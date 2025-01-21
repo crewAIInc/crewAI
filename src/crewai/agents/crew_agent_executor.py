@@ -123,7 +123,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self.iterations += 1
             try:
                 if self._has_reached_max_iterations():
-                    print("Max iterations reached")
                     formatted_answer = self._handle_max_iterations_exceeded(
                         formatted_answer
                     )
@@ -131,9 +130,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 self._enforce_rpm_limit()
 
-                print("Getting LLM response")
                 answer = self._get_llm_response()
-                print(f"LLM response: {answer}")
                 formatted_answer = self._process_llm_response(answer)
 
                 if isinstance(formatted_answer, AgentAction):
@@ -151,7 +148,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 formatted_answer = self._handle_output_parser_exception(e)
 
             except Exception as e:
-                print(f"Exception: {e}")
                 if self._is_context_length_exceeded(e):
                     self._handle_context_length()
                     continue
@@ -169,20 +165,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _is_litellm_authentication_error(self, exception: Exception) -> bool:
         """Check if the exception is a litellm authentication error."""
-        # Check if the exception is an instance of litellm.AuthenticationError
         if LiteLLMAuthenticationError and isinstance(
             exception, LiteLLMAuthenticationError
         ):
             return True
 
-        # Alternatively, inspect the exception message
-        error_message = str(exception)
-
-        # Check if 'litellm.AuthenticationError' and 'invalid_api_key' are in the message
-        return "litellm.AuthenticationError" in error_message and (
-            "invalid_api_key" in error_message
-            or "Incorrect API key provided" in error_message
-        )
+        return False
 
     def _handle_litellm_auth_error(self, exception: Exception) -> None:
         """Handle litellm authentication error by informing the user and exiting."""
@@ -197,8 +185,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _has_reached_max_iterations(self) -> bool:
         """Check if the maximum number of iterations has been reached."""
-        print(f"Max iterations: {self.max_iter}")
-        print(f"Iterations: {self.iterations}")
         return self.iterations >= self.max_iter
 
     def _enforce_rpm_limit(self) -> None:
@@ -218,7 +204,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 content=f"Error during LLM call: {e}",
                 color="red",
             )
-            # Re-raise the exception to let _invoke_loop handle it
             raise e
 
         if not answer:
