@@ -1320,6 +1320,7 @@ def test_litellm_auth_error_handling():
         backstory="test backstory",
         llm=LLM(model="gpt-4"),
         max_retry_limit=0,  # Disable retries for authentication errors
+        max_iter=1,  # Limit to one iteration to prevent multiple calls
     )
 
     # Create a task
