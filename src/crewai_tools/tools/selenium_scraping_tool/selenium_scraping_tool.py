@@ -163,7 +163,7 @@ class SeleniumScrapingTool(BaseTool):
         if not re.match(r"^https?://", url):
             raise ValueError("URL must start with http:// or https://")
 
-        options = Options()
+        options = self._options
         options.add_argument("--headless")
         driver = self.driver(options=options)
         driver.get(url)
