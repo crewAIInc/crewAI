@@ -1990,6 +1990,97 @@ def test_tools_with_custom_caching():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_multiple_tasks_with_conditional():
+    """Test that having multiple tasks before a conditional task works correctly."""
+    task1 = Task(
+        description="Research task 1",
+        expected_output="Research output",
+        agent=researcher,
+    )
+    task2 = Task(
+        description="Research task 2",
+        expected_output="Research output",
+        agent=researcher,
+    )
+    
+    def condition_func(task_output: TaskOutput) -> bool:
+        return "success" in task_output.raw.lower()
+    
+    task3 = ConditionalTask(
+        description="Conditional task that runs if previous task succeeded",
+        expected_output="Conditional output",
+        agent=writer,
+        condition=condition_func,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2, task3],
+    )
+
+    # Mock task outputs
+    mock_success = TaskOutput(
+        description="Mock success",
+        raw="Success output",
+        agent=researcher.role,
+    )
+    
+    # Set up mocks for task execution
+    with patch.object(Task, "execute_sync", return_value=mock_success) as mock_execute:
+        result = crew.kickoff()
+        # Verify all tasks were executed (no IndexError)
+        assert mock_execute.call_count == 3
+        assert len(result.tasks_output) == 3
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_multiple_conditional_tasks():
+    """Test that having multiple conditional tasks in sequence works correctly."""
+    task1 = Task(
+        description="Initial research task",
+        expected_output="Research output",
+        agent=researcher,
+    )
+    
+    def condition1(task_output: TaskOutput) -> bool:
+        return "success" in task_output.raw.lower()
+    
+    def condition2(task_output: TaskOutput) -> bool:
+        return "proceed" in task_output.raw.lower()
+    
+    task2 = ConditionalTask(
+        description="First conditional task",
+        expected_output="Conditional output 1",
+        agent=writer,
+        condition=condition1,
+    )
+    
+    task3 = ConditionalTask(
+        description="Second conditional task",
+        expected_output="Conditional output 2",
+        agent=writer,
+        condition=condition2,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2, task3],
+    )
+
+    # Mock different task outputs to test conditional logic
+    mock_success = TaskOutput(
+        description="Mock success",
+        raw="Success and proceed output",
+        agent=researcher.role,
+    )
+    
+    # Set up mocks for task execution
+    with patch.object(Task, "execute_sync", return_value=mock_success) as mock_execute:
+        result = crew.kickoff()
+        # Verify all tasks were executed (no IndexError)
+        assert mock_execute.call_count == 3
+        assert len(result.tasks_output) == 3
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory():
     from unittest.mock import patch
 

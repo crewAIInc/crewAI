@@ -762,7 +762,7 @@ class Crew(BaseModel):
                     context=context,
                     tools=tools_for_task,
                 )
-                task_outputs = [task_output]
+                task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
 
@@ -783,7 +783,7 @@ class Crew(BaseModel):
             task_outputs = self._process_async_tasks(futures, was_replayed)
             futures.clear()
 
-        previous_output = task_outputs[task_index - 1] if task_outputs else None
+        previous_output = task_outputs[0] if task_outputs else None
         if previous_output is not None and not task.should_execute(previous_output):
             self._logger.log(
                 "debug",
@@ -905,11 +905,11 @@ class Crew(BaseModel):
             )
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
-        if len(task_outputs) != 1:
-            raise ValueError(
-                "Something went wrong. Kickoff should return only one task output."
-            )
-        final_task_output = task_outputs[0]
+        # Use the last task output as the final output
+        final_task_output = task_outputs[-1] if task_outputs else None
+        if not final_task_output:
+            raise ValueError("No task outputs available to create crew output.")
+            
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         token_usage = self.calculate_usage_metrics()
@@ -918,7 +918,7 @@ class Crew(BaseModel):
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
             json_dict=final_task_output.json_dict,
-            tasks_output=[task.output for task in self.tasks if task.output],
+            tasks_output=task_outputs,  # Use all task outputs directly
             token_usage=token_usage,
         )
 
