@@ -160,6 +160,14 @@ class LLM:
 
         litellm.drop_params = True
 
+        # Normalize self.stop to always be a List[str]
+        if stop is None:
+            self.stop: List[str] = []
+        elif isinstance(stop, str):
+            self.stop = [stop]
+        else:
+            self.stop = stop
+
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
 
@@ -222,7 +230,7 @@ class LLM:
                 ].message
                 text_response = response_message.content or ""
                 tool_calls = getattr(response_message, "tool_calls", [])
-                
+
                 # Ensure callbacks get the full response object with usage info
                 if callbacks and len(callbacks) > 0:
                     for callback in callbacks:
