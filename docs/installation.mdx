@@ -112,8 +112,6 @@ Now let's get you set up! 🚀
 
 <Tip>
   We recommend using the YAML Template scaffolding for a structured approach to defining agents and tasks.
-  When you create a new project using the CLI, it automatically sets up a dedicated virtual environment for your crew project.
-  This ensures all your project dependencies are isolated and managed properly.
 </Tip>
 
 <Steps>
@@ -141,49 +139,20 @@ Now let's get you set up! 🚀
             │   └── __init__.py
             └── config/
                 ├── agents.yaml
+                ├── config.yaml
                 └── tasks.yaml
     ```
     </Frame>
   </Step>
 
-  <Step title="Activate Project Environment">
-    <Note>
-      Each crew project has its own virtual environment to manage dependencies. This is different from your initial installation environment.
-    </Note>
-
-    1. Navigate to your project directory:
-    ```shell Terminal
-    cd <project_name>
-    ```
-
-    2. Activate the project's virtual environment to make sure you're in the right environment:
-
-    **On macOS/Linux:**
-    ```shell Terminal
-    source .venv/bin/activate
-    ```
-
-    **On Windows (Command Prompt):**
-    ```shell Terminal
-    .venv\Scripts\activate.bat
-    ```
-
-    **On Windows (PowerShell):**
-    ```shell Terminal
-    .venv\Scripts\Activate.ps1
-    ```
-
-    You'll know you're in the right environment when you see `(.venv)` at the beginning of your command prompt.
-  </Step>
-
   <Step title="Install Additional Tools">
-    With the project's virtual environment activated, you can install additional tools using UV:
+    You can install additional tools using UV:
     ```shell Terminal
     uv add <tool-name>
     ```
 
     <Tip>
-      UV is our recommended package manager as it's significantly faster than pip and provides better dependency resolution.
+      UV is our preferred package manager as it's significantly faster than pip and provides better dependency resolution.
     </Tip>
   </Step>
 
