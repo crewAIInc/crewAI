@@ -16,7 +16,7 @@ from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.tools.tool_usage_events import ToolUsageFinished
-from crewai.utilities import RPMController
+from crewai.utilities import Printer, RPMController
 from crewai.utilities.events import Emitter
 
 
@@ -670,7 +670,7 @@ def test_agent_without_max_rpm_respects_crew_rpm(capsys):
         moveon.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+# @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_error_on_parsing_tool(capsys):
     from unittest.mock import patch
 
@@ -710,6 +710,7 @@ def test_agent_error_on_parsing_tool(capsys):
             force_exception_2.side_effect = Exception("Error on parsing tool.")
             crew.kickoff()
     captured = capsys.readouterr()
+    print("Captured output:", captured.out)
     assert "Error on parsing tool." in captured.out
 
 
@@ -1637,21 +1638,19 @@ def test_litellm_auth_error_handling():
     mock_llm_call.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_agent_executor_litellm_auth_error():
     """Test that CrewAgentExecutor properly identifies and handles LiteLLM authentication errors."""
     from litellm import AuthenticationError as LiteLLMAuthenticationError
 
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.utilities import Logger
+    from crewai.utilities import Printer
 
     # Create an agent and executor with max_retry_limit=0
     agent = Agent(
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="gpt-4"),
-        max_retry_limit=0,  # Disable retries for authentication errors
+        llm=LLM(model="gpt-4", api_key="invalid_api_key"),
     )
     task = Task(
         description="Test task",
@@ -1677,7 +1676,7 @@ def test_crew_agent_executor_litellm_auth_error():
     # Mock the LLM call to raise LiteLLMAuthenticationError
     with (
         patch.object(LLM, "call") as mock_llm_call,
-        patch.object(Logger, "log") as mock_logger,
+        patch.object(Printer, "print") as mock_printer,
         pytest.raises(LiteLLMAuthenticationError, match="Invalid API key"),
     ):
         mock_llm_call.side_effect = LiteLLMAuthenticationError(
@@ -1686,20 +1685,18 @@ def test_crew_agent_executor_litellm_auth_error():
         executor.invoke(
             {
                 "input": "test input",
-                "tool_names": "",  # Required template variable
-                "tools": "",  # Required template variable
+                "tool_names": "",
+                "tools": "",
             }
         )
 
     # Verify error handling
-    mock_logger.assert_any_call(
-        level="error",
-        message="Authentication error with litellm occurred. Please check your API key and configuration.",
+    mock_printer.assert_any_call(
+        content="Authentication error with litellm occurred. Please check your API key and configuration.",
         color="red",
     )
-    mock_logger.assert_any_call(
-        level="error",
-        message="Error details: litellm.AuthenticationError: Invalid API key",
+    mock_printer.assert_any_call(
+        content="Error details: litellm.AuthenticationError: Invalid API key",
         color="red",
     )
     # Verify the call was only made once (no retries)

@@ -120,7 +120,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         formatted_answer = None
         while not isinstance(formatted_answer, AgentFinish):
-            self.iterations += 1
             try:
                 if self._has_reached_max_iterations():
                     formatted_answer = self._handle_max_iterations_exceeded(
@@ -159,6 +158,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         content=f"Unhandled exception: {e}",
                         color="red",
                     )
+            finally:
+                self.iterations += 1
 
         self._show_logs(formatted_answer)
         return formatted_answer
