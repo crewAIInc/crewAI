@@ -379,6 +379,22 @@ class Crew(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_must_have_non_conditional_task(self) -> "Crew":
+        """Ensure that a crew has at least one non-conditional task."""
+        if not self.tasks:
+            return self
+        non_conditional_count = sum(
+            1 for task in self.tasks if not isinstance(task, ConditionalTask)
+        )
+        if non_conditional_count == 0:
+            raise PydanticCustomError(
+                "only_conditional_tasks",
+                "Crew must include at least one non-conditional task",
+                {},
+            )
+        return self
+
+    @model_validator(mode="after")
     def validate_first_task(self) -> "Crew":
         """Ensure the first task is not a ConditionalTask."""
         if self.tasks and isinstance(self.tasks[0], ConditionalTask):
@@ -437,19 +453,7 @@ class Crew(BaseModel):
                         )
         return self
 
-    @model_validator(mode="after")
-    def validate_must_have_non_conditional_task(self) -> "Crew":
-        """Ensure that a crew has at least one non-conditional task."""
-        non_conditional_count = sum(
-            1 for task in self.tasks if not isinstance(task, ConditionalTask)
-        )
-        if non_conditional_count == 0:
-            raise PydanticCustomError(
-                "only_conditional_tasks",
-                "Crew must include at least one non-conditional task.",
-                {},
-            )
-        return self
+
 
     @property
     def key(self) -> str:
@@ -753,6 +757,7 @@ class Crew(BaseModel):
                     task, task_outputs, futures, task_index, was_replayed
                 )
                 if skipped_task_output:
+                    task_outputs.append(skipped_task_output)
                     continue
 
             if task.async_execution:
