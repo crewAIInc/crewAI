@@ -37,9 +37,19 @@ class BrowserbaseLoadTool(BaseTool):
         try:
             from browserbase import Browserbase  # type: ignore
         except ImportError:
-            raise ImportError(
-                "`browserbase` package not found, please run `pip install browserbase`"
-            )
+            import click
+
+            if click.confirm(
+                "`browserbase` package not found, would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "browserbase"], check=True)
+                from browserbase import Browserbase  # type: ignore
+            else:
+                raise ImportError(
+                    "`browserbase` package not found, please run `uv add browserbase`"
+                )
 
         self.browserbase = Browserbase(api_key=self.api_key)
         self.text_content = text_content

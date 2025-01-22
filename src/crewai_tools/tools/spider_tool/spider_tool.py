@@ -87,13 +87,21 @@ class SpiderTool(BaseTool):
         try:
             from spider import Spider  # type: ignore
 
-            self.spider = Spider(api_key=api_key)
         except ImportError:
-            raise ImportError(
-                "`spider-client` package not found, please run `uv add spider-client`"
-            )
-        except Exception as e:
-            raise RuntimeError(f"Failed to initialize Spider client: {str(e)}")
+            import click
+
+            if click.confirm(
+                "You are missing the 'spider-client' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "pip", "install", "spider-client"], check=True)
+                from spider import Spider
+            else:
+                raise ImportError(
+                    "`spider-client` package not found, please run `uv add spider-client`"
+                )
+        self.spider = Spider(api_key=api_key)
 
     def _validate_url(self, url: str) -> bool:
         """Validate URL format and security constraints.

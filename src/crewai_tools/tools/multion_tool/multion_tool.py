@@ -28,9 +28,19 @@ class MultiOnTool(BaseTool):
         try:
             from multion.client import MultiOn  # type: ignore
         except ImportError:
-            raise ImportError(
-                "`multion` package not found, please run `pip install multion`"
-            )
+            import click
+
+            if click.confirm(
+                "You are missing the 'multion' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "multion"], check=True)
+                from multion.client import MultiOn
+            else:
+                raise ImportError(
+                    "`multion` package not found, please run `uv add multion`"
+                )
         self.session_id = None
         self.local = local
         self.multion = MultiOn(api_key=api_key)

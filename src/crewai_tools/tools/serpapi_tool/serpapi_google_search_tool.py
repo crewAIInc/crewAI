@@ -1,10 +1,13 @@
 from typing import Any, Optional, Type
 
-from pydantic import BaseModel, Field
+import re
+from pydantic import BaseModel, Field, ConfigDict
 from .serpapi_base_tool import SerpApiBaseTool
-from urllib.error import HTTPError
 
-from .serpapi_base_tool import SerpApiBaseTool
+try:
+    from serpapi import HTTPError
+except ImportError:
+    HTTPError = Any
 
 
 class SerpApiGoogleSearchToolSchema(BaseModel):
@@ -19,6 +22,9 @@ class SerpApiGoogleSearchToolSchema(BaseModel):
 
 
 class SerpApiGoogleSearchTool(SerpApiBaseTool):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True, validate_assignment=True, frozen=False
+    )
     name: str = "Google Search"
     description: str = (
         "A tool to perform to perform a Google search with a search_query."

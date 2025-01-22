@@ -168,10 +168,14 @@ class StagehandTool(BaseTool):
         super().__init__(**kwargs)
 
         if not STAGEHAND_AVAILABLE:
-            raise ImportError(
-                "The 'stagehand' package is required to use this tool. "
-                "Please install it with: pip install stagehand"
-            )
+            import click
+
+            if click.confirm(
+                "You are missing the 'stagehand-sdk' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "stagehand-sdk"], check=True)
 
         # Use config if provided, otherwise try environment variable
         if config is not None:

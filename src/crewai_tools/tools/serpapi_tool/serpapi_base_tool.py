@@ -14,11 +14,21 @@ class SerpApiBaseTool(BaseTool):
         super().__init__(**kwargs)
 
         try:
-            from serpapi import Client
+            from serpapi import Client  # type: ignore
         except ImportError:
-            raise ImportError(
-                "`serpapi` package not found, please install with `pip install serpapi`"
-            )
+            import click
+
+            if click.confirm(
+                "You are missing the 'serpapi' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "serpapi"], check=True)
+                from serpapi import Client
+            else:
+                raise ImportError(
+                    "`serpapi` package not found, please install with `uv add serpapi`"
+                )
         api_key = os.getenv("SERPAPI_API_KEY")
         if not api_key:
             raise ValueError(

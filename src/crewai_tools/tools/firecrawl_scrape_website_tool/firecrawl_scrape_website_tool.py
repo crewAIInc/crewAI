@@ -1,11 +1,12 @@
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Any, Optional, Type
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-# Type checking import
-if TYPE_CHECKING:
+try:
     from firecrawl import FirecrawlApp
+except ImportError:
+    FirecrawlApp = Any
 
 
 class FirecrawlScrapeWebsiteToolSchema(BaseModel):
@@ -31,9 +32,21 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
         try:
             from firecrawl import FirecrawlApp  # type: ignore
         except ImportError:
-            raise ImportError(
-                "`firecrawl` package not found, please run `pip install firecrawl-py`"
-            )
+            import click
+
+            if click.confirm(
+                "You are missing the 'firecrawl-py' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "firecrawl-py"], check=True)
+                from firecrawl import (
+                    FirecrawlApp,
+                )
+            else:
+                raise ImportError(
+                    "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
+                )
 
         self._firecrawl = FirecrawlApp(api_key=api_key)
 
@@ -58,7 +71,9 @@ try:
     from firecrawl import FirecrawlApp
 
     # Must rebuild model after class is defined
-    FirecrawlScrapeWebsiteTool.model_rebuild()
+    if not hasattr(FirecrawlScrapeWebsiteTool, "_model_rebuilt"):
+        FirecrawlScrapeWebsiteTool.model_rebuild()
+        FirecrawlScrapeWebsiteTool._model_rebuilt = True
 except ImportError:
     """
     When this tool is not used, then exception can be ignored.

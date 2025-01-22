@@ -1,11 +1,13 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 # Type checking import
-if TYPE_CHECKING:
+try:
     from firecrawl import FirecrawlApp
+except ImportError:
+    FirecrawlApp = Any
 
 
 class FirecrawlSearchToolSchema(BaseModel):
@@ -33,6 +35,9 @@ class FirecrawlSearchTool(BaseTool):
     model_config = ConfigDict(
         arbitrary_types_allowed=True, validate_assignment=True, frozen=False
     )
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True, validate_assignment=True, frozen=False
+    )
     name: str = "Firecrawl web search tool"
     description: str = "Search webpages using Firecrawl and return the results"
     args_schema: Type[BaseModel] = FirecrawlSearchToolSchema
@@ -41,13 +46,33 @@ class FirecrawlSearchTool(BaseTool):
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
+        self.api_key = api_key
+        self._initialize_firecrawl()
+
+    def _initialize_firecrawl(self) -> None:
         try:
             from firecrawl import FirecrawlApp  # type: ignore
+
+            self.firecrawl = FirecrawlApp(api_key=self.api_key)
         except ImportError:
-            raise ImportError(
-                "`firecrawl` package not found, please run `pip install firecrawl-py`"
-            )
-        self._firecrawl = FirecrawlApp(api_key=api_key)
+            import click
+
+            if click.confirm(
+                "You are missing the 'firecrawl-py' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                try:
+                    subprocess.run(["uv", "add", "firecrawl-py"], check=True)
+                    from firecrawl import FirecrawlApp
+
+                    self.firecrawl = FirecrawlApp(api_key=self.api_key)
+                except subprocess.CalledProcessError:
+                    raise ImportError("Failed to install firecrawl-py package")
+            else:
+                raise ImportError(
+                    "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
+                )
 
     def _run(
         self,
@@ -59,9 +84,9 @@ class FirecrawlSearchTool(BaseTool):
         location: Optional[str] = None,
         timeout: Optional[int] = 60000,
         scrape_options: Optional[Dict[str, Any]] = None,
-    ):
-        if scrape_options is None:
-            scrape_options = {}
+    ) -> Any:
+        if not self.firecrawl:
+            raise RuntimeError("FirecrawlApp not properly initialized")
 
         options = {
             "limit": limit,
@@ -70,16 +95,20 @@ class FirecrawlSearchTool(BaseTool):
             "country": country,
             "location": location,
             "timeout": timeout,
-            "scrapeOptions": scrape_options,
+            "scrapeOptions": scrape_options or {},
         }
-        return self._firecrawl.search(query, options)
+        return self.firecrawl.search(**options)
 
 
 try:
-    from firecrawl import FirecrawlApp
+    from firecrawl import FirecrawlApp  # type: ignore
 
-    # Rebuild the model after class is defined
-    FirecrawlSearchTool.model_rebuild()
+    # Only rebuild if the class hasn't been initialized yet
+    if not hasattr(FirecrawlSearchTool, "_model_rebuilt"):
+        FirecrawlSearchTool.model_rebuild()
+        FirecrawlSearchTool._model_rebuilt = True
 except ImportError:
-    # Exception can be ignored if the tool is not used
+    """
+    When this tool is not used, then exception can be ignored.
+    """
     pass

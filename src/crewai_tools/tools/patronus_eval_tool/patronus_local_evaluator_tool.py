@@ -4,6 +4,14 @@ from crewai.tools import BaseTool
 from patronus import Client
 from pydantic import BaseModel, Field
 
+try:
+    from patronus import Client
+
+    PYPATRONUS_AVAILABLE = True
+except ImportError:
+    PYPATRONUS_AVAILABLE = False
+    Client = Any
+
 
 class FixedLocalEvaluatorToolSchema(BaseModel):
     evaluated_model_input: str = Field(
@@ -26,6 +34,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
     evaluator: str = "The registered local evaluator"
     evaluated_model_gold_answer: str = "The agent's gold answer"
     description: str = "This tool is used to evaluate the model input and output using custom function evaluators."
+    description: str = "This tool is used to evaluate the model input and output using custom function evaluators."
     client: Any = None
     args_schema: Type[BaseModel] = FixedLocalEvaluatorToolSchema
 
@@ -39,16 +48,37 @@ class PatronusLocalEvaluatorTool(BaseTool):
         evaluated_model_gold_answer: str,
         **kwargs: Any,
     ):
+    def __init__(
+        self,
+        patronus_client: Client,
+        evaluator: str,
+        evaluated_model_gold_answer: str,
+        **kwargs: Any,
+    ):
         super().__init__(**kwargs)
-        self.client = patronus_client
-        if evaluator:
-            self.evaluator = evaluator
-            self.evaluated_model_gold_answer = evaluated_model_gold_answer
+        if PYPATRONUS_AVAILABLE:
+            self.client = patronus_client
+            if evaluator:
+                self.evaluator = evaluator
+                self.evaluated_model_gold_answer = evaluated_model_gold_answer
             self.description = f"This tool calls the Patronus Evaluation API that takes an additional argument in addition to the following new argument:\n evaluators={evaluator}, evaluated_model_gold_answer={evaluated_model_gold_answer}"
             self._generate_description()
             print(
                 f"Updating judge evaluator, gold_answer to: {self.evaluator}, {self.evaluated_model_gold_answer}"
             )
+        else:
+            import click
+
+            if click.confirm(
+                "You are missing the 'patronus' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "patronus"], check=True)
+            else:
+                raise ImportError(
+                    "You are missing the patronus package. Would you like to install it?"
+                )
 
     def _run(
         self,
@@ -84,6 +114,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
                 if isinstance(evaluated_model_gold_answer, str)
                 else evaluated_model_gold_answer.get("description")
             ),
+            tags={},  # Optional metadata, supports arbitrary kv pairs
             tags={},  # Optional metadata, supports arbitrary kv pairs
         )
         output = f"Evaluation result: {result.pass_}, Explanation: {result.explanation}"

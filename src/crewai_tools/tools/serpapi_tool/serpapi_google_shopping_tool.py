@@ -2,9 +2,12 @@ from typing import Any, Optional, Type
 
 from pydantic import BaseModel, Field
 from .serpapi_base_tool import SerpApiBaseTool
-from urllib.error import HTTPError
+from pydantic import ConfigDict
 
-from .serpapi_base_tool import SerpApiBaseTool
+try:
+    from serpapi import HTTPError
+except ImportError:
+    HTTPError = Any
 
 
 class SerpApiGoogleShoppingToolSchema(BaseModel):
@@ -19,6 +22,9 @@ class SerpApiGoogleShoppingToolSchema(BaseModel):
 
 
 class SerpApiGoogleShoppingTool(SerpApiBaseTool):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True, validate_assignment=True, frozen=False
+    )
     name: str = "Google Shopping"
     description: str = (
         "A tool to perform search on Google shopping with a search_query."
