@@ -5,7 +5,6 @@ import sys
 import threading
 import warnings
 from contextlib import contextmanager
-from functools import singledispatchmethod
 from typing import Any, Dict, List, Optional, Union, cast
 
 from dotenv import load_dotenv
