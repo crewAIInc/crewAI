@@ -2,14 +2,15 @@ interactions:
 - request:
     body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nTo give my best complete final answer to the task
-      use the exact following format:\n\nThought: I now can give a great answer\nFinal
-      Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!"}, {"role": "user", "content": "\nCurrent Task: Calculate 2 + 2\n\nThis
-      is the expect criteria for your final answer: The result of the calculation\nyou
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Calculate 2 +
+      2\n\nThis is the expect criteria for your final answer: The result of the calculation\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-3.5-turbo"}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -18,16 +19,13 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '797'
+      - '833'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.47.0
+      - OpenAI/Python 1.59.6
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -37,29 +35,35 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.47.0
+      - 1.59.6
       x-stainless-raw-response:
       - 'true'
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.12.7
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7WSAKkoU8Nfy5KZwYNlMSpoaSeY\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213888,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-AoJqi2nPubKHXLut6gkvISe0PizvR\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736556064,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\n\\nFinal
-      Answer: 2 + 2 = 4\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      159,\n    \"completion_tokens\": 19,\n    \"total_tokens\": 178,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: The result of the calculation 2 + 2 is 4.\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\":
+      25,\n    \"total_tokens\": 186,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c85eb70a9401cf3-GRU
+      - 9000dbe81c55bf7f-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -67,37 +71,45 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 24 Sep 2024 21:38:08 GMT
+      - Sat, 11 Jan 2025 00:41:05 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - __cf_bm=LCNQO7gfz6xDjDqEOZ7ha3jDwPnDlsjsmJyScVf4UUw-1736556065-1.0.1.1-2ZcyBDpLvmxy7UOdCrLd6falFapRDuAu6WcVrlOXN0QIgZiDVYD0bCFWGCKeeE.6UjPHoPY6QdlEZZx8.0Pggw;
+        path=/; expires=Sat, 11-Jan-25 01:11:05 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=cRATWhxkeoeSGFg3z7_5BrHO3JDsmDX2Ior2i7bNF4M-1736556065175-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '489'
+      - '1060'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
-      - '10000'
+      - '30000'
       x-ratelimit-limit-tokens:
-      - '50000000'
+      - '150000000'
       x-ratelimit-remaining-requests:
-      - '9999'
+      - '29999'
       x-ratelimit-remaining-tokens:
-      - '49999813'
+      - '149999810'
       x-ratelimit-reset-requests:
-      - 6ms
+      - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_66c2e9625c005de2d6ffcec951018ec9
+      - req_463fbd324e01320dc253008f919713bd
     http_version: HTTP/1.1
     status_code: 200
 version: 1

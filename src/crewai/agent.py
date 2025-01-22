@@ -21,6 +21,7 @@ from crewai.tools.base_tool import Tool
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
+from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -85,7 +86,7 @@ class Agent(BaseAgent):
     llm: Union[str, InstanceOf[LLM], Any] = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: Optional[Any] = Field(
+    function_calling_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: Optional[str] = Field(
@@ -139,89 +140,10 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self._set_knowledge()
         self.agent_ops_agent_name = self.role
-        unaccepted_attributes = [
-            "AWS_ACCESS_KEY_ID",
-            "AWS_SECRET_ACCESS_KEY",
-            "AWS_REGION_NAME",
-        ]
 
-        # Handle different cases for self.llm
-        if isinstance(self.llm, str):
-            # If it's a string, create an LLM instance
-            self.llm = LLM(model=self.llm)
-        elif isinstance(self.llm, LLM):
-            # If it's already an LLM instance, keep it as is
-            pass
-        elif self.llm is None:
-            # Determine the model name from environment variables or use default
-            model_name = (
-                os.environ.get("OPENAI_MODEL_NAME")
-                or os.environ.get("MODEL")
-                or "gpt-4o-mini"
-            )
-            llm_params = {"model": model_name}
-
-            api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get(
-                "OPENAI_BASE_URL"
-            )
-            if api_base:
-                llm_params["base_url"] = api_base
-
-            set_provider = model_name.split("/")[0] if "/" in model_name else "openai"
-
-            # Iterate over all environment variables to find matching API keys or use defaults
-            for provider, env_vars in ENV_VARS.items():
-                if provider == set_provider:
-                    for env_var in env_vars:
-                        # Check if the environment variable is set
-                        key_name = env_var.get("key_name")
-                        if key_name and key_name not in unaccepted_attributes:
-                            env_value = os.environ.get(key_name)
-                            if env_value:
-                                key_name = key_name.lower()
-                                for pattern in LITELLM_PARAMS:
-                                    if pattern in key_name:
-                                        key_name = pattern
-                                        break
-                                llm_params[key_name] = env_value
-                        # Check for default values if the environment variable is not set
-                        elif env_var.get("default", False):
-                            for key, value in env_var.items():
-                                if key not in ["prompt", "key_name", "default"]:
-                                    # Only add default if the key is already set in os.environ
-                                    if key in os.environ:
-                                        llm_params[key] = value
-
-            self.llm = LLM(**llm_params)
-        else:
-            # For any other type, attempt to extract relevant attributes
-            llm_params = {
-                "model": getattr(self.llm, "model_name", None)
-                or getattr(self.llm, "deployment_name", None)
-                or str(self.llm),
-                "temperature": getattr(self.llm, "temperature", None),
-                "max_tokens": getattr(self.llm, "max_tokens", None),
-                "logprobs": getattr(self.llm, "logprobs", None),
-                "timeout": getattr(self.llm, "timeout", None),
-                "max_retries": getattr(self.llm, "max_retries", None),
-                "api_key": getattr(self.llm, "api_key", None),
-                "base_url": getattr(self.llm, "base_url", None),
-                "organization": getattr(self.llm, "organization", None),
-            }
-            # Remove None values to avoid passing unnecessary parameters
-            llm_params = {k: v for k, v in llm_params.items() if v is not None}
-            self.llm = LLM(**llm_params)
-
-        # Similar handling for function_calling_llm
-        if self.function_calling_llm:
-            if isinstance(self.function_calling_llm, str):
-                self.function_calling_llm = LLM(model=self.function_calling_llm)
-            elif not isinstance(self.function_calling_llm, LLM):
-                self.function_calling_llm = LLM(
-                    model=getattr(self.function_calling_llm, "model_name", None)
-                    or getattr(self.function_calling_llm, "deployment_name", None)
-                    or str(self.function_calling_llm)
-                )
+        self.llm = create_llm(self.llm)
+        if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
+            self.function_calling_llm = create_llm(self.function_calling_llm)
 
         if not self.agent_executor:
             self._setup_agent_executor()
@@ -413,6 +335,7 @@ class Agent(BaseAgent):
 
     def get_multimodal_tools(self) -> List[Tool]:
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
+
         return [AddImageTool()]
 
     def get_code_execution_tools(self):

@@ -4,7 +4,7 @@ import unittest
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
-class TestCrewTrainingHandler(unittest.TestCase):
+class InternalCrewTrainingHandler(unittest.TestCase):
     def setUp(self):
         self.handler = CrewTrainingHandler("trained_data.pkl")
 

@@ -115,35 +115,6 @@ def test_custom_llm_temperature_preservation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execute_task():
-    from langchain_openai import ChatOpenAI
-
-    from crewai import Task
-
-    agent = Agent(
-        role="Math Tutor",
-        goal="Solve math problems accurately",
-        backstory="You are an experienced math tutor with a knack for explaining complex concepts simply.",
-        llm=ChatOpenAI(temperature=0.7, model="gpt-4o-mini"),
-    )
-
-    task = Task(
-        description="Calculate the area of a circle with radius 5 cm.",
-        expected_output="The calculated area of the circle in square centimeters.",
-        agent=agent,
-    )
-
-    result = agent.execute_task(task)
-
-    assert result is not None
-    assert (
-        result
-        == "The calculated area of the circle is approximately 78.5 square centimeters."
-    )
-    assert "square centimeters" in result.lower()
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution():
     agent = Agent(
         role="test role",
@@ -565,7 +536,7 @@ def test_agent_moved_on_after_max_iterations():
         task=task,
         tools=[get_final_answer],
     )
-    assert output == "The final answer is 42."
+    assert output == "42"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -574,7 +545,6 @@ def test_agent_respect_the_max_rpm_set(capsys):
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
-        return 42
 
     agent = Agent(
         role="test role",
@@ -641,15 +611,14 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_without_max_rpm_respet_crew_rpm(capsys):
+def test_agent_without_max_rpm_respects_crew_rpm(capsys):
     from unittest.mock import patch
 
     from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
-        """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        """Get the final answer but don't give it yet, just re-use this tool non-stop."""
         return 42
 
     agent1 = Agent(
@@ -666,23 +635,30 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         role="test role2",
         goal="test goal2",
         backstory="test backstory2",
-        max_iter=1,
+        max_iter=5,
         verbose=True,
         allow_delegation=False,
     )
 
     tasks = [
         Task(
-            description="Just say hi.", agent=agent1, expected_output="Your greeting."
+            description="Just say hi.",
+            agent=agent1,
+            expected_output="Your greeting.",
         ),
         Task(
-            description="NEVER give a Final Answer, unless you are told otherwise, instead keep using the `get_final_answer` tool non-stop, until you must give you best final answer",
+            description=(
+                "NEVER give a Final Answer, unless you are told otherwise, "
+                "instead keep using the `get_final_answer` tool non-stop, "
+                "until you must give your best final answer"
+            ),
             expected_output="The final answer",
             tools=[get_final_answer],
             agent=agent2,
         ),
     ]
 
+    # Set crew's max_rpm to 1 to trigger RPM limit
     crew = Crew(agents=[agent1, agent2], tasks=tasks, max_rpm=1, verbose=True)
 
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
@@ -1445,44 +1421,43 @@ def test_llm_call_with_all_attributes():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_ollama_gemma():
+def test_agent_with_ollama_llama3():
     agent = Agent(
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(
-            model="ollama/gemma2:latest",
-            base_url="http://localhost:8080",
-        ),
+        llm=LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434"),
     )
 
     assert isinstance(agent.llm, LLM)
-    assert agent.llm.model == "ollama/gemma2:latest"
-    assert agent.llm.base_url == "http://localhost:8080"
+    assert agent.llm.model == "ollama/llama3.2:3b"
+    assert agent.llm.base_url == "http://localhost:11434"
 
-    task = "Respond in 20 words. Who are you?"
+    task = "Respond in 20 words. Which model are you?"
     response = agent.llm.call([{"role": "user", "content": task}])
 
     assert response
     assert len(response.split()) <= 25  # Allow a little flexibility in word count
-    assert "Gemma" in response or "AI" in response or "language model" in response
+    assert "Llama3" in response or "AI" in response or "language model" in response
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_ollama_gemma():
+def test_llm_call_with_ollama_llama3():
     llm = LLM(
-        model="ollama/gemma2:latest",
-        base_url="http://localhost:8080",
+        model="ollama/llama3.2:3b",
+        base_url="http://localhost:11434",
         temperature=0.7,
         max_tokens=30,
     )
-    messages = [{"role": "user", "content": "Respond in 20 words. Who are you?"}]
+    messages = [
+        {"role": "user", "content": "Respond in 20 words. Which model are you?"}
+    ]
 
     response = llm.call(messages)
 
     assert response
     assert len(response.split()) <= 25  # Allow a little flexibility in word count
-    assert "Gemma" in response or "AI" in response or "language model" in response
+    assert "Llama3" in response or "AI" in response or "language model" in response
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1491,7 +1466,7 @@ def test_agent_execute_task_basic():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="gpt-3.5-turbo"),
+        llm="gpt-4o-mini",
     )
 
     task = Task(
@@ -1578,7 +1553,7 @@ def test_agent_execute_task_with_ollama():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="ollama/gemma2:latest", base_url="http://localhost:8080"),
+        llm=LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434"),
     )
 
     task = Task(

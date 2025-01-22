@@ -1,17 +1,26 @@
+import json
 import logging
 import os
 import sys
 import threading
 import warnings
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 
-import litellm
-from litellm import get_supported_openai_params
+from dotenv import load_dotenv
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", UserWarning)
+    import litellm
+    from litellm import Choices, get_supported_openai_params
+    from litellm.types.utils import ModelResponse
+
 
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
+
+load_dotenv()
 
 
 class FilteredStream:
@@ -21,6 +30,7 @@ class FilteredStream:
 
     def write(self, s) -> int:
         with self._lock:
+            # Filter out extraneous messages from LiteLLM
             if (
                 "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
                 in s
@@ -66,6 +76,18 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "mixtral-8x7b-32768": 32768,
     "llama-3.3-70b-versatile": 128000,
     "llama-3.3-70b-instruct": 128000,
+    # sambanova
+    "Meta-Llama-3.3-70B-Instruct": 131072,
+    "QwQ-32B-Preview": 8192,
+    "Qwen2.5-72B-Instruct": 8192,
+    "Qwen2.5-Coder-32B-Instruct": 8192,
+    "Meta-Llama-3.1-405B-Instruct": 8192,
+    "Meta-Llama-3.1-70B-Instruct": 131072,
+    "Meta-Llama-3.1-8B-Instruct": 131072,
+    "Llama-3.2-90B-Vision-Instruct": 16384,
+    "Llama-3.2-11B-Vision-Instruct": 16384,
+    "Meta-Llama-3.2-3B-Instruct": 4096,
+    "Meta-Llama-3.2-1B-Instruct": 16384,
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
@@ -76,17 +98,18 @@ CONTEXT_WINDOW_USAGE_RATIO = 0.75
 def suppress_warnings():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
+        warnings.filterwarnings(
+            "ignore", message="open_text is deprecated*", category=DeprecationWarning
+        )
 
         # Redirect stdout and stderr
         old_stdout = sys.stdout
         old_stderr = sys.stderr
         sys.stdout = FilteredStream(old_stdout)
         sys.stderr = FilteredStream(old_stderr)
-
         try:
             yield
         finally:
-            # Restore stdout and stderr
             sys.stdout = old_stdout
             sys.stderr = old_stderr
 
@@ -107,13 +130,12 @@ class LLM:
         logit_bias: Optional[Dict[int, float]] = None,
         response_format: Optional[Dict[str, Any]] = None,
         seed: Optional[int] = None,
-        logprobs: Optional[bool] = None,
+        logprobs: Optional[int] = None,
         top_logprobs: Optional[int] = None,
         base_url: Optional[str] = None,
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
-        **kwargs,
     ):
         self.model = model
         self.timeout = timeout
@@ -135,19 +157,40 @@ class LLM:
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
-        self.kwargs = kwargs
 
         litellm.drop_params = True
-        litellm.set_verbose = False
+
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
 
-    def call(self, messages: List[Dict[str, str]], callbacks: List[Any] = []) -> str:
+    def call(
+        self,
+        messages: List[Dict[str, str]],
+        tools: Optional[List[dict]] = None,
+        callbacks: Optional[List[Any]] = None,
+        available_functions: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """
+        High-level call method that:
+          1) Calls litellm.completion
+          2) Checks for function/tool calls
+          3) If a tool call is found:
+               a) executes the function
+               b) returns the result
+          4) If no tool call, returns the text response
+
+        :param messages: The conversation messages
+        :param tools: Optional list of function schemas for function calling
+        :param callbacks: Optional list of callbacks
+        :param available_functions: A dictionary mapping function_name -> actual Python function
+        :return: Final text response from the LLM or the tool result
+        """
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
 
             try:
+                # --- 1) Make the completion call
                 params = {
                     "model": self.model,
                     "messages": messages,
@@ -168,21 +211,71 @@ class LLM:
                     "api_version": self.api_version,
                     "api_key": self.api_key,
                     "stream": False,
-                    **self.kwargs,
+                    "tools": tools,  # pass the tool schema
                 }
 
-                # Remove None values to avoid passing unnecessary parameters
                 params = {k: v for k, v in params.items() if v is not None}
 
                 response = litellm.completion(**params)
-                return response["choices"][0]["message"]["content"]
+                response_message = cast(Choices, cast(ModelResponse, response).choices)[
+                    0
+                ].message
+                text_response = response_message.content or ""
+                tool_calls = getattr(response_message, "tool_calls", [])
+                
+                # Ensure callbacks get the full response object with usage info
+                if callbacks and len(callbacks) > 0:
+                    for callback in callbacks:
+                        if hasattr(callback, "log_success_event"):
+                            usage_info = getattr(response, "usage", None)
+                            if usage_info:
+                                callback.log_success_event(
+                                    kwargs=params,
+                                    response_obj={"usage": usage_info},
+                                    start_time=0,
+                                    end_time=0,
+                                )
+
+                # --- 2) If no tool calls, return the text response
+                if not tool_calls or not available_functions:
+                    return text_response
+
+                # --- 3) Handle the tool call
+                tool_call = tool_calls[0]
+                function_name = tool_call.function.name
+
+                if function_name in available_functions:
+                    try:
+                        function_args = json.loads(tool_call.function.arguments)
+                    except json.JSONDecodeError as e:
+                        logging.warning(f"Failed to parse function arguments: {e}")
+                        return text_response
+
+                    fn = available_functions[function_name]
+                    try:
+                        # Call the actual tool function
+                        result = fn(**function_args)
+
+                        return result
+
+                    except Exception as e:
+                        logging.error(
+                            f"Error executing function '{function_name}': {e}"
+                        )
+                        return text_response
+
+                else:
+                    logging.warning(
+                        f"Tool call requested unknown function '{function_name}'"
+                    )
+                    return text_response
+
             except Exception as e:
                 if not LLMContextLengthExceededException(
                     str(e)
                 )._is_context_limit_error(str(e)):
                     logging.error(f"LiteLLM call failed: {str(e)}")
-
-                raise  # Re-raise the exception after logging
+                raise
 
     def supports_function_calling(self) -> bool:
         try:
@@ -201,7 +294,10 @@ class LLM:
             return False
 
     def get_context_window_size(self) -> int:
-        # Only using 75% of the context window size to avoid cutting the message in the middle
+        """
+        Returns the context window size, using 75% of the maximum to avoid
+        cutting off messages mid-thread.
+        """
         if self.context_window_size != 0:
             return self.context_window_size
 
@@ -214,16 +310,21 @@ class LLM:
         return self.context_window_size
 
     def set_callbacks(self, callbacks: List[Any]):
-        callback_types = [type(callback) for callback in callbacks]
-        for callback in litellm.success_callback[:]:
-            if type(callback) in callback_types:
-                litellm.success_callback.remove(callback)
+        """
+        Attempt to keep a single set of callbacks in litellm by removing old
+        duplicates and adding new ones.
+        """
+        with suppress_warnings():
+            callback_types = [type(callback) for callback in callbacks]
+            for callback in litellm.success_callback[:]:
+                if type(callback) in callback_types:
+                    litellm.success_callback.remove(callback)
 
-        for callback in litellm._async_success_callback[:]:
-            if type(callback) in callback_types:
-                litellm._async_success_callback.remove(callback)
+            for callback in litellm._async_success_callback[:]:
+                if type(callback) in callback_types:
+                    litellm._async_success_callback.remove(callback)
 
-        litellm.callbacks = callbacks
+            litellm.callbacks = callbacks
 
     def set_env_callbacks(self):
         """
@@ -244,19 +345,20 @@ class LLM:
         This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
         `litellm.failure_callback` to ["langfuse"].
         """
-        success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
-        success_callbacks = []
-        if success_callbacks_str:
-            success_callbacks = [
-                callback.strip() for callback in success_callbacks_str.split(",")
-            ]
+        with suppress_warnings():
+            success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
+            success_callbacks = []
+            if success_callbacks_str:
+                success_callbacks = [
+                    cb.strip() for cb in success_callbacks_str.split(",") if cb.strip()
+                ]
 
-        failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
-        failure_callbacks = []
-        if failure_callbacks_str:
-            failure_callbacks = [
-                callback.strip() for callback in failure_callbacks_str.split(",")
-            ]
+            failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
+            failure_callbacks = []
+            if failure_callbacks_str:
+                failure_callbacks = [
+                    cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
+                ]
 
-        litellm.success_callback = success_callbacks
-        litellm.failure_callback = failure_callbacks
+                litellm.success_callback = success_callbacks
+                litellm.failure_callback = failure_callbacks

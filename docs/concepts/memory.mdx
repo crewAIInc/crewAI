@@ -134,6 +134,23 @@ crew = Crew(
 )
 ```
 
+## Memory Configuration Options
+If you want to access a specific organization and project, you can set the `org_id` and `project_id` parameters in the memory configuration.
+
+```python Code
+from crewai import Crew
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    verbose=True,
+    memory=True,
+    memory_config={
+        "provider": "mem0",
+        "config": {"user_id": "john", "org_id": "my_org_id", "project_id": "my_project_id"},
+    },
+)
+```
 
 ## Additional Embedding Providers
 
@@ -269,6 +286,26 @@ my_crew = Crew(
     verbose=True,
     embedder={
         "provider": "cohere",
+        "config": {
+            "api_key": "YOUR_API_KEY",
+            "model_name": "<model_name>"
+        }
+    }
+)
+```
+### Using VoyageAI embeddings
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "voyageai",
         "config": {
             "api_key": "YOUR_API_KEY",
             "model_name": "<model_name>"

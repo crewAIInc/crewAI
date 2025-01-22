@@ -1,10 +1,11 @@
 import asyncio
 import json
+import re
 import uuid
 import warnings
 from concurrent.futures import Future
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from pydantic import (
     UUID4,
@@ -45,6 +46,7 @@ from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
 )
+from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -81,6 +83,7 @@ class Crew(BaseModel):
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
         planning: Plan the crew execution and add the plan to the crew.
+        chat_llm: The language model used for orchestrating chat interactions with the crew.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -147,7 +150,7 @@ class Crew(BaseModel):
     manager_agent: Optional[BaseAgent] = Field(
         description="Custom agent that will be used as manager.", default=None
     )
-    function_calling_llm: Optional[Any] = Field(
+    function_calling_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
@@ -203,6 +206,10 @@ class Crew(BaseModel):
         default=None,
         description="Knowledge sources for the crew. Add knowledge sources to the knowledge object.",
     )
+    chat_llm: Optional[Any] = Field(
+        default=None,
+        description="LLM used to handle chatting with the crew.",
+    )
     _knowledge: Optional[Knowledge] = PrivateAttr(
         default=None,
     )
@@ -239,15 +246,9 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
-        if self.function_calling_llm:
-            if isinstance(self.function_calling_llm, str):
-                self.function_calling_llm = LLM(model=self.function_calling_llm)
-            elif not isinstance(self.function_calling_llm, LLM):
-                self.function_calling_llm = LLM(
-                    model=getattr(self.function_calling_llm, "model_name", None)
-                    or getattr(self.function_calling_llm, "deployment_name", None)
-                    or str(self.function_calling_llm)
-                )
+        if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
+            self.function_calling_llm = create_llm(self.function_calling_llm)
+
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         return self
@@ -512,6 +513,8 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
         for before_callback in self.before_kickoff_callbacks:
+            if inputs is None:
+                inputs = {}
             inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
@@ -673,6 +676,7 @@ class Crew(BaseModel):
         else:
             self.manager_llm = (
                 getattr(self.manager_llm, "model_name", None)
+                or getattr(self.manager_llm, "model", None)
                 or getattr(self.manager_llm, "deployment_name", None)
                 or self.manager_llm
             )
@@ -726,11 +730,7 @@ class Crew(BaseModel):
 
             # Determine which tools to use - task tools take precedence over agent tools
             tools_for_task = task.tools or agent_to_use.tools or []
-            tools_for_task = self._prepare_tools(
-                agent_to_use,
-                task,
-                tools_for_task
-            )
+            tools_for_task = self._prepare_tools(agent_to_use, task, tools_for_task)
 
             self._log_task_start(task, agent_to_use.role)
 
@@ -797,14 +797,18 @@ class Crew(BaseModel):
             return skipped_task_output
         return None
 
-    def _prepare_tools(self, agent: BaseAgent, task: Task, tools: List[Tool]) -> List[Tool]:
+    def _prepare_tools(
+        self, agent: BaseAgent, task: Task, tools: List[Tool]
+    ) -> List[Tool]:
         # Add delegation tools if agent allows delegation
         if agent.allow_delegation:
             if self.process == Process.hierarchical:
                 if self.manager_agent:
                     tools = self._update_manager_tools(task, tools)
                 else:
-                    raise ValueError("Manager agent is required for hierarchical process.")
+                    raise ValueError(
+                        "Manager agent is required for hierarchical process."
+                    )
 
             elif agent and agent.allow_delegation:
                 tools = self._add_delegation_tools(task, tools)
@@ -823,7 +827,9 @@ class Crew(BaseModel):
             return self.manager_agent
         return task.agent
 
-    def _merge_tools(self, existing_tools: List[Tool], new_tools: List[Tool]) -> List[Tool]:
+    def _merge_tools(
+        self, existing_tools: List[Tool], new_tools: List[Tool]
+    ) -> List[Tool]:
         """Merge new tools into existing tools list, avoiding duplicates by tool name."""
         if not new_tools:
             return existing_tools
@@ -839,7 +845,9 @@ class Crew(BaseModel):
 
         return tools
 
-    def _inject_delegation_tools(self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]):
+    def _inject_delegation_tools(
+        self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]
+    ):
         delegation_tools = task_agent.get_delegation_tools(agents)
         return self._merge_tools(tools, delegation_tools)
 
@@ -856,7 +864,9 @@ class Crew(BaseModel):
         if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
             if not tools:
                 tools = []
-            tools = self._inject_delegation_tools(tools, task.agent, agents_for_delegation)
+            tools = self._inject_delegation_tools(
+                tools, task.agent, agents_for_delegation
+            )
         return tools
 
     def _log_task_start(self, task: Task, role: str = "None"):
@@ -870,7 +880,9 @@ class Crew(BaseModel):
             if task.agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
             else:
-                tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents)
+                tools = self._inject_delegation_tools(
+                    tools, self.manager_agent, self.agents
+                )
         return tools
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
@@ -983,6 +995,31 @@ class Crew(BaseModel):
             return self._knowledge.query(query)
         return None
 
+    def fetch_inputs(self) -> Set[str]:
+        """
+        Gathers placeholders (e.g., {something}) referenced in tasks or agents.
+        Scans each task's 'description' + 'expected_output', and each agent's
+        'role', 'goal', and 'backstory'.
+
+        Returns a set of all discovered placeholder names.
+        """
+        placeholder_pattern = re.compile(r"\{(.+?)\}")
+        required_inputs: Set[str] = set()
+
+        # Scan tasks for inputs
+        for task in self.tasks:
+            # description and expected_output might contain e.g. {topic}, {user_name}, etc.
+            text = f"{task.description or ''} {task.expected_output or ''}"
+            required_inputs.update(placeholder_pattern.findall(text))
+
+        # Scan agents for inputs
+        for agent in self.agents:
+            # role, goal, backstory might have placeholders like {role_detail}, etc.
+            text = f"{agent.role or ''} {agent.goal or ''} {agent.backstory or ''}"
+            required_inputs.update(placeholder_pattern.findall(text))
+
+        return required_inputs
+
     def copy(self):
         """Create a deep copy of the Crew."""
 
@@ -1038,7 +1075,7 @@ class Crew(BaseModel):
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
         [
-            task.interpolate_inputs(
+            task.interpolate_inputs_and_add_conversation_history(
                 # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
                 inputs
             )
