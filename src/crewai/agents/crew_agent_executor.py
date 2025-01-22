@@ -15,6 +15,7 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
@@ -56,7 +57,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         callbacks: List[Any] = [],
     ):
         self._i18n: I18N = I18N()
-        self.llm = llm
+        self.llm: LLM = llm
         self.task = task
         self.agent = agent
         self.crew = crew

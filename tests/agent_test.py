@@ -670,6 +670,7 @@ def test_agent_without_max_rpm_respects_crew_rpm(capsys):
         moveon.assert_called_once()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_error_on_parsing_tool(capsys):
     from unittest.mock import patch
 
