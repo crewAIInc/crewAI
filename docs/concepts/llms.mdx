@@ -243,6 +243,9 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
         # llm: bedrock/amazon.titan-text-express-v1
         # llm: bedrock/meta.llama2-70b-chat-v1
 
+        # Amazon SageMaker Models - Enterprise-grade
+        # llm: sagemaker/<my-endpoint>
+
         # Mistral Models - Open source alternative
         # llm: mistral/mistral-large-latest
         # llm: mistral/mistral-medium-latest
@@ -503,6 +506,21 @@ Learn how to get the most out of your LLM configuration:
     ```python Code
     llm = LLM(
         model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Amazon SageMaker">
+    ```python Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    Example usage:
+    ```python Code
+    llm = LLM(
+        model="sagemaker/<my-endpoint>"
     )
     ```
   </Accordion>
