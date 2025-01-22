@@ -142,7 +142,6 @@ class LLM:
         self.temperature = temperature
         self.top_p = top_p
         self.n = n
-        self.stop = stop
         self.max_completion_tokens = max_completion_tokens
         self.max_tokens = max_tokens
         self.presence_penalty = presence_penalty

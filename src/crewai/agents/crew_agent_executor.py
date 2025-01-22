@@ -83,10 +83,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tool_name_to_tool_map: Dict[str, BaseTool] = {
             tool.name: tool for tool in self.tools
         }
-        if self.llm.stop:
-            self.llm.stop = list(set(self.llm.stop + self.stop))
-        else:
-            self.llm.stop = self.stop
+        self.stop = stop_words
+        self.llm.stop = list(set(self.llm.stop + self.stop))
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
