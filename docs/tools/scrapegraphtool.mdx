@@ -1,0 +1,96 @@
+---
+title: Scrapegraph AI Scraper
+description: The ScrapegraphScrapeTool uses AI to transform any website into clean, structured data.
+icon: spider
+---
+
+# `ScrapegraphScrapeTool`
+
+## Description
+
+[ScrapeGraph AI](https://scrapegraphai.com) is a platform that transforms websites into structured data using AI. It offers:
+
+- AI-powered data extraction without complex code
+- Structured data output for easy integration
+- Cost-effective scraping solution compared to traditional methods
+- Support for complex websites and dynamic content
+
+## Installation
+
+- Get an API key from [scrapegraphai.com](https://scrapegraphai.com) and set it in environment variables (`SCRAPEGRAPH_API_KEY`).
+- Install the [Scrapegraph SDK](https://github.com/scrapegraph/python-sdk) along with `crewai[tools]` package:
+
+```shell
+pip install scrapegraph-py 'crewai[tools]'
+```
+
+## Example
+
+Here's how to use the ScrapegraphScrapeTool in your CrewAI workflow:
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import ScrapegraphScrapeTool
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Example scraping eBay keyboard listings
+website = "https://www.ebay.it/sch/i.html?_from=R40&_trksid=m570.l1313&_nkw=keyboard&_sacat=0"
+tool = ScrapegraphScrapeTool()
+
+# Create an agent with the tool
+agent = Agent(
+    role="Web Researcher",
+    goal="Research and extract accurate information from websites",
+    backstory="You are an expert web researcher with experience in extracting and analyzing information from various websites.",
+    tools=[tool],
+)
+
+# Create a task
+task = Task(
+    name="scraping task",
+    description=f"Visit the website {website} and extract detailed information about all the keyboards available.",
+    expected_output="A file with the informations extracted from the website.",
+    agent=agent,    
+)
+
+# Set up and run the crew
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+)
+
+crew.kickoff()
+```
+
+## Arguments
+
+The following parameters can be used to customize the `ScrapegraphScrapeTool`:
+
+| Argument | Type | Description |
+|:---------|:-----|:------------|
+| **website_url** | `string` | _Optional_. Fixed website URL to scrape. If provided, the tool will only scrape this URL. |
+| **user_prompt** | `string` | _Optional_. Custom prompt to guide the extraction. Default is "Extract the main content of the webpage". |
+| **api_key** | `string` | _Optional_. Scrapegraph API key. Default is `SCRAPEGRAPH_API_KEY` env variable. |
+| **enable_logging** | `bool` | _Optional_. Enable detailed logging. Default is `False`. |
+
+## Error Handling
+
+The tool includes robust error handling for common scenarios:
+
+- `ValueError`: Raised when API key is missing or URL format is invalid
+- `RateLimitError`: Raised when API rate limits are exceeded
+- `RuntimeError`: Raised when scraping operation fails
+
+## Pricing
+
+ScrapeGraph AI offers flexible pricing tiers:
+
+| Service | Credits |
+|:--------|:--------|
+| Markdownify (Convert webpage to markdown) | 2 credits / Web page |
+| Smart Scraper (Structured AI web scraping) | 5 credits / Web page |
+| Local Scraper (Structured AI scraping from HTML) | 10 credits / Web page |
+
+Visit [scrapegraphai.com](https://scrapegraphai.com) for more details about pricing plans and enterprise solutions.
