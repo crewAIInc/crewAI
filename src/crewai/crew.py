@@ -797,7 +797,7 @@ class Crew(BaseModel):
             task_outputs = self._process_async_tasks(futures, was_replayed)
             futures.clear()
 
-        previous_output = task_outputs[0] if task_outputs else None
+        previous_output = task_outputs[-1] if task_outputs else None
         if previous_output is not None and not task.should_execute(previous_output):
             self._logger.log(
                 "debug",
@@ -936,7 +936,7 @@ class Crew(BaseModel):
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
             json_dict=final_task_output.json_dict,
-            tasks_output=task_outputs,  # Keep all task outputs
+            tasks_output=task_outputs,
             token_usage=token_usage,
         )
 

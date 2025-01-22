@@ -48,6 +48,39 @@ writer = Agent(
 )
 
 
+def test_crew_with_only_conditional_tasks_raises_error():
+    """Test that creating a crew with only conditional tasks raises an error."""
+    def condition_func(task_output: TaskOutput) -> bool:
+        return True
+
+    conditional1 = ConditionalTask(
+        description="Conditional task 1",
+        expected_output="Output 1",
+        agent=researcher,
+        condition=condition_func,
+    )
+    conditional2 = ConditionalTask(
+        description="Conditional task 2",
+        expected_output="Output 2",
+        agent=researcher,
+        condition=condition_func,
+    )
+    conditional3 = ConditionalTask(
+        description="Conditional task 3",
+        expected_output="Output 3",
+        agent=researcher,
+        condition=condition_func,
+    )
+
+    with pytest.raises(
+        pydantic_core._pydantic_core.ValidationError,
+        match="The first task cannot be a ConditionalTask",
+    ):
+        Crew(
+            agents=[researcher],
+            tasks=[conditional1, conditional2, conditional3],
+        )
+
 def test_crew_config_conditional_requirement():
     with pytest.raises(ValueError):
         Crew(process=Process.sequential)
@@ -1988,6 +2021,57 @@ def test_tools_with_custom_caching():
             )
             assert result.raw == "3"
 
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_task_uses_last_output():
+    """Test that conditional tasks use the last task output for condition evaluation."""
+    task1 = Task(
+        description="First task",
+        expected_output="First output",
+        agent=researcher,
+    )
+    task2 = Task(
+        description="Second task",
+        expected_output="Second output",
+        agent=researcher,
+    )
+    
+    def condition_func(task_output: TaskOutput) -> bool:
+        # Should only be true if evaluating task2's output
+        return "second success" in task_output.raw.lower()
+    
+    conditional_task = ConditionalTask(
+        description="Conditional task that should only run if second task succeeded",
+        expected_output="Conditional output",
+        agent=writer,
+        condition=condition_func,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2, conditional_task],
+    )
+
+    # Mock different outputs for task1 and task2
+    mock_first = TaskOutput(
+        description="Mock first",
+        raw="First success output",  # Would trigger condition if using first output
+        agent=researcher.role,
+    )
+    mock_second = TaskOutput(
+        description="Mock second",
+        raw="Second success output",  # Should trigger condition
+        agent=researcher.role,
+    )
+    
+    # Set up mocks to return different outputs for each task
+    with patch.object(Task, "execute_sync") as mock_execute:
+        mock_execute.side_effect = [mock_first, mock_second, mock_first]  # Third value is for conditional task if it runs
+        result = crew.kickoff()
+        
+        # Verify conditional task executed (used task2's output)
+        assert mock_execute.call_count == 3
+        assert len(result.tasks_output) == 3
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_multiple_tasks_with_conditional():
