@@ -670,7 +670,6 @@ def test_agent_without_max_rpm_respects_crew_rpm(capsys):
         moveon.assert_called_once()
 
 
-# @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_error_on_parsing_tool(capsys):
     from unittest.mock import patch
 
@@ -710,7 +709,6 @@ def test_agent_error_on_parsing_tool(capsys):
             force_exception_2.side_effect = Exception("Error on parsing tool.")
             crew.kickoff()
     captured = capsys.readouterr()
-    print("Captured output:", captured.out)
     assert "Error on parsing tool." in captured.out
 
 
