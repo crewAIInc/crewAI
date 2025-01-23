@@ -18,11 +18,6 @@ try:
 
     SNOWFLAKE_AVAILABLE = True
 except ImportError:
-    # Set modules to None
-    snowflake = None  # type: ignore
-    default_backend = None  # type: ignore
-    serialization = None  # type: ignore
-
     SNOWFLAKE_AVAILABLE = False
 
 # Configure logging
@@ -101,10 +96,7 @@ class SnowflakeSearchTool(BaseTool):
         arbitrary_types_allowed=True, validate_assignment=True, frozen=False
     )
 
-    # Internal attributes
-    _connection_pool: Optional[List["SnowflakeConnection"]] = (
-        None  # Use forward reference
-    )
+    _connection_pool: Optional[List["SnowflakeConnection"]] = None
     _pool_lock: Optional[asyncio.Lock] = None
     _thread_pool: Optional[ThreadPoolExecutor] = None
     _model_rebuilt: bool = False
@@ -112,14 +104,52 @@ class SnowflakeSearchTool(BaseTool):
     def __init__(self, **data):
         """Initialize SnowflakeSearchTool."""
         super().__init__(**data)
-        self._initialize()
+        self._initialize_snowflake()
 
-    def _initialize(self):
-        if not SNOWFLAKE_AVAILABLE:
-            return  # Snowflake is not installed
-        self._connection_pool = []
-        self._pool_lock = asyncio.Lock()
-        self._thread_pool = ThreadPoolExecutor(max_workers=self.pool_size)
+    def _initialize_snowflake(self) -> None:
+        try:
+            if SNOWFLAKE_AVAILABLE:
+                self._connection_pool = []
+                self._pool_lock = asyncio.Lock()
+                self._thread_pool = ThreadPoolExecutor(max_workers=self.pool_size)
+            else:
+                raise ImportError
+        except ImportError:
+            import click
+
+            if click.confirm(
+                "You are missing the 'snowflake-connector-python' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                try:
+                    subprocess.run(
+                        [
+                            "uv",
+                            "add",
+                            "cryptography",
+                            "snowflake-connector-python",
+                            "snowflake-sqlalchemy",
+                        ],
+                        check=True,
+                    )
+                    global snowflake, default_backend, serialization  # Needed to re-import after installation
+                    import snowflake.connector  # noqa
+                    from cryptography.hazmat.backends import default_backend  # noqa
+                    from cryptography.hazmat.primitives import serialization  # noqa
+
+                    global SNOWFLAKE_AVAILABLE
+                    SNOWFLAKE_AVAILABLE = True
+                    self._connection_pool = []
+                    self._pool_lock = asyncio.Lock()
+                    self._thread_pool = ThreadPoolExecutor(max_workers=self.pool_size)
+                except subprocess.CalledProcessError:
+                    raise ImportError("Failed to install Snowflake dependencies")
+            else:
+                raise ImportError(
+                    "Snowflake dependencies not found. Please install them by running "
+                    "`uv add cryptography snowflake-connector-python snowflake-sqlalchemy`"
+                )
 
     async def _get_connection(self) -> "SnowflakeConnection":
         """Get a connection from the pool or create a new one."""

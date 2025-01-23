@@ -51,19 +51,46 @@ class PatronusLocalEvaluatorTool(BaseTool):
         **kwargs: Any,
     ):
         super().__init__(**kwargs)
-        if PYPATRONUS_AVAILABLE:
-            self.client = patronus_client
-            self.evaluator = evaluator
-            self.evaluated_model_gold_answer = evaluated_model_gold_answer
-            self._generate_description()
-            print(
-                f"Updating evaluator and gold_answer to: {self.evaluator}, {self.evaluated_model_gold_answer}"
-            )
-        else:
-            raise ImportError(
-                "The 'patronus' package is not installed. "
-                "Please install it by running `uv add patronus` to use PatronusLocalEvaluatorTool."
-            )
+        self.evaluator = evaluator
+        self.evaluated_model_gold_answer = evaluated_model_gold_answer
+        self._initialize_patronus(patronus_client)
+
+    def _initialize_patronus(self, patronus_client: "Client") -> None:
+        try:
+            if PYPATRONUS_AVAILABLE:
+                self.client = patronus_client
+                self._generate_description()
+                print(
+                    f"Updating evaluator and gold_answer to: {self.evaluator}, {self.evaluated_model_gold_answer}"
+                )
+            else:
+                raise ImportError
+        except ImportError:
+            import click
+
+            if click.confirm(
+                "You are missing the 'patronus' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                try:
+                    subprocess.run(["uv", "add", "patronus"], check=True)
+                    global patronus  # Needed to re-import patronus after installation
+                    import patronus  # noqa
+
+                    global PYPATRONUS_AVAILABLE
+                    PYPATRONUS_AVAILABLE = True
+                    self.client = patronus_client
+                    self._generate_description()
+                    print(
+                        f"Updating evaluator and gold_answer to: {self.evaluator}, {self.evaluated_model_gold_answer}"
+                    )
+                except subprocess.CalledProcessError:
+                    raise ImportError("Failed to install 'patronus' package")
+            else:
+                raise ImportError(
+                    "`patronus` package not found, please run `uv add patronus`"
+                )
 
     def _run(
         self,
