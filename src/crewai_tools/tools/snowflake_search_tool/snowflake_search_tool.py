@@ -133,13 +133,7 @@ class SnowflakeSearchTool(BaseTool):
                         ],
                         check=True,
                     )
-                    global snowflake, default_backend, serialization  # Needed to re-import after installation
-                    import snowflake.connector  # noqa
-                    from cryptography.hazmat.backends import default_backend  # noqa
-                    from cryptography.hazmat.primitives import serialization  # noqa
 
-                    global SNOWFLAKE_AVAILABLE
-                    SNOWFLAKE_AVAILABLE = True
                     self._connection_pool = []
                     self._pool_lock = asyncio.Lock()
                     self._thread_pool = ThreadPoolExecutor(max_workers=self.pool_size)
@@ -153,13 +147,6 @@ class SnowflakeSearchTool(BaseTool):
 
     async def _get_connection(self) -> "SnowflakeConnection":
         """Get a connection from the pool or create a new one."""
-        if not SNOWFLAKE_AVAILABLE:
-            raise ImportError(
-                "The 'snowflake-connector-python' package is not installed. "
-                "Please install it by running `uv add cryptography snowflake-connector-python snowflake-sqlalchemy` "
-                "to use SnowflakeSearchTool."
-            )
-
         async with self._pool_lock:
             if not self._connection_pool:
                 conn = await asyncio.get_event_loop().run_in_executor(
@@ -199,12 +186,6 @@ class SnowflakeSearchTool(BaseTool):
         self, query: str, timeout: int = 300
     ) -> List[Dict[str, Any]]:
         """Execute a query with retries and return results."""
-        if not SNOWFLAKE_AVAILABLE:
-            raise ImportError(
-                "The 'snowflake-connector-python' package is not installed. "
-                "Please install it by running `uv add cryptography snowflake-connector-python snowflake-sqlalchemy` "
-                "to use SnowflakeSearchTool."
-            )
 
         if self.enable_caching:
             cache_key = self._get_cache_key(query, timeout)
@@ -249,12 +230,6 @@ class SnowflakeSearchTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         """Execute the search query."""
-        if not SNOWFLAKE_AVAILABLE:
-            raise ImportError(
-                "The 'snowflake-connector-python' package is not installed. "
-                "Please install it by running `uv add cryptography snowflake-connector-python snowflake-sqlalchemy` "
-                "to use SnowflakeSearchTool."
-            )
 
         try:
             # Override database/schema if provided

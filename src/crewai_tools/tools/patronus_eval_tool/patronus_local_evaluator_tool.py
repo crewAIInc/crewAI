@@ -75,11 +75,6 @@ class PatronusLocalEvaluatorTool(BaseTool):
 
                 try:
                     subprocess.run(["uv", "add", "patronus"], check=True)
-                    global patronus  # Needed to re-import patronus after installation
-                    import patronus  # noqa
-
-                    global PYPATRONUS_AVAILABLE
-                    PYPATRONUS_AVAILABLE = True
                     self.client = patronus_client
                     self._generate_description()
                     print(
@@ -96,12 +91,6 @@ class PatronusLocalEvaluatorTool(BaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
-        if not PYPATRONUS_AVAILABLE:
-            raise ImportError(
-                "The 'patronus' package is not installed. "
-                "Please install it by running `uv add patronus` to use PatronusLocalEvaluatorTool."
-            )
-
         evaluated_model_input = kwargs.get("evaluated_model_input")
         evaluated_model_output = kwargs.get("evaluated_model_output")
         evaluated_model_retrieved_context = kwargs.get(
