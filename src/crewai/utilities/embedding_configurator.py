@@ -142,9 +142,16 @@ class EmbeddingConfigurator:
             AmazonBedrockEmbeddingFunction,
         )
 
-        return AmazonBedrockEmbeddingFunction(
-            session=config.get("session"),
-        )
+        # Passing model_name to use model_name provide by user than using default. Added if/else for backward compatibility
+        if model_name==None:
+            return AmazonBedrockEmbeddingFunction(
+                session=config.get("session"),
+            )
+        else:
+            return AmazonBedrockEmbeddingFunction(
+                session=config.get("session"),
+                model_name=model_name
+            )
 
     @staticmethod
     def _configure_huggingface(config, model_name):
