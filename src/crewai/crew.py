@@ -57,9 +57,6 @@ except ImportError:
     agentops = None
 
 
-warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
-
-
 class Crew(BaseModel):
     """
     Represents a group of agents, defining how they should collaborate and the tasks they should perform.

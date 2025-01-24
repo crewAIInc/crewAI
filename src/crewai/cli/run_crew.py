@@ -11,6 +11,7 @@ def run_crew() -> None:
     """
     Run the crew by running a command in the UV environment.
     """
+    click.echo("Running crew hello...")
     command = ["uv", "run", "run_crew"]
     crewai_version = get_crewai_version()
     min_required_version = "0.71.0"
