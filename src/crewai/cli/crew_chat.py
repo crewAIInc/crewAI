@@ -1,16 +1,13 @@
-# Standard library
 import json
 import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-# Third-party
 import click
 import tomli
 from packaging import version
 
-# Local
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
 from crewai.crew import Crew
@@ -34,13 +31,12 @@ def check_conversational_crews_version(crewai_version: str, pyproject_data: dict
     """
     try:
         if version.parse(crewai_version) < version.parse(MIN_REQUIRED_VERSION):
-            if pyproject_data.get("tool", {}).get("poetry"):
-                click.secho(
-                    "You are using an older version of crewAI that doesn't support conversational crews. "
-                    "Run 'uv upgrade crewai' to get the latest version.",
-                    fg="red"
-                )
-                return False
+            click.secho(
+                "You are using an older version of crewAI that doesn't support conversational crews. "
+                "Run 'uv upgrade crewai' to get the latest version.",
+                fg="red"
+            )
+            return False
     except version.InvalidVersion:
         click.secho("Invalid crewAI version format detected", fg="red")
         return False
