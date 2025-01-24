@@ -239,8 +239,10 @@ class LLM:
                     "api_key": self.api_key,
                     "stream": False,
                     "tools": tools,
-                    **self.custom_params["custom_params"],
                 }
+
+                if self.custom_params:
+                    params.update(self.custom_params["custom_params"])
 
                 # Remove None values from params
                 params = {k: v for k, v in params.items() if v is not None}
