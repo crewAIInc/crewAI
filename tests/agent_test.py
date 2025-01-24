@@ -1635,11 +1635,12 @@ def test_agent_with_knowledge_sources_works_with_copy():
                 goal=agent.goal,
                 backstory=agent.backstory,
                 llm=agent.llm,
-                knowledge_sources=agent.knowledge_sources,
+                knowledge_sources=[string_source],
             )
 
             # Call copy method
             agent_copy = agent.copy()
+            print("agent_copy.knowledge_sources", agent_copy.knowledge_sources)
 
             # Verify the mock was called
             mock_copy.assert_called_once()
