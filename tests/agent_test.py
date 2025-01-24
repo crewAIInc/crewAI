@@ -1609,7 +1609,6 @@ def test_agent_with_knowledge_sources_works_with_copy():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    # Create a mock for KnowledgeStorage
     with patch(
         "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
     ) as MockKnowledge:
@@ -1628,26 +1627,9 @@ def test_agent_with_knowledge_sources_works_with_copy():
             knowledge_sources=[string_source],
         )
 
-        with patch.object(Agent, "copy") as mock_copy:
-            # Configure the mock to return a copy with the same attributes
-            mock_copy.return_value = Agent(
-                role=agent.role,
-                goal=agent.goal,
-                backstory=agent.backstory,
-                llm=agent.llm,
-                knowledge_sources=[string_source],
-            )
-
-            # Call copy method
-            agent_copy = agent.copy()
-            print("agent_copy.knowledge_sources", agent_copy.knowledge_sources)
-
-            # Verify the mock was called
-            mock_copy.assert_called_once()
-
-            # Verify the copied agent has the correct attributes
-            assert agent_copy.knowledge_sources == agent.knowledge_sources
-            assert isinstance(agent_copy.llm, LLM)
+        # Actually call copy instead of mocking it
+        agent_copy = agent.copy()
+        assert agent_copy.knowledge_sources == agent.knowledge_sources
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
