@@ -78,7 +78,6 @@ class BaseAgentTool(BaseTool):
                 description=task,
                 agent=target_agent,
                 expected_output=target_agent.i18n.slice("manager_request"),
-                context=context,
                 i18n=target_agent.i18n,
             )
             
@@ -91,6 +90,7 @@ class BaseAgentTool(BaseTool):
                 target_agent.tools or [],
             )
             
+            print("DEBUG CONTEXT: ", context)
             result = target_agent.execute_task(new_task, context, tools)
             
             print("\n=== Delegation Complete ===")

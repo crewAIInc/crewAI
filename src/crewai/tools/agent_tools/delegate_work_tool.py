@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 
@@ -11,10 +11,6 @@ class DelegateWorkToolSchema(BaseModel):
     coworker: str = Field(
         ..., description="The role/name of the coworker to delegate to"
     )
-
-    @field_validator("context")
-    def flatten(cls, v):
-        return " ".join(v) if isinstance(v, list) else v
 
 class DelegateWorkTool(BaseAgentTool):
     """Tool for delegating work to coworkers"""
