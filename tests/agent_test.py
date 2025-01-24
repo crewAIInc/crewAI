@@ -1606,22 +1606,30 @@ def test_agent_with_knowledge_sources():
 def test_agent_with_knowledge_sources_works_with_test():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
-    agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        llm=LLM(model="gpt-4o-mini"),
-        knowledge_sources=[string_source],
-    )
 
-    agent.create_agent_executor()
-    agent_copy = agent.copy()
+    with patch(
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+    ) as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
 
-    assert agent_copy.role == agent.role
-    assert agent_copy.goal == agent.goal
-    assert agent_copy.backstory == agent.backstory
-    assert agent_copy.knowledge_sources == agent.knowledge_sources
-    assert isinstance(agent_copy.llm, LLM)
+        agent = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
+
+        agent.create_agent_executor()
+        agent_copy = agent.copy()
+
+        # Test that all properties were copied correctly
+        assert agent_copy.role == agent.role
+        assert agent_copy.goal == agent.goal
+        assert agent_copy.backstory == agent.backstory
+        assert agent_copy.knowledge_sources == agent.knowledge_sources
+        assert isinstance(agent_copy.llm, LLM)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
