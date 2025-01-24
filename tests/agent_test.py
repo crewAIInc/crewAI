@@ -1603,6 +1603,7 @@ def test_agent_with_knowledge_sources():
         assert "red" in result.raw.lower()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 @patch("crewai.knowledge.storage.knowledge_storage.KnowledgeStorage")
 @patch.object(BaseAgent, "copy")
 def test_agent_with_knowledge_sources_works_with_copy(
