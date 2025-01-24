@@ -3,6 +3,7 @@ import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Union
 
+from litellm import AuthenticationError as LiteLLMAuthenticationError
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler
@@ -258,6 +259,9 @@ class Agent(BaseAgent):
                 }
             )["output"]
         except Exception as e:
+            if isinstance(e, LiteLLMAuthenticationError):
+                # Do not retry on authentication errors
+                raise e
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
                 raise e

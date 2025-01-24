@@ -1,0 +1,108 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "Return the name of a random
+      city in the world."}], "model": "gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '117'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=3UeEmz_rnmsoZxrVUv32u35gJOi766GDWNe5_RTjiPk-1736537376739-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.6
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.59.6
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AsZ6UtbaNSMpNU9VJKxvn52t5eJTq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1737568014,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"How about \\\"Lisbon\\\"? It\u2019s the
+      capital city of Portugal, known for its rich history and vibrant culture.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 18,\n    \"completion_tokens\":
+      24,\n    \"total_tokens\": 42,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 90615dbcaefb5cb1-RDU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 22 Jan 2025 17:46:55 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=pKr3NwXmTZN9rMSlKvEX40VPKbrxF93QwDNHunL2v8Y-1737568015-1.0.1.1-nR0EA7hYIwWpIBYUI53d9xQrUnl5iML6lgz4AGJW4ZGPBDxFma3PZ2cBhlr_hE7wKa5fV3r32eMu_rNWMXD.eA;
+        path=/; expires=Wed, 22-Jan-25 18:16:55 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=8NrWEBP3dDmc8p2.csR.EdsSwS8zFvzWI1kPICaK_fM-1737568015338-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '449'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999971'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_898373758d2eae3cd84814050b2588e3
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

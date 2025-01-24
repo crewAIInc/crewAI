@@ -38,7 +38,6 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import Tool
-from crewai.types.crew_chat import ChatInputs
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -85,6 +84,7 @@ class Crew(BaseModel):
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
         planning: Plan the crew execution and add the plan to the crew.
+        chat_llm: The language model used for orchestrating chat interactions with the crew.
     """
 
     __hash__ = object.__hash__  # type: ignore
