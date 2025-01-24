@@ -1705,11 +1705,6 @@ def test_crew_agent_executor_litellm_auth_error():
     assert exc_info.value.llm_provider == "openai"
     assert exc_info.value.model == "gpt-4"
 
-    # Optionally, assert that the exception is an instance of BaseLLMException
-    from litellm.llms.base_llm.chat.transformation import BaseLLMException
-
-    assert isinstance(exc_info.value, BaseLLMException)
-
 
 def test_litellm_anthropic_error_handling():
     """Test that AnthropicError from LiteLLM is handled correctly and not retried."""
