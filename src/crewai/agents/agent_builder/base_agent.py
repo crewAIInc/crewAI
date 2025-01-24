@@ -135,6 +135,10 @@ class BaseAgent(ABC, BaseModel):
         default=None,
         description="Knowledge sources for the agent.",
     )
+    custom_knowledge_storage: Optional[Any] = Field(
+        default=None,
+        description="Custom knowledge storage for the agent.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -272,9 +276,7 @@ class BaseAgent(ABC, BaseModel):
             **copied_data,
             llm=existing_llm,
             tools=self.tools,
-            knowledge_sources=self.knowledge_sources
-            if hasattr(self, "knowledge_sources")
-            else None,
+            knowledge_sources=getattr(self, "knowledge_sources", None),
         )
 
         return copied_agent
