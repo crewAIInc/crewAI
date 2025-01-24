@@ -1,19 +1,51 @@
+# Standard library
 import json
 import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+# Third-party
 import click
 import tomli
 from packaging import version
 
+# Local
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
+
+
+MIN_REQUIRED_VERSION = "0.98.0"
+
+
+def check_conversational_crews_version(crewai_version: str, pyproject_data: dict) -> bool:
+    """
+    Check if the installed crewAI version supports conversational crews.
+    
+    Args:
+        crewai_version: The current version of crewAI
+        pyproject_data: Dictionary containing pyproject.toml data
+        
+    Returns:
+        bool: True if version check passes, False otherwise
+    """
+    try:
+        if version.parse(crewai_version) < version.parse(MIN_REQUIRED_VERSION):
+            if pyproject_data.get("tool", {}).get("poetry"):
+                click.secho(
+                    "You are using an older version of crewAI that doesn't support conversational crews. "
+                    "Run 'uv upgrade crewai' to get the latest version.",
+                    fg="red"
+                )
+                return False
+    except version.InvalidVersion:
+        click.secho("Invalid crewAI version format detected", fg="red")
+        return False
+    return True
 
 
 def run_chat():
@@ -23,18 +55,9 @@ def run_chat():
     Exits if crew_name or crew_description are missing.
     """
     crewai_version = get_crewai_version()
-    min_required_version = "0.98.0"
-
     pyproject_data = read_toml()
 
-    if pyproject_data.get("tool", {}).get("poetry") and (
-        version.parse(crewai_version) < version.parse(min_required_version)
-    ):
-        click.secho(
-            f"You are running an older version of crewAI ({crewai_version}) that uses poetry pyproject.toml. "
-            f"Please run `crewai update` to update your pyproject.toml to use uv.",
-            fg="red",
-        )
+    if not check_conversational_crews_version(crewai_version, pyproject_data):
         return
     crew, crew_name = load_crew_and_name()
     chat_llm = initialize_chat_llm(crew)
