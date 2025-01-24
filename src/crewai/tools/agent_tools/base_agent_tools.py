@@ -45,80 +45,138 @@ class BaseAgentTool(BaseTool):
             if is_list:
                 coworker = coworker[1:-1].split(",")[0]
         return coworker
-
+    
     def _execute(
         self,
         agent_name: Optional[str],
         task: str,
         context: Optional[str] = None
     ) -> str:
-        """
-        Execute delegation to an agent with case-insensitive and whitespace-tolerant matching.
-
-        Args:
-            agent_name: Name/role of the agent to delegate to (case-insensitive)
-            task: The specific question or task to delegate
-            context: Optional additional context for the task execution
-
-        Returns:
-            str: The execution result from the delegated agent or an error message
-                 if the agent cannot be found
-        """
         try:
+            print("\n=== Delegating Work ===")
+            
             if agent_name is None:
                 agent_name = ""
                 logger.debug("No agent name provided, using empty string")
-
-            # It is important to remove the quotes from the agent name.
-            # The reason we have to do this is because less-powerful LLM's
-            # have difficulty producing valid JSON.
-            # As a result, we end up with invalid JSON that is truncated like this:
-            # {"task": "....", "coworker": "....
-            # when it should look like this:
-            # {"task": "....", "coworker": "...."}
             sanitized_name = self.sanitize_agent_name(agent_name)
             logger.debug(f"Sanitized agent name from '{agent_name}' to '{sanitized_name}'")
-
-            available_agents = [agent.role for agent in self.agents]
-            logger.debug(f"Available agents: {available_agents}")
-
-            agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
-                available_agent
-                for available_agent in self.agents
-                if self.sanitize_agent_name(available_agent.role) == sanitized_name
-            ]
-            logger.debug(f"Found {len(agent)} matching agents for role '{sanitized_name}'")
-        except (AttributeError, ValueError) as e:
-            # Handle specific exceptions that might occur during role name processing
-            return self.i18n.errors("agent_tool_unexisting_coworker").format(
-                coworkers="\n".join(
-                    [f"- {self.sanitize_agent_name(agent.role)}" for agent in self.agents]
-                ),
-                error=str(e)
+            
+            target_agent = next(
+                (agent for agent in self.agents if self.sanitize_agent_name(agent.role) == sanitized_name),
+                None,
             )
-
-        if not agent:
-            # No matching agent found after sanitization
-            return self.i18n.errors("agent_tool_unexisting_coworker").format(
-                coworkers="\n".join(
-                    [f"- {self.sanitize_agent_name(agent.role)}" for agent in self.agents]
-                ),
-                error=f"No agent found with role '{sanitized_name}'"
-            )
-
-        agent = agent[0]
-        try:
-            task_with_assigned_agent = Task(
+            
+            if not target_agent:
+                return self.i18n.errors("agent_tool_unexisting_coworker").format(
+                    coworkers="\n".join(
+                        [f"- {self.sanitize_agent_name(agent.role)}" for agent in self.agents]
+                    ),
+                    error=f"No agent found with role '{sanitized_name}'"
+                )
+            
+            new_task = Task(
                 description=task,
-                agent=agent,
-                expected_output=agent.i18n.slice("manager_request"),
-                i18n=agent.i18n,
+                agent=target_agent,
+                expected_output=target_agent.i18n.slice("manager_request"),
+                context=context,
+                i18n=target_agent.i18n,
             )
-            logger.debug(f"Created task for agent '{self.sanitize_agent_name(agent.role)}': {task}")
-            return agent.execute_task(task_with_assigned_agent, context)
+            
+            print(f"Delegated From: {agent_name}")
+            print(f"Delegated To: {target_agent.role}")
+            
+            tools = target_agent.crew._prepare_tools(
+                target_agent,
+                new_task,
+                target_agent.tools or [],
+            )
+            
+            result = target_agent.execute_task(new_task, context, tools)
+            
+            print("\n=== Delegation Complete ===")
+            
+            return result
         except Exception as e:
-            # Handle task creation or execution errors
             return self.i18n.errors("agent_tool_execution_error").format(
-                agent_role=self.sanitize_agent_name(agent.role),
+                agent_role=sanitized_name,
                 error=str(e)
             )
+
+    # def _execute(
+    #     self,
+    #     agent_name: Optional[str],
+    #     task: str,
+    #     context: Optional[str] = None
+    # ) -> str:
+    #     """
+    #     Execute delegation to an agent with case-insensitive and whitespace-tolerant matching.
+
+    #     Args:
+    #         agent_name: Name/role of the agent to delegate to (case-insensitive)
+    #         task: The specific question or task to delegate
+    #         context: Optional additional context for the task execution
+
+    #     Returns:
+    #         str: The execution result from the delegated agent or an error message
+    #              if the agent cannot be found
+    #     """
+    #     try:
+    #         print("\n=== Delegating Work ===")
+            
+    #         if agent_name is None:
+    #             agent_name = ""
+    #             logger.debug("No agent name provided, using empty string")
+
+    #         # It is important to remove the quotes from the agent name.
+    #         # The reason we have to do this is because less-powerful LLM's
+    #         # have difficulty producing valid JSON.
+    #         # As a result, we end up with invalid JSON that is truncated like this:
+    #         # {"task": "....", "coworker": "....
+    #         # when it should look like this:
+    #         # {"task": "....", "coworker": "...."}
+    #         sanitized_name = self.sanitize_agent_name(agent_name)
+    #         logger.debug(f"Sanitized agent name from '{agent_name}' to '{sanitized_name}'")
+
+    #         available_agents = [agent.role for agent in self.agents]
+    #         logger.debug(f"Available agents: {available_agents}")
+
+    #         agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
+    #             available_agent
+    #             for available_agent in self.agents
+    #             if self.sanitize_agent_name(available_agent.role) == sanitized_name
+    #         ]
+    #         logger.debug(f"Found {len(agent)} matching agents for role '{sanitized_name}'")
+    #     except (AttributeError, ValueError) as e:
+    #         # Handle specific exceptions that might occur during role name processing
+    #         return self.i18n.errors("agent_tool_unexisting_coworker").format(
+    #             coworkers="\n".join(
+    #                 [f"- {self.sanitize_agent_name(agent.role)}" for agent in self.agents]
+    #             ),
+    #             error=str(e)
+    #         )
+
+    #     if not agent:
+    #         # No matching agent found after sanitization
+    #         return self.i18n.errors("agent_tool_unexisting_coworker").format(
+    #             coworkers="\n".join(
+    #                 [f"- {self.sanitize_agent_name(agent.role)}" for agent in self.agents]
+    #             ),
+    #             error=f"No agent found with role '{sanitized_name}'"
+    #         )
+
+    #     agent = agent[0]
+    #     try:
+    #         task_with_assigned_agent = Task(
+    #             description=task,
+    #             agent=agent,
+    #             expected_output=agent.i18n.slice("manager_request"),
+    #             i18n=agent.i18n,
+    #         )
+    #         logger.debug(f"Created task for agent '{self.sanitize_agent_name(agent.role)}': {task}")
+    #         return agent.execute_task(task_with_assigned_agent, context)
+    #     except Exception as e:
+    #         # Handle task creation or execution errors
+    #         return self.i18n.errors("agent_tool_execution_error").format(
+    #             agent_role=self.sanitize_agent_name(agent.role),
+    #             error=str(e)
+    #         )
