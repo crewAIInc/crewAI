@@ -1603,6 +1603,7 @@ def test_agent_with_knowledge_sources():
         assert "red" in result.raw.lower()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources_works_with_copy():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
