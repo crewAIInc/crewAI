@@ -1604,42 +1604,35 @@ def test_agent_with_knowledge_sources():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@patch("crewai.knowledge.storage.knowledge_storage.KnowledgeStorage")
-@patch.object(BaseAgent, "copy")
-def test_agent_with_knowledge_sources_works_with_copy(
-    mock_agent_copy,
-    MockKnowledgeStorage,
-):
+def test_agent_with_knowledge_sources_works_with_copy():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
-    mock_knowledge_instance = MockKnowledgeStorage.return_value
-    mock_knowledge_instance.sources = [string_source]
-    mock_knowledge_instance.query.return_value = [{"content": content}]
+    with patch(
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+    ) as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
 
-    agent = Agent(
-        role="Information Agent",
-        goal="Provide information based on knowledge sources",
-        backstory="You have access to specific knowledge sources.",
-        knowledge_sources=[string_source],
-    )
+        agent = Agent(
+            role="Information Agent",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
 
-    # Configure the mock to return a copy of the agent
-    mock_agent_copy.return_value = Agent(
-        role=agent.role,
-        goal=agent.goal,
-        backstory=agent.backstory,
-        knowledge_sources=agent.knowledge_sources,
-    )
+        agent_copy = agent.copy()
+        with patch(
+            "crewai.agents.agent_builder.base_agent.BaseAgent.copy",
+        ) as mock_agent_copy:
+            mock_agent_copy.return_value = agent_copy
 
-    agent_copy = agent.copy()
-
-    # Add assertions to verify copy behavior
-    assert mock_agent_copy.call_count == 1
-    assert agent_copy.role == agent.role
-    assert agent_copy.goal == agent.goal
-    assert agent_copy.backstory == agent.backstory
-    assert agent_copy.knowledge_sources == agent.knowledge_sources
-    assert isinstance(agent_copy.llm, LLM)
+            assert agent_copy.role == agent.role
+            assert agent_copy.goal == agent.goal
+            assert agent_copy.backstory == agent.backstory
+            assert agent_copy.knowledge_sources == agent.knowledge_sources
+            assert isinstance(agent_copy.llm, LLM)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
