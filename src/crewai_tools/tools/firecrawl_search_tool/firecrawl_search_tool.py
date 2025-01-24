@@ -1,13 +1,18 @@
-from typing import Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-# Type checking import
+if TYPE_CHECKING:
+    from firecrawl import FirecrawlApp
+
+
 try:
     from firecrawl import FirecrawlApp
+
+    FIRECRAWL_AVAILABLE = True
 except ImportError:
-    FirecrawlApp = Any
+    FIRECRAWL_AVAILABLE = False
 
 
 class FirecrawlSearchToolSchema(BaseModel):
@@ -51,9 +56,10 @@ class FirecrawlSearchTool(BaseTool):
 
     def _initialize_firecrawl(self) -> None:
         try:
-            from firecrawl import FirecrawlApp  # type: ignore
-
-            self.firecrawl = FirecrawlApp(api_key=self.api_key)
+            if FIRECRAWL_AVAILABLE:
+                self._firecrawl = FirecrawlApp(api_key=self.api_key)
+            else:
+                raise ImportError
         except ImportError:
             import click
 
