@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import click
-from packaging import version
 import tomli
+from packaging import version
 
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
