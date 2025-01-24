@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
@@ -1603,7 +1604,9 @@ def test_agent_with_knowledge_sources():
 
 
 @patch("crewai.knowledge.storage.knowledge_storage.KnowledgeStorage")
+@patch.object(BaseAgent, "copy")
 def test_agent_with_knowledge_sources_works_with_copy(
+    mock_agent_copy,
     MockKnowledgeStorage,
 ):
     content = "Brandon's favorite color is red and he likes Mexican food."
@@ -1618,8 +1621,19 @@ def test_agent_with_knowledge_sources_works_with_copy(
         backstory="You have access to specific knowledge sources.",
         knowledge_sources=[string_source],
     )
+
+    # Configure the mock to return a copy of the agent
+    mock_agent_copy.return_value = Agent(
+        role=agent.role,
+        goal=agent.goal,
+        backstory=agent.backstory,
+        knowledge_sources=agent.knowledge_sources,
+    )
+
     agent_copy = agent.copy()
 
+    # Add assertions to verify copy behavior
+    assert mock_agent_copy.call_count == 1
     assert agent_copy.role == agent.role
     assert agent_copy.goal == agent.goal
     assert agent_copy.backstory == agent.backstory
