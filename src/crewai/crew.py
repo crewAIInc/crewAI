@@ -4,6 +4,7 @@ import re
 import uuid
 import warnings
 from concurrent.futures import Future
+from copy import copy as shallow_copy
 from hashlib import md5
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
@@ -1044,6 +1045,8 @@ class Crew(BaseModel):
         task_mapping = {}
 
         cloned_tasks = []
+        knowledge_sources_copied = shallow_copy(self.knowledge_sources)
+
         for task in self.tasks:
             cloned_task = task.copy(cloned_agents, task_mapping)
             cloned_tasks.append(cloned_task)
@@ -1067,9 +1070,7 @@ class Crew(BaseModel):
             **copied_data,
             agents=cloned_agents,
             tasks=cloned_tasks,
-            knowledge_sources=self.knowledge_sources
-            if hasattr(self, "knowledge_sources")
-            else None,
+            knowledge_sources=knowledge_sources_copied,
         )
 
         return copied_crew

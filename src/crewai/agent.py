@@ -165,7 +165,7 @@ class Agent(BaseAgent):
                         sources=self.knowledge_sources,
                         embedder_config=self.embedder_config,
                         collection_name=knowledge_agent_name,
-                        storage=self.custom_knowledge_storage or None,
+                        storage=self.knowledge_storage or None,
                     )
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")

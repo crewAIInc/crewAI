@@ -135,7 +135,7 @@ class BaseAgent(ABC, BaseModel):
         default=None,
         description="Knowledge sources for the agent.",
     )
-    custom_knowledge_storage: Optional[Any] = Field(
+    knowledge_storage: Optional[Any] = Field(
         default=None,
         description="Custom knowledge storage for the agent.",
     )
@@ -270,13 +270,14 @@ class BaseAgent(ABC, BaseModel):
 
         # Copy llm and clear callbacks
         existing_llm = shallow_copy(self.llm)
+        existing_knowledge_sources = shallow_copy(self.knowledge_sources)
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
         copied_agent = type(self)(
             **copied_data,
             llm=existing_llm,
             tools=self.tools,
-            knowledge_sources=getattr(self, "knowledge_sources", None),
+            knowledge_sources=existing_knowledge_sources,
         )
 
         return copied_agent
