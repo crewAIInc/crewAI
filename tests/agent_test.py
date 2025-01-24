@@ -1638,13 +1638,13 @@ def test_litellm_auth_error_handling():
 
 
 def test_crew_agent_executor_litellm_auth_error():
-    """Test that CrewAgentExecutor properly identifies and handles LiteLLM authentication errors."""
+    """Test that CrewAgentExecutor handles LiteLLM authentication errors by raising them."""
     from litellm import AuthenticationError as LiteLLMAuthenticationError
 
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.utilities import Printer
 
-    # Create an agent and executor with max_retry_limit=0
+    # Create an agent and executor
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1691,7 +1691,7 @@ def test_crew_agent_executor_litellm_auth_error():
 
     # Verify error handling
     mock_printer.assert_any_call(
-        content="Authentication error with litellm occurred. Please check your API key and configuration.",
+        content="An unknown error occurred. Please check the details below.",
         color="red",
     )
     mock_printer.assert_any_call(
