@@ -5,15 +5,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import click
-import tomli
 from packaging import version
+import tomli
 
+from crewai.cli.utils import read_toml
+from crewai.cli.version import get_crewai_version
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
-from crewai.cli.version import get_crewai_version
-from crewai.cli.utils import read_toml
 
 
 def run_chat():
