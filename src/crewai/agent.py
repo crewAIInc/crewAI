@@ -2,7 +2,6 @@ import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from litellm.llms.base_llm.chat.transformation import BaseLLMException
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler
@@ -260,7 +259,7 @@ class Agent(BaseAgent):
                 }
             )["output"]
         except Exception as e:
-            if isinstance(e, BaseLLMException):
+            if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
                 raise e
             self._times_executed += 1

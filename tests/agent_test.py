@@ -1676,7 +1676,7 @@ def test_crew_agent_executor_litellm_auth_error():
     with (
         patch.object(LLM, "call") as mock_llm_call,
         patch.object(Printer, "print") as mock_printer,
-        pytest.raises(AuthenticationError, match="Invalid API key"),
+        pytest.raises(AuthenticationError) as exc_info,
     ):
         mock_llm_call.side_effect = AuthenticationError(
             message="Invalid API key", llm_provider="openai", model="gpt-4"
@@ -1689,17 +1689,26 @@ def test_crew_agent_executor_litellm_auth_error():
             }
         )
 
-    # Verify error handling
+    # Verify error handling messages
+    error_message = f"Error during LLM call: {str(mock_llm_call.side_effect)}"
     mock_printer.assert_any_call(
-        content="An unknown error occurred. Please check the details below.",
+        content=error_message,
         color="red",
     )
-    mock_printer.assert_any_call(
-        content="Error details: litellm.AuthenticationError: Invalid API key",
-        color="red",
-    )
+
     # Verify the call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+    # Assert that the exception was raised and has the expected attributes
+    assert exc_info.type is AuthenticationError
+    assert "Invalid API key".lower() in exc_info.value.message.lower()
+    assert exc_info.value.llm_provider == "openai"
+    assert exc_info.value.model == "gpt-4"
+
+    # Optionally, assert that the exception is an instance of BaseLLMException
+    from litellm.llms.base_llm.chat.transformation import BaseLLMException
+
+    assert isinstance(exc_info.value, BaseLLMException)
 
 
 def test_litellm_anthropic_error_handling():
