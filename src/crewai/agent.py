@@ -262,8 +262,8 @@ class Agent(BaseAgent):
                 }
             )["output"]
         except Exception as e:
-            if isinstance(e, LiteLLMAuthenticationError):
-                # Do not retry on authentication errors
+            if e.__class__.__module__.startswith("litellm.exceptions"):
+                # Do not retry on litellm errors
                 raise e
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:

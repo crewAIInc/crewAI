@@ -1700,3 +1700,38 @@ def test_crew_agent_executor_litellm_auth_error():
     )
     # Verify the call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+
+def test_litellm_anthropic_error_handling():
+    """Test that AnthropicError from LiteLLM is handled correctly and not retried."""
+    from litellm.llms.anthropic.common_utils import AnthropicError
+
+    # Create an agent with a mocked LLM that uses an Anthropic model
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="claude-3.5-sonnet-20240620"), 
+        max_retry_limit=0,
+    )
+
+    # Create a task
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    # Mock the LLM call to raise AnthropicError
+    with (
+        patch.object(LLM, "call") as mock_llm_call,
+        pytest.raises(AnthropicError, match="Test Anthropic error"),
+    ):
+        mock_llm_call.side_effect = AnthropicError(
+            status_code=500,
+            message="Test Anthropic error",
+        )
+        agent.execute_task(task)
+
+    # Verify the LLM call was only made once (no retries)
+    mock_llm_call.assert_called_once()
