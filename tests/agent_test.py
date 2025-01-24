@@ -1600,3 +1600,25 @@ def test_agent_with_knowledge_sources():
 
         # Assert that the agent provides the correct information
         assert "red" in result.raw.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_works_with_test():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-4o-mini"),
+        knowledge_sources=[string_source],
+    )
+
+    agent.create_agent_executor()
+    agent_copy = agent.copy()
+
+    assert agent_copy.role == agent.role
+    assert agent_copy.goal == agent.goal
+    assert agent_copy.backstory == agent.backstory
+    assert agent_copy.knowledge_sources == agent.knowledge_sources
+    assert isinstance(agent_copy.llm, LLM)
