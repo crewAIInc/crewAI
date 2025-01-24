@@ -1045,7 +1045,7 @@ class Crew(BaseModel):
         task_mapping = {}
 
         cloned_tasks = []
-        knowledge_sources_copied = shallow_copy(self.knowledge_sources)
+        existing_knowledge_sources = shallow_copy(self.knowledge_sources)
 
         for task in self.tasks:
             cloned_task = task.copy(cloned_agents, task_mapping)
@@ -1070,7 +1070,7 @@ class Crew(BaseModel):
             **copied_data,
             agents=cloned_agents,
             tasks=cloned_tasks,
-            knowledge_sources=knowledge_sources_copied,
+            knowledge_sources=existing_knowledge_sources,
         )
 
         return copied_crew
