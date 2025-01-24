@@ -6,11 +6,14 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import click
 import tomli
+from packaging import version
 
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
+from crewai.cli.version import get_crewai_version
+from crewai.cli.utils import read_toml
 
 
 def run_chat():
@@ -19,6 +22,20 @@ def run_chat():
     Incorporates crew_name, crew_description, and input fields to build a tool schema.
     Exits if crew_name or crew_description are missing.
     """
+    crewai_version = get_crewai_version()
+    min_required_version = "0.98.0"
+
+    pyproject_data = read_toml()
+
+    if pyproject_data.get("tool", {}).get("poetry") and (
+        version.parse(crewai_version) < version.parse(min_required_version)
+    ):
+        click.secho(
+            f"You are running an older version of crewAI ({crewai_version}) that uses poetry pyproject.toml. "
+            f"Please run `crewai update` to update your pyproject.toml to use uv.",
+            fg="red",
+        )
+        return
     crew, crew_name = load_crew_and_name()
     chat_llm = initialize_chat_llm(crew)
     if not chat_llm:
