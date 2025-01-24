@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from litellm.exceptions import AuthenticationError as LiteLLMAuthenticationError
+from litellm.llms.base_llm.chat.transformation import BaseLLMException
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -142,10 +143,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._invoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text, role="assistant")
 
-            except OutputParserException as e:
-                formatted_answer = self._handle_output_parser_exception(e)
-
             except Exception as e:
+                if isinstance(e, BaseLLMException):
+                    # Stop execution on litellm errors
+                    raise e
                 if self._is_context_length_exceeded(e):
                     self._handle_context_length()
                     continue
