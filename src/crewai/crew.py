@@ -868,7 +868,11 @@ class Crew(BaseModel):
         #         tools, task.agent, agents_for_delegation
         #     )
         # return tools
+        print(f"Current agent: {task.agent.role}")
+        print(f"Allow delegation: {task.agent.allow_delegation}")
+        print(f"Allowed agents: {task.agent.allowed_agents}")
         if not task.agent or not task.agent.allow_delegation:
+            print("Delegation not allowed for this agent")
             return tools
         
         agents_for_delegation = []
@@ -877,6 +881,7 @@ class Crew(BaseModel):
                 continue
             if task.agent.allowed_agents is None or agent.role in task.agent.allowed_agents:
                 agents_for_delegation.append(agent)
+                print(f"Added {agent.role} to delegation list")
         if agents_for_delegation:
             if not tools:
                 tools = []
