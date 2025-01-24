@@ -18,7 +18,6 @@ from crewai.llm import LLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
 
-
 MIN_REQUIRED_VERSION = "0.98.0"
 
 
