@@ -149,33 +149,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 if self._is_context_length_exceeded(e):
                     self._handle_context_length()
                     continue
-                elif self._is_litellm_authentication_error(e):
-                    self._handle_litellm_auth_error(e)
-                    raise e
                 else:
-                    self._printer.print(
-                        content=f"Unhandled exception: {e}",
-                        color="red",
-                    )
+                    self._handle_unknown_error(e)
+                    raise e
             finally:
                 self.iterations += 1
 
         self._show_logs(formatted_answer)
         return formatted_answer
 
-    def _is_litellm_authentication_error(self, exception: Exception) -> bool:
-        """Check if the exception is a litellm authentication error."""
-        if LiteLLMAuthenticationError and isinstance(
-            exception, LiteLLMAuthenticationError
-        ):
-            return True
-
-        return False
-
-    def _handle_litellm_auth_error(self, exception: Exception) -> None:
-        """Handle litellm authentication error by informing the user and exiting."""
+    def _handle_unknown_error(self, exception: Exception) -> None:
+        """Handle unknown errors by informing the user."""
         self._printer.print(
-            content="Authentication error with litellm occurred. Please check your API key and configuration.",
+            content="An unknown error occurred. Please check the details below.",
             color="red",
         )
         self._printer.print(
