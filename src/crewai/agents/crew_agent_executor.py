@@ -3,8 +3,6 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from litellm.exceptions import AuthenticationError as LiteLLMAuthenticationError
-
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import (
@@ -103,7 +101,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             formatted_answer = self._invoke_loop()
         except Exception as e:
-            raise e
+            if e.__class__.__module__.startswith("litellm"):
+                # Do not retry on litellm errors
+                raise e
+            else:
+                self._handle_unknown_error(e)
+                raise e
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
@@ -146,36 +149,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 formatted_answer = self._handle_output_parser_exception(e)
 
             except Exception as e:
+                if e.__class__.__module__.startswith("litellm"):
+                    # Do not retry on litellm errors
+                    raise e
                 if self._is_context_length_exceeded(e):
                     self._handle_context_length()
                     continue
-                elif self._is_litellm_authentication_error(e):
-                    self._handle_litellm_auth_error(e)
-                    raise e
                 else:
-                    self._printer.print(
-                        content=f"Unhandled exception: {e}",
-                        color="red",
-                    )
+                    self._handle_unknown_error(e)
+                    raise e
             finally:
                 self.iterations += 1
 
         self._show_logs(formatted_answer)
         return formatted_answer
 
-    def _is_litellm_authentication_error(self, exception: Exception) -> bool:
-        """Check if the exception is a litellm authentication error."""
-        if LiteLLMAuthenticationError and isinstance(
-            exception, LiteLLMAuthenticationError
-        ):
-            return True
-
-        return False
-
-    def _handle_litellm_auth_error(self, exception: Exception) -> None:
-        """Handle litellm authentication error by informing the user and exiting."""
+    def _handle_unknown_error(self, exception: Exception) -> None:
+        """Handle unknown errors by informing the user."""
         self._printer.print(
-            content="Authentication error with litellm occurred. Please check your API key and configuration.",
+            content="An unknown error occurred. Please check the details below.",
             color="red",
         )
         self._printer.print(
