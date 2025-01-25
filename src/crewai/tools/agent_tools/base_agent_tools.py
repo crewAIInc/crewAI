@@ -90,7 +90,7 @@ class BaseAgentTool(BaseTool):
             result = target_agent.execute_task(new_task, context, tools)
             print("\n=== Delegation Complete ===")
             
-            return f"Task delegated to and completed by {target_agent.role}. Result: {result}"
+            return result
         except Exception as e:
             return self.i18n.errors("agent_tool_execution_error").format(
                 agent_role=sanitized_name,

@@ -707,7 +707,7 @@ class Crew(BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
-
+        print("DEBUG: EXECUTE TASKS CALLED")
         task_outputs: List[TaskOutput] = []
         futures: List[Tuple[Task, Future[TaskOutput], int]] = []
         last_sync_output: Optional[TaskOutput] = None
