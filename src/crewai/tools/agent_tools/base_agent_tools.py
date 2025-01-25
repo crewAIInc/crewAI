@@ -59,8 +59,6 @@ class BaseAgentTool(BaseTool):
                 agent_name = ""
                 logger.debug("No agent name provided, using empty string")
             sanitized_name = self.sanitize_agent_name(agent_name)
-            logger.debug(f"Sanitized agent name from '{agent_name}' to '{sanitized_name}'")
-            
             target_agent = next(
                 (agent for agent in self.agents if self.sanitize_agent_name(agent.role) == sanitized_name),
                 None,
@@ -73,6 +71,8 @@ class BaseAgentTool(BaseTool):
                     ),
                     error=f"No agent found with role '{sanitized_name}'"
                 )
+                
+            print(f"Delegating task to: {target_agent.role}")
             
             new_task = Task(
                 description=task,
@@ -81,27 +81,22 @@ class BaseAgentTool(BaseTool):
                 i18n=target_agent.i18n,
             )
             
-            print(f"Delegated From: {agent_name}")
-            print(f"Delegated To: {target_agent.role}")
-            
             tools = target_agent.crew._prepare_tools(
                 target_agent,
                 new_task,
                 target_agent.tools or [],
             )
             
-            print("DEBUG CONTEXT: ", context)
             result = target_agent.execute_task(new_task, context, tools)
-            
             print("\n=== Delegation Complete ===")
             
-            return result
+            return f"Task delegated to and completed by {target_agent.role}. Result: {result}"
         except Exception as e:
             return self.i18n.errors("agent_tool_execution_error").format(
                 agent_role=sanitized_name,
                 error=str(e)
             )
-
+    
     # def _execute(
     #     self,
     #     agent_name: Optional[str],
