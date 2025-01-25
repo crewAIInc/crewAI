@@ -18,23 +18,25 @@ from crewai.utilities.llm_utils import create_llm
 MIN_REQUIRED_VERSION = "0.98.0"
 
 
-def check_conversational_crews_version(crewai_version: str, pyproject_data: dict) -> bool:
+def check_conversational_crews_version(
+    crewai_version: str, pyproject_data: dict
+) -> bool:
     """
     Check if the installed crewAI version supports conversational crews.
-    
+
     Args:
         crewai_version: The current version of crewAI
         pyproject_data: Dictionary containing pyproject.toml data
-        
+
     Returns:
         bool: True if version check passes, False otherwise
     """
     try:
         if version.parse(crewai_version) < version.parse(MIN_REQUIRED_VERSION):
             click.secho(
-                "You are using an older version of crewAI that doesn't support conversational crews. "
+                f"You are using an older version {crewai_version} of crewAI that doesn't support conversational crews. "
                 "Run 'uv upgrade crewai' to get the latest version.",
-                fg="red"
+                fg="red",
             )
             return False
     except version.InvalidVersion:
