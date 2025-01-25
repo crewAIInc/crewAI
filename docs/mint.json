@@ -130,6 +130,7 @@
         "tools/firecrawlscrapewebsitetool",
         "tools/firecrawlsearchtool",
         "tools/githubsearchtool",
+        "tools/scrapegraphtool",
         "tools/serperdevtool",
         "tools/jsonsearchtool",
         "tools/mdxsearchtool",
