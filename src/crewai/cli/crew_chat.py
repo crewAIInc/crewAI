@@ -18,14 +18,16 @@ from crewai.utilities.llm_utils import create_llm
 MIN_REQUIRED_VERSION = "0.98.0"
 
 
-def check_conversational_crews_version(crewai_version: str, pyproject_data: dict) -> bool:
+def check_conversational_crews_version(
+    crewai_version: str, pyproject_data: dict
+) -> bool:
     """
     Check if the installed crewAI version supports conversational crews.
-    
+
     Args:
         crewai_version: The current version of crewAI
         pyproject_data: Dictionary containing pyproject.toml data
-        
+
     Returns:
         bool: True if version check passes, False otherwise
     """
@@ -34,7 +36,7 @@ def check_conversational_crews_version(crewai_version: str, pyproject_data: dict
             click.secho(
                 "You are using an older version of crewAI that doesn't support conversational crews. "
                 "Run 'uv upgrade crewai' to get the latest version.",
-                fg="red"
+                fg="red",
             )
             return False
     except version.InvalidVersion:
@@ -63,11 +65,18 @@ def run_chat():
     crew_tool_schema = generate_crew_tool_schema(crew_chat_inputs)
     system_message = build_system_message(crew_chat_inputs)
 
+    # Indicate that the crew is being analyzed
+    click.secho("\nAnalyzing crew and analyzing required inputs...", fg="cyan")
+
     # Call the LLM to generate the introductory message
     introductory_message = chat_llm.call(
         messages=[{"role": "system", "content": system_message}]
     )
-    click.secho(f"\nAssistant: {introductory_message}\n", fg="green")
+
+    # Indicate that the analysis is complete
+    click.secho("Finished analyzing crew.\n", fg="cyan")
+
+    click.secho(f"Assistant: {introductory_message}\n", fg="green")
 
     messages = [
         {"role": "system", "content": system_message},
@@ -137,16 +146,58 @@ def create_tool_function(crew: Crew, messages: List[Dict[str, str]]) -> Any:
     return run_crew_tool_with_messages
 
 
+def flush_input():
+    """Flush any pending input from the user."""
+    import platform
+    import sys
+
+    if platform.system() == "Windows":
+        # Windows platform
+        import msvcrt
+
+        while msvcrt.kbhit():
+            msvcrt.getch()
+    else:
+        # Unix-like platforms (Linux, macOS)
+        import termios
+
+        termios.tcflush(sys.stdin, termios.TCIFLUSH)
+
+
 def chat_loop(chat_llm, messages, crew_tool_schema, available_functions):
     """Main chat loop for interacting with the user."""
     while True:
         try:
-            user_input = click.prompt("You", type=str)
+            # Flush any pending input before accepting new input
+            flush_input()
+
+            click.echo(
+                "\nYou (type your message below. Press 'Enter' twice when you're done):"
+            )
+            user_input_lines = []
+            while True:
+                line = input()
+                if line == "":
+                    break
+                user_input_lines.append(line)
+            user_input = "\n".join(user_input_lines)
+
+            if not user_input.strip():
+                click.echo(
+                    "Empty message. Please provide input or type 'exit' to quit."
+                )
+                continue
             if user_input.strip().lower() in ["exit", "quit"]:
                 click.echo("Exiting chat. Goodbye!")
                 break
 
             messages.append({"role": "user", "content": user_input})
+
+            click.secho(
+                "\nAssistant is processing your input. Please wait...", fg="cyan"
+            )
+
+            # Process assistant's response
             final_response = chat_llm.call(
                 messages=messages,
                 tools=[crew_tool_schema],
