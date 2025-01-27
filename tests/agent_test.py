@@ -1623,7 +1623,7 @@ def test_agent_with_knowledge_sources_works_with_copy():
             role="Information Agent",
             goal="Provide information based on knowledge sources",
             backstory="You have access to specific knowledge sources.",
-            llm=LLM(model="gpt-4o-mini"),
+            llm=LLM(model="gpt-4o-mini", api_key="123"),
             knowledge_sources=[string_source],
         )
 
