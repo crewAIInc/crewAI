@@ -36,10 +36,6 @@ OPENAI_BIGGER_MODELS = [
     "o3-mini",
 ]
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 
 class ToolUsageErrorException(Exception):
     """Exception raised for errors in the tool usage."""
