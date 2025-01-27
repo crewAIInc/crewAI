@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from crewai import Agent, Crew, Task
+from crewai import Agent, Crew, Knowledge, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
@@ -1625,6 +1625,10 @@ def test_agent_with_knowledge_sources_works_with_copy():
             backstory="You have access to specific knowledge sources.",
             llm=LLM(model="gpt-4o-mini", api_key="123"),
             knowledge_sources=[string_source],
+            embedder_config={
+                "provider": "openai",
+                "config": {"model_name": "text-embedding-3-small", "api_key": "123"},
+            },
         )
 
         # Actually call copy instead of mocking it
