@@ -185,6 +185,10 @@ class Crew(BaseModel):
     output_log_file: Optional[str] = Field(
         default=None,
         description="output_log_file",
+    ),
+    save_as_json: Optional[bool] = Field(
+        default=False,
+        description="If true saves the logs in JSON format",
     )
     planning: Optional[bool] = Field(
         default=False,
@@ -244,7 +248,7 @@ class Crew(BaseModel):
         self._cache_handler = CacheHandler()
         self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
-            self._file_handler = FileHandler(self.output_log_file)
+            self._file_handler = FileHandler(self.output_log_file,self.save_as_json)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)

@@ -5,24 +5,48 @@ from datetime import datetime
 
 class FileHandler:
     """take care of file operations, currently it only logs messages to a file"""
-
-    def __init__(self, file_path):
-        if isinstance(file_path, bool):
-            self._path = os.path.join(os.curdir, "logs.txt")
-        elif isinstance(file_path, str):
+    
+    def __init__(self, file_path, save_as_json):
+        self.save_as_json = save_as_json
+        if file_path is True:  # File path is boolean True
+            if save_as_json:
+                self._path = os.path.join(os.curdir, "logs.json")
+            else:
+                self._path = os.path.join(os.curdir, "logs.txt")
+        elif isinstance(file_path, str):  # File path is a string
+            if save_as_json:
+                if not file_path.endswith(".json"):
+                    file_path += ".json"
             self._path = file_path
         else:
             raise ValueError("file_path must be either a boolean or a string.")
 
     def log(self, **kwargs):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        message = (
-            f"{now}: "
-            + ", ".join([f'{key}="{value}"' for key, value in kwargs.items()])
-            + "\n"
-        )
-        with open(self._path, "a", encoding="utf-8") as file:
-            file.write(message + "\n")
+        log_entry = {"timestamp": now, **kwargs}
+
+        if self._path.endswith(".json"):
+            # Append log in JSON format
+            with open(self._path, "a", encoding="utf-8") as file:
+                # If the file is empty, start with a list; else, append to it
+                try:
+                    # Try reading existing content to avoid overwriting
+                    with open(self._path, "r", encoding="utf-8") as read_file:
+                        existing_data = json.load(read_file)
+                        existing_data.append(log_entry)
+                except (json.JSONDecodeError, FileNotFoundError):
+                    # If no valid JSON or file doesn't exist, start with an empty list
+                    existing_data = [log_entry]
+                
+                with open(self._path, "w", encoding="utf-8") as write_file:
+                    json.dump(existing_data, write_file, indent=4)
+                    write_file.write("\n")
+        else:
+            # Append log in plain text format
+            message = f"{now}: " + ", ".join([f"{key}=\"{value}\"" for key, value in kwargs.items()]) + "\n"
+            with open(self._path, "a", encoding="utf-8") as file:
+                file.write(message)
+
 
 
 class PickleHandler:
