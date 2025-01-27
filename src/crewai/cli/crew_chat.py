@@ -61,20 +61,46 @@ def run_chat():
     if not chat_llm:
         return
 
-    crew_chat_inputs = generate_crew_chat_inputs(crew, crew_name, chat_llm)
-    crew_tool_schema = generate_crew_tool_schema(crew_chat_inputs)
-    system_message = build_system_message(crew_chat_inputs)
-
     # Indicate that the crew is being analyzed
-    click.secho("\nAnalyzing crew and analyzing required inputs...", fg="cyan")
-
-    # Call the LLM to generate the introductory message
-    introductory_message = chat_llm.call(
-        messages=[{"role": "system", "content": system_message}]
+    click.secho(
+        "\nAnalyzing crew and required inputs - this may take 3 to 30 seconds depending on the complexity of your crew.",
+        fg="white",
     )
 
+    # Function to show loading dots
+    def show_loading():
+        import sys
+        import time
+
+        while not loading_complete.is_set():
+            sys.stdout.write(".")
+            sys.stdout.flush()
+            time.sleep(1)
+        print()
+
+    # Start loading indicator
+    import threading
+
+    loading_complete = threading.Event()
+    loading_thread = threading.Thread(target=show_loading)
+    loading_thread.start()
+
+    try:
+        crew_chat_inputs = generate_crew_chat_inputs(crew, crew_name, chat_llm)
+        crew_tool_schema = generate_crew_tool_schema(crew_chat_inputs)
+        system_message = build_system_message(crew_chat_inputs)
+
+        # Call the LLM to generate the introductory message
+        introductory_message = chat_llm.call(
+            messages=[{"role": "system", "content": system_message}]
+        )
+    finally:
+        # Stop loading indicator
+        loading_complete.set()
+        loading_thread.join()
+
     # Indicate that the analysis is complete
-    click.secho("Finished analyzing crew.\n", fg="cyan")
+    click.secho("\nFinished analyzing crew.\n", fg="white")
 
     click.secho(f"Assistant: {introductory_message}\n", fg="green")
 
@@ -86,12 +112,6 @@ def run_chat():
     available_functions = {
         crew_chat_inputs.crew_name: create_tool_function(crew, messages),
     }
-
-    click.secho(
-        "\nEntering an interactive chat loop with function-calling.\n"
-        "Type 'exit' or Ctrl+C to quit.\n",
-        fg="cyan",
-    )
 
     chat_loop(chat_llm, messages, crew_tool_schema, available_functions)
 
@@ -171,12 +191,16 @@ def chat_loop(chat_llm, messages, crew_tool_schema, available_functions):
             # Flush any pending input before accepting new input
             flush_input()
 
-            click.echo(
-                "\nYou (type your message below. Press 'Enter' twice when you're done):"
+            click.secho(
+                "\nYou (type your message below. Press 'Enter' twice when you're done):",
+                fg="blue",
             )
             user_input_lines = []
             while True:
                 line = input()
+                if line.strip().lower() == "exit":
+                    click.echo("Exiting chat. Goodbye!")
+                    return
                 if line == "":
                     break
                 user_input_lines.append(line)
@@ -187,14 +211,13 @@ def chat_loop(chat_llm, messages, crew_tool_schema, available_functions):
                     "Empty message. Please provide input or type 'exit' to quit."
                 )
                 continue
-            if user_input.strip().lower() in ["exit", "quit"]:
-                click.echo("Exiting chat. Goodbye!")
-                break
 
             messages.append({"role": "user", "content": user_input})
 
+            # Indicate that assistant is processing
+            click.echo()
             click.secho(
-                "\nAssistant is processing your input. Please wait...", fg="cyan"
+                "Assistant is processing your input. Please wait...", fg="green"
             )
 
             # Process assistant's response
