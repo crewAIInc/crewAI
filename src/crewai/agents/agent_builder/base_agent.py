@@ -266,13 +266,34 @@ class BaseAgent(ABC, BaseModel):
             "cache_handler",
             "llm",
             "knowledge_sources",
+            "_knowledge",
         }
 
-        # Copy llm and clear callbacks
+        # Copy llm
         existing_llm = shallow_copy(self.llm)
-        existing_knowledge_sources = shallow_copy(self.knowledge_sources)
+
+        # Properly copy knowledge sources if they exist
+        existing_knowledge_sources = None
+        if self.knowledge_sources:
+            # Create a shared storage instance for all knowledge sources
+            shared_storage = (
+                self.knowledge_sources[0].storage if self.knowledge_sources else None
+            )
+
+            existing_knowledge_sources = []
+            for source in self.knowledge_sources:
+                copied_source = (
+                    source.model_copy()
+                    if hasattr(source, "model_copy")
+                    else shallow_copy(source)
+                )
+                # Ensure all copied sources use the same storage instance
+                copied_source.storage = shared_storage
+                existing_knowledge_sources.append(copied_source)
+
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
+
         copied_agent = type(self)(
             **copied_data,
             llm=existing_llm,
