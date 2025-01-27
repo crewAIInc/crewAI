@@ -1,6 +1,9 @@
 import json
+import platform
 import re
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -25,11 +28,11 @@ def check_conversational_crews_version(
     Check if the installed crewAI version supports conversational crews.
 
     Args:
-        crewai_version: The current version of crewAI
-        pyproject_data: Dictionary containing pyproject.toml data
+        crewai_version: The current version of crewAI.
+        pyproject_data: Dictionary containing pyproject.toml data.
 
     Returns:
-        bool: True if version check passes, False otherwise
+        bool: True if version check passes, False otherwise.
     """
     try:
         if version.parse(crewai_version) < version.parse(MIN_REQUIRED_VERSION):
@@ -40,7 +43,7 @@ def check_conversational_crews_version(
             )
             return False
     except version.InvalidVersion:
-        click.secho("Invalid crewAI version format detected", fg="red")
+        click.secho("Invalid crewAI version format detected.", fg="red")
         return False
     return True
 
@@ -56,6 +59,7 @@ def run_chat():
 
     if not check_conversational_crews_version(crewai_version, pyproject_data):
         return
+
     crew, crew_name = load_crew_and_name()
     chat_llm = initialize_chat_llm(crew)
     if not chat_llm:
@@ -63,26 +67,14 @@ def run_chat():
 
     # Indicate that the crew is being analyzed
     click.secho(
-        "\nAnalyzing crew and required inputs - this may take 3 to 30 seconds depending on the complexity of your crew.",
+        "\nAnalyzing crew and required inputs - this may take 3 to 30 seconds "
+        "depending on the complexity of your crew.",
         fg="white",
     )
 
-    # Function to show loading dots
-    def show_loading():
-        import sys
-        import time
-
-        while not loading_complete.is_set():
-            sys.stdout.write(".")
-            sys.stdout.flush()
-            time.sleep(1)
-        print()
-
     # Start loading indicator
-    import threading
-
     loading_complete = threading.Event()
-    loading_thread = threading.Thread(target=show_loading)
+    loading_thread = threading.Thread(target=show_loading, args=(loading_complete,))
     loading_thread.start()
 
     try:
@@ -114,6 +106,14 @@ def run_chat():
     }
 
     chat_loop(chat_llm, messages, crew_tool_schema, available_functions)
+
+
+def show_loading(event: threading.Event):
+    """Display animated loading dots while processing."""
+    while not event.is_set():
+        print(".", end="", flush=True)
+        time.sleep(1)
+    print()
 
 
 def initialize_chat_llm(crew: Crew) -> Optional[LLM]:
@@ -149,7 +149,7 @@ def build_system_message(crew_chat_inputs: ChatInputs) -> str:
         "Please keep your responses concise and friendly. "
         "If a user asks a question outside the crew's scope, provide a brief answer and remind them of the crew's purpose. "
         "After calling the tool, be prepared to take user feedback and make adjustments as needed. "
-        "If you are ever unsure about a user's request or need clarification, ask the user for more information."
+        "If you are ever unsure about a user's request or need clarification, ask the user for more information. "
         "Before doing anything else, introduce yourself with a friendly message like: 'Hey! I'm here to help you with [crew's purpose]. Could you please provide me with [inputs] so we can get started?' "
         "For example: 'Hey! I'm here to help you with uncovering and reporting cutting-edge developments through thorough research and detailed analysis. Could you please provide me with a topic you're interested in? This will help us generate a comprehensive research report and detailed analysis.'"
         f"\nCrew Name: {crew_chat_inputs.crew_name}"
@@ -168,9 +168,6 @@ def create_tool_function(crew: Crew, messages: List[Dict[str, str]]) -> Any:
 
 def flush_input():
     """Flush any pending input from the user."""
-    import platform
-    import sys
-
     if platform.system() == "Windows":
         # Windows platform
         import msvcrt
@@ -191,44 +188,10 @@ def chat_loop(chat_llm, messages, crew_tool_schema, available_functions):
             # Flush any pending input before accepting new input
             flush_input()
 
-            click.secho(
-                "\nYou (type your message below. Press 'Enter' twice when you're done):",
-                fg="blue",
+            user_input = get_user_input()
+            handle_user_input(
+                user_input, chat_llm, messages, crew_tool_schema, available_functions
             )
-            user_input_lines = []
-            while True:
-                line = input()
-                if line.strip().lower() == "exit":
-                    click.echo("Exiting chat. Goodbye!")
-                    return
-                if line == "":
-                    break
-                user_input_lines.append(line)
-            user_input = "\n".join(user_input_lines)
-
-            if not user_input.strip():
-                click.echo(
-                    "Empty message. Please provide input or type 'exit' to quit."
-                )
-                continue
-
-            messages.append({"role": "user", "content": user_input})
-
-            # Indicate that assistant is processing
-            click.echo()
-            click.secho(
-                "Assistant is processing your input. Please wait...", fg="green"
-            )
-
-            # Process assistant's response
-            final_response = chat_llm.call(
-                messages=messages,
-                tools=[crew_tool_schema],
-                available_functions=available_functions,
-            )
-
-            messages.append({"role": "assistant", "content": final_response})
-            click.secho(f"\nAssistant: {final_response}\n", fg="green")
 
         except KeyboardInterrupt:
             click.echo("\nExiting chat. Goodbye!")
@@ -236,6 +199,55 @@ def chat_loop(chat_llm, messages, crew_tool_schema, available_functions):
         except Exception as e:
             click.secho(f"An error occurred: {e}", fg="red")
             break
+
+
+def get_user_input() -> str:
+    """Collect multi-line user input with exit handling."""
+    click.secho(
+        "\nYou (type your message below. Press 'Enter' twice when you're done):",
+        fg="blue",
+    )
+    user_input_lines = []
+    while True:
+        line = input()
+        if line.strip().lower() == "exit":
+            return "exit"
+        if line == "":
+            break
+        user_input_lines.append(line)
+    return "\n".join(user_input_lines)
+
+
+def handle_user_input(
+    user_input: str,
+    chat_llm: LLM,
+    messages: List[Dict[str, str]],
+    crew_tool_schema: Dict[str, Any],
+    available_functions: Dict[str, Any],
+) -> None:
+    if user_input.strip().lower() == "exit":
+        click.echo("Exiting chat. Goodbye!")
+        return
+
+    if not user_input.strip():
+        click.echo("Empty message. Please provide input or type 'exit' to quit.")
+        return
+
+    messages.append({"role": "user", "content": user_input})
+
+    # Indicate that assistant is processing
+    click.echo()
+    click.secho("Assistant is processing your input. Please wait...", fg="green")
+
+    # Process assistant's response
+    final_response = chat_llm.call(
+        messages=messages,
+        tools=[crew_tool_schema],
+        available_functions=available_functions,
+    )
+
+    messages.append({"role": "assistant", "content": final_response})
+    click.secho(f"\nAssistant: {final_response}\n", fg="green")
 
 
 def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict:
@@ -432,10 +444,10 @@ def generate_input_description_with_ai(input_name: str, crew: Crew, chat_llm) ->
         ):
             # Replace placeholders with input names
             task_description = placeholder_pattern.sub(
-                lambda m: m.group(1), task.description
+                lambda m: m.group(1), task.description or ""
             )
             expected_output = placeholder_pattern.sub(
-                lambda m: m.group(1), task.expected_output
+                lambda m: m.group(1), task.expected_output or ""
             )
             context_texts.append(f"Task Description: {task_description}")
             context_texts.append(f"Expected Output: {expected_output}")
@@ -446,10 +458,10 @@ def generate_input_description_with_ai(input_name: str, crew: Crew, chat_llm) ->
             or f"{{{input_name}}}" in agent.backstory
         ):
             # Replace placeholders with input names
-            agent_role = placeholder_pattern.sub(lambda m: m.group(1), agent.role)
-            agent_goal = placeholder_pattern.sub(lambda m: m.group(1), agent.goal)
+            agent_role = placeholder_pattern.sub(lambda m: m.group(1), agent.role or "")
+            agent_goal = placeholder_pattern.sub(lambda m: m.group(1), agent.goal or "")
             agent_backstory = placeholder_pattern.sub(
-                lambda m: m.group(1), agent.backstory
+                lambda m: m.group(1), agent.backstory or ""
             )
             context_texts.append(f"Agent Role: {agent_role}")
             context_texts.append(f"Agent Goal: {agent_goal}")
@@ -490,18 +502,20 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm) -> str:
     for task in crew.tasks:
         # Replace placeholders with input names
         task_description = placeholder_pattern.sub(
-            lambda m: m.group(1), task.description
+            lambda m: m.group(1), task.description or ""
         )
         expected_output = placeholder_pattern.sub(
-            lambda m: m.group(1), task.expected_output
+            lambda m: m.group(1), task.expected_output or ""
         )
         context_texts.append(f"Task Description: {task_description}")
         context_texts.append(f"Expected Output: {expected_output}")
     for agent in crew.agents:
         # Replace placeholders with input names
-        agent_role = placeholder_pattern.sub(lambda m: m.group(1), agent.role)
-        agent_goal = placeholder_pattern.sub(lambda m: m.group(1), agent.goal)
-        agent_backstory = placeholder_pattern.sub(lambda m: m.group(1), agent.backstory)
+        agent_role = placeholder_pattern.sub(lambda m: m.group(1), agent.role or "")
+        agent_goal = placeholder_pattern.sub(lambda m: m.group(1), agent.goal or "")
+        agent_backstory = placeholder_pattern.sub(
+            lambda m: m.group(1), agent.backstory or ""
+        )
         context_texts.append(f"Agent Role: {agent_role}")
         context_texts.append(f"Agent Goal: {agent_goal}")
         context_texts.append(f"Agent Backstory: {agent_backstory}")
