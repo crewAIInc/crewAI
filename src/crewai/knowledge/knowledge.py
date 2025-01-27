@@ -41,8 +41,6 @@ class Knowledge(BaseModel):
             )
         self.sources = sources
         self.storage.initialize_knowledge_storage()
-        print("self.storage", self.storage)
-
         self._add_sources()
 
     def query(self, query: List[str], limit: int = 3) -> List[Dict[str, Any]]:
@@ -64,10 +62,8 @@ class Knowledge(BaseModel):
 
     def _add_sources(self):
         try:
-            print("adding sources", self.storage)
             for source in self.sources:
                 source.storage = self.storage
                 source.add()
         except Exception as e:
-            print("Error adding sources", e)
             raise e

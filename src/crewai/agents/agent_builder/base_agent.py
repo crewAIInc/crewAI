@@ -276,12 +276,8 @@ class BaseAgent(ABC, BaseModel):
 
         # Copy llm
         existing_llm = shallow_copy(self.llm)
-        print("self.knowledge", self.knowledge)
         copied_knowledge = shallow_copy(self.knowledge)
         copied_knowledge_storage = shallow_copy(self.knowledge_storage)
-        print("existing_llm", existing_llm)
-        print("copied_knowledge_storage", copied_knowledge_storage)
-        print("copied_knowledge", copied_knowledge)
         # Properly copy knowledge sources if they exist
         existing_knowledge_sources = None
         if self.knowledge_sources:
@@ -302,9 +298,7 @@ class BaseAgent(ABC, BaseModel):
                 existing_knowledge_sources.append(copied_source)
 
         copied_data = self.model_dump(exclude=exclude)
-        print("copied_data", copied_data)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-        print("copied_data", copied_data)
         copied_agent = type(self)(
             **copied_data,
             llm=existing_llm,

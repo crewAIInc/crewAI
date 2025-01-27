@@ -1608,29 +1608,22 @@ def test_agent_with_knowledge_sources_works_with_copy():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    # Create a real instance to use as spec
-
     with patch(
         "crewai.knowledge.source.base_knowledge_source.BaseKnowledgeSource",
         autospec=True,
     ) as MockKnowledgeSource:
-        # Set up the mock instance using the real class as spec
         mock_knowledge_source_instance = MockKnowledgeSource.return_value
         mock_knowledge_source_instance.__class__ = BaseKnowledgeSource
         mock_knowledge_source_instance.sources = [string_source]
-        # mock_knowledge_source_instance.query.return_value = [{"content": content}]
 
         agent = Agent(
             role="Information Agent",
             goal="Provide information based on knowledge sources",
             backstory="You have access to specific knowledge sources.",
             llm=LLM(model="gpt-4o-mini"),
-            knowledge_sources=[
-                string_source
-            ],  # Use the real string source instead of mock
+            knowledge_sources=[string_source],
         )
 
-        # Mock the knowledge attribute to avoid validation issues during copy
         with patch(
             "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
         ) as MockKnowledgeStorage:
@@ -1639,10 +1632,10 @@ def test_agent_with_knowledge_sources_works_with_copy():
 
             agent_copy = agent.copy()
 
-            # Basic assertions
             assert agent_copy.role == agent.role
             assert agent_copy.goal == agent.goal
             assert agent_copy.backstory == agent.backstory
+            assert agent_copy.knowledge_sources is not None
             assert len(agent_copy.knowledge_sources) == 1
             assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
             assert agent_copy.knowledge_sources[0].content == content
