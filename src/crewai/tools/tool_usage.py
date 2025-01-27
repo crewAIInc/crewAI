@@ -450,14 +450,14 @@ class ToolUsage:
         # Attempt 4: Repair JSON
         try:
             repaired_input = repair_json(tool_input)
-            logger.debug(f"Repaired JSON: {repaired_input}")  # TODO: REMOVE
-            print(f"Repaired JSON: {repaired_input}")  # TODO: REMOVE
+            self._printer.print(
+                content=f"Repaired JSON: {repaired_input}", color="blue"
+            )
             arguments = json.loads(repaired_input)
             if isinstance(arguments, dict):
                 return arguments
         except Exception as e:
-            logger.debug(f"Failed to repair JSON: {e}")  # Log the failure
-            print(f"Failed to repair JSON: {e}")  # Log the failure
+            self._printer.print(content=f"Failed to repair JSON: {e}", color="red")
 
         # If all parsing attempts fail, raise an error
         raise Exception(
