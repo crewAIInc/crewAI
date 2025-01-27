@@ -48,11 +48,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def __init__(
         self,
-        embedder_config: Optional[Dict[str, Any]] = None,
+        embedder: Optional[Dict[str, Any]] = None,
         collection_name: Optional[str] = None,
     ):
         self.collection_name = collection_name
-        self._set_embedder_config(embedder_config)
+        self._set_embedder_config(embedder)
 
     def search(
         self,
@@ -99,8 +99,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             if self.app:
                 self.collection = self.app.get_or_create_collection(
-                    name=collection_name, embedding_function=self.embedder_config
+                    name=collection_name, embedding_function=self.embedder
                 )
+                print("db initialized", self.collection)
             else:
                 raise Exception("Vector Database Client not initialized")
         except Exception:
@@ -187,17 +188,18 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
         )
 
-    def _set_embedder_config(
-        self, embedder_config: Optional[Dict[str, Any]] = None
-    ) -> None:
+    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.
 
         Args:
             embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
                 If None or empty, defaults to the default embedding function.
         """
-        self.embedder_config = (
-            EmbeddingConfigurator().configure_embedder(embedder_config)
-            if embedder_config
+        print("embedder", embedder)
+        self.embedder = (
+            EmbeddingConfigurator().configure_embedder(embedder)
+            if embedder
             else self._create_default_embedding_function()
         )
+        print("self.embedder", self.embedder)
+        print("type of self.embedder", type(self.embedder))

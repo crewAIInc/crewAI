@@ -125,7 +125,7 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    embedder_config: Optional[Dict[str, Any]] = Field(
+    embedder: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
     )
@@ -164,7 +164,7 @@ class Agent(BaseAgent):
                 ):
                     self._knowledge = Knowledge(
                         sources=self.knowledge_sources,
-                        embedder_config=self.embedder_config,
+                        embedder=self.embedder,
                         collection_name=knowledge_agent_name,
                         storage=self.knowledge_storage or None,
                     )

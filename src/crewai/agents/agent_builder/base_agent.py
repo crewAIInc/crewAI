@@ -266,7 +266,7 @@ class BaseAgent(ABC, BaseModel):
             "cache_handler",
             "llm",
             "knowledge_sources",
-            "_knowledge",
+            "formatting_errors",
         }
 
         # Copy llm

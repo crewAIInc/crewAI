@@ -1618,17 +1618,22 @@ def test_agent_with_knowledge_sources_works_with_copy():
         mock_knowledge_instance.query.return_value = [{"content": content}]
         mock_knowledge_instance.save.return_value = None
         mock_knowledge_instance.initialize_knowledge_storage.return_value = None
+        mock_knowledge_instance.collection_name = "test_collection"
+        # mock_knowledge_instance.embedder = {
+        #     "provider": "openai",
+        #     "config": {"model_name": "text-embedding-3-small", "api_key": "123"},
+        # }
 
         agent = Agent(
             role="Information Agent",
             goal="Provide information based on knowledge sources",
             backstory="You have access to specific knowledge sources.",
-            llm=LLM(model="gpt-4o-mini", api_key="123"),
+            llm=LLM(model="gpt-4o-mini"),
             knowledge_sources=[string_source],
-            embedder_config={
-                "provider": "openai",
-                "config": {"model_name": "text-embedding-3-small", "api_key": "123"},
-            },
+            # embedder={
+            #     "provider": "openai",
+            #     "config": {"model_name": "text-embedding-3-small", "api_key": "123"},
+            # },
         )
 
         # Actually call copy instead of mocking it

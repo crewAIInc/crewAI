@@ -29,12 +29,19 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def validate_file_path(cls, v, info):
         """Validate that at least one of file_path or file_paths is provided."""
         # Single check if both are None, O(1) instead of nested conditions
-        if v is None and info.data.get("file_path" if info.field_name == "file_paths" else "file_paths") is None:
+        if (
+            v is None
+            and info.data.get(
+                "file_path" if info.field_name == "file_paths" else "file_paths"
+            )
+            is None
+        ):
             raise ValueError("Either file_path or file_paths must be provided")
         return v
 
     def model_post_init(self, _):
         """Post-initialization method to load content."""
+        print("model_post_init")
         self.safe_file_paths = self._process_file_paths()
         self.validate_content()
         self.content = self.load_content()
@@ -64,6 +71,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def _save_documents(self):
         """Save the documents to the storage."""
         if self.storage:
+            print("saving source documents to storage")
             self.storage.save(self.chunks)
         else:
             raise ValueError("No storage found to save documents.")

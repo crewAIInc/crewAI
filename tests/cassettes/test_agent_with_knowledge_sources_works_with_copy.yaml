@@ -41,10 +41,8 @@ interactions:
       \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
       12,\n    \"total_tokens\": 12\n  }\n}\n"
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 908a48e51e29fa62-SJC
+      - 908b749c8cb41576-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -52,14 +50,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 27 Jan 2025 16:57:58 GMT
+      - Mon, 27 Jan 2025 20:22:34 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=PnGR9W8IIvattKIp.MgRbS6OXN_OoVwF8NILhGbvwWU-1737997078-1.0.1.1-9exwtgs6yYb6fCPo95Vs352XeTUIN.qWcJzCkNYp5punfMhxyEoe5f9oJbvTxF0DKntUg6RDpzJpWg9_hT3RdA;
-        path=/; expires=Mon, 27-Jan-25 17:27:58 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=NhRx2kcSiBEOhkZbWaKlY_pw46LGzb7BpUNF.ozrJrY-1738009354-1.0.1.1-naI_MYI5l4_BbeD3mwpu.Pi55FVDn3ImnfFjreNp0bbAvTuf8xOJY8HgxhE.W4XWbq247SbevyoE9aStMYq0ow;
+        path=/; expires=Mon, 27-Jan-25 20:52:34 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=7_7dz2Zqwfh8UnqUsLkZH.Oqpep1CNkZGOK89RB4q5A-1737997078040-0.0.1.1-604800000;
+      - _cfuvid=xnfGIFZVE6LqgVkRMk6ORXsMurOmTu.z7TTz7afn810-1738009354083-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -71,20 +69,22 @@ interactions:
       - X-Request-ID
       alt-svc:
       - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
       openai-model:
       - text-embedding-3-small
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '178'
+      - '75'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       via:
-      - envoy-router-6868496db6-8f7sk
+      - envoy-router-75f99bb574-mb9tb
       x-envoy-upstream-service-time:
-      - '126'
+      - '29'
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -98,7 +98,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_9f0e081d4c6f1a03fa8cbe266c95685a
+      - req_4e3d0c147826a183e2848ca1df2c9da9
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -146,7 +146,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 908a48eaac437ac7-SJC
+      - 908b749fcdbaed36-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -154,14 +154,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 27 Jan 2025 16:57:58 GMT
+      - Mon, 27 Jan 2025 20:22:34 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=ewnMVB82RxYrCuvVlXzYeFQSi1DJU2l8YaKrywP1MGM-1737997078-1.0.1.1-.UdOh2dv0U8M4y49yXJHPAQr2EKtKOi6cuQlwLUzhlKvGy7WY7WFsEg43UInPqtTfLtGtqnFWZGuLjwhbFlPUw;
-        path=/; expires=Mon, 27-Jan-25 17:27:58 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=hTW9TNu3pB35yAIOgg3sdy1hLtP_un1Js4.ZfsmNEXY-1738009354-1.0.1.1-pmAOhPxdO75O.Xt22Tnz_8pitmTMJY.vDeWPxXlJq3TTay0D.285FuCezcz8iy6gLi0hF9SRUc5f5xovdsaQOA;
+        path=/; expires=Mon, 27-Jan-25 20:52:34 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=fVidGpnlMSfhxdaGcP5YjF.u3MkGlc9LyRisqFGHQHg-1737997078492-0.0.1.1-604800000;
+      - _cfuvid=KXf4AO65W0FpWKL_jL5Tw4Xdts32F1mkwYcniiqUZtU-1738009354603-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -178,15 +178,15 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '56'
+      - '113'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       via:
-      - envoy-router-5cc9fb545f-jkfdr
+      - envoy-router-5cc9fb545f-x4k6f
       x-envoy-upstream-service-time:
-      - '35'
+      - '74'
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -200,7 +200,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_6f75f8d53cf83149ed93bfee2f0a740f
+      - req_7b9c56b5c3be975b8ce088f3457a52f9
     http_version: HTTP/1.1
     status_code: 200
 version: 1
