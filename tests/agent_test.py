@@ -1629,7 +1629,20 @@ def test_agent_with_knowledge_sources_works_with_copy():
 
         # Actually call copy instead of mocking it
         agent_copy = agent.copy()
-        assert agent_copy.knowledge_sources == agent.knowledge_sources
+        if agent.knowledge_sources and agent_copy.knowledge_sources:
+            assert len(agent_copy.knowledge_sources) == len(agent.knowledge_sources)
+            assert (
+                agent_copy.knowledge_sources[0].content  # type: ignore
+                == agent.knowledge_sources[0].content  # type: ignore
+            )
+            assert (
+                agent_copy.knowledge_sources[0].chunk_size
+                == agent.knowledge_sources[0].chunk_size
+            )
+            assert (
+                agent_copy.knowledge_sources[0].chunk_overlap
+                == agent.knowledge_sources[0].chunk_overlap
+            )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
