@@ -1,8 +1,6 @@
 import ast
 import datetime
 import json
-import logging
-import re
 import time
 from difflib import SequenceMatcher
 from json import JSONDecodeError
