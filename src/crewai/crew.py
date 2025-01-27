@@ -518,6 +518,7 @@ class Crew(BaseModel):
             inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
+        print("DEBUG: KICKOFF FOR CREW CALLED")
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
         self._task_output_handler.reset()
         self._logging_color = "bold_purple"
