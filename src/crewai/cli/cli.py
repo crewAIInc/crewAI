@@ -350,7 +350,10 @@ def chat():
     Start a conversation with the Crew, collecting user-supplied inputs,
     and using the Chat LLM to generate responses.
     """
-    click.echo("Starting a conversation with the Crew")
+    click.secho(
+        "\nStarting a conversation with the Crew\n" "Type 'exit' or Ctrl+C to quit.\n",
+    )
+
     run_chat()
 
 
