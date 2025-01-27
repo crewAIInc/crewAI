@@ -1638,7 +1638,10 @@ def test_agent_with_knowledge_sources_works_with_copy():
         agent.knowledge_sources = [string_source]
 
         # Actually call copy instead of mocking it
-        # agent_copy = agent.copy()
+        agent_copy = agent.copy()
+        print("agent_copy", agent_copy)
+        assert agent_copy.role == agent.role
+
         # if agent.knowledge_sources and agent_copy.knowledge_sources:
         #     assert len(agent_copy.knowledge_sources) == len(agent.knowledge_sources)
         #     assert (
