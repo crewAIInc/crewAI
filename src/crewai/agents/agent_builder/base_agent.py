@@ -50,6 +50,8 @@ class BaseAgent(ABC, BaseModel):
         cache_handler (InstanceOf[CacheHandler]): An instance of the CacheHandler class.
         tools_handler (InstanceOf[ToolsHandler]): An instance of the ToolsHandler class.
         max_tokens: Maximum number of tokens for the agent to generate in a response.
+        knowledge_sources: Knowledge sources for the agent.
+        knowledge_storage: Custom knowledge storage for the agent.
 
 
     Methods:

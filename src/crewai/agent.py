@@ -64,6 +64,7 @@ class Agent(BaseAgent):
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             knowledge_sources: Knowledge sources for the agent.
+            embedder: Embedder configuration for the agent.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -129,9 +130,6 @@ class Agent(BaseAgent):
         default=None,
         description="Embedder configuration for the agent.",
     )
-    # knowledge: Optional[Knowledge] = PrivateAttr(
-    #     default=None,
-    # )
 
     @model_validator(mode="after")
     def post_init_setup(self):
