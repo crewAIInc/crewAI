@@ -24,12 +24,10 @@ def create_llm(
 
     # 1) If llm_value is already an LLM object, return it directly
     if isinstance(llm_value, LLM):
-        print("LLM value is already an LLM object")
         return llm_value
 
     # 2) If llm_value is a string (model name)
     if isinstance(llm_value, str):
-        print("LLM value is a string")
         try:
             created_llm = LLM(model=llm_value)
             return created_llm
@@ -39,12 +37,10 @@ def create_llm(
 
     # 3) If llm_value is None, parse environment variables or use default
     if llm_value is None:
-        print("LLM value is None")
         return _llm_via_environment_or_fallback()
 
     # 4) Otherwise, attempt to extract relevant attributes from an unknown object
     try:
-        print("LLM value is an unknown object")
         # Extract attributes with explicit types
         model = (
             getattr(llm_value, "model_name", None)

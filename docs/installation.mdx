@@ -15,10 +15,48 @@ icon: wrench
   If you need to update Python, visit [python.org/downloads](https://python.org/downloads)
 </Note>
 
+# Setting Up Your Environment
+
+Before installing CrewAI, it's recommended to set up a virtual environment. This helps isolate your project dependencies and avoid conflicts.
+
+<Steps>
+    <Step title="Create a Virtual Environment">
+        Choose your preferred method to create a virtual environment:
+
+        **Using venv (Python's built-in tool):**
+        ```shell Terminal
+        python3 -m venv .venv
+        ```
+
+        **Using conda:**
+        ```shell Terminal
+        conda create -n crewai-env python=3.12
+        ```
+    </Step>
+
+    <Step title="Activate the Virtual Environment">
+        Activate your virtual environment based on your platform:
+
+        **On macOS/Linux (venv):**
+        ```shell Terminal
+        source .venv/bin/activate
+        ```
+
+        **On Windows (venv):**
+        ```shell Terminal
+        .venv\Scripts\activate
+        ```
+
+        **Using conda (all platforms):**
+        ```shell Terminal
+        conda activate crewai-env
+        ```
+    </Step>
+</Steps>
+
 # Installing CrewAI
 
-CrewAI is a flexible and powerful AI framework that enables you to create and manage AI agents, tools, and tasks efficiently. 
-Let's get you set up! 🚀
+Now let's get you set up! 🚀
 
 <Steps>
     <Step title="Install CrewAI">
@@ -72,9 +110,9 @@ Let's get you set up! 🚀
 
 # Creating a New Project
 
-<Info>
+<Tip>
   We recommend using the YAML Template scaffolding for a structured approach to defining agents and tasks.
-</Info>
+</Tip>
 
 <Steps>
   <Step title="Generate Project Structure">
@@ -104,7 +142,18 @@ Let's get you set up! 🚀
                 └── tasks.yaml
     ```
     </Frame>
-  </Step>   
+  </Step>
+
+  <Step title="Install Additional Tools">
+    You can install additional tools using UV:
+    ```shell Terminal
+    uv add <tool-name>
+    ```
+
+    <Tip>
+      UV is our preferred package manager as it's significantly faster than pip and provides better dependency resolution.
+    </Tip>
+  </Step>
 
   <Step title="Customize Your Project">
     Your project will contain these essential files:

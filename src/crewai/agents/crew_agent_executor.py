@@ -13,6 +13,7 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
@@ -54,7 +55,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         callbacks: List[Any] = [],
     ):
         self._i18n: I18N = I18N()
-        self.llm = llm
+        self.llm: LLM = llm
         self.task = task
         self.agent = agent
         self.crew = crew
@@ -80,10 +81,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tool_name_to_tool_map: Dict[str, BaseTool] = {
             tool.name: tool for tool in self.tools
         }
-        if self.llm.stop:
-            self.llm.stop = list(set(self.llm.stop + self.stop))
-        else:
-            self.llm.stop = self.stop
+        self.stop = stop_words
+        self.llm.stop = list(set(self.llm.stop + self.stop))
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
@@ -98,7 +97,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
-        formatted_answer = self._invoke_loop()
+
+        try:
+            formatted_answer = self._invoke_loop()
+        except Exception as e:
+            if e.__class__.__module__.startswith("litellm"):
+                # Do not retry on litellm errors
+                raise e
+            else:
+                self._handle_unknown_error(e)
+                raise e
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
@@ -124,7 +132,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._enforce_rpm_limit()
 
                 answer = self._get_llm_response()
-
                 formatted_answer = self._process_llm_response(answer)
 
                 if isinstance(formatted_answer, AgentAction):
@@ -142,12 +149,31 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 formatted_answer = self._handle_output_parser_exception(e)
 
             except Exception as e:
+                if e.__class__.__module__.startswith("litellm"):
+                    # Do not retry on litellm errors
+                    raise e
                 if self._is_context_length_exceeded(e):
                     self._handle_context_length()
                     continue
+                else:
+                    self._handle_unknown_error(e)
+                    raise e
+            finally:
+                self.iterations += 1
 
         self._show_logs(formatted_answer)
         return formatted_answer
+
+    def _handle_unknown_error(self, exception: Exception) -> None:
+        """Handle unknown errors by informing the user."""
+        self._printer.print(
+            content="An unknown error occurred. Please check the details below.",
+            color="red",
+        )
+        self._printer.print(
+            content=f"Error details: {exception}",
+            color="red",
+        )
 
     def _has_reached_max_iterations(self) -> bool:
         """Check if the maximum number of iterations has been reached."""
@@ -160,10 +186,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _get_llm_response(self) -> str:
         """Call the LLM and return the response, handling any invalid responses."""
-        answer = self.llm.call(
-            self.messages,
-            callbacks=self.callbacks,
-        )
+        try:
+            answer = self.llm.call(
+                self.messages,
+                callbacks=self.callbacks,
+            )
+        except Exception as e:
+            self._printer.print(
+                content=f"Error during LLM call: {e}",
+                color="red",
+            )
+            raise e
 
         if not answer:
             self._printer.print(
@@ -184,7 +217,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
                     answer = answer.split("Observation:")[0].strip()
 
-        self.iterations += 1
         return self._format_answer(answer)
 
     def _handle_agent_action(

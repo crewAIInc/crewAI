@@ -1,4 +1,3 @@
-import os
 import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Union
@@ -8,7 +7,6 @@ from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
-from crewai.cli.constants import ENV_VARS, LITELLM_PARAMS
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
@@ -261,6 +259,9 @@ class Agent(BaseAgent):
                 }
             )["output"]
         except Exception as e:
+            if e.__class__.__module__.startswith("litellm"):
+                # Do not retry on litellm errors
+                raise e
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
                 raise e
