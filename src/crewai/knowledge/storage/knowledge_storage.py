@@ -101,7 +101,6 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 self.collection = self.app.get_or_create_collection(
                     name=collection_name, embedding_function=self.embedder
                 )
-                print("db initialized", self.collection)
             else:
                 raise Exception("Vector Database Client not initialized")
         except Exception:
@@ -195,11 +194,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
                 If None or empty, defaults to the default embedding function.
         """
-        print("embedder", embedder)
         self.embedder = (
             EmbeddingConfigurator().configure_embedder(embedder)
             if embedder
             else self._create_default_embedding_function()
         )
-        print("self.embedder", self.embedder)
-        print("type of self.embedder", type(self.embedder))

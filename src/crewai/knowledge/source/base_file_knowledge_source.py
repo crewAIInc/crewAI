@@ -41,7 +41,6 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
 
     def model_post_init(self, _):
         """Post-initialization method to load content."""
-        print("model_post_init")
         self.safe_file_paths = self._process_file_paths()
         self.validate_content()
         self.content = self.load_content()
@@ -71,7 +70,6 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def _save_documents(self):
         """Save the documents to the storage."""
         if self.storage:
-            print("saving source documents to storage")
             self.storage.save(self.chunks)
         else:
             raise ValueError("No storage found to save documents.")
