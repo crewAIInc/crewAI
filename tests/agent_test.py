@@ -6,22 +6,19 @@ from unittest.mock import patch
 
 import pytest
 
-from crewai import Agent, Crew, Knowledge, Task
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.tools.tool_usage_events import ToolUsageFinished
-from crewai.utilities import Printer, RPMController
+from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
-from tests.utilities.test_converter import mock_agent
 
 
 def test_agent_llm_creation_with_env_vars():
