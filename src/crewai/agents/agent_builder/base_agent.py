@@ -270,15 +270,18 @@ class BaseAgent(ABC, BaseModel):
             "cache_handler",
             "llm",
             "knowledge_sources",
+            "knowledge_storage",
             "knowledge",
-            "formatting_errors",
         }
 
         # Copy llm
         existing_llm = shallow_copy(self.llm)
+        print("self.knowledge", self.knowledge)
         copied_knowledge = shallow_copy(self.knowledge)
-
+        copied_knowledge_storage = shallow_copy(self.knowledge_storage)
         print("existing_llm", existing_llm)
+        print("copied_knowledge_storage", copied_knowledge_storage)
+        print("copied_knowledge", copied_knowledge)
         # Properly copy knowledge sources if they exist
         existing_knowledge_sources = None
         if self.knowledge_sources:
@@ -308,6 +311,7 @@ class BaseAgent(ABC, BaseModel):
             tools=self.tools,
             knowledge_sources=existing_knowledge_sources,
             knowledge=copied_knowledge,
+            knowledge_storage=copied_knowledge_storage,
         )
 
         return copied_agent

@@ -12,6 +12,8 @@ from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.llm import LLM
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
@@ -1609,53 +1611,45 @@ def test_agent_with_knowledge_sources_works_with_copy():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
+    # Create a real instance to use as spec
+
     with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
-        # Set up the mock instance
-        mock_knowledge_instance = MockKnowledge.return_value
-        mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [{"content": content}]
-        mock_knowledge_instance.save.return_value = None
-        mock_knowledge_instance.initialize_knowledge_storage.return_value = None
-        mock_knowledge_instance.collection_name = "test_collection"
-        # mock_knowledge_instance.embedder = {
-        #     "provider": "openai",
-        #     "config": {"model_name": "text-embedding-3-small", "api_key": "123"},
-        # }
+        "crewai.knowledge.source.base_knowledge_source.BaseKnowledgeSource",
+        autospec=True,
+    ) as MockKnowledgeSource:
+        # Set up the mock instance using the real class as spec
+        mock_knowledge_source_instance = MockKnowledgeSource.return_value
+        mock_knowledge_source_instance.__class__ = BaseKnowledgeSource
+        mock_knowledge_source_instance.sources = [string_source]
+        # mock_knowledge_source_instance.query.return_value = [{"content": content}]
 
         agent = Agent(
             role="Information Agent",
             goal="Provide information based on knowledge sources",
             backstory="You have access to specific knowledge sources.",
             llm=LLM(model="gpt-4o-mini"),
-            knowledge_sources=[string_source],
-            # embedder={
-            #     "provider": "openai",
-            #     "config": {"model_name": "text-embedding-3-small", "api_key": "123"},
-            # },
+            knowledge_sources=[
+                string_source
+            ],  # Use the real string source instead of mock
         )
-        agent.knowledge_sources = [string_source]
 
-        # Actually call copy instead of mocking it
-        agent_copy = agent.copy()
-        print("agent_copy", agent_copy)
-        assert agent_copy.role == agent.role
+        # Mock the knowledge attribute to avoid validation issues during copy
+        with patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        ) as MockKnowledgeStorage:
+            mock_knowledge_storage = MockKnowledgeStorage.return_value
+            agent.knowledge_storage = mock_knowledge_storage
 
-        # if agent.knowledge_sources and agent_copy.knowledge_sources:
-        #     assert len(agent_copy.knowledge_sources) == len(agent.knowledge_sources)
-        #     assert (
-        #         agent_copy.knowledge_sources[0].content  # type: ignore
-        #         == agent.knowledge_sources[0].content  # type: ignore
-        #     )
-        #     assert (
-        #         agent_copy.knowledge_sources[0].chunk_size
-        #         == agent.knowledge_sources[0].chunk_size
-        #     )
-        #     assert (
-        #         agent_copy.knowledge_sources[0].chunk_overlap
-        #         == agent.knowledge_sources[0].chunk_overlap
-        #     )
+            agent_copy = agent.copy()
+
+            # Basic assertions
+            assert agent_copy.role == agent.role
+            assert agent_copy.goal == agent.goal
+            assert agent_copy.backstory == agent.backstory
+            assert len(agent_copy.knowledge_sources) == 1
+            assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
+            assert agent_copy.knowledge_sources[0].content == content
+            assert isinstance(agent_copy.llm, LLM)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
