@@ -96,9 +96,9 @@ class TaskEvaluator:
         final_aggregated_data = ""
         for _, data in output_training_data.items():
             final_aggregated_data += (
-                f"Initial Output:\n{data['initial_output']}\n\n"
-                f"Human Feedback:\n{data['human_feedback']}\n\n"
-                f"Improved Output:\n{data['improved_output']}\n\n"
+                f"Initial Output:\n{data.get('initial_output', '')}\n\n"
+                f"Human Feedback:\n{data.get('human_feedback', '')}\n\n"
+                f"Improved Output:\n{data.get('improved_output', '')}\n\n"
             )
 
         evaluation_query = (
