@@ -491,6 +491,8 @@ class Crew(BaseModel):
         """Trains the crew for a given number of iterations."""
         train_crew = self.copy()
         train_crew._setup_for_training(filename)
+        
+        print("DEBUG N ITERATIONS: ", n_iterations)
 
         for n_iteration in range(n_iterations):
             train_crew._train_iteration = n_iteration
