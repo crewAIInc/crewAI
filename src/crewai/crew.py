@@ -512,9 +512,6 @@ class Crew(BaseModel):
             CrewTrainingHandler(TRAINING_DATA_FILE).clear()
             CrewTrainingHandler(filename).clear()
             raise
-        finally:
-            CrewTrainingHandler(TRAINING_DATA_FILE).close()
-            CrewTrainingHandler(filename).close()
 
     def kickoff(
         self,
