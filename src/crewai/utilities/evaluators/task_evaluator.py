@@ -90,15 +90,16 @@ class TaskEvaluator:
             - training_data (dict): The training data to be evaluated.
             - agent_id (str): The ID of the agent.
         """
+        print("Training data: ", training_data)
 
         output_training_data = training_data[agent_id]
 
         final_aggregated_data = ""
         for _, data in output_training_data.items():
             final_aggregated_data += (
-                f"Initial Output:\n{data.get('initial_output', '')}\n\n"
-                f"Human Feedback:\n{data.get('human_feedback', '')}\n\n"
-                f"Improved Output:\n{data.get('improved_output', '')}\n\n"
+                f"Initial Output:\n{data.get('initial_output')}\n\n"
+                f"Human Feedback:\n{data.get('human_feedback')}\n\n"
+                f"Improved Output:\n{data.get('improved_output')}\n\n"
             )
 
         evaluation_query = (
