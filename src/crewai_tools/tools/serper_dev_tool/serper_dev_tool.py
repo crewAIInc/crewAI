@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 import os
-from typing import Any, Type
+from typing import Any, Type, Optional
 
 import requests
 from crewai.tools import BaseTool
@@ -45,6 +45,9 @@ class SerperDevTool(BaseTool):
     n_results: int = 10
     save_file: bool = False
     search_type: str = "search"
+    country: Optional[str] = ""
+    location: Optional[str] = ""
+    locale: Optional[str] = ""
 
     def _get_search_url(self, search_type: str) -> str:
         """Get the appropriate endpoint URL based on search type."""
@@ -146,11 +149,20 @@ class SerperDevTool(BaseTool):
     def _make_api_request(self, search_query: str, search_type: str) -> dict:
         """Make API request to Serper."""
         search_url = self._get_search_url(search_type)
-        payload = json.dumps({"q": search_query, "num": self.n_results})
+        payload = {"q": search_query, "num": self.n_results}
+
+        if self.country != "":
+            payload["gl"] = self.country
+        if self.location != "":
+            payload["location"] = self.location
+        if self.locale != "":
+            payload["hl"] = self.locale
+
         headers = {
             "X-API-KEY": os.environ["SERPER_API_KEY"],
             "content-type": "application/json",
         }
+        payload = json.dumps(payload)
 
         response = None
         try:
