@@ -112,7 +112,6 @@ class TaskEvaluator:
                     "Cannot proceed with evaluation.\n"
                     "Please check your training implementation."
                 )
-                self._logger.log("critical", error_msg, color="red")
                 raise ValueError(error_msg)
 
             final_aggregated_data += (

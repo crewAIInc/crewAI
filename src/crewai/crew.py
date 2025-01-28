@@ -492,21 +492,29 @@ class Crew(BaseModel):
         train_crew = self.copy()
         train_crew._setup_for_training(filename)
 
-        for n_iteration in range(n_iterations):
-            train_crew._train_iteration = n_iteration
-            train_crew.kickoff(inputs=inputs)
+        try:
+            for n_iteration in range(n_iterations):
+                train_crew._train_iteration = n_iteration
+                train_crew.kickoff(inputs=inputs)
 
-        training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
+            training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
 
-        for agent in train_crew.agents:
-            if training_data.get(str(agent.id)):
-                result = TaskEvaluator(agent).evaluate_training_data(
-                    training_data=training_data, agent_id=str(agent.id)
-                )
-
-                CrewTrainingHandler(filename).save_trained_data(
-                    agent_id=str(agent.role), trained_data=result.model_dump()
-                )
+            for agent in train_crew.agents:
+                if training_data.get(str(agent.id)):
+                    result = TaskEvaluator(agent).evaluate_training_data(
+                        training_data=training_data, agent_id=str(agent.id)
+                    )
+                    CrewTrainingHandler(filename).save_trained_data(
+                        agent_id=str(agent.role), trained_data=result.model_dump()
+                    )
+        except Exception as e:
+            self._logger.log("error", f"Training failed: {e}", color="red")
+            CrewTrainingHandler(TRAINING_DATA_FILE).clear()
+            CrewTrainingHandler(filename).clear()
+            raise
+        finally:
+            CrewTrainingHandler(TRAINING_DATA_FILE).close()
+            CrewTrainingHandler(filename).close()
 
     def kickoff(
         self,
