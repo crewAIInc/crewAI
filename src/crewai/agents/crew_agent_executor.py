@@ -3,8 +3,6 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from litellm.exceptions import AuthenticationError as LiteLLMAuthenticationError
-
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import (
@@ -103,7 +101,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             formatted_answer = self._invoke_loop()
         except Exception as e:
-            raise e
+            if e.__class__.__module__.startswith("litellm"):
+                # Do not retry on litellm errors
+                raise e
+            else:
+                self._handle_unknown_error(e)
+                raise e
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
@@ -146,6 +149,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 formatted_answer = self._handle_output_parser_exception(e)
 
             except Exception as e:
+                if e.__class__.__module__.startswith("litellm"):
+                    # Do not retry on litellm errors
+                    raise e
                 if self._is_context_length_exceeded(e):
                     self._handle_context_length()
                     continue

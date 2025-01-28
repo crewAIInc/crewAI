@@ -1,3 +1,4 @@
 .env
 __pycache__/
 lib/
+.DS_Store
