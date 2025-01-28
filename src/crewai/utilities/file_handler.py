@@ -28,6 +28,9 @@ class FileHandler:
             if save_as_json:
                 if not file_path.endswith(".json"):
                     file_path += ".json"
+            else:
+                if not file_path.endswith(".txt"):
+                    file_path += ".txt"
             self._path = file_path
         else:
             raise ValueError("file_path must be either a boolean or a string.")
@@ -35,7 +38,6 @@ class FileHandler:
 
     def log(self, **kwargs):
         try:
-
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log_entry = {"timestamp": now, **kwargs}
 

@@ -23,14 +23,15 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Language** _(optional)_             | `language`             | Language used for the crew, defaults to English.                                                                                                                                                                                                          |
 | **Language File** _(optional)_        | `language_file`        | Path to the language file to be used for the crew.                                                                                                                                                                                                        |
 | **Memory** _(optional)_               | `memory`               | Utilized for storing execution memories (short-term, long-term, entity memory).                                                                                                                                                                           |
-| **Memory Config** _(optional)_        | `memory_config`        | Configuration for the memory provider to be used by the crew.                                                                                                                                                                                          |
-| **Cache** _(optional)_                | `cache`                | Specifies whether to use a cache for storing the results of tools' execution. Defaults to `True`.                                                                                                                                                          |
-| **Embedder** _(optional)_             | `embedder`             | Configuration for the embedder to be used by the crew. Mostly used by memory for now. Default is `{"provider": "openai"}`.                                                                                                                                                                     |
-| **Full Output** _(optional)_          | `full_output`          | Whether the crew should return the full output with all tasks outputs or just the final output. Defaults to `False`.                                                                                                                                       |
+| **Memory Config** _(optional)_        | `memory_config`        | Configuration for the memory provider to be used by the crew.                                                                                                                                                                                             |
+| **Cache** _(optional)_                | `cache`                | Specifies whether to use a cache for storing the results of tools' execution. Defaults to `True`.                                                                                                                                                         |
+| **Embedder** _(optional)_             | `embedder`             | Configuration for the embedder to be used by the crew. Mostly used by memory for now. Default is `{"provider": "openai"}`.                                                                                                                                |
+| **Full Output** _(optional)_          | `full_output`          | Whether the crew should return the full output with all tasks outputs or just the final output. Defaults to `False`.                                                                                                                                      |
 | **Step Callback** _(optional)_        | `step_callback`        | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations; it won't override the agent-specific `step_callback`.                                                               |
 | **Task Callback** _(optional)_        | `task_callback`        | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution.                                                                                                                          |
 | **Share Crew** _(optional)_           | `share_crew`           | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models.                                                                                                      |
 | **Output Log File** _(optional)_      | `output_log_file`      | Whether you want to have a file with the complete crew output and execution. You can set it using True and it will default to the folder you are currently in and it will be called logs.txt or passing a string with the full path and name of the file. |
+| **Save Log File as JSON** _(optional)_| `save_as_json`         | Whether you want to save the file as a list of JSON object. Output Log File parameter needs to be boolean `True` or a string. Defaults to `False`.                                                                                                        |
 | **Manager Agent** _(optional)_        | `manager_agent`        | `manager` sets a custom agent that will be used as a manager.                                                                                                                                                                                             |
 | **Prompt File** _(optional)_          | `prompt_file`          | Path to the prompt JSON file to be used for the crew.                                                                                                                                                                                                     |
 | **Planning** *(optional)*             | `planning`             | Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.                                                     |
@@ -239,6 +240,23 @@ if crew_output.pydantic:
 print(f"Tasks Output: {crew_output.tasks_output}")
 print(f"Token Usage: {crew_output.token_usage}")
 ```
+
+## Accessing Crew Logs
+
+You can see real time log of the crew execution, by setting `output_log_file` as a `True(Boolean)` or a `file_name(str)`. In case of `True(Boolean)` the file name which is saved will be `logs.txt`, in case of `(str)` it will be saved as `file_name.txt`
+
+If you want to save the logs as a list of JSON events, set `save_as_json` parameter as `True(Boolean)`. In case of `output_log_file` is set as `True(Boolean)` it will be saved as `logs.json`, in case of `file_name(str)` it will be saved as `file_name.json`. In case of `output_log_file` is set as `False(Booelan)` or `None`, the logs will not be populated.
+
+```python Code
+# Save crew logs
+crew = Crew(output_log_file = True, save_as_json = False)  # Logs will be saved as logs.txt
+crew = Crew(output_log_file = file_name, save_as_json = False)  # Logs will be saved as file_name.txt
+crew = Crew(output_log_file = True, save_as_json = True)  # Logs will be saved as logs.json
+crew = Crew(output_log_file = file_name, save_as_json = False)  # Logs will be saved as file_name.json
+
+```
+
+
 
 ## Memory Utilization
 
