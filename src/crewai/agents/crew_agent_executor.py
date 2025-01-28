@@ -512,7 +512,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages.append(self._format_msg(f"Feedback: {feedback}"))
         improved_answer = self._invoke_loop()
         self._handle_crew_training_output(improved_answer)
-        self.ask_for_human_input = False  # Ensure single iteration
+        self.ask_for_human_input = False
         return improved_answer
 
     def _handle_regular_feedback(
