@@ -431,7 +431,9 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
             )
             self._save_file(content)
 
@@ -452,7 +454,7 @@ class Task(BaseModel):
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(
-        self, inputs: Dict[str, Union[str, int, float]]
+        self, inputs: Dict[str, Union[str, int, float, dict, list]]
     ) -> None:
         """Interpolate inputs into the task description, expected output, and output file path.
            Add conversation history if present.
@@ -524,7 +526,9 @@ class Task(BaseModel):
             )
 
     def interpolate_only(
-        self, input_string: Optional[str], inputs: Dict[str, Union[str, int, float]]
+        self,
+        input_string: Optional[str],
+        inputs: Dict[str, Union[str, int, float, dict, list]],
     ) -> str:
         """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
 
@@ -551,14 +555,16 @@ class Task(BaseModel):
             raise ValueError(
                 "Inputs dictionary cannot be empty when interpolating variables"
             )
-
         try:
             # Validate input types
             for key, value in inputs.items():
-                if not isinstance(value, (str, int, float)):
+                print("key", key, value)
+                if not isinstance(value, (str, int, float, dict, list)):
                     raise ValueError(
-                        f"Value for key '{key}' must be a string, integer, or float, got {type(value).__name__}"
+                        f"Value for key '{key}' must be a string, integer, float, dict, or list, got {type(value).__name__}"
                     )
+                if isinstance(value, (dict, list)):
+                    inputs[key] = json.dumps(value, ensure_ascii=False)
 
             escaped_string = input_string.replace("{", "{{").replace("}", "}}")
 

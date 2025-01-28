@@ -441,9 +441,9 @@ def test_output_pydantic_to_another_task():
     crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=True)
     result = crew.kickoff()
     pydantic_result = result.pydantic
-    assert isinstance(
-        pydantic_result, ScoreOutput
-    ), "Expected pydantic result to be of type ScoreOutput"
+    assert isinstance(pydantic_result, ScoreOutput), (
+        "Expected pydantic result to be of type ScoreOutput"
+    )
     assert pydantic_result.score == 5
 
 
@@ -779,6 +779,43 @@ def test_interpolate_only():
     assert result == no_placeholders
 
 
+def test_interpolate_only_with_dict_inside_expected_output():
+    """Test the interpolate_only method for various scenarios including JSON structure preservation."""
+    task = Task(
+        description="Unused in this test",
+        expected_output="Unused in this test: {questions}",
+    )
+
+    json_string = '{"questions": {"main_question": "What is the user\'s name?", "secondary_question": "What is the user\'s age?"}}'
+    result = task.interpolate_only(
+        input_string=json_string,
+        inputs={
+            "questions": {
+                "main_question": "What is the user's name?",
+                "secondary_question": "What is the user's age?",
+            }
+        },
+    )
+    assert '"main_question": "What is the user\'s name?"' in result
+    assert '"secondary_question": "What is the user\'s age?"' in result
+    assert result == json_string
+
+    normal_string = "Hello {name}, welcome to {place}!"
+    result = task.interpolate_only(
+        input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
+    )
+    assert result == "Hello John, welcome to CrewAI!"
+
+    result = task.interpolate_only(input_string="", inputs={"unused": "value"})
+    assert result == ""
+
+    no_placeholders = "Hello, this is a test"
+    result = task.interpolate_only(
+        input_string=no_placeholders, inputs={"unused": "value"}
+    )
+    assert result == no_placeholders
+
+
 def test_task_output_str_with_pydantic():
     from crewai.tasks.output_format import OutputFormat
 
@@ -870,9 +907,9 @@ def test_key():
     assert task.key == hash, "The key should be the hash of the description."
 
     task.interpolate_inputs_and_add_conversation_history(inputs={"topic": "AI"})
-    assert (
-        task.key == hash
-    ), "The key should be the hash of the non-interpolated description."
+    assert task.key == hash, (
+        "The key should be the hash of the non-interpolated description."
+    )
 
 
 def test_output_file_validation():
