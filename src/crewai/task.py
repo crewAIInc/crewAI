@@ -454,7 +454,7 @@ class Task(BaseModel):
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(
-        self, inputs: Dict[str, Union[str, int, float, dict, list]]
+        self, inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]]
     ) -> None:
         """Interpolate inputs into the task description, expected output, and output file path.
            Add conversation history if present.
@@ -536,7 +536,7 @@ class Task(BaseModel):
             input_string: The string containing template variables to interpolate.
                          Can be None or empty, in which case an empty string is returned.
             inputs: Dictionary mapping template variables to their values.
-                   Supported value types are strings, integers, and floats.
+                   Supported value types are strings, integers, floats, dicts, and lists.
                    If input_string is empty or has no placeholders, inputs can be empty.
 
         Returns:
@@ -558,13 +558,17 @@ class Task(BaseModel):
         try:
             # Validate input types
             for key, value in inputs.items():
-                print("key", key, value)
                 if not isinstance(value, (str, int, float, dict, list)):
                     raise ValueError(
                         f"Value for key '{key}' must be a string, integer, float, dict, or list, got {type(value).__name__}"
                     )
                 if isinstance(value, (dict, list)):
-                    inputs[key] = json.dumps(value, ensure_ascii=False)
+                    try:
+                        inputs[key] = json.dumps(value, ensure_ascii=False)
+                    except Exception as e:
+                        raise ValueError(
+                            f"Failed to serialize value for key: {key} with value: {value} due to error: {str(e)}"
+                        ) from e
 
             escaped_string = input_string.replace("{", "{{").replace("}", "}}")
 
