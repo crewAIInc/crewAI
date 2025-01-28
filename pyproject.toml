@@ -36,6 +36,7 @@ dependencies = [
     "tomli-w>=1.1.0",
     "tomli>=2.0.2",
     "blinker>=1.9.0",
+    "json5>=0.10.0",
 ]
 
 [project.urls]
