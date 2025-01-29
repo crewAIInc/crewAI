@@ -100,6 +100,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         try:
             formatted_answer = self._invoke_loop()
+        except AssertionError:
+            self._printer.print(
+                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                color="red",
+            )
+            raise
         except Exception as e:
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
@@ -115,7 +121,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_long_term_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
-    def _invoke_loop(self):
+    def _invoke_loop(self) -> AgentFinish:
         """
         Main loop to invoke the agent's thought process until it reaches a conclusion
         or the maximum number of iterations is reached.
@@ -161,6 +167,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             finally:
                 self.iterations += 1
 
+        # During the invoke loop, formatted_answer alternates between AgentAction
+        # (when the agent is using tools) and eventually becomes AgentFinish
+        # (when the agent reaches a final answer). This assertion confirms we've
+        # reached a final answer and helps type checking understand this transition.
+        assert isinstance(formatted_answer, AgentFinish)
         self._show_logs(formatted_answer)
         return formatted_answer
 
@@ -292,8 +303,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self._printer.print(
                 content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
             )
+            description = (
+                getattr(self.task, "description") if self.task else "Not Found"
+            )
             self._printer.print(
-                content=f"\033[95m## Task:\033[00m \033[92m{self.task.description}\033[00m"
+                content=f"\033[95m## Task:\033[00m \033[92m{description}\033[00m"
             )
 
     def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
