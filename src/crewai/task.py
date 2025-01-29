@@ -431,7 +431,9 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
             )
             self._save_file(content)
 
@@ -526,7 +528,7 @@ class Task(BaseModel):
     def interpolate_only(
         self,
         input_string: Optional[str],
-        inputs: Dict[str, Any],
+        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
     ) -> str:
         """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
 
@@ -547,7 +549,9 @@ class Task(BaseModel):
 
         # Validation function for recursive type checking
         def validate_type(value: Any) -> None:
-            if isinstance(value, (str, int, float)):
+            if value is None:
+                return
+            if isinstance(value, (str, int, float, bool)):
                 return
             if isinstance(value, (dict, list)):
                 for item in value.values() if isinstance(value, dict) else value:
@@ -555,7 +559,7 @@ class Task(BaseModel):
                 return
             raise ValueError(
                 f"Unsupported type {type(value).__name__} in inputs. "
-                "Only str, int, float, dict, and list are allowed."
+                "Only str, int, float, bool, dict, and list are allowed."
             )
 
         # Validate all input values
