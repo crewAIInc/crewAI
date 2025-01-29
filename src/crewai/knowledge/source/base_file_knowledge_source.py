@@ -29,7 +29,13 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def validate_file_path(cls, v, info):
         """Validate that at least one of file_path or file_paths is provided."""
         # Single check if both are None, O(1) instead of nested conditions
-        if v is None and info.data.get("file_path" if info.field_name == "file_paths" else "file_paths") is None:
+        if (
+            v is None
+            and info.data.get(
+                "file_path" if info.field_name == "file_paths" else "file_paths"
+            )
+            is None
+        ):
             raise ValueError("Either file_path or file_paths must be provided")
         return v
 
