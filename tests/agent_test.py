@@ -10,13 +10,14 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.tools.tool_usage_events import ToolUsageFinished
-from crewai.utilities import Printer, RPMController
+from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
 
 
@@ -1600,6 +1601,45 @@ def test_agent_with_knowledge_sources():
 
         # Assert that the agent provides the correct information
         assert "red" in result.raw.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_works_with_copy():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    with patch(
+        "crewai.knowledge.source.base_knowledge_source.BaseKnowledgeSource",
+        autospec=True,
+    ) as MockKnowledgeSource:
+        mock_knowledge_source_instance = MockKnowledgeSource.return_value
+        mock_knowledge_source_instance.__class__ = BaseKnowledgeSource
+        mock_knowledge_source_instance.sources = [string_source]
+
+        agent = Agent(
+            role="Information Agent",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
+
+        with patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        ) as MockKnowledgeStorage:
+            mock_knowledge_storage = MockKnowledgeStorage.return_value
+            agent.knowledge_storage = mock_knowledge_storage
+
+            agent_copy = agent.copy()
+
+            assert agent_copy.role == agent.role
+            assert agent_copy.goal == agent.goal
+            assert agent_copy.backstory == agent.backstory
+            assert agent_copy.knowledge_sources is not None
+            assert len(agent_copy.knowledge_sources) == 1
+            assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
+            assert agent_copy.knowledge_sources[0].content == content
+            assert isinstance(agent_copy.llm, LLM)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
