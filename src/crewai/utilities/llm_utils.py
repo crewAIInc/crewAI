@@ -53,6 +53,7 @@ def create_llm(
         timeout: Optional[float] = getattr(llm_value, "timeout", None)
         api_key: Optional[str] = getattr(llm_value, "api_key", None)
         base_url: Optional[str] = getattr(llm_value, "base_url", None)
+        api_base: Optional[str] = getattr(llm_value, "api_base", None)
 
         created_llm = LLM(
             model=model,
@@ -62,6 +63,7 @@ def create_llm(
             timeout=timeout,
             api_key=api_key,
             base_url=base_url,
+            api_base=api_base,
         )
         return created_llm
     except Exception as e:
