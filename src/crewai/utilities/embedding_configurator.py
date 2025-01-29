@@ -71,7 +71,6 @@ class EmbeddingConfigurator:
             raise Exception(
                 f"Unsupported embedding provider: {provider}, supported providers: {list(self.embedding_functions.keys())}"
             )
-
         return self.embedding_functions[provider](config, model_name)
 
     @staticmethod
