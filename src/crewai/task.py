@@ -431,9 +431,7 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json()
-                if pydantic_output
-                else result
+                else pydantic_output.model_dump_json() if pydantic_output else result
             )
             self._save_file(content)
 
@@ -528,7 +526,7 @@ class Task(BaseModel):
     def interpolate_only(
         self,
         input_string: Optional[str],
-        inputs: Dict[str, Union[str, int, float, dict, list]],
+        inputs: Dict[str, Any],
     ) -> str:
         """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
 
@@ -536,17 +534,37 @@ class Task(BaseModel):
             input_string: The string containing template variables to interpolate.
                          Can be None or empty, in which case an empty string is returned.
             inputs: Dictionary mapping template variables to their values.
-                   Supported value types are strings, integers, floats, dicts, and lists.
-                   If input_string is empty or has no placeholders, inputs can be empty.
+                   Supported value types are strings, integers, floats, and dicts/lists
+                   containing only these types and other nested dicts/lists.
 
         Returns:
             The interpolated string with all template variables replaced with their values.
             Empty string if input_string is None or empty.
 
         Raises:
-            ValueError: If a required template variable is missing from inputs.
-            KeyError: If a template variable is not found in the inputs dictionary.
+            ValueError: If a value contains unsupported types
         """
+
+        # Validation function for recursive type checking
+        def validate_type(value: Any) -> None:
+            if isinstance(value, (str, int, float)):
+                return
+            if isinstance(value, (dict, list)):
+                for item in value.values() if isinstance(value, dict) else value:
+                    validate_type(item)
+                return
+            raise ValueError(
+                f"Unsupported type {type(value).__name__} in inputs. "
+                "Only str, int, float, dict, and list are allowed."
+            )
+
+        # Validate all input values
+        for key, value in inputs.items():
+            try:
+                validate_type(value)
+            except ValueError as e:
+                raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
+
         if input_string is None or not input_string:
             return ""
         if "{" not in input_string and "}" not in input_string:
@@ -556,20 +574,6 @@ class Task(BaseModel):
                 "Inputs dictionary cannot be empty when interpolating variables"
             )
         try:
-            # Validate input types
-            for key, value in inputs.items():
-                if not isinstance(value, (str, int, float, dict, list)):
-                    raise ValueError(
-                        f"Value for key '{key}' must be a string, integer, float, dict, or list, got {type(value).__name__}"
-                    )
-                if isinstance(value, (dict, list)):
-                    try:
-                        inputs[key] = json.dumps(value, ensure_ascii=False)
-                    except Exception as e:
-                        raise ValueError(
-                            f"Failed to serialize value for key: {key} with value: {value} due to error: {str(e)}"
-                        ) from e
-
             escaped_string = input_string.replace("{", "{{").replace("}", "}}")
 
             for key in inputs.keys():
