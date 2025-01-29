@@ -18,6 +18,8 @@ from pydantic_core import PydanticCustomError
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.tools import BaseTool
 from crewai.tools.base_tool import Tool
 from crewai.utilities import I18N, Logger, RPMController
@@ -48,6 +50,8 @@ class BaseAgent(ABC, BaseModel):
         cache_handler (InstanceOf[CacheHandler]): An instance of the CacheHandler class.
         tools_handler (InstanceOf[ToolsHandler]): An instance of the ToolsHandler class.
         max_tokens: Maximum number of tokens for the agent to generate in a response.
+        knowledge_sources: Knowledge sources for the agent.
+        knowledge_storage: Custom knowledge storage for the agent.
 
 
     Methods:
@@ -129,6 +133,17 @@ class BaseAgent(ABC, BaseModel):
     )
     max_tokens: Optional[int] = Field(
         default=None, description="Maximum number of tokens for the agent's execution."
+    )
+    knowledge: Optional[Knowledge] = Field(
+        default=None, description="Knowledge for the agent."
+    )
+    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
+        default=None,
+        description="Knowledge sources for the agent.",
+    )
+    knowledge_storage: Optional[Any] = Field(
+        default=None,
+        description="Custom knowledge storage for the agent.",
     )
 
     @model_validator(mode="before")
@@ -256,13 +271,44 @@ class BaseAgent(ABC, BaseModel):
             "tools_handler",
             "cache_handler",
             "llm",
+            "knowledge_sources",
+            "knowledge_storage",
+            "knowledge",
         }
 
-        # Copy llm and clear callbacks
+        # Copy llm
         existing_llm = shallow_copy(self.llm)
+        copied_knowledge = shallow_copy(self.knowledge)
+        copied_knowledge_storage = shallow_copy(self.knowledge_storage)
+        # Properly copy knowledge sources if they exist
+        existing_knowledge_sources = None
+        if self.knowledge_sources:
+            # Create a shared storage instance for all knowledge sources
+            shared_storage = (
+                self.knowledge_sources[0].storage if self.knowledge_sources else None
+            )
+
+            existing_knowledge_sources = []
+            for source in self.knowledge_sources:
+                copied_source = (
+                    source.model_copy()
+                    if hasattr(source, "model_copy")
+                    else shallow_copy(source)
+                )
+                # Ensure all copied sources use the same storage instance
+                copied_source.storage = shared_storage
+                existing_knowledge_sources.append(copied_source)
+
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-        copied_agent = type(self)(**copied_data, llm=existing_llm, tools=self.tools)
+        copied_agent = type(self)(
+            **copied_data,
+            llm=existing_llm,
+            tools=self.tools,
+            knowledge_sources=existing_knowledge_sources,
+            knowledge=copied_knowledge,
+            knowledge_storage=copied_knowledge_storage,
+        )
 
         return copied_agent
 

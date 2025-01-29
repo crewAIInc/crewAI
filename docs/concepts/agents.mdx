@@ -43,7 +43,7 @@ Think of an agent as a specialized team member with specific skills, expertise, 
 | **Max Retry Limit** _(optional)_        | `max_retry_limit`        | `int`                         | Maximum number of retries when an error occurs. Default is 2.                                                         |
 | **Respect Context Window** _(optional)_ | `respect_context_window` | `bool`                        | Keep messages under context window size by summarizing. Default is True.                                              |
 | **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`   | Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct). Default is 'safe'.                               |
-| **Embedder Config** _(optional)_        | `embedder_config`        | `Optional[Dict[str, Any]]`    | Configuration for the embedder used by the agent.                                                                     |
+| **Embedder** _(optional)_               | `embedder`               | `Optional[Dict[str, Any]]`    | Configuration for the embedder used by the agent.                                                                     |
 | **Knowledge Sources** _(optional)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | Knowledge sources available to the agent.                                                                     |
 | **Use System Prompt** _(optional)_      | `use_system_prompt`      | `Optional[bool]`              | Whether to use system prompt (for o1 model support). Default is True.                                                 |
 
@@ -152,7 +152,7 @@ agent = Agent(
     use_system_prompt=True,  # Default: True
     tools=[SerperDevTool()],  # Optional: List of tools
     knowledge_sources=None,  # Optional: List of knowledge sources
-    embedder_config=None,  # Optional: Custom embedder configuration
+    embedder=None,  # Optional: Custom embedder configuration
     system_template=None,  # Optional: Custom system prompt template
     prompt_template=None,  # Optional: Custom prompt template
     response_template=None,  # Optional: Custom response template
