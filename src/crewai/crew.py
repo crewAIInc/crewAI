@@ -440,6 +440,13 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
+    
+    @model_validator(mode="after")
+    def validate_output_log_file_and_save_as_json_compatibility(self):
+        """Validates that saving as JSON is not enabled when output logging is disabled, as this would be an invalid configuration."""
+        if not self.output_log_file and self.save_as_json:   # handles False, None, empty string
+            raise PydanticCustomError("Cannot save as JSON when output logging is disabled")
+        return self
 
     @property
     def key(self) -> str:
