@@ -37,8 +37,7 @@ class ExcelKnowledgeSource(BaseFileKnowledgeSource):
     def _import_dependencies(self):
         """Dynamically import dependencies."""
         try:
-            # import openpyxl  # noqa
-            # from openpyxl import load_workbook
+            
             import pandas as pd
 
             return pd
