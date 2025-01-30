@@ -35,6 +35,4 @@ class CrewTrainingHandler(PickleHandler):
     def clear(self) -> None:
         """Clear the training data by removing the file or resetting its contents."""
         if os.path.exists(self.file_path):
-            with open(self.file_path, "wb") as file:
-                # Overwrite with an empty dictionary
-                self.save({})
+            self.save({})
