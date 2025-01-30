@@ -61,6 +61,7 @@ class Agent(BaseAgent):
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             knowledge_sources: Knowledge sources for the agent.
+            embedder: Embedder configuration for the agent.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -122,16 +123,9 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    embedder_config: Optional[Dict[str, Any]] = Field(
+    embedder: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
-    )
-    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
-        default=None,
-        description="Knowledge sources for the agent.",
-    )
-    _knowledge: Optional[Knowledge] = PrivateAttr(
-        default=None,
     )
 
     @model_validator(mode="after")
@@ -163,10 +157,11 @@ class Agent(BaseAgent):
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
-                    self._knowledge = Knowledge(
+                    self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
-                        embedder_config=self.embedder_config,
+                        embedder=self.embedder,
                         collection_name=knowledge_agent_name,
+                        storage=self.knowledge_storage or None,
                     )
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
@@ -225,8 +220,8 @@ class Agent(BaseAgent):
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
-        if self._knowledge:
-            agent_knowledge_snippets = self._knowledge.query([task.prompt()])
+        if self.knowledge:
+            agent_knowledge_snippets = self.knowledge.query([task.prompt()])
             if agent_knowledge_snippets:
                 agent_knowledge_context = extract_knowledge_context(
                     agent_knowledge_snippets

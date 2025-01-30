@@ -33,11 +33,12 @@ crew = Crew(
 | :------------------------------- | :---------------- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------- |
 | **Description**                  | `description`     | `str`                         | A clear, concise statement of what the task entails.                                                                 |
 | **Expected Output**              | `expected_output` | `str`                         | A detailed description of what the task's completion looks like.                                                     |
-| **Name** _(optional)_           | `name`           | `Optional[str]`               | A name identifier for the task.                                                                                      |
-| **Agent** _(optional)_          | `agent`           | `Optional[BaseAgent]`         | The agent responsible for executing the task.                                                                        |
-| **Tools** _(optional)_          | `tools`           | `List[BaseTool]`             | The tools/resources the agent is limited to use for this task.                                                       |
+| **Name** _(optional)_            | `name`            | `Optional[str]`               | A name identifier for the task.                                                                                      |
+| **Agent** _(optional)_           | `agent`           | `Optional[BaseAgent]`         | The agent responsible for executing the task.                                                                        |
+| **Tools** _(optional)_           | `tools`           | `List[BaseTool]`              | The tools/resources the agent is limited to use for this task.                                                       |
 | **Context** _(optional)_         | `context`         | `Optional[List["Task"]]`      | Other tasks whose outputs will be used as context for this task.                                                     |
 | **Async Execution** _(optional)_ | `async_execution` | `Optional[bool]`              | Whether the task should be executed asynchronously. Defaults to False.                                               |
+| **Human Input** _(optional)_     | `human_input`     | `Optional[bool]`              | Whether the task should have a human review the final answer of the agent. Defaults to False.                        |
 | **Config** _(optional)_          | `config`          | `Optional[Dict[str, Any]]`    | Task-specific configuration parameters.                                                                              |
 | **Output File** _(optional)_     | `output_file`     | `Optional[str]`               | File path for storing the task output.                                                                               |
 | **Output JSON** _(optional)_     | `output_json`     | `Optional[Type[BaseModel]]`   | A Pydantic model to structure the JSON output.                                                                       |
