@@ -510,7 +510,6 @@ class ToolUsage:
         if agentops:
             agentops.record(
                 agentops.ActionEvent(
-                    name=tool_calling.tool_name,
                     action_type="on_tool_use_finished",
                     params=tool_calling.arguments,
                     returns=event_data,

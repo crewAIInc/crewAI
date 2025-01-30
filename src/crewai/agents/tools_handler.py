@@ -29,7 +29,6 @@ class ToolsHandler:
         if agentops:
             agentops.record(
                 agentops.ActionEvent(
-                    name=calling.tool_name,
                     action_type="on_tool_use",
                     params=calling.arguments,
                     returns=output,
