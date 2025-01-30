@@ -95,18 +95,29 @@ class CrewAgentExecutorMixin:
                 pass
 
     def _ask_human_input(self, final_answer: str) -> str:
-        """Prompt human input for final decision making."""
+        """Prompt human input with mode-appropriate messaging."""
         self._printer.print(
             content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"
         )
 
-        self._printer.print(
-            content=(
+        # Training mode prompt (single iteration)
+        if self.crew and getattr(self.crew, "_train", False):
+            prompt = (
                 "\n\n=====\n"
-                "## Please provide feedback on the Final Result and the Agent's actions. "
-                "Respond with 'looks good' or a similar phrase when you're satisfied.\n"
+                "## TRAINING MODE: Provide feedback to improve the agent's performance.\n"
+                "This will be used to train better versions of the agent.\n"
+                "Please provide detailed feedback about the result quality and reasoning process.\n"
                 "=====\n"
-            ),
-            color="bold_yellow",
-        )
+            )
+        # Regular human-in-the-loop prompt (multiple iterations)
+        else:
+            prompt = (
+                "\n\n=====\n"
+                "## HUMAN FEEDBACK: Provide feedback on the Final Result and Agent's actions.\n"
+                "Respond with 'looks good' to accept or provide specific improvement requests.\n"
+                "You can provide multiple rounds of feedback until satisfied.\n"
+                "=====\n"
+            )
+
+        self._printer.print(content=prompt, color="bold_yellow")
         return input()
