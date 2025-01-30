@@ -211,6 +211,14 @@ my_crew = Crew(
 
 ### Using Google AI embeddings
 
+You will need to update your *pyproject.toml* dependencies:
+```YAML
+dependencies = [
+    "google-generativeai>=0.1",
+    "crewai[tools]>=0.100.0,<1.0.0"
+]
+```
+
 ```python Code
 from crewai import Crew, Agent, Task, Process
 
@@ -224,7 +232,7 @@ my_crew = Crew(
         "provider": "google",
         "config": {
             "api_key": "<YOUR_API_KEY>",
-            "model_name": "<model_name>"
+            "model": "models/<model_name>"
         }
     }
 )
