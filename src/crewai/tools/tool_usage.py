@@ -116,7 +116,10 @@ class ToolUsage:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
 
-        if isinstance(tool, CrewStructuredTool) and tool.name == self._i18n.tools("add_image")["name"]:  # type: ignore
+        if (
+            isinstance(tool, CrewStructuredTool)
+            and tool.name == self._i18n.tools("add_image")["name"]
+        ):  # type: ignore
             try:
                 result = self._use(tool_string=tool_string, tool=tool, calling=calling)
                 return result
@@ -136,7 +139,6 @@ class ToolUsage:
         tool: Any,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
-        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None  # type: ignore
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -181,7 +183,9 @@ class ToolUsage:
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.model_json_schema()["properties"].keys()  # type: ignore
+                        acceptable_args = tool.args_schema.model_json_schema()[
+                            "properties"
+                        ].keys()  # type: ignore
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
@@ -214,7 +218,19 @@ class ToolUsage:
                 self.task.increment_tools_errors()
                 if agentops:
                     agentops.record(
-                        agentops.ErrorEvent(exception=e, trigger_event=tool_event)
+                        agentops.ErrorEvent(
+                            exception=e,
+                            logs={
+                                "tool_string": tool_string,
+                                "tool": tool,
+                                "tool_calling": calling,
+                                "error": error,
+                                "run_attempts": self._run_attempts,
+                                "llm": self.function_calling_llm,
+                                "task": self.task,
+                                "agent": self.agent,
+                            },
+                        )
                     )
                 return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
 
@@ -229,11 +245,12 @@ class ToolUsage:
                     )
 
                 self.tools_handler.on_tool_use(
-                    calling=calling, output=result, should_cache=should_cache
+                    calling=calling,
+                    output=result,
+                    should_cache=should_cache,
+                    agentops=agentops,
                 )
 
-        if agentops:
-            agentops.record(tool_event)
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
             tool_name=tool.name,
@@ -460,6 +477,19 @@ class ToolUsage:
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
+
+        if agentops:
+            agentops.record(
+                agentops.ErrorEvent(
+                    exception=e,
+                    logs={
+                        "tool": tool,
+                        "tool_calling": tool_calling,
+                        "event_data": event_data,
+                    },
+                )
+            )
+
         events.emit(
             source=self, event=ToolUsageError(**{**event_data, "error": str(e)})
         )
@@ -476,6 +506,21 @@ class ToolUsage:
                 "from_cache": from_cache,
             }
         )
+
+        if agentops:
+            agentops.record(
+                agentops.ActionEvent(
+                    name=tool_calling.tool_name,
+                    action_type="on_tool_use_finished",
+                    params=tool_calling.arguments,
+                    returns=event_data,
+                    logs={
+                        "tool": tool,
+                        "tool_calling": tool_calling,
+                    },
+                )
+            )
+
         events.emit(source=self, event=ToolUsageFinished(**event_data))
 
     def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
