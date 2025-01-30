@@ -1,5 +1,6 @@
 from typing import Any, Optional, Type
 from pydantic import BaseModel, Field
+from crewai.tools import BaseTool
 
 try:
     from exa_py import Exa
@@ -10,31 +11,48 @@ except ImportError:
     EXA_INSTALLED = False
 
 
-class EXABaseToolToolSchema(BaseModel):
+class EXABaseToolSchema(BaseModel):
     search_query: str = Field(
         ..., description="Mandatory search query you want to use to search the internet"
     )
+    start_published_date: Optional[str] = Field(
+        None, description="Start date for the search"
+    )
+    end_published_date: Optional[str] = Field(
+        None, description="End date for the search"
+    )
+    include_domains: Optional[list[str]] = Field(
+        None, description="List of domains to include in the search"
+    )
 
 
-class EXASearchTool:
-    args_schema: Type[BaseModel] = EXABaseToolToolSchema
-    client: Optional["Exa"] = Field(default=None, description="Exa search client")
+class EXASearchTool(BaseTool):
+    model_config = {"arbitrary_types_allowed": True}
+    name: str = "EXASearchTool"
+    description: str = "Search the internet using Exa"
+    args_schema: Type[BaseModel] = EXABaseToolSchema
+    client: Optional["Exa"] = None
+    content: Optional[bool] = False
+    summary: Optional[bool] = False
+    type: Optional[str] = "auto"
 
     def __init__(
         self,
         api_key: str,
-        content: bool = False,
-        highlights: bool = False,
-        type: str = "keyword",
-        use_autoprompt: bool = True,
+        content: Optional[bool] = False,
+        summary: Optional[bool] = False,
+        type: Optional[str] = "auto",
+        **kwargs,
     ):
+        super().__init__(
+            **kwargs,
+        )
         if not EXA_INSTALLED:
             raise ImportError("`exa-py` package not found, please run `uv add exa-py`")
         self.client = Exa(api_key=api_key)
         self.content = content
-        self.highlights = highlights
+        self.summary = summary
         self.type = type
-        self.use_autoprompt = use_autoprompt
 
     def _run(
         self,
@@ -47,7 +65,6 @@ class EXASearchTool:
             raise ValueError("Client not initialized")
 
         search_params = {
-            "use_autoprompt": self.use_autoprompt,
             "type": self.type,
         }
 
@@ -60,7 +77,7 @@ class EXASearchTool:
 
         if self.content:
             results = self.client.search_and_contents(
-                search_query, highlights=self.highlights, **search_params
+                search_query, summary=self.summary, **search_params
             )
         else:
             results = self.client.search(search_query, **search_params)
