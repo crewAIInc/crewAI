@@ -1,11 +1,15 @@
 from pathlib import Path
 from typing import Dict, List
+from pydantic import Field
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
 class ExcelKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries Excel file content using embeddings."""
+
+    # override content to be a dict of file paths to sheet names to csv content
+    content: Dict[Path, Dict[str, str]] = Field(default_factory=dict)
 
     def load_content(self) -> Dict[Path, Dict[str, str]]:
         """Load and preprocess Excel file content from multiple sheets.
