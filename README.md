@@ -190,7 +190,7 @@ research_task:
   description: >
     Conduct a thorough research about {topic}
     Make sure you find any interesting and relevant information given
-    the current year is 2024.
+    the current year is 2025.
   expected_output: >
     A list with 10 bullet points of the most relevant information about {topic}
   agent: researcher
