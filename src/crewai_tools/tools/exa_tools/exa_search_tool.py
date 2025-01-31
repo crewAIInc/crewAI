@@ -1,30 +1,96 @@
-import os
-from typing import Any
+from typing import Any, Optional, Type
+from pydantic import BaseModel, Field
+from crewai.tools import BaseTool
 
-import requests
+try:
+    from exa_py import Exa
 
-from .exa_base_tool import EXABaseTool
+    EXA_INSTALLED = True
+except ImportError:
+    Exa = Any
+    EXA_INSTALLED = False
 
 
-class EXASearchTool(EXABaseTool):
+class EXABaseToolSchema(BaseModel):
+    search_query: str = Field(
+        ..., description="Mandatory search query you want to use to search the internet"
+    )
+    start_published_date: Optional[str] = Field(
+        None, description="Start date for the search"
+    )
+    end_published_date: Optional[str] = Field(
+        None, description="End date for the search"
+    )
+    include_domains: Optional[list[str]] = Field(
+        None, description="List of domains to include in the search"
+    )
+
+
+class EXASearchTool(BaseTool):
+    model_config = {"arbitrary_types_allowed": True}
+    name: str = "EXASearchTool"
+    description: str = "Search the internet using Exa"
+    args_schema: Type[BaseModel] = EXABaseToolSchema
+    client: Optional["Exa"] = None
+    content: Optional[bool] = False
+    summary: Optional[bool] = False
+    type: Optional[str] = "auto"
+
+    def __init__(
+        self,
+        api_key: str,
+        content: Optional[bool] = False,
+        summary: Optional[bool] = False,
+        type: Optional[str] = "auto",
+        **kwargs,
+    ):
+        super().__init__(
+            **kwargs,
+        )
+        if not EXA_INSTALLED:
+            import click
+
+            if click.confirm(
+                "You are missing the 'exa_py' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "exa_py"], check=True)
+
+            else:
+                raise ImportError(
+                    "You are missing the 'exa_py' package. Would you like to install it?"
+                )
+        self.client = Exa(api_key=api_key)
+        self.content = content
+        self.summary = summary
+        self.type = type
+
     def _run(
         self,
-        **kwargs: Any,
+        search_query: str,
+        start_published_date: Optional[str] = None,
+        end_published_date: Optional[str] = None,
+        include_domains: Optional[list[str]] = None,
     ) -> Any:
-        search_query = kwargs.get("search_query")
-        if search_query is None:
-            search_query = kwargs.get("query")
+        if self.client is None:
+            raise ValueError("Client not initialized")
 
-        payload = {
-            "query": search_query,
-            "type": "magic",
+        search_params = {
+            "type": self.type,
         }
 
-        headers = self.headers.copy()
-        headers["x-api-key"] = os.environ["EXA_API_KEY"]
+        if start_published_date:
+            search_params["start_published_date"] = start_published_date
+        if end_published_date:
+            search_params["end_published_date"] = end_published_date
+        if include_domains:
+            search_params["include_domains"] = include_domains
 
-        response = requests.post(self.search_url, json=payload, headers=headers)
-        results = response.json()
-        if "results" in results:
-            results = super()._parse_results(results["results"])
+        if self.content:
+            results = self.client.search_and_contents(
+                search_query, summary=self.summary, **search_params
+            )
+        else:
+            results = self.client.search(search_query, **search_params)
         return results

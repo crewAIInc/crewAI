@@ -6,7 +6,7 @@ This tool is designed to perform a semantic search for a specified query from a 
 ## Installation
 To incorporate this tool into your project, follow the installation instructions below:
 ```shell
-pip install 'crewai[tools]'
+uv add crewai[tools] exa_py
 ```
 
 ## Example
@@ -16,7 +16,7 @@ The following example demonstrates how to initialize the tool and execute a sear
 from crewai_tools import EXASearchTool
 
 # Initialize the tool for internet searching capabilities
-tool = EXASearchTool()
+tool = EXASearchTool(api_key="your_api_key")
 ```
 
 ## Steps to Get Started
