@@ -1,12 +1,13 @@
 import ast
 import datetime
 import json
-import re
 import time
 from difflib import SequenceMatcher
+from json import JSONDecodeError
 from textwrap import dedent
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
+import json5
 from json_repair import repair_json
 
 import crewai.utilities.events as events
@@ -407,28 +408,55 @@ class ToolUsage:
                 )
             return self._tool_calling(tool_string)
 
-    def _validate_tool_input(self, tool_input: str) -> Dict[str, Any]:
+    def _validate_tool_input(self, tool_input: Optional[str]) -> Dict[str, Any]:
+        if tool_input is None:
+            return {}
+
+        if not isinstance(tool_input, str) or not tool_input.strip():
+            raise Exception(
+                "Tool input must be a valid dictionary in JSON or Python literal format"
+            )
+
+        # Attempt 1: Parse as JSON
         try:
-            # Replace Python literals with JSON equivalents
-            replacements = {
-                r"'": '"',
-                r"None": "null",
-                r"True": "true",
-                r"False": "false",
-            }
-            for pattern, replacement in replacements.items():
-                tool_input = re.sub(pattern, replacement, tool_input)
-
             arguments = json.loads(tool_input)
-        except json.JSONDecodeError:
-            # Attempt to repair JSON string
-            repaired_input = repair_json(tool_input)
-            try:
-                arguments = json.loads(repaired_input)
-            except json.JSONDecodeError as e:
-                raise Exception(f"Invalid tool input JSON: {e}")
+            if isinstance(arguments, dict):
+                return arguments
+        except (JSONDecodeError, TypeError):
+            pass  # Continue to the next parsing attempt
 
-        return arguments
+        # Attempt 2: Parse as Python literal
+        try:
+            arguments = ast.literal_eval(tool_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except (ValueError, SyntaxError):
+            pass  # Continue to the next parsing attempt
+
+        # Attempt 3: Parse as JSON5
+        try:
+            arguments = json5.loads(tool_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except (JSONDecodeError, ValueError, TypeError):
+            pass  # Continue to the next parsing attempt
+
+        # Attempt 4: Repair JSON
+        try:
+            repaired_input = repair_json(tool_input)
+            self._printer.print(
+                content=f"Repaired JSON: {repaired_input}", color="blue"
+            )
+            arguments = json.loads(repaired_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except Exception as e:
+            self._printer.print(content=f"Failed to repair JSON: {e}", color="red")
+
+        # If all parsing attempts fail, raise an error
+        raise Exception(
+            "Tool input must be a valid dictionary in JSON or Python literal format"
+        )
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
