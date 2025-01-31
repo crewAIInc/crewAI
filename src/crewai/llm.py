@@ -137,6 +137,7 @@ class LLM:
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
+        **kwargs,
     ):
         self.model = model
         self.timeout = timeout
@@ -158,6 +159,7 @@ class LLM:
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
+        self.additional_params = kwargs
 
         litellm.drop_params = True
 
@@ -240,6 +242,7 @@ class LLM:
                     "api_key": self.api_key,
                     "stream": False,
                     "tools": tools,
+                    **self.additional_params,
                 }
 
                 # Remove None values from params
