@@ -790,7 +790,8 @@ class Crew(BaseModel):
             task_outputs = self._process_async_tasks(futures, was_replayed)
             futures.clear()
 
-        previous_output = task_outputs[task_index - 1] if task_outputs else None
+        prev_output_index = task_index - 1 if len(task_outputs) > 1 else 0
+        previous_output = task_outputs[prev_output_index] if task_outputs else None
         if previous_output is not None and not task.should_execute(previous_output):
             self._logger.log(
                 "debug",
