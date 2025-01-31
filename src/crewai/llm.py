@@ -137,6 +137,7 @@ class LLM:
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
+        **custom_params: Dict[str, Any],
     ):
         self.model = model
         self.timeout = timeout
@@ -158,6 +159,7 @@ class LLM:
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
+        self.custom_params = custom_params
 
         litellm.drop_params = True
 
@@ -241,6 +243,9 @@ class LLM:
                     "stream": False,
                     "tools": tools,
                 }
+
+                if self.custom_params:
+                    params.update(self.custom_params["custom_params"])
 
                 # Remove None values from params
                 params = {k: v for k, v in params.items() if v is not None}
