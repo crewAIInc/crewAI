@@ -48,7 +48,19 @@ class EXASearchTool(BaseTool):
             **kwargs,
         )
         if not EXA_INSTALLED:
-            raise ImportError("`exa-py` package not found, please run `uv add exa-py`")
+            import click
+
+            if click.confirm(
+                "You are missing the 'exa_py' package. Would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "exa_py"], check=True)
+
+            else:
+                raise ImportError(
+                    "You are missing the 'exa_py' package. Would you like to install it?"
+                )
         self.client = Exa(api_key=api_key)
         self.content = content
         self.summary = summary
