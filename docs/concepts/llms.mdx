@@ -465,11 +465,22 @@ Learn how to get the most out of your LLM configuration:
     # https://cloud.google.com/vertex-ai/generative-ai/docs/overview
     ```
 
+    ## GET CREDENTIALS 
+    file_path = 'path/to/vertex_ai_service_account.json'
+
+    # Load the JSON file
+    with open(file_path, 'r') as file:
+        vertex_credentials = json.load(file)
+
+    # Convert to JSON string
+    vertex_credentials_json = json.dumps(vertex_credentials)
+
     Example usage:
     ```python Code
     llm = LLM(
         model="gemini/gemini-1.5-pro-latest",
-        temperature=0.7
+        temperature=0.7,
+        vertex_credentials=vertex_credentials_json
     )
     ```
   </Accordion>
