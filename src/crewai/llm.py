@@ -248,6 +248,8 @@ class LLM:
                 # Remove None values from params
                 params = {k: v for k, v in params.items() if v is not None}
 
+                print("PARAMS FOR LLM CALL", params)
+
                 # --- 2) Make the completion call
                 response = litellm.completion(**params)
                 response_message = cast(Choices, cast(ModelResponse, response).choices)[
