@@ -46,7 +46,7 @@ ENV_VARS = {
     "ollama": [
         {
             "default": True,
-            "API_BASE": "http://localhost:11434",
+            "BASE_URL": "http://localhost:11434",
         }
     ],
     "bedrock": [
