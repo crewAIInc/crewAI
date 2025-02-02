@@ -11,7 +11,7 @@ Qdrant is a vector database that is used to store and query vector embeddings. Y
 Install the crewai_tools package by executing the following command in your terminal:
 
 ```shell
-uv pip install 'crewai[tools]'
+uv pip install 'crewai[tools] qdrant-client fastembed'
 ```
 
 ## Example
