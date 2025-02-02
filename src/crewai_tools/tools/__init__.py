@@ -35,6 +35,7 @@ from .patronus_eval_tool import (
 )
 from .pdf_search_tool.pdf_search_tool import PDFSearchTool
 from .pg_seach_tool.pg_search_tool import PGSearchTool
+from .qdrant_vector_search_tool.qdrant_search_tool import QdrantVectorSearchTool
 from .rag.rag_tool import RagTool
 from .scrape_element_from_website.scrape_element_from_website import (
     ScrapeElementFromWebsiteTool,
