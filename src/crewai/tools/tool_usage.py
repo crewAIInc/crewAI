@@ -251,6 +251,24 @@ class ToolUsage:
                     agentops=agentops,
                 )
 
+        if agentops:
+            agentops.record(
+                agentops.ToolEvent(
+                    params=calling.arguments,
+                    returns=result,
+                    name=tool.name,
+                    logs={
+                        "tool_string": tool_string,
+                        "tool": tool,
+                        "tool_calling": calling,
+                        "run_attempts": self._run_attempts,
+                        "llm": self.function_calling_llm,
+                        "task": self.task,
+                        "agent": self.agent,
+                    },
+                )
+            )
+
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
             tool_name=tool.name,
