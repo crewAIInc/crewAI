@@ -120,6 +120,8 @@
         "tools/composiotool",
         "tools/csvsearchtool",
         "tools/dalletool",
+        "tools/dappierrealtimesearchtool",
+        "tools/dappierairecommendationstool",
         "tools/directorysearchtool",
         "tools/directoryreadtool",
         "tools/docxsearchtool",
