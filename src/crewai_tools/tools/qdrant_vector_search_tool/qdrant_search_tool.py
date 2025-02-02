@@ -70,7 +70,7 @@ class QdrantVectorSearchTool(BaseTool):
         description="The API key for the Qdrant server",
     )
     vectorizer: Optional[str] = Field(
-        default="fast-bge-small-en-v1.5",
+        default="BAAI/bge-small-en-v1.5",
         description="The vectorizer to use for the Qdrant server",
     )
 
