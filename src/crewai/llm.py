@@ -133,9 +133,11 @@ class LLM:
         logprobs: Optional[int] = None,
         top_logprobs: Optional[int] = None,
         base_url: Optional[str] = None,
+        api_base: Optional[str] = None,
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
+        **kwargs,
     ):
         self.model = model
         self.timeout = timeout
@@ -152,10 +154,12 @@ class LLM:
         self.logprobs = logprobs
         self.top_logprobs = top_logprobs
         self.base_url = base_url
+        self.api_base = api_base
         self.api_version = api_version
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
+        self.additional_params = kwargs
 
         litellm.drop_params = True
 
@@ -232,11 +236,13 @@ class LLM:
                     "seed": self.seed,
                     "logprobs": self.logprobs,
                     "top_logprobs": self.top_logprobs,
-                    "api_base": self.base_url,
+                    "api_base": self.api_base,
+                    "base_url": self.base_url,
                     "api_version": self.api_version,
                     "api_key": self.api_key,
                     "stream": False,
                     "tools": tools,
+                    **self.additional_params,
                 }
 
                 # Remove None values from params
