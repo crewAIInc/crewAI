@@ -7,7 +7,10 @@ import warnings
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Union, cast
 
+import instructor
 from dotenv import load_dotenv
+from openai.types.chat import ChatCompletionMessageParam
+from pydantic import BaseModel
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
@@ -180,36 +183,66 @@ class LLM:
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
+        response_format: Optional[BaseModel] = None,
     ) -> str:
         """
-        High-level llm call method that:
-          1) Accepts either a string or a list of messages
-          2) Converts string input to the required message format
-          3) Calls litellm.completion
-          4) Handles function/tool calls if any
-          5) Returns the final text response or tool result
+        High-level LLM call method that handles:
+        1. Multiple input formats (string or message list)
+        2. Structured responses via Instructor integration
+        3. Tool/function calling with optional structured output
+        4. Callback integration
 
         Parameters:
-        - messages (Union[str, List[Dict[str, str]]]): The input messages for the LLM.
-          - If a string is provided, it will be converted into a message list with a single entry.
-          - If a list of dictionaries is provided, each dictionary should have 'role' and 'content' keys.
-        - tools (Optional[List[dict]]): A list of tool schemas for function calling.
-        - callbacks (Optional[List[Any]]): A list of callback functions to be executed.
-        - available_functions (Optional[Dict[str, Any]]): A dictionary mapping function names to actual Python functions.
+            messages: Input prompt(s) as either:
+                - String (converted to single user message)
+                - List of message dicts with 'role' and 'content'
+
+            tools: List of tool schemas for function calling
+            callbacks: List of callback handlers
+            available_functions: Mapping of function names to callables
+            response_format: Pydantic model for structured responses
 
         Returns:
-        - str: The final text response from the LLM or the result of a tool function call.
+            str: Can be:
+            - Plain text response
+            - Structured response (if response_format provided)
+            - Tool function result (raw or structured)
+
+        Behavior:
+        - With response_format and no tools: Direct structured response
+        - With tools: Initial LLM call → Tool execution → Optional secondary structured call
+        - Without tools/response_format: Standard text completion
 
         Examples:
-        ---------
-        # Example 1: Using a string input
-        response = llm.call("Return the name of a random city in the world.")
-        print(response)
+            # Basic text completion
+            llm.call("Hello world")
 
-        # Example 2: Using a list of messages
-        messages = [{"role": "user", "content": "What is the capital of France?"}]
-        response = llm.call(messages)
-        print(response)
+            # Structured response without tools
+            class City(BaseModel):
+                name: str
+                population: int
+
+            response = llm.call(
+                "Name a major US city",
+                response_format=City
+            )
+            print(response.name)  # Structured access
+
+            # Tool usage with raw output
+            llm.call(
+                "What's 5 squared?",
+                tools=[math_tools],
+                available_functions={"square": square_number}
+            )
+
+            # Tool usage with structured output
+            response = llm.call(
+                "Analyze this data",
+                tools=[data_tools],
+                available_functions={"analyze": analyze_data},
+                response_format=AnalysisResult
+            )
+            print(response.metrics)  # Structured access
         """
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
@@ -218,37 +251,52 @@ class LLM:
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
 
+            # Prepare the parameters for the completion call.
+            params = {
+                "model": self.model,
+                "messages": messages,
+                "timeout": self.timeout,
+                "temperature": self.temperature,
+                "top_p": self.top_p,
+                "n": self.n,
+                "stop": self.stop,
+                "max_tokens": self.max_tokens or self.max_completion_tokens,
+                "presence_penalty": self.presence_penalty,
+                "frequency_penalty": self.frequency_penalty,
+                "logit_bias": self.logit_bias,
+                "seed": self.seed,
+                "logprobs": self.logprobs,
+                "top_logprobs": self.top_logprobs,
+                "api_base": self.api_base,
+                "base_url": self.base_url,
+                "api_version": self.api_version,
+                "api_key": self.api_key,
+                "stream": False,
+                "tools": tools,
+                **self.additional_params,
+            }
+
+            # Remove any keys with None values.
+            params = {k: v for k, v in params.items() if v is not None}
+
+            # --- Direct structured response if no tools are provided.
+            if response_format is not None and (tools is None or len(tools) == 0):
+                try:
+                    # Cast messages to required type and remove model param
+                    params["messages"] = cast(
+                        List[ChatCompletionMessageParam], messages
+                    )
+                    params.pop("model", None)
+
+                    client = instructor.from_litellm(litellm.completion)
+                    response = client.chat.completions.create(**params)
+                    return response
+                except Exception as e:
+                    logging.error(f"LiteLLM call failed: {str(e)}")
+                    raise
+
+            # --- Standard flow with potential tool calls.
             try:
-                # --- 1) Prepare the parameters for the completion call
-                params = {
-                    "model": self.model,
-                    "messages": messages,
-                    "timeout": self.timeout,
-                    "temperature": self.temperature,
-                    "top_p": self.top_p,
-                    "n": self.n,
-                    "stop": self.stop,
-                    "max_tokens": self.max_tokens or self.max_completion_tokens,
-                    "presence_penalty": self.presence_penalty,
-                    "frequency_penalty": self.frequency_penalty,
-                    "logit_bias": self.logit_bias,
-                    "response_format": self.response_format,
-                    "seed": self.seed,
-                    "logprobs": self.logprobs,
-                    "top_logprobs": self.top_logprobs,
-                    "api_base": self.api_base,
-                    "base_url": self.base_url,
-                    "api_version": self.api_version,
-                    "api_key": self.api_key,
-                    "stream": False,
-                    "tools": tools,
-                    **self.additional_params,
-                }
-
-                # Remove None values from params
-                params = {k: v for k, v in params.items() if v is not None}
-
-                # --- 2) Make the completion call
                 response = litellm.completion(**params)
                 response_message = cast(Choices, cast(ModelResponse, response).choices)[
                     0
@@ -256,7 +304,6 @@ class LLM:
                 text_response = response_message.content or ""
                 tool_calls = getattr(response_message, "tool_calls", [])
 
-                # --- 3) Handle callbacks with usage info
                 if callbacks and len(callbacks) > 0:
                     for callback in callbacks:
                         if hasattr(callback, "log_success_event"):
@@ -269,11 +316,11 @@ class LLM:
                                     end_time=0,
                                 )
 
-                # --- 4) If no tool calls, return the text response
+                # If no tool call is requested or available_functions is not provided, return the text response.
                 if not tool_calls or not available_functions:
                     return text_response
 
-                # --- 5) Handle the tool call
+                # --- Handle tool calls.
                 tool_call = tool_calls[0]
                 function_name = tool_call.function.name
 
@@ -286,22 +333,40 @@ class LLM:
 
                     fn = available_functions[function_name]
                     try:
-                        # Call the actual tool function
                         result = fn(**function_args)
-                        return result
-
                     except Exception as e:
                         logging.error(
                             f"Error executing function '{function_name}': {e}"
                         )
                         return text_response
 
+                    # If a structured response is requested, perform a secondary call using the tool result.
+                    if response_format is not None:
+                        new_params = dict(params)
+                        # Cast tool result message to required type
+                        new_params["messages"] = cast(
+                            List[ChatCompletionMessageParam],
+                            [{"role": "user", "content": result}],
+                        )
+                        new_params.pop("model", None)
+                        if "tools" in new_params:
+                            del new_params["tools"]
+                        try:
+                            client = instructor.from_litellm(litellm.completion)
+                            final_response = client.chat.completions.create(
+                                **new_params, response_model=response_format
+                            )
+                            return final_response
+                        except Exception as e:
+                            logging.error(f"LiteLLM structured call failed: {e}")
+                            return result
+                    else:
+                        return result
                 else:
                     logging.warning(
                         f"Tool call requested unknown function '{function_name}'"
                     )
                     return text_response
-
             except Exception as e:
                 if not LLMContextLengthExceededException(
                     str(e)
