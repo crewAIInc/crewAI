@@ -525,19 +525,6 @@ class ToolUsage:
             }
         )
 
-        if agentops:
-            agentops.record(
-                agentops.ActionEvent(
-                    action_type="on_tool_use_finished",
-                    params=tool_calling.arguments,
-                    returns=event_data,
-                    logs={
-                        "tool": tool,
-                        "tool_calling": tool_calling,
-                    },
-                )
-            )
-
         events.emit(source=self, event=ToolUsageFinished(**event_data))
 
     def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
