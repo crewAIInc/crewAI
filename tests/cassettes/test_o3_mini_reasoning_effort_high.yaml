@@ -1,0 +1,107 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is the capital of France?"}],
+      "model": "o3-mini", "reasoning_effort": "high", "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '137'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=etTqqA9SBOnENmrFAUBIexdW0v2ZeO1x9_Ek_WChlfU-1737568920137-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AxFNUz7l4pwtY9xhFSPIGlwNfE4Sj\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1738683828,\n  \"model\": \"o3-mini-2025-01-31\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The capital of France is Paris.\",\n
+      \       \"refusal\": null\n      },\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 13,\n    \"completion_tokens\":
+      81,\n    \"total_tokens\": 94,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 64,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_8bcaa0ca21\"\n}\n"
+    headers:
+      CF-RAY:
+      - 90cbc745d91fb0ca-ATL
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Feb 2025 15:43:50 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=.AP74BirsYr.lu61bSaimK2HRF6126qr5vCrr3HC6ak-1738683830-1.0.1.1-feh.bcMOv9wYnitoPpr.7UR7JrzCsbRLlzct09xCDm2SwmnRQQk5ZSSV41Ywer2S0rptbvufFwklV9wo9ATvWw;
+        path=/; expires=Tue, 04-Feb-25 16:13:50 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=JBfx8Sl7w82A0S_K1tQd5ZcwzWaZP5Gg5W1dqAdgwNU-1738683830528-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '2169'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999974'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_163e7bd79cb5a5e62d4688245b97d1d9
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
