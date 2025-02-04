@@ -11,12 +11,12 @@ Qdrant is a vector database that is used to store and query vector embeddings. Y
 Install the crewai_tools package by executing the following command in your terminal:
 
 ```shell
-uv pip install 'crewai[tools] qdrant-client fastembed'
+uv pip install 'crewai[tools] qdrant-client openai'
 ```
 
 ## Example
 
-To utilize the QdrantVectorSearchTool for different use cases, follow these examples:
+To utilize the QdrantVectorSearchTool for different use cases, follow these examples: Default model is openai.
 
 ```python
 from crewai_tools import QdrantVectorSearchTool
