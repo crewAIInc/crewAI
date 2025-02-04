@@ -1,0 +1,100 @@
+interactions:
+- request:
+    body: '{"model": "deepseek/deepseek-r1", "messages": [{"role": "user", "content":
+      "What is the capital of France?"}], "stop": [], "stream": false}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '139'
+      host:
+      - openrouter.ai
+      http-referer:
+      - https://litellm.ai
+      user-agent:
+      - litellm/1.60.2
+      x-title:
+      - liteLLM
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    content: "\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n\n
+      \        \n\n         \n\n         \n\n         \n\n         \n\n         \n{\"id\":\"gen-1738684300-YnD5WOSczQWsW0vQG78a\",\"provider\":\"Nebius\",\"model\":\"deepseek/deepseek-r1\",\"object\":\"chat.completion\",\"created\":1738684300,\"choices\":[{\"logprobs\":null,\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\"The
+      capital of France is **Paris**. Known for its iconic landmarks such as the Eiffel
+      Tower, Notre-Dame Cathedral, and the Louvre Museum, Paris has served as the
+      political and cultural center of France for centuries. \U0001F1EB\U0001F1F7\",\"refusal\":null}}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":261,\"total_tokens\":271}}"
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - 90cbd2ceaf3ead5e-ATL
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Feb 2025 15:51:40 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      x-clerk-auth-message:
+      - Invalid JWT form. A JWT consists of three parts separated by dots. (reason=token-invalid,
+        token-carrier=header)
+      x-clerk-auth-reason:
+      - token-invalid
+      x-clerk-auth-status:
+      - signed-out
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
