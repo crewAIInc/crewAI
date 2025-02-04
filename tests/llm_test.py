@@ -1,4 +1,6 @@
+import os
 from time import sleep
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -154,3 +156,98 @@ def test_llm_call_with_tool_and_message_list():
 
     assert isinstance(result, int)
     assert result == 25
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_passes_additional_params():
+    llm = LLM(
+        model="gpt-4o-mini",
+        vertex_credentials="test_credentials",
+        vertex_project="test_project",
+    )
+
+    messages = [{"role": "user", "content": "Hello, world!"}]
+
+    with patch("litellm.completion") as mocked_completion:
+        # Create mocks for response structure
+        mock_message = MagicMock()
+        mock_message.content = "Test response"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 5,
+            "completion_tokens": 5,
+            "total_tokens": 10,
+        }
+
+        # Set up the mocked completion to return the mock response
+        mocked_completion.return_value = mock_response
+
+        result = llm.call(messages)
+
+        # Assert that litellm.completion was called once
+        mocked_completion.assert_called_once()
+
+        # Retrieve the actual arguments with which litellm.completion was called
+        _, kwargs = mocked_completion.call_args
+
+        # Check that the additional_params were passed to litellm.completion
+        assert kwargs["vertex_credentials"] == "test_credentials"
+        assert kwargs["vertex_project"] == "test_project"
+
+        # Also verify that other expected parameters are present
+        assert kwargs["model"] == "gpt-4o-mini"
+        assert kwargs["messages"] == messages
+
+        # Check the result from llm.call
+        assert result == "Test response"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_o3_mini_reasoning_effort_high():
+    llm = LLM(
+        model="o3-mini",
+        reasoning_effort="high",
+    )
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_o3_mini_reasoning_effort_low():
+    llm = LLM(
+        model="o3-mini",
+        reasoning_effort="low",
+    )
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_o3_mini_reasoning_effort_medium():
+    llm = LLM(
+        model="o3-mini",
+        reasoning_effort="medium",
+    )
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_deepseek_r1_with_open_router():
+    if not os.getenv("OPEN_ROUTER_API_KEY"):
+        pytest.skip("OPEN_ROUTER_API_KEY not set; skipping test.")
+
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-r1",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.getenv("OPEN_ROUTER_API_KEY"),
+    )
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
