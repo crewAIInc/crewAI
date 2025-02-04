@@ -38,6 +38,7 @@ Here's a detailed breakdown of supported models and their capabilities, you can 
     | GPT-4 | 8,192 tokens | High-accuracy tasks, complex reasoning |
     | GPT-4 Turbo | 128,000 tokens | Long-form content, document analysis |
     | GPT-4o & GPT-4o-mini | 128,000 tokens | Cost-effective large context processing |
+    | o3-mini | 200,000 tokens | Fast reasoning, complex reasoning |
 
     <Note>
       1 token ≈ 4 characters in English. For example, 8,192 tokens ≈ 32,768 characters or about 6,000 words.
@@ -162,7 +163,8 @@ Here's a detailed breakdown of supported models and their capabilities, you can 
   <Tab title="Others">
     | Provider | Context Window | Key Features |
     |----------|---------------|--------------|
-    | Deepseek Chat | 128,000 tokens | Specialized in technical discussions |
+    | Deepseek Chat | 64,000 tokens | Specialized in technical discussions |
+    | Deepseek R1 | 64,000 tokens | Affordable reasoning model |
     | Claude 3 | Up to 200K tokens | Strong reasoning, code understanding |
     | Gemma Series | 8,192 tokens | Efficient, smaller-scale tasks |
 
@@ -296,6 +298,10 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
         # llm: sambanova/Meta-Llama-3.1-8B-Instruct
         # llm: sambanova/BioMistral-7B
         # llm: sambanova/Falcon-180B
+
+        # Open Router Models - Affordable reasoning
+        # llm: openrouter/deepseek/deepseek-r1
+        # llm: openrouter/deepseek/deepseek-chat
     ```
 
     <Info>
@@ -689,6 +695,27 @@ Learn how to get the most out of your LLM configuration:
       - Competitive pricing
       - Good balance of speed and quality
       - Support for long context windows
+    </Info>
+  </Accordion>
+
+  <Accordion title="Open Router">
+    ```python Code
+    OPENROUTER_API_KEY=<your-api-key>
+    ```
+    
+    Example usage:
+    ```python Code
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-r1",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY
+    )
+    ```
+
+    <Info>
+      Open Router models:
+      - openrouter/deepseek/deepseek-r1
+      - openrouter/deepseek/deepseek-chat
     </Info>
   </Accordion>
 </AccordionGroup>

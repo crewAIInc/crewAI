@@ -1,3 +1,4 @@
+import os
 from time import sleep
 from unittest.mock import MagicMock, patch
 
@@ -202,3 +203,51 @@ def test_llm_passes_additional_params():
 
         # Check the result from llm.call
         assert result == "Test response"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_o3_mini_reasoning_effort_high():
+    llm = LLM(
+        model="o3-mini",
+        reasoning_effort="high",
+    )
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_o3_mini_reasoning_effort_low():
+    llm = LLM(
+        model="o3-mini",
+        reasoning_effort="low",
+    )
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_o3_mini_reasoning_effort_medium():
+    llm = LLM(
+        model="o3-mini",
+        reasoning_effort="medium",
+    )
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_deepseek_r1_with_open_router():
+    if not os.getenv("OPEN_ROUTER_API_KEY"):
+        pytest.skip("OPEN_ROUTER_API_KEY not set; skipping test.")
+
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-r1",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=os.getenv("OPEN_ROUTER_API_KEY"),
+    )
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
