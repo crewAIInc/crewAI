@@ -224,7 +224,6 @@ class ToolUsage:
                         "tool_string": tool_string,
                         "tool": tool,
                         "tool_calling": calling,
-                        "error": error,
                         "run_attempts": self._run_attempts,
                         "llm": self.function_calling_llm,
                         "task": self.task,
