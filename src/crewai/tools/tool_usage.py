@@ -248,7 +248,6 @@ class ToolUsage:
                     calling=calling,
                     output=result,
                     should_cache=should_cache,
-                    agentops=agentops,
                 )
 
         if agentops:

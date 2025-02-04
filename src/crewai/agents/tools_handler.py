@@ -21,7 +21,6 @@ class ToolsHandler:
         calling: Union[ToolCalling, InstructorToolCalling],
         output: str,
         should_cache: bool = True,
-        agentops: Optional[Any] = None,
     ) -> Any:
         """Run when tool ends running."""
         self.last_used_tool = calling  # type: ignore # BUG?: Incompatible types in assignment (expression has type "Union[ToolCalling, InstructorToolCalling]", variable has type "ToolCalling")
