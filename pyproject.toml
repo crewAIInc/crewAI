@@ -1,6 +1,6 @@
 [project]
 name = "crewai"
-version = "0.98.0"
+version = "0.100.0"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -11,7 +11,7 @@ dependencies = [
     # Core Dependencies
     "pydantic>=2.4.2",
     "openai>=1.13.3",
-    "litellm==1.57.4",
+    "litellm==1.60.2",
     "instructor>=1.3.3",
     # Text Processing
     "pdfplumber>=0.11.4",
@@ -36,6 +36,7 @@ dependencies = [
     "tomli-w>=1.1.0",
     "tomli>=2.0.2",
     "blinker>=1.9.0",
+    "json5>=0.10.0",
 ]
 
 [project.urls]

@@ -43,7 +43,6 @@ class EmbeddingConfigurator:
             raise Exception(
                 f"Unsupported embedding provider: {provider}, supported providers: {list(self.embedding_functions.keys())}"
             )
-
         return self.embedding_functions[provider](config, model_name)
 
     @staticmethod
@@ -142,9 +141,11 @@ class EmbeddingConfigurator:
             AmazonBedrockEmbeddingFunction,
         )
 
-        return AmazonBedrockEmbeddingFunction(
-            session=config.get("session"),
-        )
+        # Allow custom model_name override with backwards compatibility
+        kwargs = {"session": config.get("session")}
+        if model_name is not None:
+            kwargs["model_name"] = model_name
+        return AmazonBedrockEmbeddingFunction(**kwargs)
 
     @staticmethod
     def _configure_huggingface(config, model_name):

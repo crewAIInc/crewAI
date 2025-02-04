@@ -185,7 +185,7 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=OpenAIEmbeddingFunction(api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"),
+    embedder=OpenAIEmbeddingFunction(api_key=os.getenv("OPENAI_API_KEY"), model="text-embedding-3-small"),
 )
 ```
 
@@ -224,7 +224,7 @@ my_crew = Crew(
         "provider": "google",
         "config": {
             "api_key": "<YOUR_API_KEY>",
-            "model_name": "<model_name>"
+            "model": "<model_name>"
         }
     }
 )
@@ -247,7 +247,7 @@ my_crew = Crew(
         api_base="YOUR_API_BASE_PATH",
         api_type="azure",
         api_version="YOUR_API_VERSION",
-        model_name="text-embedding-3-small"
+        model="text-embedding-3-small"
     )
 )
 ```
@@ -268,7 +268,7 @@ my_crew = Crew(
         project_id="YOUR_PROJECT_ID",
         region="YOUR_REGION",
         api_key="YOUR_API_KEY",
-        model_name="textembedding-gecko"
+        model="textembedding-gecko"
     )
 )
 ```
@@ -288,7 +288,7 @@ my_crew = Crew(
         "provider": "cohere",
         "config": {
             "api_key": "YOUR_API_KEY",
-            "model_name": "<model_name>"
+            "model": "<model_name>"
         }
     }
 )
@@ -308,7 +308,7 @@ my_crew = Crew(
         "provider": "voyageai",
         "config": {
             "api_key": "YOUR_API_KEY",
-            "model_name": "<model_name>"
+            "model": "<model_name>"
         }
     }
 )
