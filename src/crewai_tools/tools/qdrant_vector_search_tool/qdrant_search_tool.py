@@ -122,7 +122,6 @@ class QdrantVectorSearchTool(BaseTool):
             )
 
         # Search in Qdrant using the built-in query method
-
         query_vector = (
             self._vectorize_query(query)
             if not self.custom_embedding_fn
