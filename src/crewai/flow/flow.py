@@ -29,6 +29,10 @@ from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
+from crewai.traces.unified_trace_controller import (
+    init_flow_main_trace,
+    trace_flow_step,
+)
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
@@ -394,7 +398,6 @@ class FlowMeta(type):
                 or hasattr(attr_value, "__trigger_methods__")
                 or hasattr(attr_value, "__is_router__")
             ):
-
                 # Register start methods
                 if hasattr(attr_value, "__is_start_method__"):
                     start_methods.append(attr_name)
@@ -600,7 +603,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ```
         """
         try:
-            if not hasattr(self, '_state'):
+            if not hasattr(self, "_state"):
                 return ""
 
             if isinstance(self._state, dict):
@@ -706,26 +709,31 @@ class Flow(Generic[T], metaclass=FlowMeta):
             inputs: Optional dictionary containing input values and potentially a state ID to restore
         """
         # Handle state restoration if ID is provided in inputs
-        if inputs and 'id' in inputs and self._persistence is not None:
-            restore_uuid = inputs['id']
+        if inputs and "id" in inputs and self._persistence is not None:
+            restore_uuid = inputs["id"]
             stored_state = self._persistence.load_state(restore_uuid)
 
             # Override the id in the state if it exists in inputs
-            if 'id' in inputs:
+            if "id" in inputs:
                 if isinstance(self._state, dict):
-                    self._state['id'] = inputs['id']
+                    self._state["id"] = inputs["id"]
                 elif isinstance(self._state, BaseModel):
-                    setattr(self._state, 'id', inputs['id'])
+                    setattr(self._state, "id", inputs["id"])
 
             if stored_state:
-                self._log_flow_event(f"Loading flow state from memory for UUID: {restore_uuid}", color="yellow")
+                self._log_flow_event(
+                    f"Loading flow state from memory for UUID: {restore_uuid}",
+                    color="yellow",
+                )
                 # Restore the state
                 self._restore_state(stored_state)
             else:
-                self._log_flow_event(f"No flow state found for UUID: {restore_uuid}", color="red")
+                self._log_flow_event(
+                    f"No flow state found for UUID: {restore_uuid}", color="red"
+                )
 
             # Apply any additional inputs after restoration
-            filtered_inputs = {k: v for k, v in inputs.items() if k != 'id'}
+            filtered_inputs = {k: v for k, v in inputs.items() if k != "id"}
             if filtered_inputs:
                 self._initialize_state(filtered_inputs)
 
@@ -737,13 +745,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow_name=self.__class__.__name__,
             ),
         )
-        self._log_flow_event(f"Flow started with ID: {self.flow_id}", color="bold_magenta")
+        self._log_flow_event(
+            f"Flow started with ID: {self.flow_id}", color="bold_magenta"
+        )
 
-        if inputs is not None and 'id' not in inputs:
+        if inputs is not None and "id" not in inputs:
             self._initialize_state(inputs)
 
         return asyncio.run(self.kickoff_async())
 
+    @init_flow_main_trace
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         if not self._start_methods:
             raise ValueError("No start method defined")
@@ -793,6 +804,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
         await self._execute_listeners(start_method_name, result)
 
+    @trace_flow_step
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
@@ -984,7 +996,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             traceback.print_exc()
 
-    def _log_flow_event(self, message: str, color: str = "yellow", level: str = "info") -> None:
+    def _log_flow_event(
+        self, message: str, color: str = "yellow", level: str = "info"
+    ) -> None:
         """Centralized logging method for flow events.
 
         This method provides a consistent interface for logging flow-related events,
