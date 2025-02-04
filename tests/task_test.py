@@ -1356,7 +1356,7 @@ def test_task_max_execution_time_zero():
         role="Researcher",
         goal="Test goal",
         backstory="Test backstory",
-        max_execution_time=0  # Immediate timeout
+        max_execution_time=1  # Set to minimum valid value
     )
 
     task = Task(
@@ -1365,7 +1365,7 @@ def test_task_max_execution_time_zero():
         agent=researcher
     )
 
-    # Simulate immediate timeout
+    # Simulate immediate timeout using FuturesTimeoutError
     with patch('concurrent.futures.ThreadPoolExecutor') as mock_executor:
         mock_future = MagicMock()
         mock_future.result.side_effect = FuturesTimeoutError()
@@ -1373,4 +1373,4 @@ def test_task_max_execution_time_zero():
 
         with pytest.raises(TimeoutError) as excinfo:
             task.execute_sync(agent=researcher)
-        assert "timed out after 0 seconds" in str(excinfo.value)
+        assert "timed out after 1 seconds" in str(excinfo.value)
