@@ -2,6 +2,7 @@ from time import sleep
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.llm import LLM
@@ -202,3 +203,49 @@ def test_llm_passes_additional_params():
 
         # Check the result from llm.call
         assert result == "Test response"
+
+
+def test_get_custom_llm_provider_openrouter():
+    llm = LLM(model="openrouter/deepseek/deepseek-chat")
+    assert llm._get_custom_llm_provider() == "openrouter"
+
+
+def test_get_custom_llm_provider_gemini():
+    llm = LLM(model="gemini/gemini-1.5-pro")
+    assert llm._get_custom_llm_provider() == "gemini"
+
+
+def test_get_custom_llm_provider_openai():
+    llm = LLM(model="gpt-4")
+    assert llm._get_custom_llm_provider() == "openai"
+
+
+def test_validate_call_params_supported():
+    class DummyResponse(BaseModel):
+        a: int
+
+    # Patch supports_response_schema to simulate a supported model.
+    with patch("crewai.llm.supports_response_schema", return_value=True):
+        llm = LLM(
+            model="openrouter/deepseek/deepseek-chat", response_format=DummyResponse
+        )
+        # Should not raise any error.
+        llm._validate_call_params()
+
+
+def test_validate_call_params_not_supported():
+    class DummyResponse(BaseModel):
+        a: int
+
+    # Patch supports_response_schema to simulate an unsupported model.
+    with patch("crewai.llm.supports_response_schema", return_value=False):
+        llm = LLM(model="gemini/gemini-1.5-pro", response_format=DummyResponse)
+        with pytest.raises(ValueError) as excinfo:
+            llm._validate_call_params()
+        assert "does not support response_format" in str(excinfo.value)
+
+
+def test_validate_call_params_no_response_format():
+    # When no response_format is provided, no validation error should occur.
+    llm = LLM(model="gemini/gemini-1.5-pro", response_format=None)
+    llm._validate_call_params()
