@@ -183,7 +183,6 @@ class LLM:
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
-        response_format: Optional[BaseModel] = None,
     ) -> str:
         """
         High-level LLM call method that handles:
@@ -280,7 +279,8 @@ class LLM:
             params = {k: v for k, v in params.items() if v is not None}
 
             # --- Direct structured response if no tools are provided.
-            if response_format is not None and (tools is None or len(tools) == 0):
+            if self.response_format is not None and (tools is None or len(tools) == 0):
+                print("Direct structured response")
                 try:
                     # Cast messages to required type and remove model param
                     params["messages"] = cast(
@@ -297,6 +297,7 @@ class LLM:
 
             # --- Standard flow with potential tool calls.
             try:
+                print("NOT DIRECT STRUCTURED RESPONSE")
                 response = litellm.completion(**params)
                 response_message = cast(Choices, cast(ModelResponse, response).choices)[
                     0
@@ -341,7 +342,7 @@ class LLM:
                         return text_response
 
                     # If a structured response is requested, perform a secondary call using the tool result.
-                    if response_format is not None:
+                    if self.response_format is not None:
                         new_params = dict(params)
                         # Cast tool result message to required type
                         new_params["messages"] = cast(
