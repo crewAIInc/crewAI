@@ -38,9 +38,10 @@ class RAGStorage(BaseRAGStorage):
     """
 
     app: ClientAPI | None = None
+    collection: Any = None
 
     def __init__(
-        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
+        self, type: str, allow_reset: bool = True, embedder_config: Dict[str, Any] | None = None, crew: Any = None, path: str | None = None
     ):
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
@@ -50,7 +51,6 @@ class RAGStorage(BaseRAGStorage):
         self.storage_file_name = self._build_storage_file_name(type, agents)
 
         self.type = type
-
         self.allow_reset = allow_reset
         self.path = path
         self._initialize_app()
@@ -163,12 +163,3 @@ class RAGStorage(BaseRAGStorage):
                 raise Exception(
                     f"An error occurred while resetting the {self.type} memory: {e}"
                 )
-
-    def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
