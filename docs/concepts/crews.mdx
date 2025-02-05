@@ -296,9 +296,9 @@ print(result)
 Once your crew is assembled, initiate the workflow with the appropriate kickoff method. CrewAI provides several methods for better control over the kickoff process: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, and `kickoff_for_each_async()`.
 
 - `kickoff()`: Starts the execution process according to the defined process flow.
-- `kickoff_for_each()`: Executes tasks for each agent individually.
+- `kickoff_for_each()`: Executes tasks sequentially for each provided input event or item in the collection.
 - `kickoff_async()`: Initiates the workflow asynchronously.
-- `kickoff_for_each_async()`: Executes tasks for each agent individually in an asynchronous manner.
+- `kickoff_for_each_async()`: Executes tasks concurrently for each provided input event or item, leveraging asynchronous processing.
 
 ```python Code
 # Start the crew's task execution

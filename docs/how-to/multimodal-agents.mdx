@@ -45,6 +45,7 @@ image_analyst = Agent(
 # Create a task for image analysis
 task = Task(
     description="Analyze the product image at https://example.com/product.jpg and provide a detailed description",
+    expected_output="A detailed description of the product image",
     agent=image_analyst
 )
 
@@ -81,6 +82,7 @@ inspection_task = Task(
     3. Compliance with standards
     Provide a detailed report highlighting any issues found.
     """,
+    expected_output="A detailed report highlighting any issues found",
     agent=expert_analyst
 )
 
