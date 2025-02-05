@@ -38,12 +38,12 @@ class EmbeddingConfigurator:
             except Exception as e:
                 raise ValueError(f"Invalid custom embedding function: {str(e)}")
 
-        if provider not in self.embedding_functions:
+        if not provider or provider not in self.embedding_functions:
             raise Exception(
                 f"Unsupported embedding provider: {provider}, supported providers: {list(self.embedding_functions.keys())}"
             )
 
-        return self.embedding_functions[provider](config, model_name)
+        return self.embedding_functions[str(provider)](config, model_name)
 
     @staticmethod
     def _create_default_embedding_function():
