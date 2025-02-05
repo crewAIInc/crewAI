@@ -1,8 +1,9 @@
+import json
 import os
 import pickle
 from datetime import datetime
 from typing import Union
-import json
+
 
 
 class FileHandler:
@@ -10,23 +11,23 @@ class FileHandler:
     
     Args:
         file_path (Union[bool, str]): Path to the log file or boolean flag
-        save_as_json (bool): If True, saves logs in JSON format
     """
 
     def __init__(self, file_path: Union[bool, str]):
         self._initialize_path(file_path)
         
-        
-    def _initialize_path(self, file_path: Union[bool, str]) -> str:
+    def _initialize_path(self, file_path: Union[bool, str]):
         if file_path is True:  # File path is boolean True
-                self._path = os.path.join(os.curdir, "logs.txt")
+            self._path = os.path.join(os.curdir, "logs.txt")
         
         elif isinstance(file_path, str):  # File path is a string
             if file_path.endswith((".json", ".txt")):
-                pass 
+                self._path = file_path  # No modification if the file ends with .json or .txt
             else:
-                file_path += ".txt"
-        self._path = file_path
+                self._path = file_path + ".txt"  # Append .txt if the file doesn't end with .json or .txt
+        
+        else:
+            raise ValueError("file_path must be a string or boolean.")  # Handle the case where file_path isn't valid
         
     def log(self, **kwargs):
         try:
