@@ -34,3 +34,43 @@ crewai reset-memories -a
 ```
 
 The memory system will use the configured embedding provider for all operations, including memory reset.
+
+## Troubleshooting
+
+### Common Issues
+
+1. OpenAI API Key Missing
+```bash
+# Error: EmbeddingConfigurationError: Invalid configuration for OpenAI provider
+# Solution: Set your OpenAI API key
+export OPENAI_API_KEY=your_key
+```
+
+2. Ollama Connection Issues
+```bash
+# Error: Failed to connect to Ollama server
+# Solution: Ensure Ollama is running and accessible
+curl http://localhost:11434/api/embeddings
+```
+
+3. Memory Reset Permission Issues
+```bash
+# Error: Failed to reset memory (readonly database)
+# Solution: Check file permissions or use custom path
+export CREWAI_MEMORY_PATH=/path/with/write/access
+```
+
+### Custom Storage Path
+
+You can configure a custom storage path for memory files:
+
+```python
+from crewai.memory import ShortTermMemory
+
+memory = ShortTermMemory(path="/custom/storage/path")
+```
+
+This is useful when:
+- Default storage location has permission issues
+- You want to isolate memory storage for different crews
+- You need to manage memory persistence manually

@@ -71,8 +71,11 @@ class EmbeddingConfigurator:
         model = os.getenv("CREWAI_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
         
         if provider == "openai":
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise EmbeddingConfigurationError("OpenAI API key is required but not provided")
             from chromadb.utils.embedding_functions.openai_embedding_function import OpenAIEmbeddingFunction
-            return OpenAIEmbeddingFunction(api_key=os.getenv("OPENAI_API_KEY"), model_name=model)
+            return OpenAIEmbeddingFunction(api_key=api_key, model_name=model)
         elif provider == "ollama":
             from chromadb.utils.embedding_functions.ollama_embedding_function import OllamaEmbeddingFunction
             url = os.getenv("CREWAI_OLLAMA_URL", "http://localhost:11434/api/embeddings")

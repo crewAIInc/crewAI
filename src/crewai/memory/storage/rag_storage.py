@@ -85,11 +85,10 @@ class RAGStorage(BaseRAGStorage):
 
         self._set_embedder_config()
         try:
-            chroma_client = chromadb.PersistentClient(
+            self.app = chromadb.PersistentClient(
                 path=self.path if self.path else self.storage_file_name,
                 settings=Settings(allow_reset=self.allow_reset),
             )
-            self.app = chroma_client
             if not self.app:
                 raise RuntimeError("Failed to initialize ChromaDB client")
 
@@ -103,19 +102,6 @@ class RAGStorage(BaseRAGStorage):
                 )
         except Exception as e:
             raise RuntimeError(f"Failed to initialize ChromaDB: {str(e)}")
-
-        self.app = chroma_client
-        if not self.app:
-            raise RuntimeError("Failed to initialize ChromaDB client")
-
-        try:
-            self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
-        except Exception:
-            self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
 
     def _sanitize_role(self, role: str) -> str:
         """
@@ -138,12 +124,21 @@ class RAGStorage(BaseRAGStorage):
         return f"{base_path}/{file_name}"
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+        """Save a value with metadata to the memory storage.
+
+        Args:
+            value: The text content to store
+            metadata: Additional metadata for the stored content
+
+        Raises:
+            EmbeddingInitializationError: If embedding generation fails
+        """
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
         try:
             self._generate_embedding(value, metadata)
         except Exception as e:
-            logging.error(f"Error during {self.type} save: {str(e)}")
+            raise EmbeddingInitializationError(self.type, str(e))
 
     def search(
         self,
@@ -151,7 +146,18 @@ class RAGStorage(BaseRAGStorage):
         limit: int = 3,
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> List[Dict[str, Any]]:
+        """Search for similar content in memory.
+
+        Args:
+            query: The search query text
+            limit: Maximum number of results to return
+            filter: Optional filter criteria
+            score_threshold: Minimum similarity score threshold
+
+        Returns:
+            List of matching results with metadata and scores
+        """
         if not hasattr(self, "app"):
             self._initialize_app()
 
@@ -175,15 +181,24 @@ class RAGStorage(BaseRAGStorage):
             logging.error(f"Error during {self.type} search: {str(e)}")
             return []
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
+    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:
+        """Generate and store embeddings for the given text.
+
+        Args:
+            text: The text to generate embeddings for
+            metadata: Additional metadata to store with the embeddings
+        """
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 
-        self.collection.add(
-            documents=[text],
-            metadatas=[metadata or {}],
-            ids=[str(uuid.uuid4())],
-        )
+        try:
+            self.collection.add(
+                documents=[text],
+                metadatas=[metadata or {}],
+                ids=[str(uuid.uuid4())],
+            )
+        except Exception as e:
+            raise EmbeddingInitializationError(self.type, f"Failed to generate embedding: {str(e)}")
 
     def reset(self) -> None:
         """Reset the memory storage by clearing the database and removing files.
