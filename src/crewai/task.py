@@ -423,6 +423,10 @@ class Task(BaseModel):
         if self.callback:
             self.callback(self.output)
 
+        crew = self.agent.crew  # type: ignore[union-attr]
+        if crew and crew.task_callback and crew.task_callback != self.callback:
+            crew.task_callback(self.output)
+
         if self._execution_span:
             self._telemetry.task_ended(self._execution_span, self, agent.crew)
             self._execution_span = None
