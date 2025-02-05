@@ -13,29 +13,21 @@ class FileHandler:
         save_as_json (bool): If True, saves logs in JSON format
     """
 
-    def __init__(self, file_path: Union[bool, str], save_as_json: bool):
-        self.save_as_json = save_as_json
-        self._path = self._initialize_path(file_path, save_as_json)
+    def __init__(self, file_path: Union[bool, str]):
+        self._initialize_path(file_path)
         
         
-    def _initialize_path(self, file_path: Union[bool, str], save_as_json: bool) -> str:
+    def _initialize_path(self, file_path: Union[bool, str]) -> str:
         if file_path is True:  # File path is boolean True
-            if save_as_json:
-                self._path = os.path.join(os.curdir, "logs.json")
-            else:
                 self._path = os.path.join(os.curdir, "logs.txt")
+        
         elif isinstance(file_path, str):  # File path is a string
-            if save_as_json:
-                if not file_path.endswith(".json"):
-                    file_path += ".json"
+            if file_path.endswith((".json", ".txt")):
+                pass 
             else:
-                if not file_path.endswith(".txt"):
-                    file_path += ".txt"
-            self._path = file_path
-        else:
-            raise ValueError("file_path must be either a boolean or a string.")
-
-
+                file_path += ".txt"
+        self._path = file_path
+        
     def log(self, **kwargs):
         try:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -67,9 +59,6 @@ class FileHandler:
         except Exception as e:
             raise ValueError(f"Failed to log message: {str(e)}")
         
-
-
-
 class PickleHandler:
     def __init__(self, file_name: str) -> None:
         """
