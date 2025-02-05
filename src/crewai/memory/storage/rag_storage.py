@@ -154,7 +154,10 @@ class RAGStorage(BaseRAGStorage):
         try:
             if self.app:
                 self.app.reset()
-                shutil.rmtree(f"{db_storage_path()}/{self.type}")
+                storage_path = self.path if self.path else db_storage_path()
+                db_dir = os.path.join(storage_path, self.type)
+                if os.path.exists(db_dir):
+                    shutil.rmtree(db_dir)
                 self.app = None
                 self.collection = None
         except Exception as e:
