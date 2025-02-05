@@ -673,12 +673,19 @@ class Task(BaseModel):
     def _save_file(self, result: Any) -> None:
         """Save task output to a file.
 
+        Note:
+        For cross-platform file writing, especially on Windows, consider using FileWriterTool
+        from the crewai_tools package:
+            pip install 'crewai[tools]'
+            from crewai_tools import FileWriterTool
+
         Args:
             result: The result to save to the file. Can be a dict or any stringifiable object.
 
         Raises:
             ValueError: If output_file is not set
-            RuntimeError: If there is an error writing to the file
+            RuntimeError: If there is an error writing to the file. If you encounter issues,
+                        especially on Windows, use FileWriterTool from crewai_tools package.
         """
         if self.output_file is None:
             raise ValueError("output_file is not set.")
@@ -698,7 +705,10 @@ class Task(BaseModel):
                 else:
                     file.write(str(result))
         except (OSError, IOError) as e:
-            raise RuntimeError(f"Failed to save output file: {e}")
+            raise RuntimeError(
+                f"Failed to save output file: {e}. For cross-platform file writing, "
+                "especially on Windows, use FileWriterTool from crewai_tools package."
+            )
         return None
 
     def __repr__(self):
