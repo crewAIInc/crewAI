@@ -6,12 +6,17 @@ import shutil
 import uuid
 from typing import Any, Dict, List, Optional
 
-from chromadb.api import ClientAPI
+from chromadb.api import ClientAPI, Collection
+from chromadb.api.types import Documents, Embeddings, Metadatas
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
+from crewai.utilities.exceptions.embedding_exceptions import (
+    EmbeddingConfigurationError,
+    EmbeddingInitializationError
+)
 
 
 @contextlib.contextmanager
@@ -32,9 +37,17 @@ def suppress_logging(
 
 
 class RAGStorage(BaseRAGStorage):
-    """
-    Extends Storage to handle embeddings for memory entries, improving
-    search efficiency.
+    """RAG-based Storage implementation using ChromaDB for vector storage and retrieval.
+
+    This class extends BaseRAGStorage to handle embeddings for memory entries,
+    improving search efficiency through vector similarity.
+
+    Attributes:
+        app: ChromaDB client instance
+        collection: ChromaDB collection for storing embeddings
+        type: Type of memory storage
+        allow_reset: Whether memory reset is allowed
+        path: Custom storage path for the database
     """
 
     app: ClientAPI | None = None
@@ -59,15 +72,37 @@ class RAGStorage(BaseRAGStorage):
         configurator = EmbeddingConfigurator()
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
-    def _initialize_app(self):
+    def _initialize_app(self) -> None:
+        """Initialize the ChromaDB client and collection.
+
+        Raises:
+            RuntimeError: If ChromaDB client initialization fails
+            EmbeddingConfigurationError: If embedding configuration is invalid
+            EmbeddingInitializationError: If embedding function fails to initialize
+        """
         import chromadb
         from chromadb.config import Settings
 
         self._set_embedder_config()
-        chroma_client = chromadb.PersistentClient(
-            path=self.path if self.path else self.storage_file_name,
-            settings=Settings(allow_reset=self.allow_reset),
-        )
+        try:
+            chroma_client = chromadb.PersistentClient(
+                path=self.path if self.path else self.storage_file_name,
+                settings=Settings(allow_reset=self.allow_reset),
+            )
+            self.app = chroma_client
+            if not self.app:
+                raise RuntimeError("Failed to initialize ChromaDB client")
+
+            try:
+                self.collection = self.app.get_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+            except Exception:
+                self.collection = self.app.create_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize ChromaDB: {str(e)}")
 
         self.app = chroma_client
         if not self.app:
@@ -151,6 +186,12 @@ class RAGStorage(BaseRAGStorage):
         )
 
     def reset(self) -> None:
+        """Reset the memory storage by clearing the database and removing files.
+
+        Raises:
+            RuntimeError: If memory reset fails and allow_reset is False
+            EmbeddingConfigurationError: If embedding configuration is invalid during reinitialization
+        """
         try:
             if self.app:
                 self.app.reset()
@@ -162,9 +203,9 @@ class RAGStorage(BaseRAGStorage):
                 self.collection = None
         except Exception as e:
             if "attempt to write a readonly database" in str(e):
-                # Ignore this specific error
+                # Ignore this specific error as it's expected in some environments
                 pass
             else:
-                raise Exception(
-                    f"An error occurred while resetting the {self.type} memory: {e}"
-                )
+                if not self.allow_reset:
+                    raise RuntimeError(f"Failed to reset {self.type} memory: {str(e)}")
+                logging.error(f"Error during {self.type} memory reset: {str(e)}")
