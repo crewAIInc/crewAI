@@ -70,6 +70,8 @@ class RAGStorage(BaseRAGStorage):
         )
 
         self.app = chroma_client
+        if not self.app:
+            raise RuntimeError("Failed to initialize ChromaDB client")
 
         try:
             self.collection = self.app.get_collection(
