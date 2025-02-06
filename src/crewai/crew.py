@@ -1182,19 +1182,19 @@ class Crew(BaseModel):
                 print("All memories have been reset.")
 
             elif command_type == 'long':
-                self.LongTermMemory().reset()
+                self._long_term_memory.reset()
                 print("Long term memory has been reset.")
             
             elif command_type == 'short':
-                self.ShortTermMemory().reset()
+                self._short_term_memory.reset()
                 print("Short term memory has been reset.")
             
             elif command_type == 'entity':
-                self.EntityMemory().reset()
+                self._entity_memory.reset()
                 print("Entity memory has been reset.")
             
             elif command_type == 'kickoff_outputs':
-                self.TaskOutputStorageHandler().reset()
+                self._task_output_handler.reset()
                 print("Latest Kickoff outputs stored has been reset.") 
             
             elif command_type == 'knowledge':
