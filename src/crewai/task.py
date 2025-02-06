@@ -40,6 +40,8 @@ from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
+from crewai.utilities.events.events import emit
+from crewai.utilities.events.task_events import TaskCompleted, TaskStarted
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 
@@ -348,6 +350,7 @@ class Task(BaseModel):
         tools: Optional[List[Any]],
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+
         agent = agent or self.agent
         self.agent = agent
         if not agent:
@@ -362,7 +365,7 @@ class Task(BaseModel):
         tools = tools or self.tools or []
 
         self.processed_by_agents.add(agent.role)
-
+        emit(self, TaskStarted(task=self))
         result = agent.execute_task(
             task=self,
             context=context,
@@ -436,7 +439,7 @@ class Task(BaseModel):
                 else result
             )
             self._save_file(content)
-
+        emit(self, TaskCompleted(task=self, output=task_output))
         return task_output
 
     def prompt(self) -> str:

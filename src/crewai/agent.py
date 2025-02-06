@@ -19,6 +19,12 @@ from crewai.tools.base_tool import Tool
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
+from crewai.utilities.events.agent_events import (
+    AgentExecutionCompleted,
+    AgentExecutionError,
+    AgentExecutionStarted,
+)
+from crewai.utilities.events.events import emit
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -182,6 +188,7 @@ class Agent(BaseAgent):
         Returns:
             Output of the agent
         """
+        emit(self, event=AgentExecutionStarted(agent=self, task=task))
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
@@ -259,6 +266,9 @@ class Agent(BaseAgent):
                 raise e
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
+                emit(
+                    self, event=AgentExecutionError(agent=self, task=task, error=str(e))
+                )
                 raise e
             result = self.execute_task(task, context, tools)
 
@@ -271,7 +281,7 @@ class Agent(BaseAgent):
         for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
-
+        emit(self, event=AgentExecutionCompleted(agent=self, task=task, output=result))
         return result
 
     def create_agent_executor(
