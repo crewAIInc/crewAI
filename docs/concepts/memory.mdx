@@ -58,38 +58,124 @@ my_crew = Crew(
 ### Example: Use Custom Memory Instances e.g FAISS as the VectorDB
 
 ```python Code
-from crewai import Crew, Agent, Task, Process
+from crewai import Crew, Process
+from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
+from crewai.memory.storage import LTMSQLiteStorage, CustomRAGStorage
+from typing import List, Optional
 
 # Assemble your crew with memory capabilities
-my_crew = Crew(
-    agents=[...],
-    tasks=[...],
-    process="Process.sequential",
-    memory=True,
-    long_term_memory=LongTermMemory(
+my_crew: Crew = Crew(
+    agents: List = [...],
+    tasks: List = [...],
+    process: str = Process.sequential,
+    memory: bool = True,
+    # Long-term memory for persistent storage across sessions
+    long_term_memory: Optional[LongTermMemory] = LongTermMemory(
         storage=LTMSQLiteStorage(
-            db_path="/my_data_dir/my_crew1/long_term_memory_storage.db"
+            db_path="${CREWAI_STORAGE_DIR}/my_crew1/long_term_memory_storage.db"
         )
     ),
-    short_term_memory=ShortTermMemory(
+    # Short-term memory for current context using RAG
+    short_term_memory: Optional[ShortTermMemory] = ShortTermMemory(
         storage=CustomRAGStorage(
             crew_name="my_crew",
             storage_type="short_term",
-            data_dir="//my_data_dir",
+            data_dir="${CREWAI_STORAGE_DIR}",
             model=embedder["model"],
             dimension=embedder["dimension"],
         ),
     ),
-    entity_memory=EntityMemory(
+    # Entity memory for tracking key information about entities
+    entity_memory: Optional[EntityMemory] = EntityMemory(
         storage=CustomRAGStorage(
             crew_name="my_crew",
             storage_type="entities",
-            data_dir="//my_data_dir",
+            data_dir="${CREWAI_STORAGE_DIR}",
             model=embedder["model"],
             dimension=embedder["dimension"],
         ),
     ),
     verbose=True,
+)
+```
+
+## Security Considerations
+
+When configuring memory storage:
+- Use environment variables for storage paths (e.g., `CREWAI_STORAGE_DIR`)
+- Never hardcode sensitive information like database credentials
+- Consider access permissions for storage directories
+- Use relative paths when possible to maintain portability
+
+Example using environment variables:
+```python
+import os
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage import LTMSQLiteStorage
+
+# Configure storage path using environment variable
+storage_path = os.getenv("CREWAI_STORAGE_DIR", "./storage")
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(
+            db_path="{storage_path}/memory.db".format(storage_path=storage_path)
+        )
+    )
+)
+```
+
+## Configuration Examples
+
+### Basic Memory Configuration
+```python
+from crewai import Crew
+from crewai.memory import LongTermMemory
+
+# Simple memory configuration
+crew = Crew(memory=True)  # Uses default storage locations
+```
+
+### Custom Storage Configuration
+```python
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage import LTMSQLiteStorage
+
+# Configure custom storage paths
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(db_path="./memory.db")
+    )
+)
+```
+
+### Full Memory Configuration
+```python
+from crewai import Crew
+from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
+from crewai.memory.storage import LTMSQLiteStorage, CustomRAGStorage
+
+# Configure all memory types with custom storage
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(db_path="./ltm.db")
+    ),
+    short_term_memory=ShortTermMemory(
+        storage=CustomRAGStorage(
+            crew_name="my_crew",
+            storage_type="short_term"
+        )
+    ),
+    entity_memory=EntityMemory(
+        storage=CustomRAGStorage(
+            crew_name="my_crew",
+            storage_type="entities"
+        )
+    )
 )
 ```
 
