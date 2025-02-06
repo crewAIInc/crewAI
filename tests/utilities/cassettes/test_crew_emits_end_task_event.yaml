@@ -1,0 +1,357 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Just say hi\n\nThis is the expect criteria for your
+      final answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '836'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=nedOdWE1YnKQYt1kSbrcA.zhwa3bZDzmZqTOjZYER0c-1738700521-1.0.1.1-xQk9iXOvqvyXNhkIOgc8Ws2WYcT1mJFkDCvCC8xA5joFD8QfNrBIAr_Qs6sIxt2EzXyeFwBA6gA8ZgWApCHx0Q;
+        _cfuvid=Cl48aI8.jSRja0Pqr6Jrh3mAnigd4rDn6lhGicyjMPY-1738698987673-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AxJlK2np8dMxYgsDIuyz2TSKKELWh\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1738700682,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      161,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    headers:
+      CF-RAY:
+      - 90cd62c1fdb0fa6a-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Feb 2025 20:24:42 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '326'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999810'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_22be86be6fd9d69ca8d310ef534e7bec
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cp0mCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS9CUKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKkBwoQfRmsiIy66Scw43CcUw5ZiBIIfYDEhWJTOTkqDENyZXcgQ3JlYXRlZDABOcD6
+      XvsOGyEYQWC2bPsOGyEYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTAwLjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi44Si4KCGNyZXdfa2V5EiIKIGU1ODA3MDFkNTJlYjY1YWZmMjRlZWZlNzhj
+      NzQ2MjhjSjEKB2NyZXdfaWQSJgokMDMzNTZiYmEtMzJmZC00OThmLTgxYTItYzc1ZDBkMzc2N2Qx
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrRAgoLY3Jl
+      d19hZ2VudHMSwQIKvgJbeyJrZXkiOiAiYWQxNTMxNjFjNWM1YTg1NmFhMGQwNmIyNDljNGM2NGEi
+      LCAiaWQiOiAiZjY5YTRmYTMtMzQ4OC00MmFhLTlhMTQtMGEzZmEyOWJmYjZjIiwgInJvbGUiOiAi
+      YmFzZV9hZ2VudCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyMCwgIm1heF9ycG0i
+      OiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIs
+      ICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNyZXdf
+      dGFza3MS8AEK7QFbeyJrZXkiOiAiMWIxNWVmMjM5MTViMjc1NWU4OWEwZWMzYjI2YTEzZDIiLCAi
+      aWQiOiAiNDllNzk0MmMtZTJiMy00YmE1LTg5MTUtMTYwYjQxMDU2ZmVlIiwgImFzeW5jX2V4ZWN1
+      dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJiYXNl
+      X2FnZW50IiwgImFnZW50X2tleSI6ICJhZDE1MzE2MWM1YzVhODU2YWEwZDA2YjI0OWM0YzY0YSIs
+      ICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCLgjutPq/3tkNyPqVjfbZhEgjhB7lb
+      clxzdyoMVGFzayBDcmVhdGVkMAE5CC9++w4bIRhBeMN++w4bIRhKLgoIY3Jld19rZXkSIgogZTU4
+      MDcwMWQ1MmViNjVhZmYyNGVlZmU3OGM3NDYyOGNKMQoHY3Jld19pZBImCiQwMzM1NmJiYS0zMmZk
+      LTQ5OGYtODFhMi1jNzVkMGQzNzY3ZDFKLgoIdGFza19rZXkSIgogMWIxNWVmMjM5MTViMjc1NWU4
+      OWEwZWMzYjI2YTEzZDJKMQoHdGFza19pZBImCiQ0OWU3OTQyYy1lMmIzLTRiYTUtODkxNS0xNjBi
+      NDEwNTZmZWV6AhgBhQEAAQAAEqQHChC7SpRSs6eG9XFmYuMQgghQEghpZMlScOy2DyoMQ3JldyBD
+      cmVhdGVkMAE50O2cAA8bIRhBOFmrAA8bIRhKGwoOY3Jld2FpX3ZlcnNpb24SCQoHMC4xMDAuMEoa
+      Cg5weXRob25fdmVyc2lvbhIICgYzLjEyLjhKLgoIY3Jld19rZXkSIgogZTU4MDcwMWQ1MmViNjVh
+      ZmYyNGVlZmU3OGM3NDYyOGNKMQoHY3Jld19pZBImCiRlYTQ1MWY2OS00Zjk3LTQ4MjYtOWNlYi04
+      NTAzMDk2MTQ2MDlKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkS
+      AhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMS
+      AhgBStECCgtjcmV3X2FnZW50cxLBAgq+Alt7ImtleSI6ICJhZDE1MzE2MWM1YzVhODU2YWEwZDA2
+      YjI0OWM0YzY0YSIsICJpZCI6ICJmNjlhNGZhMy0zNDg4LTQyYWEtOWExNC0wYTNmYTI5YmZiNmMi
+      LCAicm9sZSI6ICJiYXNlX2FnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDIw
+      LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdw
+      dC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhl
+      Y3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119
+      XUr/AQoKY3Jld190YXNrcxLwAQrtAVt7ImtleSI6ICIxYjE1ZWYyMzkxNWIyNzU1ZTg5YTBlYzNi
+      MjZhMTNkMiIsICJpZCI6ICI0OWU3OTQyYy1lMmIzLTRiYTUtODkxNS0xNjBiNDEwNTZmZWUiLCAi
+      YXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9y
+      b2xlIjogImJhc2VfYWdlbnQiLCAiYWdlbnRfa2V5IjogImFkMTUzMTYxYzVjNWE4NTZhYTBkMDZi
+      MjQ5YzRjNjRhIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEM1q5zTl6Q6WKHPQ
+      eIqEm7sSCCWi2wvaFqpfKgxUYXNrIENyZWF0ZWQwATmIObwADxshGEEAo7wADxshGEouCghjcmV3
+      X2tleRIiCiBlNTgwNzAxZDUyZWI2NWFmZjI0ZWVmZTc4Yzc0NjI4Y0oxCgdjcmV3X2lkEiYKJGVh
+      NDUxZjY5LTRmOTctNDgyNi05Y2ViLTg1MDMwOTYxNDYwOUouCgh0YXNrX2tleRIiCiAxYjE1ZWYy
+      MzkxNWIyNzU1ZTg5YTBlYzNiMjZhMTNkMkoxCgd0YXNrX2lkEiYKJDQ5ZTc5NDJjLWUyYjMtNGJh
+      NS04OTE1LTE2MGI0MTA1NmZlZXoCGAGFAQABAAASpAcKEEhIZzGdZRAdvfcluDR5qvESCFMGo60X
+      V/dYKgxDcmV3IENyZWF0ZWQwATnY8LgBDxshGEGQrsUBDxshGEobCg5jcmV3YWlfdmVyc2lvbhIJ
+      CgcwLjEwMC4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTIuOEouCghjcmV3X2tleRIiCiBlNTgw
+      NzAxZDUyZWI2NWFmZjI0ZWVmZTc4Yzc0NjI4Y0oxCgdjcmV3X2lkEiYKJDA3MDJmOGU1LWRjMTYt
+      NDlhYi1hMWY1LThjOWQyY2IwMDYwYkocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtj
+      cmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVy
+      X29mX2FnZW50cxICGAFK0QIKC2NyZXdfYWdlbnRzEsECCr4CW3sia2V5IjogImFkMTUzMTYxYzVj
+      NWE4NTZhYTBkMDZiMjQ5YzRjNjRhIiwgImlkIjogImY2OWE0ZmEzLTM0ODgtNDJhYS05YTE0LTBh
+      M2ZhMjliZmI2YyIsICJyb2xlIjogImJhc2VfYWdlbnQiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1h
+      eF9pdGVyIjogMjAsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIs
+      ICJsbG0iOiAiZ3B0LTRvLW1pbmkiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxs
+      b3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNf
+      bmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvABCu0BW3sia2V5IjogIjFiMTVlZjIzOTE1YjI3
+      NTVlODlhMGVjM2IyNmExM2QyIiwgImlkIjogIjQ5ZTc5NDJjLWUyYjMtNGJhNS04OTE1LTE2MGI0
+      MTA1NmZlZSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxz
+      ZSwgImFnZW50X3JvbGUiOiAiYmFzZV9hZ2VudCIsICJhZ2VudF9rZXkiOiAiYWQxNTMxNjFjNWM1
+      YTg1NmFhMGQwNmIyNDljNGM2NGEiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQ
+      PkgvMtq3aT5YPXE8gCRxPBIIMx/zQOuC+8sqDFRhc2sgQ3JlYXRlZDABOYjk2AEPGyEYQZiI2QEP
+      GyEYSi4KCGNyZXdfa2V5EiIKIGU1ODA3MDFkNTJlYjY1YWZmMjRlZWZlNzhjNzQ2MjhjSjEKB2Ny
+      ZXdfaWQSJgokMDcwMmY4ZTUtZGMxNi00OWFiLWExZjUtOGM5ZDJjYjAwNjBiSi4KCHRhc2tfa2V5
+      EiIKIDFiMTVlZjIzOTE1YjI3NTVlODlhMGVjM2IyNmExM2QySjEKB3Rhc2tfaWQSJgokNDllNzk0
+      MmMtZTJiMy00YmE1LTg5MTUtMTYwYjQxMDU2ZmVlegIYAYUBAAEAABKkBwoQex7nA0gUUrZHbN6F
+      gWp/gBIIKPd4fiRi7DwqDENyZXcgQ3JlYXRlZDABOTiIrAIPGyEYQdCAtwIPGyEYShsKDmNyZXdh
+      aV92ZXJzaW9uEgkKBzAuMTAwLjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMi44Si4KCGNyZXdf
+      a2V5EiIKIGU1ODA3MDFkNTJlYjY1YWZmMjRlZWZlNzhjNzQ2MjhjSjEKB2NyZXdfaWQSJgokMGNm
+      YjUzZWItMDA2Mi00YmVmLTk1ZTgtMDgwMjQ3NmNkMWRlShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1
+      ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoV
+      Y3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrRAgoLY3Jld19hZ2VudHMSwQIKvgJbeyJrZXkiOiAi
+      YWQxNTMxNjFjNWM1YTg1NmFhMGQwNmIyNDljNGM2NGEiLCAiaWQiOiAiZjY5YTRmYTMtMzQ4OC00
+      MmFhLTlhMTQtMGEzZmEyOWJmYjZjIiwgInJvbGUiOiAiYmFzZV9hZ2VudCIsICJ2ZXJib3NlPyI6
+      IGZhbHNlLCAibWF4X2l0ZXIiOiAyMCwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGlu
+      Z19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/Ijog
+      ZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6
+      IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNyZXdfdGFza3MS8AEK7QFbeyJrZXkiOiAiMWIx
+      NWVmMjM5MTViMjc1NWU4OWEwZWMzYjI2YTEzZDIiLCAiaWQiOiAiNDllNzk0MmMtZTJiMy00YmE1
+      LTg5MTUtMTYwYjQxMDU2ZmVlIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lu
+      cHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJiYXNlX2FnZW50IiwgImFnZW50X2tleSI6ICJh
+      ZDE1MzE2MWM1YzVhODU2YWEwZDA2YjI0OWM0YzY0YSIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgB
+      hQEAAQAAEo4CChD+ymllejCksajGYDua8tgNEghnjlejrbuw2SoMVGFzayBDcmVhdGVkMAE5EDrI
+      Ag8bIRhBGIzIAg8bIRhKLgoIY3Jld19rZXkSIgogZTU4MDcwMWQ1MmViNjVhZmYyNGVlZmU3OGM3
+      NDYyOGNKMQoHY3Jld19pZBImCiQwY2ZiNTNlYi0wMDYyLTRiZWYtOTVlOC0wODAyNDc2Y2QxZGVK
+      LgoIdGFza19rZXkSIgogMWIxNWVmMjM5MTViMjc1NWU4OWEwZWMzYjI2YTEzZDJKMQoHdGFza19p
+      ZBImCiQ0OWU3OTQyYy1lMmIzLTRiYTUtODkxNS0xNjBiNDEwNTZmZWV6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4896'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 04 Feb 2025 20:24:47 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Assess the quality of the task
+      completed based on the description, expected output, and actual results.\n\nTask
+      Description:\nJust say hi\n\nExpected Output:\nhi\n\nActual Output:\nhi\n\nPlease
+      provide:\n- Bullet points suggestions to improve future similar tasks\n- A score
+      from 0 to 10 evaluating on completion, quality, and overall performance- Entities
+      extracted from the task output, if any, their type, description, and relationships"}],
+      "model": "gpt-4o-mini", "tool_choice": {"type": "function", "function": {"name":
+      "TaskEvaluation"}}, "tools": [{"type": "function", "function": {"name": "TaskEvaluation",
+      "description": "Correctly extracted `TaskEvaluation` with all the required parameters
+      with correct types", "parameters": {"$defs": {"Entity": {"properties": {"name":
+      {"description": "The name of the entity.", "title": "Name", "type": "string"},
+      "type": {"description": "The type of the entity.", "title": "Type", "type":
+      "string"}, "description": {"description": "Description of the entity.", "title":
+      "Description", "type": "string"}, "relationships": {"description": "Relationships
+      of the entity.", "items": {"type": "string"}, "title": "Relationships", "type":
+      "array"}}, "required": ["name", "type", "description", "relationships"], "title":
+      "Entity", "type": "object"}}, "properties": {"suggestions": {"description":
+      "Suggestions to improve future similar tasks.", "items": {"type": "string"},
+      "title": "Suggestions", "type": "array"}, "quality": {"description": "A score
+      from 0 to 10 evaluating on completion, quality, and overall performance, all
+      taking into account the task description, expected output, and the result of
+      the task.", "title": "Quality", "type": "number"}, "entities": {"description":
+      "Entities extracted from the task output.", "items": {"$ref": "#/$defs/Entity"},
+      "title": "Entities", "type": "array"}}, "required": ["entities", "quality",
+      "suggestions"], "type": "object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1962'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=nedOdWE1YnKQYt1kSbrcA.zhwa3bZDzmZqTOjZYER0c-1738700521-1.0.1.1-xQk9iXOvqvyXNhkIOgc8Ws2WYcT1mJFkDCvCC8xA5joFD8QfNrBIAr_Qs6sIxt2EzXyeFwBA6gA8ZgWApCHx0Q;
+        _cfuvid=Cl48aI8.jSRja0Pqr6Jrh3mAnigd4rDn6lhGicyjMPY-1738698987673-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AxJlLVC3gCB9gRI0ZSkoPCZY7EwpQ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1738700683,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+      \           \"id\": \"call_mgwImOITW8lkjzAyf9Pp76cL\",\n            \"type\":
+      \"function\",\n            \"function\": {\n              \"name\": \"TaskEvaluation\",\n
+      \             \"arguments\": \"{\\\"suggestions\\\":[\\\"Provide context or
+      additional information to make tasks more engaging.\\\",\\\"Encourage variations
+      in responses to make the interaction more dynamic.\\\"],\\\"quality\\\":10,\\\"entities\\\":[{\\\"name\\\":\\\"hi\\\",\\\"type\\\":\\\"greeting\\\",\\\"description\\\":\\\"A
+      common word used to initiate a conversation or express friendliness.\\\",\\\"relationships\\\":[\\\"initiates
+      conversation\\\",\\\"expresses friendliness\\\"]}]}\"\n            }\n          }\n
+      \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      273,\n    \"completion_tokens\": 71,\n    \"total_tokens\": 344,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 90cd62c4ba41fa6a-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Feb 2025 20:24:50 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '7347'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999876'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_aec28dd3fe998d628754e8429623bf9e
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

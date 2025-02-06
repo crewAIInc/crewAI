@@ -1,7 +1,19 @@
 from functools import wraps
-from typing import Any, Callable, Dict, Generic, List, Type, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Type,
+    TypeVar,
+    TYPE_CHECKING,
+)
+from datetime import datetime
+from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from .event_types import EventTypes
 
 T = TypeVar("T")
 EVT = TypeVar("EVT", bound=BaseModel)
@@ -27,18 +39,15 @@ class Emitter(Generic[T, EVT]):
             func(source, event)
 
 
+# Global event emitter instance
 default_emitter = Emitter[Any, BaseModel]()
 
 
-def emit(source: Any, event: BaseModel, raise_on_error: bool = False) -> None:
-    try:
-        default_emitter.emit(source, event)
-    except Exception as e:
-        if raise_on_error:
-            raise e
-        else:
-            print(f"Error emitting event: {e}")
+def emit(source: Any, event: BaseModel) -> None:
+    """Emit an event to all registered listeners"""
+    default_emitter.emit(source, event)
 
 
-def on(event_type: Type[BaseModel]) -> Callable:
+def on(event_type: Type[EventTypes]) -> Callable:
+    """Register a listener for a specific event type"""
     return default_emitter.on(event_type)

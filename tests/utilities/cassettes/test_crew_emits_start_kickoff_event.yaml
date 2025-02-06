@@ -1,0 +1,243 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Just say hi\n\nThis is the expect criteria for your
+      final answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '836'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AxJJzafmayYpGTsTAWbOyZkmQJNa5\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1738698987,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      161,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 90cd395b0e641698-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Feb 2025 19:56:27 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=4s6sWmJ49B9F_wNc1STtdZF1nikfl6uN9_ov3Xzfa8U-1738698987-1.0.1.1-lmbRRS1MHrDbnU93Gh16CP3qNczxxIrQnyBU7vpHSwNf6PdmuWOHKd1mkl5SBx6rg7p1NLaNUMyqDDcE0Mvjzw;
+        path=/; expires=Tue, 04-Feb-25 20:26:27 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=Cl48aI8.jSRja0Pqr6Jrh3mAnigd4rDn6lhGicyjMPY-1738698987673-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '839'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999810'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_577b484a927b455c40ed80f9fd4d9106
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Assess the quality of the task
+      completed based on the description, expected output, and actual results.\n\nTask
+      Description:\nJust say hi\n\nExpected Output:\nhi\n\nActual Output:\nhi\n\nPlease
+      provide:\n- Bullet points suggestions to improve future similar tasks\n- A score
+      from 0 to 10 evaluating on completion, quality, and overall performance- Entities
+      extracted from the task output, if any, their type, description, and relationships"}],
+      "model": "gpt-4o-mini", "tool_choice": {"type": "function", "function": {"name":
+      "TaskEvaluation"}}, "tools": [{"type": "function", "function": {"name": "TaskEvaluation",
+      "description": "Correctly extracted `TaskEvaluation` with all the required parameters
+      with correct types", "parameters": {"$defs": {"Entity": {"properties": {"name":
+      {"description": "The name of the entity.", "title": "Name", "type": "string"},
+      "type": {"description": "The type of the entity.", "title": "Type", "type":
+      "string"}, "description": {"description": "Description of the entity.", "title":
+      "Description", "type": "string"}, "relationships": {"description": "Relationships
+      of the entity.", "items": {"type": "string"}, "title": "Relationships", "type":
+      "array"}}, "required": ["name", "type", "description", "relationships"], "title":
+      "Entity", "type": "object"}}, "properties": {"suggestions": {"description":
+      "Suggestions to improve future similar tasks.", "items": {"type": "string"},
+      "title": "Suggestions", "type": "array"}, "quality": {"description": "A score
+      from 0 to 10 evaluating on completion, quality, and overall performance, all
+      taking into account the task description, expected output, and the result of
+      the task.", "title": "Quality", "type": "number"}, "entities": {"description":
+      "Entities extracted from the task output.", "items": {"$ref": "#/$defs/Entity"},
+      "title": "Entities", "type": "array"}}, "required": ["entities", "quality",
+      "suggestions"], "type": "object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1962'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4s6sWmJ49B9F_wNc1STtdZF1nikfl6uN9_ov3Xzfa8U-1738698987-1.0.1.1-lmbRRS1MHrDbnU93Gh16CP3qNczxxIrQnyBU7vpHSwNf6PdmuWOHKd1mkl5SBx6rg7p1NLaNUMyqDDcE0Mvjzw;
+        _cfuvid=Cl48aI8.jSRja0Pqr6Jrh3mAnigd4rDn6lhGicyjMPY-1738698987673-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AxJJz10KP7iadNPdKsbcsvHBa7cic\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1738698987,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+      \           \"id\": \"call_czeHQgy5eiOVa0zlrtcfwepe\",\n            \"type\":
+      \"function\",\n            \"function\": {\n              \"name\": \"TaskEvaluation\",\n
+      \             \"arguments\": \"{\\\"suggestions\\\":[\\\"Provide more context
+      or details for similar tasks to enhance output expectations.\\\",\\\"Encourage
+      creativity in responses for simple tasks to engage users more effectively.\\\"],\\\"quality\\\":10,\\\"entities\\\":[]
+      }\"\n            }\n          }\n        ],\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 273,\n    \"completion_tokens\": 40,\n
+      \   \"total_tokens\": 313,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-RAY:
+      - 90cd39615b281698-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Feb 2025 19:56:29 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1411'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999876'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3e717a80c7d9c5ea19893dd990aaae26
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
