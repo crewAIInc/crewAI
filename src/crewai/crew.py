@@ -7,6 +7,8 @@ from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+import subprocess
+import sys
 
 from pydantic import (
     UUID4,
@@ -1152,3 +1154,59 @@ class Crew(BaseModel):
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+    
+    def reset_memories(self, command_type: str):
+        """
+        Reset specific or all memories for the crew.
+
+        Args:
+            command_type (str): Type of memory to reset. 
+            Valid options: 'long', 'short', 'entity', 'knowledge', 
+            'kickoff_outputs', or 'all'.
+
+        Raises:
+            ValueError: If an invalid command type is provided.
+        """
+        valid_types = ['long', 'short', 'entity', 'knowledge', 'kickoff_outputs', 'all']
+
+        if command_type not in valid_types:
+                raise ValueError(f"Invalid command type. Must be one of: {', '.join(valid_types)}")
+            
+        try:
+            if command_type == 'all':
+                self._short_term_memory.reset()
+                self._entity_memory.reset() 
+                self._long_term_memory.reset()
+                self._task_output_handler.reset()
+                self.knowledge.reset()
+                print("All memories have been reset.")
+
+            elif command_type == 'long':
+                self.LongTermMemory().reset()
+                print("Long term memory has been reset.")
+            
+            elif command_type == 'short':
+                self.ShortTermMemory().reset()
+                print("Short term memory has been reset.")
+            
+            elif command_type == 'entity':
+                self.EntityMemory().reset()
+                print("Entity memory has been reset.")
+            
+            elif command_type == 'kickoff_outputs':
+                self.TaskOutputStorageHandler().reset()
+                print("Latest Kickoff outputs stored has been reset.") 
+            
+            elif command_type == 'knowledge':
+                self.knowledge.reset()
+                print("Knowledge has been reset.")
+            
+            else:
+                raise ValueError(f"Invalid command type. Must be one of: long, short, entity, knowledge, kickoff_outputs, all")
+                
+        except subprocess.CalledProcessError as e:
+            print(f"An error occurred while resetting the memories: {e}", file=sys.stderr)
+            print(e.output, file=sys.stderr)
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}", file=sys.stderr)
+
