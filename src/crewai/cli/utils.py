@@ -9,6 +9,7 @@ import tomli
 from rich.console import Console
 
 from crewai.cli.constants import ENV_VARS
+from crewai.crew import Crew
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -51,6 +52,11 @@ def get_project_name(
 ) -> str | None:
     """Get the project name from the pyproject.toml file."""
     return _get_project_attribute(pyproject_path, ["project", "name"], require=require)
+
+
+def get_crew(crew_path: str = "crew.py", require: bool = False) -> Crew | None:
+    """Get the crew instance from the crew.py file."""
+    return _get_project_attribute(crew_path, ["crew"], require=require)
 
 
 def get_project_version(
