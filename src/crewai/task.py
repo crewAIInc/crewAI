@@ -674,18 +674,31 @@ class Task(BaseModel):
             return OutputFormat.PYDANTIC
         return OutputFormat.RAW
 
-    def _save_file(self, result: Any) -> None:
+    def _save_file(self, result: Union[Dict, str, Any]) -> None:
         """Save task output to a file.
+
+        Note:
+            For cross-platform file writing, especially on Windows, consider using FileWriterTool
+            from the crewai_tools package:
+                pip install 'crewai[tools]'
+                from crewai_tools import FileWriterTool
 
         Args:
             result: The result to save to the file. Can be a dict or any stringifiable object.
 
         Raises:
             ValueError: If output_file is not set
-            RuntimeError: If there is an error writing to the file
+            RuntimeError: If there is an error writing to the file. For cross-platform
+                compatibility, especially on Windows, use FileWriterTool from crewai_tools
+                package.
         """
         if self.output_file is None:
             raise ValueError("output_file is not set.")
+
+        FILEWRITER_RECOMMENDATION = (
+            "For cross-platform file writing, especially on Windows, "
+            "use FileWriterTool from crewai_tools package."
+        )
 
         try:
             resolved_path = Path(self.output_file).expanduser().resolve()
@@ -702,7 +715,12 @@ class Task(BaseModel):
                 else:
                     file.write(str(result))
         except (OSError, IOError) as e:
-            raise RuntimeError(f"Failed to save output file: {e}")
+            raise RuntimeError(
+                "\n".join([
+                    f"Failed to save output file: {e}",
+                    FILEWRITER_RECOMMENDATION
+                ])
+            )
         return None
 
     def __repr__(self):

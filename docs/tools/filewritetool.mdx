@@ -8,9 +8,9 @@ icon: file-pen
 
 ## Description
 
-The `FileWriterTool` is a component of the crewai_tools package, designed to simplify the process of writing content to files. 
+The `FileWriterTool` is a component of the crewai_tools package, designed to simplify the process of writing content to files with cross-platform compatibility (Windows, Linux, macOS). 
 It is particularly useful in scenarios such as generating reports, saving logs, creating configuration files, and more. 
-This tool supports creating new directories if they don't exist, making it easier to organize your output.
+This tool handles path differences across operating systems, supports UTF-8 encoding, and automatically creates directories if they don't exist, making it easier to organize your output reliably across different platforms.
 
 ## Installation
 
@@ -43,6 +43,8 @@ print(result)
 
 ## Conclusion
 
-By integrating the `FileWriterTool` into your crews, the agents can execute the process of writing content to files and creating directories. 
-This tool is essential for tasks that require saving output data, creating structured file systems, and more. By adhering to the setup and usage guidelines provided, 
-incorporating this tool into projects is straightforward and efficient.
+By integrating the `FileWriterTool` into your crews, the agents can reliably write content to files across different operating systems. 
+This tool is essential for tasks that require saving output data, creating structured file systems, and handling cross-platform file operations. 
+It's particularly recommended for Windows users who may encounter file writing issues with standard Python file operations.
+
+By adhering to the setup and usage guidelines provided, incorporating this tool into projects is straightforward and ensures consistent file writing behavior across all platforms.
