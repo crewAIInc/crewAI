@@ -266,9 +266,6 @@ class LLM:
                 text_response = response_message.content or ""
                 tool_calls = getattr(response_message, "tool_calls", [])
 
-                print("MESSAGES IN LLM:")
-                print(messages)
-
                 # --- 3) Handle callbacks with usage info
                 if callbacks and len(callbacks) > 0:
                     for callback in callbacks:
