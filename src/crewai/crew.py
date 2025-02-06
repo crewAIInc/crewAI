@@ -293,7 +293,7 @@ class Crew(BaseModel):
                 ):
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
-                        embedder_config=self.embedder,
+                        embedder=self.embedder,
                         collection_name="crew",
                     )
 
