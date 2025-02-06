@@ -290,6 +290,8 @@ class Agent(BaseAgent):
             response_template=self.response_template,
         ).task_execution()
 
+        print("PROMPT:")
+        print(prompt)
         stop_words = [self.i18n.slice("observation")]
 
         if self.response_template:
