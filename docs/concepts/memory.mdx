@@ -66,12 +66,12 @@ my_crew = Crew(
     tasks=[...],
     process="Process.sequential",
     memory=True,
-    long_term_memory=EnhanceLongTermMemory(
+    long_term_memory=LongTermMemory(
         storage=LTMSQLiteStorage(
             db_path="/my_data_dir/my_crew1/long_term_memory_storage.db"
         )
     ),
-    short_term_memory=EnhanceShortTermMemory(
+    short_term_memory=ShortTermMemory(
         storage=CustomRAGStorage(
             crew_name="my_crew",
             storage_type="short_term",
@@ -80,7 +80,7 @@ my_crew = Crew(
             dimension=embedder["dimension"],
         ),
     ),
-    entity_memory=EnhanceEntityMemory(
+    entity_memory=EntityMemory(
         storage=CustomRAGStorage(
             crew_name="my_crew",
             storage_type="entities",
