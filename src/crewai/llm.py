@@ -218,7 +218,7 @@ class LLM:
 
         # For O1 models, system messages are not supported.
         # Convert any system messages into assistant messages.
-        if self.model.lower() in {"o1-preview", "o1-mini"}:
+        if "o1" in self.model.lower():
             for message in messages:
                 if message.get("role") == "system":
                     message["role"] = "assistant"
