@@ -70,7 +70,6 @@ class Agent(BaseAgent):
     )
     agent_ops_agent_name: str = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
     agent_ops_agent_id: str = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
-
     step_callback: Optional[Any] = Field(
         default=None,
         description="Callback to be executed after each step of the agent execution.",
@@ -290,8 +289,6 @@ class Agent(BaseAgent):
             response_template=self.response_template,
         ).task_execution()
 
-        print("PROMPT:")
-        print(prompt)
         stop_words = [self.i18n.slice("observation")]
 
         if self.response_template:

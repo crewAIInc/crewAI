@@ -94,9 +94,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(self._format_msg(user_prompt))
 
-        print("MESSAGES:")
-        print(self.messages)
-
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
