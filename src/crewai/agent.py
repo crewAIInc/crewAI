@@ -1,3 +1,4 @@
+import re
 import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Union
@@ -153,7 +154,8 @@ class Agent(BaseAgent):
     def _set_knowledge(self):
         try:
             if self.knowledge_sources:
-                knowledge_agent_name = f"{self.role.replace(' ', '_')}"
+                full_pattern = re.compile(r'[^a-zA-Z0-9\-_\r\n]|(\.\.)')
+                knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
