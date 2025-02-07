@@ -82,6 +82,21 @@ class QdrantVectorSearchTool(BaseTool):
                 url=self.qdrant_url,
                 api_key=self.qdrant_api_key,
             )
+        else:
+            import click
+
+            if click.confirm(
+                "The 'qdrant-client' package is required to use the QdrantVectorSearchTool. "
+                "Would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "qdrant-client"], check=True)
+            else:
+                raise ImportError(
+                    "The 'qdrant-client' package is required to use the QdrantVectorSearchTool. "
+                    "Please install it with: uv add qdrant-client"
+                )
 
     def _run(
         self,
@@ -103,11 +118,6 @@ class QdrantVectorSearchTool(BaseTool):
             ImportError: If qdrant-client is not installed
             ValueError: If Qdrant credentials are missing
         """
-        if not QDRANT_AVAILABLE:
-            raise ImportError(
-                "The 'qdrant-client' package is required to use the QdrantVectorSearchTool. "
-                "Please install it with: pip install qdrant-client"
-            )
 
         if not self.qdrant_url:
             raise ValueError("QDRANT_URL is not set")
