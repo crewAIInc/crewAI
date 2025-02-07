@@ -36,7 +36,7 @@ class EntityMemory(Memory):
                     path=path,
                 )
             )
-        super().__init__(storage)
+        super().__init__(storage=storage)
 
     def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         """Saves an entity item into the SQLite storage."""
