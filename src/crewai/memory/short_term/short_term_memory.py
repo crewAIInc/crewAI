@@ -19,7 +19,6 @@ class ShortTermMemory(Memory):
     _memory_provider: Optional[str] = PrivateAttr()
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
-        # Determine memory_provider without assigning it directly as a public field.
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
             memory_provider = crew.memory_config.get("provider")
         else:
@@ -44,9 +43,7 @@ class ShortTermMemory(Memory):
                     path=path,
                 )
             )
-        # First call the parent __init__ so that Pydantic's internals are set.
         super().__init__(storage=storage)
-        # Now assign the private attribute.
         self._memory_provider = memory_provider
 
     def save(
