@@ -32,27 +32,34 @@ def reset_memories_command(
 
     try:
         crew = get_crew()
-        if crew:
-            if all:
-                crew.reset_memories(command_type="all")
-                click.echo("All memories have been reset.")
-            else:
-                if long:
-                    crew.reset_memories(command_type="long")
-                    click.echo("Long term memory has been reset.")
+        if not crew:
+            raise ValueError("No crew found.")
+        if all:
+            crew.reset_memories(command_type="all")
+            click.echo("All memories have been reset.")
+            return
 
-                if short:
-                    crew.reset_memories(command_type="short")
-                    click.echo("Short term memory has been reset.")
-                if entity:
-                    crew.reset_memories(command_type="entity")
-                    click.echo("Entity memory has been reset.")
-                if kickoff_outputs:
-                    crew.reset_memories(command_type="kickoff_outputs")
-                    click.echo("Latest Kickoff outputs stored has been reset.")
-                if knowledge:
-                    crew.reset_memories(command_type="knowledge")
-                    click.echo("Knowledge has been reset.")
+        if not any([long, short, entity, kickoff_outputs, knowledge]):
+            click.echo(
+                "No memory type specified. Please specify at least one type to reset."
+            )
+            return
+
+        if long:
+            crew.reset_memories(command_type="long")
+            click.echo("Long term memory has been reset.")
+        if short:
+            crew.reset_memories(command_type="short")
+            click.echo("Short term memory has been reset.")
+        if entity:
+            crew.reset_memories(command_type="entity")
+            click.echo("Entity memory has been reset.")
+        if kickoff_outputs:
+            crew.reset_memories(command_type="kickoff_outputs")
+            click.echo("Latest Kickoff outputs stored has been reset.")
+        if knowledge:
+            crew.reset_memories(command_type="knowledge")
+            click.echo("Knowledge has been reset.")
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while resetting the memories: {e}", err=True)
