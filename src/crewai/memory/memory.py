@@ -10,10 +10,8 @@ class Memory(BaseModel):
     Base class for memory, now supporting agent tags and generic metadata.
     """
 
-    storage: Union[RAGStorage, Any]
-
     def __init__(self, storage: Union[RAGStorage, Any]):
-        super().__init__(storage=storage)
+        self.storage = storage
 
     def save(
         self,
@@ -36,6 +34,3 @@ class Memory(BaseModel):
         return self.storage.search(
             query=query, limit=limit, score_threshold=score_threshold
         )
-
-    class Config:
-        arbitrary_types_allowed = True
