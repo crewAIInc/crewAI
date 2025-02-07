@@ -30,6 +30,7 @@ from .tools import (
     PatronusPredefinedCriteriaEvalTool,
     PDFSearchTool,
     PGSearchTool,
+    QdrantVectorSearchTool,
     RagTool,
     ScrapeElementFromWebsiteTool,
     ScrapegraphScrapeTool,
