@@ -16,7 +16,6 @@ from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.tools.base_tool import Tool
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
@@ -146,7 +145,7 @@ class Agent(BaseAgent):
     def _set_knowledge(self):
         try:
             if self.knowledge_sources:
-                full_pattern = re.compile(r'[^a-zA-Z0-9\-_\r\n]|(\.\.)')
+                full_pattern = re.compile(r"[^a-zA-Z0-9\-_\r\n]|(\.\.)")
                 knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
