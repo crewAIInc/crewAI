@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+import sys
 import uuid
 import warnings
 from concurrent.futures import Future
@@ -183,9 +184,9 @@ class Crew(BaseModel):
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
-    output_log_file: Optional[str] = Field(
+    output_log_file: Optional[Union[bool, str]] = Field(
         default=None,
-        description="output_log_file",
+        description="Path to the log file to be saved",
     )
     planning: Optional[bool] = Field(
         default=False,
@@ -438,6 +439,7 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
+
 
     @property
     def key(self) -> str:
@@ -1147,3 +1149,80 @@ class Crew(BaseModel):
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+
+    def reset_memories(self, command_type: str) -> None:
+        """Reset specific or all memories for the crew.
+
+        Args:
+            command_type: Type of memory to reset.
+                Valid options: 'long', 'short', 'entity', 'knowledge',
+                'kickoff_outputs', or 'all'
+
+        Raises:
+            ValueError: If an invalid command type is provided.
+            RuntimeError: If memory reset operation fails.
+        """
+        VALID_TYPES = frozenset(
+            ["long", "short", "entity", "knowledge", "kickoff_outputs", "all"]
+        )
+
+        if command_type not in VALID_TYPES:
+            raise ValueError(
+                f"Invalid command type. Must be one of: {', '.join(sorted(VALID_TYPES))}"
+            )
+
+        try:
+            if command_type == "all":
+                self._reset_all_memories()
+            else:
+                self._reset_specific_memory(command_type)
+
+            self._logger.log("info", f"{command_type} memory has been reset")
+
+        except Exception as e:
+            error_msg = f"Failed to reset {command_type} memory: {str(e)}"
+            self._logger.log("error", error_msg)
+            raise RuntimeError(error_msg) from e
+
+    def _reset_all_memories(self) -> None:
+        """Reset all available memory systems."""
+        memory_systems = [
+            ("short term", self._short_term_memory),
+            ("entity", self._entity_memory),
+            ("long term", self._long_term_memory),
+            ("task output", self._task_output_handler),
+            ("knowledge", self.knowledge),
+        ]
+
+        for name, system in memory_systems:
+            if system is not None:
+                try:
+                    system.reset()
+                except Exception as e:
+                    raise RuntimeError(f"Failed to reset {name} memory") from e
+
+    def _reset_specific_memory(self, memory_type: str) -> None:
+        """Reset a specific memory system.
+
+        Args:
+            memory_type: Type of memory to reset
+
+        Raises:
+            RuntimeError: If the specified memory system fails to reset
+        """
+        reset_functions = {
+            "long": (self._long_term_memory, "long term"),
+            "short": (self._short_term_memory, "short term"),
+            "entity": (self._entity_memory, "entity"),
+            "knowledge": (self.knowledge, "knowledge"),
+            "kickoff_outputs": (self._task_output_handler, "task output"),
+        }
+
+        memory_system, name = reset_functions[memory_type]
+        if memory_system is None:
+            raise RuntimeError(f"{name} memory system is not initialized")
+
+        try:
+            memory_system.reset()
+        except Exception as e:
+            raise RuntimeError(f"Failed to reset {name} memory") from e
