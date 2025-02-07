@@ -1,15 +1,19 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel
 
 from crewai.memory.storage.rag_storage import RAGStorage
 
 
-class Memory:
+class Memory(BaseModel):
     """
     Base class for memory, now supporting agent tags and generic metadata.
     """
 
-    def __init__(self, storage: RAGStorage):
-        self.storage = storage
+    storage: Any
+
+    def __init__(self, storage: Any, **data: Any):
+        super().__init__(storage=storage, **data)
 
     def save(
         self,
