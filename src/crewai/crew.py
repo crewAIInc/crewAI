@@ -681,12 +681,7 @@ class Crew(BaseModel):
                 manager.tools = []
                 raise Exception("Manager agent should not have tools")
         else:
-            self.manager_llm = (
-                getattr(self.manager_llm, "model_name", None)
-                or getattr(self.manager_llm, "model", None)
-                or getattr(self.manager_llm, "deployment_name", None)
-                or self.manager_llm
-            )
+            self.manager_llm = create_llm(self.manager_llm)
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
