@@ -8,6 +8,8 @@ class Memory(BaseModel):
     Base class for memory, now supporting agent tags and generic metadata.
     """
 
+    embedder_config: Optional[Dict[str, Any]] = None
+
     storage: Any
 
     def __init__(self, storage: Any, **data: Any):
