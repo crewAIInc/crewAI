@@ -14,6 +14,8 @@ class ShortTermMemory(Memory):
     MemoryItem instances.
     """
 
+    memory_provider: Any
+
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
             self.memory_provider = crew.memory_config.get("provider")
