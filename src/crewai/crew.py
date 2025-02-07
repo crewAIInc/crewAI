@@ -1,7 +1,6 @@
 import asyncio
 import json
 import re
-import sys
 import uuid
 import warnings
 from concurrent.futures import Future
@@ -439,7 +438,6 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
-
 
     @property
     def key(self) -> str:
