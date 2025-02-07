@@ -8,6 +8,8 @@ class Memory:
     Base class for memory, now supporting agent tags and generic metadata.
     """
 
+    embedder_config: Optional[Dict[str, Any]] = None
+
     def __init__(self, storage: RAGStorage):
         self.storage = storage
 
