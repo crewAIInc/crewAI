@@ -221,6 +221,13 @@ class LLM:
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
+        # For O1 models, system messages are not supported.
+        # Convert any system messages into assistant messages.
+        if "o1" in self.model.lower():
+            for message in messages:
+                if message.get("role") == "system":
+                    message["role"] = "assistant"
+
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
