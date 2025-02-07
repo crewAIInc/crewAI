@@ -368,6 +368,33 @@ my_crew = Crew(
 )
 ```
 
+### Adding Custom Embedding Function
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+from chromadb import Documents, EmbeddingFunction, Embeddings
+
+# Create a custom embedding function
+class CustomEmbedder(EmbeddingFunction):
+    def __call__(self, input: Documents) -> Embeddings:
+        # generate embeddings
+        return [1, 2, 3] # this is a dummy embedding
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "custom",
+        "config": {
+            "embedder": CustomEmbedder()
+        }
+    }
+)
+```
+
 ### Resetting Memory
 
 ```shell
