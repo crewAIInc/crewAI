@@ -67,3 +67,9 @@ class Knowledge(BaseModel):
                 source.add()
         except Exception as e:
             raise e
+
+    def reset(self) -> None:
+        if self.storage:
+            self.storage.reset()
+        else:
+            raise ValueError("Storage is not initialized.")
