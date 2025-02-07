@@ -185,7 +185,12 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=OpenAIEmbeddingFunction(api_key=os.getenv("OPENAI_API_KEY"), model="text-embedding-3-small"),
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -242,13 +247,15 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=OpenAIEmbeddingFunction(
-        api_key="YOUR_API_KEY",
-        api_base="YOUR_API_BASE_PATH",
-        api_type="azure",
-        api_version="YOUR_API_VERSION",
-        model="text-embedding-3-small"
-    )
+    embedder={
+        "provider": "openai",
+        "config": {
+            "api_key": "YOUR_API_KEY",
+            "api_base": "YOUR_API_BASE_PATH",
+            "api_version": "YOUR_API_VERSION",
+            "model_name": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -264,12 +271,15 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=GoogleVertexEmbeddingFunction(
-        project_id="YOUR_PROJECT_ID",
-        region="YOUR_REGION",
-        api_key="YOUR_API_KEY",
-        model="textembedding-gecko"
-    )
+    embedder={
+        "provider": "vertexai",
+        "config": {
+            "project_id"="YOUR_PROJECT_ID",
+            "region"="YOUR_REGION",
+            "api_key"="YOUR_API_KEY",
+            "model_name"="textembedding-gecko"
+        }
+    }
 )
 ```
 
