@@ -164,6 +164,7 @@ class LLM:
         self.context_window_size = 0
         self.reasoning_effort = reasoning_effort
         self.additional_params = kwargs
+        self.is_anthropic = "anthropic" in model.lower()
 
         litellm.drop_params = True
 
@@ -233,10 +234,13 @@ class LLM:
                 self.set_callbacks(callbacks)
 
             try:
-                # --- 1) Prepare the parameters for the completion call
+                # --- 1) Format messages according to provider requirements
+                formatted_messages = self._format_messages_for_provider(messages)
+
+                # --- 2) Prepare the parameters for the completion call
                 params = {
                     "model": self.model,
-                    "messages": messages,
+                    "messages": formatted_messages,
                     "timeout": self.timeout,
                     "temperature": self.temperature,
                     "top_p": self.top_p,
@@ -323,6 +327,17 @@ class LLM:
                 )._is_context_limit_error(str(e)):
                     logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
+
+    def _format_messages_for_provider(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """Format messages according to provider requirements."""
+        if not self.is_anthropic:
+            return messages
+            
+        # Anthropic requires messages to start with 'user' role
+        if not messages or messages[0]["role"] == "system":
+            # If first message is system, add a placeholder user message
+            return [{"role": "user", "content": "."}, *messages]
+        return messages
 
     def _get_custom_llm_provider(self) -> str:
         """

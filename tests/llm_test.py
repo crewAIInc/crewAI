@@ -286,6 +286,40 @@ def test_o3_mini_reasoning_effort_medium():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_anthropic_message_formatting():
+    # Test when first message is system
+    llm = LLM(model="anthropic/claude-3-sonnet")
+    messages = [{"role": "system", "content": "test"}]
+    formatted = llm._format_messages_for_provider(messages)
+    assert len(formatted) == 2
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "."
+    assert formatted[1]["role"] == "system"
+    assert formatted[1]["content"] == "test"
+
+    # Test when first message is already user
+    messages = [{"role": "user", "content": "test"}]
+    formatted = llm._format_messages_for_provider(messages)
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "test"
+
+    # Test with empty message list
+    messages = []
+    formatted = llm._format_messages_for_provider(messages)
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "."
+
+    # Test with non-Anthropic model (should not modify messages)
+    llm = LLM(model="gpt-4")
+    messages = [{"role": "system", "content": "test"}]
+    formatted = llm._format_messages_for_provider(messages)
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "system"
+    assert formatted[0]["content"] == "test"
+
+
 def test_deepseek_r1_with_open_router():
     if not os.getenv("OPEN_ROUTER_API_KEY"):
         pytest.skip("OPEN_ROUTER_API_KEY not set; skipping test.")
