@@ -3343,10 +3343,6 @@ def test_crew_testing_function(copy_mock, crew_evaluator_mock):
             mock.call().print_crew_evaluation_result(),
         ]
     )
-            mock.call().set_iteration(2),
-            mock.call().print_crew_evaluation_result(),
-        ]
-    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
