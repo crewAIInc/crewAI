@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from collections import defaultdict
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -15,6 +16,7 @@ from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.project import crew
@@ -26,6 +28,13 @@ from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
+
+@pytest.fixture
+def crew_evaluator():
+    evaluator = mock.MagicMock(spec=CrewEvaluator)
+    evaluator.print_crew_evaluation_result = mock.MagicMock()
+    return evaluator
 
 ceo = Agent(
     role="CEO",
@@ -3338,6 +3347,56 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
             mock.call().print_crew_evaluation_result(),
         ]
     )
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_with_llm_instance(kickoff_mock, copy_mock, evaluator_mock):
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    llm = LLM(model="gpt-4")
+    
+    # Create a mock for the copied crew
+    copy_mock.return_value = crew
+    
+    # Create a mock evaluator instance with required methods
+    mock_evaluator = mock.MagicMock()
+    mock_evaluator.set_iteration = mock.MagicMock()
+    mock_evaluator.evaluate = mock.MagicMock()
+    mock_evaluator.print_crew_evaluation_result = mock.MagicMock()
+    
+    # Set up the mock class to track constructor calls and return our mock instance
+    evaluator_mock.side_effect = lambda crew_arg, model_arg: mock_evaluator
+    
+    # Run the test
+    crew.test(n_iterations=2, llm=llm)
+    
+    # Verify the evaluator was used correctly
+    kickoff_mock.assert_has_calls([
+        mock.call(inputs=None),
+        mock.call(inputs=None)
+    ])
+    
+    # Verify CrewEvaluator was instantiated with the LLM instance
+    evaluator_mock.assert_called_once_with(crew, llm)
+    
+    # Verify print_crew_evaluation_result was called
+    mock_evaluator.print_crew_evaluation_result.assert_called_once()
+
+
+def test_crew_testing_with_missing_model():
+    crew = Crew(agents=[researcher], tasks=[Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )])
+    
+    with pytest.raises(ValueError, match="Either llm or openai_model_name must be provided"):
+        crew.test(n_iterations=2)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

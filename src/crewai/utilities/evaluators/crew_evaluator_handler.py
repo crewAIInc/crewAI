@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Union
 
 from pydantic import BaseModel, Field
 from rich.box import HEAVY_EDGE
@@ -6,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
@@ -32,9 +34,15 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, openai_model_name: str):
+    def __init__(self, crew, llm: Union[str, LLM]):
+        """Initialize the CrewEvaluator.
+        
+        Args:
+            crew: The crew to evaluate
+            llm: LLM instance or model name string to use for evaluation
+        """
         self.crew = crew
-        self.openai_model_name = openai_model_name
+        self.llm = llm if isinstance(llm, LLM) else LLM(model=llm)
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
@@ -51,7 +59,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=self.openai_model_name,
+            llm=self.llm,
         )
 
     def _evaluation_task(
@@ -95,9 +103,20 @@ class CrewEvaluator:
         │ Execution Time (s) │ 42    │ 79    │ 52    │ 57         │                              │
         └────────────────────┴───────┴───────┴───────┴────────────┴──────────────────────────────┘
         """
+        # Handle empty task scores
+        if not self.tasks_scores:
+            return
+            
+        task_scores_list = list(zip(*self.tasks_scores.values()))
+        if not task_scores_list:
+            return
+            
         task_averages = [
-            sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values())
+            sum(scores) / len(scores) for scores in task_scores_list
         ]
+        if not task_averages:
+            return
+            
         crew_average = sum(task_averages) / len(task_averages)
 
         table = Table(title="Tasks Scores \n (1-10 Higher is better)", box=HEAVY_EDGE)
@@ -177,11 +196,12 @@ class CrewEvaluator:
         evaluation_result = evaluation_task.execute_sync()
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
+            model_name = str(self.llm) if isinstance(self.llm, LLM) else self.llm
             self._test_result_span = self._telemetry.individual_test_result_span(
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task.execution_duration,
-                self.openai_model_name,
+                model_name,
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
