@@ -285,8 +285,37 @@ The `embedder` parameter supports various embedding model providers that include
 - `openai`: OpenAI's embedding models
 - `google`: Google's text embedding models
 - `azure`: Azure OpenAI embeddings
-- `ollama`: Local embeddings with Ollama
+- `ollama`: Local embeddings with Ollama (supports flexible URL configuration)
 - `vertexai`: Google Cloud VertexAI embeddings
+
+Here's an example of configuring the Ollama embedder with custom URL settings:
+```python
+# Configure Ollama embedder with custom URL
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data efficiently",
+    embedder={
+        "provider": "ollama",
+        "config": {
+            "model": "llama2",
+            # URL configuration supports multiple keys in priority order:
+            # 1. url: Legacy key (highest priority)
+            # 2. api_url: Alternative key following HuggingFace pattern
+            # 3. base_url: Alternative key
+            # 4. api_base: Alternative key following Azure pattern
+            "url": "http://ollama:11434/api/embeddings"  # Example for Docker setup
+        }
+    }
+)
+```
+
+The Ollama embedder supports multiple URL configuration keys for flexibility:
+- `url`: Legacy key (highest priority)
+- `api_url`: Alternative key following HuggingFace pattern
+- `base_url`: Alternative key
+- `api_base`: Alternative key following Azure pattern
+
+If no URL is specified, it defaults to `http://localhost:11434/api/embeddings`.
 - `cohere`: Cohere's embedding models
 - `voyageai`: VoyageAI's embedding models
 - `bedrock`: AWS Bedrock embeddings
