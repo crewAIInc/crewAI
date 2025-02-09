@@ -38,6 +38,7 @@ Here's a detailed breakdown of supported models and their capabilities, you can 
     | GPT-4 | 8,192 tokens | High-accuracy tasks, complex reasoning |
     | GPT-4 Turbo | 128,000 tokens | Long-form content, document analysis |
     | GPT-4o & GPT-4o-mini | 128,000 tokens | Cost-effective large context processing |
+    | o3-mini | 200,000 tokens | Fast reasoning, complex reasoning |
 
     <Note>
       1 token ≈ 4 characters in English. For example, 8,192 tokens ≈ 32,768 characters or about 6,000 words.
@@ -146,10 +147,24 @@ Here's a detailed breakdown of supported models and their capabilities, you can 
       Groq is known for its fast inference speeds, making it suitable for real-time applications.
     </Tip>
   </Tab>
+  <Tab title="SambaNova">
+    | Model | Context Window | Best For |
+    |-------|---------------|-----------|
+    | Llama 3.1 70B/8B | Up to 131,072 tokens | High-performance, large context tasks |
+    | Llama 3.1 405B | 8,192 tokens | High-performance and output quality |
+    | Llama 3.2 Series | 8,192 tokens | General-purpose tasks, multimodal |
+    | Llama 3.3 70B | Up to 131,072 tokens | High-performance and output quality|
+    | Qwen2 familly | 8,192 tokens | High-performance and output quality |
+
+    <Tip>
+      [SambaNova](https://cloud.sambanova.ai/) has several models with fast inference speed at full precision.
+    </Tip>
+  </Tab>
   <Tab title="Others">
     | Provider | Context Window | Key Features |
     |----------|---------------|--------------|
-    | Deepseek Chat | 128,000 tokens | Specialized in technical discussions |
+    | Deepseek Chat | 64,000 tokens | Specialized in technical discussions |
+    | Deepseek R1 | 64,000 tokens | Affordable reasoning model |
     | Claude 3 | Up to 200K tokens | Strong reasoning, code understanding |
     | Gemma Series | 8,192 tokens | Efficient, smaller-scale tasks |
 
@@ -230,6 +245,9 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
         # llm: bedrock/amazon.titan-text-express-v1
         # llm: bedrock/meta.llama2-70b-chat-v1
 
+        # Amazon SageMaker Models - Enterprise-grade
+        # llm: sagemaker/<my-endpoint>
+
         # Mistral Models - Open source alternative
         # llm: mistral/mistral-large-latest
         # llm: mistral/mistral-medium-latest
@@ -280,6 +298,10 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
         # llm: sambanova/Meta-Llama-3.1-8B-Instruct
         # llm: sambanova/BioMistral-7B
         # llm: sambanova/Falcon-180B
+
+        # Open Router Models - Affordable reasoning
+        # llm: openrouter/deepseek/deepseek-r1
+        # llm: openrouter/deepseek/deepseek-chat
     ```
 
     <Info>
@@ -441,19 +463,36 @@ Learn how to get the most out of your LLM configuration:
 
   <Accordion title="Google">
     ```python Code
-    # Option 1. Gemini accessed with an API key.
+    # Option 1: Gemini accessed with an API key.
     # https://ai.google.dev/gemini-api/docs/api-key
     GEMINI_API_KEY=<your-api-key>
 
-    # Option 2. Vertex AI IAM credentials for Gemini, Anthropic, and anything in the Model Garden.
+    # Option 2: Vertex AI IAM credentials for Gemini, Anthropic, and Model Garden.
     # https://cloud.google.com/vertex-ai/generative-ai/docs/overview
+    ```
+
+    Get credentials:
+    ```python Code
+    import json
+
+    file_path = 'path/to/vertex_ai_service_account.json'
+
+    # Load the JSON file
+    with open(file_path, 'r') as file:
+        vertex_credentials = json.load(file)
+
+    # Convert the credentials to a JSON string
+    vertex_credentials_json = json.dumps(vertex_credentials)
     ```
 
     Example usage:
     ```python Code
+    from crewai import LLM
+
     llm = LLM(
         model="gemini/gemini-1.5-pro-latest",
-        temperature=0.7
+        temperature=0.7,
+        vertex_credentials=vertex_credentials_json
     )
     ```
   </Accordion>
@@ -490,6 +529,21 @@ Learn how to get the most out of your LLM configuration:
     ```python Code
     llm = LLM(
         model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="Amazon SageMaker">
+    ```python Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    Example usage:
+    ```python Code
+    llm = LLM(
+        model="sagemaker/<my-endpoint>"
     )
     ```
   </Accordion>
@@ -649,7 +703,52 @@ Learn how to get the most out of your LLM configuration:
       - Support for long context windows
     </Info>
   </Accordion>
+
+  <Accordion title="Open Router">
+    ```python Code
+    OPENROUTER_API_KEY=<your-api-key>
+    ```
+    
+    Example usage:
+    ```python Code
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-r1",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY
+    )
+    ```
+
+    <Info>
+      Open Router models:
+      - openrouter/deepseek/deepseek-r1
+      - openrouter/deepseek/deepseek-chat
+    </Info>
+  </Accordion>
 </AccordionGroup>
+
+## Structured LLM Calls
+
+CrewAI supports structured responses from LLM calls by allowing you to define a `response_format` using a Pydantic model. This enables the framework to automatically parse and validate the output, making it easier to integrate the response into your application without manual post-processing.
+
+For example, you can define a Pydantic model to represent the expected response structure and pass it as the `response_format` when instantiating the LLM. The model will then be used to convert the LLM output into a structured Python object.
+
+```python Code
+from crewai import LLM
+
+class Dog(BaseModel):
+    name: str
+    age: int
+    breed: str
+
+
+llm = LLM(model="gpt-4o", response_format=Dog)
+
+response = llm.call(
+    "Analyze the following messages and return the name, age, and breed. "
+    "Meet Kona! She is 3 years old and is a black german shepherd."
+)
+print(response)
+```
 
 ## Common Issues and Solutions
 

@@ -1,9 +1,14 @@
 import ast
 import datetime
+import json
 import time
 from difflib import SequenceMatcher
+from json import JSONDecodeError
 from textwrap import dedent
-from typing import Any, List, Union
+from typing import Any, Dict, List, Optional, Union
+
+import json5
+from json_repair import repair_json
 
 import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
@@ -19,7 +24,15 @@ try:
     import agentops  # type: ignore
 except ImportError:
     agentops = None
-OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o", "o1-preview", "o1-mini", "o1", "o3", "o3-mini"]
+OPENAI_BIGGER_MODELS = [
+    "gpt-4",
+    "gpt-4o",
+    "o1-preview",
+    "o1-mini",
+    "o1",
+    "o3",
+    "o3-mini",
+]
 
 
 class ToolUsageErrorException(Exception):
@@ -80,7 +93,7 @@ class ToolUsage:
             self._max_parsing_attempts = 2
             self._remember_format_after_usages = 4
 
-    def parse(self, tool_string: str):
+    def parse_tool_calling(self, tool_string: str):
         """Parse the tool string and return the tool calling."""
         return self._tool_calling(tool_string)
 
@@ -94,7 +107,6 @@ class ToolUsage:
             self.task.increment_tools_errors()
             return error
 
-        # BUG? The code below seems to be unreachable
         try:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
@@ -116,7 +128,7 @@ class ToolUsage:
                     self._printer.print(content=f"\n\n{error}\n", color="red")
                 return error
 
-        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
+        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
 
     def _use(
         self,
@@ -169,7 +181,7 @@ class ToolUsage:
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.schema()["properties"].keys()  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "schema"
+                        acceptable_args = tool.args_schema.model_json_schema()["properties"].keys()  # type: ignore
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
@@ -349,13 +361,13 @@ class ToolUsage:
         tool_name = self.action.tool
         tool = self._select_tool(tool_name)
         try:
-            tool_input = self._validate_tool_input(self.action.tool_input)
-            arguments = ast.literal_eval(tool_input)
+            arguments = self._validate_tool_input(self.action.tool_input)
+
         except Exception:
             if raise_error:
                 raise
             else:
-                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
+                return ToolUsageErrorException(
                     f'{self._i18n.errors("tool_arguments_error")}'
                 )
 
@@ -363,14 +375,14 @@ class ToolUsage:
             if raise_error:
                 raise
             else:
-                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
+                return ToolUsageErrorException(
                     f'{self._i18n.errors("tool_arguments_error")}'
                 )
 
         return ToolCalling(
             tool_name=tool.name,
             arguments=arguments,
-            log=tool_string,  # type: ignore
+            log=tool_string,
         )
 
     def _tool_calling(
@@ -396,57 +408,55 @@ class ToolUsage:
                 )
             return self._tool_calling(tool_string)
 
-    def _validate_tool_input(self, tool_input: str) -> str:
+    def _validate_tool_input(self, tool_input: Optional[str]) -> Dict[str, Any]:
+        if tool_input is None:
+            return {}
+
+        if not isinstance(tool_input, str) or not tool_input.strip():
+            raise Exception(
+                "Tool input must be a valid dictionary in JSON or Python literal format"
+            )
+
+        # Attempt 1: Parse as JSON
         try:
-            ast.literal_eval(tool_input)
-            return tool_input
-        except Exception:
-            # Clean and ensure the string is properly enclosed in braces
-            tool_input = tool_input.strip()
-            if not tool_input.startswith("{"):
-                tool_input = "{" + tool_input
-            if not tool_input.endswith("}"):
-                tool_input += "}"
+            arguments = json.loads(tool_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except (JSONDecodeError, TypeError):
+            pass  # Continue to the next parsing attempt
 
-            # Manually split the input into key-value pairs
-            entries = tool_input.strip("{} ").split(",")
-            formatted_entries = []
+        # Attempt 2: Parse as Python literal
+        try:
+            arguments = ast.literal_eval(tool_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except (ValueError, SyntaxError):
+            pass  # Continue to the next parsing attempt
 
-            for entry in entries:
-                if ":" not in entry:
-                    continue  # Skip malformed entries
-                key, value = entry.split(":", 1)
+        # Attempt 3: Parse as JSON5
+        try:
+            arguments = json5.loads(tool_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except (JSONDecodeError, ValueError, TypeError):
+            pass  # Continue to the next parsing attempt
 
-                # Remove extraneous white spaces and quotes, replace single quotes
-                key = key.strip().strip('"').replace("'", '"')
-                value = value.strip()
+        # Attempt 4: Repair JSON
+        try:
+            repaired_input = repair_json(tool_input)
+            self._printer.print(
+                content=f"Repaired JSON: {repaired_input}", color="blue"
+            )
+            arguments = json.loads(repaired_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except Exception as e:
+            self._printer.print(content=f"Failed to repair JSON: {e}", color="red")
 
-                # Handle replacement of single quotes at the start and end of the value string
-                if value.startswith("'") and value.endswith("'"):
-                    value = value[1:-1]  # Remove single quotes
-                    value = (
-                        '"' + value.replace('"', '\\"') + '"'
-                    )  # Re-encapsulate with double quotes
-                elif value.isdigit():  # Check if value is a digit, hence integer
-                    value = value
-                elif value.lower() in [
-                    "true",
-                    "false",
-                ]:  # Check for boolean and null values
-                    value = value.lower().capitalize()
-                elif value.lower() == "null":
-                    value = "None"
-                else:
-                    # Assume the value is a string and needs quotes
-                    value = '"' + value.replace('"', '\\"') + '"'
-
-                # Rebuild the entry with proper quoting
-                formatted_entry = f'"{key}": {value}'
-                formatted_entries.append(formatted_entry)
-
-            # Reconstruct the JSON string
-            new_json_string = "{" + ", ".join(formatted_entries) + "}"
-            return new_json_string
+        # If all parsing attempts fail, raise an error
+        raise Exception(
+            "Tool input must be a valid dictionary in JSON or Python literal format"
+        )
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)

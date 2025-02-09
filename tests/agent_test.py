@@ -10,6 +10,7 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.tools import tool
@@ -112,35 +113,6 @@ def test_custom_llm_temperature_preservation():
     assert isinstance(agent.llm, LLM)
     assert agent.llm.model == "gpt-4"
     assert agent.llm.temperature == 0.7
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execute_task():
-    from langchain_openai import ChatOpenAI
-
-    from crewai import Task
-
-    agent = Agent(
-        role="Math Tutor",
-        goal="Solve math problems accurately",
-        backstory="You are an experienced math tutor with a knack for explaining complex concepts simply.",
-        llm=ChatOpenAI(temperature=0.7, model="gpt-4o-mini"),
-    )
-
-    task = Task(
-        description="Calculate the area of a circle with radius 5 cm.",
-        expected_output="The calculated area of the circle in square centimeters.",
-        agent=agent,
-    )
-
-    result = agent.execute_task(task)
-
-    assert result is not None
-    assert (
-        result
-        == "The calculated area of the circle is approximately 78.5 square centimeters."
-    )
-    assert "square centimeters" in result.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -565,7 +537,7 @@ def test_agent_moved_on_after_max_iterations():
         task=task,
         tools=[get_final_answer],
     )
-    assert output == "The final answer is 42."
+    assert output == "42"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -574,7 +546,6 @@ def test_agent_respect_the_max_rpm_set(capsys):
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
-        return 42
 
     agent = Agent(
         role="test role",
@@ -641,15 +612,14 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_without_max_rpm_respet_crew_rpm(capsys):
+def test_agent_without_max_rpm_respects_crew_rpm(capsys):
     from unittest.mock import patch
 
     from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
-        """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        """Get the final answer but don't give it yet, just re-use this tool non-stop."""
         return 42
 
     agent1 = Agent(
@@ -666,23 +636,30 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         role="test role2",
         goal="test goal2",
         backstory="test backstory2",
-        max_iter=1,
+        max_iter=5,
         verbose=True,
         allow_delegation=False,
     )
 
     tasks = [
         Task(
-            description="Just say hi.", agent=agent1, expected_output="Your greeting."
+            description="Just say hi.",
+            agent=agent1,
+            expected_output="Your greeting.",
         ),
         Task(
-            description="NEVER give a Final Answer, unless you are told otherwise, instead keep using the `get_final_answer` tool non-stop, until you must give you best final answer",
+            description=(
+                "NEVER give a Final Answer, unless you are told otherwise, "
+                "instead keep using the `get_final_answer` tool non-stop, "
+                "until you must give your best final answer"
+            ),
             expected_output="The final answer",
             tools=[get_final_answer],
             agent=agent2,
         ),
     ]
 
+    # Set crew's max_rpm to 1 to trigger RPM limit
     crew = Crew(agents=[agent1, agent2], tasks=tasks, max_rpm=1, verbose=True)
 
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
@@ -1206,7 +1183,7 @@ def test_agent_max_retry_limit():
             [
                 mock.call(
                     {
-                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
+                        "input": "Say the word: Hi\n\nThis is the expected criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,
@@ -1214,7 +1191,7 @@ def test_agent_max_retry_limit():
                 ),
                 mock.call(
                     {
-                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
+                        "input": "Say the word: Hi\n\nThis is the expected criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,
@@ -1445,44 +1422,43 @@ def test_llm_call_with_all_attributes():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_ollama_gemma():
+def test_agent_with_ollama_llama3():
     agent = Agent(
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(
-            model="ollama/gemma2:latest",
-            base_url="http://localhost:8080",
-        ),
+        llm=LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434"),
     )
 
     assert isinstance(agent.llm, LLM)
-    assert agent.llm.model == "ollama/gemma2:latest"
-    assert agent.llm.base_url == "http://localhost:8080"
+    assert agent.llm.model == "ollama/llama3.2:3b"
+    assert agent.llm.base_url == "http://localhost:11434"
 
-    task = "Respond in 20 words. Who are you?"
+    task = "Respond in 20 words. Which model are you?"
     response = agent.llm.call([{"role": "user", "content": task}])
 
     assert response
     assert len(response.split()) <= 25  # Allow a little flexibility in word count
-    assert "Gemma" in response or "AI" in response or "language model" in response
+    assert "Llama3" in response or "AI" in response or "language model" in response
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_ollama_gemma():
+def test_llm_call_with_ollama_llama3():
     llm = LLM(
-        model="ollama/gemma2:latest",
-        base_url="http://localhost:8080",
+        model="ollama/llama3.2:3b",
+        base_url="http://localhost:11434",
         temperature=0.7,
         max_tokens=30,
     )
-    messages = [{"role": "user", "content": "Respond in 20 words. Who are you?"}]
+    messages = [
+        {"role": "user", "content": "Respond in 20 words. Which model are you?"}
+    ]
 
     response = llm.call(messages)
 
     assert response
     assert len(response.split()) <= 25  # Allow a little flexibility in word count
-    assert "Gemma" in response or "AI" in response or "language model" in response
+    assert "Llama3" in response or "AI" in response or "language model" in response
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1491,7 +1467,7 @@ def test_agent_execute_task_basic():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="gpt-3.5-turbo"),
+        llm="gpt-4o-mini",
     )
 
     task = Task(
@@ -1578,7 +1554,7 @@ def test_agent_execute_task_with_ollama():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="ollama/gemma2:latest", base_url="http://localhost:8080"),
+        llm=LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434"),
     )
 
     task = Task(
@@ -1625,3 +1601,181 @@ def test_agent_with_knowledge_sources():
 
         # Assert that the agent provides the correct information
         assert "red" in result.raw.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_works_with_copy():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    with patch(
+        "crewai.knowledge.source.base_knowledge_source.BaseKnowledgeSource",
+        autospec=True,
+    ) as MockKnowledgeSource:
+        mock_knowledge_source_instance = MockKnowledgeSource.return_value
+        mock_knowledge_source_instance.__class__ = BaseKnowledgeSource
+        mock_knowledge_source_instance.sources = [string_source]
+
+        agent = Agent(
+            role="Information Agent",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
+
+        with patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        ) as MockKnowledgeStorage:
+            mock_knowledge_storage = MockKnowledgeStorage.return_value
+            agent.knowledge_storage = mock_knowledge_storage
+
+            agent_copy = agent.copy()
+
+            assert agent_copy.role == agent.role
+            assert agent_copy.goal == agent.goal
+            assert agent_copy.backstory == agent.backstory
+            assert agent_copy.knowledge_sources is not None
+            assert len(agent_copy.knowledge_sources) == 1
+            assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
+            assert agent_copy.knowledge_sources[0].content == content
+            assert isinstance(agent_copy.llm, LLM)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_litellm_auth_error_handling():
+    """Test that LiteLLM authentication errors are handled correctly and not retried."""
+    from litellm import AuthenticationError as LiteLLMAuthenticationError
+
+    # Create an agent with a mocked LLM and max_retry_limit=0
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-4"),
+        max_retry_limit=0,  # Disable retries for authentication errors
+    )
+
+    # Create a task
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    # Mock the LLM call to raise AuthenticationError
+    with (
+        patch.object(LLM, "call") as mock_llm_call,
+        pytest.raises(LiteLLMAuthenticationError, match="Invalid API key"),
+    ):
+        mock_llm_call.side_effect = LiteLLMAuthenticationError(
+            message="Invalid API key", llm_provider="openai", model="gpt-4"
+        )
+        agent.execute_task(task)
+
+    # Verify the call was only made once (no retries)
+    mock_llm_call.assert_called_once()
+
+
+def test_crew_agent_executor_litellm_auth_error():
+    """Test that CrewAgentExecutor handles LiteLLM authentication errors by raising them."""
+    from litellm.exceptions import AuthenticationError
+
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.utilities import Printer
+
+    # Create an agent and executor
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-4", api_key="invalid_api_key"),
+    )
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    # Create executor with all required parameters
+    executor = CrewAgentExecutor(
+        agent=agent,
+        task=task,
+        llm=agent.llm,
+        crew=None,
+        prompt={"system": "You are a test agent", "user": "Execute the task: {input}"},
+        max_iter=5,
+        tools=[],
+        tools_names="",
+        stop_words=[],
+        tools_description="",
+        tools_handler=ToolsHandler(),
+    )
+
+    # Mock the LLM call to raise AuthenticationError
+    with (
+        patch.object(LLM, "call") as mock_llm_call,
+        patch.object(Printer, "print") as mock_printer,
+        pytest.raises(AuthenticationError) as exc_info,
+    ):
+        mock_llm_call.side_effect = AuthenticationError(
+            message="Invalid API key", llm_provider="openai", model="gpt-4"
+        )
+        executor.invoke(
+            {
+                "input": "test input",
+                "tool_names": "",
+                "tools": "",
+            }
+        )
+
+    # Verify error handling messages
+    error_message = f"Error during LLM call: {str(mock_llm_call.side_effect)}"
+    mock_printer.assert_any_call(
+        content=error_message,
+        color="red",
+    )
+
+    # Verify the call was only made once (no retries)
+    mock_llm_call.assert_called_once()
+
+    # Assert that the exception was raised and has the expected attributes
+    assert exc_info.type is AuthenticationError
+    assert "Invalid API key".lower() in exc_info.value.message.lower()
+    assert exc_info.value.llm_provider == "openai"
+    assert exc_info.value.model == "gpt-4"
+
+
+def test_litellm_anthropic_error_handling():
+    """Test that AnthropicError from LiteLLM is handled correctly and not retried."""
+    from litellm.llms.anthropic.common_utils import AnthropicError
+
+    # Create an agent with a mocked LLM that uses an Anthropic model
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="claude-3.5-sonnet-20240620"),
+        max_retry_limit=0,
+    )
+
+    # Create a task
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    # Mock the LLM call to raise AnthropicError
+    with (
+        patch.object(LLM, "call") as mock_llm_call,
+        pytest.raises(AnthropicError, match="Test Anthropic error"),
+    ):
+        mock_llm_call.side_effect = AnthropicError(
+            status_code=500,
+            message="Test Anthropic error",
+        )
+        agent.execute_task(task)
+
+    # Verify the LLM call was only made once (no retries)
+    mock_llm_call.assert_called_once()

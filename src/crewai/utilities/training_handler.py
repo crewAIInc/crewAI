@@ -1,3 +1,5 @@
+import os
+
 from crewai.utilities.file_handler import PickleHandler
 
 
@@ -29,3 +31,8 @@ class CrewTrainingHandler(PickleHandler):
             data[agent_id] = {train_iteration: new_data}
 
         self.save(data)
+
+    def clear(self) -> None:
+        """Clear the training data by removing the file or resetting its contents."""
+        if os.path.exists(self.file_path):
+            self.save({})

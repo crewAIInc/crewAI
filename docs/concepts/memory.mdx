@@ -134,6 +134,23 @@ crew = Crew(
 )
 ```
 
+## Memory Configuration Options
+If you want to access a specific organization and project, you can set the `org_id` and `project_id` parameters in the memory configuration.
+
+```python Code
+from crewai import Crew
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    verbose=True,
+    memory=True,
+    memory_config={
+        "provider": "mem0",
+        "config": {"user_id": "john", "org_id": "my_org_id", "project_id": "my_project_id"},
+    },
+)
+```
 
 ## Additional Embedding Providers
 
@@ -168,7 +185,12 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=OpenAIEmbeddingFunction(api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"),
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -207,7 +229,7 @@ my_crew = Crew(
         "provider": "google",
         "config": {
             "api_key": "<YOUR_API_KEY>",
-            "model_name": "<model_name>"
+            "model": "<model_name>"
         }
     }
 )
@@ -225,13 +247,15 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=OpenAIEmbeddingFunction(
-        api_key="YOUR_API_KEY",
-        api_base="YOUR_API_BASE_PATH",
-        api_type="azure",
-        api_version="YOUR_API_VERSION",
-        model_name="text-embedding-3-small"
-    )
+    embedder={
+        "provider": "openai",
+        "config": {
+            "api_key": "YOUR_API_KEY",
+            "api_base": "YOUR_API_BASE_PATH",
+            "api_version": "YOUR_API_VERSION",
+            "model_name": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -247,12 +271,15 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=GoogleVertexEmbeddingFunction(
-        project_id="YOUR_PROJECT_ID",
-        region="YOUR_REGION",
-        api_key="YOUR_API_KEY",
-        model_name="textembedding-gecko"
-    )
+    embedder={
+        "provider": "vertexai",
+        "config": {
+            "project_id"="YOUR_PROJECT_ID",
+            "region"="YOUR_REGION",
+            "api_key"="YOUR_API_KEY",
+            "model_name"="textembedding-gecko"
+        }
+    }
 )
 ```
 
@@ -271,7 +298,27 @@ my_crew = Crew(
         "provider": "cohere",
         "config": {
             "api_key": "YOUR_API_KEY",
-            "model_name": "<model_name>"
+            "model": "<model_name>"
+        }
+    }
+)
+```
+### Using VoyageAI embeddings
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "voyageai",
+        "config": {
+            "api_key": "YOUR_API_KEY",
+            "model": "<model_name>"
         }
     }
 )
@@ -316,6 +363,33 @@ my_crew = Crew(
             "api_url": "<api_url>",
             "api_key": "<YOUR_API_KEY>",
             "project_id": "<YOUR_PROJECT_ID>",
+        }
+    }
+)
+```
+
+### Adding Custom Embedding Function
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+from chromadb import Documents, EmbeddingFunction, Embeddings
+
+# Create a custom embedding function
+class CustomEmbedder(EmbeddingFunction):
+    def __call__(self, input: Documents) -> Embeddings:
+        # generate embeddings
+        return [1, 2, 3] # this is a dummy embedding
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "custom",
+        "config": {
+            "embedder": CustomEmbedder()
         }
     }
 )
