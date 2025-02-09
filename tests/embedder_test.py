@@ -1,6 +1,6 @@
-from crewai.utilities.embedding_configurator import EmbeddingConfigurator
 import pytest
 from unittest.mock import patch
+from crewai.utilities.embedding_configurator import EmbeddingConfigurator
 
 def test_ollama_embedder_url_config():
     configurator = EmbeddingConfigurator()
