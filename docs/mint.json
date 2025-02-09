@@ -91,6 +91,7 @@
         "how-to/custom-manager-agent",
         "how-to/llm-connections",
         "how-to/customizing-agents",
+        "how-to/multimodal-agents",
         "how-to/coding-agents",
         "how-to/force-tool-output-as-result",
         "how-to/human-input-on-execution",
@@ -100,7 +101,9 @@
         "how-to/conditional-tasks",
         "how-to/agentops-observability",
         "how-to/langtrace-observability",
-        "how-to/openlit-observability"
+        "how-to/mlflow-observability",
+        "how-to/openlit-observability",
+        "how-to/portkey-observability"
       ]
     },
     {

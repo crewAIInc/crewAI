@@ -1,11 +1,13 @@
+import os
 from importlib.metadata import version as get_version
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
+from crewai.cli.crew_chat import run_chat
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
@@ -340,6 +342,19 @@ def flow_add_crew(crew_name):
     """Add a crew to an existing flow."""
     click.echo(f"Adding crew {crew_name} to the flow")
     add_crew_to_flow(crew_name)
+
+
+@crewai.command()
+def chat():
+    """
+    Start a conversation with the Crew, collecting user-supplied inputs,
+    and using the Chat LLM to generate responses.
+    """
+    click.secho(
+        "\nStarting a conversation with the Crew\n" "Type 'exit' or Ctrl+C to quit.\n",
+    )
+
+    run_chat()
 
 
 if __name__ == "__main__":

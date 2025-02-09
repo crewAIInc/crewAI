@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "Hello, world!"}], "model": "gpt-4o-mini",
-      "stream": false}'
+    body: '{"messages": [{"role": "user", "content": "Hello, world!"}], "model": "gpt-4o-mini"}'
     headers:
       accept:
       - application/json
@@ -10,13 +9,13 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '101'
+      - '84'
       content-type:
       - application/json
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.52.1
+      - OpenAI/Python 1.59.6
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -26,7 +25,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.52.1
+      - 1.59.6
       x-stainless-raw-response:
       - 'true'
       x-stainless-retry-count:
@@ -38,22 +37,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AcdBV2knOF2soWLszceiA08K8W8nE\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1733770453,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AoEzIjusutsoPh1EmGgeXifkYvbfH\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736537376,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Hello! How can I assist you today?\",\n
       \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
       \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 11,\n    \"completion_tokens\":
-      9,\n    \"total_tokens\": 20,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      10,\n    \"total_tokens\": 21,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
       0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
       \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_bba3c8e70b\"\n}\n"
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_01aeff40ea\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ef733d51801bada-ATL
+      - 8fff13aa78db4569-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -61,14 +60,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Dec 2024 18:54:13 GMT
+      - Fri, 10 Jan 2025 19:29:36 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=_fEt57lre0.E_IZaebjaDAcrpBbzGhLWW6KtQ4FjLxo-1733770453-1.0.1.1-ndzEQCfExSp1asSdBXxS0fGYQnKVTivInc1MHN.ZjnmGmkAmEp0EPwiJlcAMvQaMCMZ7a_vKqAEMbz8ZbzTYYg;
-        path=/; expires=Mon, 09-Dec-24 19:24:13 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=PoW0e3SDy04AxLoIfTXlp2oFUuTGjQzesTybc7KXe28-1736537376-1.0.1.1-tznDR3VZpUOrVUyHmDUYYtpSQ2WI3X6ya9EhOwgNEMVIe6KsDgje4tO7z_tk7l0cuRww1jx_ryG3sgT1AETdVw;
+        path=/; expires=Fri, 10-Jan-25 19:59:36 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=2gTS3no9rova7t6URcfR30yzeZdKkL.9.lvsZXgmbVw-1733770453657-0.0.1.1-604800000;
+      - _cfuvid=3UeEmz_rnmsoZxrVUv32u35gJOi766GDWNe5_RTjiPk-1736537376739-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -81,7 +80,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '275'
+      - '286'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -99,12 +98,12 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_82ef8940a3291813e6a347535ab6bf26
+      - req_18f5593ddf37824bb9a7690407170dc0
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: '{"messages": [{"role": "user", "content": "Hello, world from another agent!"}],
-      "model": "gpt-4o-mini", "stream": false}'
+      "model": "gpt-4o-mini"}'
     headers:
       accept:
       - application/json
@@ -113,16 +112,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '120'
+      - '103'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=_fEt57lre0.E_IZaebjaDAcrpBbzGhLWW6KtQ4FjLxo-1733770453-1.0.1.1-ndzEQCfExSp1asSdBXxS0fGYQnKVTivInc1MHN.ZjnmGmkAmEp0EPwiJlcAMvQaMCMZ7a_vKqAEMbz8ZbzTYYg;
-        _cfuvid=2gTS3no9rova7t6URcfR30yzeZdKkL.9.lvsZXgmbVw-1733770453657-0.0.1.1-604800000
+      - __cf_bm=PoW0e3SDy04AxLoIfTXlp2oFUuTGjQzesTybc7KXe28-1736537376-1.0.1.1-tznDR3VZpUOrVUyHmDUYYtpSQ2WI3X6ya9EhOwgNEMVIe6KsDgje4tO7z_tk7l0cuRww1jx_ryG3sgT1AETdVw;
+        _cfuvid=3UeEmz_rnmsoZxrVUv32u35gJOi766GDWNe5_RTjiPk-1736537376739-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.52.1
+      - OpenAI/Python 1.59.6
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -132,7 +131,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.52.1
+      - 1.59.6
       x-stainless-raw-response:
       - 'true'
       x-stainless-retry-count:
@@ -144,22 +143,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AcdBWMAembczwWDLdjIRYwtbMLONh\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1733770454,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AoEzIOYUDsd7SpYDQeQmbNGS7IBLE\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736537376,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Hello! It\u2019s great to connect with
-      you. How can I assist you today?\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      14,\n    \"completion_tokens\": 17,\n    \"total_tokens\": 31,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_bba3c8e70b\"\n}\n"
+      \"assistant\",\n        \"content\": \"Hello! It's great to connect with another
+      agent. How can I assist you today?\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 14,\n    \"completion_tokens\": 18,\n
+      \   \"total_tokens\": 32,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_01aeff40ea\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ef733d7bc41bada-ATL
+      - 8fff13ad8e054569-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -167,7 +167,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Dec 2024 18:54:14 GMT
+      - Fri, 10 Jan 2025 19:29:37 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -181,7 +181,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '659'
+      - '422'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -199,7 +199,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_da24049df911504f5102825db6b4aea9
+      - req_366bcd7dfe94e2a2b5640fd9bb1c5a6b
     http_version: HTTP/1.1
     status_code: 200
 version: 1
