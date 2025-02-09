@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Union
+from typing import TYPE_CHECKING, Any, Union
 
 from pydantic import BaseModel, Field
 from rich.box import HEAVY_EDGE
@@ -12,6 +12,9 @@ from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 
+if TYPE_CHECKING:
+    from crewai.crew import Crew
+
 
 class TaskEvaluationPydanticOutput(BaseModel):
     quality: float = Field(
@@ -20,21 +23,25 @@ class TaskEvaluationPydanticOutput(BaseModel):
 
 
 class CrewEvaluator:
-    """
-    A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
-
+    """Handles evaluation of Crew execution and performance.
+    
+    Args:
+        crew: The Crew instance to evaluate
+        llm: Language model to use for evaluation
+    
     Attributes:
-        crew (Crew): The crew of agents to evaluate.
-        openai_model_name (str): The model to use for evaluating the performance of the agents (for now ONLY OpenAI accepted).
-        tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
-        iteration (int): The current iteration of the evaluation.
+        tasks_scores: Dictionary to store task scores
+        run_execution_times: Dictionary to store execution times
+        iteration: Current iteration number
+        crew: The crew instance being evaluated
+        llm: Language model used for evaluation
     """
 
-    tasks_scores: defaultdict = defaultdict(list)
-    run_execution_times: defaultdict = defaultdict(list)
+    tasks_scores: defaultdict[int, list[float]] = defaultdict(list)
+    run_execution_times: defaultdict[int, list[float]] = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, llm: Union[str, LLM]):
+    def __init__(self, crew: "Crew", llm: Union[str, LLM]):
         self.crew = crew
         self.llm = llm if isinstance(llm, LLM) else LLM(model=llm)
         self._telemetry = Telemetry()
@@ -183,7 +190,7 @@ class CrewEvaluator:
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task._execution_time,
-                self.openai_model_name,
+                getattr(self.llm, "model", None),
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(

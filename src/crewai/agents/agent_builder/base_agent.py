@@ -256,13 +256,14 @@ class BaseAgent(ABC, BaseModel):
             "tools_handler",
             "cache_handler",
             "llm",
+            "crew",  # Exclude crew to avoid circular reference
         }
 
         # Copy llm and clear callbacks
-        existing_llm = shallow_copy(self.llm)
+        existing_llm = shallow_copy(self.llm) if self.llm else None
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-        copied_agent = type(self)(**copied_data, llm=existing_llm, tools=self.tools)
+        copied_agent = type(self)(**copied_data, llm=existing_llm, tools=self.tools or [])
 
         return copied_agent
 

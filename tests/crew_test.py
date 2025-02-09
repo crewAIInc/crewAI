@@ -26,6 +26,9 @@ from crewai.utilities import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
+TEST_MODEL = "gpt-4o"
+TEST_ITERATIONS = 1
+
 ceo = Agent(
     role="CEO",
     goal="Make sure the writers in your company produce amazing content.",
@@ -663,30 +666,30 @@ def test_task_tools_override_agent_tools_with_allow_delegation():
     assert isinstance(researcher_with_delegation.tools[0], TestTool)
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_test_with_custom_llm():
-    tasks = [
-        Task(
-            description="Test task",
-            expected_output="Test output",
-            agent=researcher,
-        )
-    ]
-    crew = Crew(agents=[researcher], tasks=tasks)
-    
-    # Test with LLM instance
-    custom_llm = LLM(model="gpt-4o")
-    crew.test(n_iterations=1, llm=custom_llm)
-    
-    # Test with model name string
-    crew.test(n_iterations=1, llm="gpt-4o")
-    
-    # Test backward compatibility
-    crew.test(n_iterations=1, openai_model_name="gpt-4o")
-    
-    # Test error when no LLM provided
-    with pytest.raises(ValueError):
-        crew.test(n_iterations=1)
+class TestCrewCustomLLM:
+    def test_crew_test_with_custom_llm(self):
+        tasks = [
+            Task(
+                description="Test task",
+                expected_output="Test output",
+                agent=researcher,
+            )
+        ]
+        crew = Crew(agents=[researcher], tasks=tasks)
+        
+        # Test with LLM instance
+        custom_llm = LLM(model=TEST_MODEL)
+        crew.test(n_iterations=TEST_ITERATIONS, llm=custom_llm)
+        
+        # Test with model name string
+        crew.test(n_iterations=TEST_ITERATIONS, llm=TEST_MODEL)
+        
+        # Test backward compatibility
+        crew.test(n_iterations=TEST_ITERATIONS, openai_model_name=TEST_MODEL)
+        
+        # Test error when no LLM provided
+        with pytest.raises(ValueError):
+            crew.test(n_iterations=TEST_ITERATIONS)
 
 
 
@@ -2863,14 +2866,23 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
         [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
     )
 
-    crew_evaluator.assert_has_calls(
-        [
-            mock.call(crew, "gpt-4o-mini"),
-            mock.call().set_iteration(1),
-            mock.call().set_iteration(2),
-            mock.call().print_crew_evaluation_result(),
-        ]
-    )
+    # Get the actual calls made to crew_evaluator
+    actual_calls = crew_evaluator.mock_calls
+    
+    # Check that the first call was made with correct crew and either string or LLM instance
+    first_call = actual_calls[0]
+    assert first_call[0] == '', "First call should be to constructor"
+    assert first_call[1][0] == crew, "First argument should be crew"
+    assert isinstance(first_call[1][1], (str, LLM)), "Second argument should be string or LLM"
+    if isinstance(first_call[1][1], LLM):
+        assert first_call[1][1].model == "gpt-4o-mini"
+    else:
+        assert first_call[1][1] == "gpt-4o-mini"
+    
+    # Check remaining calls
+    assert actual_calls[1] == mock.call().set_iteration(1)
+    assert actual_calls[2] == mock.call().set_iteration(2)
+    assert actual_calls[3] == mock.call().print_crew_evaluation_result()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

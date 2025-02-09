@@ -1079,7 +1079,7 @@ class Crew(BaseModel):
         llm: Optional[Union[str, LLM]] = None,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures.
+        """Test and evaluate the Crew with the given inputs for n iterations concurrently.
         
         Args:
             n_iterations: Number of test iterations to run
@@ -1087,31 +1087,42 @@ class Crew(BaseModel):
             llm: LLM instance or model name to use for evaluation
             inputs: Optional inputs for the crew
         """
+        if openai_model_name:
+            warnings.warn(
+                "openai_model_name parameter is deprecated and will be removed in v3.0. Use llm parameter instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        
+        if not (llm or openai_model_name):
+            raise ValueError("Either llm or openai_model_name must be provided")
+        
         test_crew = self.copy()
         
         # Convert string to LLM instance if needed
         if isinstance(llm, str):
             llm = LLM(model=llm)
-        
-        # Maintain backward compatibility
-        if openai_model_name and not llm:
+        elif openai_model_name and not llm:
             llm = LLM(model=openai_model_name)
-        elif not llm:
-            raise ValueError("Either llm or openai_model_name must be provided")
+        
+        assert isinstance(llm, LLM), "llm must be an LLM instance"
+        
+        try:
+            self._test_execution_span = test_crew._telemetry.test_execution_span(
+                test_crew,
+                n_iterations,
+                inputs,
+                getattr(llm, "model", None),
+            )
+            evaluator = CrewEvaluator(test_crew, llm)
 
-        self._test_execution_span = test_crew._telemetry.test_execution_span(
-            test_crew,
-            n_iterations,
-            inputs,
-            getattr(llm, "model", None),
-        )
-        evaluator = CrewEvaluator(test_crew, llm)
+            for i in range(1, n_iterations + 1):
+                evaluator.set_iteration(i)
+                test_crew.kickoff(inputs=inputs)
 
-        for i in range(1, n_iterations + 1):
-            evaluator.set_iteration(i)
-            test_crew.kickoff(inputs=inputs)
-
-        evaluator.print_crew_evaluation_result()
+            evaluator.print_crew_evaluation_result()
+        except Exception as e:
+            raise ValueError(f"Error during crew test execution: {str(e)}") from e
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"

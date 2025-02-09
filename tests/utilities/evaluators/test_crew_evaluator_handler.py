@@ -4,6 +4,7 @@ import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.evaluators.crew_evaluator_handler import (
@@ -23,7 +24,7 @@ class TestCrewEvaluator:
         )
         crew = Crew(agents=[agent], tasks=[task])
 
-        return CrewEvaluator(crew, openai_model_name="gpt-4o-mini")
+        return CrewEvaluator(crew, llm=LLM(model="gpt-4o-mini"))
 
     def test_setup_for_evaluating(self, crew_planner):
         crew_planner._setup_for_evaluating()
@@ -45,6 +46,7 @@ class TestCrewEvaluator:
             == "Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed"
         )
         assert agent.verbose is False
+        assert isinstance(agent.llm, LLM)
         assert agent.llm.model == "gpt-4o-mini"
 
     def test_evaluation_task(self, crew_planner):
