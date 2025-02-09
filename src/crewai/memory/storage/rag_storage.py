@@ -149,10 +149,17 @@ class RAGStorage(BaseRAGStorage):
         )
 
     def reset(self) -> None:
+        """Reset the storage by removing the database files and reinitializing."""
         try:
             if self.app:
                 self.app.reset()
-                shutil.rmtree(f"{db_storage_path()}/{self.type}")
+                # Clean up ChromaDB files
+                storage_path = os.path.join(db_storage_path(), self.type)
+                if os.path.exists(storage_path):
+                    shutil.rmtree(storage_path)
+                # Clean up temporary directory
+                if os.path.exists(self.path):
+                    shutil.rmtree(self.path)
                 self.app = None
                 self.collection = None
         except Exception as e:
@@ -163,12 +170,3 @@ class RAGStorage(BaseRAGStorage):
                 raise Exception(
                     f"An error occurred while resetting the {self.type} memory: {e}"
                 )
-
-    def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )

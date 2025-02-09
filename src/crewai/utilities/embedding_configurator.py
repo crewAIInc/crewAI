@@ -25,7 +25,34 @@ class EmbeddingConfigurator:
         self,
         embedder_config: Optional[Dict[str, Any]] = None,
     ) -> EmbeddingFunction:
-        """Configures and returns an embedding function based on the provided config."""
+        """Configure and return an embedding function based on the provided config.
+        
+        Args:
+            embedder_config: Optional configuration dictionary containing:
+                - provider: Name of the embedding provider or EmbeddingFunction instance
+                - config: Provider-specific configuration dictionary with options like:
+                    - api_key: API key for the provider
+                    - model: Model name to use for embeddings
+                    - url: API endpoint URL (for some providers)
+                    - session: Session object (for some providers)
+        
+        Returns:
+            EmbeddingFunction: Configured embedding function for the specified provider
+            
+        Raises:
+            ValueError: If custom embedding function is invalid
+            Exception: If provider is not supported or configuration is invalid
+            
+        Examples:
+            >>> config = {
+            ...     "provider": "openai",
+            ...     "config": {
+            ...         "api_key": "your-api-key",
+            ...         "model": "text-embedding-3-small"
+            ...     }
+            ... }
+            >>> embedder = EmbeddingConfigurator().configure_embedder(config)
+        """
         if embedder_config is None:
             return self._create_default_embedding_function()
 
@@ -47,12 +74,23 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _create_default_embedding_function():
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+        """Create a default embedding function based on environment variables.
+        
+        Environment Variables:
+            CREWAI_EMBEDDING_PROVIDER: The embedding provider to use (default: "openai")
+            CREWAI_EMBEDDING_MODEL: The model to use for embeddings
+            OPENAI_API_KEY: API key for OpenAI (required if using OpenAI provider)
+        
+        Returns:
+            EmbeddingFunction: Configured embedding function
+        """
+        provider = os.getenv("CREWAI_EMBEDDING_PROVIDER", "openai")
+        config = {
+            "api_key": os.getenv("OPENAI_API_KEY"),
+            "model": os.getenv("CREWAI_EMBEDDING_MODEL", "text-embedding-3-small")
+        }
+        return EmbeddingConfigurator().configure_embedder(
+            {"provider": provider, "config": config}
         )
 
     @staticmethod
@@ -170,6 +208,31 @@ class EmbeddingConfigurator:
         return HuggingFaceEmbeddingServer(
             url=config.get("api_url"),
         )
+
+    @staticmethod
+    def _configure_custom(config, model_name):
+        """Configure a custom embedding function.
+        
+        Args:
+            config: Configuration dictionary containing:
+                - embedder: Custom EmbeddingFunction instance
+            model_name: Not used for custom embedders
+            
+        Returns:
+            EmbeddingFunction: The validated custom embedding function
+            
+        Raises:
+            ValueError: If embedder is missing or invalid
+        """
+        embedder = config.get("embedder")
+        if not embedder or not isinstance(embedder, EmbeddingFunction):
+            raise ValueError("Custom provider requires a valid EmbeddingFunction instance")
+        
+        try:
+            validate_embedding_function(embedder)
+            return embedder
+        except Exception as e:
+            raise ValueError(f"Invalid custom embedding function: {str(e)}")
 
     @staticmethod
     def _configure_watson(config, model_name):
