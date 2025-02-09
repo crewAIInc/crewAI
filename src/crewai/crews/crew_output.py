@@ -23,7 +23,7 @@ class CrewOutput(BaseModel):
     tasks_output: list[TaskOutput] = Field(
         description="Output of each task", default=[]
     )
-    token_usage: UsageMetrics = Field(description="Processed token summary", default_factory=lambda: {})
+    token_usage: UsageMetrics = Field(description="Processed token summary", default_factory=UsageMetrics)
 
     def model_json(self) -> str:
         """Get the JSON representation of the output."""
