@@ -7,7 +7,14 @@ from crewai.llm import LLM
 from crewai.task import Task
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 
-def test_crew_test_with_custom_llm():
+@pytest.mark.parametrize("model_input", [
+    "gpt-4",  # Test string model name
+    LLM(model="gpt-4"),  # Test LLM instance
+])
+def test_crew_test_with_custom_llm(model_input, mocker):
+    # Mock LLM call to return valid JSON
+    mocker.patch('crewai.llm.LLM.call', return_value='{"quality": 9.0}')
+
     # Setup
     agent = Agent(
         role="test",
@@ -22,12 +29,8 @@ def test_crew_test_with_custom_llm():
     )
     crew = Crew(agents=[agent], tasks=[task])
 
-    # Test with string model name
-    crew.test(n_iterations=1, llm="gpt-4")
-
-    # Test with LLM instance
-    custom_llm = LLM(model="gpt-4")
-    crew.test(n_iterations=1, llm=custom_llm)
+    # Test with provided model input
+    crew.test(n_iterations=1, llm=model_input)
 
     # Test backward compatibility
     crew.test(n_iterations=1, openai_model_name="gpt-4")
