@@ -1147,20 +1147,35 @@ class Crew(BaseModel):
 
     def test(
         self,
-        n_iterations: int,
+        n_iterations: int = 1,
         openai_model_name: Optional[str] = None,
+        llm: Optional[Union[str, LLM]] = None,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
+        """Test and evaluate the Crew with the given inputs for n iterations.
+
+        Args:
+            n_iterations: Number of iterations to run the test
+            openai_model_name: OpenAI model name to use for evaluation (deprecated)
+            llm: LLM instance or model name to use for evaluation
+            inputs: Optional dictionary of inputs to pass to the crew
+        """
+        if not llm and not openai_model_name:
+            raise ValueError("Either llm or openai_model_name must be provided")
+        
+        model_to_use = llm or openai_model_name
+        if isinstance(model_to_use, str):
+            model_to_use = LLM(model=model_to_use)
+        
         test_crew = self.copy()
 
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
             n_iterations,
             inputs,
-            openai_model_name,  # type: ignore[arg-type]
+            str(model_to_use.model),  # type: ignore[arg-type]
         )  # type: ignore[arg-type]
-        evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
+        evaluator = CrewEvaluator(test_crew, model_to_use)
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)
