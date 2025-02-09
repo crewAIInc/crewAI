@@ -1,16 +1,16 @@
 import os
 import tempfile
-from typing import Generator
 from pathlib import Path
+from typing import Generator
 
 import pytest
 from chromadb import Documents, EmbeddingFunction, Embeddings
 
-from crewai.memory import ShortTermMemory, LongTermMemory, EntityMemory
+from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory
 from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.exceptions.embedding_exceptions import (
     EmbeddingConfigurationError,
-    EmbeddingProviderError
+    EmbeddingProviderError,
 )
 
 @pytest.fixture
