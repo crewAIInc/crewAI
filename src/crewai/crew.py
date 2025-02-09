@@ -1125,19 +1125,20 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        openai_model_name: Optional[str] = None,
+        eval_llm: Union[str, InstanceOf[LLM], Any] = Field(description="Language model that will run the agent.", default=None),
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         test_crew = self.copy()
+        eval_llm = create_llm(eval_llm)
 
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
             n_iterations,
             inputs,
-            openai_model_name,  # type: ignore[arg-type]
+            eval_llm.model,  # type: ignore[arg-type]
         )  # type: ignore[arg-type]
-        evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
+        evaluator = CrewEvaluator(test_crew, eval_llm)  # type: ignore[arg-type]
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)
