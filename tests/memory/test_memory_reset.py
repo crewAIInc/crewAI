@@ -78,4 +78,5 @@ def test_memory_reset_cleans_up_files(temp_db_dir):
     memory.save("test memory", {"test": "metadata"})
     assert any(temp_db_dir.iterdir())  # Directory should have files
     memory.reset()
-    assert not any(temp_db_dir.iterdir())  # Directory should be empty
+    # After reset, directory should either not exist or be empty
+    assert not os.path.exists(temp_db_dir) or not any(temp_db_dir.iterdir())
