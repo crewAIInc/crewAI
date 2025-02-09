@@ -618,7 +618,10 @@ class Task(BaseModel):
         """Create a copy of the Task."""
         exclude_set = {"id", "agent", "context", "tools"}
         if exclude:
-            exclude_set.update(exclude)
+            if isinstance(exclude, (AbstractSet, set)):
+                exclude_set.update(str(x) for x in exclude)
+            elif isinstance(exclude, Mapping):
+                exclude_set.update(str(x) for x in exclude.keys())
         
         copied_task = super().copy(
             include=include,
