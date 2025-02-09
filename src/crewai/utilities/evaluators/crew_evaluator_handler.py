@@ -2,6 +2,7 @@ import os
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Union
 
+from langchain.base_language.base_language_model import BaseLanguageModel
 from pydantic import BaseModel, Field, InstanceOf
 from rich.box import HEAVY_EDGE
 from rich.console import Console
@@ -12,6 +13,7 @@ from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
+from crewai.utilities.logger import Logger
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
@@ -25,25 +27,46 @@ class CrewEvaluator:
     A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
 
     Attributes:
-        crew (Crew): The crew of agents to evaluate.
-        openai_model_name (str): The model to use for evaluating the performance of the agents (for now ONLY OpenAI accepted).
-        tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
-        iteration (int): The current iteration of the evaluation.
+        crew (Crew): The crew of agents to evaluate
+        llm (Union[str, LLM, BaseLanguageModel]): Language model to use for evaluation
+        tasks_scores (defaultdict): Dictionary to store the scores of the agents for each task
+        iteration (int): Current iteration of the evaluation
+        run_execution_times (defaultdict): Dictionary to store execution times for each run
     """
 
     tasks_scores: defaultdict = defaultdict(list)
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, llm: Union[str, InstanceOf[LLM], Any]):
+    def __init__(self, crew, llm: Union[str, InstanceOf[LLM], BaseLanguageModel]):
+        """Initialize the CrewEvaluator.
+        
+        Args:
+            crew (Crew): The crew to evaluate
+            llm (Union[str, LLM, BaseLanguageModel]): Language model to use for evaluation
+        
+        Raises:
+            ValueError: If llm is of an unsupported type
+        """
+        if not isinstance(llm, (str, LLM, BaseLanguageModel, type(None))):
+            raise ValueError(f"Unsupported LLM type: {type(llm)}")
+
         self.crew = crew
         self.llm = llm
         self._telemetry = Telemetry()
+        self._logger = Logger()
         self._setup_llm()
         self._setup_for_evaluating()
 
     def _setup_llm(self):
-        """Set up the LLM following the Agent class pattern."""
+        """Set up the LLM following the Agent class pattern.
+        
+        This method initializes the language model based on the provided llm parameter:
+        - If string: creates new LLM instance with model name
+        - If LLM instance: uses as-is
+        - If None: uses default model from environment or "gpt-4"
+        - Otherwise: attempts to extract model name from object attributes
+        """
         if isinstance(self.llm, str):
             self.llm = LLM(model=self.llm)
         elif isinstance(self.llm, LLM):
@@ -179,7 +202,14 @@ class CrewEvaluator:
         console.print(table)
 
     def evaluate(self, task_output: TaskOutput):
-        """Evaluates the performance of the agents in the crew based on the tasks they have performed."""
+        """Evaluates the performance of the agents in the crew based on the tasks they have performed.
+        
+        Args:
+            task_output (TaskOutput): The output from the task to evaluate
+
+        Raises:
+            ValueError: If task to evaluate or task output is missing, or if evaluation result is invalid
+        """
         current_task = None
         for task in self.crew.tasks:
             if task.description == task_output.description:

@@ -1079,7 +1079,25 @@ class Crew(BaseModel):
         openai_model_name: Optional[str] = None,  # Kept for backward compatibility
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations."""
+        """Test and evaluate the Crew with the given inputs for n iterations.
+
+        Args:
+            n_iterations (int): Number of test iterations to run
+            llm (Optional[Union[str, LLM, BaseLanguageModel]]): Language model to use for testing
+            openai_model_name (Optional[str]): Legacy parameter for OpenAI models (deprecated)
+            inputs (Optional[Dict[str, Any]]): Test inputs for the crew
+
+        Raises:
+            ValueError: If n_iterations is less than 1 or if llm type is unsupported
+
+        Returns:
+            None
+        """
+        if n_iterations < 1:
+            raise ValueError("n_iterations must be greater than 0")
+        if llm is not None and not isinstance(llm, (str, LLM, BaseLanguageModel)):
+            raise ValueError(f"Unsupported LLM type: {type(llm)}")
+
         test_crew = self.copy()
         test_llm = llm if llm is not None else openai_model_name
 
