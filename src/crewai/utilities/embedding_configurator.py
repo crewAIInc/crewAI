@@ -17,6 +17,7 @@ class EmbeddingConfigurator:
             "bedrock": self._configure_bedrock,
             "huggingface": self._configure_huggingface,
             "watson": self._configure_watson,
+            "custom": self._configure_custom,
         }
 
     def configure_embedder(
@@ -181,6 +182,31 @@ class EmbeddingConfigurator:
         return HuggingFaceEmbeddingServer(
             url=config.get("api_url"),
         )
+
+    @staticmethod
+    def _configure_custom(config, model_name):
+        """Configure a custom embedding function.
+        
+        Args:
+            config: Configuration dictionary containing:
+                - embedder: Custom EmbeddingFunction instance
+            model_name: Not used for custom embedders
+            
+        Returns:
+            EmbeddingFunction: The validated custom embedding function
+            
+        Raises:
+            ValueError: If embedder is missing or invalid
+        """
+        embedder = config.get("embedder")
+        if not embedder or not isinstance(embedder, EmbeddingFunction):
+            raise ValueError("Custom provider requires a valid EmbeddingFunction instance")
+        
+        try:
+            validate_embedding_function(embedder)
+            return embedder
+        except Exception as e:
+            raise ValueError(f"Invalid custom embedding function: {str(e)}")
 
     @staticmethod
     def _configure_watson(config, model_name):
