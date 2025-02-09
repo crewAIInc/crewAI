@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Union
 
 from pydantic import BaseModel, Field
 from rich.box import HEAVY_EDGE
@@ -6,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
@@ -32,9 +34,9 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, openai_model_name: str):
+    def __init__(self, crew, llm: Union[str, LLM]):
         self.crew = crew
-        self.openai_model_name = openai_model_name
+        self.llm = llm if isinstance(llm, LLM) else LLM(model=llm)
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
@@ -51,7 +53,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=self.openai_model_name,
+            llm=self.llm,
         )
 
     def _evaluation_task(

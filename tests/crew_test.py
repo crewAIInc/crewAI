@@ -14,6 +14,7 @@ from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.task import Task
@@ -662,6 +663,33 @@ def test_task_tools_override_agent_tools_with_allow_delegation():
     assert isinstance(researcher_with_delegation.tools[0], TestTool)
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_test_with_custom_llm():
+    tasks = [
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=researcher,
+        )
+    ]
+    crew = Crew(agents=[researcher], tasks=tasks)
+    
+    # Test with LLM instance
+    custom_llm = LLM(model="gpt-4o")
+    crew.test(n_iterations=1, llm=custom_llm)
+    
+    # Test with model name string
+    crew.test(n_iterations=1, llm="gpt-4o")
+    
+    # Test backward compatibility
+    crew.test(n_iterations=1, openai_model_name="gpt-4o")
+    
+    # Test error when no LLM provided
+    with pytest.raises(ValueError):
+        crew.test(n_iterations=1)
+
+
+
 def test_crew_verbose_output(capsys):
     tasks = [
         Task(
@@ -1123,7 +1151,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headeruvs=["authorization"])
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
