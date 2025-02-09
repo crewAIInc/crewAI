@@ -124,3 +124,60 @@ def test_ask_question_to_wrong_agent():
         result
         == "\nError executing tool. coworker mentioned not found, it must be one of the following options:\n- researcher\n"
     )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_delegate_work_with_allowed_agents():
+    executive = Agent(
+        role="Executive Director",
+        goal="Lead the team effectively",
+        backstory="You're an experienced executive",
+        allow_delegation=True,
+        allowed_agents=["Communications Manager"]
+    )
+    
+    comms_manager = Agent(
+        role="Communications Manager",
+        goal="Manage communications",
+        backstory="You're a communications expert",
+        allow_delegation=False
+    )
+    
+    tools = AgentTools(agents=[executive, comms_manager]).tools()
+    delegate_tool = tools[0]
+    
+    result = delegate_tool.run(
+        coworker="Communications Manager",
+        task="Handle PR",
+        context="Important announcement"
+    )
+    assert "Error" not in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_delegate_work_with_unauthorized_agent():
+    executive = Agent(
+        role="Executive Director",
+        goal="Lead the team effectively",
+        backstory="You're an experienced executive",
+        allow_delegation=True,
+        allowed_agents=["Communications Manager"]
+    )
+    
+    research_manager = Agent(
+        role="Research Manager",
+        goal="Manage research",
+        backstory="You're a research expert",
+        allow_delegation=False
+    )
+    
+    tools = AgentTools(agents=[executive, research_manager]).tools()
+    delegate_tool = tools[0]
+    
+    result = delegate_tool.run(
+        coworker="Research Manager",
+        task="Handle research",
+        context="Important research"
+    )
+    assert "Error" in result
+    assert "not authorized to delegate" in result

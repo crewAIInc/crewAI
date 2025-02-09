@@ -107,6 +107,10 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
+    allowed_agents: Optional[List[str]] = Field(
+        default=None,
+        description="List of agent roles that this agent is allowed to delegate tasks to.",
+    )
     tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
@@ -135,6 +139,17 @@ class BaseAgent(ABC, BaseModel):
     @classmethod
     def process_model_config(cls, values):
         return process_config(values, cls)
+
+    @field_validator("allowed_agents")
+    @classmethod
+    def validate_allowed_agents(cls, allowed_agents: Optional[List[str]]) -> Optional[List[str]]:
+        """Validate the allowed_agents parameter."""
+        if allowed_agents is not None:
+            if not isinstance(allowed_agents, list):
+                raise ValueError("allowed_agents must be a list of strings")
+            if not all(isinstance(agent, str) for agent in allowed_agents):
+                raise ValueError("all entries in allowed_agents must be strings")
+        return allowed_agents
 
     @field_validator("tools")
     @classmethod
