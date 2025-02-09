@@ -159,33 +159,6 @@ crew = Crew(
 )
 ```
 
-### Full Memory Configuration
-```python
-from crewai import Crew
-from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
-from crewai.memory.storage import LTMSQLiteStorage, CustomRAGStorage
-
-# Configure all memory types with custom storage
-crew = Crew(
-    memory=True,
-    long_term_memory=LongTermMemory(
-        storage=LTMSQLiteStorage(db_path="./ltm.db")
-    ),
-    short_term_memory=ShortTermMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="short_term"
-        )
-    ),
-    entity_memory=EntityMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="entities"
-        )
-    )
-)
-```
-
 ## Integrating Mem0 for Enhanced User Memory
 
 [Mem0](https://mem0.ai/) is a self-improving memory layer for LLM applications, enabling personalized AI experiences. 
