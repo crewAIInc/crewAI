@@ -153,9 +153,13 @@ class RAGStorage(BaseRAGStorage):
         try:
             if self.app:
                 self.app.reset()
+                # Clean up ChromaDB files
                 storage_path = os.path.join(db_storage_path(), self.type)
                 if os.path.exists(storage_path):
                     shutil.rmtree(storage_path)
+                # Clean up temporary directory
+                if os.path.exists(self.path):
+                    shutil.rmtree(self.path)
                 self.app = None
                 self.collection = None
         except Exception as e:
