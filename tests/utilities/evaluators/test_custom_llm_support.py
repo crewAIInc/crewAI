@@ -17,6 +17,7 @@ def test_crew_test_with_custom_llm():
     )
     task = Task(
         description="test",
+        expected_output="test output",
         agent=agent,
     )
     crew = Crew(agents=[agent], tasks=[task])
@@ -45,6 +46,7 @@ def test_crew_evaluator_with_custom_llm():
     )
     task = Task(
         description="test",
+        expected_output="test output",
         agent=agent,
     )
     crew = Crew(agents=[agent], tasks=[task])
