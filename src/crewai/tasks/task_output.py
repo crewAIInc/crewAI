@@ -1,13 +1,10 @@
 import json
-from typing import Any, Callable, Dict, Optional, Set, Union
+from typing import Any, Callable, Dict, Optional, Union, AbstractSet, Mapping
 
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Literal
 
 from crewai.tasks.output_format import OutputFormat
-
-# Type definition for include/exclude parameters
-IncEx = Union[Set[int], Set[str], Dict[int, Any], Dict[str, Any]]
 
 
 class TaskOutput(BaseModel):
@@ -54,8 +51,8 @@ class TaskOutput(BaseModel):
         self,
         *,
         indent: Optional[int] = None,
-        include: Optional[IncEx] = None,
-        exclude: Optional[IncEx] = None,
+        include: Optional[Union[AbstractSet[int], AbstractSet[str], Mapping[int, Any], Mapping[str, Any]]] = None,
+        exclude: Optional[Union[AbstractSet[int], AbstractSet[str], Mapping[int, Any], Mapping[str, Any]]] = None,
         context: Optional[Any] = None,
         by_alias: bool = False,
         exclude_unset: bool = False,

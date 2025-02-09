@@ -1,5 +1,5 @@
 import json
-from typing import Any, Callable, Dict, Optional, Set, Union
+from typing import Any, Callable, Dict, Optional, Union, AbstractSet, Mapping
 
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
@@ -7,9 +7,6 @@ from typing_extensions import Literal
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
-
-# Type definition for include/exclude parameters
-IncEx = Union[Set[int], Set[str], Dict[int, Any], Dict[str, Any]]
 
 
 class CrewOutput(BaseModel):
@@ -25,7 +22,7 @@ class CrewOutput(BaseModel):
     tasks_output: list[TaskOutput] = Field(
         description="Output of each task", default=[]
     )
-    token_usage: UsageMetrics = Field(description="Processed token summary", default={})
+    token_usage: UsageMetrics = Field(description="Processed token summary", default_factory=dict)
 
     def model_json(self) -> str:
         """Get the JSON representation of the output."""
@@ -39,8 +36,8 @@ class CrewOutput(BaseModel):
         self,
         *,
         indent: Optional[int] = None,
-        include: Optional[IncEx] = None,
-        exclude: Optional[IncEx] = None,
+        include: Optional[Union[AbstractSet[int], AbstractSet[str], Mapping[int, Any], Mapping[str, Any]]] = None,
+        exclude: Optional[Union[AbstractSet[int], AbstractSet[str], Mapping[int, Any], Mapping[str, Any]]] = None,
         context: Optional[Any] = None,
         by_alias: bool = False,
         exclude_unset: bool = False,
