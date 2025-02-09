@@ -491,8 +491,6 @@ class Crew(BaseModel):
         """Trains the crew for a given number of iterations."""
         train_crew = self.copy()
         train_crew._setup_for_training(filename)
-        
-        print("DEBUG N ITERATIONS: ", n_iterations)
 
         for n_iteration in range(n_iterations):
             train_crew._train_iteration = n_iteration
@@ -520,7 +518,6 @@ class Crew(BaseModel):
             inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
-        print("DEBUG: KICKOFF FOR CREW CALLED")
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
         self._task_output_handler.reset()
         self._logging_color = "bold_purple"
@@ -710,7 +707,6 @@ class Crew(BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
-        print("DEBUG: EXECUTE TASKS CALLED")
         task_outputs: List[TaskOutput] = []
         futures: List[Tuple[Task, Future[TaskOutput], int]] = []
         last_sync_output: Optional[TaskOutput] = None
