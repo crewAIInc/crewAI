@@ -47,7 +47,7 @@ class FastEmbed(BaseEmbedder):
             cache_dir=str(cache_dir) if cache_dir else None,
         )
 
-    def embed_chunks(self, chunks: List[str]) -> List[np.ndarray]:
+    def embed_chunks(self, chunks: List[str]) -> np.ndarray:
         """
         Generate embeddings for a list of text chunks
 
@@ -55,12 +55,12 @@ class FastEmbed(BaseEmbedder):
             chunks: List of text chunks to embed
 
         Returns:
-            List of embeddings
+            Array of embeddings
         """
         embeddings = list(self.model.embed(chunks))
-        return embeddings
+        return np.stack(embeddings)
 
-    def embed_texts(self, texts: List[str]) -> List[np.ndarray]:
+    def embed_texts(self, texts: List[str]) -> np.ndarray:
         """
         Generate embeddings for a list of texts
 
@@ -68,10 +68,10 @@ class FastEmbed(BaseEmbedder):
             texts: List of texts to embed
 
         Returns:
-            List of embeddings
+            Array of embeddings
         """
         embeddings = list(self.model.embed(texts))
-        return embeddings
+        return np.stack(embeddings)
 
     def embed_text(self, text: str) -> np.ndarray:
         """

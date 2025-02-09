@@ -47,13 +47,22 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _create_default_embedding_function():
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+        from crewai.utilities.constants import DEFAULT_EMBEDDING_PROVIDER, DEFAULT_EMBEDDING_MODEL
+        provider = os.getenv("CREWAI_EMBEDDING_PROVIDER", DEFAULT_EMBEDDING_PROVIDER)
+        model = os.getenv("CREWAI_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
+        
+        if provider == "ollama":
+            from chromadb.utils.embedding_functions.ollama_embedding_function import OllamaEmbeddingFunction
+            return OllamaEmbeddingFunction(
+                url=os.getenv("CREWAI_OLLAMA_URL", "http://localhost:11434/api/embeddings"),
+                model_name=model
+            )
+        else:
+            from chromadb.utils.embedding_functions.openai_embedding_function import OpenAIEmbeddingFunction
+            return OpenAIEmbeddingFunction(
+                api_key=os.getenv("OPENAI_API_KEY"),
+                model_name=model
+            )
 
     @staticmethod
     def _configure_openai(config, model_name):

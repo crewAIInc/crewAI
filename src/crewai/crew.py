@@ -4,7 +4,7 @@ import uuid
 import warnings
 from concurrent.futures import Future
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from pydantic import (
     UUID4,
@@ -797,7 +797,7 @@ class Crew(BaseModel):
             return skipped_task_output
         return None
 
-    def _prepare_tools(self, agent: BaseAgent, task: Task, tools: List[Tool]) -> List[Tool]:
+    def _prepare_tools(self, agent: BaseAgent, task: Task, tools: Sequence[Tool]) -> List[Tool]:
         # Add delegation tools if agent allows delegation
         if agent.allow_delegation:
             if self.process == Process.hierarchical:
@@ -823,7 +823,7 @@ class Crew(BaseModel):
             return self.manager_agent
         return task.agent
 
-    def _merge_tools(self, existing_tools: List[Tool], new_tools: List[Tool]) -> List[Tool]:
+    def _merge_tools(self, existing_tools: Sequence[Tool], new_tools: Sequence[Tool]) -> List[Tool]:
         """Merge new tools into existing tools list, avoiding duplicates by tool name."""
         if not new_tools:
             return existing_tools
@@ -839,19 +839,19 @@ class Crew(BaseModel):
 
         return tools
 
-    def _inject_delegation_tools(self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]):
+    def _inject_delegation_tools(self, tools: Sequence[Tool], task_agent: BaseAgent, agents: Sequence[BaseAgent]):
         delegation_tools = task_agent.get_delegation_tools(agents)
         return self._merge_tools(tools, delegation_tools)
 
-    def _add_multimodal_tools(self, agent: BaseAgent, tools: List[Tool]):
+    def _add_multimodal_tools(self, agent: BaseAgent, tools: Sequence[Tool]):
         multimodal_tools = agent.get_multimodal_tools()
         return self._merge_tools(tools, multimodal_tools)
 
-    def _add_code_execution_tools(self, agent: BaseAgent, tools: List[Tool]):
+    def _add_code_execution_tools(self, agent: BaseAgent, tools: Sequence[Tool]):
         code_tools = agent.get_code_execution_tools()
         return self._merge_tools(tools, code_tools)
 
-    def _add_delegation_tools(self, task: Task, tools: List[Tool]):
+    def _add_delegation_tools(self, task: Task, tools: Sequence[Tool]):
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
         if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
             if not tools:

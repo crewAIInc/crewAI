@@ -1,11 +1,15 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Set, Union
 
 from pydantic import BaseModel, Field
+from typing_extensions import Literal
 
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
+
+# Type definition for include/exclude parameters
+IncEx = Union[Set[int], Set[str], Dict[int, Any], Dict[str, Any]]
 
 
 class CrewOutput(BaseModel):
@@ -24,13 +28,41 @@ class CrewOutput(BaseModel):
     token_usage: UsageMetrics = Field(description="Processed token summary", default={})
 
     @property
-    def json(self) -> Optional[str]:
-        if self.tasks_output[-1].output_format != OutputFormat.JSON:
+    def json(self) -> str:
+        """Get the JSON representation of the output."""
+        if self.tasks_output and self.tasks_output[-1].output_format != OutputFormat.JSON:
             raise ValueError(
                 "No JSON output found in the final task. Please make sure to set the output_json property in the final task in your crew."
             )
+        return json.dumps(self.json_dict) if self.json_dict else "{}"
 
-        return json.dumps(self.json_dict)
+    def model_dump_json(
+        self,
+        *,
+        indent: Optional[int] = None,
+        include: Optional[IncEx] = None,
+        exclude: Optional[IncEx] = None,
+        context: Optional[Any] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        round_trip: bool = False,
+        warnings: bool | Literal["none", "warn", "error"] = False,
+        serialize_as_any: bool = False,
+    ) -> str:
+        """Override model_dump_json to handle custom JSON output."""
+        return super().model_dump_json(
+            indent=indent,
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            round_trip=round_trip,
+            warnings=warnings,
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert json_output and pydantic_output to a dictionary."""

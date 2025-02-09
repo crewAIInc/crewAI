@@ -243,6 +243,15 @@ class Agent(BaseAgent):
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
+                    # Validate embedding configuration based on provider
+                    from crewai.utilities.constants import DEFAULT_EMBEDDING_PROVIDER
+                    provider = os.getenv("CREWAI_EMBEDDING_PROVIDER", DEFAULT_EMBEDDING_PROVIDER)
+                    
+                    if provider == "openai" and not os.getenv("OPENAI_API_KEY"):
+                        raise ValueError("Please provide an OpenAI API key via OPENAI_API_KEY environment variable")
+                    elif provider == "ollama" and not os.getenv("CREWAI_OLLAMA_URL", "http://localhost:11434/api/embeddings"):
+                        raise ValueError("Please provide Ollama URL via CREWAI_OLLAMA_URL environment variable")
+                    
                     self._knowledge = Knowledge(
                         sources=self.knowledge_sources,
                         embedder_config=self.embedder_config,

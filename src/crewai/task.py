@@ -15,6 +15,7 @@ from typing import (
     Dict,
     List,
     Optional,
+    Sequence,
     Set,
     Tuple,
     Type,
@@ -250,7 +251,7 @@ class Task(BaseModel):
         self,
         agent: Optional[BaseAgent] = None,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[Sequence[BaseTool]] = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
         return self._execute_core(agent, context, tools)
@@ -267,7 +268,7 @@ class Task(BaseModel):
         self,
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[Sequence[BaseTool]] = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()

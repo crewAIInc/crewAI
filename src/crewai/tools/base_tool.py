@@ -1,9 +1,14 @@
 from abc import ABC, abstractmethod
 from inspect import signature
-from typing import Any, Callable, Type, get_args, get_origin
+from typing import Any, Callable, Dict, Optional, Type, Tuple, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, create_model, validator
+from pydantic.fields import FieldInfo
 from pydantic import BaseModel as PydanticBaseModel
+
+def _create_model_fields(fields: Dict[str, Tuple[Any, FieldInfo]]) -> Dict[str, Any]:
+    """Helper function to create model fields with proper type hints."""
+    return {name: (annotation, field) for name, (annotation, field) in fields.items()}
 
 from crewai.tools.structured_tool import CrewStructuredTool
 
@@ -12,7 +17,8 @@ class BaseTool(BaseModel, ABC):
     class _ArgsSchemaPlaceholder(PydanticBaseModel):
         pass
 
-    model_config = ConfigDict()
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    func: Optional[Callable] = None
 
     name: str
     """The unique name of the tool that clearly communicates its purpose."""
@@ -104,20 +110,22 @@ class BaseTool(BaseModel, ABC):
                         description="",
                     )
                     args_fields[name] = (param_annotation, field_info)
+            schema_name = f"{tool.name}Input"
             if args_fields:
-                args_schema = create_model(f"{tool.name}Input", **args_fields)
+                model_fields = _create_model_fields(args_fields)
+                args_schema = create_model(schema_name, __base__=PydanticBaseModel, **model_fields)
             else:
                 # Create a default schema with no fields if no parameters are found
-                args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
-                )
+                args_schema = create_model(schema_name, __base__=PydanticBaseModel)
 
-        return cls(
+        tool_instance = cls(
             name=getattr(tool, "name", "Unnamed Tool"),
             description=getattr(tool, "description", ""),
-            func=tool.func,
             args_schema=args_schema,
         )
+        if hasattr(tool, "func"):
+            tool_instance.func = tool.func
+        return tool_instance
 
     def _set_args_schema(self):
         if self.args_schema is None:
@@ -171,6 +179,12 @@ class Tool(BaseTool):
     """The function that will be executed when the tool is called."""
 
     func: Callable
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __init__(self, **kwargs):
+        if "func" not in kwargs:
+            raise ValueError("Tool requires a 'func' argument")
+        super().__init__(**kwargs)
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         return self.func(*args, **kwargs)
@@ -212,20 +226,22 @@ class Tool(BaseTool):
                         description="",
                     )
                     args_fields[name] = (param_annotation, field_info)
+            schema_name = f"{tool.name}Input"
             if args_fields:
-                args_schema = create_model(f"{tool.name}Input", **args_fields)
+                model_fields = _create_model_fields(args_fields)
+                args_schema = create_model(schema_name, __base__=PydanticBaseModel, **model_fields)
             else:
                 # Create a default schema with no fields if no parameters are found
-                args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
-                )
+                args_schema = create_model(schema_name, __base__=PydanticBaseModel)
 
-        return cls(
+        tool_instance = cls(
             name=getattr(tool, "name", "Unnamed Tool"),
             description=getattr(tool, "description", ""),
-            func=tool.func,
             args_schema=args_schema,
         )
+        if hasattr(tool, "func"):
+            tool_instance.func = tool.func
+        return tool_instance
 
 
 def to_langchain(

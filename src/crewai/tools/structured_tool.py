@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import inspect
 import textwrap
-from typing import Any, Callable, Optional, Union, get_type_hints
+from typing import Any, Callable, Dict, Optional, Tuple, Union, get_type_hints
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, ConfigDict, Field, create_model
+from pydantic.fields import FieldInfo
+
+def _create_model_fields(fields: Dict[str, Tuple[Any, FieldInfo]]) -> Dict[str, Any]:
+    """Helper function to create model fields with proper type hints."""
+    return {name: (annotation, field) for name, (annotation, field) in fields.items()}
 
 from crewai.utilities.logger import Logger
 
@@ -142,7 +147,8 @@ class CrewStructuredTool:
 
         # Create model
         schema_name = f"{name.title()}Schema"
-        return create_model(schema_name, **fields)
+        model_fields = _create_model_fields(fields)
+        return create_model(schema_name, __base__=BaseModel, **model_fields)
 
     def _validate_function_signature(self) -> None:
         """Validate that the function signature matches the args schema."""

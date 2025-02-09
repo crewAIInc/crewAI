@@ -154,8 +154,12 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 filtered_ids.append(doc_id)
 
             # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
-                None if all(m is None for m in filtered_metadata) else filtered_metadata
+            final_metadata: Optional[List[Dict[str, Union[str, int, float, bool]]]] = (
+                None if all(m is None for m in filtered_metadata) else [
+                    {k: v for k, v in m.items() if isinstance(v, (str, int, float, bool))}
+                    if m is not None else None
+                    for m in filtered_metadata
+                ]
             )
 
             self.collection.upsert(
