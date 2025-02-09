@@ -113,7 +113,7 @@ class BaseAgent(ABC, BaseModel):
         description="Enable agent to delegate and ask questions among each other.",
     )
     tools: Optional[List[Any]] = Field(
-        default_factory=list, description="Tools at agents' disposal"
+        default_factory=lambda: [], description="Tools at agents' disposal"
     )
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
