@@ -19,7 +19,16 @@ def temp_db_dir() -> Generator[Path, None, None]:
     """Create a temporary directory for test databases."""
     with tempfile.TemporaryDirectory() as tmpdir:
         path = Path(tmpdir)
-        yield path
+        # Ensure directory exists and is writable
+        path.mkdir(parents=True, exist_ok=True)
+        # Set ChromaDB to use in-memory mode for tests
+        os.environ["CHROMA_IN_MEMORY"] = "true"
+        try:
+            yield path
+        finally:
+            # Clean up ChromaDB environment variable
+            if "CHROMA_IN_MEMORY" in os.environ:
+                del os.environ["CHROMA_IN_MEMORY"]
 
 
 def test_memory_reset_with_openai(temp_db_dir):
