@@ -6,10 +6,10 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
-from crewai.llm import LLM
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
