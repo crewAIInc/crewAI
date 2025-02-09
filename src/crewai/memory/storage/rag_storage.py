@@ -6,12 +6,17 @@ import shutil
 import uuid
 from typing import Any, Dict, List, Optional
 
-from chromadb.api import ClientAPI
+from chromadb.api import ClientAPI, Collection
+from chromadb.api.types import Documents, Embeddings, Metadatas
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
+from crewai.utilities.exceptions.embedding_exceptions import (
+    EmbeddingConfigurationError,
+    EmbeddingInitializationError
+)
 
 
 @contextlib.contextmanager
@@ -32,15 +37,24 @@ def suppress_logging(
 
 
 class RAGStorage(BaseRAGStorage):
-    """
-    Extends Storage to handle embeddings for memory entries, improving
-    search efficiency.
+    """RAG-based Storage implementation using ChromaDB for vector storage and retrieval.
+
+    This class extends BaseRAGStorage to handle embeddings for memory entries,
+    improving search efficiency through vector similarity.
+
+    Attributes:
+        app: ChromaDB client instance
+        collection: ChromaDB collection for storing embeddings
+        type: Type of memory storage
+        allow_reset: Whether memory reset is allowed
+        path: Custom storage path for the database
     """
 
     app: ClientAPI | None = None
+    collection: Any = None
 
     def __init__(
-        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
+        self, type: str, allow_reset: bool = True, embedder_config: Dict[str, Any] | None = None, crew: Any = None, path: str | None = None
     ):
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
@@ -50,7 +64,6 @@ class RAGStorage(BaseRAGStorage):
         self.storage_file_name = self._build_storage_file_name(type, agents)
 
         self.type = type
-
         self.allow_reset = allow_reset
         self.path = path
         self._initialize_app()
@@ -59,26 +72,36 @@ class RAGStorage(BaseRAGStorage):
         configurator = EmbeddingConfigurator()
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
-    def _initialize_app(self):
+    def _initialize_app(self) -> None:
+        """Initialize the ChromaDB client and collection.
+
+        Raises:
+            RuntimeError: If ChromaDB client initialization fails
+            EmbeddingConfigurationError: If embedding configuration is invalid
+            EmbeddingInitializationError: If embedding function fails to initialize
+        """
         import chromadb
         from chromadb.config import Settings
 
         self._set_embedder_config()
-        chroma_client = chromadb.PersistentClient(
-            path=self.path if self.path else self.storage_file_name,
-            settings=Settings(allow_reset=self.allow_reset),
-        )
-
-        self.app = chroma_client
-
         try:
-            self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
+            self.app = chromadb.PersistentClient(
+                path=self.path if self.path else self.storage_file_name,
+                settings=Settings(allow_reset=self.allow_reset),
             )
-        except Exception:
-            self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
+            if not self.app:
+                raise RuntimeError("Failed to initialize ChromaDB client")
+
+            try:
+                self.collection = self.app.get_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+            except Exception:
+                self.collection = self.app.create_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize ChromaDB: {str(e)}")
 
     def _sanitize_role(self, role: str) -> str:
         """
@@ -101,12 +124,21 @@ class RAGStorage(BaseRAGStorage):
         return f"{base_path}/{file_name}"
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+        """Save a value with metadata to the memory storage.
+
+        Args:
+            value: The text content to store
+            metadata: Additional metadata for the stored content
+
+        Raises:
+            EmbeddingInitializationError: If embedding generation fails
+        """
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
         try:
             self._generate_embedding(value, metadata)
         except Exception as e:
-            logging.error(f"Error during {self.type} save: {str(e)}")
+            raise EmbeddingInitializationError(self.type, str(e))
 
     def search(
         self,
@@ -114,7 +146,18 @@ class RAGStorage(BaseRAGStorage):
         limit: int = 3,
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> List[Dict[str, Any]]:
+        """Search for similar content in memory.
+
+        Args:
+            query: The search query text
+            limit: Maximum number of results to return
+            filter: Optional filter criteria
+            score_threshold: Minimum similarity score threshold
+
+        Returns:
+            List of matching results with metadata and scores
+        """
         if not hasattr(self, "app"):
             self._initialize_app()
 
@@ -138,37 +181,46 @@ class RAGStorage(BaseRAGStorage):
             logging.error(f"Error during {self.type} search: {str(e)}")
             return []
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
+    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:
+        """Generate and store embeddings for the given text.
+
+        Args:
+            text: The text to generate embeddings for
+            metadata: Additional metadata to store with the embeddings
+        """
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 
-        self.collection.add(
-            documents=[text],
-            metadatas=[metadata or {}],
-            ids=[str(uuid.uuid4())],
-        )
+        try:
+            self.collection.add(
+                documents=[text],
+                metadatas=[metadata or {}],
+                ids=[str(uuid.uuid4())],
+            )
+        except Exception as e:
+            raise EmbeddingInitializationError(self.type, f"Failed to generate embedding: {str(e)}")
 
     def reset(self) -> None:
+        """Reset the memory storage by clearing the database and removing files.
+
+        Raises:
+            RuntimeError: If memory reset fails and allow_reset is False
+            EmbeddingConfigurationError: If embedding configuration is invalid during reinitialization
+        """
         try:
             if self.app:
                 self.app.reset()
-                shutil.rmtree(f"{db_storage_path()}/{self.type}")
+                storage_path = self.path if self.path else db_storage_path()
+                db_dir = os.path.join(storage_path, self.type)
+                if os.path.exists(db_dir):
+                    shutil.rmtree(db_dir)
                 self.app = None
                 self.collection = None
         except Exception as e:
             if "attempt to write a readonly database" in str(e):
-                # Ignore this specific error
+                # Ignore this specific error as it's expected in some environments
                 pass
             else:
-                raise Exception(
-                    f"An error occurred while resetting the {self.type} memory: {e}"
-                )
-
-    def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+                if not self.allow_reset:
+                    raise RuntimeError(f"Failed to reset {self.type} memory: {str(e)}")
+                logging.error(f"Error during {self.type} memory reset: {str(e)}")

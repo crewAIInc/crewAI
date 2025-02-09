@@ -150,15 +150,20 @@ There are two main ways for one to create a CrewAI tool:
 
 ```python Code
 from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
 
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
-    description: str = "Clear description for what this tool is useful for, your agent will need this information to use it."
+    description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = MyToolInput
 
     def _run(self, argument: str) -> str:
-        # Implementation goes here
-        return "Result from custom tool"
+        # Your tool's logic here
+        return "Tool's result"
 ```
 
 ### Utilizing the `tool` Decorator

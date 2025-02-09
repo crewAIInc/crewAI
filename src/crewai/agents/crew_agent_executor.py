@@ -1,7 +1,7 @@
 import json
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -13,6 +13,7 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
@@ -50,11 +51,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         original_tools: List[Any] = [],
         function_calling_llm: Any = None,
         respect_context_window: bool = False,
-        request_within_rpm_limit: Any = None,
+        request_within_rpm_limit: Optional[Callable[[], bool]] = None,
         callbacks: List[Any] = [],
     ):
         self._i18n: I18N = I18N()
-        self.llm = llm
+        self.llm: LLM = llm
         self.task = task
         self.agent = agent
         self.crew = crew
@@ -77,14 +78,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
-        self.have_forced_answer = False
         self.tool_name_to_tool_map: Dict[str, BaseTool] = {
             tool.name: tool for tool in self.tools
         }
-        if self.llm.stop:
-            self.llm.stop = list(set(self.llm.stop + self.stop))
-        else:
-            self.llm.stop = self.stop
+        self.stop = stop_words
+        self.llm.stop = list(set(self.llm.stop + self.stop))
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
@@ -99,7 +97,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
-        formatted_answer = self._invoke_loop()
+
+        try:
+            formatted_answer = self._invoke_loop()
+        except AssertionError:
+            self._printer.print(
+                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                color="red",
+            )
+            raise
+        except Exception as e:
+            if e.__class__.__module__.startswith("litellm"):
+                # Do not retry on litellm errors
+                raise e
+            else:
+                self._handle_unknown_error(e)
+                raise e
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
@@ -108,105 +121,177 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_long_term_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
-    def _invoke_loop(self, formatted_answer=None):
+    def _invoke_loop(self) -> AgentFinish:
+        """
+        Main loop to invoke the agent's thought process until it reaches a conclusion
+        or the maximum number of iterations is reached.
+        """
+        formatted_answer = None
+        while not isinstance(formatted_answer, AgentFinish):
+            try:
+                if self._has_reached_max_iterations():
+                    formatted_answer = self._handle_max_iterations_exceeded(
+                        formatted_answer
+                    )
+                    break
+
+                self._enforce_rpm_limit()
+
+                answer = self._get_llm_response()
+                formatted_answer = self._process_llm_response(answer)
+
+                if isinstance(formatted_answer, AgentAction):
+                    tool_result = self._execute_tool_and_check_finality(
+                        formatted_answer
+                    )
+                    formatted_answer = self._handle_agent_action(
+                        formatted_answer, tool_result
+                    )
+
+                self._invoke_step_callback(formatted_answer)
+                self._append_message(formatted_answer.text, role="assistant")
+
+            except OutputParserException as e:
+                formatted_answer = self._handle_output_parser_exception(e)
+
+            except Exception as e:
+                if e.__class__.__module__.startswith("litellm"):
+                    # Do not retry on litellm errors
+                    raise e
+                if self._is_context_length_exceeded(e):
+                    self._handle_context_length()
+                    continue
+                else:
+                    self._handle_unknown_error(e)
+                    raise e
+            finally:
+                self.iterations += 1
+
+        # During the invoke loop, formatted_answer alternates between AgentAction
+        # (when the agent is using tools) and eventually becomes AgentFinish
+        # (when the agent reaches a final answer). This assertion confirms we've
+        # reached a final answer and helps type checking understand this transition.
+        assert isinstance(formatted_answer, AgentFinish)
+        self._show_logs(formatted_answer)
+        return formatted_answer
+
+    def _handle_unknown_error(self, exception: Exception) -> None:
+        """Handle unknown errors by informing the user."""
+        self._printer.print(
+            content="An unknown error occurred. Please check the details below.",
+            color="red",
+        )
+        self._printer.print(
+            content=f"Error details: {exception}",
+            color="red",
+        )
+
+    def _has_reached_max_iterations(self) -> bool:
+        """Check if the maximum number of iterations has been reached."""
+        return self.iterations >= self.max_iter
+
+    def _enforce_rpm_limit(self) -> None:
+        """Enforce the requests per minute (RPM) limit if applicable."""
+        if self.request_within_rpm_limit:
+            self.request_within_rpm_limit()
+
+    def _get_llm_response(self) -> str:
+        """Call the LLM and return the response, handling any invalid responses."""
         try:
-            while not isinstance(formatted_answer, AgentFinish):
-                if not self.request_within_rpm_limit or self.request_within_rpm_limit():
-                    answer = self.llm.call(
-                        self.messages,
-                        callbacks=self.callbacks,
-                    )
-
-                    if answer is None or answer == "":
-                        self._printer.print(
-                            content="Received None or empty response from LLM call.",
-                            color="red",
-                        )
-                        raise ValueError(
-                            "Invalid response from LLM call - None or empty."
-                        )
-
-                    if not self.use_stop_words:
-                        try:
-                            self._format_answer(answer)
-                        except OutputParserException as e:
-                            if (
-                                FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
-                                in e.error
-                            ):
-                                answer = answer.split("Observation:")[0].strip()
-
-                    self.iterations += 1
-                    formatted_answer = self._format_answer(answer)
-
-                    if isinstance(formatted_answer, AgentAction):
-                        tool_result = self._execute_tool_and_check_finality(
-                            formatted_answer
-                        )
-
-                        # Directly append the result to the messages if the
-                        # tool is "Add image to content" in case of multimodal
-                        # agents
-                        if formatted_answer.tool == self._i18n.tools("add_image")["name"]:
-                            self.messages.append(tool_result.result)
-                            continue
-
-                        else:
-                            if self.step_callback:
-                                self.step_callback(tool_result)
-
-                            formatted_answer.text += f"\nObservation: {tool_result.result}"
-
-                        formatted_answer.result = tool_result.result
-                        if tool_result.result_as_answer:
-                            return AgentFinish(
-                                thought="",
-                                output=tool_result.result,
-                                text=formatted_answer.text,
-                            )
-                        self._show_logs(formatted_answer)
-
-                    if self.step_callback:
-                        self.step_callback(formatted_answer)
-
-                    if self._should_force_answer():
-                        if self.have_forced_answer:
-                            return AgentFinish(
-                                thought="",
-                                output=self._i18n.errors(
-                                    "force_final_answer_error"
-                                ).format(formatted_answer.text),
-                                text=formatted_answer.text,
-                            )
-                        else:
-                            formatted_answer.text += (
-                                f'\n{self._i18n.errors("force_final_answer")}'
-                            )
-                            self.have_forced_answer = True
-                    self.messages.append(
-                        self._format_msg(formatted_answer.text, role="assistant")
-                    )
-
-        except OutputParserException as e:
-            self.messages.append({"role": "user", "content": e.error})
-            if self.iterations > self.log_error_after:
-                self._printer.print(
-                    content=f"Error parsing LLM output, agent will retry: {e.error}",
-                    color="red",
-                )
-            return self._invoke_loop(formatted_answer)
-
+            answer = self.llm.call(
+                self.messages,
+                callbacks=self.callbacks,
+            )
         except Exception as e:
-            if LLMContextLengthExceededException(str(e))._is_context_limit_error(
-                str(e)
-            ):
-                self._handle_context_length()
-                return self._invoke_loop(formatted_answer)
-            else:
-                raise e
+            self._printer.print(
+                content=f"Error during LLM call: {e}",
+                color="red",
+            )
+            raise e
+
+        if not answer:
+            self._printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
+            raise ValueError("Invalid response from LLM call - None or empty.")
+
+        return answer
+
+    def _process_llm_response(self, answer: str) -> Union[AgentAction, AgentFinish]:
+        """Process the LLM response and format it into an AgentAction or AgentFinish."""
+        if not self.use_stop_words:
+            try:
+                # Preliminary parsing to check for errors.
+                self._format_answer(answer)
+            except OutputParserException as e:
+                if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
+                    answer = answer.split("Observation:")[0].strip()
+
+        return self._format_answer(answer)
+
+    def _handle_agent_action(
+        self, formatted_answer: AgentAction, tool_result: ToolResult
+    ) -> Union[AgentAction, AgentFinish]:
+        """Handle the AgentAction, execute tools, and process the results."""
+        add_image_tool = self._i18n.tools("add_image")
+        if (
+            isinstance(add_image_tool, dict)
+            and formatted_answer.tool.casefold().strip()
+            == add_image_tool.get("name", "").casefold().strip()
+        ):
+            self.messages.append(tool_result.result)
+            return formatted_answer  # Continue the loop
+
+        if self.step_callback:
+            self.step_callback(tool_result)
+
+        formatted_answer.text += f"\nObservation: {tool_result.result}"
+        formatted_answer.result = tool_result.result
+
+        if tool_result.result_as_answer:
+            return AgentFinish(
+                thought="",
+                output=tool_result.result,
+                text=formatted_answer.text,
+            )
 
         self._show_logs(formatted_answer)
         return formatted_answer
+
+    def _invoke_step_callback(self, formatted_answer) -> None:
+        """Invoke the step callback if it exists."""
+        if self.step_callback:
+            self.step_callback(formatted_answer)
+
+    def _append_message(self, text: str, role: str = "assistant") -> None:
+        """Append a message to the message list with the given role."""
+        self.messages.append(self._format_msg(text, role=role))
+
+    def _handle_output_parser_exception(self, e: OutputParserException) -> AgentAction:
+        """Handle OutputParserException by updating messages and formatted_answer."""
+        self.messages.append({"role": "user", "content": e.error})
+
+        formatted_answer = AgentAction(
+            text=e.error,
+            tool="",
+            tool_input="",
+            thought="",
+        )
+
+        if self.iterations > self.log_error_after:
+            self._printer.print(
+                content=f"Error parsing LLM output, agent will retry: {e.error}",
+                color="red",
+            )
+
+        return formatted_answer
+
+    def _is_context_length_exceeded(self, exception: Exception) -> bool:
+        """Check if the exception is due to context length exceeding."""
+        return LLMContextLengthExceededException(
+            str(exception)
+        )._is_context_limit_error(str(exception))
 
     def _show_start_logs(self):
         if self.agent is None:
@@ -218,8 +303,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self._printer.print(
                 content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
             )
+            description = (
+                getattr(self.task, "description") if self.task else "Not Found"
+            )
             self._printer.print(
-                content=f"\033[95m## Task:\033[00m \033[92m{self.task.description}\033[00m"
+                content=f"\033[95m## Task:\033[00m \033[92m{description}\033[00m"
             )
 
     def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
@@ -272,7 +360,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             agent=self.agent,
             action=agent_action,
         )
-        tool_calling = tool_usage.parse(agent_action.text)
+        tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
         if isinstance(tool_calling, ToolUsageErrorException):
             tool_result = tool_calling.message
@@ -344,58 +432,50 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
 
     def _handle_crew_training_output(
-        self, result: AgentFinish, human_feedback: str | None = None
+        self, result: AgentFinish, human_feedback: Optional[str] = None
     ) -> None:
-        """Function to handle the process of the training data."""
+        """Handle the process of saving training data."""
         agent_id = str(self.agent.id)  # type: ignore
+        train_iteration = (
+            getattr(self.crew, "_train_iteration", None) if self.crew else None
+        )
 
-        # Load training data
+        if train_iteration is None or not isinstance(train_iteration, int):
+            self._printer.print(
+                content="Invalid or missing train iteration. Cannot save training data.",
+                color="red",
+            )
+            return
+
         training_handler = CrewTrainingHandler(TRAINING_DATA_FILE)
-        training_data = training_handler.load()
+        training_data = training_handler.load() or {}
 
-        # Check if training data exists, human input is not requested, and self.crew is valid
-        if training_data and not self.ask_for_human_input:
-            if self.crew is not None and hasattr(self.crew, "_train_iteration"):
-                train_iteration = self.crew._train_iteration
-                if agent_id in training_data and isinstance(train_iteration, int):
-                    training_data[agent_id][train_iteration][
-                        "improved_output"
-                    ] = result.output
-                    training_handler.save(training_data)
-                else:
-                    self._printer.print(
-                        content="Invalid train iteration type or agent_id not in training data.",
-                        color="red",
-                    )
-            else:
-                self._printer.print(
-                    content="Crew is None or does not have _train_iteration attribute.",
-                    color="red",
-                )
+        # Initialize or retrieve agent's training data
+        agent_training_data = training_data.get(agent_id, {})
 
-        if self.ask_for_human_input and human_feedback is not None:
-            training_data = {
+        if human_feedback is not None:
+            # Save initial output and human feedback
+            agent_training_data[train_iteration] = {
                 "initial_output": result.output,
                 "human_feedback": human_feedback,
-                "agent": agent_id,
-                "agent_role": self.agent.role,  # type: ignore
             }
-            if self.crew is not None and hasattr(self.crew, "_train_iteration"):
-                train_iteration = self.crew._train_iteration
-                if isinstance(train_iteration, int):
-                    CrewTrainingHandler(TRAINING_DATA_FILE).append(
-                        train_iteration, agent_id, training_data
-                    )
-                else:
-                    self._printer.print(
-                        content="Invalid train iteration type. Expected int.",
-                        color="red",
-                    )
+        else:
+            # Save improved output
+            if train_iteration in agent_training_data:
+                agent_training_data[train_iteration]["improved_output"] = result.output
             else:
                 self._printer.print(
-                    content="Crew is None or does not have _train_iteration attribute.",
+                    content=(
+                        f"No existing training data for agent {agent_id} and iteration "
+                        f"{train_iteration}. Cannot save improved output."
+                    ),
                     color="red",
                 )
+                return
+
+        # Update the training data and save
+        training_data[agent_id] = agent_training_data
+        training_handler.save(training_data)
 
     def _format_prompt(self, prompt: str, inputs: Dict[str, str]) -> str:
         prompt = prompt.replace("{input}", inputs["input"])
@@ -411,79 +491,150 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return {"role": role, "content": prompt}
 
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
-        """
-        Handles the human feedback loop, allowing the user to provide feedback
-        on the agent's output and determining if additional iterations are needed.
+        """Handle human feedback with different flows for training vs regular use.
 
-        Parameters:
-            formatted_answer (AgentFinish): The initial output from the agent.
+        Args:
+            formatted_answer: The initial AgentFinish result to get feedback on
 
         Returns:
-            AgentFinish: The final output after incorporating human feedback.
+            AgentFinish: The final answer after processing feedback
         """
+        human_feedback = self._ask_human_input(formatted_answer.output)
+
+        if self._is_training_mode():
+            return self._handle_training_feedback(formatted_answer, human_feedback)
+
+        return self._handle_regular_feedback(formatted_answer, human_feedback)
+
+    def _is_training_mode(self) -> bool:
+        """Check if crew is in training mode."""
+        return bool(self.crew and self.crew._train)
+
+    def _handle_training_feedback(
+        self, initial_answer: AgentFinish, feedback: str
+    ) -> AgentFinish:
+        """Process feedback for training scenarios with single iteration."""
+        self._printer.print(
+            content="\nProcessing training feedback.\n",
+            color="yellow",
+        )
+        self._handle_crew_training_output(initial_answer, feedback)
+        self.messages.append(
+            self._format_msg(
+                self._i18n.slice("feedback_instructions").format(feedback=feedback)
+            )
+        )
+        improved_answer = self._invoke_loop()
+        self._handle_crew_training_output(improved_answer)
+        self.ask_for_human_input = False
+        return improved_answer
+
+    def _handle_regular_feedback(
+        self, current_answer: AgentFinish, initial_feedback: str
+    ) -> AgentFinish:
+        """Process feedback for regular use with potential multiple iterations."""
+        feedback = initial_feedback
+        answer = current_answer
+
         while self.ask_for_human_input:
-            human_feedback = self._ask_human_input(formatted_answer.output)
+            response = self._get_llm_feedback_response(feedback)
 
-            if self.crew and self.crew._train:
-                self._handle_crew_training_output(formatted_answer, human_feedback)
-
-            # Make an LLM call to verify if additional changes are requested based on human feedback
-            additional_changes_prompt = self._i18n.slice(
-                "human_feedback_classification"
-            ).format(feedback=human_feedback)
-
-            retry_count = 0
-            llm_call_successful = False
-            additional_changes_response = None
-
-            while retry_count < MAX_LLM_RETRY and not llm_call_successful:
-                try:
-                    additional_changes_response = (
-                        self.llm.call(
-                            [
-                                self._format_msg(
-                                    additional_changes_prompt, role="system"
-                                )
-                            ],
-                            callbacks=self.callbacks,
-                        )
-                        .strip()
-                        .lower()
-                    )
-                    llm_call_successful = True
-                except Exception as e:
-                    retry_count += 1
-
-                    self._printer.print(
-                        content=f"Error during LLM call to classify human feedback: {e}. Retrying... ({retry_count}/{MAX_LLM_RETRY})",
-                        color="red",
-                    )
-
-            if not llm_call_successful:
-                self._printer.print(
-                    content="Error processing feedback after multiple attempts.",
-                    color="red",
-                )
+            if not self._feedback_requires_changes(response):
                 self.ask_for_human_input = False
-                break
-
-            if additional_changes_response == "false":
-                self.ask_for_human_input = False
-            elif additional_changes_response == "true":
-                self.ask_for_human_input = True
-                # Add human feedback to messages
-                self.messages.append(self._format_msg(f"Feedback: {human_feedback}"))
-                # Invoke the loop again with updated messages
-                formatted_answer = self._invoke_loop()
-
-                if self.crew and self.crew._train:
-                    self._handle_crew_training_output(formatted_answer)
             else:
-                # Unexpected response
-                self._printer.print(
-                    content=f"Unexpected response from LLM: '{additional_changes_response}'. Assuming no additional changes requested.",
-                    color="red",
-                )
-                self.ask_for_human_input = False
+                answer = self._process_feedback_iteration(feedback)
+                feedback = self._ask_human_input(answer.output)
 
+        return answer
+
+    def _get_llm_feedback_response(self, feedback: str) -> Optional[str]:
+        """Get LLM classification of whether feedback requires changes."""
+        prompt = self._i18n.slice("human_feedback_classification").format(
+            feedback=feedback
+        )
+        message = self._format_msg(prompt, role="system")
+
+        for retry in range(MAX_LLM_RETRY):
+            try:
+                response = self.llm.call([message], callbacks=self.callbacks)
+                return response.strip().lower() if response else None
+            except Exception as error:
+                self._log_feedback_error(retry, error)
+
+        self._log_max_retries_exceeded()
+        return None
+
+    def _feedback_requires_changes(self, response: Optional[str]) -> bool:
+        """Determine if feedback response indicates need for changes."""
+        return response == "true" if response else False
+
+    def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
+        """Process a single feedback iteration."""
+        self.messages.append(
+            self._format_msg(
+                self._i18n.slice("feedback_instructions").format(feedback=feedback)
+            )
+        )
+        return self._invoke_loop()
+
+    def _log_feedback_error(self, retry_count: int, error: Exception) -> None:
+        """Log feedback processing errors."""
+        self._printer.print(
+            content=(
+                f"Error processing feedback: {error}. "
+                f"Retrying... ({retry_count + 1}/{MAX_LLM_RETRY})"
+            ),
+            color="red",
+        )
+
+    def _log_max_retries_exceeded(self) -> None:
+        """Log when max retries for feedback processing are exceeded."""
+        self._printer.print(
+            content=(
+                f"Failed to process feedback after {MAX_LLM_RETRY} attempts. "
+                "Ending feedback loop."
+            ),
+            color="red",
+        )
+
+    def _handle_max_iterations_exceeded(self, formatted_answer):
+        """
+        Handles the case when the maximum number of iterations is exceeded.
+        Performs one more LLM call to get the final answer.
+
+        Parameters:
+            formatted_answer: The last formatted answer from the agent.
+
+        Returns:
+            The final formatted answer after exceeding max iterations.
+        """
+        self._printer.print(
+            content="Maximum iterations reached. Requesting final answer.",
+            color="yellow",
+        )
+
+        if formatted_answer and hasattr(formatted_answer, "text"):
+            assistant_message = (
+                formatted_answer.text + f'\n{self._i18n.errors("force_final_answer")}'
+            )
+        else:
+            assistant_message = self._i18n.errors("force_final_answer")
+
+        self.messages.append(self._format_msg(assistant_message, role="assistant"))
+
+        # Perform one more LLM call to get the final answer
+        answer = self.llm.call(
+            self.messages,
+            callbacks=self.callbacks,
+        )
+
+        if answer is None or answer == "":
+            self._printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
+            raise ValueError("Invalid response from LLM call - None or empty.")
+
+        formatted_answer = self._format_answer(answer)
+        # Return the formatted answer, regardless of its type
         return formatted_answer

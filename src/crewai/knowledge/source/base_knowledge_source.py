@@ -16,7 +16,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     chunk_embeddings: List[np.ndarray] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    storage: Optional[KnowledgeStorage] = Field(default=None)
     metadata: Dict[str, Any] = Field(default_factory=dict)  # Currently unused
     collection_name: Optional[str] = Field(default=None)
 
@@ -46,4 +46,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
         Save the documents to the storage.
         This method should be called after the chunks and embeddings are generated.
         """
-        self.storage.save(self.chunks)
+        if self.storage:
+            self.storage.save(self.chunks)
+        else:
+            raise ValueError("No storage found to save documents.")
