@@ -110,7 +110,7 @@ class Task(BaseModel):
         description="Task output, it's final result after being executed", default=None
     )
     tools: Optional[List[BaseTool]] = Field(
-        default_factory=list,
+        default_factory=lambda: [],
         description="Tools the agent is limited to use for this task.",
     )
     id: UUID4 = Field(
@@ -126,7 +126,7 @@ class Task(BaseModel):
         description="A converter class used to export structured output",
         default=None,
     )
-    processed_by_agents: Set[str] = Field(default_factory=set)
+    processed_by_agents: Set[str] = Field(default_factory=lambda: set())
     guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
         default=None,
         description="Function to validate task output before proceeding to next task",
