@@ -10,6 +10,7 @@ import instructor
 import pydantic_core
 import pytest
 
+from crewai.llm import LLM
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -299,6 +300,35 @@ def test_hierarchical_process():
         == "Here are the 5 interesting ideas along with a compelling paragraph for each that showcases how good an article on the topic could be:\n\n1. **The Evolution and Future of AI Agents in Everyday Life**:\nThe rapid development of AI agents from rudimentary virtual assistants like Siri and Alexa to today's sophisticated systems marks a significant technological leap. This article will explore the evolving landscape of AI agents, detailing their seamless integration into daily activities ranging from managing smart home devices to streamlining workflows. We will examine the multifaceted benefits these agents bring, such as increased efficiency and personalized user experiences, while also addressing ethical concerns like data privacy and algorithmic bias. Looking ahead, we will forecast the advancements slated for the next decade, including AI agents in personalized health coaching and automated legal consultancy. With more advanced machine learning algorithms, the potential for these AI systems to revolutionize our daily lives is immense.\n\n2. **AI in Healthcare: Revolutionizing Diagnostics and Treatment**:\nArtificial Intelligence is poised to revolutionize the healthcare sector by offering unprecedented improvements in diagnostic accuracy and personalized treatments. This article will delve into the transformative power of AI in healthcare, highlighting real-world applications like AI-driven imaging technologies that aid in early disease detection and predictive analytics that enable personalized patient care plans. We will discuss the ethical challenges, such as data privacy and the implications of AI-driven decision-making in medicine. Through compelling case studies, we will showcase successful AI implementations that have made significant impacts, ultimately painting a picture of a future where AI plays a central role in proactive and precise healthcare delivery.\n\n3. **The Role of AI in Enhancing Cybersecurity**:\nAs cyber threats become increasingly sophisticated, AI stands at the forefront of the battle against cybercrime. This article will discuss the crucial role AI plays in detecting and responding to threats in real-time, its capacity to predict and prevent potential attacks, and the inherent challenges of an AI-dependent cybersecurity framework. We will highlight recent advancements in AI-based security tools and provide case studies where AI has been instrumental in mitigating cyber threats effectively. By examining these elements, we'll underline the potential and limitations of AI in creating a more secure digital environment, showcasing how it can adapt to evolving threats faster than traditional methods.\n\n4. **The Intersection of AI and Autonomous Vehicles: Driving Towards a Safer Future**:\nThe prospect of AI-driven autonomous vehicles promises to redefine transportation. This article will explore the technological underpinnings of self-driving cars, their developmental milestones, and the hurdles they face, including regulatory and ethical challenges. We will discuss the profound implications for various industries and employment sectors, coupled with the benefits such as reduced traffic accidents, improved fuel efficiency, and enhanced mobility for people with disabilities. By detailing these aspects, the article will offer a comprehensive overview of how AI-powered autonomous vehicles are steering us towards a safer, more efficient future.\n\n5. **AI and the Future of Work: Embracing Change in the Workplace**:\nAI is transforming the workplace by automating mundane tasks, enabling advanced data analysis, and fostering creativity and strategic decision-making. This article will explore the profound impact of AI on the job market, addressing concerns about job displacement and the evolution of new roles that demand reskilling. We will provide insights into the necessity for upskilling to keep pace with an AI-driven economy. Through interviews with industry experts and narratives from workers who have experienced AI's impact firsthand, we will present a balanced perspective. The aim is to paint a future where humans and AI work in synergy, driving innovation and productivity in a continuously evolving workplace landscape."
     )
 
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_test_with_custom_llm():
+    """Test that Crew.test() works correctly with custom LLM instances."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    custom_llm = LLM(model="gpt-4", temperature=0.5)
+    crew = Crew(agents=[researcher], tasks=[task], process=Process.sequential)
+    
+    with mock.patch('crewai.crew.CrewEvaluator') as mock_evaluator:
+        crew.test(n_iterations=1, openai_model_name=custom_llm)
+        mock_evaluator.assert_called_once_with(mock.ANY, custom_llm)
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_test_backward_compatibility():
+    """Test that Crew.test() maintains backward compatibility with string model names."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task], process=Process.sequential)
+    
+    with mock.patch('crewai.crew.CrewEvaluator') as mock_evaluator:
+        crew.test(n_iterations=1, openai_model_name="gpt-4")
+        mock_evaluator.assert_called_once_with(mock.ANY, "gpt-4")
 
 def test_manager_llm_requirement_for_hierarchical_process():
     task = Task(
@@ -1123,7 +1153,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headeruvs=["authorization"])
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 

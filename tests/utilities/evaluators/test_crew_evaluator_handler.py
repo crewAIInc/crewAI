@@ -2,6 +2,7 @@ from unittest import mock
 
 import pytest
 
+from crewai.llm import LLM
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task
@@ -130,6 +131,19 @@ class TestCrewEvaluator:
 
         # Ensure the console prints the table
         console.assert_has_calls([mock.call(), mock.call().print(table())])
+
+    def test_evaluator_with_custom_llm(self, crew_planner):
+        """Test that CrewEvaluator correctly handles custom LLM instances."""
+        custom_llm = LLM(model="gpt-4", temperature=0.5)
+        evaluator = CrewEvaluator(crew_planner.crew, custom_llm)
+        assert evaluator.llm == custom_llm
+        assert evaluator.llm.temperature == 0.5
+
+    def test_evaluator_with_model_name(self, crew_planner):
+        """Test that CrewEvaluator correctly handles string model names."""
+        evaluator = CrewEvaluator(crew_planner.crew, "gpt-4")
+        assert isinstance(evaluator.llm, LLM)
+        assert evaluator.llm.model == "gpt-4"
 
     def test_evaluate(self, crew_planner):
         task_output = TaskOutput(

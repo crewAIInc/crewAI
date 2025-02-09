@@ -1,6 +1,9 @@
 from importlib.metadata import version as get_version
 from typing import Optional
 
+from typing import Union
+
+from crewai.llm import LLM
 import click
 
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
@@ -180,8 +183,15 @@ def reset_memories(
     default="gpt-4o-mini",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
-def test(n_iterations: int, model: str):
-    """Test the crew and evaluate the results."""
+def test(n_iterations: int, model: Union[str, LLM]):
+    """Test the crew and evaluate the results using either a model name or LLM instance.
+    
+    Args:
+        n_iterations: The number of iterations to run the test.
+        model: Either a model name string or an LLM instance to use for evaluating
+            the performance of the agents. If a string is provided, it will be used
+            to create an LLM instance.
+    """
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
     evaluate_crew(n_iterations, model)
 
