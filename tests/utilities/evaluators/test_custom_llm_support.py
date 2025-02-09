@@ -1,11 +1,13 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
+
 
 @pytest.mark.vcr()
 def test_crew_test_with_custom_llm():
