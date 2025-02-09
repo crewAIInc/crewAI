@@ -1,0 +1,134 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Research Manager.
+      You''re a research expert\nYour personal goal is: Manage research\nTo give my
+      best complete final answer to the task use the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Handle research\n\nThis is the expect criteria for your final answer:
+      Your best answer to your coworker asking you this, accounting for the context
+      shared.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nImportant research\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"], "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '983'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=GxztReZeGi6qENS0TkwOuBgjGx3aFWu5H5e9HnTkQRI-1739131802782-0.0.1.1-604800000;
+        __cf_bm=UYR3lic9ZX3q_w8ul5YU1NoMKLvuFEK8LNu_O.5QPcU-1739131802-1.0.1.1-K5kQYiuLVp2wZpT4pe1oC.zjo4mBzVzXvfIChY.A419uN54s97KQRauV2PBI5ArtsbDEMIaVV3GOZaAtCfAClg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-Az7usRsnv7YVDLrlprCZSD9s2EZw0\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1739131802,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: To effectively handle this important research, we must first establish
+      a clear framework that outlines our objectives, methodologies, and expected
+      outcomes. This includes defining the key research questions we aim to answer,
+      identifying the target population for our study, and selecting appropriate research
+      methods\u2014whether qualitative, quantitative, or a mixed approach.\\n\\nNext,
+      we should gather and analyze existing literature related to our research topic
+      to ensure we build upon existing knowledge and identify gaps that our study
+      could address. It\u2019s essential to collect data systematically, while considering
+      ethical guidelines, to ensure integrity and reliability in our findings.\\n\\nOnce
+      data collection is complete, we will utilize statistical software or qualitative
+      analysis tools to interpret our results accurately. Our end goal is to derive
+      meaningful conclusions that can inform stakeholders and promote actionable insights.
+      \\n\\nTo ensure our research resonates and is disseminated effectively, we will
+      prepare a comprehensive report, highlighting our methodology, findings, and
+      implications. This report should be designed for various audiences, making it
+      both accessible to the wider public and detailed enough for academic scrutiny.\\n\\nIn
+      conclusion, our research will not only contribute to the body of knowledge in
+      our field but also provide pivotal insights that can guide policy and future
+      studies. Collaboration and consistent communication throughout this process
+      will be key to our success. Thus, let us prioritize this research as an integral
+      part of our goals moving forward.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 179,\n    \"completion_tokens\": 275,\n
+      \   \"total_tokens\": 454,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    headers:
+      CF-RAY:
+      - 90f68027cd8a76f1-SEA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 09 Feb 2025 20:10:06 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '3496'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999777'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_17b6c277c477e2f7bd3bbff2429c1132
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

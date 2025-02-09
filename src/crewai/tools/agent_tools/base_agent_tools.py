@@ -37,8 +37,9 @@ class BaseAgentTool(BaseTool, AgentLookupMixin):
             bool: True if delegation is allowed, False otherwise
         """
         return (delegating_agent.allow_delegation and 
-                (not delegating_agent.allowed_agents or 
-                 target_agent.role in delegating_agent.allowed_agents))
+                (delegating_agent.allowed_agents is None or 
+                 (len(delegating_agent.allowed_agents) > 0 and
+                  target_agent.role in delegating_agent.allowed_agents)))
 
     def _execute(
         self, agent_name: Union[str, None], task: str, context: Union[str, None]

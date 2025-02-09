@@ -239,4 +239,5 @@ def test_delegate_work_with_unauthorized_agent():
         context="Important research"
     )
     assert "Error" in result
-    assert "not authorized to delegate" in result
+    assert "Authorization Error" in result
+    assert "cannot delegate to" in result
