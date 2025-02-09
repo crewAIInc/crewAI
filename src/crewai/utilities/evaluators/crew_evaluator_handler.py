@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from typing import Optional, Union
 
@@ -11,6 +12,16 @@ from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
+
+
+class CrewEvaluationError(Exception):
+    """Raised when there is an error during crew evaluation."""
+    pass
+
+
+# Default values for evaluation metrics
+DEFAULT_TASK_SCORE = 9.0
+DEFAULT_EXECUTION_TIME = 60  # seconds
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
@@ -35,15 +46,23 @@ class CrewEvaluator:
     iteration: int = 0
 
     def __init__(self, crew, llm: Optional[Union[str, LLM]] = None):
+        """Initialize CrewEvaluator.
+        
+        Args:
+            crew: The crew to evaluate
+            llm: LLM instance or model name for evaluation
+        """
         self.crew = crew
+        logging.info(f"Initializing CrewEvaluator with LLM: {llm}")
+        
         # Initialize tasks_scores with default values to avoid division by zero
         self.tasks_scores = defaultdict(list)
         for i in range(1, len(crew.tasks) + 1):
-            self.tasks_scores[i] = [9.0]  # Default score of 9.0 for each task
+            self.tasks_scores[i] = [DEFAULT_TASK_SCORE]
         # Initialize run_execution_times with default values
         self.run_execution_times = defaultdict(list)
         for i in range(1, len(crew.tasks) + 1):
-            self.run_execution_times[i] = [60]  # Default execution time of 60 seconds
+            self.run_execution_times[i] = [DEFAULT_EXECUTION_TIME]
         self.llm = llm if isinstance(llm, LLM) else (
             LLM(model=llm) if isinstance(llm, str) else None
         )
@@ -169,35 +188,57 @@ class CrewEvaluator:
         console.print(table)
 
     def evaluate(self, task_output: TaskOutput):
-        """Evaluates the performance of the agents in the crew based on the tasks they have performed."""
-        current_task = None
-        for task in self.crew.tasks:
-            if task.description == task_output.description:
-                current_task = task
-                break
+        """Evaluates the performance of the agents in the crew based on the tasks they have performed.
+        
+        Args:
+            task_output: The output from the task execution to evaluate
+            
+        Raises:
+            CrewEvaluationError: If evaluation fails or produces unexpected results
+            ValueError: If required inputs are missing or invalid
+        """
+        try:
+            # Find the matching task
+            current_task = None
+            for task in self.crew.tasks:
+                if task.description == task_output.description:
+                    current_task = task
+                    break
 
-        if not current_task or not task_output:
-            raise ValueError(
-                "Task to evaluate and task output are required for evaluation"
+            if not current_task or not task_output:
+                raise ValueError(
+                    "Task to evaluate and task output are required for evaluation"
+                )
+
+            # Create and execute evaluation task
+            evaluator_agent = self._evaluator_agent()
+            evaluation_task = self._evaluation_task(
+                evaluator_agent, current_task, task_output.raw
             )
 
-        evaluator_agent = self._evaluator_agent()
-        evaluation_task = self._evaluation_task(
-            evaluator_agent, current_task, task_output.raw
-        )
+            logging.info(f"Evaluating task: {current_task.description}")
+            evaluation_result = evaluation_task.execute_sync()
 
-        evaluation_result = evaluation_task.execute_sync()
+            # Process evaluation results
+            if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
+                self._test_result_span = self._telemetry.individual_test_result_span(
+                    self.crew,
+                    evaluation_result.pydantic.quality,
+                    current_task._execution_time,
+                    str(self.llm.model if self.llm else None),
+                )
+                self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
+                self.run_execution_times[self.iteration].append(
+                    current_task._execution_time
+                )
+                logging.info(f"Task evaluation completed with score: {evaluation_result.pydantic.quality}")
+            else:
+                raise CrewEvaluationError("Evaluation result is not in the expected format")
 
-        if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
-            self._test_result_span = self._telemetry.individual_test_result_span(
-                self.crew,
-                evaluation_result.pydantic.quality,
-                current_task._execution_time,
-                str(self.llm.model if self.llm else None),
-            )
-            self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
-            self.run_execution_times[self.iteration].append(
-                current_task._execution_time
-            )
-        else:
-            raise ValueError("Evaluation result is not in the expected format")
+        except ValueError as e:
+            logging.error(f"Invalid input for task evaluation: {e}")
+            raise
+
+        except Exception as e:
+            logging.error(f"Error during task evaluation: {e}")
+            raise CrewEvaluationError(f"Failed to evaluate task: {e}")

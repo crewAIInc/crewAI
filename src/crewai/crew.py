@@ -1079,14 +1079,19 @@ class Crew(BaseModel):
         openai_model_name: Optional[str] = None,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures.
+        """Test and evaluate the Crew with the given inputs for n iterations.
         
         Args:
             n_iterations: Number of iterations to run
             llm: LLM instance or model name to use for evaluation
             openai_model_name: (Deprecated) OpenAI model name for backward compatibility
             inputs: Optional inputs for the crew
+            
+        Raises:
+            ValueError: If llm parameter is neither a string nor LLM instance
         """
+        if llm and not isinstance(llm, (str, LLM)):
+            raise ValueError("llm parameter must be either a string model name or LLM instance")
         test_crew = self.copy()
 
         # Handle backward compatibility

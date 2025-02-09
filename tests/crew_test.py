@@ -2851,6 +2851,22 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch("crewai.crew.Crew.copy")
 @mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_with_invalid_llm(kickoff_mock, copy_mock, crew_evaluator_mock):
+    """Test that Crew.test() properly validates LLM input."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    
+    with pytest.raises(ValueError, match="llm parameter must be either"):
+        crew.test(2, llm=123)  # Invalid type
+
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
+@mock.patch("crewai.crew.Crew.kickoff")
 def test_crew_testing_with_custom_llm(kickoff_mock, copy_mock, crew_evaluator_mock):
     """Test that Crew.test() works with both string and LLM instance parameters."""
     task = Task(
