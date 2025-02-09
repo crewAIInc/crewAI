@@ -82,12 +82,33 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_ollama(config, model_name):
+        """Configure Ollama embedder with flexible URL configuration.
+        
+        Args:
+            config: Configuration dictionary that supports multiple URL keys:
+                - url: Legacy key (default: http://localhost:11434/api/embeddings)
+                - api_url: Alternative key following HuggingFace pattern
+                - base_url: Alternative key
+                - api_base: Alternative key following Azure pattern
+            model_name: Name of the Ollama model to use
+            
+        Returns:
+            OllamaEmbeddingFunction: Configured embedder instance
+        """
         from chromadb.utils.embedding_functions.ollama_embedding_function import (
             OllamaEmbeddingFunction,
         )
 
+        url = (
+            config.get("url")
+            or config.get("api_url")
+            or config.get("base_url")
+            or config.get("api_base")
+            or "http://localhost:11434/api/embeddings"
+        )
+
         return OllamaEmbeddingFunction(
-            url=config.get("url", "http://localhost:11434/api/embeddings"),
+            url=url,
             model_name=model_name,
         )
 
