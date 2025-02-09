@@ -104,6 +104,32 @@ def test_crew_test_backward_compatibility():
     crew.test(n_iterations=1, openai_model_name="gpt-4")
     # No assertion needed as we just verify it runs without errors
 
+def test_crew_test_with_invalid_llm():
+    """Test that Crew.test() properly handles invalid LLM inputs."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    
+    # Test with invalid LLM type
+    with pytest.raises(ValueError, match="Unsupported LLM type"):
+        crew.test(n_iterations=1, llm=123)  # type: ignore
+
+def test_crew_test_with_invalid_iterations():
+    """Test that Crew.test() validates n_iterations."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    
+    # Test with invalid n_iterations
+    with pytest.raises(ValueError, match="n_iterations must be greater than 0"):
+        crew.test(n_iterations=0, llm=MockLLM())
+
 
 def test_crew_config_conditional_requirement():
     with pytest.raises(ValueError):
