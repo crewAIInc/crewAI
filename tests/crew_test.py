@@ -13,6 +13,7 @@ import pytest
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
+from crewai.llm import LLM
 from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
@@ -1123,7 +1124,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headeruvs=["authorization"])
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
@@ -2812,10 +2813,43 @@ def test_conditional_should_execute():
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch("crewai.crew.Crew.copy")
 @mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
+def test_crew_testing_with_custom_llm(kickoff_mock, copy_mock, crew_evaluator):
     task = Task(
-        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
-        expected_output="5 bullet points with a paragraph for each idea.",
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+    )
+
+    # Create a mock for the copied crew
+    copy_mock.return_value = crew
+
+    custom_llm = LLM(model="gpt-4o-mini")
+    n_iterations = 2
+    crew.test(n_iterations, llm=custom_llm)
+
+    # Ensure kickoff is called on the copied crew
+    kickoff_mock.assert_has_calls([mock.call(inputs=None), mock.call(inputs=None)])
+
+    # Verify CrewEvaluator was called with custom LLM
+    crew_evaluator.assert_has_calls([
+        mock.call(crew, custom_llm),
+        mock.call().set_iteration(1),
+        mock.call().set_iteration(2),
+        mock.call().print_crew_evaluation_result(),
+    ])
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_backward_compatibility(kickoff_mock, copy_mock, crew_evaluator):
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
         agent=researcher,
     )
 
@@ -2831,18 +2865,40 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
     crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
 
     # Ensure kickoff is called on the copied crew
-    kickoff_mock.assert_has_calls(
-        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+    kickoff_mock.assert_has_calls([
+        mock.call(inputs={"topic": "AI"}),
+        mock.call(inputs={"topic": "AI"})
+    ])
+
+    # Verify CrewEvaluator was called with string model name
+    crew_evaluator.assert_has_calls([
+        mock.call(crew, mock.ANY),
+        mock.call().set_iteration(1),
+        mock.call().set_iteration(2),
+        mock.call().print_crew_evaluation_result(),
+    ])
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_missing_llm(kickoff_mock, copy_mock, crew_evaluator):
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
     )
 
-    crew_evaluator.assert_has_calls(
-        [
-            mock.call(crew, "gpt-4o-mini"),
-            mock.call().set_iteration(1),
-            mock.call().set_iteration(2),
-            mock.call().print_crew_evaluation_result(),
-        ]
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
     )
+
+    # Create a mock for the copied crew
+    copy_mock.return_value = crew
+
+    n_iterations = 2
+    with pytest.raises(ValueError, match="Either llm or openai_model_name must be provided"):
+        crew.test(n_iterations)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

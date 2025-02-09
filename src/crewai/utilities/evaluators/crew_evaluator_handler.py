@@ -1,6 +1,10 @@
 from collections import defaultdict
 
+from typing import Union
+
 from pydantic import BaseModel, Field
+
+from crewai.llm import LLM
 from rich.box import HEAVY_EDGE
 from rich.console import Console
 from rich.table import Table
@@ -23,7 +27,7 @@ class CrewEvaluator:
 
     Attributes:
         crew (Crew): The crew of agents to evaluate.
-        openai_model_name (str): The model to use for evaluating the performance of the agents (for now ONLY OpenAI accepted).
+        llm (LLM): The language model to use for evaluating the performance of the agents.
         tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
         iteration (int): The current iteration of the evaluation.
     """
@@ -32,9 +36,9 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, openai_model_name: str):
+    def __init__(self, crew, llm: Union[str, LLM]):
         self.crew = crew
-        self.openai_model_name = openai_model_name
+        self.llm = llm if isinstance(llm, LLM) else LLM(model=llm)
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
@@ -51,7 +55,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=self.openai_model_name,
+            llm=self.llm,
         )
 
     def _evaluation_task(
@@ -181,7 +185,7 @@ class CrewEvaluator:
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task._execution_time,
-                self.openai_model_name,
+                str(self.llm),
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
