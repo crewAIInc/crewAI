@@ -109,7 +109,9 @@ class BaseAgent(ABC, BaseModel):
     )
     allowed_agents: Optional[List[str]] = Field(
         default=None,
-        description="List of agent roles that this agent is allowed to delegate tasks to.",
+        description="List of agent roles that this agent is allowed to delegate tasks to. "
+                   "If None, delegation is unrestricted when allow_delegation is True.",
+        examples=["Researcher", "Analyst"]
     )
     tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents' disposal"

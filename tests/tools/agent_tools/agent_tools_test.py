@@ -127,6 +127,65 @@ def test_ask_question_to_wrong_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_delegate_work_with_null_allowed_agents():
+    """Test delegation when allowed_agents is None (unrestricted delegation)."""
+    executive = Agent(
+        role="Executive Director",
+        goal="Lead the team effectively",
+        backstory="You're an experienced executive",
+        allow_delegation=True,
+        allowed_agents=None
+    )
+    
+    research_manager = Agent(
+        role="Research Manager",
+        goal="Manage research",
+        backstory="You're a research expert",
+        allow_delegation=False
+    )
+    
+    tools = AgentTools(agents=[executive, research_manager]).tools()
+    delegate_tool = tools[0]
+    
+    result = delegate_tool.run(
+        coworker="Research Manager",
+        task="Handle research",
+        context="Important research"
+    )
+    assert "Error" not in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_delegate_work_with_empty_allowed_agents():
+    """Test delegation when allowed_agents is an empty list (no delegation allowed)."""
+    executive = Agent(
+        role="Executive Director",
+        goal="Lead the team effectively",
+        backstory="You're an experienced executive",
+        allow_delegation=True,
+        allowed_agents=[]
+    )
+    
+    research_manager = Agent(
+        role="Research Manager",
+        goal="Manage research",
+        backstory="You're a research expert",
+        allow_delegation=False
+    )
+    
+    tools = AgentTools(agents=[executive, research_manager]).tools()
+    delegate_tool = tools[0]
+    
+    result = delegate_tool.run(
+        coworker="Research Manager",
+        task="Handle research",
+        context="Important research"
+    )
+    assert "Error" in result
+    assert "Authorization Error" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegate_work_with_allowed_agents():
     executive = Agent(
         role="Executive Director",

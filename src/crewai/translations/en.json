@@ -29,7 +29,7 @@
     "force_final_answer_error": "You can't keep going, this was the best you could do.\n {formatted_answer.text}",
     "force_final_answer": "Now it's time you MUST give your absolute best final answer. You'll ignore all previous instructions, stop using any tools, and just return your absolute BEST Final answer.",
     "agent_tool_unexisting_coworker": "\nError executing tool. coworker mentioned not found, it must be one of the following options:\n{coworkers}\n",
-    "agent_tool_unauthorized_delegation": "\nError executing tool. Agent '{agent}' is not authorized to delegate to '{target}'. Allowed agents are:\n{allowed}\n",
+    "agent_tool_unauthorized_delegation": "\nAuthorization Error: Agent '{agent}' cannot delegate to '{target}'.\nAllowed delegation targets:\n{allowed}\nPlease check agent configuration or contact administrator.\n",
     "task_repeated_usage": "I tried reusing the same input, I must stop using this action input. I'll try something else instead.\n\n",
     "tool_usage_error": "I encountered an error: {error}",
     "tool_arguments_error": "Error: the Action Input is not a valid key, value dictionary.",
