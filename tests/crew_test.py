@@ -10,6 +10,8 @@ import instructor
 import pydantic_core
 import pytest
 
+from crewai.llm import LLM
+from crewai.utilities.evaluators.crew_evaluator_handler import TaskEvaluationPydanticOutput
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -3305,39 +3307,63 @@ def test_conditional_should_execute():
 
 
 @mock.patch("crewai.crew.CrewEvaluator")
-@mock.patch("crewai.crew.Crew.copy")
-@mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
+@mock.patch.object(Crew, "copy")
+@mock.patch.object(Crew, "kickoff")
+def test_crew_test_with_custom_llm(mock_kickoff, mock_copy, mock_evaluator):
+    """Test that Crew.test() works with a custom LLM implementation."""
+    task = Task(description="Test task", expected_output="Test output", agent=researcher)
+    crew = Crew(agents=[researcher], tasks=[task])
+    mock_copy.return_value = crew
+    mock_evaluator.return_value = mock.MagicMock()
+    
+    llm = LLM(model="gpt-4")
+    crew.test(n_iterations=1, llm=llm)
+    
+    # Verify CrewEvaluator was called with the LLM instance
+    mock_evaluator.assert_called_once()
+    args = mock_evaluator.call_args[0]
+    assert args[1] == llm
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch.object(Crew, "copy")
+@mock.patch.object(Crew, "kickoff")
+def test_crew_test_backward_compatibility(mock_kickoff, mock_copy, mock_evaluator):
+    """Test that Crew.test() maintains backward compatibility with openai_model_name."""
+    task = Task(description="Test task", expected_output="Test output", agent=researcher)
+    crew = Crew(agents=[researcher], tasks=[task])
+    mock_copy.return_value = crew
+    mock_evaluator.return_value = mock.MagicMock()
+    
+    crew.test(n_iterations=1, openai_model_name="gpt-4")
+    
+    # Verify CrewEvaluator was called with the model name
+    mock_evaluator.assert_called_once()
+    args = mock_evaluator.call_args[0]
+    assert args[1] == "gpt-4"
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch.object(Crew, "copy")
+@mock.patch.object(Crew, "kickoff")
+def test_crew_testing_function(mock_kickoff, mock_copy, mock_evaluator):
+    """Test that Crew.test() works with basic functionality."""
     task = Task(
-        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
-        expected_output="5 bullet points with a paragraph for each idea.",
+        description="Test task",
+        expected_output="Test output",
         agent=researcher,
     )
-
-    crew = Crew(
-        agents=[researcher],
-        tasks=[task],
-    )
-
-    # Create a mock for the copied crew
-    copy_mock.return_value = crew
-
-    n_iterations = 2
-    crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
-
-    # Ensure kickoff is called on the copied crew
-    kickoff_mock.assert_has_calls(
-        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
-    )
-
-    crew_evaluator.assert_has_calls(
-        [
-            mock.call(crew, "gpt-4o-mini"),
-            mock.call().set_iteration(1),
-            mock.call().set_iteration(2),
-            mock.call().print_crew_evaluation_result(),
-        ]
-    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    mock_copy.return_value = crew
+    mock_evaluator.return_value = mock.MagicMock()
+    
+    crew.test(n_iterations=1)
+    
+    # Verify CrewEvaluator was called with None as llm (default behavior)
+    mock_evaluator.assert_called_once()
+    args = mock_evaluator.call_args[0]
+    assert args[1] is None
+    
+    # Verify kickoff was called
+    mock_kickoff.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

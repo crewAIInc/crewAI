@@ -20,6 +20,9 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from typing import Union
+
+from crewai.llm import LLM
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
@@ -1148,19 +1151,28 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
+        llm: Optional[Union[str, LLM]] = None,
         openai_model_name: Optional[str] = None,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
+        """Test and evaluate the Crew with the given inputs for n iterations.
+        
+        Args:
+            n_iterations: Number of test iterations to run
+            llm: LLM instance or model name to use for evaluation
+            openai_model_name: (Deprecated) OpenAI model name to use for evaluation
+            inputs: Optional inputs for the crew
+        """
         test_crew = self.copy()
+        test_llm = llm or openai_model_name
 
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
             n_iterations,
             inputs,
-            openai_model_name,  # type: ignore[arg-type]
+            test_llm,  # type: ignore[arg-type]
         )  # type: ignore[arg-type]
-        evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
+        evaluator = CrewEvaluator(test_crew, test_llm)
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)

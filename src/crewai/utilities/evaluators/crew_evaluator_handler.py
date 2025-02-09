@@ -1,3 +1,6 @@
+from typing import Union
+
+from crewai.llm import LLM
 from collections import defaultdict
 
 from pydantic import BaseModel, Field
@@ -32,9 +35,15 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, openai_model_name: str):
+    def __init__(self, crew, llm: Union[str, LLM, None] = None):
+        """Initialize the CrewEvaluator.
+        
+        Args:
+            crew: The crew to evaluate
+            llm: LLM instance or model name to use for evaluation
+        """
         self.crew = crew
-        self.openai_model_name = openai_model_name
+        self._llm = llm if isinstance(llm, LLM) else LLM(model=llm) if llm else None
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
@@ -51,7 +60,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=self.openai_model_name,
+            llm=self._llm,
         )
 
     def _evaluation_task(

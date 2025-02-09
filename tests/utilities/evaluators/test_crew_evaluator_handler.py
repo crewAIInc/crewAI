@@ -2,6 +2,7 @@ from unittest import mock
 
 import pytest
 
+from crewai.llm import LLM
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task
@@ -140,3 +141,23 @@ class InternalCrewEvaluator:
             execute().pydantic = TaskEvaluationPydanticOutput(quality=9.5)
             crew_planner.evaluate(task_output)
             assert crew_planner.tasks_scores[0] == [9.5]
+
+    def test_crew_evaluator_with_llm_instance(self):
+        """Test that CrewEvaluator works with an LLM instance."""
+        agent = Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1")
+        task = Task(description="Task 1", expected_output="Output 1", agent=agent)
+        crew = Crew(agents=[agent], tasks=[task])
+        
+        llm = LLM(model="gpt-4")
+        evaluator = CrewEvaluator(crew, llm)
+        assert evaluator._llm == llm
+
+    def test_crew_evaluator_with_model_name(self):
+        """Test that CrewEvaluator works with a model name string."""
+        agent = Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1")
+        task = Task(description="Task 1", expected_output="Output 1", agent=agent)
+        crew = Crew(agents=[agent], tasks=[task])
+        
+        evaluator = CrewEvaluator(crew, "gpt-4")
+        assert isinstance(evaluator._llm, LLM)
+        assert evaluator._llm.model == "gpt-4"
