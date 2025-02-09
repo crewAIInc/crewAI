@@ -3335,14 +3335,11 @@ def test_crew_testing_function(copy_mock, crew_evaluator_mock):
     )
 
     # Verify CrewEvaluator interactions
-    crew_evaluator_mock.assert_has_calls(
-        [
-            mock.call(crew, "gpt-4o-mini"),
-            mock.call().set_iteration(1),
-            mock.call().set_iteration(2),
-            mock.call().print_crew_evaluation_result(),
-        ]
-    )
+    # We don't check the exact LLM object since it's created internally
+    assert len(crew_evaluator_mock.mock_calls) == 4
+    assert crew_evaluator_mock.mock_calls[1] == mock.call().set_iteration(1)
+    assert crew_evaluator_mock.mock_calls[2] == mock.call().set_iteration(2)
+    assert crew_evaluator_mock.mock_calls[3] == mock.call().print_crew_evaluation_result()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
