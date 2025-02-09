@@ -1374,3 +1374,49 @@ def test_task_max_execution_time_zero():
         with pytest.raises(TimeoutError) as excinfo:
             task.execute_sync(agent=researcher)
         assert "timed out after 1 seconds" in str(excinfo.value)
+
+
+def test_task_force_final_answer_on_timeout():
+    """Test that force_final_answer is used when task times out"""
+    researcher = Agent(
+        role="Researcher",
+        goal="Test goal",
+        backstory="Test backstory",
+        max_execution_time=1  # Very short timeout
+    )
+
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher
+    )
+
+    # Mock the task execution to simulate a partial result before timeout
+    mock_i18n = MagicMock()
+    mock_i18n.errors.return_value = "MUST give your absolute best final answer"
+    researcher.i18n = mock_i18n
+
+    class MockThread:
+        def __init__(self, target, *args, **kwargs):
+            self.target = target
+            self.daemon = kwargs.get('daemon', False)
+            self.args = args
+            self.kwargs = kwargs
+
+        def start(self):
+            # Execute the target function to set the result
+            self.target()
+
+        def join(self, timeout=None):
+            pass
+
+    def mock_thread(*args, **kwargs):
+        return MockThread(*args, **kwargs)
+
+    with patch('threading.Thread', side_effect=mock_thread), \
+         patch('threading.Event.wait', return_value=False), \
+         patch('litellm.completion'), \
+         patch.object(Agent, '_execute_task_without_timeout', return_value="Partial result"):
+        result = task.execute_sync(agent=researcher)
+        assert "MUST give your absolute best final answer" in result.raw
+        assert "Partial result" in result.raw  # Should include partial result

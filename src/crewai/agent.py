@@ -66,6 +66,7 @@ class Agent(BaseAgent):
     """
 
     _times_executed: int = PrivateAttr(default=0)
+    _have_forced_answer: bool = PrivateAttr(default=False)
     max_execution_time: Optional[int] = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -177,11 +178,10 @@ class Agent(BaseAgent):
             timeout: Maximum execution time in seconds (must be > 0)
             
         Returns:
-            The result of the task execution
+            The result of the task execution, with force_final_answer prompt appended on timeout
             
         Raises:
             ValueError: If timeout is not a positive integer
-            TimeoutError: If execution exceeds the timeout
             Exception: Any error that occurs during execution
         """
         # Validate timeout before creating any resources
@@ -216,8 +216,11 @@ class Agent(BaseAgent):
                 self.agent_executor.llm = None  # Release LLM resources
                 if hasattr(self.agent_executor, 'close'):
                     self.agent_executor.close()
-                
-            raise timeout_decorator.TimeoutError(f"Task execution timed out after {timeout} seconds")
+
+            # Force final answer using the prompt
+            self._have_forced_answer = True
+            forced_answer = self.i18n.errors("force_final_answer")
+            return f"{result_container[0] if result_container[0] else ''}\n{forced_answer}"
         
         if error_container[0]:
             error = error_container[0]
@@ -226,7 +229,7 @@ class Agent(BaseAgent):
         
         if result_container[0] is None:
             self._logger.log("warning", "Task execution completed but returned no result")
-            raise timeout_decorator.TimeoutError("Task execution completed but returned no result")
+            raise timeout_decorator.TimeoutError("Task execution completed but returned no result")  # This is a different kind of failure than timeout
         
         return result_container[0]
 
@@ -258,11 +261,15 @@ class Agent(BaseAgent):
             if hasattr(self.llm, 'timeout'):
                 self.llm.timeout = self.max_execution_time
             
-            return self._execute_with_timeout(task, context, tools, self.max_execution_time)
+            result = self._execute_with_timeout(task, context, tools, self.max_execution_time)
+            if self._have_forced_answer:
+                self._logger.log("warning", f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. Using forced answer.")
+            return result
         except timeout_decorator.TimeoutError:
+            # This is a different kind of failure (e.g., no result at all)
             error_msg = (
-                f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. "
-                f"Consider increasing max_execution_time or optimizing the task."
+                f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds "
+                f"and produced no result. Consider increasing max_execution_time or optimizing the task."
             )
             self._logger.log("error", error_msg)
             raise TimeoutError(error_msg)
