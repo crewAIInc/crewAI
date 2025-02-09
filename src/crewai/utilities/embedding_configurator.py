@@ -1,11 +1,36 @@
+import logging
 import os
-from typing import Any, Dict, cast
+import urllib.parse
+from typing import Any, Dict, Optional, cast
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
 
+logger = logging.getLogger(__name__)
+
 
 class EmbeddingConfigurator:
+    @staticmethod
+    def _validate_url(url: str) -> str:
+        """Validate URL format.
+        
+        Args:
+            url: URL to validate
+            
+        Returns:
+            str: The validated URL
+            
+        Raises:
+            ValueError: If URL is invalid
+        """
+        try:
+            result = urllib.parse.urlparse(url)
+            if all([result.scheme, result.netloc]):
+                return url
+            raise ValueError(f"Invalid URL format: {url}")
+        except Exception as e:
+            raise ValueError(f"Invalid URL: {str(e)}")
+
     def __init__(self):
         self.embedding_functions = {
             "openai": self._configure_openai,
@@ -81,23 +106,30 @@ class EmbeddingConfigurator:
         )
 
     @staticmethod
-    def _configure_ollama(config, model_name):
+    def _configure_ollama(config: Dict[str, Any], model_name: Optional[str]) -> EmbeddingFunction:
         """Configure Ollama embedder with flexible URL configuration.
         
         Args:
-            config: Configuration dictionary that supports multiple URL keys:
-                - url: Legacy key (default: http://localhost:11434/api/embeddings)
-                - api_url: Alternative key following HuggingFace pattern
-                - base_url: Alternative key
-                - api_base: Alternative key following Azure pattern
+            config: Configuration dictionary that supports multiple URL keys in priority order:
+                1. url: Legacy key (highest priority)
+                2. api_url: Alternative key following HuggingFace pattern
+                3. base_url: Alternative key
+                4. api_base: Alternative key following Azure pattern
+                Default: http://localhost:11434/api/embeddings
             model_name: Name of the Ollama model to use
             
         Returns:
             OllamaEmbeddingFunction: Configured embedder instance
+            
+        Raises:
+            ValueError: If URL is invalid or model name is missing
         """
         from chromadb.utils.embedding_functions.ollama_embedding_function import (
             OllamaEmbeddingFunction,
         )
+
+        if not model_name:
+            raise ValueError("Model name is required for Ollama embedder configuration")
 
         url = (
             config.get("url")
@@ -106,9 +138,12 @@ class EmbeddingConfigurator:
             or config.get("api_base")
             or "http://localhost:11434/api/embeddings"
         )
+        
+        validated_url = EmbeddingConfigurator._validate_url(url)
+        logger.info(f"Configuring Ollama embedder with URL: {validated_url}")
 
         return OllamaEmbeddingFunction(
-            url=url,
+            url=validated_url,
             model_name=model_name,
         )
 
