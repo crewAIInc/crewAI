@@ -6,10 +6,6 @@ from concurrent.futures import Future
 from hashlib import md5
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from pydantic import InstanceOf
-
-from crewai.llm import LLM
-
 from pydantic import (
     UUID4,
     BaseModel,
@@ -20,6 +16,8 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+
+from crewai.llm import LLM
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
