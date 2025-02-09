@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field, create_model, validator
 from pydantic.fields import FieldInfo
 from pydantic import BaseModel as PydanticBaseModel
 
+from crewai.tools.structured_tool import CrewStructuredTool
+
 def _create_model_fields(fields: Dict[str, Tuple[Any, FieldInfo]]) -> Dict[str, Any]:
     """Helper function to create model fields with proper type hints."""
     return {name: (annotation, field) for name, (annotation, field) in fields.items()}
@@ -68,6 +70,17 @@ class BaseTool(BaseModel, ABC):
         **kwargs: Any,
     ) -> Any:
         """Here goes the actual implementation of the tool."""
+
+    def to_structured_tool(self) -> CrewStructuredTool:
+        """Convert this tool to a CrewStructuredTool instance."""
+        self._set_args_schema()
+        return CrewStructuredTool(
+            name=self.name,
+            description=self.description,
+            args_schema=self.args_schema,
+            func=self._run,
+            result_as_answer=self.result_as_answer,
+        )
 
     def _set_args_schema(self) -> None:
         if self.args_schema is None:
