@@ -1,11 +1,14 @@
+import os
 from collections import defaultdict
+from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, InstanceOf
 from rich.box import HEAVY_EDGE
 from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
@@ -32,11 +35,30 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, openai_model_name: str):
+    def __init__(self, crew, llm: Union[str, InstanceOf[LLM], Any]):
         self.crew = crew
-        self.openai_model_name = openai_model_name
+        self.llm = llm
         self._telemetry = Telemetry()
+        self._setup_llm()
         self._setup_for_evaluating()
+
+    def _setup_llm(self):
+        """Set up the LLM following the Agent class pattern."""
+        if isinstance(self.llm, str):
+            self.llm = LLM(model=self.llm)
+        elif isinstance(self.llm, LLM):
+            pass
+        elif self.llm is None:
+            model_name = os.environ.get("OPENAI_MODEL_NAME") or "gpt-4"
+            self.llm = LLM(model=model_name)
+        else:
+            llm_params = {
+                "model": getattr(self.llm, "model_name", None)
+                or getattr(self.llm, "deployment_name", None)
+                or str(self.llm),
+            }
+            self.llm = LLM(**llm_params)
+
 
     def _setup_for_evaluating(self) -> None:
         """Sets up the crew for evaluating."""
@@ -51,7 +73,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=self.openai_model_name,
+            llm=self.llm,
         )
 
     def _evaluation_task(
@@ -181,7 +203,7 @@ class CrewEvaluator:
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task._execution_time,
-                self.openai_model_name,
+                self.llm,
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(

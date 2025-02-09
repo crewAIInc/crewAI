@@ -1075,19 +1075,21 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        openai_model_name: Optional[str] = None,
+        llm: Optional[Union[str, InstanceOf[LLM], Any]] = None,
+        openai_model_name: Optional[str] = None,  # Kept for backward compatibility
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
+        """Test and evaluate the Crew with the given inputs for n iterations."""
         test_crew = self.copy()
+        test_llm = llm if llm is not None else openai_model_name
 
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
             n_iterations,
             inputs,
-            openai_model_name,  # type: ignore[arg-type]
+            test_llm,  # type: ignore[arg-type]
         )  # type: ignore[arg-type]
-        evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
+        evaluator = CrewEvaluator(test_crew, test_llm)  # type: ignore[arg-type]
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)

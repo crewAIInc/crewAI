@@ -23,7 +23,7 @@ class TestCrewEvaluator:
         )
         crew = Crew(agents=[agent], tasks=[task])
 
-        return CrewEvaluator(crew, openai_model_name="gpt-4o-mini")
+        return CrewEvaluator(crew, llm="openai/gpt-4o-mini")
 
     def test_setup_for_evaluating(self, crew_planner):
         crew_planner._setup_for_evaluating()
@@ -45,7 +45,7 @@ class TestCrewEvaluator:
             == "Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed"
         )
         assert agent.verbose is False
-        assert agent.llm.model == "gpt-4o-mini"
+        assert agent.llm.model == "openai/gpt-4o-mini"
 
     def test_evaluation_task(self, crew_planner):
         evaluator_agent = Agent(

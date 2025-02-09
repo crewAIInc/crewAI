@@ -24,6 +24,36 @@ from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai.llm import LLM
+
+class MockLLM(LLM):
+    """Mock LLM for testing."""
+    def __init__(self):
+        super().__init__(model="gpt-4")  # Use a known model name
+        
+    def chat_completion(self, messages, tools=None, tool_choice=None, **kwargs):
+        # Mock a proper response that matches the expected format
+        if tools and any('output' in tool.get('function', {}).get('name', '') for tool in tools):
+            return {
+                "choices": [{
+                    "message": {
+                        "content": None,
+                        "role": "assistant",
+                        "function_call": {
+                            "name": "output",
+                            "arguments": '{"quality": 8.5}'
+                        }
+                    }
+                }]
+            }
+        return {
+            "choices": [{
+                "message": {
+                    "content": "Mock LLM Response",
+                    "role": "assistant"
+                }
+            }]
+        }
 
 ceo = Agent(
     role="CEO",
@@ -45,6 +75,34 @@ writer = Agent(
     backstory="You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
     allow_delegation=False,
 )
+
+
+def test_crew_test_with_custom_llm():
+    """Test that Crew.test() works with a custom LLM implementation."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    
+    # Test with custom LLM
+    custom_llm = MockLLM()
+    crew.test(n_iterations=1, llm=custom_llm)
+    # No assertion needed as we just verify it runs without errors
+
+def test_crew_test_backward_compatibility():
+    """Test that Crew.test() maintains backward compatibility with openai_model_name."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    
+    # Test with openai_model_name
+    crew.test(n_iterations=1, openai_model_name="gpt-4")
+    # No assertion needed as we just verify it runs without errors
 
 
 def test_crew_config_conditional_requirement():
@@ -1123,7 +1181,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headeruvs=["authorization"])
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
