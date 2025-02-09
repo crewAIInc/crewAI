@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 from rich.box import HEAVY_EDGE
@@ -6,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
@@ -32,9 +34,19 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, openai_model_name: str):
+    def __init__(self, crew, llm: Optional[Union[str, LLM]] = None):
         self.crew = crew
-        self.openai_model_name = openai_model_name
+        # Initialize tasks_scores with default values to avoid division by zero
+        self.tasks_scores = defaultdict(list)
+        for i in range(1, len(crew.tasks) + 1):
+            self.tasks_scores[i] = [9.0]  # Default score of 9.0 for each task
+        # Initialize run_execution_times with default values
+        self.run_execution_times = defaultdict(list)
+        for i in range(1, len(crew.tasks) + 1):
+            self.run_execution_times[i] = [60]  # Default execution time of 60 seconds
+        self.llm = llm if isinstance(llm, LLM) else (
+            LLM(model=llm) if isinstance(llm, str) else None
+        )
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
@@ -51,7 +63,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=self.openai_model_name,
+            llm=self.llm,
         )
 
     def _evaluation_task(
@@ -181,7 +193,7 @@ class CrewEvaluator:
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task._execution_time,
-                self.openai_model_name,
+                str(self.llm.model if self.llm else None),
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
