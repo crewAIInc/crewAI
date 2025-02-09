@@ -447,14 +447,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def __init__(
         self,
         persistence: Optional[FlowPersistence] = None,
-        restore_uuid: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
 
         Args:
             persistence: Optional persistence backend for storing flow states
-            restore_uuid: Optional UUID to restore state from persistence
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -464,64 +462,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._method_outputs: List[Any] = []  # List to store all method outputs
         self._persistence: Optional[FlowPersistence] = persistence
 
-        # Validate state model before initialization
-        if isinstance(self.initial_state, type):
-            if issubclass(self.initial_state, BaseModel) and not issubclass(
-                self.initial_state, FlowState
-            ):
-                # Check if model has id field
-                model_fields = getattr(self.initial_state, "model_fields", None)
-                if not model_fields or "id" not in model_fields:
-                    raise ValueError("Flow state model must have an 'id' field")
+        # Initialize state with initial values
+        self._state = self._create_initial_state()
 
-        # Handle persistence and potential ID conflicts
-        stored_state = None
-        if self._persistence is not None:
-            if (
-                restore_uuid
-                and kwargs
-                and "id" in kwargs
-                and restore_uuid != kwargs["id"]
-            ):
-                raise ValueError(
-                    f"Conflicting IDs provided: restore_uuid='{restore_uuid}' "
-                    f"vs kwargs['id']='{kwargs['id']}'. Use only one ID for restoration."
-                )
-
-            # Attempt to load state, prioritizing restore_uuid
-            if restore_uuid:
-                self._log_flow_event(f"Loading flow state from memory for UUID: {restore_uuid}", color="bold_yellow")
-                stored_state = self._persistence.load_state(restore_uuid)
-                if not stored_state:
-                    raise ValueError(
-                        f"No state found for restore_uuid='{restore_uuid}'"
-                    )
-            elif kwargs and "id" in kwargs:
-                self._log_flow_event(f"Loading flow state from memory for ID: {kwargs['id']}", color="bold_yellow")
-                stored_state = self._persistence.load_state(kwargs["id"])
-                if not stored_state:
-                    # For kwargs["id"], we allow creating new state if not found
-                    self._state = self._create_initial_state()
-                    if kwargs:
-                        self._initialize_state(kwargs)
-                    return
-
-        # Initialize state based on persistence and kwargs
-        if stored_state:
-            # Create initial state and restore from persistence
-            self._state = self._create_initial_state()
-            self._restore_state(stored_state)
-            # Apply any additional kwargs to override specific fields
-            if kwargs:
-                filtered_kwargs = {k: v for k, v in kwargs.items() if k != "id"}
-                if filtered_kwargs:
-                    self._initialize_state(filtered_kwargs)
-        else:
-            # No stored state, create new state with initial values
-            self._state = self._create_initial_state()
-            # Apply any additional kwargs
-            if kwargs:
-                self._initialize_state(kwargs)
+        # Apply any additional kwargs
+        if kwargs:
+            self._initialize_state(kwargs)
 
         self._telemetry.flow_creation_span(self.__class__.__name__)
 
@@ -635,18 +581,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
     @property
     def flow_id(self) -> str:
         """Returns the unique identifier of this flow instance.
-        
+
         This property provides a consistent way to access the flow's unique identifier
         regardless of the underlying state implementation (dict or BaseModel).
-        
+
         Returns:
             str: The flow's unique identifier, or an empty string if not found
-            
+
         Note:
             This property safely handles both dictionary and BaseModel state types,
             returning an empty string if the ID cannot be retrieved rather than raising
             an exception.
-            
+
         Example:
             ```python
             flow = MyFlow()
@@ -654,9 +600,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ```
         """
         try:
-            if not hasattr(self, '_state'):
+            if not hasattr(self, "_state"):
                 return ""
-                
+
             if isinstance(self._state, dict):
                 return str(self._state.get("id", ""))
             elif isinstance(self._state, BaseModel):
@@ -731,7 +677,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         # When restoring from persistence, use the stored ID
         stored_id = stored_state.get("id")
-        self._log_flow_event(f"Restoring flow state from memory for ID: {stored_id}", color="bold_yellow")
         if not stored_id:
             raise ValueError("Stored state must have an 'id' field")
 
@@ -755,6 +700,41 @@ class Flow(Generic[T], metaclass=FlowMeta):
             raise TypeError(f"State must be dict or BaseModel, got {type(self._state)}")
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
+        """Start the flow execution.
+
+        Args:
+            inputs: Optional dictionary containing input values and potentially a state ID to restore
+        """
+        # Handle state restoration if ID is provided in inputs
+        if inputs and "id" in inputs and self._persistence is not None:
+            restore_uuid = inputs["id"]
+            stored_state = self._persistence.load_state(restore_uuid)
+
+            # Override the id in the state if it exists in inputs
+            if "id" in inputs:
+                if isinstance(self._state, dict):
+                    self._state["id"] = inputs["id"]
+                elif isinstance(self._state, BaseModel):
+                    setattr(self._state, "id", inputs["id"])
+
+            if stored_state:
+                self._log_flow_event(
+                    f"Loading flow state from memory for UUID: {restore_uuid}",
+                    color="yellow",
+                )
+                # Restore the state
+                self._restore_state(stored_state)
+            else:
+                self._log_flow_event(
+                    f"No flow state found for UUID: {restore_uuid}", color="red"
+                )
+
+            # Apply any additional inputs after restoration
+            filtered_inputs = {k: v for k, v in inputs.items() if k != "id"}
+            if filtered_inputs:
+                self._initialize_state(filtered_inputs)
+
+        # Start flow execution
         self.event_emitter.send(
             self,
             event=FlowStartedEvent(
@@ -762,10 +742,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow_name=self.__class__.__name__,
             ),
         )
-        self._log_flow_event(f"Flow started with ID: {self.flow_id}", color="yellow")
+        self._log_flow_event(
+            f"Flow started with ID: {self.flow_id}", color="bold_magenta"
+        )
 
-        if inputs is not None:
+        if inputs is not None and "id" not in inputs:
             self._initialize_state(inputs)
+
         return asyncio.run(self.kickoff_async())
 
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
@@ -1008,20 +991,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             traceback.print_exc()
 
-    def _log_flow_event(self, message: str, color: str = "yellow", level: str = "info") -> None:
+    def _log_flow_event(
+        self, message: str, color: str = "yellow", level: str = "info"
+    ) -> None:
         """Centralized logging method for flow events.
-        
+
         This method provides a consistent interface for logging flow-related events,
         combining both console output with colors and proper logging levels.
-        
+
         Args:
             message: The message to log
             color: Color to use for console output (default: yellow)
                   Available colors: purple, red, bold_green, bold_purple,
-                  bold_blue, yellow, bold_yellow
+                  bold_blue, yellow, yellow
             level: Log level to use (default: info)
                   Supported levels: info, warning
-                  
+
         Note:
             This method uses the Printer utility for colored console output
             and the standard logging module for log level support.
@@ -1031,7 +1016,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.info(message)
         elif level == "warning":
             logger.warning(message)
-    
+
     def plot(self, filename: str = "crewai_flow") -> None:
         self._telemetry.flow_plotting_span(
             self.__class__.__name__, list(self._methods.keys())

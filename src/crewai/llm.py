@@ -5,15 +5,17 @@ import sys
 import threading
 import warnings
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Type, Union, cast
 
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
     from litellm import Choices, get_supported_openai_params
     from litellm.types.utils import ModelResponse
+    from litellm.utils import supports_response_schema
 
 
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -128,21 +130,23 @@ class LLM:
         presence_penalty: Optional[float] = None,
         frequency_penalty: Optional[float] = None,
         logit_bias: Optional[Dict[int, float]] = None,
-        response_format: Optional[Dict[str, Any]] = None,
+        response_format: Optional[Type[BaseModel]] = None,
         seed: Optional[int] = None,
         logprobs: Optional[int] = None,
         top_logprobs: Optional[int] = None,
         base_url: Optional[str] = None,
+        api_base: Optional[str] = None,
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
+        reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
+        **kwargs,
     ):
         self.model = model
         self.timeout = timeout
         self.temperature = temperature
         self.top_p = top_p
         self.n = n
-        self.stop = stop
         self.max_completion_tokens = max_completion_tokens
         self.max_tokens = max_tokens
         self.presence_penalty = presence_penalty
@@ -153,44 +157,83 @@ class LLM:
         self.logprobs = logprobs
         self.top_logprobs = top_logprobs
         self.base_url = base_url
+        self.api_base = api_base
         self.api_version = api_version
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
+        self.reasoning_effort = reasoning_effort
+        self.additional_params = kwargs
 
         litellm.drop_params = True
+
+        # Normalize self.stop to always be a List[str]
+        if stop is None:
+            self.stop: List[str] = []
+        elif isinstance(stop, str):
+            self.stop = [stop]
+        else:
+            self.stop = stop
 
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
 
     def call(
         self,
-        messages: List[Dict[str, str]],
+        messages: Union[str, List[Dict[str, str]]],
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
-        High-level call method that:
-          1) Calls litellm.completion
-          2) Checks for function/tool calls
-          3) If a tool call is found:
-               a) executes the function
-               b) returns the result
-          4) If no tool call, returns the text response
+        High-level llm call method that:
+          1) Accepts either a string or a list of messages
+          2) Converts string input to the required message format
+          3) Calls litellm.completion
+          4) Handles function/tool calls if any
+          5) Returns the final text response or tool result
 
-        :param messages: The conversation messages
-        :param tools: Optional list of function schemas for function calling
-        :param callbacks: Optional list of callbacks
-        :param available_functions: A dictionary mapping function_name -> actual Python function
-        :return: Final text response from the LLM or the tool result
+        Parameters:
+        - messages (Union[str, List[Dict[str, str]]]): The input messages for the LLM.
+          - If a string is provided, it will be converted into a message list with a single entry.
+          - If a list of dictionaries is provided, each dictionary should have 'role' and 'content' keys.
+        - tools (Optional[List[dict]]): A list of tool schemas for function calling.
+        - callbacks (Optional[List[Any]]): A list of callback functions to be executed.
+        - available_functions (Optional[Dict[str, Any]]): A dictionary mapping function names to actual Python functions.
+
+        Returns:
+        - str: The final text response from the LLM or the result of a tool function call.
+
+        Examples:
+        ---------
+        # Example 1: Using a string input
+        response = llm.call("Return the name of a random city in the world.")
+        print(response)
+
+        # Example 2: Using a list of messages
+        messages = [{"role": "user", "content": "What is the capital of France?"}]
+        response = llm.call(messages)
+        print(response)
         """
+        # Validate parameters before proceeding with the call.
+        self._validate_call_params()
+
+        if isinstance(messages, str):
+            messages = [{"role": "user", "content": messages}]
+
+        # For O1 models, system messages are not supported.
+        # Convert any system messages into assistant messages.
+        if "o1" in self.model.lower():
+            for message in messages:
+                if message.get("role") == "system":
+                    message["role"] = "assistant"
+
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
 
             try:
-                # --- 1) Make the completion call
+                # --- 1) Prepare the parameters for the completion call
                 params = {
                     "model": self.model,
                     "messages": messages,
@@ -207,23 +250,28 @@ class LLM:
                     "seed": self.seed,
                     "logprobs": self.logprobs,
                     "top_logprobs": self.top_logprobs,
-                    "api_base": self.base_url,
+                    "api_base": self.api_base,
+                    "base_url": self.base_url,
                     "api_version": self.api_version,
                     "api_key": self.api_key,
                     "stream": False,
-                    "tools": tools,  # pass the tool schema
+                    "tools": tools,
+                    "reasoning_effort": self.reasoning_effort,
+                    **self.additional_params,
                 }
 
+                # Remove None values from params
                 params = {k: v for k, v in params.items() if v is not None}
 
+                # --- 2) Make the completion call
                 response = litellm.completion(**params)
                 response_message = cast(Choices, cast(ModelResponse, response).choices)[
                     0
                 ].message
                 text_response = response_message.content or ""
                 tool_calls = getattr(response_message, "tool_calls", [])
-                
-                # Ensure callbacks get the full response object with usage info
+
+                # --- 3) Handle callbacks with usage info
                 if callbacks and len(callbacks) > 0:
                     for callback in callbacks:
                         if hasattr(callback, "log_success_event"):
@@ -236,11 +284,11 @@ class LLM:
                                     end_time=0,
                                 )
 
-                # --- 2) If no tool calls, return the text response
+                # --- 4) If no tool calls, return the text response
                 if not tool_calls or not available_functions:
                     return text_response
 
-                # --- 3) Handle the tool call
+                # --- 5) Handle the tool call
                 tool_call = tool_calls[0]
                 function_name = tool_call.function.name
 
@@ -255,7 +303,6 @@ class LLM:
                     try:
                         # Call the actual tool function
                         result = fn(**function_args)
-
                         return result
 
                     except Exception as e:
@@ -276,6 +323,36 @@ class LLM:
                 )._is_context_limit_error(str(e)):
                     logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
+
+    def _get_custom_llm_provider(self) -> str:
+        """
+        Derives the custom_llm_provider from the model string.
+        - For example, if the model is "openrouter/deepseek/deepseek-chat", returns "openrouter".
+        - If the model is "gemini/gemini-1.5-pro", returns "gemini".
+        - If there is no '/', defaults to "openai".
+        """
+        if "/" in self.model:
+            return self.model.split("/")[0]
+        return "openai"
+
+    def _validate_call_params(self) -> None:
+        """
+        Validate parameters before making a call. Currently this only checks if
+        a response_format is provided and whether the model supports it.
+        The custom_llm_provider is dynamically determined from the model:
+          - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
+          - "gemini/gemini-1.5-pro" yields "gemini"
+          - If no slash is present, "openai" is assumed.
+        """
+        provider = self._get_custom_llm_provider()
+        if self.response_format is not None and not supports_response_schema(
+            model=self.model,
+            custom_llm_provider=provider,
+        ):
+            raise ValueError(
+                f"The model {self.model} does not support response_format for provider '{provider}'. "
+                "Please remove response_format or use a supported model."
+            )
 
     def supports_function_calling(self) -> bool:
         try:

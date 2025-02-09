@@ -23,7 +23,7 @@ class KickoffTaskOutputsSQLiteStorage:
     ) -> None:
         if db_path is None:
             # Get the parent directory of the default db path and create our db file there
-            db_path = str(Path(db_storage_path()).parent / "latest_kickoff_task_outputs.db")
+            db_path = str(Path(db_storage_path()) / "latest_kickoff_task_outputs.db")
         self.db_path = db_path
         self._printer: Printer = Printer()
         self._initialize_db()

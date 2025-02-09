@@ -15,20 +15,20 @@ class Knowledge(BaseModel):
     Args:
         sources: List[BaseKnowledgeSource] = Field(default_factory=list)
         storage: Optional[KnowledgeStorage] = Field(default=None)
-        embedder_config: Optional[Dict[str, Any]] = None
+        embedder: Optional[Dict[str, Any]] = None
     """
 
     sources: List[BaseKnowledgeSource] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: Optional[KnowledgeStorage] = Field(default=None)
-    embedder_config: Optional[Dict[str, Any]] = None
+    embedder: Optional[Dict[str, Any]] = None
     collection_name: Optional[str] = None
 
     def __init__(
         self,
         collection_name: str,
         sources: List[BaseKnowledgeSource],
-        embedder_config: Optional[Dict[str, Any]] = None,
+        embedder: Optional[Dict[str, Any]] = None,
         storage: Optional[KnowledgeStorage] = None,
         **data,
     ):
@@ -37,25 +37,23 @@ class Knowledge(BaseModel):
             self.storage = storage
         else:
             self.storage = KnowledgeStorage(
-                embedder_config=embedder_config, collection_name=collection_name
+                embedder=embedder, collection_name=collection_name
             )
         self.sources = sources
         self.storage.initialize_knowledge_storage()
-        for source in sources:
-            source.storage = self.storage
-            source.add()
+        self._add_sources()
 
     def query(self, query: List[str], limit: int = 3) -> List[Dict[str, Any]]:
         """
         Query across all knowledge sources to find the most relevant information.
         Returns the top_k most relevant chunks.
-        
+
         Raises:
             ValueError: If storage is not initialized.
         """
         if self.storage is None:
             raise ValueError("Storage is not initialized.")
-            
+
         results = self.storage.search(
             query,
             limit,
@@ -63,6 +61,15 @@ class Knowledge(BaseModel):
         return results
 
     def _add_sources(self):
-        for source in self.sources:
-            source.storage = self.storage
-            source.add()
+        try:
+            for source in self.sources:
+                source.storage = self.storage
+                source.add()
+        except Exception as e:
+            raise e
+
+    def reset(self) -> None:
+        if self.storage:
+            self.storage.reset()
+        else:
+            raise ValueError("Storage is not initialized.")

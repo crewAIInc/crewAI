@@ -24,12 +24,10 @@ def create_llm(
 
     # 1) If llm_value is already an LLM object, return it directly
     if isinstance(llm_value, LLM):
-        print("LLM value is already an LLM object")
         return llm_value
 
     # 2) If llm_value is a string (model name)
     if isinstance(llm_value, str):
-        print("LLM value is a string")
         try:
             created_llm = LLM(model=llm_value)
             return created_llm
@@ -39,12 +37,10 @@ def create_llm(
 
     # 3) If llm_value is None, parse environment variables or use default
     if llm_value is None:
-        print("LLM value is None")
         return _llm_via_environment_or_fallback()
 
     # 4) Otherwise, attempt to extract relevant attributes from an unknown object
     try:
-        print("LLM value is an unknown object")
         # Extract attributes with explicit types
         model = (
             getattr(llm_value, "model_name", None)
@@ -57,6 +53,7 @@ def create_llm(
         timeout: Optional[float] = getattr(llm_value, "timeout", None)
         api_key: Optional[str] = getattr(llm_value, "api_key", None)
         base_url: Optional[str] = getattr(llm_value, "base_url", None)
+        api_base: Optional[str] = getattr(llm_value, "api_base", None)
 
         created_llm = LLM(
             model=model,
@@ -66,6 +63,7 @@ def create_llm(
             timeout=timeout,
             api_key=api_key,
             base_url=base_url,
+            api_base=api_base,
         )
         return created_llm
     except Exception as e:
@@ -105,8 +103,18 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
     callbacks: List[Any] = []
 
     # Optional base URL from env
-    api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get("OPENAI_BASE_URL")
-    if api_base:
+    base_url = (
+        os.environ.get("BASE_URL")
+        or os.environ.get("OPENAI_API_BASE")
+        or os.environ.get("OPENAI_BASE_URL")
+    )
+
+    api_base = os.environ.get("API_BASE") or os.environ.get("AZURE_API_BASE")
+
+    # Synchronize base_url and api_base if one is populated and the other is not
+    if base_url and not api_base:
+        api_base = base_url
+    elif api_base and not base_url:
         base_url = api_base
 
     # Initialize llm_params dictionary
@@ -119,6 +127,7 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
         "timeout": timeout,
         "api_key": api_key,
         "base_url": base_url,
+        "api_base": api_base,
         "api_version": api_version,
         "presence_penalty": presence_penalty,
         "frequency_penalty": frequency_penalty,

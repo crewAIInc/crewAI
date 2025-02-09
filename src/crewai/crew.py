@@ -4,6 +4,7 @@ import re
 import uuid
 import warnings
 from concurrent.futures import Future
+from copy import copy as shallow_copy
 from hashlib import md5
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
@@ -37,7 +38,6 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import Tool
-from crewai.types.crew_chat import ChatInputs
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -84,6 +84,7 @@ class Crew(BaseModel):
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
         planning: Plan the crew execution and add the plan to the crew.
+        chat_llm: The language model used for orchestrating chat interactions with the crew.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -182,9 +183,9 @@ class Crew(BaseModel):
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
-    output_log_file: Optional[str] = Field(
+    output_log_file: Optional[Union[bool, str]] = Field(
         default=None,
-        description="output_log_file",
+        description="Path to the log file to be saved",
     )
     planning: Optional[bool] = Field(
         default=False,
@@ -210,8 +211,9 @@ class Crew(BaseModel):
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
-    _knowledge: Optional[Knowledge] = PrivateAttr(
+    knowledge: Optional[Knowledge] = Field(
         default=None,
+        description="Knowledge for the crew.",
     )
 
     @field_validator("id", mode="before")
@@ -289,9 +291,9 @@ class Crew(BaseModel):
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
-                    self._knowledge = Knowledge(
+                    self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
-                        embedder_config=self.embedder,
+                        embedder=self.embedder,
                         collection_name="crew",
                     )
 
@@ -492,21 +494,26 @@ class Crew(BaseModel):
         train_crew = self.copy()
         train_crew._setup_for_training(filename)
 
-        for n_iteration in range(n_iterations):
-            train_crew._train_iteration = n_iteration
-            train_crew.kickoff(inputs=inputs)
+        try:
+            for n_iteration in range(n_iterations):
+                train_crew._train_iteration = n_iteration
+                train_crew.kickoff(inputs=inputs)
 
-        training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
+            training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
 
-        for agent in train_crew.agents:
-            if training_data.get(str(agent.id)):
-                result = TaskEvaluator(agent).evaluate_training_data(
-                    training_data=training_data, agent_id=str(agent.id)
-                )
-
-                CrewTrainingHandler(filename).save_trained_data(
-                    agent_id=str(agent.role), trained_data=result.model_dump()
-                )
+            for agent in train_crew.agents:
+                if training_data.get(str(agent.id)):
+                    result = TaskEvaluator(agent).evaluate_training_data(
+                        training_data=training_data, agent_id=str(agent.id)
+                    )
+                    CrewTrainingHandler(filename).save_trained_data(
+                        agent_id=str(agent.role), trained_data=result.model_dump()
+                    )
+        except Exception as e:
+            self._logger.log("error", f"Training failed: {e}", color="red")
+            CrewTrainingHandler(TRAINING_DATA_FILE).clear()
+            CrewTrainingHandler(filename).clear()
+            raise
 
     def kickoff(
         self,
@@ -674,12 +681,7 @@ class Crew(BaseModel):
                 manager.tools = []
                 raise Exception("Manager agent should not have tools")
         else:
-            self.manager_llm = (
-                getattr(self.manager_llm, "model_name", None)
-                or getattr(self.manager_llm, "model", None)
-                or getattr(self.manager_llm, "deployment_name", None)
-                or self.manager_llm
-            )
+            self.manager_llm = create_llm(self.manager_llm)
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
@@ -1011,8 +1013,8 @@ class Crew(BaseModel):
         return result
 
     def query_knowledge(self, query: List[str]) -> Union[List[Dict[str, Any]], None]:
-        if self._knowledge:
-            return self._knowledge.query(query)
+        if self.knowledge:
+            return self.knowledge.query(query)
         return None
 
     def fetch_inputs(self) -> Set[str]:
@@ -1056,6 +1058,8 @@ class Crew(BaseModel):
             "_telemetry",
             "agents",
             "tasks",
+            "knowledge_sources",
+            "knowledge",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
@@ -1063,6 +1067,9 @@ class Crew(BaseModel):
         task_mapping = {}
 
         cloned_tasks = []
+        existing_knowledge_sources = shallow_copy(self.knowledge_sources)
+        existing_knowledge = shallow_copy(self.knowledge)
+
         for task in self.tasks:
             cloned_task = task.copy(cloned_agents, task_mapping)
             cloned_tasks.append(cloned_task)
@@ -1082,7 +1089,13 @@ class Crew(BaseModel):
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
 
-        copied_crew = Crew(**copied_data, agents=cloned_agents, tasks=cloned_tasks)
+        copied_crew = Crew(
+            **copied_data,
+            agents=cloned_agents,
+            tasks=cloned_tasks,
+            knowledge_sources=existing_knowledge_sources,
+            knowledge=existing_knowledge,
+        )
 
         return copied_crew
 
@@ -1154,3 +1167,80 @@ class Crew(BaseModel):
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+
+    def reset_memories(self, command_type: str) -> None:
+        """Reset specific or all memories for the crew.
+
+        Args:
+            command_type: Type of memory to reset.
+                Valid options: 'long', 'short', 'entity', 'knowledge',
+                'kickoff_outputs', or 'all'
+
+        Raises:
+            ValueError: If an invalid command type is provided.
+            RuntimeError: If memory reset operation fails.
+        """
+        VALID_TYPES = frozenset(
+            ["long", "short", "entity", "knowledge", "kickoff_outputs", "all"]
+        )
+
+        if command_type not in VALID_TYPES:
+            raise ValueError(
+                f"Invalid command type. Must be one of: {', '.join(sorted(VALID_TYPES))}"
+            )
+
+        try:
+            if command_type == "all":
+                self._reset_all_memories()
+            else:
+                self._reset_specific_memory(command_type)
+
+            self._logger.log("info", f"{command_type} memory has been reset")
+
+        except Exception as e:
+            error_msg = f"Failed to reset {command_type} memory: {str(e)}"
+            self._logger.log("error", error_msg)
+            raise RuntimeError(error_msg) from e
+
+    def _reset_all_memories(self) -> None:
+        """Reset all available memory systems."""
+        memory_systems = [
+            ("short term", self._short_term_memory),
+            ("entity", self._entity_memory),
+            ("long term", self._long_term_memory),
+            ("task output", self._task_output_handler),
+            ("knowledge", self.knowledge),
+        ]
+
+        for name, system in memory_systems:
+            if system is not None:
+                try:
+                    system.reset()
+                except Exception as e:
+                    raise RuntimeError(f"Failed to reset {name} memory") from e
+
+    def _reset_specific_memory(self, memory_type: str) -> None:
+        """Reset a specific memory system.
+
+        Args:
+            memory_type: Type of memory to reset
+
+        Raises:
+            RuntimeError: If the specified memory system fails to reset
+        """
+        reset_functions = {
+            "long": (self._long_term_memory, "long term"),
+            "short": (self._short_term_memory, "short term"),
+            "entity": (self._entity_memory, "entity"),
+            "knowledge": (self.knowledge, "knowledge"),
+            "kickoff_outputs": (self._task_output_handler, "task output"),
+        }
+
+        memory_system, name = reset_functions[memory_type]
+        if memory_system is None:
+            raise RuntimeError(f"{name} memory system is not initialized")
+
+        try:
+            memory_system.reset()
+        except Exception as e:
+            raise RuntimeError(f"Failed to reset {name} memory") from e
