@@ -58,38 +58,104 @@ my_crew = Crew(
 ### Example: Use Custom Memory Instances e.g FAISS as the VectorDB
 
 ```python Code
-from crewai import Crew, Agent, Task, Process
+from crewai import Crew, Process
+from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
+from crewai.memory.storage import LTMSQLiteStorage, RAGStorage
+from typing import List, Optional
 
 # Assemble your crew with memory capabilities
-my_crew = Crew(
-    agents=[...],
-    tasks=[...],
-    process="Process.sequential",
-    memory=True,
-    long_term_memory=EnhanceLongTermMemory(
+my_crew: Crew = Crew(
+    agents = [...],
+    tasks = [...],
+    process = Process.sequential,
+    memory = True,
+    # Long-term memory for persistent storage across sessions
+    long_term_memory = LongTermMemory(
         storage=LTMSQLiteStorage(
-            db_path="/my_data_dir/my_crew1/long_term_memory_storage.db"
+            db_path="/my_crew1/long_term_memory_storage.db"
         )
     ),
-    short_term_memory=EnhanceShortTermMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="short_term",
-            data_dir="//my_data_dir",
-            model=embedder["model"],
-            dimension=embedder["dimension"],
+    # Short-term memory for current context using RAG
+    short_term_memory = ShortTermMemory(
+        storage = RAGStorage(
+                embedder_config={
+                    "provider": "openai",
+                    "config": {
+                        "model": 'text-embedding-3-small'
+                    }
+                },
+                type="short_term",
+                path="/my_crew1/"
+            )
         ),
     ),
-    entity_memory=EnhanceEntityMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="entities",
-            data_dir="//my_data_dir",
-            model=embedder["model"],
-            dimension=embedder["dimension"],
-        ),
+    # Entity memory for tracking key information about entities
+    entity_memory = EntityMemory(
+        storage=RAGStorage(
+            embedder_config={
+                "provider": "openai",
+                "config": {
+                    "model": 'text-embedding-3-small'
+                }
+            },
+            type="short_term",
+            path="/my_crew1/"
+        )
     ),
     verbose=True,
+)
+```
+
+## Security Considerations
+
+When configuring memory storage:
+- Use environment variables for storage paths (e.g., `CREWAI_STORAGE_DIR`)
+- Never hardcode sensitive information like database credentials
+- Consider access permissions for storage directories
+- Use relative paths when possible to maintain portability
+
+Example using environment variables:
+```python
+import os
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage import LTMSQLiteStorage
+
+# Configure storage path using environment variable
+storage_path = os.getenv("CREWAI_STORAGE_DIR", "./storage")
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(
+            db_path="{storage_path}/memory.db".format(storage_path=storage_path)
+        )
+    )
+)
+```
+
+## Configuration Examples
+
+### Basic Memory Configuration
+```python
+from crewai import Crew
+from crewai.memory import LongTermMemory
+
+# Simple memory configuration
+crew = Crew(memory=True)  # Uses default storage locations
+```
+
+### Custom Storage Configuration
+```python
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage import LTMSQLiteStorage
+
+# Configure custom storage paths
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(db_path="./memory.db")
+    )
 )
 ```
 
@@ -185,7 +251,12 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=OpenAIEmbeddingFunction(api_key=os.getenv("OPENAI_API_KEY"), model="text-embedding-3-small"),
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -242,13 +313,15 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=OpenAIEmbeddingFunction(
-        api_key="YOUR_API_KEY",
-        api_base="YOUR_API_BASE_PATH",
-        api_type="azure",
-        api_version="YOUR_API_VERSION",
-        model="text-embedding-3-small"
-    )
+    embedder={
+        "provider": "openai",
+        "config": {
+            "api_key": "YOUR_API_KEY",
+            "api_base": "YOUR_API_BASE_PATH",
+            "api_version": "YOUR_API_VERSION",
+            "model_name": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -264,12 +337,15 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=GoogleVertexEmbeddingFunction(
-        project_id="YOUR_PROJECT_ID",
-        region="YOUR_REGION",
-        api_key="YOUR_API_KEY",
-        model="textembedding-gecko"
-    )
+    embedder={
+        "provider": "vertexai",
+        "config": {
+            "project_id"="YOUR_PROJECT_ID",
+            "region"="YOUR_REGION",
+            "api_key"="YOUR_API_KEY",
+            "model_name"="textembedding-gecko"
+        }
+    }
 )
 ```
 
@@ -353,6 +429,33 @@ my_crew = Crew(
             "api_url": "<api_url>",
             "api_key": "<YOUR_API_KEY>",
             "project_id": "<YOUR_PROJECT_ID>",
+        }
+    }
+)
+```
+
+### Adding Custom Embedding Function
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+from chromadb import Documents, EmbeddingFunction, Embeddings
+
+# Create a custom embedding function
+class CustomEmbedder(EmbeddingFunction):
+    def __call__(self, input: Documents) -> Embeddings:
+        # generate embeddings
+        return [1, 2, 3] # this is a dummy embedding
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "custom",
+        "config": {
+            "embedder": CustomEmbedder()
         }
     }
 )

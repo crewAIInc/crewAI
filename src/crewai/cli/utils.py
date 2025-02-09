@@ -9,6 +9,7 @@ import tomli
 from rich.console import Console
 
 from crewai.cli.constants import ENV_VARS
+from crewai.crew import Crew
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -247,3 +248,64 @@ def write_env_file(folder_path, env_vars):
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
             file.write(f"{key}={value}\n")
+
+
+def get_crew(crew_path: str = "crew.py", require: bool = False) -> Crew | None:
+    """Get the crew instance from the crew.py file."""
+    try:
+        import importlib.util
+        import os
+
+        for root, _, files in os.walk("."):
+            if "crew.py" in files:
+                crew_path = os.path.join(root, "crew.py")
+                try:
+                    spec = importlib.util.spec_from_file_location(
+                        "crew_module", crew_path
+                    )
+                    if not spec or not spec.loader:
+                        continue
+                    module = importlib.util.module_from_spec(spec)
+                    try:
+                        sys.modules[spec.name] = module
+                        spec.loader.exec_module(module)
+
+                        for attr_name in dir(module):
+                            attr = getattr(module, attr_name)
+                            try:
+                                if callable(attr) and hasattr(attr, "crew"):
+                                    crew_instance = attr().crew()
+                                    return crew_instance
+
+                            except Exception as e:
+                                print(f"Error processing attribute {attr_name}: {e}")
+                                continue
+
+                    except Exception as exec_error:
+                        print(f"Error executing module: {exec_error}")
+                        import traceback
+
+                        print(f"Traceback: {traceback.format_exc()}")
+
+                except (ImportError, AttributeError) as e:
+                    if require:
+                        console.print(
+                            f"Error importing crew from {crew_path}: {str(e)}",
+                            style="bold red",
+                        )
+                        continue
+
+                break
+
+        if require:
+            console.print("No valid Crew instance found in crew.py", style="bold red")
+            raise SystemExit
+        return None
+
+    except Exception as e:
+        if require:
+            console.print(
+                f"Unexpected error while loading crew: {str(e)}", style="bold red"
+            )
+            raise SystemExit
+        return None
