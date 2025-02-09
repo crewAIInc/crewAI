@@ -1081,7 +1081,26 @@ class Crew(BaseModel):
         openai_model_name: Optional[str] = None,  # For backward compatibility
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
+        """Test and evaluate the Crew with the given inputs for n iterations.
+
+        This method runs tests to evaluate the performance of the crew using the specified
+        language model. It supports both string model names and LLM instances for flexibility.
+
+        Args:
+            n_iterations: Number of test iterations to run
+            llm: Language model configuration (preferred). Can be:
+                - A string model name (e.g., "gpt-4")
+                - An LLM instance
+                - Any object with model_name or deployment_name attributes
+            openai_model_name: Legacy parameter for backward compatibility.
+                Deprecated: Will be removed in future versions. Use `llm` instead.
+            inputs: Optional dictionary of inputs to be used during testing
+
+        Note:
+            The `openai_model_name` parameter is deprecated and will be removed in
+            future versions. Use the more flexible `llm` parameter instead, which
+            supports any LLM implementation.
+        """
         test_crew = self.copy()
 
         # For backward compatibility, convert openai_model_name to llm

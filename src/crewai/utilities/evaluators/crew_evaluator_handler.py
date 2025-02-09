@@ -1,8 +1,13 @@
-from collections import defaultdict
+from collections.abc import Callable
+from typing import Any, Dict, List, Union, Annotated, DefaultDict
 
-from typing import Any, Union
-
-from pydantic import BaseModel, Field, InstanceOf
+from pydantic import (
+    BaseModel,
+    Field,
+    InstanceOf,
+    PrivateAttr,
+    model_validator,
+)
 from rich.box import HEAVY_EDGE
 from rich.console import Console
 from rich.table import Table
@@ -20,7 +25,7 @@ class TaskEvaluationPydanticOutput(BaseModel):
     )
 
 
-class CrewEvaluator:
+class CrewEvaluator(BaseModel):
     """
     A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
 
@@ -31,15 +36,62 @@ class CrewEvaluator:
         iteration (int): The current iteration of the evaluation.
     """
 
-    tasks_scores: defaultdict = defaultdict(list)
-    run_execution_times: defaultdict = defaultdict(list)
-    iteration: int = 0
+    crew: Any = Field(description="The crew of agents to evaluate.")
+    llm: Union[str, InstanceOf[LLM], Any] = Field(
+        description="Language model that will run the evaluation."
+    )
+    tasks_scores: DefaultDict[int, List[float]] = Field(
+        default_factory=lambda: DefaultDict(list),
+        description="Dictionary to store the scores of the agents for each task."
+    )
+    run_execution_times: DefaultDict[int, List[int]] = Field(
+        default_factory=lambda: DefaultDict(list),
+        description="Dictionary to store execution times for each run."
+    )
+    iteration: int = Field(
+        default=0,
+        description="Current iteration of the evaluation."
+    )
+
+    @model_validator(mode="after")
+    def validate_llm(self):
+        """Validates that the LLM is properly configured."""
+        if not self.llm:
+            raise ValueError("LLM configuration is required")
+        return self
+
+    _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
 
     def __init__(self, crew, llm: Union[str, InstanceOf[LLM], Any]):
-        self.crew = crew
-        self.llm = llm if isinstance(llm, LLM) else LLM(model=llm)
-        self._telemetry = Telemetry()
+        # Initialize Pydantic model with validated fields
+        super().__init__(crew=crew, llm=llm)
         self._setup_for_evaluating()
+
+    @model_validator(mode="before")
+    def init_llm(cls, values):
+        """Initialize LLM before Pydantic validation."""
+        llm = values.get("llm")
+        try:
+            if isinstance(llm, str):
+                values["llm"] = LLM(model=llm)
+            elif isinstance(llm, LLM):
+                values["llm"] = llm
+            else:
+                # For any other type, attempt to extract relevant attributes
+                llm_params = {
+                    "model": getattr(llm, "model_name", None)
+                    or getattr(llm, "deployment_name", None)
+                    or str(llm),
+                    "temperature": getattr(llm, "temperature", None),
+                    "max_tokens": getattr(llm, "max_tokens", None),
+                    "timeout": getattr(llm, "timeout", None),
+                }
+                # Remove None values
+                llm_params = {k: v for k, v in llm_params.items() if v is not None}
+                values["llm"] = LLM(**llm_params)
+        except Exception as e:
+            raise ValueError(f"Invalid LLM configuration: {str(e)}") from e
+        return values
 
     def _setup_for_evaluating(self) -> None:
         """Sets up the crew for evaluating."""
