@@ -17,7 +17,7 @@ class LongTermMemory(Memory):
     def __init__(self, storage=None, path=None):
         if not storage:
             storage = LTMSQLiteStorage(db_path=path) if path else LTMSQLiteStorage()
-        super().__init__(storage)
+        super().__init__(storage=storage)
 
     def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         metadata = item.metadata

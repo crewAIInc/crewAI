@@ -1917,6 +1917,77 @@ def test_task_callback_on_crew():
         assert isinstance(args[0], TaskOutput)
 
 
+def test_task_callback_both_on_task_and_crew():
+    from unittest.mock import MagicMock, patch
+    mock_callback_on_task = MagicMock()
+    mock_callback_on_crew = MagicMock()
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+        callback=mock_callback_on_task,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        task_callback=mock_callback_on_crew,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+
+        assert list_ideas.callback is not None
+        mock_callback_on_task.assert_called_once_with(list_ideas.output)
+        mock_callback_on_crew.assert_called_once_with(list_ideas.output)
+
+
+def test_task_same_callback_both_on_task_and_crew():
+    from unittest.mock import MagicMock, patch
+
+    mock_callback = MagicMock()
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+        callback=mock_callback,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        task_callback=mock_callback,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+
+        assert list_ideas.callback is not None
+        mock_callback.assert_called_once_with(list_ideas.output)
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tools_with_custom_caching():
     from unittest.mock import patch
