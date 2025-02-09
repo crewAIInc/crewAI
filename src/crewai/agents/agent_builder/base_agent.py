@@ -258,10 +258,21 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @field_validator('allowed_agents')
-    def validate_allowed_agents(cls, v):
-        if v is None:
+    def validate_allowed_agents(cls, v: Optional[List[Union[str, 'BaseAgent']]]):
+        """Validate and process the allowed agents provided.
+        This method ensures that each allowed agent is either a string or a BaseAgent instance.
+        If all agents meet this criteria, the list is returned as-is. Otherwise, a ValueError is raised.
+        Args:
+            v (Optional[List[Union[str, 'BaseAgent']]]): A list of strings or BaseAgent instances
+                representing the allowed agents, or None.
+        Returns:
+            Optional[List[Union[str, 'BaseAgent']]]: The validated list of allowed agents if valid.
+        Raises:
+            ValueError: If any element in the list is not a string or BaseAgent instance."""
+
+        if v is None or all(isinstance(agent, (str, BaseAgent)) for agent in v):
             return v
-        return [agent.role if isinstance(agent, BaseAgent) else agent for agent in v]
+        raise ValueError("allowed_agents must be a list of strings or BaseAgent instances.")
     
     @abstractmethod
     def get_output_converter(

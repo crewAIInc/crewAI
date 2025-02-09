@@ -53,7 +53,7 @@ class BaseAgentTool(BaseTool):
         context: Optional[str] = None
     ) -> str:
         try:
-            print("\n=== Delegating Work ===")
+            logger.debug("\n=== Delegating Work ===")
             
             if agent_name is None:
                 agent_name = ""
@@ -72,7 +72,7 @@ class BaseAgentTool(BaseTool):
                     error=f"No agent found with role '{sanitized_name}'"
                 )
                 
-            print(f"Delegating task to: {target_agent.role}")
+            logger.debug(f"Delegating task to: {target_agent.role}")
             
             new_task = Task(
                 description=task,
@@ -88,7 +88,7 @@ class BaseAgentTool(BaseTool):
             )
             
             result = target_agent.execute_task(new_task, context, tools)
-            print("\n=== Delegation Complete ===")
+            logger.debug("\n=== Delegation Complete ===")
             
             return result
         except Exception as e:
