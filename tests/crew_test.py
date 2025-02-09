@@ -10,13 +10,12 @@ import instructor
 import pydantic_core
 import pytest
 
-from crewai.llm import LLM
-from crewai.utilities.evaluators.crew_evaluator_handler import TaskEvaluationPydanticOutput
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.project import crew
@@ -26,6 +25,9 @@ from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
+from crewai.utilities.evaluators.crew_evaluator_handler import (
+    TaskEvaluationPydanticOutput,
+)
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
@@ -3340,6 +3342,38 @@ def test_crew_test_backward_compatibility(mock_kickoff, mock_copy, mock_evaluato
     mock_evaluator.assert_called_once()
     args = mock_evaluator.call_args[0]
     assert args[1] == "gpt-4"
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch.object(Crew, "copy")
+@mock.patch.object(Crew, "kickoff")
+def test_crew_test_with_invalid_inputs(mock_kickoff, mock_copy, mock_evaluator):
+    """Test that Crew.test() validates inputs properly."""
+    task = Task(description="Test task", expected_output="Test output", agent=researcher)
+    crew = Crew(agents=[researcher], tasks=[task])
+    mock_copy.return_value = crew
+    
+    with pytest.raises(TypeError):
+        crew.test(n_iterations=0)  # Invalid iterations
+        
+    with pytest.raises(ValueError):
+        crew.test(n_iterations=1, inputs="invalid")  # Invalid inputs type
+        
+    with pytest.raises(ValueError):
+        crew.test(n_iterations=1, llm="")  # Empty LLM name
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch.object(Crew, "copy")
+@mock.patch.object(Crew, "kickoff")
+def test_crew_test_concurrent_execution(mock_kickoff, mock_copy, mock_evaluator):
+    """Test that Crew.test() handles concurrent execution properly."""
+    task = Task(description="Test task", expected_output="Test output", agent=researcher)
+    crew = Crew(agents=[researcher], tasks=[task])
+    mock_copy.return_value = crew
+    mock_evaluator.return_value = mock.MagicMock()
+    n_iterations = 3
+    
+    crew.test(n_iterations=n_iterations)
+    assert mock_evaluator.return_value.set_iteration.call_count == n_iterations
 
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch.object(Crew, "copy")

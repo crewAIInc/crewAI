@@ -2,9 +2,9 @@ from unittest import mock
 
 import pytest
 
-from crewai.llm import LLM
 from crewai.agent import Agent
 from crewai.crew import Crew
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.evaluators.crew_evaluator_handler import (

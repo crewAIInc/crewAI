@@ -1,7 +1,5 @@
-from typing import Union
-
-from crewai.llm import LLM
 from collections import defaultdict
+from typing import Union
 
 from pydantic import BaseModel, Field
 from rich.box import HEAVY_EDGE
@@ -9,6 +7,7 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
@@ -41,9 +40,21 @@ class CrewEvaluator:
         Args:
             crew: The crew to evaluate
             llm: LLM instance or model name to use for evaluation
+            
+        Raises:
+            ValueError: If LLM model name is empty or invalid
+            RuntimeError: If evaluator agent initialization fails
         """
         self.crew = crew
-        self._llm = llm if isinstance(llm, LLM) else LLM(model=llm) if llm else None
+        
+        if isinstance(llm, str) and not llm.strip():
+            raise ValueError("LLM model name cannot be empty")
+            
+        try:
+            self._llm = llm if isinstance(llm, LLM) else LLM(model=llm) if llm else None
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize LLM: {str(e)}")
+            
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
@@ -190,7 +201,7 @@ class CrewEvaluator:
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task.execution_duration,
-                self._llm.model if self._llm else None,
+                self._llm.model if self._llm else "default",
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
