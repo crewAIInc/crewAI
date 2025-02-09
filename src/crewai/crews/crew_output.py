@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional, Set, Union
+from typing import Any, Callable, Dict, Optional, Set, Union
 
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
@@ -27,8 +27,19 @@ class CrewOutput(BaseModel):
     )
     token_usage: UsageMetrics = Field(description="Processed token summary", default={})
 
-    @property
-    def json(self) -> str:
+    def json(
+        self,
+        *,
+        include: Optional[IncEx] = None,
+        exclude: Optional[IncEx] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        encoder: Optional[Callable[[Any], Any]] = None,
+        models_as_dict: bool = True,
+        **dumps_kwargs: Any,
+    ) -> str:
         """Get the JSON representation of the output."""
         if self.tasks_output and self.tasks_output[-1].output_format != OutputFormat.JSON:
             raise ValueError(
@@ -42,14 +53,12 @@ class CrewOutput(BaseModel):
         indent: Optional[int] = None,
         include: Optional[IncEx] = None,
         exclude: Optional[IncEx] = None,
-        context: Optional[Any] = None,
         by_alias: bool = False,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         round_trip: bool = False,
         warnings: bool | Literal["none", "warn", "error"] = False,
-        serialize_as_any: bool = False,
     ) -> str:
         """Override model_dump_json to handle custom JSON output."""
         return super().model_dump_json(
