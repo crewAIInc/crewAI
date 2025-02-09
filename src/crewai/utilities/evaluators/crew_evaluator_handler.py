@@ -210,34 +210,40 @@ class CrewEvaluator:
         Raises:
             ValueError: If task to evaluate or task output is missing, or if evaluation result is invalid
         """
-        current_task = None
-        for task in self.crew.tasks:
-            if task.description == task_output.description:
-                current_task = task
-                break
+        try:
+            current_task = None
+            for task in self.crew.tasks:
+                if task.description == task_output.description:
+                    current_task = task
+                    break
 
-        if not current_task or not task_output:
-            raise ValueError(
-                "Task to evaluate and task output are required for evaluation"
+            if not current_task or not task_output:
+                raise ValueError(
+                    "Task to evaluate and task output are required for evaluation"
+                )
+
+            self._logger.log("info", f"Starting evaluation for task: {task_output.description}")
+            evaluator_agent = self._evaluator_agent()
+            evaluation_task = self._evaluation_task(
+                evaluator_agent, current_task, task_output.raw
             )
 
-        evaluator_agent = self._evaluator_agent()
-        evaluation_task = self._evaluation_task(
-            evaluator_agent, current_task, task_output.raw
-        )
+            evaluation_result = evaluation_task.execute_sync()
 
-        evaluation_result = evaluation_task.execute_sync()
-
-        if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
-            self._test_result_span = self._telemetry.individual_test_result_span(
-                self.crew,
-                evaluation_result.pydantic.quality,
-                current_task._execution_time,
-                self.llm,
-            )
-            self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
-            self.run_execution_times[self.iteration].append(
-                current_task._execution_time
-            )
-        else:
-            raise ValueError("Evaluation result is not in the expected format")
+            if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
+                self._test_result_span = self._telemetry.individual_test_result_span(
+                    self.crew,
+                    evaluation_result.pydantic.quality,
+                    current_task._execution_time,
+                    self.llm,
+                )
+                self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
+                self.run_execution_times[self.iteration].append(
+                    current_task._execution_time
+                )
+                self._logger.log("info", f"Evaluation completed with score: {evaluation_result.pydantic.quality}")
+            else:
+                raise ValueError("Evaluation result is not in the expected format")
+        except Exception as e:
+            self._logger.log("error", f"Evaluation failed: {str(e)}")
+            raise
