@@ -24,6 +24,7 @@ from crewai.tools import BaseTool
 from crewai.tools.base_tool import Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
+from crewai.utilities.converter import Converter
 
 T = TypeVar("T", bound="BaseAgent")
 
@@ -42,7 +43,7 @@ class BaseAgent(ABC, BaseModel):
         max_rpm (Optional[int]): Maximum number of requests per minute for the agent execution.
         allow_delegation (bool): Allow delegation of tasks to agents.
         tools (Optional[List[Any]]): Tools at the agent's disposal.
-        max_iter (Optional[int]): Maximum iterations for an agent to execute a task.
+        max_iter (int): Maximum iterations for an agent to execute a task.
         agent_executor (InstanceOf): An instance of the CrewAgentExecutor class.
         llm (Any): Language model that will run the agent.
         crew (Any): Crew to which the agent belongs.
@@ -114,7 +115,7 @@ class BaseAgent(ABC, BaseModel):
     tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
-    max_iter: Optional[int] = Field(
+    max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
     agent_executor: InstanceOf = Field(
@@ -125,11 +126,12 @@ class BaseAgent(ABC, BaseModel):
     )
     crew: Any = Field(default=None, description="Crew to which the agent belongs.")
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
-    cache_handler: InstanceOf[CacheHandler] = Field(
+    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
         default=None, description="An instance of the CacheHandler class."
     )
     tools_handler: InstanceOf[ToolsHandler] = Field(
-        default=None, description="An instance of the ToolsHandler class."
+        default_factory=ToolsHandler,
+        description="An instance of the ToolsHandler class.",
     )
     max_tokens: Optional[int] = Field(
         default=None, description="Maximum number of tokens for the agent's execution."
@@ -254,7 +256,7 @@ class BaseAgent(ABC, BaseModel):
     @abstractmethod
     def get_output_converter(
         self, llm: Any, text: str, model: type[BaseModel] | None, instructions: str
-    ):
+    ) -> Converter:
         """Get the converter class for the agent to create json/pydantic outputs."""
         pass
 
