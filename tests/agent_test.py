@@ -1183,7 +1183,7 @@ def test_agent_max_retry_limit():
             [
                 mock.call(
                     {
-                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
+                        "input": "Say the word: Hi\n\nThis is the expected criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,
@@ -1191,7 +1191,7 @@ def test_agent_max_retry_limit():
                 ),
                 mock.call(
                     {
-                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
+                        "input": "Say the word: Hi\n\nThis is the expected criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,

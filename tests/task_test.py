@@ -724,14 +724,14 @@ def test_interpolate_inputs():
     )
 
     task.interpolate_inputs_and_add_conversation_history(
-        inputs={"topic": "AI", "date": "2024"}
+        inputs={"topic": "AI", "date": "2025"}
     )
     assert (
         task.description
         == "Give me a list of 5 interesting ideas about AI to explore for an article, what makes them unique and interesting."
     )
     assert task.expected_output == "Bullet point list of 5 interesting ideas about AI."
-    assert task.output_file == "/tmp/AI/output_2024.txt"
+    assert task.output_file == "/tmp/AI/output_2025.txt"
 
     task.interpolate_inputs_and_add_conversation_history(
         inputs={"topic": "ML", "date": "2025"}
