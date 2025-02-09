@@ -272,28 +272,3 @@ class EmbeddingConfigurator:
                     raise e
 
         return WatsonEmbeddingFunction()
-
-    @staticmethod
-    def _configure_custom(config):
-        custom_embedder = config.get("embedder")
-        if isinstance(custom_embedder, EmbeddingFunction):
-            try:
-                validate_embedding_function(custom_embedder)
-                return custom_embedder
-            except Exception as e:
-                raise ValueError(f"Invalid custom embedding function: {str(e)}")
-        elif callable(custom_embedder):
-            try:
-                instance = custom_embedder()
-                if isinstance(instance, EmbeddingFunction):
-                    validate_embedding_function(instance)
-                    return instance
-                raise ValueError(
-                    "Custom embedder does not create an EmbeddingFunction instance"
-                )
-            except Exception as e:
-                raise ValueError(f"Error instantiating custom embedder: {str(e)}")
-        else:
-            raise ValueError(
-                "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"
-            )
