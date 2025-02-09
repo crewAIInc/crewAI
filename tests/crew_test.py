@@ -2862,7 +2862,8 @@ def test_crew_testing_backward_compatibility(kickoff_mock, copy_mock, crew_evalu
     copy_mock.return_value = crew
 
     n_iterations = 2
-    crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
+    with pytest.warns(DeprecationWarning, match="openai_model_name is deprecated"):
+        crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
 
     # Ensure kickoff is called on the copied crew
     kickoff_mock.assert_has_calls([
@@ -2899,6 +2900,34 @@ def test_crew_testing_missing_llm(kickoff_mock, copy_mock, crew_evaluator):
     n_iterations = 2
     with pytest.raises(ValueError, match="Either llm or openai_model_name must be provided"):
         crew.test(n_iterations)
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_with_invalid_llm(kickoff_mock, copy_mock, crew_evaluator):
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+    )
+
+    # Create a mock for the copied crew
+    copy_mock.return_value = crew
+
+    # Test invalid LLM type
+    with pytest.raises(ValueError, match="Failed to initialize LLM"):
+        crew.test(n_iterations=2, llm={})
+
+    # Test LLM without model attribute
+    class InvalidLLM:
+        def __init__(self): pass
+    with pytest.raises(ValueError, match="LLM must be either a string model name or an LLM instance"):
+        crew.test(n_iterations=2, llm=InvalidLLM())
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

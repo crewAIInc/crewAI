@@ -38,9 +38,17 @@ class CrewEvaluator:
 
     def __init__(self, crew, llm: Union[str, LLM]):
         self.crew = crew
-        self.llm = llm if isinstance(llm, LLM) else LLM(model=llm)
+        try:
+            self.llm = llm if isinstance(llm, LLM) else LLM(model=llm)
+            if not hasattr(self.llm, 'model'):
+                raise ValueError("Provided LLM instance must have a 'model' attribute")
+        except Exception as e:
+            raise ValueError(f"Failed to initialize LLM: {str(e)}")
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
+
+    def __str__(self) -> str:
+        return f"CrewEvaluator(model={str(self.llm)}, iteration={self.iteration})"
 
     def _setup_for_evaluating(self) -> None:
         """Sets up the crew for evaluating."""

@@ -1087,13 +1087,31 @@ class Crew(BaseModel):
             llm: LLM instance or model name to use for evaluation
             inputs: Optional dictionary of inputs to pass to the crew
         """
-        if not llm and not openai_model_name:
-            raise ValueError("Either llm or openai_model_name must be provided")
+        if openai_model_name:
+            warnings.warn(
+                "openai_model_name is deprecated and will be removed in future versions. Use llm parameter instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
         
         test_crew = self.copy()
         model = llm if llm else openai_model_name
-        if isinstance(model, str):
-            model = LLM(model=model)
+
+        try:
+            if not model:
+                raise ValueError(
+                    "Either llm or openai_model_name must be provided. Please provide either "
+                    "a custom LLM instance or an OpenAI model name."
+                )
+            if isinstance(model, LLM):
+                if not hasattr(model, 'model'):
+                    raise ValueError("Provided LLM instance must have a 'model' attribute")
+            elif isinstance(model, str):
+                model = LLM(model=model)
+            else:
+                raise ValueError("LLM must be either a string model name or an LLM instance")
+        except Exception as e:
+            raise ValueError(f"Failed to initialize LLM: {str(e)}")
 
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
