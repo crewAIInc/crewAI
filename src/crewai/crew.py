@@ -1092,7 +1092,7 @@ class Crew(BaseModel):
             inputs,
             llm or openai_model_name or "gpt-4o-mini",
         )
-        evaluator = CrewEvaluator(test_crew, llm or openai_model_name or "gpt-4o-mini")
+        evaluator = CrewEvaluator(test_crew, openai_model_name or "gpt-4o-mini")
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)
