@@ -1081,7 +1081,7 @@ class Crew(BaseModel):
         openai_model_name: Optional[Union[str, LLM]] = None,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures.
+        """Test and evaluate the Crew with the given inputs for n iterations.
 
         Args:
             n_iterations: The number of iterations to run the test.
@@ -1089,6 +1089,9 @@ class Crew(BaseModel):
                 the performance of the agents. If a string is provided, it will be used to create
                 an LLM instance.
             inputs: The inputs to use for the test.
+
+        Raises:
+            ValueError: If openai_model_name is not a string or LLM instance.
         """
         test_crew = self.copy()
 

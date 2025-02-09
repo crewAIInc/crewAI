@@ -4,6 +4,7 @@ from crewai.llm import LLM
 from collections import defaultdict
 
 from pydantic import BaseModel, Field
+from crewai.utilities.logger import Logger
 from rich.box import HEAVY_EDGE
 from rich.console import Console
 from rich.table import Table
@@ -42,11 +43,22 @@ class CrewEvaluator:
             crew (Crew): The crew to evaluate
             openai_model_name (Union[str, LLM]): Either a model name string or an LLM instance
                 to use for evaluation. If a string is provided, it will be used to create an
-                LLM instance.
+                LLM instance with default settings. If an LLM instance is provided, its settings
+                (like temperature) will be preserved.
+        
+        Raises:
+            ValueError: If openai_model_name is not a string or LLM instance.
         """
         self.crew = crew
-        self.llm = openai_model_name if isinstance(openai_model_name, LLM) else LLM(model=openai_model_name)
+        if not isinstance(openai_model_name, (str, LLM)):
+            raise ValueError(f"Invalid model type '{type(openai_model_name)}'. Expected str or LLM instance.")
+        self.model_instance = openai_model_name if isinstance(openai_model_name, LLM) else LLM(model=openai_model_name)
         self._telemetry = Telemetry()
+        self._logger = Logger()
+        self._logger.log(
+            "info",
+            f"Initializing CrewEvaluator with model: {openai_model_name if isinstance(openai_model_name, str) else openai_model_name.model}"
+        )
         self._setup_for_evaluating()
 
     def _setup_for_evaluating(self) -> None:
@@ -62,7 +74,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=self.llm,
+            llm=self.model_instance,
         )
 
     def _evaluation_task(
@@ -192,7 +204,11 @@ class CrewEvaluator:
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task._execution_time,
-                self.llm.model,
+                self.model_instance.model,
+            )
+            self._logger.log(
+                "info",
+                f"Task evaluation completed with quality score: {evaluation_result.pydantic.quality}"
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(

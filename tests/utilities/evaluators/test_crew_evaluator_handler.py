@@ -136,14 +136,25 @@ class TestCrewEvaluator:
         """Test that CrewEvaluator correctly handles custom LLM instances."""
         custom_llm = LLM(model="gpt-4", temperature=0.5)
         evaluator = CrewEvaluator(crew_planner.crew, custom_llm)
-        assert evaluator.llm == custom_llm
-        assert evaluator.llm.temperature == 0.5
+        assert evaluator.model_instance == custom_llm
+        assert evaluator.model_instance.temperature == 0.5
+
+    def test_evaluator_with_invalid_model_type(self, crew_planner):
+        """Test that CrewEvaluator raises error for invalid model type."""
+        with pytest.raises(ValueError, match="Invalid model type"):
+            CrewEvaluator(crew_planner.crew, 123)
+
+    def test_evaluator_preserves_model_settings(self, crew_planner):
+        """Test that CrewEvaluator preserves model settings."""
+        custom_llm = LLM(model="gpt-4", temperature=0.7)
+        evaluator = CrewEvaluator(crew_planner.crew, custom_llm)
+        assert evaluator.model_instance.temperature == 0.7
 
     def test_evaluator_with_model_name(self, crew_planner):
         """Test that CrewEvaluator correctly handles string model names."""
         evaluator = CrewEvaluator(crew_planner.crew, "gpt-4")
-        assert isinstance(evaluator.llm, LLM)
-        assert evaluator.llm.model == "gpt-4"
+        assert isinstance(evaluator.model_instance, LLM)
+        assert evaluator.model_instance.model == "gpt-4"
 
     def test_evaluate(self, crew_planner):
         task_output = TaskOutput(
