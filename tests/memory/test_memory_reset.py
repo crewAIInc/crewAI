@@ -1,7 +1,7 @@
-from pathlib import Path
-from typing import Generator
 import os
 import tempfile
+from pathlib import Path
+from typing import Generator
 
 import pytest
 from chromadb import Documents, EmbeddingFunction, Embeddings
