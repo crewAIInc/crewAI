@@ -1,5 +1,5 @@
-from collections.abc import Callable
-from typing import Any, Dict, List, Union, Annotated, DefaultDict
+from collections import defaultdict
+from typing import Any, Dict, List, Union
 
 from pydantic import (
     BaseModel,
@@ -40,12 +40,12 @@ class CrewEvaluator(BaseModel):
     llm: Union[str, InstanceOf[LLM], Any] = Field(
         description="Language model that will run the evaluation."
     )
-    tasks_scores: DefaultDict[int, List[float]] = Field(
-        default_factory=lambda: DefaultDict(list),
+    tasks_scores: Dict[int, List[float]] = Field(
+        default_factory=lambda: defaultdict(list),
         description="Dictionary to store the scores of the agents for each task."
     )
-    run_execution_times: DefaultDict[int, List[int]] = Field(
-        default_factory=lambda: DefaultDict(list),
+    run_execution_times: Dict[int, List[int]] = Field(
+        default_factory=lambda: defaultdict(list),
         description="Dictionary to store execution times for each run."
     )
     iteration: int = Field(
