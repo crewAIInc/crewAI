@@ -60,8 +60,8 @@ class BaseAgentTool(BaseTool):
 
         # Check if delegation is allowed based on allowed_agents list
         delegating_agent = [a for a in self.agents if a.id == self.agent_id][0]
-        if (delegating_agent.allowed_agents is not None and 
-            agent[0].role not in delegating_agent.allowed_agents):
+        if (delegating_agent.allowed_agents is not None and
+                agent[0].role not in delegating_agent.allowed_agents):
             return self.i18n.errors("agent_tool_unauthorized_delegation").format(
                 coworker=agent[0].role,
                 allowed_agents="\n".join([f"- {role}" for role in delegating_agent.allowed_agents])
