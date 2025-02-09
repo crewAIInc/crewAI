@@ -6,6 +6,7 @@ from concurrent.futures import Future
 from hashlib import md5
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from langchain_core.language_models.base import BaseLanguageModel
 from pydantic import (
     UUID4,
     BaseModel,

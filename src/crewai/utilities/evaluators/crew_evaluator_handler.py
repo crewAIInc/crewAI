@@ -2,7 +2,7 @@ import os
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Union
 
-from langchain.base_language.base_language_model import BaseLanguageModel
+from langchain_core.language_models.base import BaseLanguageModel
 from pydantic import BaseModel, Field, InstanceOf
 from rich.box import HEAVY_EDGE
 from rich.console import Console
