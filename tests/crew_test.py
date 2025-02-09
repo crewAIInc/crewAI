@@ -26,9 +26,9 @@ from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
+from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 
 @pytest.fixture
 def crew_evaluator():
