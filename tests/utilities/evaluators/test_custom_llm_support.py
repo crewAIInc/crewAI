@@ -1,6 +1,5 @@
-from unittest.mock import MagicMock
-
 import pytest
+from unittest.mock import MagicMock
 
 from crewai.agent import Agent
 from crewai.crew import Crew
@@ -37,7 +36,7 @@ def test_crew_test_with_custom_llm():
     crew.test(n_iterations=1, openai_model_name="gpt-4")
 
     # Test error when neither parameter is provided
-    with pytest.raises(ValueError, match="Either llm or openai_model_name must be provided"):
+    with pytest.raises(ValueError, match="Must provide either 'llm' or 'openai_model_name' parameter"):
         crew.test(n_iterations=1)
 
 def test_crew_evaluator_with_custom_llm():

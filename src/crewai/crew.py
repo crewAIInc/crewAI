@@ -1166,21 +1166,6 @@ class Crew(BaseModel):
         model_to_use = self._get_llm_instance(llm, openai_model_name)
         test_crew = self.copy()
 
-    def _get_llm_instance(self, llm: Optional[Union[str, LLM]], openai_model_name: Optional[str]) -> LLM:
-        """Get an LLM instance from either llm or openai_model_name parameter.
-        
-        Args:
-            llm: LLM instance or model name
-            openai_model_name: OpenAI model name (deprecated)
-            
-        Returns:
-            LLM instance
-        """
-        model = llm if llm is not None else openai_model_name
-        if isinstance(model, str):
-            return LLM(model=model)
-        return model
-
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
             n_iterations,
@@ -1194,6 +1179,28 @@ class Crew(BaseModel):
             test_crew.kickoff(inputs=inputs)
 
         evaluator.print_crew_evaluation_result()
+
+    def _get_llm_instance(self, llm: Optional[Union[str, LLM]], openai_model_name: Optional[str]) -> LLM:
+        """Get an LLM instance from either llm or openai_model_name parameter.
+        
+        Args:
+            llm: LLM instance or model name
+            openai_model_name: OpenAI model name (deprecated)
+            
+        Returns:
+            LLM instance
+            
+        Raises:
+            ValueError: If neither llm nor openai_model_name is provided
+        """
+        model = llm if llm is not None else openai_model_name
+        if model is None:
+            raise ValueError("Must provide either 'llm' or 'openai_model_name' parameter")
+        if isinstance(model, str):
+            return LLM(model=model)
+        if not isinstance(model, LLM):
+            raise ValueError("Model must be either a string or an LLM instance")
+        return model
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
