@@ -36,10 +36,7 @@ class CrewEvaluator:
 
     def __init__(self, crew, llm: Union[str, LLM]):
         self.crew = crew
-        if isinstance(llm, str):
-            self.llm = LLM(model=llm)
-        else:
-            self.llm = llm
+        self.llm = LLM(model=llm) if isinstance(llm, str) else llm
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
 

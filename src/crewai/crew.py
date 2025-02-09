@@ -1161,13 +1161,25 @@ class Crew(BaseModel):
             inputs: Optional dictionary of inputs to pass to the crew
         """
         if not llm and not openai_model_name:
-            raise ValueError("Either llm or openai_model_name must be provided")
+            raise ValueError("Must provide either 'llm' or 'openai_model_name' parameter")
         
-        model_to_use: Union[str, LLM] = llm if llm is not None else openai_model_name
-        if isinstance(model_to_use, str):
-            model_to_use = LLM(model=model_to_use)
-        
+        model_to_use = self._get_llm_instance(llm, openai_model_name)
         test_crew = self.copy()
+
+    def _get_llm_instance(self, llm: Optional[Union[str, LLM]], openai_model_name: Optional[str]) -> LLM:
+        """Get an LLM instance from either llm or openai_model_name parameter.
+        
+        Args:
+            llm: LLM instance or model name
+            openai_model_name: OpenAI model name (deprecated)
+            
+        Returns:
+            LLM instance
+        """
+        model = llm if llm is not None else openai_model_name
+        if isinstance(model, str):
+            return LLM(model=model)
+        return model
 
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
