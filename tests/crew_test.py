@@ -300,6 +300,15 @@ def test_hierarchical_process():
     )
 
 
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
+def test_crew_test_backward_compatibility(mock_copy, mock_evaluator):
+    crew = Crew(agents=[researcher], tasks=[Task(description="test", agent=researcher)])
+    crew.test(2, openai_model_name="gpt-4")
+    mock_evaluator.assert_called_once()
+    _, kwargs = mock_evaluator.call_args
+    assert kwargs["llm"] == "gpt-4"
+
 def test_manager_llm_requirement_for_hierarchical_process():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -1123,7 +1132,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headeruvs=["authorization"])
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 

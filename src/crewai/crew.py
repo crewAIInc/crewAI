@@ -6,6 +6,10 @@ from concurrent.futures import Future
 from hashlib import md5
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from pydantic import InstanceOf
+
+from crewai.llm import LLM
+
 from pydantic import (
     UUID4,
     BaseModel,
@@ -1075,7 +1079,8 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        openai_model_name: Optional[str] = None,
+        llm: Optional[Union[str, InstanceOf[LLM], Any]] = None,
+        openai_model_name: Optional[str] = None,  # For backward compatibility
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
@@ -1085,9 +1090,9 @@ class Crew(BaseModel):
             test_crew,
             n_iterations,
             inputs,
-            openai_model_name,  # type: ignore[arg-type]
-        )  # type: ignore[arg-type]
-        evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
+            llm or openai_model_name or "gpt-4o-mini",
+        )
+        evaluator = CrewEvaluator(test_crew, llm or openai_model_name or "gpt-4o-mini")
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)

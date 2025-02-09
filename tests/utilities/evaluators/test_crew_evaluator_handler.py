@@ -4,6 +4,7 @@ import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.evaluators.crew_evaluator_handler import (
@@ -23,7 +24,7 @@ class TestCrewEvaluator:
         )
         crew = Crew(agents=[agent], tasks=[task])
 
-        return CrewEvaluator(crew, openai_model_name="gpt-4o-mini")
+        return CrewEvaluator(crew, llm="gpt-4o-mini")
 
     def test_setup_for_evaluating(self, crew_planner):
         crew_planner._setup_for_evaluating()
@@ -46,6 +47,7 @@ class TestCrewEvaluator:
         )
         assert agent.verbose is False
         assert agent.llm.model == "gpt-4o-mini"
+        assert isinstance(agent.llm, LLM)
 
     def test_evaluation_task(self, crew_planner):
         evaluator_agent = Agent(
@@ -130,6 +132,17 @@ class TestCrewEvaluator:
 
         # Ensure the console prints the table
         console.assert_has_calls([mock.call(), mock.call().print(table())])
+
+    def test_custom_llm_support(self):
+        agent = Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1")
+        task = Task(description="Task 1", expected_output="Output 1", agent=agent)
+        crew = Crew(agents=[agent], tasks=[task])
+        
+        custom_llm = LLM(model="custom-model")
+        evaluator = CrewEvaluator(crew, llm=custom_llm)
+        
+        assert evaluator.llm.model == "custom-model"
+        assert isinstance(evaluator.llm, LLM)
 
     def test_evaluate(self, crew_planner):
         task_output = TaskOutput(
