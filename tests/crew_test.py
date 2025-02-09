@@ -3306,8 +3306,7 @@ def test_conditional_should_execute():
 
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch("crewai.crew.Crew.copy")
-@mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
+def test_crew_testing_function(copy_mock, crew_evaluator_mock):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -3319,21 +3318,31 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
         tasks=[task],
     )
 
-    # Create a mock for the copied crew
-    copy_mock.return_value = crew
+    # Create a mock for the copied crew with a mock kickoff method
+    copied_crew = MagicMock()
+    copy_mock.return_value = copied_crew
+
+    # Create a mock for the CrewEvaluator instance
+    evaluator_instance = MagicMock()
+    crew_evaluator_mock.return_value = evaluator_instance
 
     n_iterations = 2
     crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
 
     # Ensure kickoff is called on the copied crew
-    kickoff_mock.assert_has_calls(
+    copied_crew.kickoff.assert_has_calls(
         [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
     )
 
-    crew_evaluator.assert_has_calls(
+    # Verify CrewEvaluator interactions
+    crew_evaluator_mock.assert_has_calls(
         [
             mock.call(crew, "gpt-4o-mini"),
             mock.call().set_iteration(1),
+            mock.call().set_iteration(2),
+            mock.call().print_crew_evaluation_result(),
+        ]
+    )
             mock.call().set_iteration(2),
             mock.call().print_crew_evaluation_result(),
         ]
