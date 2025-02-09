@@ -1,7 +1,7 @@
-import os
-import tempfile
 from pathlib import Path
 from typing import Generator
+import os
+import tempfile
 
 import pytest
 from chromadb import Documents, EmbeddingFunction, Embeddings
