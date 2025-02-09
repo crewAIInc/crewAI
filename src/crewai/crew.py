@@ -1086,13 +1086,15 @@ class Crew(BaseModel):
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         test_crew = self.copy()
 
+        # For backward compatibility, convert openai_model_name to llm
+        model_name = llm or openai_model_name or "gpt-4o-mini"
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
             n_iterations,
             inputs,
-            llm or openai_model_name or "gpt-4o-mini",
+            model_name,
         )
-        evaluator = CrewEvaluator(test_crew, openai_model_name or "gpt-4o-mini")
+        evaluator = CrewEvaluator(test_crew, llm=model_name)
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)
