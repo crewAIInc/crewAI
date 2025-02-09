@@ -60,40 +60,47 @@ my_crew = Crew(
 ```python Code
 from crewai import Crew, Process
 from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
-from crewai.memory.storage import LTMSQLiteStorage, CustomRAGStorage
+from crewai.memory.storage import LTMSQLiteStorage, RAGStorage
 from typing import List, Optional
 
 # Assemble your crew with memory capabilities
 my_crew: Crew = Crew(
-    agents: List = [...],
-    tasks: List = [...],
-    process: str = Process.sequential,
-    memory: bool = True,
+    agents = [...],
+    tasks = [...],
+    process = Process.sequential,
+    memory = True,
     # Long-term memory for persistent storage across sessions
-    long_term_memory: Optional[LongTermMemory] = LongTermMemory(
+    long_term_memory = LongTermMemory(
         storage=LTMSQLiteStorage(
-            db_path="${CREWAI_STORAGE_DIR}/my_crew1/long_term_memory_storage.db"
+            db_path="/my_crew1/long_term_memory_storage.db"
         )
     ),
     # Short-term memory for current context using RAG
-    short_term_memory: Optional[ShortTermMemory] = ShortTermMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="short_term",
-            data_dir="${CREWAI_STORAGE_DIR}",
-            model=embedder["model"],
-            dimension=embedder["dimension"],
+    short_term_memory = ShortTermMemory(
+        storage = RAGStorage(
+                embedder_config={
+                    "provider": "openai",
+                    "config": {
+                        "model": 'text-embedding-3-small'
+                    }
+                },
+                type="short_term",
+                path="/my_crew1/"
+            )
         ),
     ),
     # Entity memory for tracking key information about entities
-    entity_memory: Optional[EntityMemory] = EntityMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="entities",
-            data_dir="${CREWAI_STORAGE_DIR}",
-            model=embedder["model"],
-            dimension=embedder["dimension"],
-        ),
+    entity_memory = EntityMemory(
+        storage=RAGStorage(
+            embedder_config={
+                "provider": "openai",
+                "config": {
+                    "model": 'text-embedding-3-small'
+                }
+            },
+            type="short_term",
+            path="/my_crew1/"
+        )
     ),
     verbose=True,
 )
