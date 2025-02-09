@@ -14,6 +14,7 @@ from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.task import Task
@@ -1123,7 +1124,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headeruvs=["authorization"])
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
@@ -2812,10 +2813,11 @@ def test_conditional_should_execute():
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch("crewai.crew.Crew.copy")
 @mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
+def test_crew_testing_function_with_openai_model_name(kickoff_mock, copy_mock, crew_evaluator):
+    """Test backward compatibility with openai_model_name parameter."""
     task = Task(
-        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
-        expected_output="5 bullet points with a paragraph for each idea.",
+        description="Test task",
+        expected_output="Test output",
         agent=researcher,
     )
 
@@ -2824,20 +2826,87 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
         tasks=[task],
     )
 
-    # Create a mock for the copied crew
     copy_mock.return_value = crew
 
     n_iterations = 2
     crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
 
-    # Ensure kickoff is called on the copied crew
     kickoff_mock.assert_has_calls(
         [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
     )
 
     crew_evaluator.assert_has_calls(
         [
-            mock.call(crew, "gpt-4o-mini"),
+            mock.call(crew, mock.ANY),  # ANY because we convert to LLM instance
+            mock.call().set_iteration(1),
+            mock.call().set_iteration(2),
+            mock.call().print_crew_evaluation_result(),
+        ]
+    )
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_function_with_llm_instance(kickoff_mock, copy_mock, crew_evaluator):
+    """Test using LLM instance parameter."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+    )
+
+    copy_mock.return_value = crew
+    llm = LLM(model="gpt-4o-mini")
+    
+    n_iterations = 2
+    crew.test(n_iterations, llm=llm, inputs={"topic": "AI"})
+
+    kickoff_mock.assert_has_calls(
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+    )
+
+    crew_evaluator.assert_has_calls(
+        [
+            mock.call(crew, llm),
+            mock.call().set_iteration(1),
+            mock.call().set_iteration(2),
+            mock.call().print_crew_evaluation_result(),
+        ]
+    )
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_function_with_llm_string(kickoff_mock, copy_mock, crew_evaluator):
+    """Test using LLM string parameter."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+    )
+
+    copy_mock.return_value = crew
+    
+    n_iterations = 2
+    crew.test(n_iterations, llm="gpt-4o-mini", inputs={"topic": "AI"})
+
+    kickoff_mock.assert_has_calls(
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+    )
+
+    crew_evaluator.assert_has_calls(
+        [
+            mock.call(crew, mock.ANY),  # ANY because we don't care about the LLM instance details
             mock.call().set_iteration(1),
             mock.call().set_iteration(2),
             mock.call().print_crew_evaluation_result(),
