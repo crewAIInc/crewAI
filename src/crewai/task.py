@@ -9,13 +9,14 @@ from copy import copy
 from hashlib import md5
 from pathlib import Path
 from typing import (
+    AbstractSet,
     Any,
     Callable,
     ClassVar,
     Dict,
     List,
+    Mapping,
     Optional,
-    Sequence,
     Set,
     Tuple,
     Type,
@@ -297,7 +298,7 @@ class Task(BaseModel):
         self,
         agent: Optional[BaseAgent] = None,
         context: Optional[str] = None,
-        tools: Optional[Sequence[BaseTool]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
         return self._execute_core(agent, context, tools)
@@ -320,7 +321,7 @@ class Task(BaseModel):
         self,
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
-        tools: Optional[Sequence[BaseTool]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
@@ -607,37 +608,53 @@ class Task(BaseModel):
         self.delegations += 1
 
     def copy(
+        self,
+        *,
+        include: Optional[AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any]] = None,
+        exclude: Optional[AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any]] = None,
+        update: Optional[Dict[str, Any]] = None,
+        deep: bool = False,
+    ) -> "Task":
+        """Create a copy of the Task."""
+        exclude_set = {"id", "agent", "context", "tools"}
+        if exclude:
+            exclude_set.update(exclude)
+        
+        copied_task = super().copy(
+            include=include,
+            exclude=exclude_set,
+            update=update,
+            deep=deep,
+        )
+        
+        copied_task.id = uuid.uuid4()
+        copied_task.agent = None
+        copied_task.context = None
+        copied_task.tools = []
+        
+        return copied_task
+
+    def copy_with_agents(
         self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
     ) -> "Task":
-        """Create a deep copy of the Task."""
-        exclude = {
-            "id",
-            "agent",
-            "context",
-            "tools",
-        }
-
-        copied_data = self.model_dump(exclude=exclude)
-        copied_data = {k: v for k, v in copied_data.items() if v is not None}
-
-        cloned_context = (
-            [task_mapping[context_task.key] for context_task in self.context]
-            if self.context
-            else None
-        )
+        """Create a copy of the Task with agent references."""
+        copied_task = self.copy()
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
             return next((agent for agent in agents if agent.role == role), None)
 
-        cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
-        cloned_tools = copy(self.tools) if self.tools else []
+        if self.agent:
+            copied_task.agent = get_agent_by_role(self.agent.role)
 
-        copied_task = Task(
-            **copied_data,
-            context=cloned_context,
-            agent=cloned_agent,
-            tools=cloned_tools,
-        )
+        if self.context:
+            copied_task.context = [
+                task_mapping[context_task.key]
+                for context_task in self.context
+                if context_task.key in task_mapping
+            ]
+
+        if self.tools:
+            copied_task.tools = copy(self.tools)
 
         return copied_task
 
