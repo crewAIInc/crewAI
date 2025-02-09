@@ -4,6 +4,7 @@ import uuid
 import warnings
 from concurrent.futures import Future
 from hashlib import md5
+import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from crewai.llm import LLM
@@ -1085,11 +1086,17 @@ class Crew(BaseModel):
         
         Args:
             n_iterations: Number of test iterations to run
-            openai_model_name: (Deprecated) OpenAI model name to use for evaluation
-            llm: Language model to use for evaluation, can be a string (model name) or LLM instance
+            openai_model_name: (Deprecated) OpenAI model name to use for evaluation. Will be ignored if llm is provided.
+            llm: Language model to use for evaluation, can be a string (model name) or LLM instance.
+                 Takes precedence over openai_model_name if both are provided.
             inputs: Optional dictionary of inputs to pass to the crew
+
+        Raises:
+            ValueError: If neither openai_model_name nor llm is provided
         """
-        if not (openai_model_name or llm):
+        if openai_model_name and llm:
+            warnings.warn("Both openai_model_name and llm provided. Using llm parameter.")
+        elif not (openai_model_name or llm):
             raise ValueError("Either openai_model_name or llm must be provided")
 
         test_crew = self.copy()

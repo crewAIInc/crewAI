@@ -2845,75 +2845,76 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
         ]
     )
 
-@mock.patch("crewai.crew.CrewEvaluator")
-@mock.patch("crewai.crew.Crew.copy")
-@mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_test_with_custom_llm(kickoff_mock, copy_mock, crew_evaluator):
-    task = Task(
-        description="Test task",
-        expected_output="Expected output",
-        agent=researcher,
-    )
-    crew = Crew(agents=[researcher], tasks=[task])
-    custom_llm = LLM(model="gpt-4o-mini")
+class TestCrewTesting:
+    """Tests for Crew.test() functionality."""
 
-    copy_mock.return_value = crew
-    crew.test(n_iterations=2, llm=custom_llm, inputs={"topic": "AI"})
+    @pytest.fixture
+    def task(self):
+        return Task(
+            description="Test task",
+            expected_output="Expected output",
+            agent=researcher,
+        )
 
-    kickoff_mock.assert_has_calls([
-        mock.call(inputs={"topic": "AI"}),
-        mock.call(inputs={"topic": "AI"})
+    @pytest.fixture
+    def crew(self, task):
+        return Crew(agents=[researcher], tasks=[task])
+
+    @pytest.mark.parametrize("llm_input", [
+        "gpt-4o-mini",
+        LLM(model="gpt-4o-mini"),
     ])
+    @mock.patch("crewai.crew.CrewEvaluator")
+    @mock.patch("crewai.crew.Crew.copy")
+    @mock.patch("crewai.crew.Crew.kickoff")
+    def test_crew_test_with_different_llms(self, kickoff_mock, copy_mock, crew_evaluator, crew, llm_input):
+        """Test Crew.test() with different LLM inputs."""
+        copy_mock.return_value = crew
+        crew.test(n_iterations=2, llm=llm_input, inputs={"topic": "AI"})
 
-    crew_evaluator.assert_has_calls([
-        mock.call(crew, custom_llm),
-        mock.call().set_iteration(1),
-        mock.call().set_iteration(2),
-        mock.call().print_crew_evaluation_result(),
-    ])
+        kickoff_mock.assert_has_calls([
+            mock.call(inputs={"topic": "AI"}),
+            mock.call(inputs={"topic": "AI"})
+        ])
 
-@mock.patch("crewai.crew.CrewEvaluator")
-@mock.patch("crewai.crew.Crew.copy")
-@mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_test_with_both_llm_and_model_name(kickoff_mock, copy_mock, crew_evaluator):
-    task = Task(
-        description="Test task",
-        expected_output="Expected output",
-        agent=researcher,
-    )
-    crew = Crew(agents=[researcher], tasks=[task])
-    custom_llm = LLM(model="gpt-4o-mini")
+        crew_evaluator.assert_has_calls([
+            mock.call(crew, llm_input),
+            mock.call().set_iteration(1),
+            mock.call().set_iteration(2),
+            mock.call().print_crew_evaluation_result(),
+        ])
 
-    copy_mock.return_value = crew
-    crew.test(n_iterations=2, llm=custom_llm, openai_model_name="gpt-4", inputs={"topic": "AI"})
+    @mock.patch("crewai.crew.CrewEvaluator")
+    @mock.patch("crewai.crew.Crew.copy")
+    @mock.patch("crewai.crew.Crew.kickoff")
+    def test_crew_test_with_both_llm_and_model_name(self, kickoff_mock, copy_mock, crew_evaluator, crew):
+        """Test that llm parameter takes precedence over openai_model_name."""
+        custom_llm = LLM(model="gpt-4o-mini")
+        copy_mock.return_value = crew
 
-    kickoff_mock.assert_has_calls([
-        mock.call(inputs={"topic": "AI"}),
-        mock.call(inputs={"topic": "AI"})
-    ])
+        with pytest.warns(UserWarning, match="Both openai_model_name and llm provided. Using llm parameter."):
+            crew.test(n_iterations=2, llm=custom_llm, openai_model_name="gpt-4", inputs={"topic": "AI"})
 
-    # Should prioritize llm over openai_model_name
-    crew_evaluator.assert_has_calls([
-        mock.call(crew, custom_llm),
-        mock.call().set_iteration(1),
-        mock.call().set_iteration(2),
-        mock.call().print_crew_evaluation_result(),
-    ])
+        kickoff_mock.assert_has_calls([
+            mock.call(inputs={"topic": "AI"}),
+            mock.call(inputs={"topic": "AI"})
+        ])
 
-@mock.patch("crewai.crew.CrewEvaluator")
-@mock.patch("crewai.crew.Crew.copy")
-@mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_test_with_no_llm_raises_error(kickoff_mock, copy_mock, crew_evaluator):
-    task = Task(
-        description="Test task",
-        expected_output="Expected output",
-        agent=researcher,
-    )
-    crew = Crew(agents=[researcher], tasks=[task])
+        crew_evaluator.assert_has_calls([
+            mock.call(crew, custom_llm),
+            mock.call().set_iteration(1),
+            mock.call().set_iteration(2),
+            mock.call().print_crew_evaluation_result(),
+        ])
 
-    copy_mock.return_value = crew
-    with pytest.raises(ValueError, match="Either openai_model_name or llm must be provided"):
-        crew.test(n_iterations=2, inputs={"topic": "AI"})
+    @mock.patch("crewai.crew.CrewEvaluator")
+    @mock.patch("crewai.crew.Crew.copy")
+    @mock.patch("crewai.crew.Crew.kickoff")
+    def test_crew_test_with_no_llm_raises_error(self, kickoff_mock, copy_mock, crew_evaluator, crew):
+        """Test that error is raised when no LLM is provided."""
+        copy_mock.return_value = crew
+        with pytest.raises(ValueError, match="Either openai_model_name or llm must be provided"):
+            crew.test(n_iterations=2, inputs={"topic": "AI"})
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

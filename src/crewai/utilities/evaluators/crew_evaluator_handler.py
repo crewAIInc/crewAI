@@ -1,16 +1,27 @@
 from collections import defaultdict
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 from pydantic import BaseModel, Field
 from rich.box import HEAVY_EDGE
 from rich.console import Console
 from rich.table import Table
 
+try:
+    from agentops import track_agent
+except ImportError:
+    def track_agent():
+        def noop(f):
+            return f
+        return noop
+
 from crewai.agent import Agent
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
+
+if TYPE_CHECKING:
+    from crewai.crew import Crew
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
@@ -19,9 +30,11 @@ class TaskEvaluationPydanticOutput(BaseModel):
     )
 
 
+@track_agent()
 class CrewEvaluator:
-    """
-    A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
+    """Evaluates the performance of a crew's agents on their tasks.
+
+    Handles evaluation of agent performance using specified LLM model.
 
     Attributes:
         crew (Crew): The crew of agents to evaluate.
@@ -34,18 +47,29 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, llm: Union[str, "LLM"]):
+    def __init__(self, crew: "Crew", llm: Union[str, LLM]) -> None:
+        """Initialize CrewEvaluator with crew and language model.
+        
+        Args:
+            crew: The crew to evaluate
+            llm: Language model to use for evaluation, can be a string (model name) or LLM instance
+        """
         self.crew = crew
         self.llm = llm if isinstance(llm, LLM) else LLM(model=llm)
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
     def _setup_for_evaluating(self) -> None:
-        """Sets up the crew for evaluating."""
+        """Sets up the crew for evaluating by assigning evaluation callbacks to tasks."""
         for task in self.crew.tasks:
             task.callback = self.evaluate
 
-    def _evaluator_agent(self):
+    def _evaluator_agent(self) -> Agent:
+        """Creates an agent specialized in evaluating task performance.
+
+        Returns:
+            Agent: An agent configured to evaluate task execution quality.
+        """
         return Agent(
             role="Task Execution Evaluator",
             goal=(
@@ -59,6 +83,16 @@ class CrewEvaluator:
     def _evaluation_task(
         self, evaluator_agent: Agent, task_to_evaluate: Task, task_output: str
     ) -> Task:
+        """Creates a task for evaluating another task's execution.
+
+        Args:
+            evaluator_agent: The agent that will perform the evaluation
+            task_to_evaluate: The task whose execution needs to be evaluated
+            task_output: The output produced by the task execution
+
+        Returns:
+            Task: A task configured to evaluate the execution quality
+        """
         return Task(
             description=(
                 "Based on the task description and the expected output, compare and evaluate the performance of the agents in the crew based on the Task Output they have performed using score from 1 to 10 evaluating on completion, quality, and overall performance."
@@ -74,25 +108,28 @@ class CrewEvaluator:
         )
 
     def set_iteration(self, iteration: int) -> None:
+        """Sets the current iteration number for test tracking.
+
+        Args:
+            iteration: The iteration number to set
+        """
         self.iteration = iteration
 
     def print_crew_evaluation_result(self) -> None:
-        """
-        Prints the evaluation result of the crew in a table.
-        A Crew with 2 tasks using the command crewai test -n 3
-        will output the following table:
+        """Prints a formatted table showing evaluation results for all tasks and iterations.
 
+        Displays task scores (1-10), average scores, execution times, and involved agents
+        in a rich-formatted table. Each row represents a task or crew-level metric,
+        with columns for each test iteration and averages.
+
+        Example output:
                         Tasks Scores
                     (1-10 Higher is better)
         ┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
         ┃ Tasks/Crew/Agents  ┃ Run 1 ┃ Run 2 ┃ Run 3 ┃ Avg. Total ┃ Agents                       ┃
         ┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
         │ Task 1             │ 9.0   │ 10.0  │ 9.0   │ 9.3        │ - AI LLMs Senior Researcher  │
-        │                    │       │       │       │            │ - AI LLMs Reporting Analyst  │
-        │                    │       │       │       │            │                              │
         │ Task 2             │ 9.0   │ 9.0   │ 9.0   │ 9.0        │ - AI LLMs Senior Researcher  │
-        │                    │       │       │       │            │ - AI LLMs Reporting Analyst  │
-        │                    │       │       │       │            │                              │
         │ Crew               │ 9.0   │ 9.5   │ 9.0   │ 9.2        │                              │
         │ Execution Time (s) │ 42    │ 79    │ 52    │ 57         │                              │
         └────────────────────┴───────┴───────┴───────┴────────────┴──────────────────────────────┘
@@ -158,8 +195,18 @@ class CrewEvaluator:
         console = Console()
         console.print(table)
 
-    def evaluate(self, task_output: TaskOutput):
-        """Evaluates the performance of the agents in the crew based on the tasks they have performed."""
+    def evaluate(self, task_output: TaskOutput) -> None:
+        """Evaluates the performance of the agents in the crew based on task execution.
+
+        Evaluates task execution quality using a specialized evaluator agent and
+        stores the evaluation results for later analysis.
+
+        Args:
+            task_output: The output from the task execution to evaluate
+
+        Raises:
+            ValueError: If task_output is missing or doesn't match any known task
+        """
         current_task = None
         for task in self.crew.tasks:
             if task.description == task_output.description:
