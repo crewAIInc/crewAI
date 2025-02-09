@@ -149,10 +149,13 @@ class RAGStorage(BaseRAGStorage):
         )
 
     def reset(self) -> None:
+        """Reset the storage by removing the database files and reinitializing."""
         try:
             if self.app:
                 self.app.reset()
-                shutil.rmtree(f"{db_storage_path()}/{self.type}")
+                storage_path = os.path.join(db_storage_path(), self.type)
+                if os.path.exists(storage_path):
+                    shutil.rmtree(storage_path)
                 self.app = None
                 self.collection = None
         except Exception as e:
