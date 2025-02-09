@@ -1163,7 +1163,7 @@ class Crew(BaseModel):
         if not llm and not openai_model_name:
             raise ValueError("Either llm or openai_model_name must be provided")
         
-        model_to_use = llm or openai_model_name
+        model_to_use: Union[str, LLM] = llm if llm is not None else openai_model_name
         if isinstance(model_to_use, str):
             model_to_use = LLM(model=model_to_use)
         
@@ -1173,8 +1173,8 @@ class Crew(BaseModel):
             test_crew,
             n_iterations,
             inputs,
-            str(model_to_use.model),  # type: ignore[arg-type]
-        )  # type: ignore[arg-type]
+            str(model_to_use.model),
+        )
         evaluator = CrewEvaluator(test_crew, model_to_use)
 
         for i in range(1, n_iterations + 1):
