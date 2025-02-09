@@ -303,7 +303,7 @@ def test_hierarchical_process():
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch("crewai.crew.Crew.copy")
 def test_crew_test_backward_compatibility(mock_copy, mock_evaluator):
-    crew = Crew(agents=[researcher], tasks=[Task(description="test", agent=researcher)])
+    crew = Crew(agents=[researcher], tasks=[Task(description="test", expected_output="test output", agent=researcher)])
     crew.test(2, openai_model_name="gpt-4")
     mock_evaluator.assert_called_once()
     _, kwargs = mock_evaluator.call_args
