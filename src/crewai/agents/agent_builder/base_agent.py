@@ -110,6 +110,13 @@ class BaseAgent(ABC, BaseModel):
     allowed_agents: Optional[List[str]] = Field(
         default=None,
         description="List of agent roles that this agent is allowed to delegate tasks to.",
+        docstring="""
+        Specifies which agent roles this agent can delegate tasks to. When set:
+        - Must be a list of role names as strings
+        - Cannot be empty if delegation is enabled
+        - Case-insensitive matching is used for role names
+        - If None, agent can delegate to any other agent (when allow_delegation is True)
+        """,
     )
     tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents' disposal"
@@ -178,12 +185,8 @@ class BaseAgent(ABC, BaseModel):
                     f"{field} must be provided either directly or through config"
                 )
 
-        # Validate allowed_agents if delegation is enabled
-        if self.allow_delegation and self.allowed_agents is not None:
-            if not isinstance(self.allowed_agents, list):
-                raise ValueError("allowed_agents must be a list of strings")
-            if not all(isinstance(agent, str) for agent in self.allowed_agents):
-                raise ValueError("all entries in allowed_agents must be strings")
+        # Validate allowed_agents configuration
+        self._validate_allowed_agents()
 
         # Set private attributes
         self._logger = Logger(verbose=self.verbose)
@@ -224,6 +227,24 @@ class BaseAgent(ABC, BaseModel):
             self._original_backstory or self.backstory,
         ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
+
+    def _validate_allowed_agents(self) -> None:
+        """Validate allowed_agents configuration.
+        
+        Raises:
+            ValueError: If allowed_agents is not properly configured:
+                - Not a list of strings when specified
+                - Empty list when delegation is enabled
+                - Contains non-string entries
+        """
+        if self.allow_delegation and self.allowed_agents is not None:
+            if not isinstance(self.allowed_agents, list):
+                raise ValueError("allowed_agents must be a list of strings")
+            if not all(isinstance(agent, str) for agent in self.allowed_agents):
+                raise ValueError("all entries in allowed_agents must be strings")
+            if len(self.allowed_agents) == 0:
+                raise ValueError("allowed_agents cannot be empty when delegation is enabled")
+
 
     @abstractmethod
     def execute_task(

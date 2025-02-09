@@ -56,8 +56,8 @@ def test_delegate_work_with_allowed_agents():
     )
     
     # Verify delegation was allowed
-    assert "error" not in result.lower()
-    assert "unauthorized" not in result.lower()
+    assert "authorization error" not in result.lower()
+    assert "cannot delegate" not in result.lower()
 
 def test_delegate_work_with_unauthorized_agent():
     """Test failed delegation to unauthorized agent."""
@@ -109,21 +109,66 @@ def test_delegate_work_with_unauthorized_agent():
     )
     
     # Verify delegation was blocked with proper error message
-    assert "cannot delegate this task" in result.lower()
+    assert "authorization error" in result.lower()
     assert "tech manager" in result.lower()
     assert "communications manager" in result.lower()
 
-def test_delegate_work_without_allowed_agents():
-    """Test delegation works normally when no allowed_agents is specified."""
+@pytest.mark.parametrize("scenario", [
+    {
+        "name": "empty_allowed_agents",
+        "delegating_agent": {
+            "role": "Manager",
+            "allow_delegation": True,
+            "allowed_agents": []
+        },
+        "target_agent": "Worker",
+        "should_succeed": False,
+        "error_contains": "cannot be empty"
+    },
+    {
+        "name": "case_insensitive_match",
+        "delegating_agent": {
+            "role": "Manager",
+            "allow_delegation": True,
+            "allowed_agents": ["Worker"]
+        },
+        "target_agent": "WORKER",
+        "should_succeed": True
+    },
+    {
+        "name": "unauthorized_delegation",
+        "delegating_agent": {
+            "role": "Manager",
+            "allow_delegation": True,
+            "allowed_agents": ["Worker A"]
+        },
+        "target_agent": "Worker B",
+        "should_succeed": False,
+        "error_contains": "Authorization Error"
+    },
+    {
+        "name": "no_allowed_agents_specified",
+        "delegating_agent": {
+            "role": "Manager",
+            "allow_delegation": True,
+            "allowed_agents": None
+        },
+        "target_agent": "Worker",
+        "should_succeed": True
+    }
+])
+def test_delegation_scenarios(scenario):
+    """Test various delegation scenarios."""
     # Create agents
-    manager = Agent(
-        role="Manager",
+    delegating_agent = Agent(
+        role=scenario["delegating_agent"]["role"],
         goal="Manage the team",
         backstory="An experienced manager",
-        allow_delegation=True  # No allowed_agents specified
+        allow_delegation=scenario["delegating_agent"]["allow_delegation"],
+        allowed_agents=scenario["delegating_agent"]["allowed_agents"]
     )
-    worker = Agent(
-        role="Worker",
+    target_agent = Agent(
+        role=scenario["target_agent"],
         goal="Do the work",
         backstory="A skilled worker",
         allow_delegation=False
@@ -138,29 +183,30 @@ def test_delegate_work_without_allowed_agents():
             }
         }]
     }
-    manager.llm = MagicMock()
-    manager.llm.invoke = MagicMock(return_value=mock_response)
-    manager.llm.call = MagicMock(return_value=mock_content)
-    worker.llm = MagicMock()
-    worker.llm.invoke = MagicMock(return_value=mock_response)
-    worker.llm.call = MagicMock(return_value=mock_content)
+    for agent in [delegating_agent, target_agent]:
+        agent.llm = MagicMock()
+        agent.llm.invoke = MagicMock(return_value=mock_response)
+        agent.llm.call = MagicMock(return_value=mock_content)
     
     # Create crew and tool
-    crew = Crew(agents=[manager, worker])
+    crew = Crew(agents=[delegating_agent, target_agent])
     tool = DelegateWorkTool(
         name="Delegate work to coworker",
         description="Tool for delegating work to coworkers",
-        agents=[manager, worker],
-        agent_id=manager.id
+        agents=[delegating_agent, target_agent],
+        agent_id=delegating_agent.id
     )
     
     # Test delegation
     result = tool._execute(
-        agent_name="Worker",
+        agent_name=scenario["target_agent"],
         task="Complete task",
         context="Important task"
     )
     
-    # Verify delegation was allowed
-    assert "error" not in result.lower()
-    assert "unauthorized" not in result.lower()
+    # Verify results
+    if scenario["should_succeed"]:
+        assert "authorization error" not in result.lower()
+        assert "cannot delegate" not in result.lower()
+    else:
+        assert scenario["error_contains"].lower() in result.lower()

@@ -16,6 +16,39 @@ class BaseAgentTool(BaseTool):
         default_factory=I18N, description="Internationalization settings"
     )
 
+    def _get_agent_by_id(self, agent_id: UUID4) -> Optional[BaseAgent]:
+        """Helper method to find agent by ID."""
+        return next((a for a in self.agents if a.id == agent_id), None)
+
+    def _get_agent_by_role(self, role: str) -> Optional[BaseAgent]:
+        """Helper method to find agent by role (case-insensitive)."""
+        return next(
+            (a for a in self.agents if a.role.casefold() == role.casefold()),
+            None
+        )
+
+    def _check_delegation_authorization(
+        self, delegating_agent: BaseAgent, target_role: str
+    ) -> Optional[str]:
+        """Verify if delegation is authorized.
+        
+        Args:
+            delegating_agent: The agent attempting to delegate
+            target_role: The role of the agent being delegated to
+
+        Returns:
+            Optional[str]: Error message if delegation is not authorized, None otherwise
+        """
+        if (delegating_agent.allowed_agents is not None and
+            not any(allowed.casefold() == target_role.casefold() 
+                   for allowed in delegating_agent.allowed_agents)):
+            return self.i18n.errors("agent_tool_unauthorized_delegation").format(
+                coworker=target_role,
+                allowed_agents="\n".join([f"- {role}" for role in delegating_agent.allowed_agents])
+            )
+        return None
+
+
     def _get_coworker(self, coworker: Optional[str], **kwargs) -> Optional[str]:
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
         if coworker:
@@ -58,14 +91,16 @@ class BaseAgentTool(BaseTool):
                 )
             )
 
-        # Check if delegation is allowed based on allowed_agents list
-        delegating_agent = [a for a in self.agents if a.id == self.agent_id][0]
-        if (delegating_agent.allowed_agents is not None and
-                agent[0].role not in delegating_agent.allowed_agents):
-            return self.i18n.errors("agent_tool_unauthorized_delegation").format(
-                coworker=agent[0].role,
-                allowed_agents="\n".join([f"- {role}" for role in delegating_agent.allowed_agents])
+        # Get delegating agent and check authorization
+        delegating_agent = self._get_agent_by_id(self.agent_id)
+        if not delegating_agent:
+            return self.i18n.errors("agent_tool_unexisting_coworker").format(
+                coworkers="\n".join([f"- {agent.role}" for agent in self.agents])
             )
+
+        auth_error = self._check_delegation_authorization(delegating_agent, agent[0].role)
+        if auth_error:
+            return auth_error
 
         agent = agent[0]
         task_with_assigned_agent = Task(  # type: ignore # Incompatible types in assignment (expression has type "Task", variable has type "str")
