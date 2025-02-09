@@ -21,7 +21,6 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
-from crewai.tools.base_tool import BaseTool
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
@@ -38,7 +37,7 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.tools.base_tool import Tool
+from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
