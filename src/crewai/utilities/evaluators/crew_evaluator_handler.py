@@ -24,7 +24,7 @@ class CrewEvaluator:
 
     Attributes:
         crew (Crew): The crew of agents to evaluate.
-        openai_model_name (str): The model to use for evaluating the performance of the agents (for now ONLY OpenAI accepted).
+        eval_llm (LLM): Language model instance to use for evaluations
         tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
         iteration (int): The current iteration of the evaluation.
     """

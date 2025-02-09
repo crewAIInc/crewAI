@@ -1125,12 +1125,16 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        eval_llm: Union[str, InstanceOf[LLM], Any] = Field(description="Language model that will run the agent.", default=None),
+        eval_llm: Union[str, InstanceOf[LLM]],
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         test_crew = self.copy()
+
         eval_llm = create_llm(eval_llm)
+
+        if not eval_llm:
+            raise ValueError("Failed to create LLM instance.")
 
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
