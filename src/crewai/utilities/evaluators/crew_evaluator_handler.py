@@ -1,12 +1,15 @@
-from typing import Union
-
-from crewai.llm import LLM
 from collections import defaultdict
+from typing import Any, Dict, List, Optional, TypeVar, Union
+from typing import DefaultDict  # Separate import to avoid circular imports
 
 from pydantic import BaseModel, Field
 from rich.box import HEAVY_EDGE
 from rich.console import Console
 from rich.table import Table
+
+from crewai.llm import LLM
+
+T = TypeVar('T', bound=LLM)
 
 from crewai.agent import Agent
 from crewai.task import Task
@@ -31,14 +34,47 @@ class CrewEvaluator:
         iteration (int): The current iteration of the evaluation.
     """
 
-    tasks_scores: defaultdict = defaultdict(list)
-    run_execution_times: defaultdict = defaultdict(list)
+    _tasks_scores: DefaultDict[int, List[float]] = Field(
+        default_factory=lambda: defaultdict(list))
+    _run_execution_times: DefaultDict[int, List[float]] = Field(
+        default_factory=lambda: defaultdict(list))
     iteration: int = 0
 
-    def __init__(self, crew, llm: Union[str, LLM]):
+    @property
+    def tasks_scores(self) -> DefaultDict[int, List[float]]:
+        return self._tasks_scores
+
+    @tasks_scores.setter
+    def tasks_scores(self, value: Dict[int, List[float]]) -> None:
+        self._tasks_scores = defaultdict(list, value)
+
+    @property
+    def run_execution_times(self) -> DefaultDict[int, List[float]]:
+        return self._run_execution_times
+
+    @run_execution_times.setter
+    def run_execution_times(self, value: Dict[int, List[float]]) -> None:
+        self._run_execution_times = defaultdict(list, value)
+
+    def __init__(self, crew, llm: Union[str, T]):
+        """Initialize the CrewEvaluator.
+        
+        Args:
+            crew: The Crew instance to evaluate
+            llm: Language model to use for evaluation. Can be either a model name string
+                or an LLM instance for custom implementations
+                
+        Raises:
+            ValueError: If llm is None or invalid
+        """
+        if not llm:
+            raise ValueError("Invalid LLM configuration")
+            
         self.crew = crew
         self.llm = LLM(model=llm) if isinstance(llm, str) else llm
         self._telemetry = Telemetry()
+        self._tasks_scores = defaultdict(list)
+        self._run_execution_times = defaultdict(list)
         self._setup_for_evaluating()
 
     def _setup_for_evaluating(self) -> None:
@@ -184,11 +220,19 @@ class CrewEvaluator:
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task._execution_time,
-                str(self.llm) if isinstance(self.llm, LLM) else self.llm,
+                self._get_llm_identifier(),
             )
-            self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
-            self.run_execution_times[self.iteration].append(
+            self._tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
+            self._run_execution_times[self.iteration].append(
                 current_task._execution_time
             )
         else:
             raise ValueError("Evaluation result is not in the expected format")
+
+    def _get_llm_identifier(self) -> str:
+        """Get a string identifier for the LLM instance.
+        
+        Returns:
+            String representation of the LLM for telemetry
+        """
+        return str(self.llm) if isinstance(self.llm, LLM) else self.llm

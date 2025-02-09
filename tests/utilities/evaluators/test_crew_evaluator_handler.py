@@ -48,11 +48,18 @@ class TestCrewEvaluator:
         assert agent.verbose is False
         assert agent.llm.model == "gpt-4o-mini"
 
-    def test_evaluator_with_custom_llm(self, crew_planner):
-        custom_llm = LLM(model="gpt-4")
-        evaluator = CrewEvaluator(crew_planner.crew, custom_llm)
+    @pytest.mark.parametrize("llm_input,expected_model", [
+        (LLM(model="gpt-4"), "gpt-4"),
+        ("gpt-4", "gpt-4"),
+    ])
+    def test_evaluator_with_llm_types(self, crew_planner, llm_input, expected_model):
+        evaluator = CrewEvaluator(crew_planner.crew, llm_input)
         agent = evaluator._evaluator_agent()
-        assert agent.llm == custom_llm
+        assert agent.llm.model == expected_model
+        
+    def test_evaluator_with_invalid_llm(self, crew_planner):
+        with pytest.raises(ValueError, match="Invalid LLM configuration"):
+            CrewEvaluator(crew_planner.crew, None)
 
     def test_evaluator_with_string_llm(self, crew_planner):
         evaluator = CrewEvaluator(crew_planner.crew, "gpt-4")

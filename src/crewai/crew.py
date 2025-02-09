@@ -1079,7 +1079,24 @@ class Crew(BaseModel):
         llm: Union[str, LLM],
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
+        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures.
+        
+        Args:
+            n_iterations: Number of test iterations to run
+            llm: Language model to use for evaluation. Can be either a model name string (e.g. "gpt-4") 
+                 or an LLM instance for custom implementations
+            inputs: Optional dictionary of input values to use for task execution
+            
+        Example:
+            ```python
+            # Using model name string
+            crew.test(n_iterations=3, llm="gpt-4")
+            
+            # Using custom LLM implementation
+            custom_llm = LLM(model="custom-model")
+            crew.test(n_iterations=3, llm=custom_llm)
+            ```
+        """
         test_crew = self.copy()
 
         self._test_execution_span = test_crew._telemetry.test_execution_span(
