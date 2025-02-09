@@ -369,7 +369,9 @@ def test_converter_with_llama3_2_model():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_converter_with_llama3_1_model():
-    llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.call.return_value = '{"name": "Alice Llama", "age": 30}'
     sample_text = "Name: Alice Llama, Age: 30"
 
     instructions = get_conversion_instructions(SimpleModel, llm)
@@ -385,9 +387,10 @@ def test_converter_with_llama3_1_model():
     assert isinstance(output, SimpleModel)
     assert output.name == "Alice Llama"
     assert output.age == 30
+    llm.call.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"], record_mode="new_episodes")
 def test_converter_with_nested_model():
     llm = LLM(model="gpt-4o-mini")
     sample_text = "Name: John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"
