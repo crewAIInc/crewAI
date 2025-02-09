@@ -190,7 +190,7 @@ class CrewEvaluator:
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task.execution_duration,
-                self.openai_model_name,
+                self._llm.model if self._llm else None,
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
