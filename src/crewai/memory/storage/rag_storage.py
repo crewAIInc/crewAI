@@ -163,12 +163,3 @@ class RAGStorage(BaseRAGStorage):
                 raise Exception(
                     f"An error occurred while resetting the {self.type} memory: {e}"
                 )
-
-    def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
