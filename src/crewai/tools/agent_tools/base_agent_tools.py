@@ -1,6 +1,5 @@
 from typing import Optional, Union
-
-from pydantic import Field
+from pydantic import UUID4, Field
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
@@ -12,6 +11,7 @@ class BaseAgentTool(BaseTool):
     """Base class for agent-related tools"""
 
     agents: list[BaseAgent] = Field(description="List of available agents")
+    agent_id: UUID4 = Field(description="ID of the agent using this tool")
     i18n: I18N = Field(
         default_factory=I18N, description="Internationalization settings"
     )
@@ -56,6 +56,15 @@ class BaseAgentTool(BaseTool):
                 coworkers="\n".join(
                     [f"- {agent.role.casefold()}" for agent in self.agents]
                 )
+            )
+
+        # Check if delegation is allowed based on allowed_agents list
+        delegating_agent = [a for a in self.agents if a.id == self.agent_id][0]
+        if (delegating_agent.allowed_agents is not None and 
+            agent[0].role not in delegating_agent.allowed_agents):
+            return self.i18n.errors("agent_tool_unauthorized_delegation").format(
+                coworker=agent[0].role,
+                allowed_agents="\n".join([f"- {role}" for role in delegating_agent.allowed_agents])
             )
 
         agent = agent[0]

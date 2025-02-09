@@ -107,6 +107,10 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
+    allowed_agents: Optional[List[str]] = Field(
+        default=None,
+        description="List of agent roles that this agent is allowed to delegate tasks to.",
+    )
     tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
@@ -173,6 +177,13 @@ class BaseAgent(ABC, BaseModel):
                 raise ValueError(
                     f"{field} must be provided either directly or through config"
                 )
+
+        # Validate allowed_agents if delegation is enabled
+        if self.allow_delegation and self.allowed_agents is not None:
+            if not isinstance(self.allowed_agents, list):
+                raise ValueError("allowed_agents must be a list of strings")
+            if not all(isinstance(agent, str) for agent in self.allowed_agents):
+                raise ValueError("all entries in allowed_agents must be strings")
 
         # Set private attributes
         self._logger = Logger(verbose=self.verbose)

@@ -33,7 +33,8 @@
     "tool_usage_error": "I encountered an error: {error}",
     "tool_arguments_error": "Error: the Action Input is not a valid key, value dictionary.",
     "wrong_tool_name": "You tried to use the tool {tool}, but it doesn't exist. You must use one of the following tools, use one at time: {tools}.",
-    "tool_usage_exception": "I encountered an error while trying to use the tool. This was the error: {error}.\n Tool {tool} accepts these inputs: {tool_inputs}"
+    "tool_usage_exception": "I encountered an error while trying to use the tool. This was the error: {error}.\n Tool {tool} accepts these inputs: {tool_inputs}",
+    "agent_tool_unauthorized_delegation": "I cannot delegate this task to {coworker} as I am only allowed to delegate to: \n{allowed_agents}"
   },
   "tools": {
     "delegate_work": "Delegate a specific task to one of the following coworkers: {coworkers}\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolute everything you know, don't reference things but instead explain them.",
