@@ -10,6 +10,7 @@ import instructor
 import pydantic_core
 import pytest
 
+from crewai.llm import LLM
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -1123,7 +1124,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headeruvs=["authorization"])
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
@@ -2828,7 +2829,7 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
     copy_mock.return_value = crew
 
     n_iterations = 2
-    crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
+    crew.test(n_iterations, llm="gpt-4o-mini", inputs={"topic": "AI"})
 
     # Ensure kickoff is called on the copied crew
     kickoff_mock.assert_has_calls(
@@ -2843,6 +2844,32 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
             mock.call().print_crew_evaluation_result(),
         ]
     )
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_with_custom_llm(kickoff_mock, copy_mock, crew_evaluator):
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    copy_mock.return_value = crew
+    custom_llm = LLM(model="gpt-4")
+    
+    crew.test(2, llm=custom_llm, inputs={"topic": "AI"})
+    
+    kickoff_mock.assert_has_calls([
+        mock.call(inputs={"topic": "AI"}),
+        mock.call(inputs={"topic": "AI"})
+    ])
+    crew_evaluator.assert_has_calls([
+        mock.call(crew, custom_llm),
+        mock.call().set_iteration(1),
+        mock.call().set_iteration(2),
+        mock.call().print_crew_evaluation_result(),
+    ])
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

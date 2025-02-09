@@ -2,6 +2,7 @@ from unittest import mock
 
 import pytest
 
+from crewai.llm import LLM
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task
@@ -23,7 +24,7 @@ class TestCrewEvaluator:
         )
         crew = Crew(agents=[agent], tasks=[task])
 
-        return CrewEvaluator(crew, openai_model_name="gpt-4o-mini")
+        return CrewEvaluator(crew, llm="gpt-4o-mini")
 
     def test_setup_for_evaluating(self, crew_planner):
         crew_planner._setup_for_evaluating()
@@ -46,6 +47,18 @@ class TestCrewEvaluator:
         )
         assert agent.verbose is False
         assert agent.llm.model == "gpt-4o-mini"
+
+    def test_evaluator_with_custom_llm(self, crew_planner):
+        custom_llm = LLM(model="gpt-4")
+        evaluator = CrewEvaluator(crew_planner.crew, custom_llm)
+        agent = evaluator._evaluator_agent()
+        assert agent.llm == custom_llm
+
+    def test_evaluator_with_string_llm(self, crew_planner):
+        evaluator = CrewEvaluator(crew_planner.crew, "gpt-4")
+        agent = evaluator._evaluator_agent()
+        assert isinstance(agent.llm, LLM)
+        assert agent.llm.model == "gpt-4"
 
     def test_evaluation_task(self, crew_planner):
         evaluator_agent = Agent(
