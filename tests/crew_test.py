@@ -307,7 +307,7 @@ def test_crew_test_backward_compatibility(mock_copy, mock_evaluator):
     crew.test(2, openai_model_name="gpt-4")
     mock_evaluator.assert_called_once()
     _, kwargs = mock_evaluator.call_args
-    assert kwargs["openai_model_name"] == "gpt-4"
+    assert kwargs["llm"] == "gpt-4"
 
 def test_manager_llm_requirement_for_hierarchical_process():
     task = Task(
@@ -2846,7 +2846,7 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
 
     crew_evaluator.assert_has_calls(
         [
-            mock.call(crew, "gpt-4o-mini"),
+            mock.call(crew, llm="gpt-4o-mini"),
             mock.call().set_iteration(1),
             mock.call().set_iteration(2),
             mock.call().print_crew_evaluation_result(),
