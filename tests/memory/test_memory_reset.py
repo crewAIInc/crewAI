@@ -65,6 +65,7 @@ def test_memory_reset_with_missing_api_key(temp_db_dir):
 
 def test_memory_reset_cleans_up_files(temp_db_dir):
     """Test that memory reset properly cleans up database files."""
+    os.environ["OPENAI_API_KEY"] = "test-key"
     memory = ShortTermMemory(path=str(temp_db_dir))
     memory.save("test memory", {"test": "metadata"})
     assert any(temp_db_dir.iterdir())  # Directory should have files
