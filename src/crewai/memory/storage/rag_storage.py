@@ -181,12 +181,15 @@ class RAGStorage(BaseRAGStorage):
             logging.error(f"Error during {self.type} search: {str(e)}")
             return []
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:
+    def _generate_embedding(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> Any:
         """Generate and store embeddings for the given text.
 
         Args:
             text: The text to generate embeddings for
-            metadata: Additional metadata to store with the embeddings
+            metadata: Optional additional metadata to store with the embeddings
+
+        Returns:
+            Any: The generated embedding or None if only storing
         """
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
@@ -197,6 +200,7 @@ class RAGStorage(BaseRAGStorage):
                 metadatas=[metadata or {}],
                 ids=[str(uuid.uuid4())],
             )
+            return None
         except Exception as e:
             raise EmbeddingInitializationError(self.type, f"Failed to generate embedding: {str(e)}")
 
