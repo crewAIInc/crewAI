@@ -3111,7 +3111,7 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
 
     crew_evaluator.assert_has_calls(
         [
-            mock.call(crew,LLM),
+            mock.call(crew,LLM('gpt-4o-mini')),
             mock.call().set_iteration(1),
             mock.call().set_iteration(2),
             mock.call().print_crew_evaluation_result(),
