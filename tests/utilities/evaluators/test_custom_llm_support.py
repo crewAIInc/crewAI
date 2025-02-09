@@ -1,6 +1,5 @@
-from unittest.mock import MagicMock
-
 import pytest
+from unittest.mock import MagicMock
 
 from crewai.agent import Agent
 from crewai.crew import Crew
