@@ -4,6 +4,7 @@ import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.evaluators.crew_evaluator_handler import (
@@ -23,7 +24,7 @@ class TestCrewEvaluator:
         )
         crew = Crew(agents=[agent], tasks=[task])
 
-        return CrewEvaluator(crew, openai_model_name="gpt-4o-mini")
+        return CrewEvaluator(crew, "gpt-4o-mini")
 
     def test_setup_for_evaluating(self, crew_planner):
         crew_planner._setup_for_evaluating()
@@ -140,3 +141,30 @@ class TestCrewEvaluator:
             execute().pydantic = TaskEvaluationPydanticOutput(quality=9.5)
             crew_planner.evaluate(task_output)
             assert crew_planner.tasks_scores[0] == [9.5]
+
+    def test_crew_evaluator_with_custom_llm(self):
+        agent = Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1")
+        task = Task(
+            description="Task 1",
+            expected_output="Output 1",
+            agent=agent,
+        )
+        crew = Crew(agents=[agent], tasks=[task])
+        custom_llm = LLM(model="gpt-4o-mini")
+
+        evaluator = CrewEvaluator(crew, custom_llm)
+        assert evaluator.llm == custom_llm
+
+    def test_crew_evaluator_with_model_name(self):
+        agent = Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1")
+        task = Task(
+            description="Task 1",
+            expected_output="Output 1",
+            agent=agent,
+        )
+        crew = Crew(agents=[agent], tasks=[task])
+        model_name = "gpt-4o-mini"
+
+        evaluator = CrewEvaluator(crew, model_name)
+        assert isinstance(evaluator.llm, LLM)
+        assert evaluator.llm.model == model_name
