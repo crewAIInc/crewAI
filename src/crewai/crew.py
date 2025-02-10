@@ -381,6 +381,22 @@ class Crew(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_must_have_non_conditional_task(self) -> "Crew":
+        """Ensure that a crew has at least one non-conditional task."""
+        if not self.tasks:
+            return self
+        non_conditional_count = sum(
+            1 for task in self.tasks if not isinstance(task, ConditionalTask)
+        )
+        if non_conditional_count == 0:
+            raise PydanticCustomError(
+                "only_conditional_tasks",
+                "Crew must include at least one non-conditional task",
+                {},
+            )
+        return self
+
+    @model_validator(mode="after")
     def validate_first_task(self) -> "Crew":
         """Ensure the first task is not a ConditionalTask."""
         if self.tasks and isinstance(self.tasks[0], ConditionalTask):
@@ -438,6 +454,8 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
+
+
 
     @property
     def key(self) -> str:
@@ -741,6 +759,7 @@ class Crew(BaseModel):
                     task, task_outputs, futures, task_index, was_replayed
                 )
                 if skipped_task_output:
+                    task_outputs.append(skipped_task_output)
                     continue
 
             if task.async_execution:
@@ -764,7 +783,7 @@ class Crew(BaseModel):
                     context=context,
                     tools=tools_for_task,
                 )
-                task_outputs = [task_output]
+                task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
 
@@ -785,7 +804,7 @@ class Crew(BaseModel):
             task_outputs = self._process_async_tasks(futures, was_replayed)
             futures.clear()
 
-        previous_output = task_outputs[task_index - 1] if task_outputs else None
+        previous_output = task_outputs[-1] if task_outputs else None
         if previous_output is not None and not task.should_execute(previous_output):
             self._logger.log(
                 "debug",
@@ -907,11 +926,15 @@ class Crew(BaseModel):
             )
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
-        if len(task_outputs) != 1:
-            raise ValueError(
-                "Something went wrong. Kickoff should return only one task output."
-            )
-        final_task_output = task_outputs[0]
+        if not task_outputs:
+            raise ValueError("No task outputs available to create crew output.")
+            
+        # Filter out empty outputs and get the last valid one as the main output
+        valid_outputs = [t for t in task_outputs if t.raw]
+        if not valid_outputs:
+            raise ValueError("No valid task outputs available to create crew output.")
+        final_task_output = valid_outputs[-1]
+            
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         token_usage = self.calculate_usage_metrics()
@@ -920,7 +943,7 @@ class Crew(BaseModel):
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
             json_dict=final_task_output.json_dict,
-            tasks_output=[task.output for task in self.tasks if task.output],
+            tasks_output=task_outputs,
             token_usage=token_usage,
         )
 
