@@ -11,7 +11,6 @@ from crewai.traces.models import (
     FlowStepIO,
     LLMRequest,
     LLMResponse,
-    ToolCall,
 )
 from crewai.traces.unified_trace_controller import (
     UnifiedTraceController,
