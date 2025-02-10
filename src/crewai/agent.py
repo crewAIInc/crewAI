@@ -1,7 +1,7 @@
 import re
 import shutil
 import subprocess
-from typing import Any, Dict, List, Literal, Optional, Sequence, Union
+from typing import Any, Dict, List, Literal, Optional, Sequence, Union, cast
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -184,19 +184,12 @@ class Agent(BaseAgent):
         # append specific instructions to the task prompt to ensure
         # that the final answer does not include any code block markers
         if task.output_json or task.output_pydantic:
-            # Generate the schema based on the output format
-            if task.output_json:
-                # schema = json.dumps(task.output_json, indent=2)
-                schema = generate_model_description(task.output_json)
-                task_prompt += "\n" + self.i18n.slice(
-                    "formatted_task_instructions"
-                ).format(output_format=schema)
-
-            elif task.output_pydantic:
-                schema = generate_model_description(task.output_pydantic)
-                task_prompt += "\n" + self.i18n.slice(
-                    "formatted_task_instructions"
-                ).format(output_format=schema)
+            # Choose the output format, preferring output_json if available
+            output_format = (
+                task.output_json if task.output_json else task.output_pydantic
+            )
+            schema = generate_model_description(cast(type, output_format))
+            task_prompt += f"\n{self.i18n.slice('formatted_task_instructions').format(output_format=schema)}"
 
         if context:
             task_prompt = self.i18n.slice("task_with_context").format(

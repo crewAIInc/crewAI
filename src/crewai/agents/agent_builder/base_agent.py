@@ -163,6 +163,7 @@ class BaseAgent(ABC, BaseModel):
         tool meets these criteria, it is processed and added to the list of
         tools. Otherwise, a ValueError is raised.
         """
+        print(f"Validating tools: {tools}")
         processed_tools = []
         for tool in tools:
             if isinstance(tool, BaseTool):
@@ -180,6 +181,7 @@ class BaseAgent(ABC, BaseModel):
                     "Tool must be an instance of BaseTool or "
                     "an object with 'name', 'func', and 'description' attributes."
                 )
+        print(f"Processed tools: {processed_tools}")
         return processed_tools
 
     @model_validator(mode="after")
@@ -338,7 +340,15 @@ class BaseAgent(ABC, BaseModel):
         if self.cache:
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
-        self.create_agent_executor()
+        print(f"Setting cache handler for agent: {self.id}")
+        # Only create the executor if it hasn't been created yet.
+        if self.agent_executor is None:
+            self.create_agent_executor()
+        else:
+            print(
+                "Agent executor already exists, skipping creation in set_cache_handler."
+            )
+        print(f"Cache handler set for agent: {self.id}")
 
     def increment_formatting_errors(self) -> None:
         self.formatting_errors += 1
@@ -351,4 +361,12 @@ class BaseAgent(ABC, BaseModel):
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
-            self.create_agent_executor()
+            print(f"Setting RPM controller for agent: {self.id}")
+            # Only create the executor if it hasn't been created yet.
+            if self.agent_executor is None:
+                self.create_agent_executor()
+            else:
+                print(
+                    "Agent executor already exists, skipping creation in set_rpm_controller."
+                )
+            print(f"RPM controller set for agent: {self.id}")

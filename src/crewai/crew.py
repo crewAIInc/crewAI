@@ -455,8 +455,6 @@ class Crew(BaseModel):
                         )
         return self
 
-
-
     @property
     def key(self) -> str:
         source = [agent.key for agent in self.agents] + [
@@ -928,13 +926,13 @@ class Crew(BaseModel):
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
-            
+
         # Filter out empty outputs and get the last valid one as the main output
         valid_outputs = [t for t in task_outputs if t.raw]
         if not valid_outputs:
             raise ValueError("No valid task outputs available to create crew output.")
         final_task_output = valid_outputs[-1]
-            
+
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         token_usage = self.calculate_usage_metrics()
