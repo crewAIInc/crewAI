@@ -10,21 +10,25 @@ from typing import (
     Any,
     Dict,
     List,
+    Literal,
     Optional,
     Protocol,
     Tuple,
+    Type,
     Union,
     cast,
     runtime_checkable,
 )
 
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
     from litellm import Choices, get_supported_openai_params
     from litellm.types.utils import ModelResponse
+    from litellm.utils import supports_response_schema
 
 
 from crewai.traces.unified_trace_controller import trace_llm_call
@@ -151,7 +155,7 @@ class LLM:
         presence_penalty: Optional[float] = None,
         frequency_penalty: Optional[float] = None,
         logit_bias: Optional[Dict[int, float]] = None,
-        response_format: Optional[Dict[str, Any]] = None,
+        response_format: Optional[Type[BaseModel]] = None,
         seed: Optional[int] = None,
         logprobs: Optional[int] = None,
         top_logprobs: Optional[int] = None,
@@ -160,6 +164,7 @@ class LLM:
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
+        reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         **kwargs,
     ):
         self.model = model
@@ -182,8 +187,10 @@ class LLM:
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
+        self.reasoning_effort = reasoning_effort
         self.additional_params = kwargs
         self._message_history = []
+        self.is_anthropic = self._is_anthropic_model(model)
 
         litellm.drop_params = True
 
@@ -204,55 +211,88 @@ class LLM:
             response = litellm.completion(**params)
             return response
 
+    def _is_anthropic_model(self, model: str) -> bool:
+        """Determine if the model is from Anthropic provider.
+
+        Args:
+            model: The model identifier string.
+
+        Returns:
+            bool: True if the model is from Anthropic, False otherwise.
+        """
+        ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
+        return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
+
     def call(
         self,
         messages: Union[str, List[Dict[str, str]]],
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        """
-        High-level llm call method that:
-          1) Accepts either a string or a list of messages
-          2) Converts string input to the required message format
-          3) Calls litellm.completion
-          4) Handles function/tool calls if any
-          5) Returns the final text response or tool result
+    ) -> Union[str, Any]:
+        """High-level LLM call method.
 
-        Parameters:
-        - messages (Union[str, List[Dict[str, str]]]): The input messages for the LLM.
-          - If a string is provided, it will be converted into a message list with a single entry.
-          - If a list of dictionaries is provided, each dictionary should have 'role' and 'content' keys.
-        - tools (Optional[List[dict]]): A list of tool schemas for function calling.
-        - callbacks (Optional[List[Any]]): A list of callback functions to be executed.
-        - available_functions (Optional[Dict[str, Any]]): A dictionary mapping function names to actual Python functions.
+        Args:
+            messages: Input messages for the LLM.
+                     Can be a string or list of message dictionaries.
+                     If string, it will be converted to a single user message.
+                     If list, each dict must have 'role' and 'content' keys.
+            tools: Optional list of tool schemas for function calling.
+                  Each tool should define its name, description, and parameters.
+            callbacks: Optional list of callback functions to be executed
+                      during and after the LLM call.
+            available_functions: Optional dict mapping function names to callables
+                               that can be invoked by the LLM.
 
         Returns:
-        - str: The final text response from the LLM or the result of a tool function call.
+            Union[str, Any]: Either a text response from the LLM (str) or
+                           the result of a tool function call (Any).
+
+        Raises:
+            TypeError: If messages format is invalid
+            ValueError: If response format is not supported
+            LLMContextLengthExceededException: If input exceeds model's context limit
 
         Examples:
-        ---------
-        # Example 1: Using a string input
-        response = llm.call("Return the name of a random city in the world.")
-        print(response)
+            # Example 1: Simple string input
+            >>> response = llm.call("Return the name of a random city.")
+            >>> print(response)
+            "Paris"
 
-        # Example 2: Using a list of messages
-        messages = [{"role": "user", "content": "What is the capital of France?"}]
-        response = llm.call(messages)
-        print(response)
+            # Example 2: Message list with system and user messages
+            >>> messages = [
+            ...     {"role": "system", "content": "You are a geography expert"},
+            ...     {"role": "user", "content": "What is France's capital?"}
+            ... ]
+            >>> response = llm.call(messages)
+            >>> print(response)
+            "The capital of France is Paris."
         """
+        # Validate parameters before proceeding with the call.
+        self._validate_call_params()
+
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
+
+        # For O1 models, system messages are not supported.
+        # Convert any system messages into assistant messages.
+        if "o1" in self.model.lower():
+            for message in messages:
+                if message.get("role") == "system":
+                    message["role"] = "assistant"
 
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
 
             try:
-                # --- 1) Prepare the parameters for the completion call
+                # --- 1) Format messages according to provider requirements
+                formatted_messages = self._format_messages_for_provider(messages)
+
+                # --- 2) Prepare the parameters for the completion call
                 params = {
                     "model": self.model,
-                    "messages": messages,
+                    "messages": formatted_messages,
                     "timeout": self.timeout,
                     "temperature": self.temperature,
                     "top_p": self.top_p,
@@ -272,6 +312,7 @@ class LLM:
                     "api_key": self.api_key,
                     "stream": False,
                     "tools": tools,
+                    "reasoning_effort": self.reasoning_effort,
                     **self.additional_params,
                 }
 
@@ -338,6 +379,72 @@ class LLM:
                 )._is_context_limit_error(str(e)):
                     logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
+
+    def _format_messages_for_provider(
+        self, messages: List[Dict[str, str]]
+    ) -> List[Dict[str, str]]:
+        """Format messages according to provider requirements.
+
+        Args:
+            messages: List of message dictionaries with 'role' and 'content' keys.
+                     Can be empty or None.
+
+        Returns:
+            List of formatted messages according to provider requirements.
+            For Anthropic models, ensures first message has 'user' role.
+
+        Raises:
+            TypeError: If messages is None or contains invalid message format.
+        """
+        if messages is None:
+            raise TypeError("Messages cannot be None")
+
+        # Validate message format first
+        for msg in messages:
+            if not isinstance(msg, dict) or "role" not in msg or "content" not in msg:
+                raise TypeError(
+                    "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
+                )
+
+        if not self.is_anthropic:
+            return messages
+
+        # Anthropic requires messages to start with 'user' role
+        if not messages or messages[0]["role"] == "system":
+            # If first message is system or empty, add a placeholder user message
+            return [{"role": "user", "content": "."}, *messages]
+
+        return messages
+
+    def _get_custom_llm_provider(self) -> str:
+        """
+        Derives the custom_llm_provider from the model string.
+        - For example, if the model is "openrouter/deepseek/deepseek-chat", returns "openrouter".
+        - If the model is "gemini/gemini-1.5-pro", returns "gemini".
+        - If there is no '/', defaults to "openai".
+        """
+        if "/" in self.model:
+            return self.model.split("/")[0]
+        return "openai"
+
+    def _validate_call_params(self) -> None:
+        """
+        Validate parameters before making a call. Currently this only checks if
+        a response_format is provided and whether the model supports it.
+        The custom_llm_provider is dynamically determined from the model:
+          - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
+          - "gemini/gemini-1.5-pro" yields "gemini"
+          - If no slash is present, "openai" is assumed.
+        """
+        provider = self._get_custom_llm_provider()
+        if self.response_format is not None and not supports_response_schema(
+            model=self.model,
+            custom_llm_provider=provider,
+        ):
+            raise ValueError(
+                f"The model {self.model} does not support response_format for provider '{provider}'. "
+                "Please remove response_format or use a supported model."
+            )
 
     def supports_function_calling(self) -> bool:
         try:

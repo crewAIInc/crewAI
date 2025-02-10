@@ -1,10 +1,18 @@
 <div align="center">
 
-![Logo of CrewAI, two people rowing on a boat](./docs/crewai_logo.png)
+![Logo of CrewAI](./docs/crewai_logo.png)
 
 # **CrewAI**
 
-🤖 **CrewAI**: Production-grade framework for orchestrating sophisticated AI agent systems. From simple automations to complex real-world applications, CrewAI provides precise control and deep customization. By fostering collaborative intelligence through flexible, production-ready architecture, CrewAI empowers agents to work together seamlessly, tackling complex business challenges with predictable, consistent results.
+**CrewAI**: Production-grade framework for orchestrating sophisticated AI agent systems. From simple automations to complex real-world applications, CrewAI provides precise control and deep customization. By fostering collaborative intelligence through flexible, production-ready architecture, CrewAI empowers agents to work together seamlessly, tackling complex business challenges with predictable, consistent results.
+
+**CrewAI Enterprise**
+Want to plan, build (+ no code), deploy, monitor and interare your agents: [CrewAI Enterprise](https://www.crewai.com/enterprise). Designed for complex, real-world applications, our enterprise solution offers:
+
+- **Seamless Integrations**
+- **Scalable & Secure Deployment**
+- **Actionable Insights**
+- **24/7 Support**
 
 <h3>
 
@@ -190,7 +198,7 @@ research_task:
   description: >
     Conduct a thorough research about {topic}
     Make sure you find any interesting and relevant information given
-    the current year is 2024.
+    the current year is 2025.
   expected_output: >
     A list with 10 bullet points of the most relevant information about {topic}
   agent: researcher
@@ -392,7 +400,7 @@ class AdvancedAnalysisFlow(Flow[MarketState]):
             goal="Gather and validate supporting market data",
             backstory="You excel at finding and correlating multiple data sources"
         )
-        
+
         analysis_task = Task(
             description="Analyze {sector} sector data for the past {timeframe}",
             expected_output="Detailed market analysis with confidence score",
@@ -403,7 +411,7 @@ class AdvancedAnalysisFlow(Flow[MarketState]):
             expected_output="Corroborating evidence and potential contradictions",
             agent=researcher
         )
-        
+
         # Demonstrate crew autonomy
         analysis_crew = Crew(
             agents=[analyst, researcher],

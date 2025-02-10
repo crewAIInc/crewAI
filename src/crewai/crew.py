@@ -184,9 +184,9 @@ class Crew(BaseModel):
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
-    output_log_file: Optional[str] = Field(
+    output_log_file: Optional[Union[bool, str]] = Field(
         default=None,
-        description="output_log_file",
+        description="Path to the log file to be saved",
     )
     planning: Optional[bool] = Field(
         default=False,
@@ -294,7 +294,7 @@ class Crew(BaseModel):
                 ):
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
-                        embedder_config=self.embedder,
+                        embedder=self.embedder,
                         collection_name="crew",
                     )
 
@@ -382,6 +382,22 @@ class Crew(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_must_have_non_conditional_task(self) -> "Crew":
+        """Ensure that a crew has at least one non-conditional task."""
+        if not self.tasks:
+            return self
+        non_conditional_count = sum(
+            1 for task in self.tasks if not isinstance(task, ConditionalTask)
+        )
+        if non_conditional_count == 0:
+            raise PydanticCustomError(
+                "only_conditional_tasks",
+                "Crew must include at least one non-conditional task",
+                {},
+            )
+        return self
+
+    @model_validator(mode="after")
     def validate_first_task(self) -> "Crew":
         """Ensure the first task is not a ConditionalTask."""
         if self.tasks and isinstance(self.tasks[0], ConditionalTask):
@@ -439,6 +455,8 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
+
+
 
     @property
     def key(self) -> str:
@@ -683,12 +701,7 @@ class Crew(BaseModel):
                 manager.tools = []
                 raise Exception("Manager agent should not have tools")
         else:
-            self.manager_llm = (
-                getattr(self.manager_llm, "model_name", None)
-                or getattr(self.manager_llm, "model", None)
-                or getattr(self.manager_llm, "deployment_name", None)
-                or self.manager_llm
-            )
+            self.manager_llm = create_llm(self.manager_llm)
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
@@ -748,6 +761,7 @@ class Crew(BaseModel):
                     task, task_outputs, futures, task_index, was_replayed
                 )
                 if skipped_task_output:
+                    task_outputs.append(skipped_task_output)
                     continue
 
             if task.async_execution:
@@ -771,7 +785,7 @@ class Crew(BaseModel):
                     context=context,
                     tools=tools_for_task,
                 )
-                task_outputs = [task_output]
+                task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
 
@@ -792,7 +806,7 @@ class Crew(BaseModel):
             task_outputs = self._process_async_tasks(futures, was_replayed)
             futures.clear()
 
-        previous_output = task_outputs[task_index - 1] if task_outputs else None
+        previous_output = task_outputs[-1] if task_outputs else None
         if previous_output is not None and not task.should_execute(previous_output):
             self._logger.log(
                 "debug",
@@ -914,11 +928,15 @@ class Crew(BaseModel):
             )
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
-        if len(task_outputs) != 1:
-            raise ValueError(
-                "Something went wrong. Kickoff should return only one task output."
-            )
-        final_task_output = task_outputs[0]
+        if not task_outputs:
+            raise ValueError("No task outputs available to create crew output.")
+            
+        # Filter out empty outputs and get the last valid one as the main output
+        valid_outputs = [t for t in task_outputs if t.raw]
+        if not valid_outputs:
+            raise ValueError("No valid task outputs available to create crew output.")
+        final_task_output = valid_outputs[-1]
+            
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         token_usage = self.calculate_usage_metrics()
@@ -927,7 +945,7 @@ class Crew(BaseModel):
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
             json_dict=final_task_output.json_dict,
-            tasks_output=[task.output for task in self.tasks if task.output],
+            tasks_output=task_outputs,
             token_usage=token_usage,
         )
 
@@ -1154,3 +1172,80 @@ class Crew(BaseModel):
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+
+    def reset_memories(self, command_type: str) -> None:
+        """Reset specific or all memories for the crew.
+
+        Args:
+            command_type: Type of memory to reset.
+                Valid options: 'long', 'short', 'entity', 'knowledge',
+                'kickoff_outputs', or 'all'
+
+        Raises:
+            ValueError: If an invalid command type is provided.
+            RuntimeError: If memory reset operation fails.
+        """
+        VALID_TYPES = frozenset(
+            ["long", "short", "entity", "knowledge", "kickoff_outputs", "all"]
+        )
+
+        if command_type not in VALID_TYPES:
+            raise ValueError(
+                f"Invalid command type. Must be one of: {', '.join(sorted(VALID_TYPES))}"
+            )
+
+        try:
+            if command_type == "all":
+                self._reset_all_memories()
+            else:
+                self._reset_specific_memory(command_type)
+
+            self._logger.log("info", f"{command_type} memory has been reset")
+
+        except Exception as e:
+            error_msg = f"Failed to reset {command_type} memory: {str(e)}"
+            self._logger.log("error", error_msg)
+            raise RuntimeError(error_msg) from e
+
+    def _reset_all_memories(self) -> None:
+        """Reset all available memory systems."""
+        memory_systems = [
+            ("short term", self._short_term_memory),
+            ("entity", self._entity_memory),
+            ("long term", self._long_term_memory),
+            ("task output", self._task_output_handler),
+            ("knowledge", self.knowledge),
+        ]
+
+        for name, system in memory_systems:
+            if system is not None:
+                try:
+                    system.reset()
+                except Exception as e:
+                    raise RuntimeError(f"Failed to reset {name} memory") from e
+
+    def _reset_specific_memory(self, memory_type: str) -> None:
+        """Reset a specific memory system.
+
+        Args:
+            memory_type: Type of memory to reset
+
+        Raises:
+            RuntimeError: If the specified memory system fails to reset
+        """
+        reset_functions = {
+            "long": (self._long_term_memory, "long term"),
+            "short": (self._short_term_memory, "short term"),
+            "entity": (self._entity_memory, "entity"),
+            "knowledge": (self.knowledge, "knowledge"),
+            "kickoff_outputs": (self._task_output_handler, "task output"),
+        }
+
+        memory_system, name = reset_functions[memory_type]
+        if memory_system is None:
+            raise RuntimeError(f"{name} memory system is not initialized")
+
+        try:
+            memory_system.reset()
+        except Exception as e:
+            raise RuntimeError(f"Failed to reset {name} memory") from e
