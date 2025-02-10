@@ -282,6 +282,19 @@ my_crew = Crew(
 
 ### Using Google AI embeddings
 
+#### Prerequisites
+Before using Google AI embeddings, ensure you have:
+- Access to the Gemini API
+- The necessary API keys and permissions
+
+You will need to update your *pyproject.toml* dependencies:
+```YAML
+dependencies = [
+    "google-generativeai>=0.8.4", #main version in January/2025 - crewai v.0.100.0 and crewai-tools 0.33.0
+    "crewai[tools]>=0.100.0,<1.0.0"
+]
+```
+
 ```python Code
 from crewai import Crew, Agent, Task, Process
 
