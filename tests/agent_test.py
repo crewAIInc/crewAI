@@ -921,9 +921,9 @@ def test_tool_usage_information_is_appended_to_agent():
             return "Howdy!"
 
     fixed_datetime = datetime(2025, 2, 10, 12, 0, 0, tzinfo=UTC)
-    with patch("crewai.tools.tool_usage.datetime") as mock_datetime:
+    with patch("datetime.datetime") as mock_datetime:
         mock_datetime.now.return_value = fixed_datetime
-        mock_datetime.UTC = UTC
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         agent1 = Agent(
             role="Friendly Neighbor",
