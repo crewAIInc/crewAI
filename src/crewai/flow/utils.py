@@ -97,6 +97,8 @@ def get_possible_return_constants(function: Any) -> Optional[List[str]]:
 def calculate_node_levels(flow: Any) -> Dict[str, int]:
     """
     Calculate the hierarchical level of each node in the flow.
+    Performs a breadth-first traversal of the flow graph to assign levels
+    to nodes, starting with start methods at level 0.
 
     Parameters
     ----------
@@ -107,6 +109,13 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     -------
     Dict[str, int]
         Dictionary mapping method names to their hierarchical levels.
+            Notes
+    -----
+    - Start methods are assigned level 0
+    - Each subsequent connected node is assigned level = parent_level + 1
+    - Handles both OR and AND conditions for listeners
+    - Processes router paths separately
+
     """
     levels: Dict[str, int] = {}
     queue: Deque[str] = deque()
