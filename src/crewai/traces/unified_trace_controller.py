@@ -80,6 +80,19 @@ class UnifiedTraceController:
         self.flow_step = flow_step
         self.status: str = "running"
 
+    def _add_to_task_traces(self) -> None:
+        """Add this trace to the task's trace collection."""
+        if not hasattr(UnifiedTraceController, "_task_traces"):
+            UnifiedTraceController._task_traces = {}
+
+        if self.task_id is None:
+            return
+
+        if self.task_id not in UnifiedTraceController._task_traces:
+            UnifiedTraceController._task_traces[self.task_id] = []
+
+        UnifiedTraceController._task_traces[self.task_id].append(self)
+
     @classmethod
     def get_task_traces(cls, task_id: str) -> List["UnifiedTraceController"]:
         """Get all traces for a specific task.
