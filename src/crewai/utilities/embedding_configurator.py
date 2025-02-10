@@ -66,11 +66,9 @@ class EmbeddingConfigurator:
             )
 
         embedding_function = self.embedding_functions[provider]
-        return (
-            embedding_function(config)
-            if provider == "custom"
-            else embedding_function(config, model_name)
-        )
+        if provider == "custom":
+            return embedding_function(config)
+        return embedding_function(config, model_name)
 
     @staticmethod
     def _create_default_embedding_function():
@@ -210,13 +208,13 @@ class EmbeddingConfigurator:
         )
 
     @staticmethod
-    def _configure_custom(config, model_name):
+    def _configure_custom(config, model_name=None):
         """Configure a custom embedding function.
         
         Args:
             config: Configuration dictionary containing:
                 - embedder: Custom EmbeddingFunction instance
-            model_name: Not used for custom embedders
+            model_name: Not used for custom embedders, defaults to None
             
         Returns:
             EmbeddingFunction: The validated custom embedding function

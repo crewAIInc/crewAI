@@ -74,7 +74,11 @@ def test_memory_reset_with_custom_provider(temp_db_dir):
             return [[0.5] * 10] * len(input)
 
     memory = ShortTermMemory(
-        path=str(temp_db_dir), embedder_config={"provider": CustomEmbedder()}
+        path=str(temp_db_dir),
+        embedder_config={
+            "provider": "custom",
+            "config": {"embedder": CustomEmbedder()}
+        }
     )
     memory.reset()  # Should work with custom embedder
 
@@ -132,7 +136,11 @@ def test_memory_reset_cleans_up_files(temp_db_dir):
         if "CREWAI_EMBEDDING_PROVIDER" in os.environ:
             del os.environ["CREWAI_EMBEDDING_PROVIDER"]
         memory = ShortTermMemory(
-            path=str(temp_db_dir), embedder_config={"provider": TestEmbedder()}
+            path=str(temp_db_dir),
+            embedder_config={
+                "provider": "custom",
+                "config": {"embedder": TestEmbedder()}
+            }
         )
         memory.save("test memory", {"test": "metadata"})
         assert any(temp_db_dir.iterdir())  # Directory should have files
