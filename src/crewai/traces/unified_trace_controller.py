@@ -23,6 +23,8 @@ class UnifiedTraceController:
     and recording of results for various types of operations (LLM calls, tool calls, flow steps).
     """
 
+    _task_traces: Dict[str, List["UnifiedTraceController"]] = {}
+
     def __init__(
         self,
         trace_type: TraceType,
@@ -88,8 +90,6 @@ class UnifiedTraceController:
         Returns:
             List of traces associated with the task
         """
-        if not hasattr(cls, "_task_traces"):
-            cls._task_traces = {}
         return cls._task_traces.get(task_id, [])
 
     @classmethod

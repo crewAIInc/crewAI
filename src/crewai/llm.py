@@ -189,7 +189,7 @@ class LLM:
         self.context_window_size = 0
         self.reasoning_effort = reasoning_effort
         self.additional_params = kwargs
-        self._message_history = []
+        self._message_history: List[Dict[str, str]] = []
         self.is_anthropic = self._is_anthropic_model(model)
 
         litellm.drop_params = True
@@ -575,7 +575,7 @@ class LLM:
             return []
 
         if not hasattr(self, "_tool_results_history"):
-            self._tool_results_history = []
+            self._tool_results_history: List[Dict] = []
 
         new_tool_results = []
 

@@ -752,7 +752,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if inputs is not None and "id" not in inputs:
             self._initialize_state(inputs)
 
-        return asyncio.run(self.kickoff_async())
+        async def run_flow():
+            return await self.kickoff_async()
+
+        return asyncio.run(run_flow())
 
     @init_flow_main_trace
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:

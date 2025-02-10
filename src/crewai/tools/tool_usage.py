@@ -119,8 +119,8 @@ class ToolUsage:
 
         if (
             isinstance(tool, CrewStructuredTool)
-            and tool.name == self._i18n.tools("add_image")["name"]
-        ):  # type: ignore
+            and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
+        ):
             try:
                 result = self._use(tool_string=tool_string, tool=tool, calling=calling)
                 return result
