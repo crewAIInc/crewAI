@@ -80,6 +80,10 @@ class UnifiedTraceController:
         self.flow_step = flow_step
         self.status: str = "running"
 
+        # Add trace to task's trace collection if task_id is present
+        if task_id:
+            self._add_to_task_traces()
+
     def _add_to_task_traces(self) -> None:
         """Add this trace to the task's trace collection."""
         if not hasattr(UnifiedTraceController, "_task_traces"):
@@ -213,15 +217,20 @@ class UnifiedTraceController:
         )
 
     def _record_trace(self, result: Any = None) -> None:
-        """Record the trace using PlusClient.
+        """Record the trace.
+
+        This method is called when a trace is completed. It ensures the trace
+        is properly recorded and associated with its task if applicable.
 
         Args:
-            result: Optional result to include in the trace.
+            result: Optional result to include in the trace
         """
         if result:
             self.context["response"] = result
 
-        # TODO: Add trace to record_task_finished
+        # Add to task traces if this trace belongs to a task
+        if self.task_id:
+            self._add_to_task_traces()
 
 
 def should_trace() -> bool:
@@ -311,8 +320,7 @@ def init_flow_main_trace(
         with TraceContext.set_current(trace):
             try:
                 return await func(self, *args, **kwargs)
-            except Exception as e:
-                trace.end_trace(error=str(e))
+            except Exception:
                 raise
 
     return wrapper
