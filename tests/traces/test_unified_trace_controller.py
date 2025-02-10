@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 from uuid import UUID
 
 import pytest
+
 from crewai.traces.context import TraceContext
 from crewai.traces.enums import CrewType, RunType, TraceType
 from crewai.traces.models import (
