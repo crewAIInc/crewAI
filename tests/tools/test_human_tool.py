@@ -1,7 +1,8 @@
 """Test HumanTool functionality."""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from crewai.tools import HumanTool
 

@@ -1,5 +1,6 @@
 """Tool for handling human input using LangGraph's interrupt mechanism."""
 
+import logging
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
@@ -17,8 +18,6 @@ class HumanToolSchema(BaseModel):
         default=None,
         description="Optional timeout in seconds for waiting for user response"
     )
-
-import logging
 
 class HumanTool(BaseTool):
     """Tool for getting human input using LangGraph's interrupt mechanism.
