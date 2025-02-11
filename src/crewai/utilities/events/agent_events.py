@@ -1,6 +1,16 @@
-from typing import Any
+from typing import Any, Dict, List
+
+from crewai.tools.base_tool import BaseTool
 
 from .crew_events import CrewEvent
+
+
+class AgentExecutorCreated(CrewEvent):
+    """Event emitted when an agent executor is created"""
+
+    agent: Any
+    tools: List[BaseTool]
+    type: str = "agent_executor_created"
 
 
 class AgentExecutionStarted(CrewEvent):
@@ -8,6 +18,8 @@ class AgentExecutionStarted(CrewEvent):
 
     agent: Any  # type: ignore
     task: Any  # type: ignore
+    tools: List[Any]
+    inputs: Dict[str, Any]
     type: str = "agent_execution_started"
 
     model_config = {"arbitrary_types_allowed": True}

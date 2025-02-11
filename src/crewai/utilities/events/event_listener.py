@@ -25,7 +25,6 @@ class EventListener:
     _telemetry = Telemetry()
 
     def __init__(self):
-        print("Initializing EventListener")
         self._setup_listeners()
         self._telemetry.set_tracer()
 
@@ -64,7 +63,6 @@ class EventListener:
 
         @event_bus.on(TaskCompleted)
         def on_task_completed(source, event):
-            print(f"✓ Task completed: {event.task.description}")
             print(f"   Output: {event.output}")
             result = TaskEvaluator(event.task.agent).evaluate(event.task, event.output)
             print(f"   Evaluation: {result.quality}")
@@ -75,9 +73,7 @@ class EventListener:
 
         @event_bus.on(AgentExecutionStarted)
         def on_agent_execution_started(source, event):
-            print(
-                f"🤖 Agent '{event.agent.role}' started task: {event.task.description}"
-            )
+            print(f"🤖 Agent '{event.agent.role}' started task")
 
         @event_bus.on(AgentExecutionCompleted)
         def on_agent_execution_completed(source, event):

@@ -40,8 +40,8 @@ from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
-from crewai.utilities.events.events import emit
-from crewai.utilities.events.task_events import TaskCompleted, TaskStarted
+from crewai.utilities.events.event_bus import event_bus
+from crewai.utilities.events.task_events import TaskCompleted, TaskFailed, TaskStarted
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 
@@ -350,97 +350,110 @@ class Task(BaseModel):
         tools: Optional[List[Any]],
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+        try:
+            agent = agent or self.agent
+            self.agent = agent
+            if not agent:
+                raise Exception(
+                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                )
 
-        agent = agent or self.agent
-        self.agent = agent
-        if not agent:
-            raise Exception(
-                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+            self.start_time = datetime.datetime.now()
+            self._execution_span = self._telemetry.task_started(
+                crew=agent.crew, task=self
             )
 
-        self.start_time = datetime.datetime.now()
-        self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
+            self.prompt_context = context
+            tools = tools or self.tools or []
 
-        self.prompt_context = context
-        tools = tools or self.tools or []
+            self.processed_by_agents.add(agent.role)
+            event_bus.emit(self, TaskStarted(task=self))
+            result = agent.execute_task(
+                task=self,
+                context=context,
+                tools=tools,
+            )
 
-        self.processed_by_agents.add(agent.role)
-        emit(self, TaskStarted(task=self))
-        result = agent.execute_task(
-            task=self,
-            context=context,
-            tools=tools,
-        )
+            pydantic_output, json_output = self._export_output(result)
+            task_output = TaskOutput(
+                name=self.name,
+                description=self.description,
+                expected_output=self.expected_output,
+                raw=result,
+                pydantic=pydantic_output,
+                json_dict=json_output,
+                agent=agent.role,
+                output_format=self._get_output_format(),
+            )
 
-        pydantic_output, json_output = self._export_output(result)
-        task_output = TaskOutput(
-            name=self.name,
-            description=self.description,
-            expected_output=self.expected_output,
-            raw=result,
-            pydantic=pydantic_output,
-            json_dict=json_output,
-            agent=agent.role,
-            output_format=self._get_output_format(),
-        )
+            if self.guardrail:
+                guardrail_result = GuardrailResult.from_tuple(
+                    self.guardrail(task_output)
+                )
+                if not guardrail_result.success:
+                    if self.retry_count >= self.max_retries:
+                        raise Exception(
+                            f"Task failed guardrail validation after {self.max_retries} retries. "
+                            f"Last error: {guardrail_result.error}"
+                        )
 
-        if self.guardrail:
-            guardrail_result = GuardrailResult.from_tuple(self.guardrail(task_output))
-            if not guardrail_result.success:
-                if self.retry_count >= self.max_retries:
+                    self.retry_count += 1
+                    context = self.i18n.errors("validation_error").format(
+                        guardrail_result_error=guardrail_result.error,
+                        task_output=task_output.raw,
+                    )
+                    printer = Printer()
+                    printer.print(
+                        content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
+                        color="yellow",
+                    )
+                    return self._execute_core(agent, context, tools)
+
+                if guardrail_result.result is None:
                     raise Exception(
-                        f"Task failed guardrail validation after {self.max_retries} retries. "
-                        f"Last error: {guardrail_result.error}"
+                        "Task guardrail returned None as result. This is not allowed."
                     )
 
-                self.retry_count += 1
-                context = self.i18n.errors("validation_error").format(
-                    guardrail_result_error=guardrail_result.error,
-                    task_output=task_output.raw,
+                if isinstance(guardrail_result.result, str):
+                    task_output.raw = guardrail_result.result
+                    pydantic_output, json_output = self._export_output(
+                        guardrail_result.result
+                    )
+                    task_output.pydantic = pydantic_output
+                    task_output.json_dict = json_output
+                elif isinstance(guardrail_result.result, TaskOutput):
+                    task_output = guardrail_result.result
+
+            self.output = task_output
+            self.end_time = datetime.datetime.now()
+
+            if self.callback:
+                self.callback(self.output)
+
+            if self._execution_span:
+                self._telemetry.task_ended(self._execution_span, self, agent.crew)
+                self._execution_span = None
+
+            if self.output_file:
+                content = (
+                    json_output
+                    if json_output
+                    else pydantic_output.model_dump_json()
+                    if pydantic_output
+                    else result
                 )
-                printer = Printer()
-                printer.print(
-                    content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
-                    color="yellow",
-                )
-                return self._execute_core(agent, context, tools)
+                self._save_file(content)
+            event_bus.emit(self, TaskCompleted(task=self, output=task_output))
+            return task_output
+        except Exception as e:
+            self.end_time = datetime.datetime.now()
+            if self._execution_span:
+                if agent and agent.crew:
+                    self._telemetry.task_ended(self._execution_span, self, agent.crew)
+                self._execution_span = None
 
-            if guardrail_result.result is None:
-                raise Exception(
-                    "Task guardrail returned None as result. This is not allowed."
-                )
-
-            if isinstance(guardrail_result.result, str):
-                task_output.raw = guardrail_result.result
-                pydantic_output, json_output = self._export_output(
-                    guardrail_result.result
-                )
-                task_output.pydantic = pydantic_output
-                task_output.json_dict = json_output
-            elif isinstance(guardrail_result.result, TaskOutput):
-                task_output = guardrail_result.result
-
-        self.output = task_output
-        self.end_time = datetime.datetime.now()
-
-        if self.callback:
-            self.callback(self.output)
-
-        if self._execution_span:
-            self._telemetry.task_ended(self._execution_span, self, agent.crew)
-            self._execution_span = None
-
-        if self.output_file:
-            content = (
-                json_output
-                if json_output
-                else pydantic_output.model_dump_json()
-                if pydantic_output
-                else result
-            )
-            self._save_file(content)
-        emit(self, TaskCompleted(task=self, output=task_output))
-        return task_output
+            event_bus.emit(self, TaskFailed(task=self, error=str(e)))
+            raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:
         """Prompt the task.

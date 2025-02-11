@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Any, Dict
 
-from pydantic import BaseModel
+from .crew_events import CrewEvent
 
 
-class ToolUsageEvent(BaseModel):
+class ToolUsageEvent(CrewEvent):
+    """Base event for tool usage tracking"""
+
     agent_key: str
     agent_role: str
     tool_name: str
@@ -13,12 +15,20 @@ class ToolUsageEvent(BaseModel):
     run_attempts: int | None = None
     delegations: int | None = None
 
+    model_config = {"arbitrary_types_allowed": True}
+
 
 class ToolUsageFinished(ToolUsageEvent):
+    """Event emitted when a tool execution is completed"""
+
     started_at: datetime
     finished_at: datetime
     from_cache: bool = False
+    type: str = "tool_usage_finished"
 
 
 class ToolUsageError(ToolUsageEvent):
+    """Event emitted when a tool execution encounters an error"""
+
     error: str
+    type: str = "tool_usage_error"

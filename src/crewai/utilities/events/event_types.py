@@ -2,6 +2,7 @@ from typing import Union
 
 from .agent_events import (
     AgentExecutionCompleted,
+    AgentExecutionError,
     AgentExecutionStarted,
 )
 from .crew_events import (
@@ -23,8 +24,10 @@ from .flow_events import (
 )
 from .task_events import (
     TaskCompleted,
+    TaskFailed,
     TaskStarted,
 )
+from .tool_usage_events import ToolUsageError, ToolUsageFinished
 
 EventTypes = Union[
     CrewKickoffStarted,
@@ -40,8 +43,12 @@ EventTypes = Union[
     AgentExecutionCompleted,
     TaskStarted,
     TaskCompleted,
+    TaskFailed,
     FlowStarted,
     FlowFinished,
     MethodExecutionStarted,
     MethodExecutionFinished,
+    AgentExecutionError,
+    ToolUsageFinished,
+    ToolUsageError,
 ]

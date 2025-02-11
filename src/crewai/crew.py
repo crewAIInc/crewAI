@@ -48,12 +48,12 @@ from crewai.utilities.events.crew_events import (
     CrewKickoffCompleted,
     CrewKickoffFailed,
     CrewKickoffStarted,
-    CrewTrainStarted,
-    CrewTrainCompleted,
-    CrewTrainFailed,
-    CrewTestStarted,
     CrewTestCompleted,
     CrewTestFailed,
+    CrewTestStarted,
+    CrewTrainCompleted,
+    CrewTrainFailed,
+    CrewTrainStarted,
 )
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
@@ -1192,13 +1192,6 @@ class Crew(BaseModel):
                 ),
             )
             test_crew = self.copy()
-            # TODO: drop this
-            # self._test_execution_span = test_crew._telemetry.test_execution_span(
-            #     test_crew,
-            #     n_iterations,
-            #     inputs,
-            #     openai_model_name,
-            # )
             evaluator = CrewEvaluator(test_crew, openai_model_name)
 
             for i in range(1, n_iterations + 1):
@@ -1211,7 +1204,6 @@ class Crew(BaseModel):
                 self,
                 CrewTestCompleted(
                     crew_name=self.name or "crew",
-                    n_iterations=n_iterations,
                 ),
             )
         except Exception as e:

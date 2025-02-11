@@ -20,3 +20,11 @@ class TaskCompleted(CrewEvent):
     type: str = "task_completed"
 
     model_config = {"arbitrary_types_allowed": True}
+
+
+class TaskFailed(CrewEvent):
+    """Event emitted when a task fails"""
+
+    task: Any
+    error: str
+    type: str = "task_failed"
