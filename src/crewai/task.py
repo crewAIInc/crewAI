@@ -430,23 +430,23 @@ class Task(BaseModel):
             if self.callback:
                 self.callback(self.output)
 
-        crew = self.agent.crew  # type: ignore[union-attr]
-        if crew and crew.task_callback and crew.task_callback != self.callback:
-            crew.task_callback(self.output)
+            crew = self.agent.crew  # type: ignore[union-attr]
+            if crew and crew.task_callback and crew.task_callback != self.callback:
+                crew.task_callback(self.output)
 
-        if self._execution_span:
-            self._telemetry.task_ended(self._execution_span, self, agent.crew)
-            self._execution_span = None
+            if self._execution_span:
+                self._telemetry.task_ended(self._execution_span, self, agent.crew)
+                self._execution_span = None
 
-            if self.output_file:
-                content = (
-                    json_output
-                    if json_output
-                    else pydantic_output.model_dump_json()
-                    if pydantic_output
-                    else result
-                )
-                self._save_file(content)
+                if self.output_file:
+                    content = (
+                        json_output
+                        if json_output
+                        else pydantic_output.model_dump_json()
+                        if pydantic_output
+                        else result
+                    )
+                    self._save_file(content)
             event_bus.emit(self, TaskCompleted(task=self, output=task_output))
             return task_output
         except Exception as e:
@@ -732,10 +732,9 @@ class Task(BaseModel):
                     file.write(str(result))
         except (OSError, IOError) as e:
             raise RuntimeError(
-                "\n".join([
-                    f"Failed to save output file: {e}",
-                    FILEWRITER_RECOMMENDATION
-                ])
+                "\n".join(
+                    [f"Failed to save output file: {e}", FILEWRITER_RECOMMENDATION]
+                )
             )
         return None
 

@@ -18,6 +18,11 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
+from crewai.utilities.events import event_bus
+from crewai.utilities.events.agent_events import (
+    AgentExecutionError,
+    AgentExecutionStarted,
+)
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -85,6 +90,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.llm.stop = list(set(self.llm.stop + self.stop))
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
+        event_bus.emit(
+            self,
+            event=AgentExecutionStarted(
+                agent=self.agent,
+                task=self.task,
+                tools=self.tools,
+                inputs=inputs,
+            ),
+        )
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
@@ -107,11 +121,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
             raise
         except Exception as e:
+            self._handle_unknown_error(e)
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
                 raise e
             else:
-                self._handle_unknown_error(e)
                 raise e
 
         if self.ask_for_human_input:
@@ -177,6 +191,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _handle_unknown_error(self, exception: Exception) -> None:
         """Handle unknown errors by informing the user."""
+        event_bus.emit(
+            self,
+            event=AgentExecutionError(
+                agent=self.agent, task=self.task, error=str(exception)
+            ),
+        )
         self._printer.print(
             content="An unknown error occurred. Please check the details below.",
             color="red",

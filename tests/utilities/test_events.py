@@ -190,7 +190,7 @@ def test_agent_emits_execution_started_and_completed_events():
         "ask_for_human_input": False,
         "input": "Just say hi\n"
         "\n"
-        "This is the expect criteria for your final answer: hi\n"
+        "This is the expected criteria for your final answer: hi\n"
         "you MUST return the actual complete content as the final answer, not a "
         "summary.",
         "tool_names": "",
