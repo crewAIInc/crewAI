@@ -1,6 +1,7 @@
 """Tool for handling human input using LangGraph's interrupt mechanism."""
 
 from typing import Any, Dict
+
 from pydantic import Field
 
 from crewai.tools import BaseTool

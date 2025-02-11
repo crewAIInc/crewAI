@@ -1,14 +1,14 @@
 import json
 import random
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Task
 from crewai.tools import BaseTool
-from crewai.tools.tool_usage import ToolUsage
 from crewai.tools.tool_calling import ToolCalling
+from crewai.tools.tool_usage import ToolUsage
 
 
 class RandomNumberToolInput(BaseModel):
