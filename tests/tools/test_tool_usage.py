@@ -88,8 +88,6 @@ def test_random_number_tool_schema():
 
 def test_tool_usage_interrupt_handling():
     """Test that tool usage properly propagates LangGraph interrupts."""
-    from unittest.mock import patch, MagicMock
-
     class InterruptingTool(BaseTool):
         name: str = "interrupt_test"
         description: str = "A tool that raises LangGraph interrupts"

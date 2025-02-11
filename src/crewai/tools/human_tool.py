@@ -1,6 +1,6 @@
 """Tool for handling human input using LangGraph's interrupt mechanism."""
 
-from typing import Any, Dict
+import typing
 
 from pydantic import Field
 
