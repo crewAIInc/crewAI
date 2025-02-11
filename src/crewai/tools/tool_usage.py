@@ -182,6 +182,10 @@ class ToolUsage:
                 else:
                     result = tool.invoke(input={})
             except Exception as e:
+                # Check if this is a LangGraph interrupt that should be propagated
+                if hasattr(e, '__class__') and e.__class__.__name__ == 'Interrupt':
+                    raise e  # Propagate interrupt up
+
                 self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
