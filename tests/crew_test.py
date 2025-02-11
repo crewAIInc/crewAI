@@ -352,6 +352,38 @@ def test_manager_llm_requirement_for_hierarchical_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_crew_with_similar_roles():
+    """Test that manager can effectively delegate to agents with similar roles using enhanced context."""
+    quick_researcher = Agent(
+        role="Quick Researcher",
+        goal="Find information quickly, prioritizing speed over depth",
+        backstory="Specialist in rapid information gathering and quick insights"
+    )
+    deep_researcher = Agent(
+        role="Deep Researcher",
+        goal="Find detailed and thorough information through comprehensive analysis",
+        backstory="Expert in comprehensive research and in-depth investigation"
+    )
+    
+    task = Task(
+        description="Research the impact of AI on healthcare. Quick researcher should focus on recent developments, while deep researcher should analyze long-term implications.",
+        expected_output="A comprehensive analysis combining quick insights and deep research."
+    )
+    
+    crew = Crew(
+        agents=[quick_researcher, deep_researcher],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm="gpt-4"
+    )
+    
+    result = crew.kickoff()
+    assert result  # Verify crew execution completes
+    assert isinstance(result, CrewOutput)  # Verify output type
+    assert len(result.tasks_output) == 1  # Verify task was completed
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent_delegating_to_assigned_task_agent():
     """
     Test that the manager agent delegates to the assigned task agent.
@@ -392,12 +424,12 @@ def test_manager_agent_delegating_to_assigned_task_agent():
         # Verify the delegation tools were passed correctly
         assert len(tools) == 2
         assert any(
-            "Delegate a specific task to one of the following coworkers: Researcher"
+            "Researcher (Goal: Make the best research and analysis on content about AI and AI agents)"
             in tool.description
             for tool in tools
         )
         assert any(
-            "Ask a specific question to one of the following coworkers: Researcher"
+            "Researcher (Goal: Make the best research and analysis on content about AI and AI agents)"
             in tool.description
             for tool in tools
         )
@@ -426,13 +458,15 @@ def test_manager_agent_delegating_to_all_agents():
     assert crew.manager_agent.tools is not None
 
     assert len(crew.manager_agent.tools) == 2
-    assert (
-        "Delegate a specific task to one of the following coworkers: Researcher, Senior Writer\n"
-        in crew.manager_agent.tools[0].description
+    assert any(
+        "Researcher (Goal: Make the best research and analysis on content about AI and AI agents)"
+        in tool.description
+        for tool in crew.manager_agent.tools
     )
-    assert (
-        "Ask a specific question to one of the following coworkers: Researcher, Senior Writer\n"
-        in crew.manager_agent.tools[1].description
+    assert any(
+        "Senior Writer (Goal: Write the best content about AI and AI agents.)"
+        in tool.description
+        for tool in crew.manager_agent.tools
     )
 
 
@@ -1731,13 +1765,11 @@ def test_hierarchical_crew_creation_tasks_with_agents():
         # Verify the delegation tools were passed correctly
         assert len(tools) == 2
         assert any(
-            "Delegate a specific task to one of the following coworkers: Senior Writer"
-            in tool.description
+            "Senior Writer (Goal: Write the best content about AI and AI agents.)" in tool.description
             for tool in tools
         )
         assert any(
-            "Ask a specific question to one of the following coworkers: Senior Writer"
-            in tool.description
+            "Senior Writer (Goal: Write the best content about AI and AI agents.)" in tool.description
             for tool in tools
         )
 
@@ -1788,13 +1820,15 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
         # Verify the delegation tools were passed correctly
         assert len(tools) == 2
         assert any(
-            "Delegate a specific task to one of the following coworkers: Senior Writer\n"
-            in tool.description
+            "Senior Writer (Goal: Write the best content about AI and AI agents.)" in tool.description
             for tool in tools
         )
         assert any(
-            "Ask a specific question to one of the following coworkers: Senior Writer\n"
-            in tool.description
+            "Researcher (Goal: Make the best research and analysis on content about AI and AI agents)" in tool.description
+            for tool in tools
+        )
+        assert any(
+            "CEO (Goal: Make sure the writers in your company produce amazing content.)" in tool.description
             for tool in tools
         )
 
@@ -1827,9 +1861,17 @@ def test_hierarchical_crew_creation_tasks_with_sync_last():
     crew.kickoff()
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
-    assert (
-        "Delegate a specific task to one of the following coworkers: Senior Writer, Researcher, CEO\n"
-        in crew.manager_agent.tools[0].description
+    assert any(
+        "Senior Writer (Goal: Write the best content about AI and AI agents.)" in tool.description
+        for tool in crew.manager_agent.tools
+    )
+    assert any(
+        "Researcher (Goal: Make the best research and analysis on content about AI and AI agents)" in tool.description
+        for tool in crew.manager_agent.tools
+    )
+    assert any(
+        "CEO (Goal: Make sure the writers in your company produce amazing content.)" in tool.description
+        for tool in crew.manager_agent.tools
     )
 
 

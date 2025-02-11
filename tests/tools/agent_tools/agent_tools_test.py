@@ -124,3 +124,36 @@ def test_ask_question_to_wrong_agent():
         result
         == "\nError executing tool. coworker mentioned not found, it must be one of the following options:\n- researcher\n"
     )
+
+
+def test_delegate_work_with_similar_roles():
+    """Test that delegation tools show rich context for similar roles."""
+    researcher1 = Agent(
+        role="Quick Researcher",
+        goal="Find information quickly, prioritizing speed",
+        backstory="Specialist in rapid information gathering"
+    )
+    researcher2 = Agent(
+        role="Deep Researcher",
+        goal="Find detailed and thorough information",
+        backstory="Expert in comprehensive research"
+    )
+    tools = AgentTools(agents=[researcher1, researcher2]).tools()
+    delegate_tool = tools[0]
+    ask_tool = tools[1]
+    
+    # Verify tool descriptions include goals and backstories
+    assert "Quick Researcher (Goal: Find information quickly" in delegate_tool.description
+    assert "Deep Researcher (Goal: Find detailed" in delegate_tool.description
+    assert "Specialist in rapid information gathering" in delegate_tool.description
+    assert "Expert in comprehensive research" in delegate_tool.description
+    
+    # Verify ask tool also has the enhanced descriptions
+    assert "Quick Researcher (Goal: Find information quickly" in ask_tool.description
+    assert "Deep Researcher (Goal: Find detailed" in ask_tool.description
+    assert "Specialist in rapid information gathering" in ask_tool.description
+    assert "Expert in comprehensive research" in ask_tool.description
+    
+    # Verify multiline formatting
+    assert "\n- " in delegate_tool.description
+    assert "\n- " in ask_tool.description
