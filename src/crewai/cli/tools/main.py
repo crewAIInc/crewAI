@@ -2,13 +2,15 @@ import base64
 import os
 import subprocess
 import tempfile
+import typer
 from pathlib import Path
+from typing import Optional
 
 import click
 from rich.console import Console
 
-from crewai.cli import git
-from crewai.cli.command import BaseCommand, PlusAPIMixin
+from crewai.cli.base_command import BaseCommand
+from crewai.cli.command import PlusAPIMixin
 from crewai.cli.config import Settings
 from crewai.cli.utils import (
     get_project_description,
@@ -21,13 +23,18 @@ from crewai.cli.utils import (
 console = Console()
 
 
-class ToolCommand(BaseCommand, PlusAPIMixin):
+class ToolCommand(PlusAPIMixin, BaseCommand):
     """
     A class to handle tool repository related operations for CrewAI projects.
     """
 
-    def __init__(self):
-        BaseCommand.__init__(self)
+    def __init__(self, app: typer.Typer = None):
+        """Initialize the tool command.
+
+        Args:
+            app (typer.Typer, optional): Typer app instance. Defaults to None.
+        """
+        super().__init__(app)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
 
     def create(self, handle: str):

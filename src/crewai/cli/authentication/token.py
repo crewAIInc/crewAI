@@ -1,9 +1,8 @@
 from .utils import TokenManager
-
+from typing import Optional
+from pathlib import Path
 
 def get_auth_token() -> str:
     """Get the authentication token."""
-    access_token = TokenManager().get_token()
-    if not access_token:
-        raise Exception()
-    return access_token
+    token_manager = TokenManager()
+    return token_manager.get_token()

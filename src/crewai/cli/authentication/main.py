@@ -1,34 +1,50 @@
-import time
-import webbrowser
-from typing import Any, Dict
+"""Authentication command module."""
 
-import requests
+import os
+import typer
 from rich.console import Console
 
-from crewai.cli.tools.main import ToolCommand
-
-from .constants import AUTH0_AUDIENCE, AUTH0_CLIENT_ID, AUTH0_DOMAIN
-from .utils import TokenManager, validate_token
+from crewai.cli.base_command import BaseCommand
+from crewai.cli.authentication.token import get_auth_token
+from crewai.cli.authentication.constants import AUTH0_AUDIENCE, AUTH0_CLIENT_ID, AUTH0_DOMAIN
+from crewai.cli.authentication.utils import TokenManager, validate_token
 
 console = Console()
 
 
-class AuthenticationCommand:
+class AuthenticationCommand(BaseCommand):
+    """Authentication command class."""
+
     DEVICE_CODE_URL = f"https://{AUTH0_DOMAIN}/oauth/device/code"
     TOKEN_URL = f"https://{AUTH0_DOMAIN}/oauth/token"
 
-    def __init__(self):
+    def __init__(self, app: typer.Typer = None):
+        """Initialize the authentication command.
+
+        Args:
+            app (typer.Typer, optional): Typer app instance. Defaults to None.
+        """
+        super().__init__(app)
         self.token_manager = TokenManager()
+        self.setup_commands()
 
-    def signup(self) -> None:
-        """Sign up to CrewAI+"""
-        console.print("Signing Up to CrewAI+ \n", style="bold blue")
-        device_code_data = self._get_device_code()
-        self._display_auth_instructions(device_code_data)
+    def setup_commands(self):
+        """Setup authentication commands."""
+        @self.app.command()
+        def login():
+            """Login to CrewAI+"""
+            console.print("Signing Up to CrewAI+ \n", style="bold blue")
+            device_code_data = self._get_device_code()
+            self._display_auth_instructions(device_code_data)
 
-        return self._poll_for_token(device_code_data)
+            self._poll_for_token(device_code_data)
 
-    def _get_device_code(self) -> Dict[str, Any]:
+        @self.app.command()
+        def logout():
+            """Logout and remove the API token."""
+            console.print("Successfully logged out!")
+
+    def _get_device_code(self) -> dict:
         """Get the device code to authenticate the user."""
 
         device_code_payload = {
@@ -42,13 +58,13 @@ class AuthenticationCommand:
         response.raise_for_status()
         return response.json()
 
-    def _display_auth_instructions(self, device_code_data: Dict[str, str]) -> None:
+    def _display_auth_instructions(self, device_code_data: dict) -> None:
         """Display the authentication instructions to the user."""
         console.print("1. Navigate to: ", device_code_data["verification_uri_complete"])
         console.print("2. Enter the following code: ", device_code_data["user_code"])
         webbrowser.open(device_code_data["verification_uri_complete"])
 
-    def _poll_for_token(self, device_code_data: Dict[str, Any]) -> None:
+    def _poll_for_token(self, device_code_data: dict) -> None:
         """Poll the server for the token."""
         token_payload = {
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",

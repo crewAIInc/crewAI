@@ -3,25 +3,19 @@ from requests.exceptions import JSONDecodeError
 from rich.console import Console
 
 from crewai.cli.authentication.token import get_auth_token
+from crewai.cli.base_command import BaseCommand
 from crewai.cli.plus_api import PlusAPI
-from crewai.telemetry.telemetry import Telemetry
+
 
 console = Console()
 
 
-class BaseCommand:
+class PlusAPIMixin(BaseCommand):
     def __init__(self):
-        self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
-
-
-class PlusAPIMixin:
-    def __init__(self, telemetry):
+        super().__init__()
         try:
-            telemetry.set_tracer()
             self.plus_api_client = PlusAPI(api_key=get_auth_token())
         except Exception:
-            self._deploy_signup_error_span = telemetry.deploy_signup_error_span()
             console.print(
                 "Please sign up/login to CrewAI+ before using the CLI.",
                 style="bold red",

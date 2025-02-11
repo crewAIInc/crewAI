@@ -22,3 +22,10 @@ crew_tasks_output.json
 .ruff_cache
 .venv
 agentops.log
+
+# windsurf rules
+.windsurfrules
+.cursorrules
+.specstory/history/.what-is-this.md
+.specstory/history/expert-coding-assistance-in-python-and-typescript.md
+windsurfrules.md

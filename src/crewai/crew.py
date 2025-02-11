@@ -6,7 +6,7 @@ import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from pydantic import (
     UUID4,
@@ -35,13 +35,11 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import Tool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
-from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
@@ -50,7 +48,9 @@ from crewai.utilities.formatter import (
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from crewai.utilities.training_handler import CrewTrainingHandler
+
+if TYPE_CHECKING:
+    from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 
 try:
     import agentops  # type: ignore
@@ -251,8 +251,6 @@ class Crew(BaseModel):
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
-        self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
         return self
 
     @model_validator(mode="after")
@@ -543,7 +541,6 @@ class Crew(BaseModel):
             inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
-        self._execution_span = self._telemetry.crew_execution_span(self, inputs)
         self._task_output_handler.reset()
         self._logging_color = "bold_purple"
 
@@ -1130,7 +1127,6 @@ class Crew(BaseModel):
                 end_state_reason="Finished Execution",
                 is_auto_end=True,
             )
-        self._telemetry.end_crew(self, final_string_output)
 
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
@@ -1154,12 +1150,6 @@ class Crew(BaseModel):
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         test_crew = self.copy()
 
-        self._test_execution_span = test_crew._telemetry.test_execution_span(
-            test_crew,
-            n_iterations,
-            inputs,
-            openai_model_name,  # type: ignore[arg-type]
-        )  # type: ignore[arg-type]
         evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
 
         for i in range(1, n_iterations + 1):

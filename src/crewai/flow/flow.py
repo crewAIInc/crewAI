@@ -28,7 +28,6 @@ from crewai.flow.flow_events import (
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
-from crewai.telemetry import Telemetry
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
@@ -427,7 +426,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
 
-    _telemetry = Telemetry()
     _printer = Printer()
 
     _start_methods: List[str] = []
@@ -469,8 +467,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if kwargs:
             self._initialize_state(kwargs)
 
-        self._telemetry.flow_creation_span(self.__class__.__name__)
-
         # Register all flow-related methods
         for method_name in dir(self):
             if not method_name.startswith("_"):
@@ -482,6 +478,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     or hasattr(method, "__trigger_methods__")
                     or hasattr(method, "__is_router__")
                 ):
+
                     # Ensure method is bound to this instance
                     if not hasattr(method, "__self__"):
                         method = method.__get__(self, self.__class__)
@@ -755,10 +752,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if not self._start_methods:
             raise ValueError("No start method defined")
 
-        self._telemetry.flow_execution_span(
-            self.__class__.__name__, list(self._methods.keys())
-        )
-
         tasks = [
             self._execute_start_method(start_method)
             for start_method in self._start_methods
@@ -1018,7 +1011,4 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow") -> None:
-        self._telemetry.flow_plotting_span(
-            self.__class__.__name__, list(self._methods.keys())
-        )
         plot_flow(self, filename)

@@ -13,7 +13,6 @@ from json_repair import repair_json
 import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
-from crewai.telemetry import Telemetry
 from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
@@ -71,7 +70,6 @@ class ToolUsage:
     ) -> None:
         self._i18n: I18N = agent.i18n
         self._printer: Printer = Printer()
-        self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
         self._remember_format_after_usages: int = 3
@@ -142,11 +140,6 @@ class ToolUsage:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
-                self._telemetry.tool_repeated_usage(
-                    llm=self.function_calling_llm,
-                    tool_name=tool.name,
-                    attempts=self._run_attempts,
-                )
                 result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
                 return result  # type: ignore # Fix the return type of this function
 
@@ -197,7 +190,6 @@ class ToolUsage:
                 self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
-                    self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                     error_message = self._i18n.errors("tool_usage_exception").format(
                         error=e, tool=tool.name, tool_inputs=tool.description
                     )
@@ -234,11 +226,6 @@ class ToolUsage:
 
         if agentops:
             agentops.record(tool_event)
-        self._telemetry.tool_usage(
-            llm=self.function_calling_llm,
-            tool_name=tool.name,
-            attempts=self._run_attempts,
-        )
         result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
         data = {
             "result": result,
@@ -399,13 +386,16 @@ class ToolUsage:
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
-                self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                error_message = self._i18n.errors("tool_usage_error").format(
+                    error=e
+                )
+                error = ToolUsageErrorException(
+                    f'\n{error_message}.\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                ).message
                 self.task.increment_tools_errors()
                 if self.agent.verbose:
-                    self._printer.print(content=f"\n\n{e}\n", color="red")
-                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
-                    f'{self._i18n.errors("tool_usage_error").format(error=e)}\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
-                )
+                    self._printer.print(content=f"\n\n{error_message}\n", color="red")
+                return error  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
             return self._tool_calling(tool_string)
 
     def _validate_tool_input(self, tool_input: Optional[str]) -> Dict[str, Any]:

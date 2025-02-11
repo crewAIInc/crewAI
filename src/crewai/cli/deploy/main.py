@@ -3,13 +3,14 @@ from typing import Any, Dict, List, Optional
 from rich.console import Console
 
 from crewai.cli import git
-from crewai.cli.command import BaseCommand, PlusAPIMixin
+from crewai.cli.command import PlusAPIMixin
+from crewai.cli.base_command import BaseCommand
 from crewai.cli.utils import fetch_and_json_env_file, get_project_name
 
 console = Console()
 
 
-class DeployCommand(BaseCommand, PlusAPIMixin):
+class DeployCommand(PlusAPIMixin, BaseCommand):
     """
     A class to handle deployment-related operations for CrewAI projects.
     """
@@ -19,8 +20,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Initialize the DeployCommand with project name and API client.
         """
 
-        BaseCommand.__init__(self)
-        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
+        super().__init__()
         self.project_name = get_project_name(require=True)
 
     def _standard_no_param_error_message(self) -> None:
