@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from crewai import Agent, Task
 from crewai.tools import BaseTool
 from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_calling import ToolCalling
 
 
 class RandomNumberToolInput(BaseModel):
