@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -15,17 +15,21 @@ class Event:
 
 @dataclass
 class FlowStartedEvent(Event):
-    pass
+    inputs: Optional[Dict[str, Any]] = None
 
 
 @dataclass
 class MethodExecutionStartedEvent(Event):
     method_name: str
+    params: Optional[Dict[str, Any]] = None
+    state: Optional[Dict[str, Any]] = None
 
 
 @dataclass
 class MethodExecutionFinishedEvent(Event):
     method_name: str
+    result: Any = None
+    state: Optional[Dict[str, Any]] = None
 
 
 @dataclass
