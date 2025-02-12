@@ -321,7 +321,13 @@ def test_sync_task_execution():
         assert mock_execute_sync.call_count == len(tasks)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"], record_mode="once")
+@pytest.mark.vcr(
+    filter_headers=["authorization"],
+    record_mode="once",
+    decode_compressed_response=True,
+    ignore_localhost=True,
+    match_on=["method", "scheme", "host", "port", "path"]
+)
 @pytest.mark.parametrize(
     "tool_output,expected",
     [
