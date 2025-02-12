@@ -324,6 +324,9 @@ def test_sync_task_execution():
     ("test result``````", "test result"),
     ("test result", "test result"),
     ("test ```result```", "test ```result"),  # Only strip trailing backticks
+    (None, None),  # Test non-string input
+    ("", ""),  # Test empty string
+    ("malformed`result```test", "malformed`result```test"),  # Test non-trailing backticks
 ])
 def test_hierarchical_tool_output_formatting(tool_output, expected):
     """Test that tool outputs in hierarchical mode don't have extra backticks.
