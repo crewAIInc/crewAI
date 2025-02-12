@@ -1,21 +1,19 @@
 """Test Agent creation and execution basic functionality."""
 
 import hashlib
+import instructor
 import json
+import pydantic_core
+import pytest
 from concurrent.futures import Future
 from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import instructor
-import pydantic_core
-import pytest
-
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
-from crewai.tools.base_tool import BaseTool
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
@@ -24,6 +22,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools.base_tool import BaseTool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
 from crewai.utilities.rpm_controller import RPMController
