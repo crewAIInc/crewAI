@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import inspect
 import logging
 from typing import (
@@ -568,27 +569,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
 
-    def _dump_state(self) -> Optional[Dict[str, Any]]:
-        """
-        Dumps the current flow state as a dictionary.
-
-        This method converts the internal state into a serializable dictionary format,
-        ensuring compatibility with both dictionary and Pydantic BaseModel states.
-
-        Returns:
-            Optional[Dict[str, Any]]: The serialized state dictionary, or None if state is not available.
-        """
-        if self._state is None:
-            return None
-
-        if isinstance(self._state, dict):
-            return self._state.copy()
-
-        if isinstance(self._state, BaseModel):
-            return self._state.model_dump()
-
-        logger.warning("Unsupported flow state type for dumping.")
-        return None
+    def _copy_state(self) -> T:
+        return copy.deepcopy(self._state)
 
     @property
     def state(self) -> T:
@@ -833,7 +815,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 method_name=method_name,
                 flow_name=self.__class__.__name__,
                 params=dumped_params,
-                state=self._dump_state(),
+                state=self._copy_state(),
             ),
         )
 
@@ -853,7 +835,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 type="method_execution_finished",
                 method_name=method_name,
                 flow_name=self.__class__.__name__,
-                state=self._dump_state(),
+                state=self._copy_state(),
                 result=result,
             ),
         )

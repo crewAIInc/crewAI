@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
+
+from pydantic import BaseModel
 
 
 @dataclass
@@ -21,15 +23,15 @@ class FlowStartedEvent(Event):
 @dataclass
 class MethodExecutionStartedEvent(Event):
     method_name: str
+    state: Union[Dict[str, Any], BaseModel]
     params: Optional[Dict[str, Any]] = None
-    state: Optional[Dict[str, Any]] = None
 
 
 @dataclass
 class MethodExecutionFinishedEvent(Event):
     method_name: str
+    state: Union[Dict[str, Any], BaseModel]
     result: Any = None
-    state: Optional[Dict[str, Any]] = None
 
 
 @dataclass

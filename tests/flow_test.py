@@ -460,21 +460,21 @@ def test_unstructured_flow_event_emission():
         if event.method_name == "prepare_flower":
             if isinstance(event, MethodExecutionStartedEvent):
                 assert event.params == {}
-                assert event.state.get("separator") == ", "
+                assert event.state["separator"] == ", "
             elif isinstance(event, MethodExecutionFinishedEvent):
                 assert event.result == "foo"
-                assert event.state.get("flower") == "roses"
-                assert event.state.get("separator") == ", "
+                assert event.state["flower"] == "roses"
+                assert event.state["separator"] == ", "
             else:
                 assert False, "Unexpected event type for prepare_flower"
         elif event.method_name == "prepare_color":
             if isinstance(event, MethodExecutionStartedEvent):
                 assert event.params == {}
-                assert event.state.get("separator") == ", "
+                assert event.state["separator"] == ", "
             elif isinstance(event, MethodExecutionFinishedEvent):
                 assert event.result == "bar"
-                assert event.state.get("color") == "red"
-                assert event.state.get("separator") == ", "
+                assert event.state["color"] == "red"
+                assert event.state["separator"] == ", "
             else:
                 assert False, "Unexpected event type for prepare_color"
         else:
@@ -484,9 +484,9 @@ def test_unstructured_flow_event_emission():
     assert event_log[5].method_name == "write_first_sentence"
     assert event_log[5].params == {}
     assert isinstance(event_log[5].state, dict)
-    assert event_log[5].state.get("flower") == "roses"
-    assert event_log[5].state.get("color") == "red"
-    assert event_log[5].state.get("separator") == ", "
+    assert event_log[5].state["flower"] == "roses"
+    assert event_log[5].state["color"] == "red"
+    assert event_log[5].state["separator"] == ", "
 
     assert isinstance(event_log[6], MethodExecutionFinishedEvent)
     assert event_log[6].method_name == "write_first_sentence"
@@ -496,8 +496,8 @@ def test_unstructured_flow_event_emission():
     assert event_log[7].method_name == "finish_poem"
     assert event_log[7].params == {"_0": "roses are red"}
     assert isinstance(event_log[7].state, dict)
-    assert event_log[7].state.get("flower") == "roses"
-    assert event_log[7].state.get("color") == "red"
+    assert event_log[7].state["flower"] == "roses"
+    assert event_log[7].state["color"] == "red"
 
     assert isinstance(event_log[8], MethodExecutionFinishedEvent)
     assert event_log[8].method_name == "finish_poem"
@@ -507,8 +507,8 @@ def test_unstructured_flow_event_emission():
     assert event_log[9].method_name == "save_poem_to_database"
     assert event_log[9].params == {}
     assert isinstance(event_log[9].state, dict)
-    assert event_log[9].state.get("flower") == "roses"
-    assert event_log[9].state.get("color") == "red"
+    assert event_log[9].state["flower"] == "roses"
+    assert event_log[9].state["color"] == "red"
 
     assert isinstance(event_log[10], MethodExecutionFinishedEvent)
     assert event_log[10].method_name == "save_poem_to_database"
@@ -561,13 +561,11 @@ def test_structured_flow_event_emission():
     assert isinstance(event_log[3], MethodExecutionStartedEvent)
     assert event_log[3].method_name == "send_welcome_message"
     assert event_log[3].params == {}
-    assert isinstance(event_log[3].state, dict)
-    assert event_log[3].state.get("sent") == False
+    assert getattr(event_log[3].state, "sent") == False
 
     assert isinstance(event_log[4], MethodExecutionFinishedEvent)
     assert event_log[4].method_name == "send_welcome_message"
-    assert isinstance(event_log[4].state, dict)
-    assert event_log[4].state.get("sent") == True
+    assert getattr(event_log[4].state, "sent") == True
     assert event_log[4].result == "Welcome, Anakin!"
 
     assert isinstance(event_log[5], FlowFinishedEvent)
