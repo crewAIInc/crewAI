@@ -2,13 +2,14 @@
 
 import os
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
 from crewai import Agent, Crew, Task
-from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.utilities.exceptions.feedback_processing_exception import FeedbackProcessingError
+from crewai.agents.cache import CacheHandler
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
@@ -1001,6 +1002,53 @@ def test_agent_human_input():
         assert mock_human_input.call_count == 2  # Should have asked for feedback twice
         assert output.strip().lower() == "hello"  # Final output should be 'Hello'
 
+        # Verify message format for human feedback
+        messages = agent.agent_executor.messages
+        feedback_messages = [m for m in messages if "Feedback:" in m.get("content", "")]
+        assert len(feedback_messages) == 2  # Two feedback messages
+        for msg in feedback_messages:
+            assert msg["role"] == "user"  # All feedback messages should have user role
+
+
+@pytest.fixture
+def mock_executor():
+    """Create a mock executor for testing."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory"
+    )
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        human_input=True,
+        agent=agent
+    )
+    executor = CrewAgentExecutor(
+        agent=agent,
+        task=task,
+        llm=agent.llm,
+        crew=None,
+        prompt="",
+        max_iter=1,
+        tools=[],
+        tools_names=[],
+        stop_words=[],
+        tools_description="",
+        tools_handler=None
+    )
+    return executor
+
+def test_empty_feedback_handling(mock_executor):
+    """Test that empty feedback is properly handled."""
+    with pytest.raises(FeedbackProcessingError):
+        mock_executor._format_msg("")
+
+def test_long_feedback_handling(mock_executor):
+    """Test that very long feedback is properly handled."""
+    very_long_feedback = "x" * 10000
+    with pytest.raises(FeedbackProcessingError):
+        mock_executor._format_msg(very_long_feedback)
 
 def test_interpolate_inputs():
     agent = Agent(

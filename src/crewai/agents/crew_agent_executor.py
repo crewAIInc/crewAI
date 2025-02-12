@@ -18,6 +18,7 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
+from crewai.utilities.exceptions.feedback_processing_exception import FeedbackProcessingError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -487,6 +488,23 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return CrewAgentParser(agent=self.agent).parse(answer)
 
     def _format_msg(self, prompt: str, role: str = "user") -> Dict[str, str]:
+        """Format a message with role and content.
+        
+        Args:
+            prompt (str): The message content
+            role (str): The message role (default: "user")
+            
+        Returns:
+            Dict[str, str]: Formatted message with role and content
+            
+        Raises:
+            FeedbackProcessingError: If prompt is empty or exceeds max length
+        """
+        if not prompt or not prompt.strip():
+            raise FeedbackProcessingError("Feedback message cannot be empty")
+        if len(prompt) > 8192:  # Standard context window size
+            raise FeedbackProcessingError("Feedback message exceeds maximum length")
+            
         prompt = prompt.rstrip()
         return {"role": role, "content": prompt}
 
