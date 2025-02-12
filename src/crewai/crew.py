@@ -53,8 +53,6 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-from typing import Optional
-
 try:
     import agentops  # type: ignore
     from agentops.exceptions import AgentOpsError, AuthenticationError  # type: ignore
