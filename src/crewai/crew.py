@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 import uuid
 import warnings
@@ -248,6 +249,20 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+
+        # Initialize agentops if available and API key is present
+        if agentops:
+            api_key = os.getenv("AGENTOPS_API_KEY")
+            if api_key:
+                try:
+                    agentops.init(api_key)
+                except Exception as e:
+                    self._logger.log(
+                        "warning",
+                        f"Failed to initialize agentops: {e}",
+                        color="yellow"
+                    )
+
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
