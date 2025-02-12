@@ -587,7 +587,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             raise FeedbackProcessingError(error_msg, original_error=e)
 
     def _get_llm_feedback_response(self, feedback: str) -> Optional[str]:
-        """Get LLM classification of whether feedback requires changes."""
+        """Get LLM classification of whether feedback requires changes.
+        
+        Args:
+            feedback (str): The feedback to classify
+            
+        Returns:
+            Optional[str]: The LLM's response indicating if changes are needed
+            
+        Raises:
+            FeedbackProcessingError: If LLM call fails after max retries
+        """
         prompt = self._i18n.slice("human_feedback_classification").format(
             feedback=feedback
         )
@@ -600,8 +610,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             except Exception as error:
                 self._log_feedback_error(retry, error)
 
+        error_msg = f"Failed to get LLM feedback response after {MAX_LLM_RETRY} retries"
         self._log_max_retries_exceeded()
-        return None
+        raise FeedbackProcessingError(error_msg)
 
     def _feedback_requires_changes(self, response: Optional[str]) -> bool:
         """Determine if feedback response indicates need for changes."""
