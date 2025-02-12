@@ -574,6 +574,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     ) -> AgentFinish:
         """Process feedback for regular use with potential multiple iterations.
 
+        This method handles the iterative feedback process where the agent continues
+        to improve its answer based on user feedback until no more changes are needed.
+
         Args:
             current_answer (AgentFinish): The current answer from the agent
             initial_feedback (str): The initial feedback from the user
@@ -582,7 +585,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             AgentFinish: The final answer after processing all feedback iterations
             
         Raises:
-            FeedbackProcessingError: If feedback processing fails
+            FeedbackProcessingError: If feedback processing or validation fails
         """
         try:
             feedback = initial_feedback
@@ -590,12 +593,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
             while self.ask_for_human_input:
                 # Add feedback message with user role using standard formatter
-                self.messages.append(self._format_msg(
-                    f"Feedback: {feedback}",
-                    role="user"
-                ))
+                feedback_msg = self._i18n.slice("feedback_message").format(feedback=feedback)
+                self.messages.append(self._format_msg(feedback_msg, role="user"))
+                
                 response = self._get_llm_feedback_response(feedback)
-
                 if not self._feedback_requires_changes(response):
                     self.ask_for_human_input = False
                 else:
