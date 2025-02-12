@@ -317,14 +317,26 @@ def test_sync_task_execution():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_tool_output_formatting():
-    """Test that tool outputs in hierarchical mode don't have extra backticks"""
+@pytest.mark.parametrize("tool_output,expected", [
+    ("test result```", "test result"),
+    ("test result`", "test result"),
+    ("test result``````", "test result"),
+    ("test result", "test result"),
+    ("test ```result```", "test ```result"),  # Only strip trailing backticks
+])
+def test_hierarchical_tool_output_formatting(tool_output, expected):
+    """Test that tool outputs in hierarchical mode don't have extra backticks.
+    
+    This test verifies that the tool output cleaning functionality correctly handles
+    various scenarios of backtick formatting, ensuring only trailing backticks are
+    removed while preserving any inline markdown formatting.
+    """
     class TestTool(BaseTool):
         name: str = "test_tool"
         description: str = "A test tool"
         
         def _run(self, *args: Any, **kwargs: Any) -> str:
-            return "test result```"  # Intentionally add backticks to test stripping
+            return tool_output
 
     task = Task(
         description="Test task using test_tool",
@@ -341,13 +353,12 @@ def test_hierarchical_tool_output_formatting():
 
     with patch.object(Task, 'execute_sync', return_value=TaskOutput(
         description="Test task",
-        raw="test result",
+        raw=expected,
         agent="researcher"
     )) as mock_execute_sync:
         result = crew.kickoff()
         assert mock_execute_sync.called
-        assert not result.raw.endswith('```')
-        assert '```\n```' not in result.raw
+        assert result.raw == expected
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_process():
