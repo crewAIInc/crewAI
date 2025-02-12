@@ -30,87 +30,98 @@ from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
 
-def test_agentops_initialization_with_api_key(monkeypatch):
-    """Test that agentops is properly initialized when API key is present."""
-    import agentops
-    
-    # Mock agentops.init
-    mock_init = MagicMock()
-    monkeypatch.setattr(agentops, "init", mock_init)
-    
-    # Set API key
-    monkeypatch.setenv("AGENTOPS_API_KEY", "test-key")
-    
-    # Create crew
-    task = Task(
-        description="Test task",
-        expected_output="Test output",
-        agent=researcher,
+@pytest.fixture
+def researcher():
+    """Fixture to create a researcher agent."""
+    return Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups.",
+        allow_delegation=False,
     )
-    crew = Crew(agents=[researcher], tasks=[task])
-    
-    # Verify agentops was initialized
-    mock_init.assert_called_once_with("test-key")
 
-def test_agentops_initialization_without_api_key(monkeypatch):
-    """Test that agentops is not initialized when API key is not present."""
-    import agentops
-    
-    # Mock agentops.init
-    mock_init = MagicMock()
-    monkeypatch.setattr(agentops, "init", mock_init)
-    
-    # Create crew without setting API key
-    task = Task(
-        description="Test task",
-        expected_output="Test output",
-        agent=researcher,
-    )
-    crew = Crew(agents=[researcher], tasks=[task])
-    
-    # Verify agentops.init was not called
-    mock_init.assert_not_called()
-
-def test_gemini_llm_with_agentops(monkeypatch):
-    """Test that Gemini LLM works correctly with agentops."""
-    # Mock agentops
+@pytest.fixture
+def mock_agentops():
+    """Fixture to mock agentops for testing."""
     mock_agentops = MagicMock()
-    monkeypatch.setattr("crewai.crew.agentops", mock_agentops)
-    
-    # Set API keys
-    monkeypatch.setenv("AGENTOPS_API_KEY", "test-key")
-    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
-    
-    # Create crew with Gemini LLM
-    llm = LLM(model="gemini-pro")
-    agent = Agent(
-        role="test",
-        goal="test",
-        backstory="test",
-        llm=llm
-    )
-    task = Task(
-        description="test task",
-        expected_output="test output",
-        agent=agent
-    )
-    crew = Crew(agents=[agent], tasks=[task])
-    
-    # Mock the agent execution to avoid actual API calls
-    with patch.object(Task, 'execute_sync', return_value=TaskOutput(
-        description="test",
-        raw="test output",
-        agent=agent.role
-    )):
-        # Run crew
-        crew.kickoff()
-    
-    # Verify agentops.end_session was called correctly
-    mock_agentops.end_session.assert_called_once_with(
-        end_state="Success",
-        end_state_reason="Finished Execution",
-        is_auto_end=True
-    )
+    mock_agentops.init = MagicMock()
+    return mock_agentops
+
+@pytest.mark.agentops
+class TestAgentOpsIntegration:
+    """Tests for AgentOps integration."""
+
+    def test_initialization_with_api_key(self, mock_agentops, monkeypatch):
+        """Test that agentops is properly initialized when API key is present."""
+        monkeypatch.setattr("crewai.crew.agentops", mock_agentops)
+        monkeypatch.setenv("AGENTOPS_API_KEY", "test-key-12345")
+        crew = Crew(agents=[researcher], tasks=[Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=researcher,
+        )])
+        crew.set_private_attrs()
+        mock_agentops.init.assert_called_once_with("test-key-12345")
+
+    def test_initialization_without_api_key(self, mock_agentops):
+        """Test that agentops is not initialized when API key is not present."""
+        crew = Crew(agents=[researcher], tasks=[Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=researcher,
+        )])
+        mock_agentops.assert_not_called()
+
+    def test_initialization_with_invalid_api_key(self, mock_agentops, monkeypatch):
+        """Test that agentops is not initialized when API key is invalid."""
+        monkeypatch.setenv("AGENTOPS_API_KEY", "   ")
+        crew = Crew(agents=[researcher], tasks=[Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=researcher,
+        )])
+        mock_agentops.assert_not_called()
+
+    def test_gemini_llm_integration(self, mock_agentops, monkeypatch):
+        """Test that Gemini LLM works correctly with agentops."""
+        # Mock agentops
+        monkeypatch.setattr("crewai.crew.agentops", mock_agentops)
+        
+        # Set API keys
+        monkeypatch.setenv("AGENTOPS_API_KEY", "test-key-12345")
+        monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
+        
+        # Create crew with Gemini LLM
+        llm = LLM(model="gemini-pro")
+        agent = Agent(
+            role="test",
+            goal="test",
+            backstory="test",
+            llm=llm
+        )
+        task = Task(
+            description="test task",
+            expected_output="test output",
+            agent=agent
+        )
+        crew = Crew(agents=[agent], tasks=[task])
+        crew.set_private_attrs()
+        
+        # Mock the agent execution to avoid actual API calls
+        with patch.object(Task, 'execute_sync', return_value=TaskOutput(
+            description="test",
+            raw="test output",
+            agent=agent.role
+        )):
+            # Run crew
+            crew.kickoff()
+        
+        # Verify agentops.end_session was called correctly
+        mock_agentops.end_session.assert_called_once_with(
+            end_state="Success",
+            end_state_reason="Finished Execution",
+            is_auto_end=True
+        )
 
 ceo = Agent(
     role="CEO",

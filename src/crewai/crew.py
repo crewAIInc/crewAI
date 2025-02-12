@@ -53,10 +53,15 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+from typing import Optional
+
 try:
     import agentops  # type: ignore
+    from agentops.exceptions import AgentOpsError, AuthenticationError  # type: ignore
 except ImportError:
     agentops = None
+    AgentOpsError = None
+    AuthenticationError = None
 
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
@@ -91,6 +96,8 @@ class Crew(BaseModel):
     __hash__ = object.__hash__  # type: ignore
     _execution_span: Any = PrivateAttr()
     _rpm_controller: RPMController = PrivateAttr()
+    _agentops: Optional['agentops.AgentOps'] = PrivateAttr(default=None)
+    _telemetry: Optional[Telemetry] = PrivateAttr(default=None)
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
@@ -241,38 +248,72 @@ class Crew(BaseModel):
         # TODO: Improve typing
         return json.loads(v) if isinstance(v, Json) else v  # type: ignore
 
-    @model_validator(mode="after")
+    def _validate_api_key(self, api_key: Optional[str]) -> bool:
+        """Validate the AgentOps API key.
+        
+        Args:
+            api_key: The API key to validate
+            
+        Returns:
+            bool: True if the API key is valid, False otherwise
+        """
+        if not api_key:
+            return False
+        stripped_key = api_key.strip()
+        return bool(stripped_key and len(stripped_key) > 10)
+
     def set_private_attrs(self) -> "Crew":
-        """Set private attributes."""
+        """Initialize private attributes including AgentOps integration.
+        
+        This method sets up:
+        - Logger and file handler for output logging
+        - RPM controller for rate limiting
+        - AgentOps integration for monitoring (if available and configured)
+        """
         self._cache_handler = CacheHandler()
         self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+        self._telemetry = Telemetry()
+        self._telemetry.set_tracer()
 
         # Initialize agentops if available and API key is present
         if agentops:
             api_key = os.getenv("AGENTOPS_API_KEY")
-            if api_key and api_key.strip():  # Validate API key
+            if self._validate_api_key(api_key):
                 try:
                     agentops.init(api_key)
+                    self._agentops = agentops
                     self._logger.log(
                         "info",
                         "Successfully initialized agentops",
                         color="green"
                     )
-                except (ConnectionError, ValueError) as e:
+                except (ConnectionError, AuthenticationError) as e:
                     self._logger.log(
                         "warning",
-                        f"Failed to initialize agentops: {e}",
+                        f"Failed to connect to agentops: {e}",
                         color="yellow"
                     )
+                    self._agentops = None
+                except (ValueError, AgentOpsError) as e:
+                    self._logger.log(
+                        "warning",
+                        f"Invalid agentops configuration: {e}",
+                        color="yellow"
+                    )
+                    self._agentops = None
+            else:
+                self._logger.log(
+                    "warning",
+                    "Invalid AGENTOPS_API_KEY provided",
+                    color="yellow"
+                )
+                self._agentops = None
 
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)
-
-        self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
         return self
 
     @model_validator(mode="after")
