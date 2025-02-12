@@ -1,6 +1,13 @@
-from typing import Any, List, Optional, Type, cast
+from typing import Any, List, Optional, Type, Union, cast
 
-from pydantic import Field
+from crewai.tools.base_tool import Tool
+
+try:
+    from langchain_core.tools import Tool as LangChainTool  # type: ignore
+except ImportError:
+    LangChainTool = None
+
+from pydantic import Field, field_validator
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
@@ -24,6 +31,10 @@ class LangChainAgentAdapter(BaseAgent):
         ...,
         description="The wrapped LangChain runnable agent instance. It is expected to have an 'invoke' method.",
     )
+    tools: Optional[List[Union[BaseTool, Any]]] = Field(
+        default_factory=list,
+        description="Tools at the agent's disposal. Accepts both CrewAI BaseTool instances and other tools.",
+    )
     function_calling_llm: Optional[Any] = Field(
         default=None, description="Optional function calling LLM."
     )
@@ -40,10 +51,23 @@ class LangChainAgentAdapter(BaseAgent):
     i18n: Any = None
     crew: Any = None
     knowledge: Any = None
-    tools: Optional[List[BaseTool]] = None
 
     class Config:
         arbitrary_types_allowed = True
+
+    @field_validator("tools", mode="before")
+    def convert_tools(cls, value):
+        """Ensure tools are valid CrewAI BaseTool instances."""
+        if not value:
+            return value
+        new_tools = []
+        for tool in value:
+            # If tool is already a CrewAI BaseTool instance, keep it as is.
+            if isinstance(tool, BaseTool):
+                new_tools.append(tool)
+            else:
+                new_tools.append(Tool.from_langchain(tool))
+        return new_tools
 
     def execute_task(
         self,
@@ -114,6 +138,8 @@ class LangChainAgentAdapter(BaseAgent):
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools)
+
+        self._show_start_logs(task)
 
         if self.crew and getattr(self.crew, "_train", False):
             task_prompt = self._training_handler(task_prompt=task_prompt)
@@ -223,20 +249,43 @@ class LangChainAgentAdapter(BaseAgent):
         """
         Creates an agent executor using LangChain's AgentExecutor.
         """
-        from importlib import import_module
+        try:
+            from langchain.agents import AgentExecutor
+        except ImportError as e:
+            raise ImportError(
+                "LangChain library not found. Please run `uv add langchain` to add LangChain support."
+            ) from e
 
-        langchain_agents = import_module("langchain.agents")
-        AgentExecutor = getattr(langchain_agents, "AgentExecutor")
-        used_tools = tools or self.tools or []
+        # Use the following fallback strategy:
+        # 1. If tools were passed in, use them.
+        # 2. Otherwise, if self.tools exists, use them.
+        # 3. Otherwise, try to extract the tools set in the underlying langchain agent.
+        raw_tools = tools or self.tools
+        if not raw_tools:
+            # Try getting the tools from the agent's inner 'agent' attribute.
+            if hasattr(self.langchain_agent, "agent") and hasattr(
+                self.langchain_agent.agent, "tools"
+            ):
+                raw_tools = self.langchain_agent.agent.tools
+            else:
+                raw_tools = getattr(self.langchain_agent, "tools", [])
 
-        print(f"Creating agent executor for langchain agent: {self.langchain_agent}")
-        print("Passing tools: ", used_tools)
+        # Convert each CrewAI tool to a native LangChain tool if possible.
+        used_tools = []
+        for tool in raw_tools:
+            if hasattr(tool, "to_langchain"):
+                used_tools.append(tool.to_langchain())
+            else:
+                used_tools.append(tool)
+
+        print("Raw tools:", raw_tools)
+        print("Used tools:", used_tools)
+
         self.agent_executor = AgentExecutor.from_agent_and_tools(
             agent=self.langchain_agent,
             tools=used_tools,
             verbose=getattr(self, "verbose", True),
         )
-        print("Created agent executor for langchain agent")
 
     def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
         return tools
@@ -252,3 +301,21 @@ class LangChainAgentAdapter(BaseAgent):
         instructions: str = "",
     ) -> Converter:
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
+
+    def _show_start_logs(self, task: Task) -> None:
+        if self.langchain_agent is None:
+            raise ValueError("Agent cannot be None")
+        # Check if the adapter or its crew is in verbose mode.
+        verbose = self.verbose or (self.crew and getattr(self.crew, "verbose", False))
+        if verbose:
+            from crewai.utilities import Printer
+
+            printer = Printer()
+            # Use the adapter's role (inherited from BaseAgent) for logging.
+            printer.print(
+                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.role}\033[00m"
+            )
+            description = getattr(task, "description", "Not Found")
+            printer.print(
+                content=f"\033[95m## Task:\033[00m \033[92m{description}\033[00m"
+            )

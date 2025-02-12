@@ -340,7 +340,6 @@ class BaseAgent(ABC, BaseModel):
         if self.cache:
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
-        print(f"Setting cache handler for agent: {self.id}")
         # Only create the executor if it hasn't been created yet.
         if self.agent_executor is None:
             self.create_agent_executor()
@@ -348,7 +347,6 @@ class BaseAgent(ABC, BaseModel):
             print(
                 "Agent executor already exists, skipping creation in set_cache_handler."
             )
-        print(f"Cache handler set for agent: {self.id}")
 
     def increment_formatting_errors(self) -> None:
         self.formatting_errors += 1
@@ -361,7 +359,6 @@ class BaseAgent(ABC, BaseModel):
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
-            print(f"Setting RPM controller for agent: {self.id}")
             # Only create the executor if it hasn't been created yet.
             if self.agent_executor is None:
                 self.create_agent_executor()
@@ -369,4 +366,3 @@ class BaseAgent(ABC, BaseModel):
                 print(
                     "Agent executor already exists, skipping creation in set_rpm_controller."
                 )
-            print(f"RPM controller set for agent: {self.id}")

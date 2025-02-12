@@ -1,7 +1,7 @@
 import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
-from typing import Any, Callable, Type, get_args, get_origin
+from typing import Any, Callable, Optional, Type, get_args, get_origin
 
 from pydantic import (
     BaseModel,
@@ -23,7 +23,10 @@ class BaseTool(BaseModel, ABC):
     class _ArgsSchemaPlaceholder(PydanticBaseModel):
         pass
 
-    model_config = ConfigDict()
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        from_attributes=True,  # Allow conversion from ORM objects
+    )
 
     name: str
     """The unique name of the tool that clearly communicates its purpose."""
@@ -89,6 +92,7 @@ class BaseTool(BaseModel, ABC):
 
     @classmethod
     def from_langchain(cls, tool: Any) -> "BaseTool":
+        print("CREATING TOOL FROM LANGCHAIN")
         """Create a Tool instance from a CrewStructuredTool.
 
         This method takes a CrewStructuredTool object and converts it into a
@@ -177,66 +181,95 @@ class BaseTool(BaseModel, ABC):
 
         return origin.__name__
 
+    def to_langchain(self) -> Any:
+        """
+        Convert this CrewAI Tool instance into a LangChain-compatible tool.
+        Returns a concrete subclass of LangChain's BaseTool.
+        """
+        try:
+            from langchain_core.tools import Tool as LC_Tool
+        except ImportError as e:
+            raise ImportError(
+                "LangChain library not found. Please run `uv add langchain` to add LangChain support."
+            ) from e
+
+        # Capture the function in a local variable to avoid referencing None.
+        tool_func = self.func
+
+        class ConcreteLangChainTool(LC_Tool):
+            def _run(self, *args, **kwargs):
+                return tool_func(*args, **kwargs)
+
+        # Do not pass callback_manager; let LC_Tool use its default.
+        print("Creating concrete langchain tool")
+        return ConcreteLangChainTool(
+            name=self.name,
+            description=self.description,
+            func=tool_func,
+            args_schema=self.args_schema,
+        )
+
+    @property
+    def get(self) -> Callable[[str, Any], Any]:
+        # Returns a callable that looks up attributes on the instance.
+        return lambda key, default=None: getattr(self, key, default)
+
 
 class Tool(BaseTool):
-    """The function that will be executed when the tool is called."""
+    """Tool implementation that requires a function."""
 
     func: Callable
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        from_attributes=True,
+    )
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         return self.func(*args, **kwargs)
 
     @classmethod
     def from_langchain(cls, tool: Any) -> "Tool":
-        """Create a Tool instance from a CrewStructuredTool.
-
-        This method takes a CrewStructuredTool object and converts it into a
-        Tool instance. It ensures that the provided tool has a callable 'func'
-        attribute and infers the argument schema if not explicitly provided.
-
-        Args:
-            tool (Any): The CrewStructuredTool object to be converted.
-
-        Returns:
-            Tool: A new Tool instance created from the provided CrewStructuredTool.
-
-        Raises:
-            ValueError: If the provided tool does not have a callable 'func' attribute.
-        """
-        if not hasattr(tool, "func") or not callable(tool.func):
-            raise ValueError("The provided tool must have a callable 'func' attribute.")
-
+        """Convert a LangChain tool to a CrewAI Tool."""
+        # Handle missing args_schema
         args_schema = getattr(tool, "args_schema", None)
-
         if args_schema is None:
-            # Infer args_schema from the function signature if not provided
-            func_signature = signature(tool.func)
-            annotations = func_signature.parameters
-            args_fields = {}
-            for name, param in annotations.items():
-                if name != "self":
-                    param_annotation = (
-                        param.annotation if param.annotation != param.empty else Any
-                    )
-                    field_info = Field(
-                        default=...,
-                        description="",
-                    )
-                    args_fields[name] = (param_annotation, field_info)
-            if args_fields:
-                args_schema = create_model(f"{tool.name}Input", **args_fields)
-            else:
-                # Create a default schema with no fields if no parameters are found
-                args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
-                )
+            # Create default args schema
+            args_schema = create_model(f"{tool.name}Input", __base__=PydanticBaseModel)
+        tool_dict = {
+            "name": tool.name,
+            "description": tool.description,
+            "func": tool._run,  # LangChain tools use _run
+            "args_schema": args_schema,
+        }
+        # Create and validate a new instance directly from the dictionary
+        return cls.model_validate(tool_dict)
 
-        return cls(
-            name=getattr(tool, "name", "Unnamed Tool"),
-            description=getattr(tool, "description", ""),
-            func=tool.func,
-            args_schema=args_schema,
+    def to_langchain(self) -> Any:
+        """Convert to LangChain tool with proper get method."""
+        try:
+            from langchain_core.tools import Tool as LC_Tool
+        except ImportError:
+            raise ImportError("langchain_core is not installed")
+
+        LC_Tool(
+            name=self.name,
+            description=self.description,
+            func=self.func,
+            args_schema=self.args_schema,
         )
+
+        # # Create subclass with get method
+        # class PatchedTool(LC_Tool):
+        #     def get(self, key: str, default: Any = None) -> Any:
+        #         return getattr(self, key, default)
+
+        # return PatchedTool(
+        #     name=self.name,
+        #     description=self.description,
+        #     func=self.func,
+        #     args_schema=self.args_schema,
+        #     callback_manager=None,
+        # )
 
 
 def to_langchain(
