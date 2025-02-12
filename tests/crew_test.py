@@ -29,6 +29,7 @@ from crewai.utilities import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
+
 def test_agentops_initialization_with_api_key(monkeypatch):
     """Test that agentops is properly initialized when API key is present."""
     import agentops
