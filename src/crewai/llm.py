@@ -119,7 +119,16 @@ def suppress_warnings():
 class LLM:
     def __init__(
         self,
-        model: str,
+        model: Union[str, 'BaseLanguageModel'],
+        """Initialize LLM instance.
+        
+        Args:
+            model: The model identifier; should not start with 'models/'.
+                  Examples: 'gemini/gemini-1.5-pro', 'anthropic/claude-3'
+            
+        Raises:
+            ValueError: If the model name starts with 'models/'.
+        """
         timeout: Optional[Union[float, int]] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
@@ -142,10 +151,13 @@ class LLM:
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         **kwargs,
     ):
+        # Constants for model name validation
+        INVALID_MODEL_PREFIX = "models/"
+        
         # Validate model name
-        if isinstance(model, str) and model.startswith('models/'):
+        if isinstance(model, str) and model.startswith(INVALID_MODEL_PREFIX):
             raise ValueError(
-                'Model name should not start with "models/". '
+                f'Invalid model name "{model}": Model names should not start with "{INVALID_MODEL_PREFIX}". '
                 'Use the provider prefix instead (e.g., "gemini/model-name").'
             )
         

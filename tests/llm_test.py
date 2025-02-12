@@ -252,15 +252,27 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
-def test_model_name_validation():
-    """Test that model names with 'models/' prefix are rejected."""
-    with pytest.raises(ValueError, match="should not start with \"models/\""):
-        LLM(model="models/gemini/gemini-1.5-pro")
+class TestModelNameValidation:
+    """Tests for model name validation in LLM class."""
+    
+    def test_models_prefix_rejection(self):
+        """Test that model names with 'models/' prefix are rejected."""
+        with pytest.raises(ValueError, match="should not start with \"models/\""):
+            LLM(model="models/gemini/gemini-1.5-pro")
 
-    # Valid model names should work
-    LLM(model="gemini/gemini-1.5-pro")
-    LLM(model="anthropic/claude-3-opus-20240229-v1:0")
-    LLM(model="openai/gpt-4")
+    def test_valid_model_names(self):
+        """Test that valid model names are accepted."""
+        LLM(model="gemini/gemini-1.5-pro")
+        LLM(model="anthropic/claude-3-opus-20240229-v1:0")
+        LLM(model="openai/gpt-4")
+        LLM(model="openai/gpt-4 turbo")  # Space in model name should work
+        
+    def test_edge_cases(self):
+        """Test edge cases for model name validation."""
+        with pytest.raises(ValueError):
+            LLM(model="")  # Empty string
+        with pytest.raises(TypeError):
+            LLM(model=None)  # None value
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
