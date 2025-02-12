@@ -537,16 +537,35 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _handle_training_feedback(
         self, initial_answer: AgentFinish, feedback: str
     ) -> AgentFinish:
-        """Process feedback for training scenarios with single iteration."""
-        self._printer.print(
-            content="\nProcessing training feedback.\n",
-            color="yellow",
-        )
-        self._handle_crew_training_output(initial_answer, feedback)
-        improved_answer = self._process_feedback_iteration(feedback)
-        self._handle_crew_training_output(improved_answer)
-        self.ask_for_human_input = False
-        return improved_answer
+        """Process feedback for training scenarios with single iteration.
+        
+        Args:
+            initial_answer (AgentFinish): The initial answer to improve
+            feedback (str): The feedback to process
+            
+        Returns:
+            AgentFinish: The improved answer after processing feedback
+            
+        Raises:
+            FeedbackProcessingError: If feedback processing fails
+        """
+        try:
+            self._printer.print(
+                content="\nProcessing training feedback.\n",
+                color="yellow",
+            )
+            self._handle_crew_training_output(initial_answer, feedback)
+            improved_answer = self._process_feedback_iteration(feedback)
+            self._handle_crew_training_output(improved_answer)
+            self.ask_for_human_input = False
+            return improved_answer
+        except Exception as e:
+            error_msg = f"Failed to process training feedback: {str(e)}"
+            self._printer.print(
+                content=error_msg,
+                color="red"
+            )
+            raise FeedbackProcessingError(error_msg, original_error=e)
 
     def _handle_regular_feedback(
         self,
