@@ -18,9 +18,11 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
-from crewai.utilities.exceptions.feedback_processing_exception import FeedbackProcessingError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
+)
+from crewai.utilities.exceptions.feedback_processing_exception import (
+    FeedbackProcessingError,
 )
 from crewai.utilities.logger import Logger
 from crewai.utilities.training_handler import CrewTrainingHandler
