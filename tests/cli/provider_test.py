@@ -1,8 +1,9 @@
-from unittest.mock import Mock, patch
+import json
+import time
 
 import pytest
 import requests
-import time
+from unittest.mock import Mock, patch
 
 from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
 from crewai.cli.provider import fetch_provider_data, get_provider_data
@@ -27,6 +28,7 @@ def test_fetch_provider_data_success():
         mock_response = Mock()
         mock_response.headers = {'content-type': 'application/json'}
         mock_response.json.return_value = mock_data
+        mock_response.iter_content.return_value = [json.dumps(mock_data).encode()]
         mock_get.return_value = mock_response
         result = fetch_provider_data('/tmp/cache.json')
         assert result == mock_data
