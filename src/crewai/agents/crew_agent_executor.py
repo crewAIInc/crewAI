@@ -366,24 +366,24 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             tool_result = tool_calling.message
             return ToolResult(result=tool_result, result_as_answer=False)
         else:
-            if tool_calling.tool_name.casefold().strip() in [
-                name.casefold().strip() for name in self.tool_name_to_tool_map
-            ] or tool_calling.tool_name.casefold().replace("_", " ") in [
-                name.casefold().strip() for name in self.tool_name_to_tool_map
-            ]:
+            valid_names = [name.casefold().strip() for name in self.tool_name_to_tool_map]
+            tool_name = tool_calling.tool_name.casefold().strip()
+            tool_name_alt = tool_calling.tool_name.casefold().replace("_", " ")
+            
+            if tool_name in valid_names or tool_name_alt in valid_names:
                 tool_result = tool_usage.use(tool_calling, agent_action.text)
                 tool_result = self._clean_tool_result(tool_result)
                 tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
-                if tool:
-                    return ToolResult(
-                        result=tool_result, result_as_answer=tool.result_as_answer
-                    )
-            else:
-                tool_result = self._i18n.errors("wrong_tool_name").format(
-                    tool=tool_calling.tool_name,
-                    tools=", ".join([tool.name.casefold() for tool in self.tools]),
+                return ToolResult(
+                    result=tool_result,
+                    result_as_answer=tool.result_as_answer if tool else False
                 )
-                return ToolResult(result=tool_result, result_as_answer=False)
+            
+            tool_result = self._i18n.errors("wrong_tool_name").format(
+                tool=tool_calling.tool_name,
+                tools=", ".join([tool.name.casefold() for tool in self.tools]),
+            )
+            return ToolResult(result=tool_result, result_as_answer=False)
 
     def _clean_tool_result(self, tool_result: Any) -> Any:
         """Clean tool result by removing trailing backticks.
