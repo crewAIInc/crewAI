@@ -1,6 +1,5 @@
-import requests
-
 import pytest
+import requests
 from unittest.mock import Mock, patch
 
 from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
