@@ -58,38 +58,104 @@ my_crew = Crew(
 ### Example: Use Custom Memory Instances e.g FAISS as the VectorDB
 
 ```python Code
-from crewai import Crew, Agent, Task, Process
+from crewai import Crew, Process
+from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
+from crewai.memory.storage import LTMSQLiteStorage, RAGStorage
+from typing import List, Optional
 
 # Assemble your crew with memory capabilities
-my_crew = Crew(
-    agents=[...],
-    tasks=[...],
-    process="Process.sequential",
-    memory=True,
-    long_term_memory=EnhanceLongTermMemory(
+my_crew: Crew = Crew(
+    agents = [...],
+    tasks = [...],
+    process = Process.sequential,
+    memory = True,
+    # Long-term memory for persistent storage across sessions
+    long_term_memory = LongTermMemory(
         storage=LTMSQLiteStorage(
-            db_path="/my_data_dir/my_crew1/long_term_memory_storage.db"
+            db_path="/my_crew1/long_term_memory_storage.db"
         )
     ),
-    short_term_memory=EnhanceShortTermMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="short_term",
-            data_dir="//my_data_dir",
-            model=embedder["model"],
-            dimension=embedder["dimension"],
+    # Short-term memory for current context using RAG
+    short_term_memory = ShortTermMemory(
+        storage = RAGStorage(
+                embedder_config={
+                    "provider": "openai",
+                    "config": {
+                        "model": 'text-embedding-3-small'
+                    }
+                },
+                type="short_term",
+                path="/my_crew1/"
+            )
         ),
     ),
-    entity_memory=EnhanceEntityMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="entities",
-            data_dir="//my_data_dir",
-            model=embedder["model"],
-            dimension=embedder["dimension"],
-        ),
+    # Entity memory for tracking key information about entities
+    entity_memory = EntityMemory(
+        storage=RAGStorage(
+            embedder_config={
+                "provider": "openai",
+                "config": {
+                    "model": 'text-embedding-3-small'
+                }
+            },
+            type="short_term",
+            path="/my_crew1/"
+        )
     ),
     verbose=True,
+)
+```
+
+## Security Considerations
+
+When configuring memory storage:
+- Use environment variables for storage paths (e.g., `CREWAI_STORAGE_DIR`)
+- Never hardcode sensitive information like database credentials
+- Consider access permissions for storage directories
+- Use relative paths when possible to maintain portability
+
+Example using environment variables:
+```python
+import os
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage import LTMSQLiteStorage
+
+# Configure storage path using environment variable
+storage_path = os.getenv("CREWAI_STORAGE_DIR", "./storage")
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(
+            db_path="{storage_path}/memory.db".format(storage_path=storage_path)
+        )
+    )
+)
+```
+
+## Configuration Examples
+
+### Basic Memory Configuration
+```python
+from crewai import Crew
+from crewai.memory import LongTermMemory
+
+# Simple memory configuration
+crew = Crew(memory=True)  # Uses default storage locations
+```
+
+### Custom Storage Configuration
+```python
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage import LTMSQLiteStorage
+
+# Configure custom storage paths
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(db_path="./memory.db")
+    )
 )
 ```
 
@@ -215,6 +281,19 @@ my_crew = Crew(
 ```
 
 ### Using Google AI embeddings
+
+#### Prerequisites
+Before using Google AI embeddings, ensure you have:
+- Access to the Gemini API
+- The necessary API keys and permissions
+
+You will need to update your *pyproject.toml* dependencies:
+```YAML
+dependencies = [
+    "google-generativeai>=0.8.4", #main version in January/2025 - crewai v.0.100.0 and crewai-tools 0.33.0
+    "crewai[tools]>=0.100.0,<1.0.0"
+]
+```
 
 ```python Code
 from crewai import Crew, Agent, Task, Process
@@ -365,6 +444,38 @@ my_crew = Crew(
             "project_id": "<YOUR_PROJECT_ID>",
         }
     }
+)
+```
+
+### Using Amazon Bedrock embeddings
+
+```python Code
+# Note: Ensure you have installed `boto3` for Bedrock embeddings to work.
+
+import os
+import boto3
+from crewai import Crew, Agent, Task, Process
+
+boto3_session = boto3.Session(
+    region_name=os.environ.get("AWS_REGION_NAME"),
+    aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY")
+)
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    embedder={
+    "provider": "bedrock",
+        "config":{
+            "session": boto3_session,
+            "model": "amazon.titan-embed-text-v2:0",
+            "vector_dimension": 1024
+        }
+    }
+    verbose=True
 )
 ```
 

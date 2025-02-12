@@ -50,6 +50,41 @@ writer = Agent(
 )
 
 
+def test_crew_with_only_conditional_tasks_raises_error():
+    """Test that creating a crew with only conditional tasks raises an error."""
+
+    def condition_func(task_output: TaskOutput) -> bool:
+        return True
+
+    conditional1 = ConditionalTask(
+        description="Conditional task 1",
+        expected_output="Output 1",
+        agent=researcher,
+        condition=condition_func,
+    )
+    conditional2 = ConditionalTask(
+        description="Conditional task 2",
+        expected_output="Output 2",
+        agent=researcher,
+        condition=condition_func,
+    )
+    conditional3 = ConditionalTask(
+        description="Conditional task 3",
+        expected_output="Output 3",
+        agent=researcher,
+        condition=condition_func,
+    )
+
+    with pytest.raises(
+        pydantic_core._pydantic_core.ValidationError,
+        match="Crew must include at least one non-conditional task",
+    ):
+        Crew(
+            agents=[researcher],
+            tasks=[conditional1, conditional2, conditional3],
+        )
+
+
 def test_crew_config_conditional_requirement():
     with pytest.raises(ValueError):
         Crew(process=Process.sequential)
@@ -557,12 +592,12 @@ def test_crew_with_delegating_agents_should_not_override_task_tools():
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        assert any(isinstance(tool, TestTool) for tool in tools), (
-            "TestTool should be present"
-        )
-        assert any("delegate" in tool.name.lower() for tool in tools), (
-            "Delegation tool should be present"
-        )
+        assert any(
+            isinstance(tool, TestTool) for tool in tools
+        ), "TestTool should be present"
+        assert any(
+            "delegate" in tool.name.lower() for tool in tools
+        ), "Delegation tool should be present"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -621,12 +656,12 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools():
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        assert any(isinstance(tool, TestTool) for tool in new_ceo.tools), (
-            "TestTool should be present"
-        )
-        assert any("delegate" in tool.name.lower() for tool in tools), (
-            "Delegation tool should be present"
-        )
+        assert any(
+            isinstance(tool, TestTool) for tool in new_ceo.tools
+        ), "TestTool should be present"
+        assert any(
+            "delegate" in tool.name.lower() for tool in tools
+        ), "Delegation tool should be present"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -750,17 +785,17 @@ def test_task_tools_override_agent_tools_with_allow_delegation():
         used_tools = kwargs["tools"]
 
         # Confirm AnotherTestTool is present but TestTool is not
-        assert any(isinstance(tool, AnotherTestTool) for tool in used_tools), (
-            "AnotherTestTool should be present"
-        )
-        assert not any(isinstance(tool, TestTool) for tool in used_tools), (
-            "TestTool should not be present among used tools"
-        )
+        assert any(
+            isinstance(tool, AnotherTestTool) for tool in used_tools
+        ), "AnotherTestTool should be present"
+        assert not any(
+            isinstance(tool, TestTool) for tool in used_tools
+        ), "TestTool should not be present among used tools"
 
         # Confirm delegation tool(s) are present
-        assert any("delegate" in tool.name.lower() for tool in used_tools), (
-            "Delegation tool should be present"
-        )
+        assert any(
+            "delegate" in tool.name.lower() for tool in used_tools
+        ), "Delegation tool should be present"
 
     # Finally, make sure the agent's original tools remain unchanged
     assert len(researcher_with_delegation.tools) == 1
@@ -1561,9 +1596,9 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
         # Verify that exactly one tool was used and it was a CodeInterpreterTool
         assert len(used_tools) == 1, "Should have exactly one tool"
-        assert isinstance(used_tools[0], CodeInterpreterTool), (
-            "Tool should be CodeInterpreterTool"
-        )
+        assert isinstance(
+            used_tools[0], CodeInterpreterTool
+        ), "Tool should be CodeInterpreterTool"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1920,6 +1955,7 @@ def test_task_callback_on_crew():
 
 def test_task_callback_both_on_task_and_crew():
     from unittest.mock import MagicMock, patch
+
     mock_callback_on_task = MagicMock()
     mock_callback_on_crew = MagicMock()
 
@@ -2059,6 +2095,210 @@ def test_tools_with_custom_caching():
                 output=12,
             )
             assert result.raw == "3"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_task_uses_last_output():
+    """Test that conditional tasks use the last task output for condition evaluation."""
+    task1 = Task(
+        description="First task",
+        expected_output="First output",
+        agent=researcher,
+    )
+
+    def condition_fails(task_output: TaskOutput) -> bool:
+        # This condition will never be met
+        return "never matches" in task_output.raw.lower()
+
+    def condition_succeeds(task_output: TaskOutput) -> bool:
+        # This condition will match first task's output
+        return "first success" in task_output.raw.lower()
+
+    conditional_task1 = ConditionalTask(
+        description="Second task - conditional that fails condition",
+        expected_output="Second output",
+        agent=researcher,
+        condition=condition_fails,
+    )
+
+    conditional_task2 = ConditionalTask(
+        description="Third task - conditional that succeeds using first task output",
+        expected_output="Third output",
+        agent=writer,
+        condition=condition_succeeds,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, conditional_task1, conditional_task2],
+    )
+
+    # Mock outputs for tasks
+    mock_first = TaskOutput(
+        description="First task output",
+        raw="First success output",  # Will be used by third task's condition
+        agent=researcher.role,
+    )
+    mock_third = TaskOutput(
+        description="Third task output",
+        raw="Third task executed",  # Output when condition succeeds using first task output
+        agent=writer.role,
+    )
+
+    # Set up mocks for task execution and conditional logic
+    with patch.object(ConditionalTask, "should_execute") as mock_should_execute:
+        # First conditional fails, second succeeds
+        mock_should_execute.side_effect = [False, True]
+        with patch.object(Task, "execute_sync") as mock_execute:
+            mock_execute.side_effect = [mock_first, mock_third]
+            result = crew.kickoff()
+
+            # Verify execution behavior
+            assert mock_execute.call_count == 2  # Only first and third tasks execute
+            assert mock_should_execute.call_count == 2  # Both conditionals checked
+
+            # Verify outputs collection:
+            # First executed task output, followed by an automatically generated (skipped) output, then the conditional execution
+            assert len(result.tasks_output) == 3
+            assert (
+                result.tasks_output[0].raw == "First success output"
+            )  # First task succeeded
+            assert (
+                result.tasks_output[1].raw == ""
+            )  # Second task skipped (condition failed)
+            assert (
+                result.tasks_output[2].raw == "Third task executed"
+            )  # Third task used first task's output
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_tasks_result_collection():
+    """Test that task outputs are properly collected based on execution status."""
+    task1 = Task(
+        description="Normal task that always executes",
+        expected_output="First output",
+        agent=researcher,
+    )
+
+    def condition_never_met(task_output: TaskOutput) -> bool:
+        return "never matches" in task_output.raw.lower()
+
+    def condition_always_met(task_output: TaskOutput) -> bool:
+        return "success" in task_output.raw.lower()
+
+    task2 = ConditionalTask(
+        description="Conditional task that never executes",
+        expected_output="Second output",
+        agent=researcher,
+        condition=condition_never_met,
+    )
+
+    task3 = ConditionalTask(
+        description="Conditional task that always executes",
+        expected_output="Third output",
+        agent=writer,
+        condition=condition_always_met,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2, task3],
+    )
+
+    # Mock outputs for different execution paths
+    mock_success = TaskOutput(
+        description="Success output",
+        raw="Success output",  # Triggers third task's condition
+        agent=researcher.role,
+    )
+    mock_conditional = TaskOutput(
+        description="Conditional output",
+        raw="Conditional task executed",
+        agent=writer.role,
+    )
+
+    # Set up mocks for task execution and conditional logic
+    with patch.object(ConditionalTask, "should_execute") as mock_should_execute:
+        # First conditional fails, second succeeds
+        mock_should_execute.side_effect = [False, True]
+        with patch.object(Task, "execute_sync") as mock_execute:
+            mock_execute.side_effect = [mock_success, mock_conditional]
+            result = crew.kickoff()
+
+            # Verify execution behavior
+            assert mock_execute.call_count == 2  # Only first and third tasks execute
+            assert mock_should_execute.call_count == 2  # Both conditionals checked
+
+            # Verify task output collection:
+            # There should be three outputs: normal task, skipped conditional task (empty output),
+            # and the conditional task that executed.
+            assert len(result.tasks_output) == 3
+            assert (
+                result.tasks_output[0].raw == "Success output"
+            )  # Normal task executed
+            assert result.tasks_output[1].raw == ""  # Second task skipped
+            assert (
+                result.tasks_output[2].raw == "Conditional task executed"
+            )  # Third task executed
+
+            # Verify task output collection
+            assert len(result.tasks_output) == 3
+            assert (
+                result.tasks_output[0].raw == "Success output"
+            )  # Normal task executed
+            assert result.tasks_output[1].raw == ""  # Second task skipped
+            assert (
+                result.tasks_output[2].raw == "Conditional task executed"
+            )  # Third task executed
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_multiple_conditional_tasks():
+    """Test that having multiple conditional tasks in sequence works correctly."""
+    task1 = Task(
+        description="Initial research task",
+        expected_output="Research output",
+        agent=researcher,
+    )
+
+    def condition1(task_output: TaskOutput) -> bool:
+        return "success" in task_output.raw.lower()
+
+    def condition2(task_output: TaskOutput) -> bool:
+        return "proceed" in task_output.raw.lower()
+
+    task2 = ConditionalTask(
+        description="First conditional task",
+        expected_output="Conditional output 1",
+        agent=writer,
+        condition=condition1,
+    )
+
+    task3 = ConditionalTask(
+        description="Second conditional task",
+        expected_output="Conditional output 2",
+        agent=writer,
+        condition=condition2,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2, task3],
+    )
+
+    # Mock different task outputs to test conditional logic
+    mock_success = TaskOutput(
+        description="Mock success",
+        raw="Success and proceed output",
+        agent=researcher.role,
+    )
+
+    # Set up mocks for task execution
+    with patch.object(Task, "execute_sync", return_value=mock_success) as mock_execute:
+        result = crew.kickoff()
+        # Verify all tasks were executed (no IndexError)
+        assert mock_execute.call_count == 3
+        assert len(result.tasks_output) == 3
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -3180,9 +3420,9 @@ def test_fetch_inputs():
     expected_placeholders = {"role_detail", "topic", "field"}
     actual_placeholders = crew.fetch_inputs()
 
-    assert actual_placeholders == expected_placeholders, (
-        f"Expected {expected_placeholders}, but got {actual_placeholders}"
-    )
+    assert (
+        actual_placeholders == expected_placeholders
+    ), f"Expected {expected_placeholders}, but got {actual_placeholders}"
 
 
 def test_task_tools_preserve_code_execution_tools():
@@ -3255,20 +3495,20 @@ def test_task_tools_preserve_code_execution_tools():
         used_tools = kwargs["tools"]
 
         # Verify all expected tools are present
-        assert any(isinstance(tool, TestTool) for tool in used_tools), (
-            "Task's TestTool should be present"
-        )
-        assert any(isinstance(tool, CodeInterpreterTool) for tool in used_tools), (
-            "CodeInterpreterTool should be present"
-        )
-        assert any("delegate" in tool.name.lower() for tool in used_tools), (
-            "Delegation tool should be present"
-        )
+        assert any(
+            isinstance(tool, TestTool) for tool in used_tools
+        ), "Task's TestTool should be present"
+        assert any(
+            isinstance(tool, CodeInterpreterTool) for tool in used_tools
+        ), "CodeInterpreterTool should be present"
+        assert any(
+            "delegate" in tool.name.lower() for tool in used_tools
+        ), "Delegation tool should be present"
 
         # Verify the total number of tools (TestTool + CodeInterpreter + 2 delegation tools)
-        assert len(used_tools) == 4, (
-            "Should have TestTool, CodeInterpreter, and 2 delegation tools"
-        )
+        assert (
+            len(used_tools) == 4
+        ), "Should have TestTool, CodeInterpreter, and 2 delegation tools"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -3312,9 +3552,9 @@ def test_multimodal_flag_adds_multimodal_tools():
         used_tools = kwargs["tools"]
 
         # Check that the multimodal tool was added
-        assert any(isinstance(tool, AddImageTool) for tool in used_tools), (
-            "AddImageTool should be present when agent is multimodal"
-        )
+        assert any(
+            isinstance(tool, AddImageTool) for tool in used_tools
+        ), "AddImageTool should be present when agent is multimodal"
 
         # Verify we have exactly one tool (just the AddImageTool)
         assert len(used_tools) == 1, "Should only have the AddImageTool"
@@ -3540,9 +3780,9 @@ def test_crew_guardrail_feedback_in_context():
     assert len(execution_contexts) > 1, "Task should have been executed multiple times"
 
     # Verify that the second execution included the guardrail feedback
-    assert "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1], (
-        "Guardrail feedback should be included in retry context"
-    )
+    assert (
+        "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1]
+    ), "Guardrail feedback should be included in retry context"
 
     # Verify final output meets guardrail requirements
     assert "IMPORTANT" in result.raw, "Final output should contain required keyword"
