@@ -253,10 +253,15 @@ class Crew(BaseModel):
         # Initialize agentops if available and API key is present
         if agentops:
             api_key = os.getenv("AGENTOPS_API_KEY")
-            if api_key:
+            if api_key and api_key.strip():  # Validate API key
                 try:
                     agentops.init(api_key)
-                except Exception as e:
+                    self._logger.log(
+                        "info",
+                        "Successfully initialized agentops",
+                        color="green"
+                    )
+                except (ConnectionError, ValueError) as e:
                     self._logger.log(
                         "warning",
                         f"Failed to initialize agentops: {e}",
