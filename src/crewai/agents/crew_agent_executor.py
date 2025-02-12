@@ -555,6 +555,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         Returns:
             AgentFinish: The final answer after processing all feedback iterations
+            
+        Raises:
+            FeedbackProcessingError: If feedback processing fails
         """
         try:
             feedback = initial_feedback
@@ -576,11 +579,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
             return answer
         except Exception as e:
+            error_msg = f"Failed to process feedback: {str(e)}"
             self._printer.print(
-                content=f"Error processing feedback: {str(e)}",
+                content=error_msg,
                 color="red"
             )
-            raise
+            raise FeedbackProcessingError(error_msg, original_error=e)
 
     def _get_llm_feedback_response(self, feedback: str) -> Optional[str]:
         """Get LLM classification of whether feedback requires changes."""
