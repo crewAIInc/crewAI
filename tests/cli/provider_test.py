@@ -1,9 +1,8 @@
-from unittest.mock import Mock, patch
-
 import json
 import pytest
 import requests
 import time
+from unittest.mock import Mock, patch
 
 from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
 from crewai.cli.provider import fetch_provider_data, get_provider_data
