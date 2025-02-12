@@ -525,24 +525,44 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return improved_answer
 
     def _handle_regular_feedback(
-        self, current_answer: AgentFinish, initial_feedback: str
+        self,
+        current_answer: AgentFinish,
+        initial_feedback: str
     ) -> AgentFinish:
-        """Process feedback for regular use with potential multiple iterations."""
-        feedback = initial_feedback
-        answer = current_answer
+        """Process feedback for regular use with potential multiple iterations.
 
-        while self.ask_for_human_input:
-            # Add feedback message with user role
-            self.messages.append({"role": "user", "content": f"Feedback: {feedback}"})
-            response = self._get_llm_feedback_response(feedback)
+        Args:
+            current_answer (AgentFinish): The current answer from the agent
+            initial_feedback (str): The initial feedback from the user
 
-            if not self._feedback_requires_changes(response):
-                self.ask_for_human_input = False
-            else:
-                answer = self._process_feedback_iteration(feedback)
-                feedback = self._ask_human_input(answer.output)
+        Returns:
+            AgentFinish: The final answer after processing all feedback iterations
+        """
+        try:
+            feedback = initial_feedback
+            answer = current_answer
 
-        return answer
+            while self.ask_for_human_input:
+                # Add feedback message with user role using standard formatter
+                self.messages.append(self._format_msg(
+                    f"Feedback: {feedback}",
+                    role="user"
+                ))
+                response = self._get_llm_feedback_response(feedback)
+
+                if not self._feedback_requires_changes(response):
+                    self.ask_for_human_input = False
+                else:
+                    answer = self._process_feedback_iteration(feedback)
+                    feedback = self._ask_human_input(answer.output)
+
+            return answer
+        except Exception as e:
+            self._printer.print(
+                content=f"Error processing feedback: {str(e)}",
+                color="red"
+            )
+            raise
 
     def _get_llm_feedback_response(self, feedback: str) -> Optional[str]:
         """Get LLM classification of whether feedback requires changes."""
@@ -566,15 +586,29 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return response == "true" if response else False
 
     def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
-        """Process a single feedback iteration."""
-        # Add feedback instructions with user role
-        self.messages.append(
-            self._format_msg(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback),
-                role="user"
+        """Process a single feedback iteration.
+        
+        Args:
+            feedback (str): The feedback to process from the user
+            
+        Returns:
+            AgentFinish: The processed agent response after incorporating feedback
+        """
+        try:
+            # Add feedback instructions with user role
+            self.messages.append(
+                self._format_msg(
+                    self._i18n.slice("feedback_instructions").format(feedback=feedback),
+                    role="user"
+                )
             )
-        )
-        return self._invoke_loop()
+            return self._invoke_loop()
+        except Exception as e:
+            self._printer.print(
+                content=f"Error processing feedback iteration: {str(e)}",
+                color="red"
+            )
+            raise
 
     def _log_feedback_error(self, retry_count: int, error: Exception) -> None:
         """Log feedback processing errors."""
