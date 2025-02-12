@@ -166,6 +166,12 @@ def fetch_provider_data(cache_file):
     try:
         response = requests.get(JSON_URL, stream=True, timeout=60)
         response.raise_for_status()
+        
+        # Add content-type check
+        if not response.headers.get('content-type', '').startswith('application/json'):
+            click.secho("Error: Expected JSON response but got different content type", fg="red")
+            return None
+            
         data = download_data(response)
         with open(cache_file, "w") as f:
             json.dump(data, f)
@@ -174,6 +180,8 @@ def fetch_provider_data(cache_file):
         click.secho(f"Error fetching provider data: {e}", fg="red")
     except json.JSONDecodeError:
         click.secho("Error parsing provider data. Invalid JSON format.", fg="red")
+    except Exception as e:
+        click.secho(f"Unexpected error fetching provider data: {e}", fg="red")
     return None
 
 
