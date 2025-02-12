@@ -78,6 +78,18 @@ def test_agent_default_values():
     assert agent.llm.model == "gpt-4o-mini"
     assert agent.allow_delegation is False
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_creation_without_model_prices():
+    with patch('crewai.cli.provider.get_provider_data') as mock_get:
+        mock_get.return_value = None
+        agent = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory"
+        )
+        assert agent is not None
+        assert agent.role == "test role"
+
 
 def test_custom_llm():
     agent = Agent(
