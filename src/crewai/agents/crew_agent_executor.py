@@ -535,7 +535,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return bool(self.crew and self.crew._train)
 
     def _handle_training_feedback(
-        self, initial_answer: AgentFinish, feedback: str
+        self,
+        initial_answer: AgentFinish,
+        feedback: str,
     ) -> AgentFinish:
         """Process feedback for training scenarios with single iteration.
         
@@ -570,7 +572,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _handle_regular_feedback(
         self,
         current_answer: AgentFinish,
-        initial_feedback: str
+        initial_feedback: str,
     ) -> AgentFinish:
         """Process feedback for regular use with potential multiple iterations.
 
