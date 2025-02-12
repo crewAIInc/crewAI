@@ -1,11 +1,18 @@
 """Test Flow creation and execution basic functionality."""
 
 import asyncio
+from datetime import datetime
 
 import pytest
 from pydantic import BaseModel
 
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
+from crewai.flow.flow_events import (
+    FlowFinishedEvent,
+    FlowStartedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
+)
 
 
 def test_simple_sequential_flow():
@@ -398,3 +405,218 @@ def test_router_with_multiple_conditions():
 
     # final_step should run after router_and
     assert execution_order.index("log_final_step") > execution_order.index("router_and")
+
+
+def test_unstructured_flow_event_emission():
+    """Test that the correct events are emitted during unstructured flow
+    execution with all fields validated."""
+
+    class PoemFlow(Flow):
+        @start()
+        def prepare_flower(self):
+            self.state["flower"] = "roses"
+            return "foo"
+
+        @start()
+        def prepare_color(self):
+            self.state["color"] = "red"
+            return "bar"
+
+        @listen(prepare_color)
+        def write_first_sentence(self):
+            return f"{self.state["flower"]} are {self.state["color"]}"
+
+        @listen(write_first_sentence)
+        def finish_poem(self, first_sentence):
+            separator = self.state.get("separator", "\n")
+            return separator.join([first_sentence, "violets are blue"])
+
+        @listen(finish_poem)
+        def save_poem_to_database(self):
+            # A method without args/kwargs to ensure events are sent correctly
+            pass
+
+    event_log = []
+
+    def handle_event(_, event):
+        event_log.append(event)
+
+    flow = PoemFlow()
+    flow.event_emitter.connect(handle_event)
+    flow.kickoff(inputs={"separator": ", "})
+
+    assert isinstance(event_log[0], FlowStartedEvent)
+    assert event_log[0].flow_name == "PoemFlow"
+    assert event_log[0].inputs == {"separator": ", "}
+    assert isinstance(event_log[0].timestamp, datetime)
+
+    # Asserting for concurrent start method executions in a for loop as you
+    # can't guarantee ordering in asynchronous executions
+    for i in range(1, 5):
+        event = event_log[i]
+        assert isinstance(event.state, dict)
+        assert isinstance(event.state["id"], str)
+
+        if event.method_name == "prepare_flower":
+            if isinstance(event, MethodExecutionStartedEvent):
+                assert event.params == {}
+                assert event.state["separator"] == ", "
+            elif isinstance(event, MethodExecutionFinishedEvent):
+                assert event.result == "foo"
+                assert event.state["flower"] == "roses"
+                assert event.state["separator"] == ", "
+            else:
+                assert False, "Unexpected event type for prepare_flower"
+        elif event.method_name == "prepare_color":
+            if isinstance(event, MethodExecutionStartedEvent):
+                assert event.params == {}
+                assert event.state["separator"] == ", "
+            elif isinstance(event, MethodExecutionFinishedEvent):
+                assert event.result == "bar"
+                assert event.state["color"] == "red"
+                assert event.state["separator"] == ", "
+            else:
+                assert False, "Unexpected event type for prepare_color"
+        else:
+            assert False, f"Unexpected method {event.method_name} in prepare events"
+
+    assert isinstance(event_log[5], MethodExecutionStartedEvent)
+    assert event_log[5].method_name == "write_first_sentence"
+    assert event_log[5].params == {}
+    assert isinstance(event_log[5].state, dict)
+    assert event_log[5].state["flower"] == "roses"
+    assert event_log[5].state["color"] == "red"
+    assert event_log[5].state["separator"] == ", "
+
+    assert isinstance(event_log[6], MethodExecutionFinishedEvent)
+    assert event_log[6].method_name == "write_first_sentence"
+    assert event_log[6].result == "roses are red"
+
+    assert isinstance(event_log[7], MethodExecutionStartedEvent)
+    assert event_log[7].method_name == "finish_poem"
+    assert event_log[7].params == {"_0": "roses are red"}
+    assert isinstance(event_log[7].state, dict)
+    assert event_log[7].state["flower"] == "roses"
+    assert event_log[7].state["color"] == "red"
+
+    assert isinstance(event_log[8], MethodExecutionFinishedEvent)
+    assert event_log[8].method_name == "finish_poem"
+    assert event_log[8].result == "roses are red, violets are blue"
+
+    assert isinstance(event_log[9], MethodExecutionStartedEvent)
+    assert event_log[9].method_name == "save_poem_to_database"
+    assert event_log[9].params == {}
+    assert isinstance(event_log[9].state, dict)
+    assert event_log[9].state["flower"] == "roses"
+    assert event_log[9].state["color"] == "red"
+
+    assert isinstance(event_log[10], MethodExecutionFinishedEvent)
+    assert event_log[10].method_name == "save_poem_to_database"
+    assert event_log[10].result is None
+
+    assert isinstance(event_log[11], FlowFinishedEvent)
+    assert event_log[11].flow_name == "PoemFlow"
+    assert event_log[11].result is None
+    assert isinstance(event_log[11].timestamp, datetime)
+
+
+def test_structured_flow_event_emission():
+    """Test that the correct events are emitted during structured flow
+    execution with all fields validated."""
+
+    class OnboardingState(BaseModel):
+        name: str = ""
+        sent: bool = False
+
+    class OnboardingFlow(Flow[OnboardingState]):
+        @start()
+        def user_signs_up(self):
+            self.state.sent = False
+
+        @listen(user_signs_up)
+        def send_welcome_message(self):
+            self.state.sent = True
+            return f"Welcome, {self.state.name}!"
+
+    event_log = []
+
+    def handle_event(_, event):
+        event_log.append(event)
+
+    flow = OnboardingFlow()
+    flow.event_emitter.connect(handle_event)
+    flow.kickoff(inputs={"name": "Anakin"})
+
+    assert isinstance(event_log[0], FlowStartedEvent)
+    assert event_log[0].flow_name == "OnboardingFlow"
+    assert event_log[0].inputs == {"name": "Anakin"}
+    assert isinstance(event_log[0].timestamp, datetime)
+
+    assert isinstance(event_log[1], MethodExecutionStartedEvent)
+    assert event_log[1].method_name == "user_signs_up"
+
+    assert isinstance(event_log[2], MethodExecutionFinishedEvent)
+    assert event_log[2].method_name == "user_signs_up"
+
+    assert isinstance(event_log[3], MethodExecutionStartedEvent)
+    assert event_log[3].method_name == "send_welcome_message"
+    assert event_log[3].params == {}
+    assert getattr(event_log[3].state, "sent") is False
+
+    assert isinstance(event_log[4], MethodExecutionFinishedEvent)
+    assert event_log[4].method_name == "send_welcome_message"
+    assert getattr(event_log[4].state, "sent") is True
+    assert event_log[4].result == "Welcome, Anakin!"
+
+    assert isinstance(event_log[5], FlowFinishedEvent)
+    assert event_log[5].flow_name == "OnboardingFlow"
+    assert event_log[5].result == "Welcome, Anakin!"
+    assert isinstance(event_log[5].timestamp, datetime)
+
+
+def test_stateless_flow_event_emission():
+    """Test that the correct events are emitted stateless during flow execution
+    with all fields validated."""
+
+    class StatelessFlow(Flow):
+        @start()
+        def init(self):
+            pass
+
+        @listen(init)
+        def process(self):
+            return "Deeds will not be less valiant because they are unpraised."
+
+    event_log = []
+
+    def handle_event(_, event):
+        event_log.append(event)
+
+    flow = StatelessFlow()
+    flow.event_emitter.connect(handle_event)
+    flow.kickoff()
+
+    assert isinstance(event_log[0], FlowStartedEvent)
+    assert event_log[0].flow_name == "StatelessFlow"
+    assert event_log[0].inputs is None
+    assert isinstance(event_log[0].timestamp, datetime)
+
+    assert isinstance(event_log[1], MethodExecutionStartedEvent)
+    assert event_log[1].method_name == "init"
+
+    assert isinstance(event_log[2], MethodExecutionFinishedEvent)
+    assert event_log[2].method_name == "init"
+
+    assert isinstance(event_log[3], MethodExecutionStartedEvent)
+    assert event_log[3].method_name == "process"
+
+    assert isinstance(event_log[4], MethodExecutionFinishedEvent)
+    assert event_log[4].method_name == "process"
+
+    assert isinstance(event_log[5], FlowFinishedEvent)
+    assert event_log[5].flow_name == "StatelessFlow"
+    assert (
+        event_log[5].result
+        == "Deeds will not be less valiant because they are unpraised."
+    )
+    assert isinstance(event_log[5].timestamp, datetime)
