@@ -1,14 +1,15 @@
 """Test Agent creation and execution basic functionality."""
 
+from concurrent.futures import Future
+from typing import Any
+from unittest import mock
+from unittest.mock import MagicMock, patch
+
 import hashlib
 import instructor
 import json
 import pydantic_core
 import pytest
-from concurrent.futures import Future
-from typing import Any
-from unittest import mock
-from unittest.mock import MagicMock, patch
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
