@@ -602,7 +602,8 @@ class Crew(BaseModel):
             inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
-        self._execution_span = self._telemetry.crew_execution_span(self, inputs)
+        if self._telemetry:
+            self._execution_span = self._telemetry.crew_execution_span(self, inputs)
         self._task_output_handler.reset()
         self._logging_color = "bold_purple"
 
@@ -1180,16 +1181,22 @@ class Crew(BaseModel):
         for agent in self.agents:
             agent.interpolate_inputs(inputs)
 
-    def _finish_execution(self, final_string_output: str) -> None:
+    def _finish_execution(self, final_output: Union[str, CrewOutput]) -> None:
+        """Finish execution and cleanup.
+        
+        Args:
+            final_output: The final output from crew execution, either as string or CrewOutput
+        """
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
-        if agentops:
-            agentops.end_session(
+        if self._telemetry:
+            self._telemetry.end_crew(self, final_output)
+        if self._agentops:
+            self._agentops.end_session(
                 end_state="Success",
                 end_state_reason="Finished Execution",
                 is_auto_end=True,
             )
-        self._telemetry.end_crew(self, final_string_output)
 
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
