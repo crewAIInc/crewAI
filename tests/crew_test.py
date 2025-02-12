@@ -1,13 +1,13 @@
 """Test Agent creation and execution basic functionality."""
 
+import hashlib
+import json
 from concurrent.futures import Future
 from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import hashlib
 import instructor
-import json
 import pydantic_core
 import pytest
 
@@ -15,7 +15,9 @@ from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.knowledge.source.string_knowledge_source import (
+    StringKnowledgeSource,
+)
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.project import crew
@@ -27,7 +29,9 @@ from crewai.tools.base_tool import BaseTool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
 from crewai.utilities.rpm_controller import RPMController
-from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai.utilities.task_output_storage_handler import (
+    TaskOutputStorageHandler,
+)
 
 ceo = Agent(
     role="CEO",
@@ -317,31 +321,35 @@ def test_sync_task_execution():
         assert mock_execute_sync.call_count == len(tasks)
 
 
-@pytest.mark.vcr(
-    filter_headers=["authorization"],
-    record_mode="once"
+@pytest.mark.vcr(filter_headers=["authorization"], record_mode="once")
+@pytest.mark.parametrize(
+    "tool_output,expected",
+    [
+        ("test result```", "test result"),
+        ("test result`", "test result"),
+        ("test result``````", "test result"),
+        ("test result", "test result"),
+        ("test ```result```", "test ```result"),  # Only strip trailing backticks
+        (None, "None"),  # Test non-string input gets converted to string
+        (" ", " "),  # Test whitespace string
+        (
+            "malformed`result```test",
+            "malformed`result```test",
+        ),  # Test non-trailing backticks
+    ],
 )
-@pytest.mark.parametrize("tool_output,expected", [
-    ("test result```", "test result"),
-    ("test result`", "test result"),
-    ("test result``````", "test result"),
-    ("test result", "test result"),
-    ("test ```result```", "test ```result"),  # Only strip trailing backticks
-    (None, "None"),  # Test non-string input gets converted to string
-    (" ", " "),  # Test whitespace string
-    ("malformed`result```test", "malformed`result```test"),  # Test non-trailing backticks
-])
 def test_hierarchical_tool_output_formatting(tool_output, expected):
     """Test that tool outputs in hierarchical mode don't have extra backticks.
-    
+
     This test verifies that the tool output cleaning functionality correctly handles
     various scenarios of backtick formatting, ensuring only trailing backticks are
     removed while preserving any inline markdown formatting.
     """
+
     class TestTool(BaseTool):
         name: str = "test_tool"
         description: str = "A test tool"
-        
+
         def _run(self, *args: Any, **kwargs: Any) -> str:
             return tool_output
 
@@ -358,14 +366,17 @@ def test_hierarchical_tool_output_formatting(tool_output, expected):
         tools=[TestTool()],
     )
 
-    with patch.object(Task, 'execute_sync', return_value=TaskOutput(
-        description="Test task",
-        raw=expected,
-        agent="researcher"
-    )) as mock_execute_sync:
+    with patch.object(
+        Task,
+        "execute_sync",
+        return_value=TaskOutput(
+            description="Test task", raw=expected, agent="researcher"
+        ),
+    ) as mock_execute_sync:
         result = crew.kickoff()
         assert mock_execute_sync.called
         assert result.raw == expected
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_process():
@@ -643,12 +654,12 @@ def test_crew_with_delegating_agents_should_not_override_task_tools():
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        assert any(
-            isinstance(tool, TestTool) for tool in tools
-        ), "TestTool should be present"
-        assert any(
-            "delegate" in tool.name.lower() for tool in tools
-        ), "Delegation tool should be present"
+        assert any(isinstance(tool, TestTool) for tool in tools), (
+            "TestTool should be present"
+        )
+        assert any("delegate" in tool.name.lower() for tool in tools), (
+            "Delegation tool should be present"
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -707,12 +718,12 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools():
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        assert any(
-            isinstance(tool, TestTool) for tool in new_ceo.tools
-        ), "TestTool should be present"
-        assert any(
-            "delegate" in tool.name.lower() for tool in tools
-        ), "Delegation tool should be present"
+        assert any(isinstance(tool, TestTool) for tool in new_ceo.tools), (
+            "TestTool should be present"
+        )
+        assert any("delegate" in tool.name.lower() for tool in tools), (
+            "Delegation tool should be present"
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -836,17 +847,17 @@ def test_task_tools_override_agent_tools_with_allow_delegation():
         used_tools = kwargs["tools"]
 
         # Confirm AnotherTestTool is present but TestTool is not
-        assert any(
-            isinstance(tool, AnotherTestTool) for tool in used_tools
-        ), "AnotherTestTool should be present"
-        assert not any(
-            isinstance(tool, TestTool) for tool in used_tools
-        ), "TestTool should not be present among used tools"
+        assert any(isinstance(tool, AnotherTestTool) for tool in used_tools), (
+            "AnotherTestTool should be present"
+        )
+        assert not any(isinstance(tool, TestTool) for tool in used_tools), (
+            "TestTool should not be present among used tools"
+        )
 
         # Confirm delegation tool(s) are present
-        assert any(
-            "delegate" in tool.name.lower() for tool in used_tools
-        ), "Delegation tool should be present"
+        assert any("delegate" in tool.name.lower() for tool in used_tools), (
+            "Delegation tool should be present"
+        )
 
     # Finally, make sure the agent's original tools remain unchanged
     assert len(researcher_with_delegation.tools) == 1
@@ -1647,9 +1658,9 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
         # Verify that exactly one tool was used and it was a CodeInterpreterTool
         assert len(used_tools) == 1, "Should have exactly one tool"
-        assert isinstance(
-            used_tools[0], CodeInterpreterTool
-        ), "Tool should be CodeInterpreterTool"
+        assert isinstance(used_tools[0], CodeInterpreterTool), (
+            "Tool should be CodeInterpreterTool"
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -3470,9 +3481,9 @@ def test_fetch_inputs():
     expected_placeholders = {"role_detail", "topic", "field"}
     actual_placeholders = crew.fetch_inputs()
 
-    assert (
-        actual_placeholders == expected_placeholders
-    ), f"Expected {expected_placeholders}, but got {actual_placeholders}"
+    assert actual_placeholders == expected_placeholders, (
+        f"Expected {expected_placeholders}, but got {actual_placeholders}"
+    )
 
 
 def test_task_tools_preserve_code_execution_tools():
@@ -3545,20 +3556,20 @@ def test_task_tools_preserve_code_execution_tools():
         used_tools = kwargs["tools"]
 
         # Verify all expected tools are present
-        assert any(
-            isinstance(tool, TestTool) for tool in used_tools
-        ), "Task's TestTool should be present"
-        assert any(
-            isinstance(tool, CodeInterpreterTool) for tool in used_tools
-        ), "CodeInterpreterTool should be present"
-        assert any(
-            "delegate" in tool.name.lower() for tool in used_tools
-        ), "Delegation tool should be present"
+        assert any(isinstance(tool, TestTool) for tool in used_tools), (
+            "Task's TestTool should be present"
+        )
+        assert any(isinstance(tool, CodeInterpreterTool) for tool in used_tools), (
+            "CodeInterpreterTool should be present"
+        )
+        assert any("delegate" in tool.name.lower() for tool in used_tools), (
+            "Delegation tool should be present"
+        )
 
         # Verify the total number of tools (TestTool + CodeInterpreter + 2 delegation tools)
-        assert (
-            len(used_tools) == 4
-        ), "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+        assert len(used_tools) == 4, (
+            "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -3602,9 +3613,9 @@ def test_multimodal_flag_adds_multimodal_tools():
         used_tools = kwargs["tools"]
 
         # Check that the multimodal tool was added
-        assert any(
-            isinstance(tool, AddImageTool) for tool in used_tools
-        ), "AddImageTool should be present when agent is multimodal"
+        assert any(isinstance(tool, AddImageTool) for tool in used_tools), (
+            "AddImageTool should be present when agent is multimodal"
+        )
 
         # Verify we have exactly one tool (just the AddImageTool)
         assert len(used_tools) == 1, "Should only have the AddImageTool"
@@ -3830,9 +3841,9 @@ def test_crew_guardrail_feedback_in_context():
     assert len(execution_contexts) > 1, "Task should have been executed multiple times"
 
     # Verify that the second execution included the guardrail feedback
-    assert (
-        "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1]
-    ), "Guardrail feedback should be included in retry context"
+    assert "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1], (
+        "Guardrail feedback should be included in retry context"
+    )
 
     # Verify final output meets guardrail requirements
     assert "IMPORTANT" in result.raw, "Final output should contain required keyword"
