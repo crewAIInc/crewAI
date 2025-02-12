@@ -153,6 +153,56 @@ def read_cache_file(cache_file):
         return None
 
 
+def validate_response(response):
+    """
+    Validates the response content type.
+
+    Args:
+    - response: The HTTP response object.
+
+    Returns:
+    - bool: True if the content type is valid, False otherwise.
+    """
+    content_type = response.headers.get('content-type', '').lower()
+    valid_types = ['application/json', 'application/json; charset=utf-8']
+    if not any(content_type.startswith(t) for t in valid_types):
+        click.secho(f"Error: Expected JSON response but got {content_type}", fg="red")
+        return False
+    return True
+
+def handle_provider_error(error, error_type="fetch"):
+    """
+    Handles provider data errors with consistent messaging.
+
+    Args:
+    - error: The error object.
+    - error_type: Type of error for message selection.
+
+    Returns:
+    - None: Always returns None to indicate error.
+    """
+    error_messages = {
+        "fetch": "Error fetching provider data",
+        "parse": "Error parsing provider data",
+        "unexpected": "Unexpected error"
+    }
+    base_message = error_messages.get(error_type, "Error")
+    click.secho(f"{base_message}: {str(error)}", fg="red")
+    return None
+
+def invalidate_cache(cache_file):
+    """
+    Invalidates the cache file in error scenarios.
+
+    Args:
+    - cache_file: Path to the cache file.
+    """
+    try:
+        if os.path.exists(cache_file):
+            os.remove(cache_file)
+    except OSError as e:
+        click.secho(f"Warning: Could not clear cache file: {e}", fg="yellow")
+
 def fetch_provider_data(cache_file):
     """
     Fetches provider data from a specified URL and caches it to a file.
@@ -167,9 +217,8 @@ def fetch_provider_data(cache_file):
         response = requests.get(JSON_URL, stream=True, timeout=60)
         response.raise_for_status()
         
-        # Add content-type check
-        if not response.headers.get('content-type', '').startswith('application/json'):
-            click.secho("Error: Expected JSON response but got different content type", fg="red")
+        if not validate_response(response):
+            invalidate_cache(cache_file)
             return None
             
         data = download_data(response)
@@ -177,12 +226,14 @@ def fetch_provider_data(cache_file):
             json.dump(data, f)
         return data
     except requests.RequestException as e:
-        click.secho(f"Error fetching provider data: {e}", fg="red")
-    except json.JSONDecodeError:
-        click.secho("Error parsing provider data. Invalid JSON format.", fg="red")
+        invalidate_cache(cache_file)
+        return handle_provider_error(e, "fetch")
+    except json.JSONDecodeError as e:
+        invalidate_cache(cache_file)
+        return handle_provider_error(e, "parse")
     except Exception as e:
-        click.secho(f"Unexpected error fetching provider data: {e}", fg="red")
-    return None
+        invalidate_cache(cache_file)
+        return handle_provider_error(e, "unexpected")
 
 
 def download_data(response):
