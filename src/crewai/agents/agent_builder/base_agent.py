@@ -20,7 +20,7 @@ from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.tools import BaseTool
+from crewai.tools.base_tool import BaseTool
 from crewai.tools.base_tool import Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
@@ -112,7 +112,7 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    tools: Optional[List[Any]] = Field(
+    tools: Optional[List[BaseTool]] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: int = Field(

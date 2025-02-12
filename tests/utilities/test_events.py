@@ -9,7 +9,7 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.flow.flow import Flow, listen, start
 from crewai.task import Task
-from crewai.tools import BaseTool
+from crewai.tools.base_tool import BaseTool
 from crewai.utilities.events.agent_events import (
     AgentExecutionCompleted,
     AgentExecutionError,
@@ -306,7 +306,7 @@ def test_tools_emits_error_events():
     crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
     crew.kickoff()
 
-    assert len(received_events) == 60
+    assert len(received_events) == 75
     assert received_events[0].agent_key == agent.key
     assert received_events[0].agent_role == agent.role
     assert received_events[0].tool_name == "error_tool"

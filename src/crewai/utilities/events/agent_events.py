@@ -1,24 +1,21 @@
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union
 
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
 
 from .crew_events import CrewEvent
 
-
-class AgentExecutorCreated(CrewEvent):
-    """Event emitted when an agent executor is created"""
-
-    agent: Any
-    tools: List[BaseTool]
-    type: str = "agent_executor_created"
+if TYPE_CHECKING:
+    from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class AgentExecutionStarted(CrewEvent):
     """Event emitted when an agent starts executing a task"""
 
-    agent: Any  # type: ignore
-    task: Any  # type: ignore
-    tools: List[Any]
+    agent: BaseAgent
+    task: Any
+    tools: Optional[Sequence[Union[BaseTool, CrewStructuredTool]]]
     inputs: Dict[str, Any]
     type: str = "agent_execution_started"
 
@@ -28,20 +25,16 @@ class AgentExecutionStarted(CrewEvent):
 class AgentExecutionCompleted(CrewEvent):
     """Event emitted when an agent completes executing a task"""
 
-    agent: Any
+    agent: BaseAgent
     task: Any
     output: str
     type: str = "agent_execution_completed"
-
-    model_config = {"arbitrary_types_allowed": True}
 
 
 class AgentExecutionError(CrewEvent):
     """Event emitted when an agent encounters an error during execution"""
 
-    agent: Any
+    agent: BaseAgent
     task: Any
     error: str
     type: str = "agent_execution_error"
-
-    model_config = {"arbitrary_types_allowed": True}

@@ -90,15 +90,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.llm.stop = list(set(self.llm.stop + self.stop))
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
-        event_bus.emit(
-            self,
-            event=AgentExecutionStarted(
-                agent=self.agent,
-                task=self.task,
-                tools=self.tools,
-                inputs=inputs,
-            ),
-        )
+        if self.agent and self.task:
+            event_bus.emit(
+                self,
+                event=AgentExecutionStarted(
+                    agent=self.agent,
+                    tools=self.tools,
+                    inputs=inputs,
+                    task=self.task,
+                ),
+            )
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
@@ -191,12 +192,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _handle_unknown_error(self, exception: Exception) -> None:
         """Handle unknown errors by informing the user."""
-        event_bus.emit(
-            self,
-            event=AgentExecutionError(
-                agent=self.agent, task=self.task, error=str(exception)
-            ),
-        )
+        if self.agent:
+            event_bus.emit(
+                self,
+                event=AgentExecutionError(
+                    agent=self.agent, task=self.task, error=str(exception)
+                ),
+            )
         self._printer.print(
             content="An unknown error occurred. Please check the details below.",
             color="red",

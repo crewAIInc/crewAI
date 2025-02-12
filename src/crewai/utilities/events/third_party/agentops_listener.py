@@ -12,7 +12,6 @@ except ImportError:
 class AgentOpsListener(BaseEventListener):
     def __init__(self):
         super().__init__()
-        print("AgentOpsListener init")
 
     def setup_listeners(self, event_bus):
         if AGENTOPS_INSTALLED:

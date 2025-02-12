@@ -3,7 +3,7 @@ from .crew_events import (
     CrewKickoffCompleted,
     CrewKickoffFailed,
 )
-from .agent_events import AgentExecutionStarted, AgentExecutionCompleted
+from .agent_events import AgentExecutionStarted, AgentExecutionCompleted, AgentExecutionError
 from .task_events import TaskStarted, TaskCompleted, TaskFailed
 from .flow_events import FlowStarted, FlowFinished, MethodExecutionStarted, MethodExecutionFinished
 from .event_bus import EventTypes, EventBus
@@ -34,7 +34,8 @@ __all__ = [
     event_bus,
     ToolUsageFinished,
     ToolUsageError,
-    EventBus
+    EventBus,
+    AgentExecutionError
 ]
 
 
