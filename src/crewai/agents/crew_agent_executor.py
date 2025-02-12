@@ -511,11 +511,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
         """Handle human feedback with different flows for training vs regular use.
 
+        This method processes human feedback by either handling it as training data
+        or as regular feedback requiring potential multiple iterations.
+
         Args:
-            formatted_answer: The initial AgentFinish result to get feedback on
+            formatted_answer (AgentFinish): The initial AgentFinish result to get feedback on
 
         Returns:
             AgentFinish: The final answer after processing feedback
+            
+        Raises:
+            FeedbackProcessingError: If feedback processing fails
         """
         human_feedback = self._ask_human_input(formatted_answer.output)
 
@@ -615,7 +621,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         raise FeedbackProcessingError(error_msg)
 
     def _feedback_requires_changes(self, response: Optional[str]) -> bool:
-        """Determine if feedback response indicates need for changes."""
+        """Determine if feedback response indicates need for changes.
+        
+        Args:
+            response (Optional[str]): The LLM's response to feedback classification
+            
+        Returns:
+            bool: True if feedback requires changes, False otherwise
+        """
         return response == "true" if response else False
 
     def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
