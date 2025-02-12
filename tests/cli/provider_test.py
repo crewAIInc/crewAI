@@ -1,8 +1,10 @@
-import pytest
-from unittest.mock import patch, Mock
 import requests
+
+import pytest
+from unittest.mock import Mock, patch
+
+from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
 from crewai.cli.provider import fetch_provider_data, get_provider_data
-from crewai.cli.constants import JSON_URL, PROVIDERS, MODELS
 
 def test_fetch_provider_data_timeout():
     with patch('requests.get') as mock_get:
