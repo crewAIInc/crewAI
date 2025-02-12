@@ -9,6 +9,11 @@ from dotenv import load_dotenv
 load_result = load_dotenv(override=True)
 
 @pytest.fixture(autouse=True)
+def mock_openai_key(monkeypatch):
+    """Mock OpenAI API key for VCR cassettes."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-fake-test-key-12345")
+
+@pytest.fixture(autouse=True)
 def setup_test_environment():
     """Set up test environment with a temporary directory for SQLite storage."""
     with tempfile.TemporaryDirectory() as temp_dir:

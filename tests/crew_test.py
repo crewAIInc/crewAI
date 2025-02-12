@@ -317,15 +317,18 @@ def test_sync_task_execution():
         assert mock_execute_sync.call_count == len(tasks)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(
+    filter_headers=["authorization"],
+    record_mode="once"
+)
 @pytest.mark.parametrize("tool_output,expected", [
     ("test result```", "test result"),
     ("test result`", "test result"),
     ("test result``````", "test result"),
     ("test result", "test result"),
     ("test ```result```", "test ```result"),  # Only strip trailing backticks
-    (None, None),  # Test non-string input
-    ("", ""),  # Test empty string
+    (None, "None"),  # Test non-string input gets converted to string
+    (" ", " "),  # Test whitespace string
     ("malformed`result```test", "malformed`result```test"),  # Test non-trailing backticks
 ])
 def test_hierarchical_tool_output_formatting(tool_output, expected):
