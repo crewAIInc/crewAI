@@ -378,6 +378,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     return ToolResult(
                         result=tool_result, result_as_answer=tool.result_as_answer
                     )
+            else:
+                tool_result = self._i18n.errors("wrong_tool_name").format(
+                    tool=tool_calling.tool_name,
+                    tools=", ".join([tool.name.casefold() for tool in self.tools]),
+                )
+                return ToolResult(result=tool_result, result_as_answer=False)
 
     def _clean_tool_result(self, tool_result: Any) -> Any:
         """Clean tool result by removing trailing backticks.
@@ -395,12 +401,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if isinstance(tool_result, str):
             return tool_result.rstrip('`').rstrip('```')
         return tool_result
-            else:
-                tool_result = self._i18n.errors("wrong_tool_name").format(
-                    tool=tool_calling.tool_name,
-                    tools=", ".join([tool.name.casefold() for tool in self.tools]),
-                )
-        return ToolResult(result=tool_result, result_as_answer=False)
 
     def _summarize_messages(self) -> None:
         messages_groups = []
