@@ -372,6 +372,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 name.casefold().strip() for name in self.tool_name_to_tool_map
             ]:
                 tool_result = tool_usage.use(tool_calling, agent_action.text)
+                # Strip any trailing backticks from tool result
+                if isinstance(tool_result, str):
+                    tool_result = tool_result.rstrip('`')
                 tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
                 if tool:
                     return ToolResult(

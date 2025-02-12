@@ -3,6 +3,7 @@
 import hashlib
 import json
 from concurrent.futures import Future
+from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
@@ -14,6 +15,7 @@ from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.tools.base_tool import BaseTool
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
@@ -314,6 +316,39 @@ def test_sync_task_execution():
         # Assert that execute_sync was called for each task
         assert mock_execute_sync.call_count == len(tasks)
 
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_tool_output_formatting():
+    """Test that tool outputs in hierarchical mode don't have extra backticks"""
+    class TestTool(BaseTool):
+        name: str = "test_tool"
+        description: str = "A test tool"
+        
+        def _run(self, *args: Any, **kwargs: Any) -> str:
+            return "test result```"  # Intentionally add backticks to test stripping
+
+    task = Task(
+        description="Test task using test_tool",
+        expected_output="Test output",
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+        tasks=[task],
+        tools=[TestTool()],
+    )
+
+    with patch.object(Task, 'execute_sync', return_value=TaskOutput(
+        description="Test task",
+        raw="test result",
+        agent="researcher"
+    )) as mock_execute_sync:
+        result = crew.kickoff()
+        assert mock_execute_sync.called
+        assert not result.raw.endswith('```')
+        assert '```\n```' not in result.raw
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_process():
