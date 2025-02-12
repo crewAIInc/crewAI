@@ -142,6 +142,13 @@ class LLM:
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         **kwargs,
     ):
+        # Validate model name
+        if isinstance(model, str) and model.startswith('models/'):
+            raise ValueError(
+                'Model name should not start with "models/". '
+                'Use the provider prefix instead (e.g., "gemini/model-name").'
+            )
+        
         self.model = model
         self.timeout = timeout
         self.temperature = temperature

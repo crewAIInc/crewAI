@@ -252,6 +252,17 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
+def test_model_name_validation():
+    """Test that model names with 'models/' prefix are rejected."""
+    with pytest.raises(ValueError, match="should not start with \"models/\""):
+        LLM(model="models/gemini/gemini-1.5-pro")
+
+    # Valid model names should work
+    LLM(model="gemini/gemini-1.5-pro")
+    LLM(model="anthropic/claude-3-opus-20240229-v1:0")
+    LLM(model="openai/gpt-4")
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_o3_mini_reasoning_effort_high():
     llm = LLM(
