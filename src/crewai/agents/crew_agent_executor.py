@@ -519,12 +519,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             color="yellow",
         )
         self._handle_crew_training_output(initial_answer, feedback)
-        self.messages.append(
-            self._format_msg(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
-        )
-        improved_answer = self._invoke_loop()
+        improved_answer = self._process_feedback_iteration(feedback)
         self._handle_crew_training_output(improved_answer)
         self.ask_for_human_input = False
         return improved_answer
@@ -537,6 +532,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         answer = current_answer
 
         while self.ask_for_human_input:
+            # Add feedback message with user role
+            self.messages.append({"role": "user", "content": f"Feedback: {feedback}"})
             response = self._get_llm_feedback_response(feedback)
 
             if not self._feedback_requires_changes(response):
@@ -570,9 +567,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
         """Process a single feedback iteration."""
+        # Add feedback instructions with user role
         self.messages.append(
             self._format_msg(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
+                self._i18n.slice("feedback_instructions").format(feedback=feedback),
+                role="user"
             )
         )
         return self._invoke_loop()
