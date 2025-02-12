@@ -561,11 +561,11 @@ def test_structured_flow_event_emission():
     assert isinstance(event_log[3], MethodExecutionStartedEvent)
     assert event_log[3].method_name == "send_welcome_message"
     assert event_log[3].params == {}
-    assert getattr(event_log[3].state, "sent") == False
+    assert getattr(event_log[3].state, "sent") is False
 
     assert isinstance(event_log[4], MethodExecutionFinishedEvent)
     assert event_log[4].method_name == "send_welcome_message"
-    assert getattr(event_log[4].state, "sent") == True
+    assert getattr(event_log[4].state, "sent") is True
     assert event_log[4].result == "Welcome, Anakin!"
 
     assert isinstance(event_log[5], FlowFinishedEvent)
