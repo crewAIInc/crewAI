@@ -6,6 +6,7 @@ from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import agentops
 import instructor
 import pydantic_core
 import pytest
@@ -15,6 +16,7 @@ from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.project import crew
@@ -70,9 +72,6 @@ def test_agentops_initialization_without_api_key(monkeypatch):
 
 def test_gemini_llm_with_agentops(monkeypatch):
     """Test that Gemini LLM works correctly with agentops."""
-    from crewai.llm import LLM
-    import agentops
-    
     # Mock agentops
     mock_agentops = MagicMock()
     monkeypatch.setattr("crewai.crew.agentops", mock_agentops)
