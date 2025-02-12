@@ -1,8 +1,7 @@
 import json
-import time
-
 import pytest
 import requests
+import time
 from unittest.mock import Mock, patch
 
 from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
