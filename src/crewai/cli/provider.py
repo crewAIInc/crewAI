@@ -214,7 +214,7 @@ def get_provider_data():
     Retrieves provider data from a cache file, filters out models based on provider criteria, and returns a dictionary of providers mapped to their models.
 
     Returns:
-    - dict or None: A dictionary of providers mapped to their models or None if the operation fails.
+    - dict: A dictionary of providers mapped to their models, using default providers if fetch fails.
     """
     cache_dir = Path.home() / ".crewai"
     cache_dir.mkdir(exist_ok=True)
@@ -223,7 +223,9 @@ def get_provider_data():
 
     data = load_provider_data(cache_file, cache_expiry)
     if not data:
-        return None
+        # Return default providers if fetch fails
+        return {provider.lower(): MODELS.get(provider.lower(), []) 
+                for provider in PROVIDERS}
 
     provider_models = defaultdict(list)
     for model_name, properties in data.items():
