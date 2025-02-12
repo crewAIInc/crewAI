@@ -2,14 +2,13 @@
 
 import os
 from unittest import mock
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from crewai import Agent, Crew, Task
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
-from crewai.utilities.exceptions.feedback_processing_exception import FeedbackProcessingError
 from crewai.agents.cache import CacheHandler
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
@@ -20,6 +19,9 @@ from crewai.tools.tool_usage import ToolUsage
 from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
+from crewai.utilities.exceptions.feedback_processing_exception import (
+    FeedbackProcessingError,
+)
 
 
 def test_agent_llm_creation_with_env_vars():
