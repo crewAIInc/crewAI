@@ -1,5 +1,8 @@
+from pydantic import PrivateAttr
+
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.events.base_event_listener import BaseEventListener
 
 from .agent_events import (
     AgentExecutionCompleted,
@@ -11,7 +14,6 @@ from .crew_events import (
     CrewTestCompleted,
     CrewTestStarted,
 )
-from .event_bus import EventBus
 from .flow_events import (
     FlowFinished,
     FlowStarted,
@@ -21,16 +23,15 @@ from .flow_events import (
 from .task_events import TaskCompleted, TaskStarted
 
 
-class EventListener:
-    _telemetry = Telemetry()
+class EventListener(BaseEventListener):
+    _telemetry: Telemetry = PrivateAttr(default_factory=lambda: Telemetry())
 
     def __init__(self):
-        self._setup_listeners()
+        super().__init__()
+        self._telemetry = Telemetry()
         self._telemetry.set_tracer()
 
-    def _setup_listeners(self):
-        event_bus = EventBus()
-
+    def setup_listeners(self, event_bus):
         @event_bus.on(CrewKickoffStarted)
         def on_crew_started(source, event):
             print(f"🚀 Crew '{event.crew_name}' started", event.timestamp)
@@ -95,3 +96,6 @@ class EventListener:
         @event_bus.on(MethodExecutionFinished)
         def on_method_execution_finished(source, event):
             print(f"👍 Flow Method Finished: '{event.method_name}'")
+
+
+event_listener = EventListener()

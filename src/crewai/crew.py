@@ -43,7 +43,6 @@ from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.events import event_bus
 from crewai.utilities.events.crew_events import (
     CrewKickoffCompleted,
     CrewKickoffFailed,
@@ -55,6 +54,7 @@ from crewai.utilities.events.crew_events import (
     CrewTrainFailed,
     CrewTrainStarted,
 )
+from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -470,8 +470,6 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
-
-
 
     @property
     def key(self) -> str:
@@ -970,13 +968,13 @@ class Crew(BaseModel):
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
-            
+
         # Filter out empty outputs and get the last valid one as the main output
         valid_outputs = [t for t in task_outputs if t.raw]
         if not valid_outputs:
             raise ValueError("No valid task outputs available to create crew output.")
         final_task_output = valid_outputs[-1]
-            
+
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         token_usage = self.calculate_usage_metrics()

@@ -28,8 +28,8 @@ from crewai.utilities.events import (
     FlowStarted,
     MethodExecutionFinished,
     MethodExecutionStarted,
-    event_bus,
 )
+from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)

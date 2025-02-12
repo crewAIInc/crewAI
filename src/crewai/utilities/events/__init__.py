@@ -6,13 +6,14 @@ from .crew_events import (
 from .agent_events import AgentExecutionStarted, AgentExecutionCompleted
 from .task_events import TaskStarted, TaskCompleted, TaskFailed
 from .flow_events import FlowStarted, FlowFinished, MethodExecutionStarted, MethodExecutionFinished
-from .event_bus import event_bus, EventTypes
+from .event_bus import EventTypes, EventBus
 from .events import emit, on
-from .event_bus import EventBus
-from .event_listener import EventListener
 from .tool_usage_events import ToolUsageFinished, ToolUsageError
-event_bus = EventBus()
-event_listener = EventListener()
+
+# events
+from .event_listener import EventListener
+from .third_party.agentops_listener import agentops_listener
+
 
 __all__ = [
     AgentExecutionStarted,
@@ -29,10 +30,11 @@ __all__ = [
     MethodExecutionFinished,
     EventTypes,
     emit,
-    on,
+    on, 
     event_bus,
     ToolUsageFinished,
     ToolUsageError,
+    EventBus
 ]
 
 

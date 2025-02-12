@@ -18,11 +18,11 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
-from crewai.utilities.events import event_bus
 from crewai.utilities.events.agent_events import (
     AgentExecutionError,
     AgentExecutionStarted,
 )
+from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )

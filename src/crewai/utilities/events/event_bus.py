@@ -29,6 +29,7 @@ class EventBus:
         self._signal = Signal("event_bus")
         self._handlers: Dict[Type[EventTypes], List[Callable]] = {}
 
+    # TODO: generic types
     def on(self, event_type: Type[EventTypes]) -> Callable:
         """
         Decorator to register an event handler for a specific event type.

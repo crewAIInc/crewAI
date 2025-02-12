@@ -17,7 +17,7 @@ from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
-from crewai.utilities.events import event_bus
+from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.events.event_types import (
     ToolUsageError,
     ToolUsageFinished,
