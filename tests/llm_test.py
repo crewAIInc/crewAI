@@ -269,9 +269,9 @@ class TestModelNameValidation:
         
     def test_edge_cases(self):
         """Test edge cases for model name validation."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="cannot be empty"):
             LLM(model="")  # Empty string
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="must be a string"):
             LLM(model=None)  # None value
 
 
@@ -347,13 +347,16 @@ def test_anthropic_model_detection():
         ("claude-instant", True),
         ("claude/v1", True),
         ("gpt-4", False),
-        ("", False),
         ("anthropomorphic", False),  # Should not match partial words
     ]
     
     for model, expected in models:
         llm = LLM(model=model)
-        assert llm.is_anthropic == expected, f"Failed for model: {model}"
+        assert llm._is_anthropic_model(model) == expected, f"Failed for model: {model}"
+    
+    # Test empty model name separately since it raises ValueError
+    with pytest.raises(ValueError, match="cannot be empty"):
+        LLM(model="")
 
 def test_anthropic_message_formatting(anthropic_llm, system_message, user_message):
     """Test Anthropic message formatting with fixtures."""

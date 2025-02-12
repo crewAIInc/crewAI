@@ -117,18 +117,42 @@ def suppress_warnings():
 
 
 class LLM:
+    """LLM class for handling model interactions.
+
+    Args:
+        model: The model identifier; should not start with 'models/'.
+              Examples: 'gemini/gemini-1.5-pro', 'anthropic/claude-3'
+        timeout: Optional timeout for model calls
+        temperature: Optional temperature parameter
+        max_tokens: Optional maximum tokens for completion
+        max_completion_tokens: Optional maximum completion tokens
+        logprobs: Optional log probabilities
+        top_p: Optional nucleus sampling parameter
+        n: Optional number of completions
+        stop: Optional stop sequences
+        presence_penalty: Optional presence penalty
+        frequency_penalty: Optional frequency penalty
+        logit_bias: Optional token biasing
+        user: Optional user identifier
+        response_format: Optional response format configuration
+        seed: Optional random seed
+        tools: Optional list of tools
+        tool_choice: Optional tool choice configuration
+        api_base: Optional API base URL
+        api_key: Optional API key
+        api_version: Optional API version
+        base_url: Optional base URL
+        top_logprobs: Optional top log probabilities
+        callbacks: Optional list of callbacks
+        reasoning_effort: Optional reasoning effort level
+
+    Raises:
+        ValueError: If the model name starts with 'models/' or is empty
+        TypeError: If model is not a string
+    """
     def __init__(
         self,
-        model: Union[str, 'BaseLanguageModel'],
-        """Initialize LLM instance.
-        
-        Args:
-            model: The model identifier; should not start with 'models/'.
-                  Examples: 'gemini/gemini-1.5-pro', 'anthropic/claude-3'
-            
-        Raises:
-            ValueError: If the model name starts with 'models/'.
-        """
+        model: str,
         timeout: Optional[Union[float, int]] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
@@ -155,7 +179,11 @@ class LLM:
         INVALID_MODEL_PREFIX = "models/"
         
         # Validate model name
-        if isinstance(model, str) and model.startswith(INVALID_MODEL_PREFIX):
+        if not isinstance(model, str):
+            raise TypeError("Model name must be a string")
+        if not model:
+            raise ValueError("Model name cannot be empty")
+        if model.startswith(INVALID_MODEL_PREFIX):
             raise ValueError(
                 f'Invalid model name "{model}": Model names should not start with "{INVALID_MODEL_PREFIX}". '
                 'Use the provider prefix instead (e.g., "gemini/model-name").'
