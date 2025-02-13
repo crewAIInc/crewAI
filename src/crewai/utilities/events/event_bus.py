@@ -28,7 +28,7 @@ class EventBus:
                     cls._instance._initialize()
         return cls._instance
 
-    def _initialize(self):
+    def _initialize(self) -> None:
         """Initialize the event bus internal state"""
         self._signal = Signal("event_bus")
         self._handlers: Dict[

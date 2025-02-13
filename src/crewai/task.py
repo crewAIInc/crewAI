@@ -40,12 +40,12 @@ from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
-from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
 )
+from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 

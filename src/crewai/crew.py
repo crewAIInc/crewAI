@@ -1209,7 +1209,7 @@ class Crew(BaseModel):
                 ),
             )
             test_crew = self.copy()
-            evaluator = CrewEvaluator(test_crew, openai_model_name)
+            evaluator = CrewEvaluator(test_crew, openai_model_name or "gpt-4o-mini")
 
             for i in range(1, n_iterations + 1):
                 evaluator.set_iteration(i)

@@ -15,7 +15,7 @@ from .flow_events import (
     MethodExecutionStartedEvent,
     MethodExecutionFinishedEvent,
 )
-from .event_bus import EventTypes, EventBus
+from .event_bus import EventTypes, EventBus, event_bus
 from .tool_usage_events import ToolUsageFinishedEvent, ToolUsageErrorEvent
 
 # events
