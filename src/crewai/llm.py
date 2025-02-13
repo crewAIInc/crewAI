@@ -543,7 +543,11 @@ class LLM:
         agent = None
         task = None
 
-        while caller_frame:
+        # Add a maximum depth to prevent infinite loops
+        max_depth = 100  # Reasonable limit for call stack depth
+        current_depth = 0
+
+        while caller_frame and current_depth < max_depth:
             if "self" in caller_frame.f_locals:
                 caller_self = caller_frame.f_locals["self"]
                 if isinstance(caller_self, AgentExecutorProtocol):
@@ -551,6 +555,7 @@ class LLM:
                     task = caller_self.task
                     break
             caller_frame = caller_frame.f_back
+            current_depth += 1
 
         return agent, task
 
