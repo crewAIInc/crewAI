@@ -4,6 +4,8 @@ from unittest import mock
 import pytest
 from click.testing import CliRunner
 
+from crewai.cli.reset_memories_command import reset_memories_command
+
 from crewai.cli.cli import (
     deploy_create,
     deploy_list,
@@ -12,12 +14,12 @@ from crewai.cli.cli import (
     deploy_remove,
     deply_status,
     flow_add_crew,
-    reset_memories,
     signup,
     test,
     train,
     version,
 )
+from crewai.cli.reset_memories_command import reset_memories_command
 
 
 @pytest.fixture
@@ -63,7 +65,7 @@ class TestResetMemoriesCommand:
         """Test resetting all memories when crew exists."""
         mock_crew = mock.Mock()
         mock_get_crew.return_value = mock_crew
-        result = runner.invoke(reset_memories, ["-a"])
+        result = runner.invoke(reset_memories_command, ["-a"])
 
         mock_crew.reset_memories.assert_called_once_with(command_type="all")
         assert result.output == "All memories have been reset.\n"
@@ -89,7 +91,7 @@ class TestResetMemoriesCommand:
         Should reset all memory types individually.
         """
         mock_get_crew.return_value = None
-        result = runner.invoke(reset_memories, ["-a"])
+        result = runner.invoke(reset_memories_command, ["-a"])
 
         MockShortTermMemory().reset.assert_called_once()
         MockEntityMemory().reset.assert_called_once()
@@ -99,12 +101,30 @@ class TestResetMemoriesCommand:
         assert result.output == "All memories have been reset.\n"
         assert result.exit_code == 0
 
+    @mock.patch("crewai.cli.reset_memories_command.get_crew")
+    def test_reset_memories_handles_failure(
+        self,
+        mock_get_crew,
+        runner,
+    ):
+        """
+        Test handling of memory reset failures.
+        Should handle exceptions gracefully and return appropriate error code.
+        """
+        mock_crew = mock.Mock()
+        mock_get_crew.return_value = mock_crew
+        mock_crew.reset_memories.side_effect = Exception("Failed to reset")
+        result = runner.invoke(reset_memories_command, ["-s"], catch_exceptions=True)
+
+        assert result.exit_code == 1
+        assert "An unexpected error occurred: Failed to reset" in result.output
+
 
 @mock.patch("crewai.cli.reset_memories_command.get_crew")
 def test_reset_short_term_memories(mock_get_crew, runner):
     mock_crew = mock.Mock()
     mock_get_crew.return_value = mock_crew
-    result = runner.invoke(reset_memories, ["-s"])
+    result = runner.invoke(reset_memories_command, ["-s"])
 
     mock_crew.reset_memories.assert_called_once_with(command_type="short")
     assert result.output == "Short term memory has been reset.\n"
@@ -114,7 +134,7 @@ def test_reset_short_term_memories(mock_get_crew, runner):
 def test_reset_entity_memories(mock_get_crew, runner):
     mock_crew = mock.Mock()
     mock_get_crew.return_value = mock_crew
-    result = runner.invoke(reset_memories, ["-e"])
+    result = runner.invoke(reset_memories_command, ["-e"])
 
     mock_crew.reset_memories.assert_called_once_with(command_type="entity")
     assert result.output == "Entity memory has been reset.\n"
@@ -124,7 +144,7 @@ def test_reset_entity_memories(mock_get_crew, runner):
 def test_reset_long_term_memories(mock_get_crew, runner):
     mock_crew = mock.Mock()
     mock_get_crew.return_value = mock_crew
-    result = runner.invoke(reset_memories, ["-l"])
+    result = runner.invoke(reset_memories_command, ["-l"])
 
     mock_crew.reset_memories.assert_called_once_with(command_type="long")
     assert result.output == "Long term memory has been reset.\n"
@@ -134,7 +154,7 @@ def test_reset_long_term_memories(mock_get_crew, runner):
 def test_reset_kickoff_outputs(mock_get_crew, runner):
     mock_crew = mock.Mock()
     mock_get_crew.return_value = mock_crew
-    result = runner.invoke(reset_memories, ["-k"])
+    result = runner.invoke(reset_memories_command, ["-k"])
 
     mock_crew.reset_memories.assert_called_once_with(command_type="kickoff_outputs")
     assert result.output == "Latest Kickoff outputs stored has been reset.\n"
@@ -144,7 +164,7 @@ def test_reset_kickoff_outputs(mock_get_crew, runner):
 def test_reset_multiple_memory_flags(mock_get_crew, runner):
     mock_crew = mock.Mock()
     mock_get_crew.return_value = mock_crew
-    result = runner.invoke(reset_memories, ["-s", "-l"])
+    result = runner.invoke(reset_memories_command, ["-s", "-l"])
 
     # Check that reset_memories was called twice with the correct arguments
     assert mock_crew.reset_memories.call_count == 2
@@ -161,7 +181,7 @@ def test_reset_multiple_memory_flags(mock_get_crew, runner):
 def test_reset_knowledge(mock_get_crew, runner):
     mock_crew = mock.Mock()
     mock_get_crew.return_value = mock_crew
-    result = runner.invoke(reset_memories, ["--knowledge"])
+    result = runner.invoke(reset_memories_command, ["--knowledge"])
 
     mock_crew.reset_memories.assert_called_once_with(command_type="knowledge")
     assert result.output == "Knowledge has been reset.\n"
@@ -169,7 +189,7 @@ def test_reset_knowledge(mock_get_crew, runner):
 
 def test_reset_no_memory_flags(runner):
     result = runner.invoke(
-        reset_memories,
+        reset_memories_command,
     )
     assert (
         result.output
