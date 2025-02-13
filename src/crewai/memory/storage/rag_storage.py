@@ -43,14 +43,15 @@ class RAGStorage(BaseRAGStorage):
         self, type, allow_reset=True, embedder_config=None, crew=None, path=None
     ):
         super().__init__(type, allow_reset, embedder_config, crew)
-        agents = crew.agents if crew else []
-        agents = [self._sanitize_role(agent.role) for agent in agents]
-        agents = "_".join(agents)
+        if crew:
+            agents = crew.agents
+            agents = [self._sanitize_role(agent.role) for agent in agents]
+            agents = "_".join(agents)
+        else:
+            agents = "no_crew"
         self.agents = agents
         self.storage_file_name = self._build_storage_file_name(type, agents)
-
         self.type = type
-
         self.allow_reset = allow_reset
         self.path = path
         self._initialize_app()

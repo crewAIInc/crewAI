@@ -27,10 +27,22 @@ def reset_memories_command(
 
     try:
         crew = get_crew()
-        if not crew:
-            raise ValueError("No crew found.")
         if all:
-            crew.reset_memories(command_type="all")
+            if crew:
+                crew.reset_memories(command_type="all")
+            else:
+                # When no crew exists, use default storage paths
+                from crewai.memory.short_term.short_term_memory import ShortTermMemory
+                from crewai.memory.entity.entity_memory import EntityMemory
+                from crewai.memory.long_term.long_term_memory import LongTermMemory
+                from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+                from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+                
+                ShortTermMemory().reset()
+                EntityMemory().reset()
+                LongTermMemory().reset()
+                TaskOutputStorageHandler().reset()
+                KnowledgeStorage().reset()
             click.echo("All memories have been reset.")
             return
 
