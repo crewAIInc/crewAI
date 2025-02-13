@@ -1,5 +1,6 @@
-import pytest
 import numpy as np
+import pytest
+
 from crewai.tools import FAISSSearchTool
 
 def test_faiss_search_tool_initialization():
