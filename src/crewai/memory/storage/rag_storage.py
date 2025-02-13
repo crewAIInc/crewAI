@@ -39,18 +39,27 @@ class RAGStorage(BaseRAGStorage):
 
     app: ClientAPI | None = None
 
+    """
+    RAG Storage implementation that handles both crew and no-crew scenarios.
+    
+    Args:
+        type: Type of storage
+        allow_reset: Whether storage can be reset
+        embedder_config: Configuration for embeddings
+        crew: Crew instance or None for no-crew scenario
+        path: Custom storage path
+    """
+
+    def _get_agents_string(self, crew) -> str:
+        """Get a string representation of agents for storage path."""
+        return "no_crew" if not crew else "_".join([self._sanitize_role(agent.role) for agent in crew.agents])
+
     def __init__(
-        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
+        self, type: str, allow_reset: bool = True, embedder_config=None, crew=None, path=None
     ):
         super().__init__(type, allow_reset, embedder_config, crew)
-        if crew:
-            agents = crew.agents
-            agents = [self._sanitize_role(agent.role) for agent in agents]
-            agents = "_".join(agents)
-        else:
-            agents = "no_crew"
-        self.agents = agents
-        self.storage_file_name = self._build_storage_file_name(type, agents)
+        self.agents = self._get_agents_string(crew)
+        self.storage_file_name = self._build_storage_file_name(type, self.agents)
         self.type = type
         self.allow_reset = allow_reset
         self.path = path

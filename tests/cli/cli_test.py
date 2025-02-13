@@ -55,41 +55,49 @@ def test_train_invalid_string_iterations(train_crew, runner):
     )
 
 
-@mock.patch("crewai.cli.reset_memories_command.get_crew")
-def test_reset_all_memories(mock_get_crew, runner):
-    mock_crew = mock.Mock()
-    mock_get_crew.return_value = mock_crew
-    result = runner.invoke(reset_memories, ["-a"])
+class TestResetMemoriesCommand:
+    """Tests for the reset-memories command."""
 
-    mock_crew.reset_memories.assert_called_once_with(command_type="all")
-    assert result.output == "All memories have been reset.\n"
+    @mock.patch("crewai.cli.reset_memories_command.get_crew")
+    def test_reset_all_memories(self, mock_get_crew, runner):
+        """Test resetting all memories when crew exists."""
+        mock_crew = mock.Mock()
+        mock_get_crew.return_value = mock_crew
+        result = runner.invoke(reset_memories, ["-a"])
 
+        mock_crew.reset_memories.assert_called_once_with(command_type="all")
+        assert result.output == "All memories have been reset.\n"
 
-@mock.patch("crewai.cli.reset_memories_command.get_crew")
-@mock.patch("crewai.cli.reset_memories_command.ShortTermMemory")
-@mock.patch("crewai.cli.reset_memories_command.EntityMemory")
-@mock.patch("crewai.cli.reset_memories_command.LongTermMemory")
-@mock.patch("crewai.cli.reset_memories_command.TaskOutputStorageHandler")
-@mock.patch("crewai.cli.reset_memories_command.KnowledgeStorage")
-def test_reset_all_memories_no_crew(
-    MockKnowledgeStorage,
-    MockTaskOutputStorageHandler,
-    MockLongTermMemory,
-    MockEntityMemory,
-    MockShortTermMemory,
-    mock_get_crew,
-    runner,
-):
-    mock_get_crew.return_value = None
-    result = runner.invoke(reset_memories, ["-a"])
+    @mock.patch("crewai.cli.reset_memories_command.get_crew")
+    @mock.patch("crewai.cli.reset_memories_command.ShortTermMemory")
+    @mock.patch("crewai.cli.reset_memories_command.EntityMemory")
+    @mock.patch("crewai.cli.reset_memories_command.LongTermMemory")
+    @mock.patch("crewai.cli.reset_memories_command.TaskOutputStorageHandler")
+    @mock.patch("crewai.cli.reset_memories_command.KnowledgeStorage")
+    def test_reset_all_memories_no_crew(
+        self,
+        MockKnowledgeStorage,
+        MockTaskOutputStorageHandler,
+        MockLongTermMemory,
+        MockEntityMemory,
+        MockShortTermMemory,
+        mock_get_crew,
+        runner,
+    ):
+        """
+        Test resetting all memories when no crew exists.
+        Should reset all memory types individually.
+        """
+        mock_get_crew.return_value = None
+        result = runner.invoke(reset_memories, ["-a"])
 
-    MockShortTermMemory().reset.assert_called_once()
-    MockEntityMemory().reset.assert_called_once()
-    MockLongTermMemory().reset.assert_called_once()
-    MockTaskOutputStorageHandler().reset.assert_called_once()
-    MockKnowledgeStorage().reset.assert_called_once()
-    assert result.output == "All memories have been reset.\n"
-    assert result.exit_code == 0
+        MockShortTermMemory().reset.assert_called_once()
+        MockEntityMemory().reset.assert_called_once()
+        MockLongTermMemory().reset.assert_called_once()
+        MockTaskOutputStorageHandler().reset.assert_called_once()
+        MockKnowledgeStorage().reset.assert_called_once()
+        assert result.output == "All memories have been reset.\n"
+        assert result.exit_code == 0
 
 
 @mock.patch("crewai.cli.reset_memories_command.get_crew")

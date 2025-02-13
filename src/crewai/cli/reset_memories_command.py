@@ -1,17 +1,32 @@
 import subprocess
+from typing import Optional
 
 import click
 
 from crewai.cli.utils import get_crew
+from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.memory.entity.entity_memory import EntityMemory
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+
+
+def _reset_all_memories() -> None:
+    """Reset all memory types."""
+    ShortTermMemory().reset()
+    EntityMemory().reset()
+    LongTermMemory().reset()
+    TaskOutputStorageHandler().reset()
+    KnowledgeStorage().reset()
 
 
 def reset_memories_command(
-    long,
-    short,
-    entity,
-    knowledge,
-    kickoff_outputs,
-    all,
+    long: bool,
+    short: bool,
+    entity: bool,
+    knowledge: bool,
+    kickoff_outputs: bool,
+    all: bool,
 ) -> None:
     """
     Reset the crew memories.
@@ -32,17 +47,7 @@ def reset_memories_command(
                 crew.reset_memories(command_type="all")
             else:
                 # When no crew exists, use default storage paths
-                from crewai.memory.short_term.short_term_memory import ShortTermMemory
-                from crewai.memory.entity.entity_memory import EntityMemory
-                from crewai.memory.long_term.long_term_memory import LongTermMemory
-                from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-                from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
-                
-                ShortTermMemory().reset()
-                EntityMemory().reset()
-                LongTermMemory().reset()
-                TaskOutputStorageHandler().reset()
-                KnowledgeStorage().reset()
+                _reset_all_memories()
             click.echo("All memories have been reset.")
             return
 
