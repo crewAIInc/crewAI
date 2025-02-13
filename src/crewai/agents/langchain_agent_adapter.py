@@ -297,14 +297,14 @@ class LangChainAgentAdapter(BaseAgent):
 
         used_tools = []
         try:
-            # Import the CrewAI Tool class using a local variable name to avoid reassigning the imported type.
-            from crewai.tools.base_tool import Tool as CrewToolLocal
+            # Import the CrewAI Tool class using a different alias to avoid redefinition.
+            from crewai.tools.base_tool import Tool as LocalCrewTool
         except ImportError:
-            CrewToolLocal = None  # type: Optional[Type[BaseTool]]
+            LocalCrewTool = None  # type: Optional[Type[BaseTool]]
 
         for tool in raw_tools:
             # If the tool is a CrewAI Tool, convert it to a LangChain compatible tool.
-            if CrewToolLocal is not None and isinstance(tool, CrewToolLocal):
+            if LocalCrewTool is not None and isinstance(tool, LocalCrewTool):
                 used_tools.append(tool.to_langchain())
             else:
                 used_tools.append(tool)
