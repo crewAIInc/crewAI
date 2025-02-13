@@ -12,7 +12,6 @@ class DelegateWorkToolSchema(BaseModel):
         ..., description="The role/name of the coworker to delegate to"
     )
 
-
 class DelegateWorkTool(BaseAgentTool):
     """Tool for delegating work to coworkers"""
 
