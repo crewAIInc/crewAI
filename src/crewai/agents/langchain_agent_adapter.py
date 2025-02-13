@@ -286,7 +286,7 @@ class LangChainAgentAdapter(BaseAgent):
             if tools is not None
             else (self.tools if self.tools is not None else [])
         )
-        # Fallback: if raw_tools is still empty, try to extract them from the wrapped langchain agent.
+        # Fallback: if raw_tools is still empty, try to extract them from the wrapped LangChain agent.
         if not raw_tools:
             if hasattr(self.langchain_agent, "agent") and hasattr(
                 self.langchain_agent.agent, "tools"
@@ -297,14 +297,14 @@ class LangChainAgentAdapter(BaseAgent):
 
         used_tools = []
         try:
-            # Import the CrewAI Tool class and name it differently to avoid type assignment issues.
-            from crewai.tools.base_tool import Tool as CrewToolClass
+            # Import the CrewAI Tool class using a local variable name to avoid reassigning the imported type.
+            from crewai.tools.base_tool import Tool as CrewToolLocal
         except ImportError:
-            CrewToolClass = None  # No type annotation here
+            CrewToolLocal = None  # type: Optional[Type[BaseTool]]
 
         for tool in raw_tools:
             # If the tool is a CrewAI Tool, convert it to a LangChain compatible tool.
-            if CrewToolClass is not None and isinstance(tool, CrewToolClass):
+            if CrewToolLocal is not None and isinstance(tool, CrewToolLocal):
                 used_tools.append(tool.to_langchain())
             else:
                 used_tools.append(tool)

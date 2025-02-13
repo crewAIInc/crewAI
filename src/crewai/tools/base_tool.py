@@ -189,38 +189,13 @@ class BaseTool(BaseModel, ABC):
 
         return origin.__name__
 
-    # def to_langchain(self) -> Any:
-    #     """
-    #     Convert this CrewAI Tool instance into a LangChain-compatible tool.
-    #     Returns a concrete subclass of LangChain's BaseTool.
-    #     """
-    #     try:
-    #         from langchain_core.tools import Tool as LC_Tool
-    #     except ImportError as e:
-    #         raise ImportError(
-    #             "LangChain library not found. Please run `uv add langchain` to add LangChain support."
-    #         ) from e
-
-    #     # Capture the function in a local variable to avoid referencing None.
-    #     tool_func = self.func
-
-    #     class ConcreteLangChainTool(LC_Tool):
-    #         def _run(self, *args, **kwargs):
-    #             return tool_func(*args, **kwargs)
-
-    #     # Do not pass callback_manager; let LC_Tool use its default.
-    #     print("Creating concrete langchain tool")
-    #     return ConcreteLangChainTool(
-    #         name=self.name,
-    #         description=self.description,
-    #         func=self._run,
-    #         args_schema=self.args_schema,
-    #     )
-
     @property
     def get(self) -> Callable[[str, Any], Any]:
-        # Returns a callable that looks up attributes on the instance.
-        return lambda key, default=None: getattr(self, key, default)
+        # Instead of an inline lambda, we define a helper function with explicit types.
+        def _getter(key: str, default: Any = None) -> Any:
+            return getattr(self, key, default)
+
+        return _getter
 
 
 class Tool(BaseTool):
