@@ -580,7 +580,51 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
 
     def _copy_state(self) -> T:
+        """Create a deep copy of the current state.
+        
+        Returns:
+            A deep copy of the current state object
+        """
         return copy.deepcopy(self._state)
+        
+    def _serialize_state(self) -> Union[Dict[str, Any], BaseModel]:
+        """Serialize the current state for event emission.
+        
+        This method handles the serialization of both BaseModel and dictionary states,
+        ensuring thread-safe copying of state data. Uses caching to improve performance
+        when state hasn't changed.
+        
+        Returns:
+            Serialized state as either a new BaseModel instance or dictionary
+            
+        Raises:
+            ValueError: If state has invalid type
+            Exception: If serialization fails, logs error and returns empty dict
+        """
+        try:
+            if not isinstance(self._state, (dict, BaseModel)):
+                raise ValueError(f"Invalid state type: {type(self._state)}")
+                
+            if not hasattr(self, '_last_state_hash'):
+                self._last_state_hash = None
+                self._last_serialized_state = None
+                
+            current_hash = hash(str(self._state))
+            if current_hash == self._last_state_hash:
+                return self._last_serialized_state
+                
+            serialized = (
+                type(self._state)(**self._state.model_dump())
+                if isinstance(self._state, BaseModel)
+                else dict(self._state)
+            )
+            
+            self._last_state_hash = current_hash
+            self._last_serialized_state = serialized
+            return serialized
+        except Exception as e:
+            logger.error(f"State serialization failed: {str(e)}")
+            return {}
 
     @property
     def state(self) -> T:
@@ -820,11 +864,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     ) -> Any:
         try:
             # Serialize state before event emission to avoid pickling issues
-            state_copy = (
-                type(self._state)(**self._state.model_dump())
-                if isinstance(self._state, BaseModel)
-                else dict(self._state)
-            )
+            state_copy = self._serialize_state()
 
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
             crewai_event_bus.emit(
@@ -849,12 +889,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._method_execution_counts.get(method_name, 0) + 1
             )
 
-            # Serialize state after execution to avoid pickling issues
-            state_copy = (
-                type(self._state)(**self._state.model_dump())
-                if isinstance(self._state, BaseModel)
-                else dict(self._state)
-            )
+            # Serialize state after execution
+            state_copy = self._serialize_state()
 
             crewai_event_bus.emit(
                 self,
@@ -867,13 +903,83 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 ),
             )
 
+            return result
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                MethodExecutionFailedEvent(
+                    type="method_execution_failed",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    error=e,
+                ),
+            )
+            raise e
+
+            dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
+            crewai_event_bus.emit(
+                self,
+                MethodExecutionStartedEvent(
+                    type="method_execution_started",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    params=dumped_params,
+                    state=state_copy,
+                ),
+            )
+
+<<<<<<< HEAD
+            result = (
+                await method(*args, **kwargs)
+                if asyncio.iscoroutinefunction(method)
+                else method(*args, **kwargs)
+            )
+||||||| parent of ed877467 (refactor: Improve Flow state serialization)
+        # Serialize state after execution
+        state_copy = (
+            type(self._state)(**self._state.model_dump())
+            if isinstance(self._state, BaseModel)
+            else dict(self._state)
+        )
+        
+        self.event_emitter.send(
+            self,
+            event=MethodExecutionFinishedEvent(
+                type="method_execution_finished",
+                method_name=method_name,
+                flow_name=self.__class__.__name__,
+                state=state_copy,
+                result=result,
+            ),
+        )
+=======
+        # Serialize state after execution
+        state_copy = self._serialize_state()
+        
+        self.event_emitter.send(
+            self,
+            event=MethodExecutionFinishedEvent(
+                type="method_execution_finished",
+                method_name=method_name,
+                flow_name=self.__class__.__name__,
+                state=state_copy,
+                result=result,
+            ),
+        )
+>>>>>>> ed877467 (refactor: Improve Flow state serialization)
+
+            self._method_outputs.append(result)
+            self._method_execution_counts[method_name] = (
+                self._method_execution_counts.get(method_name, 0) + 1
+            )
+
             crewai_event_bus.emit(
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=method_name,
                     flow_name=self.__class__.__name__,
-                    state=self._copy_state(),
+                    state=state_copy,
                     result=result,
                 ),
             )

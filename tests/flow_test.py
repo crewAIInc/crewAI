@@ -379,6 +379,72 @@ def test_flow_with_thread_lock():
     assert flow.counter == 2
 
 
+def test_flow_with_nested_locks():
+    """Test that Flow properly handles nested thread locks."""
+    import threading
+    
+    class NestedLockFlow(Flow):
+        def __init__(self):
+            super().__init__()
+            self.outer_lock = threading.RLock()
+            self.inner_lock = threading.RLock()
+            self.counter = 0
+            
+        @start()
+        async def step_1(self):
+            with self.outer_lock:
+                with self.inner_lock:
+                    self.counter += 1
+                    return "step 1"
+                
+        @listen(step_1)
+        async def step_2(self, result):
+            with self.outer_lock:
+                with self.inner_lock:
+                    self.counter += 1
+                    return result + " -> step 2"
+
+    flow = NestedLockFlow()
+    result = flow.kickoff()
+    
+    assert result == "step 1 -> step 2"
+    assert flow.counter == 2
+
+
+@pytest.mark.asyncio
+async def test_flow_with_async_locks():
+    """Test that Flow properly handles locks in async context."""
+    import asyncio
+    import threading
+    
+    class AsyncLockFlow(Flow):
+        def __init__(self):
+            super().__init__()
+            self.lock = threading.RLock()
+            self.async_lock = asyncio.Lock()
+            self.counter = 0
+            
+        @start()
+        async def step_1(self):
+            async with self.async_lock:
+                with self.lock:
+                    self.counter += 1
+                    return "step 1"
+                
+        @listen(step_1)
+        async def step_2(self, result):
+            async with self.async_lock:
+                with self.lock:
+                    self.counter += 1
+                    return result + " -> step 2"
+
+    flow = AsyncLockFlow()
+    result = await flow.kickoff_async()
+    
+    assert result == "step 1 -> step 2"
+    assert flow.counter == 2
+
+
 def test_router_with_multiple_conditions():
     """Test a router that triggers when any of multiple steps complete (OR condition),
     and another router that triggers only after all specified steps complete (AND condition).
