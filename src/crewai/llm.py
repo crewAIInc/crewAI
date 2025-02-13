@@ -12,12 +12,10 @@ from typing import (
     List,
     Literal,
     Optional,
-    Protocol,
     Tuple,
     Type,
     Union,
     cast,
-    runtime_checkable,
 )
 
 from dotenv import load_dotenv
@@ -35,6 +33,7 @@ from crewai.traces.unified_trace_controller import trace_llm_call
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
+from crewai.utilities.protocols import AgentExecutorProtocol
 
 load_dotenv()
 
@@ -128,17 +127,6 @@ def suppress_warnings():
         finally:
             sys.stdout = old_stdout
             sys.stderr = old_stderr
-
-
-@runtime_checkable
-class AgentExecutorProtocol(Protocol):
-    """Protocol defining the expected interface for an agent executor."""
-
-    @property
-    def agent(self) -> Any: ...
-
-    @property
-    def task(self) -> Any: ...
 
 
 class LLM:
