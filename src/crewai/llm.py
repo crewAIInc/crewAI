@@ -607,6 +607,8 @@ class LLM:
                     == str(history_result["tool_args"])
                     and str(clean_result["result"]) == str(history_result["result"])
                     and clean_result["content"] == history_result.get("content", "")
+                    and clean_result["start_time"]
+                    == history_result.get("start_time", "")
                 ):
                     is_duplicate = True
                     break
