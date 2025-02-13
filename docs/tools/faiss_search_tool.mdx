@@ -1,0 +1,58 @@
+# FAISS Search Tool
+
+The FAISS Search Tool enables efficient vector similarity search using Facebook AI Similarity Search (FAISS).
+
+## Usage
+
+```python
+from crewai import Agent
+from crewai.tools import FAISSSearchTool
+
+# Initialize tool
+search_tool = FAISSSearchTool(
+    index_type="L2",  # or "IP" for inner product
+    dimension=384,    # Match your embedder's dimension
+    embedder_config={
+        "provider": "fastembed",
+        "model": "BAAI/bge-small-en-v1.5"
+    }
+)
+
+# Add documents
+search_tool.add_texts([
+    "Document 1 content",
+    "Document 2 content",
+    # ...
+])
+
+# Create agent with tool
+agent = Agent(
+    role="researcher",
+    goal="Find relevant information",
+    tools=[search_tool]
+)
+```
+
+## Configuration
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| index_type | str | FAISS index type ("L2" or "IP") |
+| dimension | int | Embedding dimension |
+| embedder_config | dict | Embedder configuration |
+
+## Parameters
+
+### index_type
+- `"L2"`: Euclidean distance (default)
+- `"IP"`: Inner product similarity
+
+### dimension
+Default is 384, which matches the BAAI/bge-small-en-v1.5 model. Adjust this to match your chosen embedder model's output dimension.
+
+### embedder_config
+Configuration for the embedding model. Supports all CrewAI embedder providers:
+- fastembed (default)
+- openai
+- google
+- ollama
