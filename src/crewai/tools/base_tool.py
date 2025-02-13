@@ -19,6 +19,13 @@ from crewai.tools.structured_tool import CrewStructuredTool
 warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
 
+# Define a helper function with an explicit signature
+def default_cache_function(
+    _args: Optional[Any] = None, _result: Optional[Any] = None
+) -> bool:
+    return True
+
+
 class BaseTool(BaseModel, ABC):
     class _ArgsSchemaPlaceholder(PydanticBaseModel):
         pass
@@ -37,9 +44,9 @@ class BaseTool(BaseModel, ABC):
     description_updated: bool = False
     """Flag to check if the description has been updated."""
     cache_function: Callable[[Optional[Any], Optional[Any]], bool] = (
-        lambda _args=None, _result=None: True
+        default_cache_function
     )
-    """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
+    """Function used to determine if the tool should be cached."""
     result_as_answer: bool = False
     """Flag to check if the tool should be the final agent answer."""
 

@@ -280,8 +280,12 @@ class LangChainAgentAdapter(BaseAgent):
                 "LangGraph library not found. Please run `uv add langgraph` to add LangGraph support."
             ) from e
 
-        # Ensure raw_tools is always a list, even if tools and self.tools are None.
-        raw_tools = tools or self.tools or []
+        # Ensure raw_tools is always a list.
+        raw_tools: List[Any] = (
+            tools
+            if tools is not None
+            else (self.tools if self.tools is not None else [])
+        )
         # Fallback: if raw_tools is still empty, try to extract them from the wrapped langchain agent.
         if not raw_tools:
             if hasattr(self.langchain_agent, "agent") and hasattr(
@@ -293,14 +297,14 @@ class LangChainAgentAdapter(BaseAgent):
 
         used_tools = []
         try:
-            # Import the CrewAI Tool class.
-            from crewai.tools.base_tool import Tool as CrewTool
+            # Import the CrewAI Tool class and name it differently to avoid type assignment issues.
+            from crewai.tools.base_tool import Tool as CrewToolClass
         except ImportError:
-            CrewTool: Optional[Type[BaseTool]] = None  # Explicitly annotate as Optional
+            CrewToolClass = None  # No type annotation here
 
         for tool in raw_tools:
             # If the tool is a CrewAI Tool, convert it to a LangChain compatible tool.
-            if CrewTool is not None and isinstance(tool, CrewTool):
+            if CrewToolClass is not None and isinstance(tool, CrewToolClass):
                 used_tools.append(tool.to_langchain())
             else:
                 used_tools.append(tool)
