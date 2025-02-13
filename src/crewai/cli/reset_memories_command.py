@@ -52,6 +52,10 @@ def reset_memories_command(
             )
             return
 
+        if not crew:
+            click.echo("No crew found. Use --all to reset all memories.")
+            return
+
         if long:
             crew.reset_memories(command_type="long")
             click.echo("Long term memory has been reset.")
