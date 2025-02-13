@@ -1,40 +1,36 @@
-import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
-from typing import Any, Callable, Type, get_args, get_origin
+from typing import Any, Callable, Dict, Optional, Type, Tuple, get_args, get_origin
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    PydanticDeprecatedSince20,
-    create_model,
-    validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, create_model, validator
+from pydantic.fields import FieldInfo
 from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
 
-# Ignore all "PydanticDeprecatedSince20" warnings globally
-warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
-
+def _create_model_fields(fields: Dict[str, Tuple[Any, FieldInfo]]) -> Dict[str, Any]:
+    """Helper function to create model fields with proper type hints."""
+    return {name: (annotation, field) for name, (annotation, field) in fields.items()}
 
 class BaseTool(BaseModel, ABC):
+    """Base class for all tools."""
+
     class _ArgsSchemaPlaceholder(PydanticBaseModel):
         pass
 
-    model_config = ConfigDict()
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    func: Optional[Callable] = None
 
     name: str
     """The unique name of the tool that clearly communicates its purpose."""
     description: str
     """Used to tell the model how/when/why to use the tool."""
-    args_schema: Type[PydanticBaseModel] = Field(default_factory=_ArgsSchemaPlaceholder)
+    args_schema: Type[PydanticBaseModel] = Field(default=_ArgsSchemaPlaceholder)
     """The schema for the arguments that the tool accepts."""
     description_updated: bool = False
     """Flag to check if the description has been updated."""
     cache_function: Callable = lambda _args=None, _result=None: True
-    """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
+    """Function that will be used to determine if the tool should be cached."""
     result_as_answer: bool = False
     """Flag to check if the tool should be the final agent answer."""
 
@@ -57,7 +53,6 @@ class BaseTool(BaseModel, ABC):
 
     def model_post_init(self, __context: Any) -> None:
         self._generate_description()
-
         super().model_post_init(__context)
 
     def run(
@@ -87,50 +82,7 @@ class BaseTool(BaseModel, ABC):
             result_as_answer=self.result_as_answer,
         )
 
-    @classmethod
-    def from_langchain(cls, tool: Any) -> "BaseTool":
-        """Create a Tool instance from a CrewStructuredTool.
-
-        This method takes a CrewStructuredTool object and converts it into a
-        Tool instance. It ensures that the provided tool has a callable 'func'
-        attribute and infers the argument schema if not explicitly provided.
-        """
-        if not hasattr(tool, "func") or not callable(tool.func):
-            raise ValueError("The provided tool must have a callable 'func' attribute.")
-
-        args_schema = getattr(tool, "args_schema", None)
-
-        if args_schema is None:
-            # Infer args_schema from the function signature if not provided
-            func_signature = signature(tool.func)
-            annotations = func_signature.parameters
-            args_fields = {}
-            for name, param in annotations.items():
-                if name != "self":
-                    param_annotation = (
-                        param.annotation if param.annotation != param.empty else Any
-                    )
-                    field_info = Field(
-                        default=...,
-                        description="",
-                    )
-                    args_fields[name] = (param_annotation, field_info)
-            if args_fields:
-                args_schema = create_model(f"{tool.name}Input", **args_fields)
-            else:
-                # Create a default schema with no fields if no parameters are found
-                args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
-                )
-
-        return cls(
-            name=getattr(tool, "name", "Unnamed Tool"),
-            description=getattr(tool, "description", ""),
-            func=tool.func,
-            args_schema=args_schema,
-        )
-
-    def _set_args_schema(self):
+    def _set_args_schema(self) -> None:
         if self.args_schema is None:
             class_name = f"{self.__class__.__name__}Schema"
             self.args_schema = type(
@@ -145,7 +97,7 @@ class BaseTool(BaseModel, ABC):
                 },
             )
 
-    def _generate_description(self):
+    def _generate_description(self) -> None:
         args_schema = {
             name: {
                 "description": field.description,
@@ -179,79 +131,25 @@ class BaseTool(BaseModel, ABC):
 
 
 class Tool(BaseTool):
-    """The function that will be executed when the tool is called."""
+    """Tool class that wraps a function."""
 
     func: Callable
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def __init__(self, **kwargs):
+        if "func" not in kwargs:
+            raise ValueError("Tool requires a 'func' argument")
+        super().__init__(**kwargs)
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         return self.func(*args, **kwargs)
 
-    @classmethod
-    def from_langchain(cls, tool: Any) -> "Tool":
-        """Create a Tool instance from a CrewStructuredTool.
 
-        This method takes a CrewStructuredTool object and converts it into a
-        Tool instance. It ensures that the provided tool has a callable 'func'
-        attribute and infers the argument schema if not explicitly provided.
-
-        Args:
-            tool (Any): The CrewStructuredTool object to be converted.
-
-        Returns:
-            Tool: A new Tool instance created from the provided CrewStructuredTool.
-
-        Raises:
-            ValueError: If the provided tool does not have a callable 'func' attribute.
-        """
-        if not hasattr(tool, "func") or not callable(tool.func):
-            raise ValueError("The provided tool must have a callable 'func' attribute.")
-
-        args_schema = getattr(tool, "args_schema", None)
-
-        if args_schema is None:
-            # Infer args_schema from the function signature if not provided
-            func_signature = signature(tool.func)
-            annotations = func_signature.parameters
-            args_fields = {}
-            for name, param in annotations.items():
-                if name != "self":
-                    param_annotation = (
-                        param.annotation if param.annotation != param.empty else Any
-                    )
-                    field_info = Field(
-                        default=...,
-                        description="",
-                    )
-                    args_fields[name] = (param_annotation, field_info)
-            if args_fields:
-                args_schema = create_model(f"{tool.name}Input", **args_fields)
-            else:
-                # Create a default schema with no fields if no parameters are found
-                args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
-                )
-
-        return cls(
-            name=getattr(tool, "name", "Unnamed Tool"),
-            description=getattr(tool, "description", ""),
-            func=tool.func,
-            args_schema=args_schema,
-        )
-
-
-def to_langchain(
-    tools: list[BaseTool | CrewStructuredTool],
-) -> list[CrewStructuredTool]:
-    return [t.to_structured_tool() if isinstance(t, BaseTool) else t for t in tools]
-
-
-def tool(*args):
-    """
-    Decorator to create a tool from a function.
-    """
+def tool(*args: Any) -> Any:
+    """Decorator to create a tool from a function."""
 
     def _make_with_name(tool_name: str) -> Callable:
-        def _make_tool(f: Callable) -> BaseTool:
+        def _make_tool(f: Callable) -> Tool:
             if f.__doc__ is None:
                 raise ValueError("Function must have a docstring")
             if f.__annotations__ is None:

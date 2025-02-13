@@ -82,12 +82,12 @@ class BaseAgentTool(BaseTool):
             available_agents = [agent.role for agent in self.agents]
             logger.debug(f"Available agents: {available_agents}")
 
-            agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
+            matching_agents = [
                 available_agent
                 for available_agent in self.agents
                 if self.sanitize_agent_name(available_agent.role) == sanitized_name
             ]
-            logger.debug(f"Found {len(agent)} matching agents for role '{sanitized_name}'")
+            logger.debug(f"Found {len(matching_agents)} matching agents for role '{sanitized_name}'")
         except (AttributeError, ValueError) as e:
             # Handle specific exceptions that might occur during role name processing
             return self.i18n.errors("agent_tool_unexisting_coworker").format(
@@ -97,7 +97,7 @@ class BaseAgentTool(BaseTool):
                 error=str(e)
             )
 
-        if not agent:
+        if not matching_agents:
             # No matching agent found after sanitization
             return self.i18n.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
@@ -106,19 +106,19 @@ class BaseAgentTool(BaseTool):
                 error=f"No agent found with role '{sanitized_name}'"
             )
 
-        agent = agent[0]
+        selected_agent = matching_agents[0]
         try:
             task_with_assigned_agent = Task(
                 description=task,
-                agent=agent,
-                expected_output=agent.i18n.slice("manager_request"),
-                i18n=agent.i18n,
+                agent=selected_agent,
+                expected_output=selected_agent.i18n.slice("manager_request"),
+                i18n=selected_agent.i18n,
             )
-            logger.debug(f"Created task for agent '{self.sanitize_agent_name(agent.role)}': {task}")
-            return agent.execute_task(task_with_assigned_agent, context)
+            logger.debug(f"Created task for agent '{self.sanitize_agent_name(selected_agent.role)}': {task}")
+            return selected_agent.execute_task(task_with_assigned_agent, context)
         except Exception as e:
             # Handle task creation or execution errors
             return self.i18n.errors("agent_tool_execution_error").format(
-                agent_role=self.sanitize_agent_name(agent.role),
+                agent_role=self.sanitize_agent_name(selected_agent.role),
                 error=str(e)
             )

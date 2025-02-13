@@ -1,12 +1,10 @@
 import asyncio
 import json
-import re
 import uuid
 import warnings
 from concurrent.futures import Future
-from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from pydantic import (
     UUID4,
@@ -18,7 +16,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent

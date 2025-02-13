@@ -1,7 +1,9 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from pydantic import BaseModel, Field, model_validator
+from pydantic.main import IncEx
+from typing_extensions import Literal
 
 from crewai.tasks.output_format import OutputFormat
 
@@ -34,8 +36,8 @@ class TaskOutput(BaseModel):
         self.summary = f"{excerpt}..."
         return self
 
-    @property
-    def json(self) -> Optional[str]:
+    def model_json(self) -> str:
+        """Get the JSON representation of the output."""
         if self.output_format != OutputFormat.JSON:
             raise ValueError(
                 """
@@ -44,8 +46,37 @@ class TaskOutput(BaseModel):
                 please make sure to set the output_json property for the task
                 """
             )
+        return json.dumps(self.json_dict) if self.json_dict else "{}"
 
-        return json.dumps(self.json_dict)
+    def model_dump_json(
+        self,
+        *,
+        indent: Optional[int] = None,
+        include: Optional[IncEx] = None,
+        exclude: Optional[IncEx] = None,
+        context: Optional[Any] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        round_trip: bool = False,
+        warnings: bool | Literal["none", "warn", "error"] = False,
+        serialize_as_any: bool = False,
+    ) -> str:
+        """Override model_dump_json to handle custom JSON output."""
+        return super().model_dump_json(
+            indent=indent,
+            include=include,
+            exclude=exclude,
+            context=context,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            round_trip=round_trip,
+            warnings=warnings,
+            serialize_as_any=serialize_as_any,
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert json_output and pydantic_output to a dictionary."""

@@ -9,11 +9,13 @@ from copy import copy
 from hashlib import md5
 from pathlib import Path
 from typing import (
+    AbstractSet,
     Any,
     Callable,
     ClassVar,
     Dict,
     List,
+    Mapping,
     Optional,
     Set,
     Tuple,
@@ -109,7 +111,7 @@ class Task(BaseModel):
         description="Task output, it's final result after being executed", default=None
     )
     tools: Optional[List[BaseTool]] = Field(
-        default_factory=list,
+        default_factory=lambda: [],
         description="Tools the agent is limited to use for this task.",
     )
     id: UUID4 = Field(
@@ -125,7 +127,7 @@ class Task(BaseModel):
         description="A converter class used to export structured output",
         default=None,
     )
-    processed_by_agents: Set[str] = Field(default_factory=set)
+    processed_by_agents: Set[str] = Field(default_factory=lambda: set())
     guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
         default=None,
         description="Function to validate task output before proceeding to next task",
@@ -606,37 +608,56 @@ class Task(BaseModel):
         self.delegations += 1
 
     def copy(
+        self,
+        *,
+        include: Optional[AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any]] = None,
+        exclude: Optional[AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any]] = None,
+        update: Optional[Dict[str, Any]] = None,
+        deep: bool = False,
+    ) -> "Task":
+        """Create a copy of the Task."""
+        exclude_set = {"id", "agent", "context", "tools"}
+        if exclude:
+            if isinstance(exclude, (AbstractSet, set)):
+                exclude_set.update(str(x) for x in exclude)
+            elif isinstance(exclude, Mapping):
+                exclude_set.update(str(x) for x in exclude.keys())
+        
+        copied_task = super().copy(
+            include=include,
+            exclude=exclude_set,
+            update=update,
+            deep=deep,
+        )
+        
+        copied_task.id = uuid.uuid4()
+        copied_task.agent = None
+        copied_task.context = None
+        copied_task.tools = []
+        
+        return copied_task
+
+    def copy_with_agents(
         self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
     ) -> "Task":
-        """Create a deep copy of the Task."""
-        exclude = {
-            "id",
-            "agent",
-            "context",
-            "tools",
-        }
-
-        copied_data = self.model_dump(exclude=exclude)
-        copied_data = {k: v for k, v in copied_data.items() if v is not None}
-
-        cloned_context = (
-            [task_mapping[context_task.key] for context_task in self.context]
-            if self.context
-            else None
-        )
+        """Create a copy of the Task with agent references."""
+        copied_task = self.copy()
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
             return next((agent for agent in agents if agent.role == role), None)
 
-        cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
-        cloned_tools = copy(self.tools) if self.tools else []
+        if self.agent:
+            copied_task.agent = get_agent_by_role(self.agent.role)
 
-        copied_task = Task(
-            **copied_data,
-            context=cloned_context,
-            agent=cloned_agent,
-            tools=cloned_tools,
-        )
+        if self.context:
+            copied_task.context = [
+                task_mapping[context_task.key]
+                for context_task in self.context
+                if context_task.key in task_mapping
+            ]
+
+        if self.tools:
+            copied_task.tools = copy(self.tools)
 
         return copied_task
 
