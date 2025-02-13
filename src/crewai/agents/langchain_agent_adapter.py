@@ -161,7 +161,6 @@ class LangChainAgentAdapter(BaseAgent):
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
 
-        # IMPORTANT: create an initial state using "messages" (not "input")
         init_state = {"messages": [("user", task_prompt)]}
         state = self.agent_executor.invoke(init_state)
 
@@ -176,7 +175,6 @@ class LangChainAgentAdapter(BaseAgent):
         else:
             current_output = ""
 
-        # If human feedback is required, enter a feedback loop
         if task.human_input:
             current_output = self._handle_human_feedback(current_output)
 
@@ -206,7 +204,6 @@ class LangChainAgentAdapter(BaseAgent):
                 f"Updated answer:"
             )
             try:
-                # Use "messages" key for the prompt, like we do in execute_task.
                 new_state = self.agent_executor.invoke(
                     {"messages": [("user", new_prompt)]}
                 )
@@ -308,9 +305,6 @@ class LangChainAgentAdapter(BaseAgent):
                 used_tools.append(tool.to_langchain())
             else:
                 used_tools.append(tool)
-
-        print("Raw tools:", raw_tools)
-        print("Used tools:", used_tools)
 
         # Sanitize the agent's role for the "name" field. The allowed pattern is ^[a-zA-Z0-9_-]+$
         import re

@@ -78,6 +78,8 @@ class BaseAgent(ABC, BaseModel):
             Set the rpm controller for the agent.
         set_private_attrs() -> "BaseAgent":
             Set private attributes.
+        configure_executor(cache_handler: CacheHandler, rpm_controller: RPMController) -> None:
+            Configure the agent's executor with both cache and RPM handling.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -163,7 +165,6 @@ class BaseAgent(ABC, BaseModel):
         tool meets these criteria, it is processed and added to the list of
         tools. Otherwise, a ValueError is raised.
         """
-        print(f"Validating tools: {tools}")
         processed_tools = []
         for tool in tools:
             if isinstance(tool, BaseTool):
@@ -181,7 +182,6 @@ class BaseAgent(ABC, BaseModel):
                     "Tool must be an instance of BaseTool or "
                     "an object with 'name', 'func', and 'description' attributes."
                 )
-        print(f"Processed tools: {processed_tools}")
         return processed_tools
 
     @model_validator(mode="after")
@@ -343,10 +343,6 @@ class BaseAgent(ABC, BaseModel):
         # Only create the executor if it hasn't been created yet.
         if self.agent_executor is None:
             self.create_agent_executor()
-        else:
-            print(
-                "Agent executor already exists, skipping creation in set_cache_handler."
-            )
 
     def increment_formatting_errors(self) -> None:
         self.formatting_errors += 1
@@ -362,7 +358,16 @@ class BaseAgent(ABC, BaseModel):
             # Only create the executor if it hasn't been created yet.
             if self.agent_executor is None:
                 self.create_agent_executor()
-            else:
-                print(
-                    "Agent executor already exists, skipping creation in set_rpm_controller."
-                )
+
+    def configure_executor(
+        self, cache_handler: CacheHandler, rpm_controller: RPMController
+    ) -> None:
+        """Configure the agent's executor with both cache and RPM handling.
+
+        This method delegates to set_cache_handler and set_rpm_controller, applying the configuration
+        only if the respective flags or values are set.
+        """
+        if self.cache:
+            self.set_cache_handler(cache_handler)
+        if self.max_rpm:
+            self.set_rpm_controller(rpm_controller)

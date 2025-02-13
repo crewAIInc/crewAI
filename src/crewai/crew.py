@@ -340,10 +340,7 @@ class Crew(BaseModel):
 
         if self.agents:
             for agent in self.agents:
-                if self.cache:
-                    agent.set_cache_handler(self._cache_handler)
-                if self.max_rpm:
-                    agent.set_rpm_controller(self._rpm_controller)
+                agent.configure_executor(self._cache_handler, self._rpm_controller)
         return self
 
     @model_validator(mode="after")

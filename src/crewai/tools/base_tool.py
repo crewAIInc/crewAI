@@ -92,7 +92,6 @@ class BaseTool(BaseModel, ABC):
 
     @classmethod
     def from_langchain(cls, tool: Any) -> "BaseTool":
-        print("CREATING TOOL FROM LANGCHAIN")
         """Create a Tool instance from a CrewStructuredTool.
 
         This method takes a CrewStructuredTool object and converts it into a
