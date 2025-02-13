@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 class FAISSSearchTool(BaseTool):
     """FAISS vector similarity search tool for efficient document search."""
     
+    model_config = {"extra": "allow"}
+    
     name: str = "FAISS Search Tool"
     description: str = "Search through documents using FAISS vector similarity search"
     embedder_config: Optional[Dict[str, Any]] = Field(default=None)
@@ -21,6 +23,7 @@ class FAISSSearchTool(BaseTool):
     texts: List[str] = Field(default_factory=list)
     index_type: str = Field(default="L2")
     index: Any = Field(default=None)  # FAISS index instance
+    embedder: Any = Field(default=None)  # Embedder instance
     
     def __init__(
         self,
