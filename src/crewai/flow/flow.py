@@ -583,23 +583,34 @@ class Flow(Generic[T], metaclass=FlowMeta):
             The type of the thread-safe primitive, or None if not a primitive
         """
         if hasattr(value, '_is_owned') and hasattr(value, 'acquire'):
-            if isinstance(value, threading.RLock):
+            # Get the actual types since some are factory functions
+            rlock_type = type(threading.RLock())
+            lock_type = type(threading.Lock())
+            semaphore_type = type(threading.Semaphore())
+            event_type = type(threading.Event())
+            condition_type = type(threading.Condition())
+            async_lock_type = type(asyncio.Lock())
+            async_event_type = type(asyncio.Event())
+            async_condition_type = type(asyncio.Condition())
+            async_semaphore_type = type(asyncio.Semaphore())
+
+            if isinstance(value, rlock_type):
                 return threading.RLock
-            elif isinstance(value, threading.Lock):
+            elif isinstance(value, lock_type):
                 return threading.Lock
-            elif isinstance(value, threading.Semaphore):
+            elif isinstance(value, semaphore_type):
                 return threading.Semaphore
-            elif isinstance(value, threading.Event):
+            elif isinstance(value, event_type):
                 return threading.Event
-            elif isinstance(value, threading.Condition):
+            elif isinstance(value, condition_type):
                 return threading.Condition
-            elif isinstance(value, asyncio.Lock):
+            elif isinstance(value, async_lock_type):
                 return asyncio.Lock
-            elif isinstance(value, asyncio.Event):
+            elif isinstance(value, async_event_type):
                 return asyncio.Event
-            elif isinstance(value, asyncio.Condition):
+            elif isinstance(value, async_condition_type):
                 return asyncio.Condition
-            elif isinstance(value, asyncio.Semaphore):
+            elif isinstance(value, async_semaphore_type):
                 return asyncio.Semaphore
         return None
 
