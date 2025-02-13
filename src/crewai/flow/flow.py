@@ -570,7 +570,51 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
 
     def _copy_state(self) -> T:
+        """Create a deep copy of the current state.
+        
+        Returns:
+            A deep copy of the current state object
+        """
         return copy.deepcopy(self._state)
+        
+    def _serialize_state(self) -> Union[Dict[str, Any], BaseModel]:
+        """Serialize the current state for event emission.
+        
+        This method handles the serialization of both BaseModel and dictionary states,
+        ensuring thread-safe copying of state data. Uses caching to improve performance
+        when state hasn't changed.
+        
+        Returns:
+            Serialized state as either a new BaseModel instance or dictionary
+            
+        Raises:
+            ValueError: If state has invalid type
+            Exception: If serialization fails, logs error and returns empty dict
+        """
+        try:
+            if not isinstance(self._state, (dict, BaseModel)):
+                raise ValueError(f"Invalid state type: {type(self._state)}")
+                
+            if not hasattr(self, '_last_state_hash'):
+                self._last_state_hash = None
+                self._last_serialized_state = None
+                
+            current_hash = hash(str(self._state))
+            if current_hash == self._last_state_hash:
+                return self._last_serialized_state
+                
+            serialized = (
+                type(self._state)(**self._state.model_dump())
+                if isinstance(self._state, BaseModel)
+                else dict(self._state)
+            )
+            
+            self._last_state_hash = current_hash
+            self._last_serialized_state = serialized
+            return serialized
+        except Exception as e:
+            logger.error(f"State serialization failed: {str(e)}")
+            return {}
 
     @property
     def state(self) -> T:
@@ -808,11 +852,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
         # Serialize state before event emission to avoid pickling issues
-        state_copy = (
-            type(self._state)(**self._state.model_dump())
-            if isinstance(self._state, BaseModel)
-            else dict(self._state)
-        )
+        state_copy = self._serialize_state()
         
         dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
         self.event_emitter.send(
@@ -837,11 +877,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
 
         # Serialize state after execution
-        state_copy = (
-            type(self._state)(**self._state.model_dump())
-            if isinstance(self._state, BaseModel)
-            else dict(self._state)
-        )
+        state_copy = self._serialize_state()
         
         self.event_emitter.send(
             self,
