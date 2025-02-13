@@ -36,7 +36,9 @@ class BaseTool(BaseModel, ABC):
     """The schema for the arguments that the tool accepts."""
     description_updated: bool = False
     """Flag to check if the description has been updated."""
-    cache_function: Callable = lambda _args=None, _result=None: True
+    cache_function: Callable[[Optional[Any], Optional[Any]], bool] = (
+        lambda _args=None, _result=None: True
+    )
     """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
     result_as_answer: bool = False
     """Flag to check if the tool should be the final agent answer."""
