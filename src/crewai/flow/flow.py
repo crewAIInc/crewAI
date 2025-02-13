@@ -436,7 +436,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _routers: Set[str] = set()
     _router_paths: Dict[str, List[str]] = {}
     initial_state: Union[Type[T], T, None] = None
-    event_emitter = Signal("event_emitter")
 
     def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
         class _FlowGeneric(cls):  # type: ignore
@@ -769,8 +768,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
             for start_method in self._start_methods
         ]
         await asyncio.gather(*tasks)
+        print(f"All method outputs: {self._method_outputs}")  # Debug log
 
         final_output = self._method_outputs[-1] if self._method_outputs else None
+        print("final_output", final_output)
 
         event_bus.emit(
             self,
@@ -809,9 +810,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
         dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
-        self.event_emitter.send(
+        event_bus.emit(
             self,
-            event=MethodExecutionStartedEvent(
+            MethodExecutionStartedEvent(
                 type="method_execution_started",
                 method_name=method_name,
                 flow_name=self.__class__.__name__,
@@ -830,9 +831,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._method_execution_counts.get(method_name, 0) + 1
         )
 
-        self.event_emitter.send(
+        event_bus.emit(
             self,
-            event=MethodExecutionFinishedEvent(
+            MethodExecutionFinishedEvent(
                 type="method_execution_finished",
                 method_name=method_name,
                 flow_name=self.__class__.__name__,
@@ -980,16 +981,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         try:
             method = self._methods[listener_name]
 
-            event_bus.emit(
-                self,
-                MethodExecutionStartedEvent(
-                    type="method_execution_started",
-                    method_name=listener_name,
-                    flow_name=self.__class__.__name__,
-                    state=self._copy_state(),
-                ),
-            )
-
             sig = inspect.signature(method)
             params = list(sig.parameters.values())
             method_params = [p for p in params if p.name != "self"]
@@ -1000,17 +991,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
             else:
                 listener_result = await self._execute_method(listener_name, method)
-
-            event_bus.emit(
-                self,
-                MethodExecutionFinishedEvent(
-                    type="method_execution_finished",
-                    method_name=listener_name,
-                    flow_name=self.__class__.__name__,
-                    state=self._copy_state(),
-                    result=listener_result,
-                ),
-            )
 
             # Execute listeners (and possibly routers) of this listener
             await self._execute_listeners(listener_name, listener_result)
