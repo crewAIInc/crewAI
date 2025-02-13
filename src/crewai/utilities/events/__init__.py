@@ -2,6 +2,12 @@ from .crew_events import (
     CrewKickoffStartedEvent,
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
+    CrewTrainStartedEvent,
+    CrewTrainCompletedEvent,
+    CrewTrainFailedEvent,
+    CrewTestStartedEvent,
+    CrewTestCompletedEvent,
+    CrewTestFailedEvent,
 )
 from .agent_events import (
     AgentExecutionStartedEvent,

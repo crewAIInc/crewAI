@@ -24,8 +24,17 @@ from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
+from crewai.utilities.events.crew_events import (
+    CrewTestCompletedEvent,
+    CrewTestStartedEvent,
+)
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai.utilities.events import (
+    CrewTrainStartedEvent,
+    CrewTrainCompletedEvent,
+    event_bus,
+)
 
 ceo = Agent(
     role="CEO",
@@ -2568,6 +2577,16 @@ def test_crew_train_success(
     # Create a mock for the copied crew
     copy_mock.return_value = crew
 
+    received_events = []
+
+    @event_bus.on(CrewTrainStartedEvent)
+    def on_crew_train_started(source, event: CrewTrainStartedEvent):
+        received_events.append(event)
+
+    @event_bus.on(CrewTrainCompletedEvent)
+    def on_crew_train_completed(source, event: CrewTrainCompletedEvent):
+        received_events.append(event)
+
     crew.train(
         n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
     )
@@ -2612,6 +2631,10 @@ def test_crew_train_success(
             ),
         ]
     )
+
+    assert len(received_events) == 2
+    assert isinstance(received_events[0], CrewTrainStartedEvent)
+    assert isinstance(received_events[1], CrewTrainCompletedEvent)
 
 
 def test_crew_train_error():
@@ -3341,6 +3364,17 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
     copy_mock.return_value = crew
 
     n_iterations = 2
+
+    received_events = []
+
+    @event_bus.on(CrewTestStartedEvent)
+    def on_crew_test_started(source, event: CrewTestStartedEvent):
+        received_events.append(event)
+
+    @event_bus.on(CrewTestCompletedEvent)
+    def on_crew_test_completed(source, event: CrewTestCompletedEvent):
+        received_events.append(event)
+
     crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
 
     # Ensure kickoff is called on the copied crew
@@ -3356,6 +3390,10 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
             mock.call().print_crew_evaluation_result(),
         ]
     )
+
+    assert len(received_events) == 2
+    assert isinstance(received_events[0], CrewTestStartedEvent)
+    assert isinstance(received_events[1], CrewTestCompletedEvent)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

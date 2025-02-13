@@ -38,6 +38,7 @@ class CrewKickoffFailedEvent(CrewEvent):
     """Event emitted when a crew fails to complete execution"""
 
     error: str
+    crew_name: Optional[str]
     type: str = "crew_kickoff_failed"
 
 
@@ -64,6 +65,7 @@ class CrewTrainFailedEvent(CrewEvent):
     """Event emitted when a crew fails to complete training"""
 
     error: str
+    crew_name: Optional[str]
     type: str = "crew_train_failed"
 
 
@@ -88,4 +90,6 @@ class CrewTestFailedEvent(CrewEvent):
     """Event emitted when a crew fails to complete testing"""
 
     error: str
+    crew_name: Optional[str]
     type: str = "crew_test_failed"
+

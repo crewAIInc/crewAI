@@ -560,7 +560,12 @@ class Crew(BaseModel):
                 ),
             )
         except Exception as e:
-            event_bus.emit(self, CrewTrainFailedEvent(error=str(e)))
+            event_bus.emit(
+                self,
+                CrewTrainFailedEvent(
+                    error=str(e), crew_name=self.name or "crew"
+                ),
+            )
             self._logger.log("error", f"Training failed: {e}", color="red")
             CrewTrainingHandler(TRAINING_DATA_FILE).clear()
             CrewTrainingHandler(filename).clear()
@@ -630,7 +635,12 @@ class Crew(BaseModel):
                 self.usage_metrics.add_usage_metrics(metric)
             return result
         except Exception as e:
-            event_bus.emit(self, CrewKickoffFailedEvent(error=str(e)))
+            event_bus.emit(
+                self,
+                CrewKickoffFailedEvent(
+                    error=str(e), crew_name=self.name or "crew"
+                ),
+            )
             raise
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
@@ -1224,7 +1234,12 @@ class Crew(BaseModel):
                 ),
             )
         except Exception as e:
-            event_bus.emit(self, CrewTestFailedEvent(error=str(e)))
+            event_bus.emit(
+                self,
+                CrewTestFailedEvent(
+                    error=str(e), crew_name=self.name or "crew"
+                ),
+            )
             raise
 
     def __repr__(self):

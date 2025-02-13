@@ -371,7 +371,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            event_bus.emit(self, TaskStartedEvent(task=self))
+            event_bus.emit(self, TaskStartedEvent(context=context))
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -451,7 +451,7 @@ class Task(BaseModel):
                         else result
                     )
                     self._save_file(content)
-            event_bus.emit(self, TaskCompletedEvent(task=self, output=task_output))
+            event_bus.emit(self, TaskCompletedEvent(output=task_output))
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()

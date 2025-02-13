@@ -388,11 +388,15 @@ def test_flow_emits_method_execution_started_event():
         flow = TestFlow()
         flow.kickoff()
 
-        assert len(received_events) == 1
+        assert len(received_events) == 2
 
-        assert received_events[0].method_name == "second_method"
+        assert received_events[0].method_name == "begin"
         assert received_events[0].flow_name == "TestFlow"
         assert received_events[0].type == "method_execution_started"
+
+        assert received_events[1].method_name == "second_method"
+        assert received_events[1].flow_name == "TestFlow"
+        assert received_events[1].type == "method_execution_started"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
