@@ -1,7 +1,9 @@
 import asyncio
 import copy
+import dataclasses
 import inspect
 import logging
+import threading
 from typing import (
     Any,
     Callable,
@@ -562,12 +564,71 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     k: v for k, v in model.__dict__.items() if not k.startswith("_")
                 }
 
-            # Create new instance of the same class
+            # Create new instance of the same class, handling thread locks
             model_class = type(model)
-            return cast(T, model_class(**state_dict))
+            serialized_dict = self._serialize_value(state_dict)
+            return cast(T, model_class(**serialized_dict))
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
+
+    def _get_thread_safe_primitive_type(self, value: Any) -> Optional[Type]:
+        """Get the type of a thread-safe primitive for recreation.
+        
+        Args:
+            value: Any Python value to check
+            
+        Returns:
+            The type of the thread-safe primitive, or None if not a primitive
+        """
+        if hasattr(value, '_is_owned') and hasattr(value, 'acquire'):
+            if isinstance(value, threading.RLock):
+                return threading.RLock
+            elif isinstance(value, threading.Lock):
+                return threading.Lock
+            elif isinstance(value, threading.Semaphore):
+                return threading.Semaphore
+            elif isinstance(value, threading.Event):
+                return threading.Event
+            elif isinstance(value, threading.Condition):
+                return threading.Condition
+            elif isinstance(value, asyncio.Lock):
+                return asyncio.Lock
+            elif isinstance(value, asyncio.Event):
+                return asyncio.Event
+            elif isinstance(value, asyncio.Condition):
+                return asyncio.Condition
+            elif isinstance(value, asyncio.Semaphore):
+                return asyncio.Semaphore
+        return None
+
+    def _serialize_dataclass(self, value: Any) -> Any:
+        """Serialize a dataclass instance.
+        
+        Args:
+            value: A dataclass instance
+            
+        Returns:
+            A new instance of the dataclass with thread-safe primitives recreated
+        """
+        if not hasattr(value, '__class__'):
+            return value
+            
+        if hasattr(value, '__pydantic_validate__'):
+            return value.__pydantic_validate__()
+            
+        # Get field values, handling thread-safe primitives
+        field_values = {}
+        for field in dataclasses.fields(value):
+            field_value = getattr(value, field.name)
+            primitive_type = self._get_thread_safe_primitive_type(field_value)
+            if primitive_type is not None:
+                field_values[field.name] = primitive_type()
+            else:
+                field_values[field.name] = self._serialize_value(field_value)
+                
+        # Create new instance
+        return value.__class__(**field_values)
 
     def _copy_state(self) -> T:
         """Create a deep copy of the current state.
@@ -575,14 +636,92 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             A deep copy of the current state object
         """
-        return copy.deepcopy(self._state)
+        return self._serialize_value(self._state)
+
+    def _serialize_value(self, value: Any) -> Any:
+        """Recursively serialize a value, handling nested objects and locks.
         
+        Args:
+            value: Any Python value to serialize
+            
+        Returns:
+            Serialized version of the value with thread-safe primitives handled
+        """
+        # Handle None
+        if value is None:
+            return None
+            
+        # Handle thread-safe primitives
+        primitive_type = self._get_thread_safe_primitive_type(value)
+        if primitive_type is not None:
+            return None
+            
+        # Handle Pydantic models
+        if isinstance(value, BaseModel):
+            return type(value)(**{
+                k: self._serialize_value(v)
+                for k, v in value.model_dump().items()
+            })
+            
+        # Handle dataclasses
+        if dataclasses.is_dataclass(value):
+            return self._serialize_dataclass(value)
+            
+        # Handle dictionaries
+        if isinstance(value, dict):
+            return {
+                k: self._serialize_value(v)
+                for k, v in value.items()
+            }
+            
+        # Handle lists, tuples, and sets
+        if isinstance(value, (list, tuple, set)):
+            serialized = [self._serialize_value(item) for item in value]
+            return (
+                serialized if isinstance(value, list)
+                else tuple(serialized) if isinstance(value, tuple)
+                else set(serialized)
+            )
+            
+        # Handle other types
+        return value
+        
+    def _serialize_value(self, value: Any) -> Any:
+        """Recursively serialize a value, handling nested objects and locks.
+        
+        Args:
+            value: Any Python value to serialize
+            
+        Returns:
+            Serialized version of the value with locks properly handled
+        """
+        if isinstance(value, BaseModel):
+            return type(value)(**{
+                k: self._serialize_value(v)
+                for k, v in value.model_dump().items()
+            })
+        elif isinstance(value, dict):
+            return {
+                k: self._serialize_value(v)
+                for k, v in value.items()
+            }
+        elif isinstance(value, list):
+            return [self._serialize_value(item) for item in value]
+        elif isinstance(value, tuple):
+            return tuple(self._serialize_value(item) for item in value)
+        elif isinstance(value, set):
+            return {self._serialize_value(item) for item in value}
+        elif hasattr(value, '_is_owned') and hasattr(value, 'acquire'):
+            # Skip thread locks and similar synchronization primitives
+            return None
+        return value
+
     def _serialize_state(self) -> Union[Dict[str, Any], BaseModel]:
         """Serialize the current state for event emission.
         
         This method handles the serialization of both BaseModel and dictionary states,
         ensuring thread-safe copying of state data. Uses caching to improve performance
-        when state hasn't changed.
+        when state hasn't changed. Handles nested objects and locks recursively.
         
         Returns:
             Serialized state as either a new BaseModel instance or dictionary
@@ -603,11 +742,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if current_hash == self._last_state_hash:
                 return self._last_serialized_state
                 
-            serialized = (
-                type(self._state)(**self._state.model_dump())
-                if isinstance(self._state, BaseModel)
-                else dict(self._state)
-            )
+            serialized = self._serialize_value(self._state)
             
             self._last_state_hash = current_hash
             self._last_serialized_state = serialized
