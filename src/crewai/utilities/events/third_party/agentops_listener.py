@@ -1,4 +1,4 @@
-from crewai.utilities.events.agent_events import AgentExecutionStarted
+from crewai.utilities.events.agent_events import AgentExecutionStartedEvent
 from crewai.utilities.events.base_event_listener import BaseEventListener
 
 try:
@@ -16,8 +16,8 @@ class AgentOpsListener(BaseEventListener):
     def setup_listeners(self, event_bus):
         if AGENTOPS_INSTALLED:
 
-            @event_bus.on(AgentExecutionStarted)
-            def on_agent_started(source, event: AgentExecutionStarted):
+            @event_bus.on(AgentExecutionStartedEvent)
+            def on_agent_started(source, event: AgentExecutionStartedEvent):
                 print("AGENTOPS WORKS !!!", event.agent)
 
 

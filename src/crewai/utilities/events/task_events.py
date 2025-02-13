@@ -3,7 +3,7 @@ from typing import Any
 from crewai.utilities.events.crew_events import CrewEvent
 
 
-class TaskStarted(CrewEvent):
+class TaskStartedEvent(CrewEvent):
     """Event emitted when a task starts"""
 
     task: Any
@@ -12,7 +12,7 @@ class TaskStarted(CrewEvent):
     model_config = {"arbitrary_types_allowed": True}
 
 
-class TaskCompleted(CrewEvent):
+class TaskCompletedEvent(CrewEvent):
     """Event emitted when a task completes"""
 
     task: Any
@@ -22,7 +22,7 @@ class TaskCompleted(CrewEvent):
     model_config = {"arbitrary_types_allowed": True}
 
 
-class TaskFailed(CrewEvent):
+class TaskFailedEvent(CrewEvent):
     """Event emitted when a task fails"""
 
     task: Any

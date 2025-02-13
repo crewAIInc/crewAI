@@ -20,8 +20,8 @@ from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.events.agent_events import (
-    AgentExecutionCompleted,
-    AgentExecutionError,
+    AgentExecutionCompletedEvent,
+    AgentExecutionErrorEvent,
 )
 from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.llm_utils import create_llm
@@ -256,7 +256,7 @@ class Agent(BaseAgent):
         except Exception as e:
             event_bus.emit(
                 self,
-                event=AgentExecutionError(
+                event=AgentExecutionErrorEvent(
                     agent=self,
                     task=task,
                     error=str(e),
@@ -280,7 +280,8 @@ class Agent(BaseAgent):
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
         event_bus.emit(
-            self, event=AgentExecutionCompleted(agent=self, task=task, output=result)
+            self,
+            event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
         )
         return result
 

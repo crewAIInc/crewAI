@@ -25,10 +25,10 @@ from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
 from crewai.utilities.events import (
-    FlowFinished,
-    FlowStarted,
-    MethodExecutionFinished,
-    MethodExecutionStarted,
+    FlowFinishedEvent,
+    FlowStartedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
 )
 from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.printer import Printer
@@ -741,7 +741,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Start flow execution
         event_bus.emit(
             self,
-            FlowStarted(
+            FlowStartedEvent(
                 type="flow_started",
                 flow_name=self.__class__.__name__,
                 inputs=inputs,
@@ -774,7 +774,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         event_bus.emit(
             self,
-            FlowFinished(
+            FlowFinishedEvent(
                 type="flow_finished",
                 flow_name=self.__class__.__name__,
                 result=final_output,
@@ -982,10 +982,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             event_bus.emit(
                 self,
-                MethodExecutionStarted(
+                MethodExecutionStartedEvent(
                     type="method_execution_started",
                     method_name=listener_name,
                     flow_name=self.__class__.__name__,
+                    state=self._copy_state(),
                 ),
             )
 
@@ -1002,10 +1003,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             event_bus.emit(
                 self,
-                MethodExecutionFinished(
+                MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=listener_name,
                     flow_name=self.__class__.__name__,
+                    state=self._copy_state(),
+                    result=listener_result,
                 ),
             )
 

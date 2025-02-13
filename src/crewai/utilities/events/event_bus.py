@@ -42,8 +42,10 @@ class EventBus:
         Decorator to register an event handler for a specific event type.
 
         Usage:
-            @event_bus.on(AgentExecutionCompleted)
-            def on_agent_execution_completed(source: Any, event: AgentExecutionCompleted):
+            @event_bus.on(AgentExecutionCompletedEvent)
+            def on_agent_execution_completed(
+                source: Any, event: AgentExecutionCompletedEvent
+            ):
                 print(f"👍 Agent '{event.agent}' completed task")
                 print(f"   Output: {event.output}")
         """

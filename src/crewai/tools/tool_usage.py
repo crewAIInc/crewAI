@@ -19,8 +19,8 @@ from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.events.event_types import (
-    ToolUsageError,
-    ToolUsageFinished,
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
 )
 
 try:
@@ -468,7 +468,9 @@ class ToolUsage:
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
-        event_bus.emit(self, event=ToolUsageError(**{**event_data, "error": str(e)}))
+        event_bus.emit(
+            self, event=ToolUsageErrorEvent(**{**event_data, "error": str(e)})
+        )
 
     def on_tool_use_finished(
         self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float
@@ -482,7 +484,7 @@ class ToolUsage:
                 "from_cache": from_cache,
             }
         )
-        event_bus.emit(self, event=ToolUsageFinished(**event_data))
+        event_bus.emit(self, event=ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
         return {

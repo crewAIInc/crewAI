@@ -41,7 +41,11 @@ from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.events.event_bus import event_bus
-from crewai.utilities.events.task_events import TaskCompleted, TaskFailed, TaskStarted
+from crewai.utilities.events import (
+    TaskCompletedEvent,
+    TaskFailedEvent,
+    TaskStartedEvent,
+)
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 
@@ -367,7 +371,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            event_bus.emit(self, TaskStarted(task=self))
+            event_bus.emit(self, TaskStartedEvent(task=self))
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -447,7 +451,7 @@ class Task(BaseModel):
                         else result
                     )
                     self._save_file(content)
-            event_bus.emit(self, TaskCompleted(task=self, output=task_output))
+            event_bus.emit(self, TaskCompletedEvent(task=self, output=task_output))
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
@@ -456,7 +460,7 @@ class Task(BaseModel):
                     self._telemetry.task_ended(self._execution_span, self, agent.crew)
                 self._execution_span = None
 
-            event_bus.emit(self, TaskFailed(task=self, error=str(e)))
+            event_bus.emit(self, TaskFailedEvent(task=self, error=str(e)))
             raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:

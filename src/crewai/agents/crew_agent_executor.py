@@ -18,9 +18,9 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
-from crewai.utilities.events.agent_events import (
-    AgentExecutionError,
-    AgentExecutionStarted,
+from crewai.utilities.events import (
+    AgentExecutionErrorEvent,
+    AgentExecutionStartedEvent,
 )
 from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -93,7 +93,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent and self.task:
             event_bus.emit(
                 self,
-                event=AgentExecutionStarted(
+                event=AgentExecutionStartedEvent(
                     agent=self.agent,
                     tools=self.tools,
                     inputs=inputs,
@@ -195,7 +195,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent:
             event_bus.emit(
                 self,
-                event=AgentExecutionError(
+                event=AgentExecutionErrorEvent(
                     agent=self.agent, task=self.task, error=str(exception)
                 ),
             )

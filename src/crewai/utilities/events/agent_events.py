@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
-class AgentExecutionStarted(CrewEvent):
+class AgentExecutionStartedEvent(CrewEvent):
     """Event emitted when an agent starts executing a task"""
 
     agent: BaseAgent
@@ -22,7 +22,7 @@ class AgentExecutionStarted(CrewEvent):
     model_config = {"arbitrary_types_allowed": True}
 
 
-class AgentExecutionCompleted(CrewEvent):
+class AgentExecutionCompletedEvent(CrewEvent):
     """Event emitted when an agent completes executing a task"""
 
     agent: BaseAgent
@@ -31,7 +31,7 @@ class AgentExecutionCompleted(CrewEvent):
     type: str = "agent_execution_completed"
 
 
-class AgentExecutionError(CrewEvent):
+class AgentExecutionErrorEvent(CrewEvent):
     """Event emitted when an agent encounters an error during execution"""
 
     agent: BaseAgent

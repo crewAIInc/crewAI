@@ -18,7 +18,7 @@ class CrewEvent(BaseModel):
     type: str
 
 
-class CrewKickoffStarted(CrewEvent):
+class CrewKickoffStartedEvent(CrewEvent):
     """Event emitted when a crew starts execution"""
 
     crew_name: Optional[str]
@@ -26,7 +26,7 @@ class CrewKickoffStarted(CrewEvent):
     type: str = "crew_kickoff_started"
 
 
-class CrewKickoffCompleted(CrewEvent):
+class CrewKickoffCompletedEvent(CrewEvent):
     """Event emitted when a crew completes execution"""
 
     crew_name: Optional[str]
@@ -34,14 +34,14 @@ class CrewKickoffCompleted(CrewEvent):
     type: str = "crew_kickoff_completed"
 
 
-class CrewKickoffFailed(CrewEvent):
+class CrewKickoffFailedEvent(CrewEvent):
     """Event emitted when a crew fails to complete execution"""
 
     error: str
     type: str = "crew_kickoff_failed"
 
 
-class CrewTrainStarted(CrewEvent):
+class CrewTrainStartedEvent(CrewEvent):
     """Event emitted when a crew starts training"""
 
     crew_name: Optional[str]
@@ -51,7 +51,7 @@ class CrewTrainStarted(CrewEvent):
     type: str = "crew_train_started"
 
 
-class CrewTrainCompleted(CrewEvent):
+class CrewTrainCompletedEvent(CrewEvent):
     """Event emitted when a crew completes training"""
 
     crew_name: Optional[str]
@@ -60,14 +60,14 @@ class CrewTrainCompleted(CrewEvent):
     type: str = "crew_train_completed"
 
 
-class CrewTrainFailed(CrewEvent):
+class CrewTrainFailedEvent(CrewEvent):
     """Event emitted when a crew fails to complete training"""
 
     error: str
     type: str = "crew_train_failed"
 
 
-class CrewTestStarted(CrewEvent):
+class CrewTestStartedEvent(CrewEvent):
     """Event emitted when a crew starts testing"""
 
     crew_name: Optional[str]
@@ -77,14 +77,14 @@ class CrewTestStarted(CrewEvent):
     type: str = "crew_test_started"
 
 
-class CrewTestCompleted(CrewEvent):
+class CrewTestCompletedEvent(CrewEvent):
     """Event emitted when a crew completes testing"""
 
     crew_name: Optional[str]
     type: str = "crew_test_completed"
 
 
-class CrewTestFailed(CrewEvent):
+class CrewTestFailedEvent(CrewEvent):
     """Event emitted when a crew fails to complete testing"""
 
     error: str

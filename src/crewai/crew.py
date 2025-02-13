@@ -44,15 +44,15 @@ from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.events.crew_events import (
-    CrewKickoffCompleted,
-    CrewKickoffFailed,
-    CrewKickoffStarted,
-    CrewTestCompleted,
-    CrewTestFailed,
-    CrewTestStarted,
-    CrewTrainCompleted,
-    CrewTrainFailed,
-    CrewTrainStarted,
+    CrewKickoffCompletedEvent,
+    CrewKickoffFailedEvent,
+    CrewKickoffStartedEvent,
+    CrewTestCompletedEvent,
+    CrewTestFailedEvent,
+    CrewTestStartedEvent,
+    CrewTrainCompletedEvent,
+    CrewTrainFailedEvent,
+    CrewTrainStartedEvent,
 )
 from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.formatter import (
@@ -526,7 +526,7 @@ class Crew(BaseModel):
         try:
             event_bus.emit(
                 self,
-                CrewTrainStarted(
+                CrewTrainStartedEvent(
                     crew_name=self.name or "crew",
                     n_iterations=n_iterations,
                     filename=filename,
@@ -553,14 +553,14 @@ class Crew(BaseModel):
 
             event_bus.emit(
                 self,
-                CrewTrainCompleted(
+                CrewTrainCompletedEvent(
                     crew_name=self.name or "crew",
                     n_iterations=n_iterations,
                     filename=filename,
                 ),
             )
         except Exception as e:
-            event_bus.emit(self, CrewTrainFailed(error=str(e)))
+            event_bus.emit(self, CrewTrainFailedEvent(error=str(e)))
             self._logger.log("error", f"Training failed: {e}", color="red")
             CrewTrainingHandler(TRAINING_DATA_FILE).clear()
             CrewTrainingHandler(filename).clear()
@@ -577,7 +577,8 @@ class Crew(BaseModel):
                 inputs = before_callback(inputs)
 
             event_bus.emit(
-                self, CrewKickoffStarted(crew_name=self.name or "crew", inputs=inputs)
+                self,
+                CrewKickoffStartedEvent(crew_name=self.name or "crew", inputs=inputs),
             )
 
             """Starts the crew to work on its assigned tasks."""
@@ -629,7 +630,7 @@ class Crew(BaseModel):
                 self.usage_metrics.add_usage_metrics(metric)
             return result
         except Exception as e:
-            event_bus.emit(self, CrewKickoffFailed(error=str(e)))
+            event_bus.emit(self, CrewKickoffFailedEvent(error=str(e)))
             raise
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
@@ -980,7 +981,7 @@ class Crew(BaseModel):
         token_usage = self.calculate_usage_metrics()
         event_bus.emit(
             self,
-            CrewKickoffCompleted(
+            CrewKickoffCompletedEvent(
                 crew_name=self.name or "crew", output=final_task_output
             ),
         )
@@ -1200,7 +1201,7 @@ class Crew(BaseModel):
         try:
             event_bus.emit(
                 self,
-                CrewTestStarted(
+                CrewTestStartedEvent(
                     crew_name=self.name or "crew",
                     n_iterations=n_iterations,
                     openai_model_name=openai_model_name,
@@ -1218,12 +1219,12 @@ class Crew(BaseModel):
 
             event_bus.emit(
                 self,
-                CrewTestCompleted(
+                CrewTestCompletedEvent(
                     crew_name=self.name or "crew",
                 ),
             )
         except Exception as e:
-            event_bus.emit(self, CrewTestFailed(error=str(e)))
+            event_bus.emit(self, CrewTestFailedEvent(error=str(e)))
             raise
 
     def __repr__(self):

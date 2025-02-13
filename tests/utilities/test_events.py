@@ -11,24 +11,28 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.events.agent_events import (
-    AgentExecutionCompleted,
-    AgentExecutionError,
-    AgentExecutionStarted,
+    AgentExecutionCompletedEvent,
+    AgentExecutionErrorEvent,
+    AgentExecutionStartedEvent,
 )
 from crewai.utilities.events.crew_events import (
-    CrewKickoffCompleted,
-    CrewKickoffFailed,
-    CrewKickoffStarted,
+    CrewKickoffCompletedEvent,
+    CrewKickoffFailedEvent,
+    CrewKickoffStartedEvent,
 )
 from crewai.utilities.events.event_bus import event_bus
-from crewai.utilities.events.event_types import ToolUsageFinished
+from crewai.utilities.events.event_types import ToolUsageFinishedEvent
 from crewai.utilities.events.flow_events import (
-    FlowFinished,
-    FlowStarted,
-    MethodExecutionStarted,
+    FlowFinishedEvent,
+    FlowStartedEvent,
+    MethodExecutionStartedEvent,
 )
-from crewai.utilities.events.task_events import TaskCompleted, TaskFailed, TaskStarted
-from crewai.utilities.events.tool_usage_events import ToolUsageError
+from crewai.utilities.events.task_events import (
+    TaskCompletedEvent,
+    TaskFailedEvent,
+    TaskStartedEvent,
+)
+from crewai.utilities.events.tool_usage_events import ToolUsageErrorEvent
 
 base_agent = Agent(
     role="base_agent",
@@ -50,7 +54,7 @@ def test_crew_emits_start_kickoff_event():
 
     with event_bus.scoped_handlers():
 
-        @event_bus.on(CrewKickoffStarted)
+        @event_bus.on(CrewKickoffStartedEvent)
         def handle_crew_start(source, event):
             received_events.append(event)
 
@@ -68,7 +72,7 @@ def test_crew_emits_start_kickoff_event():
 def test_crew_emits_end_kickoff_event():
     received_events = []
 
-    @event_bus.on(CrewKickoffCompleted)
+    @event_bus.on(CrewKickoffCompletedEvent)
     def handle_crew_end(source, event):
         received_events.append(event)
 
@@ -88,7 +92,7 @@ def test_crew_emits_kickoff_failed_event():
 
     with event_bus.scoped_handlers():
 
-        @event_bus.on(CrewKickoffFailed)
+        @event_bus.on(CrewKickoffFailedEvent)
         def handle_crew_failed(source, event):
             received_events.append(event)
 
@@ -111,7 +115,7 @@ def test_crew_emits_kickoff_failed_event():
 def test_crew_emits_start_task_event():
     received_events = []
 
-    @event_bus.on(TaskStarted)
+    @event_bus.on(TaskStartedEvent)
     def handle_task_start(source, event):
         received_events.append(event)
 
@@ -128,7 +132,7 @@ def test_crew_emits_start_task_event():
 def test_crew_emits_end_task_event():
     received_events = []
 
-    @event_bus.on(TaskCompleted)
+    @event_bus.on(TaskCompletedEvent)
     def handle_task_end(source, event):
         received_events.append(event)
 
@@ -145,7 +149,7 @@ def test_crew_emits_end_task_event():
 def test_task_emits_failed_event_on_execution_error():
     received_events = []
 
-    @event_bus.on(TaskFailed)
+    @event_bus.on(TaskFailedEvent)
     def handle_task_failed(source, event):
         received_events.append(event)
 
@@ -171,11 +175,11 @@ def test_task_emits_failed_event_on_execution_error():
 def test_agent_emits_execution_started_and_completed_events():
     received_events = []
 
-    @event_bus.on(AgentExecutionStarted)
+    @event_bus.on(AgentExecutionStartedEvent)
     def handle_agent_start(source, event):
         received_events.append(event)
 
-    @event_bus.on(AgentExecutionCompleted)
+    @event_bus.on(AgentExecutionCompletedEvent)
     def handle_agent_completed(source, event):
         received_events.append(event)
 
@@ -205,7 +209,7 @@ def test_agent_emits_execution_started_and_completed_events():
 def test_agent_emits_execution_error_event():
     received_events = []
 
-    @event_bus.on(AgentExecutionError)
+    @event_bus.on(AgentExecutionErrorEvent)
     def handle_agent_start(source, event):
         received_events.append(event)
 
@@ -243,7 +247,7 @@ class SayHiTool(BaseTool):
 def test_tools_emits_finished_events():
     received_events = []
 
-    @event_bus.on(ToolUsageFinished)
+    @event_bus.on(ToolUsageFinishedEvent)
     def handle_tool_end(source, event):
         received_events.append(event)
 
@@ -274,7 +278,7 @@ def test_tools_emits_finished_events():
 def test_tools_emits_error_events():
     received_events = []
 
-    @event_bus.on(ToolUsageError)
+    @event_bus.on(ToolUsageErrorEvent)
     def handle_tool_end(source, event):
         received_events.append(event)
 
@@ -321,7 +325,7 @@ def test_flow_emits_start_event():
 
     with event_bus.scoped_handlers():
 
-        @event_bus.on(FlowStarted)
+        @event_bus.on(FlowStartedEvent)
         def handle_flow_start(source, event):
             received_events.append(event)
 
@@ -343,7 +347,7 @@ def test_flow_emits_finish_event():
 
     with event_bus.scoped_handlers():
 
-        @event_bus.on(FlowFinished)
+        @event_bus.on(FlowFinishedEvent)
         def handle_flow_finish(source, event):
             received_events.append(event)
 
@@ -367,7 +371,7 @@ def test_flow_emits_method_execution_started_event():
 
     with event_bus.scoped_handlers():
 
-        @event_bus.on(MethodExecutionStarted)
+        @event_bus.on(MethodExecutionStartedEvent)
         def handle_method_start(source, event):
             print("event in method name", event.method_name)
             received_events.append(event)
@@ -399,7 +403,7 @@ def test_register_handler_adds_new_handler():
         received_events.append(event)
 
     with event_bus.scoped_handlers():
-        event_bus.register_handler(CrewKickoffStarted, custom_handler)
+        event_bus.register_handler(CrewKickoffStartedEvent, custom_handler)
 
         crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
         crew.kickoff()
@@ -421,8 +425,8 @@ def test_multiple_handlers_for_same_event():
         received_events_2.append(event)
 
     with event_bus.scoped_handlers():
-        event_bus.register_handler(CrewKickoffStarted, handler_1)
-        event_bus.register_handler(CrewKickoffStarted, handler_2)
+        event_bus.register_handler(CrewKickoffStartedEvent, handler_1)
+        event_bus.register_handler(CrewKickoffStartedEvent, handler_2)
 
         crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
         crew.kickoff()
