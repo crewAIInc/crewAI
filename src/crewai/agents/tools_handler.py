@@ -24,6 +24,7 @@ class ToolsHandler:
     ) -> Any:
         """Run when tool ends running."""
         self.last_used_tool = calling  # type: ignore # BUG?: Incompatible types in assignment (expression has type "Union[ToolCalling, InstructorToolCalling]", variable has type "ToolCalling")
+
         if self.cache and should_cache and calling.tool_name != CacheTools().name:
             self.cache.add(
                 tool=calling.tool_name,

@@ -24,6 +24,7 @@ try:
     import agentops  # type: ignore
 except ImportError:
     agentops = None
+
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
     "gpt-4o",
@@ -116,7 +117,10 @@ class ToolUsage:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
 
-        if isinstance(tool, CrewStructuredTool) and tool.name == self._i18n.tools("add_image")["name"]:  # type: ignore
+        if (
+            isinstance(tool, CrewStructuredTool)
+            and tool.name == self._i18n.tools("add_image")["name"]
+        ):  # type: ignore
             try:
                 result = self._use(tool_string=tool_string, tool=tool, calling=calling)
                 return result
@@ -136,7 +140,6 @@ class ToolUsage:
         tool: Any,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
-        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None  # type: ignore
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -181,7 +184,9 @@ class ToolUsage:
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.model_json_schema()["properties"].keys()  # type: ignore
+                        acceptable_args = tool.args_schema.model_json_schema()[
+                            "properties"
+                        ].keys()  # type: ignore
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
@@ -212,10 +217,19 @@ class ToolUsage:
                     return error  # type: ignore # No return value expected
 
                 self.task.increment_tools_errors()
-                if agentops:
-                    agentops.record(
-                        agentops.ErrorEvent(exception=e, trigger_event=tool_event)
-                    )
+                self._log_to_agentops(
+                    event_type=agentops.ErrorEvent,
+                    exception=e,
+                    logs={
+                        "tool_string": tool_string,
+                        "tool": tool,
+                        "tool_calling": calling,
+                        "run_attempts": self._run_attempts,
+                        "llm": self.function_calling_llm,
+                        "task": self.task,
+                        "agent": self.agent,
+                    },
+                )
                 return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
 
             if self.tools_handler:
@@ -229,11 +243,27 @@ class ToolUsage:
                     )
 
                 self.tools_handler.on_tool_use(
-                    calling=calling, output=result, should_cache=should_cache
+                    calling=calling,
+                    output=result,
+                    should_cache=should_cache,
                 )
 
-        if agentops:
-            agentops.record(tool_event)
+        self._log_to_agentops(
+            event_type=agentops.ToolEvent,
+            params=calling.arguments,
+            returns=result,
+            name=tool.name,
+            logs={
+                "tool_string": tool_string,
+                "tool": tool,
+                "tool_calling": calling,
+                "run_attempts": self._run_attempts,
+                "llm": self.function_calling_llm,
+                "task": self.task,
+                "agent": self.agent,
+            },
+        )
+
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
             tool_name=tool.name,
@@ -460,6 +490,17 @@ class ToolUsage:
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
+
+        self._log_to_agentops(
+            event_type=agentops.ErrorEvent,
+            exception=e,
+            logs={
+                "tool": tool,
+                "tool_calling": tool_calling,
+                "event_data": event_data,
+            },
+        )
+
         events.emit(
             source=self, event=ToolUsageError(**{**event_data, "error": str(e)})
         )
@@ -476,6 +517,7 @@ class ToolUsage:
                 "from_cache": from_cache,
             }
         )
+
         events.emit(source=self, event=ToolUsageFinished(**event_data))
 
     def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
@@ -488,3 +530,11 @@ class ToolUsage:
             "tool_args": tool_calling.arguments,
             "tool_class": tool.__class__.__name__,
         }
+
+    def _log_to_agentops(self, event_type, **kwargs) -> None:
+        """Helper method to log events to agentops if available"""
+
+        if agentops:
+            agentops.record(event_type(**kwargs))
+
+        return
