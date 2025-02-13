@@ -19,7 +19,7 @@ class FAISSSearchTool(BaseTool):
     embedder_config: Optional[Dict[str, Any]] = Field(default=None)
     dimension: int = Field(default=384)  # Default for BAAI/bge-small-en-v1.5
     texts: List[str] = Field(default_factory=list)
-    _index_type: str = Field(default="L2")
+    index_type: str = Field(default="L2")
     index: Any = Field(default=None)  # FAISS index instance
     
     def __init__(
@@ -38,7 +38,7 @@ class FAISSSearchTool(BaseTool):
         super().__init__()
         self.dimension = dimension
         self.embedder_config = embedder_config
-        self._index_type = index_type
+        self.index_type = index_type
         self.index = self._create_index(index_type)
         self._initialize_embedder()
 
@@ -158,7 +158,7 @@ class FAISSSearchTool(BaseTool):
             
     def clear_index(self) -> None:
         """Clear the index and stored texts."""
-        self.index = self._create_index(self._index_type)
+        self.index = self._create_index(self.index_type)
         self.texts = []
         
     @property
