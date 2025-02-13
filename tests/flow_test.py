@@ -2,9 +2,10 @@
 
 import asyncio
 from datetime import datetime
+from typing import Dict, List, Optional, Set, Tuple
+from uuid import uuid4
 
 import pytest
-from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
@@ -401,8 +402,8 @@ def test_flow_with_nested_objects_and_locks():
         @classmethod
         def __get_pydantic_core_schema__(cls, source_type, handler):
             from pydantic_core.core_schema import (
-                with_info_plain_validator_function,
                 str_schema,
+                with_info_plain_validator_function,
             )
             def validate(value, _):
                 if isinstance(value, cls):
@@ -522,10 +523,9 @@ async def test_flow_with_async_locks():
 
 def test_flow_with_complex_nested_objects():
     """Test that Flow properly handles complex nested objects."""
-    import threading
     import asyncio
+    import threading
     from dataclasses import dataclass
-    from typing import Dict, List, Optional, Set, Tuple
     
     @dataclass
     class ThreadSafePrimitives:
