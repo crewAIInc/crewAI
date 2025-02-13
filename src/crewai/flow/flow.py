@@ -807,6 +807,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
+        # Serialize state before event emission to avoid pickling issues
+        state_copy = (
+            type(self._state)(**self._state.model_dump())
+            if isinstance(self._state, BaseModel)
+            else dict(self._state)
+        )
+        
         dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
         self.event_emitter.send(
             self,
@@ -815,7 +822,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 method_name=method_name,
                 flow_name=self.__class__.__name__,
                 params=dumped_params,
-                state=self._copy_state(),
+                state=state_copy,
             ),
         )
 
@@ -829,13 +836,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._method_execution_counts.get(method_name, 0) + 1
         )
 
+        # Serialize state after execution
+        state_copy = (
+            type(self._state)(**self._state.model_dump())
+            if isinstance(self._state, BaseModel)
+            else dict(self._state)
+        )
+        
         self.event_emitter.send(
             self,
             event=MethodExecutionFinishedEvent(
                 type="method_execution_finished",
                 method_name=method_name,
                 flow_name=self.__class__.__name__,
-                state=self._copy_state(),
+                state=state_copy,
                 result=result,
             ),
         )

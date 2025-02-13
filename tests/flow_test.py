@@ -348,6 +348,35 @@ def test_flow_uuid_structured():
     assert flow.state.message == "final"
 
 
+def test_flow_with_thread_lock():
+    """Test that Flow properly handles thread locks in state."""
+    import threading
+    
+    class LockFlow(Flow):
+        def __init__(self):
+            super().__init__()
+            self.lock = threading.RLock()
+            self.counter = 0
+            
+        @start()
+        async def step_1(self):
+            with self.lock:
+                self.counter += 1
+                return "step 1"
+                
+        @listen(step_1)
+        async def step_2(self, result):
+            with self.lock:
+                self.counter += 1
+                return result + " -> step 2"
+
+    flow = LockFlow()
+    result = flow.kickoff()
+    
+    assert result == "step 1 -> step 2"
+    assert flow.counter == 2
+
+
 def test_router_with_multiple_conditions():
     """Test a router that triggers when any of multiple steps complete (OR condition),
     and another router that triggers only after all specified steps complete (AND condition).
