@@ -66,8 +66,8 @@ class FAISSSearchTool(BaseTool):
 
     def _initialize_embedder(self):
         """Initialize the embedder using the provided configuration."""
-        configurator = EmbeddingConfigurator()
-        self.embedder = configurator.configure_embedder(self.embedder_config)
+        from crewai.knowledge.embedder.fastembed import FastEmbed
+        self.embedder = FastEmbed()
 
     def _sanitize_query(self, query: str) -> str:
         """Remove potentially harmful characters from query.
