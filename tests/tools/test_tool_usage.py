@@ -1,12 +1,13 @@
 import json
 import random
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Task
 from crewai.tools import BaseTool
+from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
 
 
@@ -84,6 +85,36 @@ def test_random_number_tool_schema():
         "maximum value" in schema_dict["properties"]["max_value"]["description"].lower()
     )
 
+
+def test_tool_usage_interrupt_handling():
+    """Test that tool usage properly propagates LangGraph interrupts."""
+    class InterruptingTool(BaseTool):
+        name: str = "interrupt_test"
+        description: str = "A tool that raises LangGraph interrupts"
+
+        def _run(self, query: str) -> str:
+            raise type('Interrupt', (Exception,), {})("test interrupt")
+
+    tool = InterruptingTool()
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[tool],
+        original_tools=[tool],
+        tools_description="Sample tool for testing",
+        tools_names="interrupt_test",
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    # Test that interrupt is propagated
+    with pytest.raises(Exception) as exc_info:
+        tool_usage.use(
+            ToolCalling(tool_name="interrupt_test", arguments={"query": "test"}, log="test"),
+            "test"
+        )
+    assert "test interrupt" in str(exc_info.value)
 
 def test_tool_usage_render():
     tool = RandomNumberTool()
