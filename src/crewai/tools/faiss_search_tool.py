@@ -20,6 +20,7 @@ class FAISSSearchTool(BaseTool):
     dimension: int = Field(default=384)  # Default for BAAI/bge-small-en-v1.5
     texts: List[str] = Field(default_factory=list)
     _index_type: str = Field(default="L2")
+    index: Any = Field(default=None)  # FAISS index instance
     
     def __init__(
         self,
