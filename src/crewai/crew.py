@@ -925,13 +925,25 @@ class Crew(BaseModel):
 
         # Add code execution tools if agent allows code execution
         if agent.allow_code_execution:
-            code_tools = self._add_code_execution_tools(agent, [])
-            final_tools.extend(code_tools)
+            code_tools = agent.get_code_execution_tools()
+            if code_tools:
+                final_tools.extend(code_tools)
+                self._logger.log(
+                    "debug",
+                    f"Added code execution tools for agent {agent.role}: {[tool.name for tool in code_tools]}",
+                    color="blue",
+                )
 
         # Add multimodal tools if agent supports them
         if agent and agent.multimodal:
-            multimodal_tools = self._add_multimodal_tools(agent, [])
-            final_tools.extend(multimodal_tools)
+            multimodal_tools = agent.get_multimodal_tools()
+            if multimodal_tools:
+                final_tools.extend(multimodal_tools)
+                self._logger.log(
+                    "debug",
+                    f"Added multimodal tools for agent {agent.role}: {[tool.name for tool in multimodal_tools]}",
+                    color="blue",
+                )
 
         # Always add delegation tools if agent allows delegation
         if delegation_tools:
