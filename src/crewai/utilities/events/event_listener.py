@@ -3,6 +3,7 @@ from pydantic import PrivateAttr
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
 from crewai.utilities.events.base_event_listener import BaseEventListener
+from .tool_usage_events import ToolUsageErrorEvent, ToolUsageFinishedEvent
 
 from .agent_events import AgentExecutionCompletedEvent, AgentExecutionStartedEvent
 from .crew_events import (
@@ -14,7 +15,7 @@ from .crew_events import (
     CrewTestStartedEvent,
     CrewTrainCompletedEvent,
     CrewTrainFailedEvent,
-    CrewTrainStartedEvent,
+    CrewTrainStartedEvent
 )
 from .flow_events import (
     FlowCreatedEvent,
@@ -225,6 +226,23 @@ class EventListener(BaseEventListener):
         def on_method_execution_finished(source, event: MethodExecutionFinishedEvent):
             self.logger.log(
                 f"👍 Flow Method Finished: '{event.method_name}'",
+                event.timestamp,
+                color=self.color,
+            )
+            
+        # Tool Usage Events
+        @event_bus.on(ToolUsageFinishedEvent)
+        def on_tool_usage_finished(source, event: ToolUsageFinishedEvent):
+            self.logger.log(
+                f"✅ Tool Usage Finished: '{event.tool_name}'",
+                event.timestamp,
+                color=self.color,
+            )
+            
+        @event_bus.on(ToolUsageErrorEvent)
+        def on_tool_usage_error(source, event: ToolUsageErrorEvent):
+            self.logger.log(
+                f"❌ Tool Usage Error: '{event.tool_name}'",
                 event.timestamp,
                 color=self.color,
             )
