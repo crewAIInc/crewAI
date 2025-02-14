@@ -23,7 +23,12 @@ Before installing CrewAI, it's recommended to set up a virtual environment. This
     <Step title="Create a Virtual Environment">
         Choose your preferred method to create a virtual environment:
 
-        **Using venv (Python's built-in tool):**
+	**Using uv (Recommended)**
+	```
+	# skip this step. uv has a global venv for tools
+	```
+
+        **Using traditional venv (Python's built-in tool):**
         ```shell Terminal
         python3 -m venv .venv
         ```
@@ -61,6 +66,11 @@ Now let's get you set up! 🚀
 <Steps>
     <Step title="Install CrewAI">
         Install CrewAI with all recommended tools using either method:
+
+	```shell Terminal
+	uv tool install crewai[tools]
+	```
+
         ```shell Terminal
         pip install 'crewai[tools]'
         ```
@@ -75,7 +85,13 @@ Now let's get you set up! 🚀
     </Step>
 
     <Step title="Upgrade CrewAI (Existing Installations Only)">
+	
         If you have an older version of CrewAI installed, you can upgrade it:
+
+	```shell Terminal
+	uv tool upgrade crewai[tools]
+	```
+
         ```shell Terminal
         pip install --upgrade crewai crewai-tools
         ```
@@ -95,6 +111,10 @@ Now let's get you set up! 🚀
 
     <Step title="Verify Installation">
         Check your installed versions:
+	```
+	uv tool list
+	```
+
         ```shell Terminal
         pip freeze | grep crewai
         ```
@@ -116,9 +136,11 @@ Now let's get you set up! 🚀
 
 <Steps>
   <Step title="Generate Project Structure">
-    Run the CrewAI CLI command:
+    Run the CrewAI CLI command with pip or uv:
+
     ```shell Terminal
     crewai create crew <project_name>
+
     ```
 
     This creates a new project with the following structure:
