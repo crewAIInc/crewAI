@@ -110,6 +110,7 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
     )
 
     api_base = os.environ.get("API_BASE") or os.environ.get("AZURE_API_BASE")
+    api_version = os.environ.get("API_VERSION") or os.environ.get("AZURE_API_VERSION")
 
     # Synchronize base_url and api_base if one is populated and the other is not
     if base_url and not api_base:
