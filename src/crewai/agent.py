@@ -175,8 +175,9 @@ class Agent(BaseAgent):
         Returns:
             Output of the agent
         """
+        # The RPM controller is now managed by the Crew, so no need to set it here.
         if self.tools_handler:
-            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
+            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalli
 
         task_prompt = task.prompt()
 
@@ -249,9 +250,6 @@ class Agent(BaseAgent):
             if self._times_executed > self.max_retry_limit:
                 raise e
             result = self.execute_task(task, context, tools)
-
-        if self.max_rpm and self._rpm_controller:
-            self._rpm_controller.stop_rpm_counter()
 
         # If there was any tool in self.tools_results that had result_as_answer
         # set to True, return the results of the last tool that had

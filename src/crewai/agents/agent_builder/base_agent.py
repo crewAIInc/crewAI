@@ -74,7 +74,7 @@ class BaseAgent(ABC, BaseModel):
             Increment formatting errors.
         copy() -> "BaseAgent":
             Create a copy of the agent.
-        set_rpm_controller(rpm_controller: RPMController) -> None:
+        set_rpm_controller(rpm_controller: Optional[RPMController] = None) -> None:
             Set the rpm controller for the agent.
         set_private_attrs() -> "BaseAgent":
             Set private attributes.
@@ -347,15 +347,26 @@ class BaseAgent(ABC, BaseModel):
     def increment_formatting_errors(self) -> None:
         self.formatting_errors += 1
 
-    def set_rpm_controller(self, rpm_controller: RPMController) -> None:
-        """Set the rpm controller for the agent.
-
-        Args:
-            rpm_controller: An instance of the RPMController class.
+    def set_rpm_controller(
+        self, rpm_controller: Optional[RPMController] = None
+    ) -> None:
         """
-        if not self._rpm_controller:
-            self._rpm_controller = rpm_controller
-            # Only create the executor if it hasn't been created yet.
+        Set the RPM controller for the agent. If no rpm_controller is provided, then:
+          - use self.max_rpm if set, or
+          - if self.crew exists and has max_rpm, use that.
+        """
+        if self._rpm_controller is None:
+            if rpm_controller is not None:
+                self._rpm_controller = rpm_controller
+            elif self.max_rpm:
+                self._rpm_controller = RPMController(
+                    max_rpm=self.max_rpm, logger=self._logger
+                )
+            elif self.crew and getattr(self.crew, "max_rpm", None):
+                self._rpm_controller = RPMController(
+                    max_rpm=self.crew.max_rpm, logger=self._logger
+                )
+            # else: no rpm limit provided – leave the controller None
             if self.agent_executor is None:
                 self.create_agent_executor()
 
@@ -370,4 +381,4 @@ class BaseAgent(ABC, BaseModel):
         if self.cache:
             self.set_cache_handler(cache_handler)
         if self.max_rpm:
-            self.set_rpm_controller(rpm_controller)
+            self.set_rpm_controller()
