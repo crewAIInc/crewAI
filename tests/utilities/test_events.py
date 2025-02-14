@@ -26,6 +26,7 @@ from crewai.utilities.events.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
+    MethodExecutionFailedEvent,
     MethodExecutionStartedEvent,
 )
 from crewai.utilities.events.task_events import (
@@ -468,3 +469,27 @@ def test_flow_emits_created_event():
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"
     assert received_events[0].type == "flow_created"
+
+
+def test_flow_emits_method_execution_failed_event():
+    received_events = []
+    error = Exception("Simulated method failure")
+
+    @event_bus.on(MethodExecutionFailedEvent)
+    def handle_method_failed(source, event):
+        received_events.append(event)
+
+    class TestFlow(Flow[dict]):
+        @start()
+        def begin(self):
+            raise error
+
+    flow = TestFlow()
+    # with pytest.raises(Exception):
+    flow.kickoff()
+
+    assert len(received_events) == 1
+    assert received_events[0].method_name == "begin"
+    assert received_events[0].flow_name == "TestFlow"
+    assert received_events[0].type == "method_execution_failed"
+    assert received_events[0].error == error

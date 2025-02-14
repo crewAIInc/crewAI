@@ -21,6 +21,7 @@ from .flow_events import (
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
+    MethodExecutionFailedEvent,
 )
 from .task_events import (
     TaskCompletedEvent,
@@ -48,6 +49,7 @@ EventTypes = Union[
     FlowFinishedEvent,
     MethodExecutionStartedEvent,
     MethodExecutionFinishedEvent,
+    MethodExecutionFailedEvent,
     AgentExecutionErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageErrorEvent,

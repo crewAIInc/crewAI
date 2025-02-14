@@ -45,6 +45,15 @@ class MethodExecutionFinishedEvent(FlowEvent):
     result: Any = None
     state: Union[Dict[str, Any], BaseModel]
     type: str = "method_execution_finished"
+    
+
+class MethodExecutionFailedEvent(FlowEvent):
+    """Event emitted when a flow method fails execution"""
+
+    flow_name: str
+    method_name: str
+    error: Any
+    type: str = "method_execution_failed"
 
 
 class FlowFinishedEvent(FlowEvent):

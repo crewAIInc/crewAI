@@ -20,6 +20,7 @@ from .flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
+    MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
@@ -125,9 +126,8 @@ class EventListener(BaseEventListener):
             source._execution_span = self._telemetry.task_started(
                 crew=source.agent.crew, task=source
             )
-            context = event.context
             self.logger.log(
-                f"📋 Task started: {source.description} Context: {context}",
+                f"📋 Task started: {source.description}",
                 event.timestamp,
                 color=self.color,
             )
@@ -139,7 +139,7 @@ class EventListener(BaseEventListener):
             if source._execution_span:
                 self._telemetry.task_ended(source._execution_span, source, source.agent.crew)
             self.logger.log(
-                f"📋 Task completed: {source.description}",
+                f"✅ Task completed: {source.description}",
                 event.timestamp,
                 color=self.color,
             )
@@ -169,7 +169,7 @@ class EventListener(BaseEventListener):
         @event_bus.on(AgentExecutionCompletedEvent)
         def on_agent_execution_completed(source, event: AgentExecutionCompletedEvent):
             self.logger.log(
-                f"👍 Agent '{event.agent.role}' completed task",
+                f"✅ Agent '{event.agent.role}' completed task",
                 event.timestamp,
                 color=self.color,
             )
@@ -211,6 +211,15 @@ class EventListener(BaseEventListener):
                 event.timestamp,
                 color=self.color,
             )
+
+        @event_bus.on(MethodExecutionFailedEvent)
+        def on_method_execution_failed(source, event: MethodExecutionFailedEvent):
+            self.logger.log(
+                f"❌ Flow Method Failed: '{event.method_name}'",
+                event.timestamp,
+                color=self.color,
+            )
+
 
         @event_bus.on(MethodExecutionFinishedEvent)
         def on_method_execution_finished(source, event: MethodExecutionFinishedEvent):

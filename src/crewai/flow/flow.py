@@ -31,6 +31,7 @@ from crewai.utilities.events import (
     MethodExecutionStartedEvent,
 )
 from crewai.utilities.events.event_bus import event_bus
+from crewai.utilities.events.flow_events import MethodExecutionFailedEvent
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
@@ -808,40 +809,53 @@ class Flow(Generic[T], metaclass=FlowMeta):
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
-        dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
-        event_bus.emit(
-            self,
-            MethodExecutionStartedEvent(
-                type="method_execution_started",
-                method_name=method_name,
-                flow_name=self.__class__.__name__,
-                params=dumped_params,
-                state=self._copy_state(),
-            ),
-        )
+        try:
+            dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
+            event_bus.emit(
+                self,
+                MethodExecutionStartedEvent(
+                    type="method_execution_started",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    params=dumped_params,
+                    state=self._copy_state(),
+                ),
+            )
 
-        result = (
-            await method(*args, **kwargs)
-            if asyncio.iscoroutinefunction(method)
-            else method(*args, **kwargs)
-        )
-        self._method_outputs.append(result)
-        self._method_execution_counts[method_name] = (
-            self._method_execution_counts.get(method_name, 0) + 1
-        )
+            
+            result = (
+                await method(*args, **kwargs)
+                if asyncio.iscoroutinefunction(method)
+                else method(*args, **kwargs)
+            )
+        
+            self._method_outputs.append(result)
+            self._method_execution_counts[method_name] = (
+                self._method_execution_counts.get(method_name, 0) + 1
+            )
 
-        event_bus.emit(
-            self,
-            MethodExecutionFinishedEvent(
-                type="method_execution_finished",
-                method_name=method_name,
-                flow_name=self.__class__.__name__,
-                state=self._copy_state(),
-                result=result,
-            ),
-        )
+            event_bus.emit(
+                self,
+                MethodExecutionFinishedEvent(
+                    type="method_execution_finished",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    state=self._copy_state(),
+                    result=result,
+                ),
+            )
 
-        return result
+            return result
+        except Exception as e:
+            event_bus.emit(
+                self,
+                MethodExecutionFailedEvent(
+                    type="method_execution_failed",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    error=e,
+                ),
+            )
 
     async def _execute_listeners(self, trigger_method: str, result: Any) -> None:
         """
