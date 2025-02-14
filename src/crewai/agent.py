@@ -175,10 +175,8 @@ class Agent(BaseAgent):
         Returns:
             Output of the agent
         """
-        # The RPM controller is now managed by the Crew, so no need to set it here.
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalli
-
         task_prompt = task.prompt()
 
         # If the task requires output in JSON or Pydantic format,

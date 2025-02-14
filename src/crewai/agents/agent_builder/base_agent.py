@@ -380,5 +380,6 @@ class BaseAgent(ABC, BaseModel):
         """
         if self.cache:
             self.set_cache_handler(cache_handler)
-        if self.max_rpm:
-            self.set_rpm_controller()
+        # Use the injected RPM controller rather than auto-creating one
+        if rpm_controller:
+            self.set_rpm_controller(rpm_controller)
