@@ -22,21 +22,23 @@ class AgentTools:
     def tools(self) -> list[BaseTool]:
         """Get all available agent tools"""
         coworkers = ", ".join([f"{agent.role}" for agent in self.agents])
-        
-        self._logger.log("debug", f"Creating delegation tools for agents: {coworkers}", color="blue")
+
+        self._logger.log(
+            "debug", f"Creating delegation tools for agents: {coworkers}", color="blue"
+        )
 
         delegate_tool = DelegateWorkTool(
             agents=self.agents,
             i18n=self.i18n,
             description=self.i18n.tools("delegate_work").format(coworkers=coworkers),  # type: ignore
-            name=DELEGATE_WORK_TOOL  # Using constant for consistency
+            name=DELEGATE_WORK_TOOL,  # Using constant for consistency
         )
 
         ask_tool = AskQuestionTool(
             agents=self.agents,
             i18n=self.i18n,
             description=self.i18n.tools("ask_question").format(coworkers=coworkers),  # type: ignore
-            name=ASK_QUESTION_TOOL  # Using constant for consistency
+            name=ASK_QUESTION_TOOL,  # Using constant for consistency
         )
 
         return [delegate_tool, ask_tool]
