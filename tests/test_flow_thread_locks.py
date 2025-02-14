@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from pydantic import BaseModel, Field, field_validator
 
-from crewai.flow.flow import Flow, start, listen
+from crewai.flow.flow import Flow, listen, start
 
 
 class ThreadSafeState(BaseModel):
