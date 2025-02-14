@@ -13,7 +13,6 @@ from typing import (
     Generic,
     List,
     Optional,
-    Protocol,
     Set,
     Type,
     TypeVar,
