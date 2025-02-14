@@ -425,7 +425,7 @@ def test_unstructured_flow_event_emission():
 
         @listen(prepare_color)
         def write_first_sentence(self):
-            return f"{self.state["flower"]} are {self.state["color"]}"
+            return f"{self.state['flower']} are {self.state['color']}"
 
         @listen(write_first_sentence)
         def finish_poem(self, first_sentence):
