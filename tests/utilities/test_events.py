@@ -485,8 +485,8 @@ def test_flow_emits_method_execution_failed_event():
             raise error
 
     flow = TestFlow()
-    # with pytest.raises(Exception):
-    flow.kickoff()
+    with pytest.raises(Exception):
+        flow.kickoff()
 
     assert len(received_events) == 1
     assert received_events[0].method_name == "begin"
