@@ -3,9 +3,9 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from crewai.utilities import Converter
-from crewai.utilities.events import event_bus
-from crewai.utilities.events import TaskEvaluationEvent
+from crewai.utilities.events import TaskEvaluationEvent, event_bus
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+
 
 class Entity(BaseModel):
     name: str = Field(description="The name of the entity.")

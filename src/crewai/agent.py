@@ -28,6 +28,7 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+
 class Agent(BaseAgent):
     """Represents an agent in a system.
 

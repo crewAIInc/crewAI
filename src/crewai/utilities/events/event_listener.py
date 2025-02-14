@@ -25,7 +25,11 @@ from .flow_events import (
     MethodExecutionStartedEvent,
 )
 from .task_events import TaskCompletedEvent, TaskFailedEvent, TaskStartedEvent
-from .tool_usage_events import ToolUsageErrorEvent, ToolUsageFinishedEvent, ToolUsageStartedEvent
+from .tool_usage_events import (
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+)
 
 
 class EventListener(BaseEventListener):

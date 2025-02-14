@@ -17,12 +17,12 @@ from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
-from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.utilities.events.event_bus import event_bus
 
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
