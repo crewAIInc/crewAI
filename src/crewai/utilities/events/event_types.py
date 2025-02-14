@@ -28,7 +28,7 @@ from .task_events import (
     TaskFailedEvent,
     TaskStartedEvent,
 )
-from .tool_usage_events import ToolUsageErrorEvent, ToolUsageFinishedEvent
+from .tool_usage_events import ToolUsageErrorEvent, ToolUsageFinishedEvent, ToolUsageStartedEvent
 
 EventTypes = Union[
     CrewKickoffStartedEvent,
@@ -53,4 +53,5 @@ EventTypes = Union[
     AgentExecutionErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageErrorEvent,
+    ToolUsageStartedEvent,
 ]

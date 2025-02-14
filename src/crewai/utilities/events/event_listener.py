@@ -25,7 +25,7 @@ from .flow_events import (
     MethodExecutionStartedEvent,
 )
 from .task_events import TaskCompletedEvent, TaskFailedEvent, TaskStartedEvent
-from .tool_usage_events import ToolUsageErrorEvent, ToolUsageFinishedEvent
+from .tool_usage_events import ToolUsageErrorEvent, ToolUsageFinishedEvent, ToolUsageStartedEvent
 
 
 class EventListener(BaseEventListener):
@@ -136,7 +136,7 @@ class EventListener(BaseEventListener):
          
         
         @event_bus.on(TaskCompletedEvent)
-        def on_task_completed(source, event: TaskCompletedEvent):
+        def on_task_completed(source, event):
             if source._execution_span:
                 self._telemetry.task_ended(source._execution_span, source, source.agent.crew)
             self.logger.log(
@@ -231,6 +231,14 @@ class EventListener(BaseEventListener):
             )
             
         # Tool Usage Events
+        @event_bus.on(ToolUsageStartedEvent)
+        def on_tool_usage_started(source, event: ToolUsageStartedEvent):
+            self.logger.log(
+                f"🤖 Tool Usage Started: '{event.tool_name}'",
+                event.timestamp,
+                color=self.color,
+            )
+            
         @event_bus.on(ToolUsageFinishedEvent)
         def on_tool_usage_finished(source, event: ToolUsageFinishedEvent):
             self.logger.log(

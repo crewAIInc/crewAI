@@ -14,7 +14,7 @@ from .agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
 )
-from .task_events import TaskStartedEvent, TaskCompletedEvent, TaskFailedEvent
+from .task_events import TaskStartedEvent, TaskCompletedEvent, TaskFailedEvent, TaskEvaluationEvent
 from .flow_events import (
     FlowCreatedEvent,
     FlowStartedEvent,
@@ -24,7 +24,7 @@ from .flow_events import (
     MethodExecutionFailedEvent,
 )
 from .event_bus import EventBus, event_bus
-from .tool_usage_events import ToolUsageFinishedEvent, ToolUsageErrorEvent
+from .tool_usage_events import ToolUsageFinishedEvent, ToolUsageErrorEvent, ToolUsageStartedEvent
 
 # events
 from .event_listener import EventListener

@@ -18,6 +18,12 @@ class ToolUsageEvent(CrewEvent):
     model_config = {"arbitrary_types_allowed": True}
 
 
+class ToolUsageStartedEvent(ToolUsageEvent):
+    """Event emitted when a tool execution is started"""
+
+    type: str = "tool_usage_started"
+
+
 class ToolUsageFinishedEvent(ToolUsageEvent):
     """Event emitted when a tool execution is completed"""
 
@@ -30,5 +36,5 @@ class ToolUsageFinishedEvent(ToolUsageEvent):
 class ToolUsageErrorEvent(ToolUsageEvent):
     """Event emitted when a tool execution encounters an error"""
 
-    error: str
+    error: Any
     type: str = "tool_usage_error"

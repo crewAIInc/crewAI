@@ -18,15 +18,12 @@ from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 from crewai.utilities.events.event_bus import event_bus
-from crewai.utilities.events.event_types import (
+from crewai.utilities.events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
 )
 
-try:
-    import agentops  # type: ignore
-except ImportError:
-    agentops = None
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
     "gpt-4o",
@@ -141,7 +138,8 @@ class ToolUsage:
         tool: Any,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
-        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None  # type: ignore
+        event_data = self._prepare_event_data(tool, calling) # type: ignore
+        event_bus.emit(self, ToolUsageStartedEvent(**event_data))
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -219,10 +217,6 @@ class ToolUsage:
                     return error  # type: ignore # No return value expected
 
                 self.task.increment_tools_errors()
-                if agentops:
-                    agentops.record(
-                        agentops.ErrorEvent(exception=e, trigger_event=tool_event)
-                    )
                 return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
 
             if self.tools_handler:
@@ -238,9 +232,6 @@ class ToolUsage:
                 self.tools_handler.on_tool_use(
                     calling=calling, output=result, should_cache=should_cache
                 )
-
-        if agentops:
-            agentops.record(tool_event)
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
             tool_name=tool.name,
@@ -468,7 +459,7 @@ class ToolUsage:
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
         event_bus.emit(
-            self, event=ToolUsageErrorEvent(**{**event_data, "error": str(e)})
+            self, event=ToolUsageErrorEvent(**{**event_data, "error": e})
         )
 
     def on_tool_use_finished(

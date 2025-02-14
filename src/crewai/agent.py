@@ -28,21 +28,6 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-agentops = None
-
-try:
-    import agentops  # type: ignore # Name "agentops" is already defined
-    from agentops import track_agent  # type: ignore
-except ImportError:
-
-    def track_agent():
-        def noop(f):
-            return f
-
-        return noop
-
-
-@track_agent()
 class Agent(BaseAgent):
     """Represents an agent in a system.
 
