@@ -5,7 +5,6 @@ from crewai.utilities import I18N, Logger
 from .ask_question_tool import AskQuestionTool
 from .delegate_work_tool import DelegateWorkTool
 
-
 # Tool name constants
 DELEGATE_WORK_TOOL = "Delegate Work"
 ASK_QUESTION_TOOL = "Ask Question"
