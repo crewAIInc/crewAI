@@ -718,6 +718,30 @@ class Flow(Generic[T], metaclass=FlowMeta):
                                     setattr(instance, field_name, primitive_type())
                     
                     return instance
+                    
+                # Handle dataclasses
+                if dataclasses.is_dataclass(value):
+                    return self._serialize_dataclass(value)
+                    
+                # Handle dictionaries
+                if isinstance(value, dict):
+                    return {
+                        k: self._serialize_value(v)
+                        for k, v in value.items()
+                    }
+                    
+                # Handle lists, tuples, and sets
+                if isinstance(value, (list, tuple, set)):
+                    serialized = [self._serialize_value(item) for item in value]
+                    return (
+                        serialized if isinstance(value, list)
+                        else tuple(serialized) if isinstance(value, tuple)
+                        else set(serialized)
+                    )
+                    
+                # Handle other types
+                return value
+                
             except Exception as e:
                 logger.error(f"Serialization error for {type(value)}: {str(e)}")
                 raise SerializationError(f"Failed to serialize {type(value)}") from e
