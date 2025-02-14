@@ -776,7 +776,12 @@ class Crew(BaseModel):
                 )
 
             # Track delegation in hierarchical process
-            if self.process == Process.hierarchical and task.agent and task.agent != self.manager_agent:
+            if (
+                self.process == Process.hierarchical 
+                and task.agent 
+                and task.agent != self.manager_agent 
+                and self.manager_agent
+            ):
                 task.increment_delegations(self.manager_agent.role)
                 task.processed_by_agents.add(self.manager_agent.role)
                 self._logger.log(
