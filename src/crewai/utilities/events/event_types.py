@@ -19,9 +19,9 @@ from .crew_events import (
 from .flow_events import (
     FlowFinishedEvent,
     FlowStartedEvent,
+    MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
-    MethodExecutionFailedEvent,
 )
 from .task_events import (
     TaskCompletedEvent,

@@ -856,6 +856,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     error=e,
                 ),
             )
+            raise e
 
     async def _execute_listeners(self, trigger_method: str, result: Any) -> None:
         """
