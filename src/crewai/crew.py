@@ -314,14 +314,16 @@ class Crew(BaseModel):
                     {},
                 )
 
-            if (self.manager_agent is not None) and (
-                self.agents.count(self.manager_agent) > 0
-            ):
-                raise PydanticCustomError(
-                    "manager_agent_in_agents",
-                    "Manager agent should not be included in agents list.",
-                    {},
-                )
+            if self.manager_agent is not None:
+                if self.agents.count(self.manager_agent) > 0:
+                    raise PydanticCustomError(
+                        "manager_agent_in_agents",
+                        "Manager agent should not be included in agents list.",
+                        {},
+                    )
+                # Set manager agent's crew and tools
+                self.manager_agent.crew = self
+                self.manager_agent.tools = AgentTools(agents=self.agents).tools()
 
         return self
 
@@ -690,26 +692,30 @@ class Crew(BaseModel):
     def _create_manager_agent(self):
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
-            self.manager_agent.allow_delegation = True
             manager = self.manager_agent
-            if manager.tools is not None and len(manager.tools) > 0:
-                self._logger.log(
-                    "warning", "Manager agent should not have tools", color="orange"
-                )
-                manager.tools = []
-                raise Exception("Manager agent should not have tools")
+            manager.allow_delegation = True
+            # Only use delegation tools for manager agent
+            delegation_tools = AgentTools(agents=self.agents).tools()
+            manager.tools = delegation_tools
+            self._logger.log(
+                "info",
+                f"Manager agent has delegation tools: {[tool.name for tool in manager.tools]}",
+                color="blue",
+            )
         else:
             self.manager_llm = create_llm(self.manager_llm)
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
                 backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
-                tools=AgentTools(agents=self.agents).tools(),
+                tools=[],  # Initialize with no tools
                 allow_delegation=True,
                 llm=self.manager_llm,
                 verbose=self.verbose,
             )
             self.manager_agent = manager
+            # Set delegation tools after initialization
+            manager.tools = AgentTools(agents=self.agents).tools()
         manager.crew = self
 
     def _execute_tasks(
@@ -821,6 +827,10 @@ class Crew(BaseModel):
     def _prepare_tools(
         self, agent: BaseAgent, task: Task, tools: List[Tool]
     ) -> List[Tool]:
+        # For manager agent, only use delegation tools
+        if agent == self.manager_agent:
+            return self._update_manager_tools(task, [])
+
         # Add delegation tools if agent allows delegation
         if agent.allow_delegation:
             if self.process == Process.hierarchical:
@@ -830,7 +840,6 @@ class Crew(BaseModel):
                     raise ValueError(
                         "Manager agent is required for hierarchical process."
                     )
-
             elif agent and agent.allow_delegation:
                 tools = self._add_delegation_tools(task, tools)
 
@@ -870,6 +879,8 @@ class Crew(BaseModel):
         self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]
     ):
         delegation_tools = task_agent.get_delegation_tools(agents)
+        if task_agent == self.manager_agent:
+            return delegation_tools
         return self._merge_tools(tools, delegation_tools)
 
     def _add_multimodal_tools(self, agent: BaseAgent, tools: List[Tool]):
@@ -899,10 +910,10 @@ class Crew(BaseModel):
     def _update_manager_tools(self, task: Task, tools: List[Tool]):
         if self.manager_agent:
             if task.agent:
-                tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
+                tools = self._inject_delegation_tools([], task.agent, [task.agent])
             else:
                 tools = self._inject_delegation_tools(
-                    tools, self.manager_agent, self.agents
+                    [], self.manager_agent, self.agents
                 )
         return tools
 

@@ -21,12 +21,14 @@ class AgentTools:
             agents=self.agents,
             i18n=self.i18n,
             description=self.i18n.tools("delegate_work").format(coworkers=coworkers),  # type: ignore
+            name="Delegate Work"
         )
 
         ask_tool = AskQuestionTool(
             agents=self.agents,
             i18n=self.i18n,
             description=self.i18n.tools("ask_question").format(coworkers=coworkers),  # type: ignore
+            name="Ask Question"
         )
 
         return [delegate_tool, ask_tool]
