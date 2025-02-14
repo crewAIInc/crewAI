@@ -1,0 +1,111 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
+      are a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
+      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
+      ''str''}}\nTool Description: Delegate a specific task to one of the following
+      coworkers: Researcher\nThe input to this tool should be the coworker, the task
+      you want them to do, and ALL necessary context to execute the task, they know
+      nothing about the task, so share absolute everything you know, don''t reference
+      things but instead explain them.\nTool Name: Ask question to coworker\nTool
+      Arguments: {''question'': {''description'': ''The question to ask'', ''type'':
+      ''str''}, ''context'': {''description'': ''The context for the question'', ''type'':
+      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
+      ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one
+      of the following coworkers: Researcher\nThe input to this tool should be the
+      coworker, the question you have for them, and ALL necessary context to ask the
+      question properly, they know nothing about the question, so share absolute everything
+      you know, don''t reference things but instead explain them.\n\nIMPORTANT: Use
+      the following format in your response:\n\n```\nThought: you should always think
+      about what to do\nAction: the action to take, only one name of [Delegate work
+      to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction
+      Input: the input to the action, just a simple JSON object, enclosed in curly
+      braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: Test task
+      using test_tool\n\nThis is the expected criteria for your final answer: Test
+      output\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2915'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=0nI_3cs9LKHlz0_cVifl9lVXZWfNQrzhLRZzoaDCVJs-1739358791-1.0.1.1-GJZzVGs1fHQe9gucVHUCoDlI3mwg3JyXCBIIChx_OsB0jgqbzt1s2et96vUgpdjONt9C2tB8OQ6fk70k3vhh0w;
+        _cfuvid=TvEPcNq35qaIgBFFzOP7g7NQf632eeMrvRDJyr7UTro-1739358791985-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n    \"error\": {\n        \"message\": \"Incorrect API key provided:
+      sk-fake-**********2345. You can find your API key at https://platform.openai.com/account/api-keys.\",\n
+      \       \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\":
+      \"invalid_api_key\"\n    }\n}\n"
+    headers:
+      CF-RAY:
+      - 910c25e84886a373-SEA
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '272'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 12 Feb 2025 11:13:13 GMT
+      Server:
+      - cloudflare
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Origin
+      x-request-id:
+      - req_e48016407be31edd1f9ee2e1bb4d1b30
+    http_version: HTTP/1.1
+    status_code: 401
+version: 1
