@@ -14,6 +14,7 @@ icon: bars-staggered
 
 - **Sequential**: Executes tasks sequentially, ensuring tasks are completed in an orderly progression.
 - **Hierarchical**: Organizes tasks in a managerial hierarchy, where tasks are delegated and executed based on a structured chain of command. A manager language model (`manager_llm`) or a custom manager agent (`manager_agent`) must be specified in the crew to enable the hierarchical process, facilitating the creation and management of tasks by the manager.
+- **Parallel**: Enables concurrent execution of multiple flows, allowing transitions from one flow to multiple parallel flows for improved task parallelization. Parallel execution is automatically handled using asyncio for optimal performance.
 - **Consensual Process (Planned)**: Aiming for collaborative decision-making among agents on task execution, this process type introduces a democratic approach to task management within CrewAI. It is planned for future development and is not currently implemented in the codebase.
 
 ## The Role of Processes in Teamwork
@@ -57,7 +58,28 @@ Emulates a corporate hierarchy, CrewAI allows specifying a custom manager agent 
 
 ## Process Class: Detailed Overview
 
-The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types (`sequential`, `hierarchical`). The consensual process is planned for future inclusion, emphasizing our commitment to continuous development and innovation.
+The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types (`sequential`, `hierarchical`, `parallel`). The consensual process is planned for future inclusion, emphasizing our commitment to continuous development and innovation.
+
+## Parallel Process
+
+The parallel process type enables concurrent execution of multiple flows, leveraging Python's asyncio for efficient task parallelization. When using parallel execution:
+
+- Multiple start methods are executed concurrently
+- Listeners can run in parallel when triggered by the same method
+- State consistency is maintained through thread-safe operations
+- Execution timing and order are preserved where necessary
+
+Example of parallel flow execution:
+```python
+from crewai import Crew, Process
+
+# Create a crew with parallel process
+crew = Crew(
+    agents=my_agents,
+    tasks=my_tasks,
+    process=Process.parallel
+)
+```
 
 ## Conclusion
 
