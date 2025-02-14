@@ -89,7 +89,7 @@ class Crew(BaseModel):
 
     __hash__ = object.__hash__  # type: ignore
     _execution_span: Any = PrivateAttr()
-    _rpm_controller: RPMController = PrivateAttr()
+    _rpm_controller: Optional[RPMController] = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
@@ -274,7 +274,10 @@ class Crew(BaseModel):
         # Now inject these external dependencies into each agent
         for agent in self.agents:
             agent.crew = self  # ensure the agent's crew reference is set
-            agent.configure_executor(self._cache_handler, self._rpm_controller)
+            # If cache is disabled (_cache_handler is None) provide a new CacheHandler instance
+            agent.configure_executor(
+                self._cache_handler or CacheHandler(), self._rpm_controller
+            )
 
         return self
 

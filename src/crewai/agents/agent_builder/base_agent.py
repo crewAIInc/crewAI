@@ -371,7 +371,7 @@ class BaseAgent(ABC, BaseModel):
                 self.create_agent_executor()
 
     def configure_executor(
-        self, cache_handler: CacheHandler, rpm_controller: RPMController
+        self, cache_handler: CacheHandler, rpm_controller: Optional[RPMController]
     ) -> None:
         """Configure the agent's executor with both cache and RPM handling.
 
