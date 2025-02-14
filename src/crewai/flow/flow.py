@@ -17,7 +17,6 @@ from typing import (
 )
 from uuid import uuid4
 
-from blinker import Signal
 from pydantic import BaseModel, Field, ValidationError
 
 from crewai.flow.flow_visualizer import plot_flow
@@ -25,11 +24,11 @@ from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
 from crewai.utilities.events import (
+    FlowCreatedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
-    FlowCreatedEvent,
 )
 from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.printer import Printer

@@ -34,7 +34,6 @@ from crewai.utilities.events.task_events import (
     TaskStartedEvent,
 )
 from crewai.utilities.events.tool_usage_events import ToolUsageErrorEvent
-from requests.exceptions import RequestException
 
 base_agent = Agent(
     role="base_agent",

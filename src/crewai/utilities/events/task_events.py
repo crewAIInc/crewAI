@@ -1,4 +1,5 @@
 from typing import Any, Optional
+
 from crewai.utilities.events.crew_events import CrewEvent
 
 

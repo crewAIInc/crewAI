@@ -6,7 +6,6 @@ from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import instructor
 import pydantic_core
 import pytest
 
@@ -17,24 +16,23 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
-from crewai.project import crew
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
+from crewai.utilities.events import (
+    CrewTrainCompletedEvent,
+    CrewTrainStartedEvent,
+    event_bus,
+)
 from crewai.utilities.events.crew_events import (
     CrewTestCompletedEvent,
     CrewTestStartedEvent,
 )
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from crewai.utilities.events import (
-    CrewTrainStartedEvent,
-    CrewTrainCompletedEvent,
-    event_bus,
-)
 
 ceo = Agent(
     role="CEO",

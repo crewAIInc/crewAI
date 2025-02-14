@@ -6,8 +6,6 @@ from blinker import Signal
 
 from crewai.utilities.events.crew_events import CrewEvent
 
-from .event_types import EventTypes
-
 EventT = TypeVar("EventT", bound=CrewEvent)
 
 
