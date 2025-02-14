@@ -694,14 +694,18 @@ class Crew(BaseModel):
         if self.manager_agent is not None:
             manager = self.manager_agent
             manager.allow_delegation = True
-            # Only use delegation tools for manager agent
-            delegation_tools = AgentTools(agents=self.agents).tools()
-            manager.tools = delegation_tools
-            self._logger.log(
-                "info",
-                f"Manager agent has delegation tools: {[tool.name for tool in manager.tools]}",
-                color="blue",
-            )
+            manager.crew = self
+            try:
+                delegation_tools = AgentTools(agents=self.agents).tools()
+                manager.tools = delegation_tools
+                self._logger.log(
+                    "info",
+                    f"Manager agent has delegation tools: {[tool.name for tool in manager.tools]}",
+                    color="blue",
+                )
+            except Exception as e:
+                self._logger.log("error", f"Failed to set manager tools: {str(e)}", color="red")
+                raise ValueError(f"Failed to set manager tools: {str(e)}")
         else:
             self.manager_llm = create_llm(self.manager_llm)
             manager = Agent(
@@ -714,9 +718,19 @@ class Crew(BaseModel):
                 verbose=self.verbose,
             )
             self.manager_agent = manager
-            # Set delegation tools after initialization
-            manager.tools = AgentTools(agents=self.agents).tools()
-        manager.crew = self
+            manager.crew = self
+            try:
+                delegation_tools = AgentTools(agents=self.agents).tools()
+                manager.tools = delegation_tools
+                self._logger.log(
+                    "info",
+                    f"Manager agent has delegation tools: {[tool.name for tool in manager.tools]}",
+                    color="blue",
+                )
+            except Exception as e:
+                self._logger.log("error", f"Failed to set manager tools: {str(e)}", color="red")
+                raise ValueError(f"Failed to set manager tools: {str(e)}")
+
 
     def _execute_tasks(
         self,

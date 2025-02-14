@@ -6,6 +6,11 @@ from .ask_question_tool import AskQuestionTool
 from .delegate_work_tool import DelegateWorkTool
 
 
+# Tool name constants
+DELEGATE_WORK_TOOL = "Delegate Work"
+ASK_QUESTION_TOOL = "Ask Question"
+
+
 class AgentTools:
     """Manager class for agent-related tools"""
 
@@ -21,14 +26,14 @@ class AgentTools:
             agents=self.agents,
             i18n=self.i18n,
             description=self.i18n.tools("delegate_work").format(coworkers=coworkers),  # type: ignore
-            name="Delegate Work"
+            name=DELEGATE_WORK_TOOL  # Using constant for consistency
         )
 
         ask_tool = AskQuestionTool(
             agents=self.agents,
             i18n=self.i18n,
             description=self.i18n.tools("ask_question").format(coworkers=coworkers),  # type: ignore
-            name="Ask Question"
+            name=ASK_QUESTION_TOOL  # Using constant for consistency
         )
 
         return [delegate_tool, ask_tool]
