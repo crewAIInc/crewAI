@@ -10,15 +10,18 @@ from typing import Any, Dict, List, Optional, Union
 import json5
 from json_repair import repair_json
 
-import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
-from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
 from crewai.utilities import I18N, Converter, ConverterError, Printer
+from crewai.utilities.events.event_bus import event_bus
+from crewai.utilities.events.event_types import (
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+)
 
 try:
     import agentops  # type: ignore
@@ -116,7 +119,9 @@ class ToolUsage:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
 
-        if isinstance(tool, CrewStructuredTool) and tool.name == self._i18n.tools("add_image")["name"]:  # type: ignore
+        if isinstance(tool, CrewStructuredTool) and tool.name == self._i18n.tools(
+            "add_image"
+        ).get("name"):  # type: ignore
             try:
                 result = self._use(tool_string=tool_string, tool=tool, calling=calling)
                 return result
@@ -181,7 +186,9 @@ class ToolUsage:
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.model_json_schema()["properties"].keys()  # type: ignore
+                        acceptable_args = tool.args_schema.model_json_schema()[
+                            "properties"
+                        ].keys()  # type: ignore
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
@@ -460,8 +467,8 @@ class ToolUsage:
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
-        events.emit(
-            source=self, event=ToolUsageError(**{**event_data, "error": str(e)})
+        event_bus.emit(
+            self, event=ToolUsageErrorEvent(**{**event_data, "error": str(e)})
         )
 
     def on_tool_use_finished(
@@ -476,7 +483,7 @@ class ToolUsage:
                 "from_cache": from_cache,
             }
         )
-        events.emit(source=self, event=ToolUsageFinished(**event_data))
+        event_bus.emit(self, event=ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
         return {

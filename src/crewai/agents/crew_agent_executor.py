@@ -18,6 +18,11 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
+from crewai.utilities.events import (
+    AgentExecutionErrorEvent,
+    AgentExecutionStartedEvent,
+)
+from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -85,6 +90,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.llm.stop = list(set(self.llm.stop + self.stop))
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
+        if self.agent and self.task:
+            event_bus.emit(
+                self,
+                event=AgentExecutionStartedEvent(
+                    agent=self.agent,
+                    tools=self.tools,
+                    inputs=inputs,
+                    task=self.task,
+                ),
+            )
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
@@ -107,11 +122,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
             raise
         except Exception as e:
+            self._handle_unknown_error(e)
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
                 raise e
             else:
-                self._handle_unknown_error(e)
                 raise e
 
         if self.ask_for_human_input:
@@ -177,6 +192,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _handle_unknown_error(self, exception: Exception) -> None:
         """Handle unknown errors by informing the user."""
+        if self.agent:
+            event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self.agent, task=self.task, error=str(exception)
+                ),
+            )
         self._printer.print(
             content="An unknown error occurred. Please check the details below.",
             color="red",

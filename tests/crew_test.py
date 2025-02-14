@@ -6,7 +6,6 @@ from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import instructor
 import pydantic_core
 import pytest
 
@@ -17,13 +16,21 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
-from crewai.project import crew
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
+from crewai.utilities.events import (
+    CrewTrainCompletedEvent,
+    CrewTrainStartedEvent,
+    event_bus,
+)
+from crewai.utilities.events.crew_events import (
+    CrewTestCompletedEvent,
+    CrewTestStartedEvent,
+)
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
@@ -843,8 +850,21 @@ def test_crew_verbose_output(capsys):
     crew.verbose = False
     crew._logger = Logger(verbose=False)
     crew.kickoff()
+    expected_listener_logs = [
+        "[🚀 CREW 'CREW' STARTED]",
+        "[📋 TASK STARTED: RESEARCH AI ADVANCEMENTS.]",
+        "[🤖 AGENT 'RESEARCHER' STARTED TASK]",
+        "[✅ AGENT 'RESEARCHER' COMPLETED TASK]",
+        "[✅ TASK COMPLETED: RESEARCH AI ADVANCEMENTS.]",
+        "[📋 TASK STARTED: WRITE ABOUT AI IN HEALTHCARE.]",
+        "[🤖 AGENT 'SENIOR WRITER' STARTED TASK]",
+        "[✅ AGENT 'SENIOR WRITER' COMPLETED TASK]",
+        "[✅ TASK COMPLETED: WRITE ABOUT AI IN HEALTHCARE.]",
+        "[✅ CREW 'CREW' COMPLETED]"
+    ]
     captured = capsys.readouterr()
-    assert captured.out == ""
+    for log in expected_listener_logs:
+        assert log in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1282,9 +1302,9 @@ def test_kickoff_for_each_invalid_input():
 
     crew = Crew(agents=[agent], tasks=[task])
 
-    with pytest.raises(TypeError):
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
         # Pass a string instead of a list
-        crew.kickoff_for_each("invalid input")
+        crew.kickoff_for_each(["invalid input"])
 
 
 def test_kickoff_for_each_error_handling():
@@ -2568,6 +2588,16 @@ def test_crew_train_success(
     # Create a mock for the copied crew
     copy_mock.return_value = crew
 
+    received_events = []
+
+    @event_bus.on(CrewTrainStartedEvent)
+    def on_crew_train_started(source, event: CrewTrainStartedEvent):
+        received_events.append(event)
+
+    @event_bus.on(CrewTrainCompletedEvent)
+    def on_crew_train_completed(source, event: CrewTrainCompletedEvent):
+        received_events.append(event)
+
     crew.train(
         n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
     )
@@ -2612,6 +2642,10 @@ def test_crew_train_success(
             ),
         ]
     )
+
+    assert len(received_events) == 2
+    assert isinstance(received_events[0], CrewTrainStartedEvent)
+    assert isinstance(received_events[1], CrewTrainCompletedEvent)
 
 
 def test_crew_train_error():
@@ -3341,6 +3375,17 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
     copy_mock.return_value = crew
 
     n_iterations = 2
+
+    received_events = []
+
+    @event_bus.on(CrewTestStartedEvent)
+    def on_crew_test_started(source, event: CrewTestStartedEvent):
+        received_events.append(event)
+
+    @event_bus.on(CrewTestCompletedEvent)
+    def on_crew_test_completed(source, event: CrewTestCompletedEvent):
+        received_events.append(event)
+
     crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
 
     # Ensure kickoff is called on the copied crew
@@ -3356,6 +3401,10 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
             mock.call().print_crew_evaluation_result(),
         ]
     )
+
+    assert len(received_events) == 2
+    assert isinstance(received_events[0], CrewTestStartedEvent)
+    assert isinstance(received_events[1], CrewTestCompletedEvent)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
