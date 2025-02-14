@@ -1143,7 +1143,7 @@ class Crew(BaseModel):
             agent.interpolate_inputs(inputs)
 
     def _finish_execution(self, final_string_output: str) -> None:
-        if self.max_rpm:
+        if self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()
         if agentops:
             agentops.end_session(
