@@ -92,4 +92,3 @@ class CrewTestFailedEvent(CrewEvent):
     error: str
     crew_name: Optional[str]
     type: str = "crew_test_failed"
-

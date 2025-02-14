@@ -1,9 +1,7 @@
-from re import S
 from pydantic import PrivateAttr
 
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
-from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.events.base_event_listener import BaseEventListener
 
 from .agent_events import AgentExecutionCompletedEvent, AgentExecutionStartedEvent
@@ -19,12 +17,13 @@ from .crew_events import (
     CrewTrainStartedEvent,
 )
 from .flow_events import (
+    FlowCreatedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from .task_events import TaskCompletedEvent, TaskStartedEvent
+from .task_events import TaskCompletedEvent, TaskFailedEvent, TaskStartedEvent
 
 
 class EventListener(BaseEventListener):
@@ -120,15 +119,44 @@ class EventListener(BaseEventListener):
                 event.timestamp,
                 color=self.color,
             )
-
+        
+        @event_bus.on(TaskStartedEvent)
+        def on_task_started(source, event: TaskStartedEvent):
+            source._execution_span = self._telemetry.task_started(
+                crew=source.agent.crew, task=source
+            )
+            context = event.context
+            self.logger.log(
+                f"📋 Task started: {source.description} Context: {context}",
+                event.timestamp,
+                color=self.color,
+            )
+            
+         
+        
         @event_bus.on(TaskCompletedEvent)
         def on_task_completed(source, event: TaskCompletedEvent):
-            self._telemetry.task_ended(source._execution_span, source, source)
+            if source._execution_span:
+                self._telemetry.task_ended(source._execution_span, source, source.agent.crew)
             self.logger.log(
                 f"📋 Task completed: {source.description}",
                 event.timestamp,
                 color=self.color,
             )
+            source._execution_span = None
+            
+        @event_bus.on(TaskFailedEvent)
+        def on_task_failed(source, event: TaskFailedEvent):
+            if source._execution_span:
+                if source.agent and source.agent.crew:
+                    self._telemetry.task_ended(source._execution_span, source, source.agent.crew)
+                source._execution_span = None
+            self.logger.log(
+                f"❌ Task failed: {source.description}",
+                event.timestamp,
+                color=self.color,
+            )
+
 
         @event_bus.on(AgentExecutionStartedEvent)
         def on_agent_execution_started(source, event: AgentExecutionStartedEvent):
@@ -147,8 +175,21 @@ class EventListener(BaseEventListener):
             )
 
         # Flow Events
+        
+        @event_bus.on(FlowCreatedEvent)
+        def on_flow_created(source, event: FlowCreatedEvent):
+            self._telemetry.flow_creation_span(self.__class__.__name__)
+            self.logger.log(
+                f"🌊 Flow Created: '{event.flow_name}'",
+                event.timestamp,
+                color=self.color,
+            )
+        
         @event_bus.on(FlowStartedEvent)
         def on_flow_started(source, event: FlowStartedEvent):
+            self._telemetry.flow_execution_span(
+                source.__class__.__name__, list(source._methods.keys())
+            )
             self.logger.log(
                 f"🤖 Flow Started: '{event.flow_name}'",
                 event.timestamp,

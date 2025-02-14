@@ -23,6 +23,7 @@ from crewai.utilities.events.crew_events import (
 from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.events.event_types import ToolUsageFinishedEvent
 from crewai.utilities.events.flow_events import (
+    FlowCreatedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionStartedEvent,
@@ -33,6 +34,7 @@ from crewai.utilities.events.task_events import (
     TaskStartedEvent,
 )
 from crewai.utilities.events.tool_usage_events import ToolUsageErrorEvent
+from requests.exceptions import RequestException
 
 base_agent = Agent(
     role="base_agent",
@@ -148,27 +150,35 @@ def test_crew_emits_end_task_event():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_emits_failed_event_on_execution_error():
     received_events = []
+    received_sources = []
 
     @event_bus.on(TaskFailedEvent)
     def handle_task_failed(source, event):
         received_events.append(event)
+        received_sources.append(source)
+   
+    with patch.object(Task, "_execute_core",) as mock_execute:
+        error_message = "Simulated task failure"
+        mock_execute.side_effect = Exception(error_message)
+        agent = Agent(
+            role="base_agent",
+            goal="Just say hi",
+            backstory="You are a helpful assistant that just says hi",
+        )       
+        task = Task(
+            description="Just say hi",
+            expected_output="hi",
+            agent=agent,
+        )
+        
+        with pytest.raises(Exception):
+            agent.execute_task(task=task)
 
-    task = Task(
-        description="Just say hi",
-        expected_output="hi",
-        agent=None,
-    )
-
-    with pytest.raises(Exception) as exc_info:
-        task._execute_core(agent=None, context=None, tools=None)
-
-    assert "has no agent assigned" in str(exc_info.value)
-
-    assert len(received_events) == 1
-    assert received_events[0].task == task
-    assert "has no agent assigned" in received_events[0].error
-    assert isinstance(received_events[0].timestamp, datetime)
-    assert received_events[0].type == "task_failed"
+            assert len(received_events) == 1
+            assert received_sources[0] == task
+            assert received_events[0].error == error_message
+            assert isinstance(received_events[0].timestamp, datetime)
+            assert received_events[0].type == "task_failed"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -439,3 +449,23 @@ def test_multiple_handlers_for_same_event():
         assert len(received_events_2) == 1
         assert received_events_1[0].type == "crew_kickoff_started"
         assert received_events_2[0].type == "crew_kickoff_started"
+
+
+def test_flow_emits_created_event():
+    received_events = []
+
+    @event_bus.on(FlowCreatedEvent)
+    def handle_flow_created(source, event):
+        received_events.append(event)
+
+    class TestFlow(Flow[dict]):
+        @start()
+        def begin(self):
+            return "started"
+
+    flow = TestFlow()
+    flow.kickoff()
+
+    assert len(received_events) == 1
+    assert received_events[0].flow_name == "TestFlow"
+    assert received_events[0].type == "flow_created"

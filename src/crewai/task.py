@@ -21,7 +21,6 @@ from typing import (
     Union,
 )
 
-from opentelemetry.trace import Span
 from pydantic import (
     UUID4,
     BaseModel,
@@ -36,7 +35,6 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
@@ -189,8 +187,6 @@ class Task(BaseModel):
                     )
         return v
 
-    _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
-    _execution_span: Optional[Span] = PrivateAttr(default=None)
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _original_output_file: Optional[str] = PrivateAttr(default=None)
@@ -363,9 +359,6 @@ class Task(BaseModel):
                 )
 
             self.start_time = datetime.datetime.now()
-            self._execution_span = self._telemetry.task_started(
-                crew=agent.crew, task=self
-            )
 
             self.prompt_context = context
             tools = tools or self.tools or []
@@ -438,29 +431,20 @@ class Task(BaseModel):
             if crew and crew.task_callback and crew.task_callback != self.callback:
                 crew.task_callback(self.output)
 
-            if self._execution_span:
-                self._telemetry.task_ended(self._execution_span, self, agent.crew)
-                self._execution_span = None
-
-                if self.output_file:
-                    content = (
-                        json_output
-                        if json_output
-                        else pydantic_output.model_dump_json()
-                        if pydantic_output
-                        else result
-                    )
-                    self._save_file(content)
+            if self.output_file:
+                content = (
+                    json_output
+                    if json_output
+                    else pydantic_output.model_dump_json()
+                    if pydantic_output
+                    else result
+                )
+                self._save_file(content)
             event_bus.emit(self, TaskCompletedEvent(output=task_output))
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            if self._execution_span:
-                if agent and agent.crew:
-                    self._telemetry.task_ended(self._execution_span, self, agent.crew)
-                self._execution_span = None
-
-            event_bus.emit(self, TaskFailedEvent(task=self, error=str(e)))
+            event_bus.emit(self, TaskFailedEvent(error=str(e)))
             raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:

@@ -29,6 +29,7 @@ from crewai.utilities.events import (
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
+    FlowCreatedEvent,
 )
 from crewai.utilities.events.event_bus import event_bus
 from crewai.utilities.printer import Printer
@@ -428,7 +429,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
 
-    _telemetry = Telemetry()
     _printer = Printer()
 
     _start_methods: List[str] = []
@@ -469,7 +469,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if kwargs:
             self._initialize_state(kwargs)
 
-        self._telemetry.flow_creation_span(self.__class__.__name__)
+        event_bus.emit(
+            self,
+            FlowCreatedEvent(
+                type="flow_created",
+                flow_name=self.__class__.__name__,
+            ),
+        )
 
         # Register all flow-related methods
         for method_name in dir(self):
@@ -759,19 +765,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if not self._start_methods:
             raise ValueError("No start method defined")
 
-        self._telemetry.flow_execution_span(
-            self.__class__.__name__, list(self._methods.keys())
-        )
-
         tasks = [
             self._execute_start_method(start_method)
             for start_method in self._start_methods
         ]
         await asyncio.gather(*tasks)
-        print(f"All method outputs: {self._method_outputs}")  # Debug log
 
         final_output = self._method_outputs[-1] if self._method_outputs else None
-        print("final_output", final_output)
 
         event_bus.emit(
             self,
@@ -1029,8 +1029,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif level == "warning":
             logger.warning(message)
 
-    def plot(self, filename: str = "crewai_flow") -> None:
-        self._telemetry.flow_plotting_span(
+    def plot(self, filename: str = "crewai_flow") -> None: 
+        Telemetry().flow_plotting_span(
             self.__class__.__name__, list(self._methods.keys())
         )
         plot_flow(self, filename)

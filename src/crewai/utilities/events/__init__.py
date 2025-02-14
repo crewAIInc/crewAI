@@ -16,6 +16,7 @@ from .agent_events import (
 )
 from .task_events import TaskStartedEvent, TaskCompletedEvent, TaskFailedEvent
 from .flow_events import (
+    FlowCreatedEvent,
     FlowStartedEvent,
     FlowFinishedEvent,
     MethodExecutionStartedEvent,
