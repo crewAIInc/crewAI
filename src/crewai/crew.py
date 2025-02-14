@@ -1014,13 +1014,45 @@ class Crew(BaseModel):
             return delegation_tools
         return self._merge_tools(tools, delegation_tools)
 
-    def _add_multimodal_tools(self, agent: BaseAgent, tools: List[Tool]):
+    def _add_multimodal_tools(self, agent: BaseAgent, tools: List[Tool]) -> List[Tool]:
+        """Add multimodal tools for an agent.
+        
+        Args:
+            agent: The agent that will use the tools
+            tools: The current set of tools
+            
+        Returns:
+            List[Tool]: The tools with multimodal tools added
+        """
         multimodal_tools = agent.get_multimodal_tools()
-        return self._merge_tools(tools, multimodal_tools)
+        if multimodal_tools:
+            self._logger.log(
+                "debug",
+                f"Adding multimodal tools for agent {agent.role}: {[tool.name for tool in multimodal_tools]}",
+                color="blue",
+            )
+            return multimodal_tools
+        return []
 
-    def _add_code_execution_tools(self, agent: BaseAgent, tools: List[Tool]):
+    def _add_code_execution_tools(self, agent: BaseAgent, tools: List[Tool]) -> List[Tool]:
+        """Add code execution tools for an agent.
+        
+        Args:
+            agent: The agent that will use the tools
+            tools: The current set of tools
+            
+        Returns:
+            List[Tool]: The tools with code execution tools added
+        """
         code_tools = agent.get_code_execution_tools()
-        return self._merge_tools(tools, code_tools)
+        if code_tools:
+            self._logger.log(
+                "debug",
+                f"Adding code execution tools for agent {agent.role}: {[tool.name for tool in code_tools]}",
+                color="blue",
+            )
+            return code_tools
+        return []
 
     def _add_delegation_tools(self, task: Task, tools: List[Tool]) -> List[Tool]:
         """Add delegation tools for the task's agent.
