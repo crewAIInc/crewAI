@@ -64,12 +64,6 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-try:
-    import agentops  # type: ignore
-except ImportError:
-    agentops = None
-
-
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 
@@ -1180,13 +1174,6 @@ class Crew(BaseModel):
     def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
-        if agentops:
-            agentops.end_session(
-                end_state="Success",
-                end_state_reason="Finished Execution",
-                is_auto_end=True,
-            )
-        # self._telemetry.end_crew(self, final_string_output)
 
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
