@@ -413,7 +413,7 @@ class LLM:
     def supports_function_calling(self) -> bool:
         try:
             params = get_supported_openai_params(model=self.model)
-            return "response_format" in params
+            return "tools" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {str(e)}")
             return False
