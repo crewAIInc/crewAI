@@ -135,6 +135,19 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
+        # If this is a manager agent, ensure it only has delegation tools
+        if self.role == "Manager" and self.allow_delegation and self.crew:
+            try:
+                self.tools = self.get_delegation_tools(self.crew.agents)
+                self._logger.log(
+                    "info",
+                    f"Manager agent has delegation tools: {[tool.name for tool in self.tools]}",
+                    color="blue",
+                )
+            except Exception as e:
+                self._logger.log("error", f"Failed to set delegation tools: {str(e)}", color="red")
+                raise ValueError(f"Failed to set delegation tools: {str(e)}")
+
         return self
 
     def _setup_agent_executor(self):

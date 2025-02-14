@@ -22,6 +22,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools.base_tool import BaseTool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
 from crewai.utilities.rpm_controller import RPMController
@@ -349,6 +350,42 @@ def test_manager_llm_requirement_for_hierarchical_process():
             process=Process.hierarchical,
             tasks=[task],
         )
+
+class TestTool(BaseTool):
+    """Test tool for validation."""
+    name: str = "test_tool"
+    description: str = "A test tool"
+
+    def _run(self, *args, **kwargs):
+        return "test output"
+
+def test_manager_agent_tools_validation():
+    """Test that manager agent only has delegation tools."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+    )
+
+    # Test with manager_agent having non-delegation tools
+    manager = Agent(
+        role="Manager",
+        goal="Manage tasks",
+        backstory="Test manager",
+        tools=[TestTool()],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.hierarchical,
+        manager_agent=manager,
+        tasks=[task],
+    )
+
+    # Verify manager agent has only delegation tools
+    assert crew.manager_agent.tools is not None
+    assert len(crew.manager_agent.tools) == 2
+    tool_names = {tool.name for tool in crew.manager_agent.tools}
+    assert tool_names == {"Delegate Work", "Ask Question"}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
