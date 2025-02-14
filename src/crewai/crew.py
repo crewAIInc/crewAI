@@ -36,7 +36,11 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
-from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.agent_tools import (
+    AgentTools,
+    ASK_QUESTION_TOOL,
+    DELEGATE_WORK_TOOL,
+)
 from crewai.tools.base_tool import Tool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
@@ -965,7 +969,7 @@ class Crew(BaseModel):
         # Keep track of delegation tools
         delegation_tools = [
             tool for tool in existing_tools 
-            if tool.name in {"Delegate Work", "Ask Question"}
+            if tool.name in {DELEGATE_WORK_TOOL, ASK_QUESTION_TOOL}
         ]
 
         # Create mapping of tool names to new tools
@@ -1001,7 +1005,7 @@ class Crew(BaseModel):
         code_tools = agent.get_code_execution_tools()
         return self._merge_tools(tools, code_tools)
 
-    def _add_delegation_tools(self, task: Task, tools: List[Tool]):
+    def _add_delegation_tools(self, task: Task, tools: List[Tool]) -> List[Tool]:
         """Add delegation tools for the task's agent.
         
         Args:
