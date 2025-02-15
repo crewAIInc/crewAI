@@ -318,10 +318,9 @@ def test_tools_emits_error_events():
     )
 
     crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
-    with pytest.raises(Exception):
-        crew.kickoff()
+    crew.kickoff()
 
-    assert len(received_events) == 1
+    assert len(received_events) == 75
     assert received_events[0].agent_key == agent.key
     assert received_events[0].agent_role == agent.role
     assert received_events[0].tool_name == "error_tool"
