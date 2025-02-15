@@ -48,6 +48,8 @@ from crewai.utilities.formatter import (
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.i18n import I18N
 
 if TYPE_CHECKING:
     from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator

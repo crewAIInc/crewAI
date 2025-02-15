@@ -138,6 +138,9 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
+    _original_description: Optional[str] = PrivateAttr(default=None)
+    _original_expected_output: Optional[str] = PrivateAttr(default=None)
+    _original_output_file: Optional[str] = PrivateAttr(default=None)
 
     @field_validator("guardrail")
     @classmethod
@@ -283,6 +286,17 @@ class Task(BaseModel):
                 "Only one output type can be set, either output_pydantic or output_json.",
                 {},
             )
+        return self
+
+    @model_validator(mode="after")
+    def initialize_original_fields(self) -> "Task":
+        """Initialize the original fields for description and expected output."""
+        if self._original_description is None:
+            self._original_description = self.description
+        if self._original_expected_output is None:
+            self._original_expected_output = self.expected_output
+        if self.output_file is not None and self._original_output_file is None:
+            self._original_output_file = self.output_file
         return self
 
     def execute_sync(
