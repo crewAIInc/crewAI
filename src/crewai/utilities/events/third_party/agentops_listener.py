@@ -18,8 +18,8 @@ except ImportError:
    
 
 class AgentOpsListener(BaseEventListener):
-    tool_event: Optional[agentops.ToolEvent] = None
-    session: Optional[agentops.Session] = None
+    tool_event: Optional["agentops.ToolEvent"] = None
+    session: Optional["agentops.Session"] = None
     
     def __init__(self):
         super().__init__()
@@ -28,8 +28,6 @@ class AgentOpsListener(BaseEventListener):
       if not AGENTOPS_INSTALLED:
         return 
       
-
-              
       @event_bus.on(CrewKickoffStartedEvent)
       def on_crew_kickoff_started(source, event: CrewKickoffStartedEvent):
           self.session = agentops.init()
@@ -50,9 +48,9 @@ class AgentOpsListener(BaseEventListener):
             
       @event_bus.on(ToolUsageStartedEvent)
       def on_tool_usage_started(source, event: ToolUsageStartedEvent):
-            self.tool_event = agentops.ToolEvent(name=event.tool_name) 
-            if self.session:
-              self.session.record(self.tool_event)
+          self.tool_event = agentops.ToolEvent(name=event.tool_name) 
+          if self.session:
+            self.session.record(self.tool_event)
             
       @event_bus.on(ToolUsageErrorEvent)
       def on_tool_usage_error(source, event: ToolUsageErrorEvent):
