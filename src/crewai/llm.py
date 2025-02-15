@@ -92,6 +92,19 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "Meta-Llama-3.2-1B-Instruct": 16384,
 }
 
+# Common Vertex AI regions
+VERTEX_AI_REGIONS = [
+    "us-central1",  # Iowa
+    "us-east1",     # South Carolina
+    "us-west1",     # Oregon
+    "europe-west1", # Belgium
+    "europe-west2", # London
+    "europe-west3", # Frankfurt
+    "europe-west4", # Netherlands
+    "asia-east1",   # Taiwan
+    "asia-southeast1" # Singapore
+]
+
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
 CONTEXT_WINDOW_USAGE_RATIO = 0.75
 
@@ -121,7 +134,8 @@ class LLM:
 
     Args:
         model (str): The identifier of the LLM model to use
-        location (Optional[str]): Optional location for provider-specific settings (e.g., Vertex AI region)
+        location (Optional[str]): The GCP region for Vertex AI models (e.g., 'us-central1', 'europe-west4').
+                            Only applicable for Vertex AI models.
         timeout (Optional[Union[float, int]]): Maximum time to wait for the model response
         temperature (Optional[float]): Controls randomness in the model's output
         top_p (Optional[float]): Controls diversity of the model's output
@@ -153,7 +167,18 @@ class LLM:
         **kwargs,
     ):
         self.model = model
+        
+        # Validate location parameter
+        if location is not None:
+            if not isinstance(location, str):
+                raise ValueError("Location must be a string when provided")
+            if self._is_vertex_model(model) and location not in VERTEX_AI_REGIONS:
+                raise ValueError(
+                    f"Invalid Vertex AI region: {location}. "
+                    f"Supported regions: {', '.join(VERTEX_AI_REGIONS)}"
+                )
         self.location = location
+        
         self.timeout = timeout
         self.temperature = temperature
         self.top_p = top_p
@@ -178,7 +203,7 @@ class LLM:
         self.is_anthropic = self._is_anthropic_model(model)
 
         # Set vertex location if provided for vertex models
-        if self.location and ("vertex" in self.model.lower() or self.model.startswith("gemini-")):
+        if self.location and self._is_vertex_model(model):
             litellm.vertex_location = self.location
 
         litellm.drop_params = True
@@ -193,6 +218,17 @@ class LLM:
 
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
+
+    def _is_vertex_model(self, model: str) -> bool:
+        """Determine if the model is from Vertex AI provider.
+        
+        Args:
+            model: The model identifier string.
+            
+        Returns:
+            bool: True if the model is from Vertex AI, False otherwise.
+        """
+        return "vertex" in model.lower() or model.startswith("gemini-")
 
     def _is_anthropic_model(self, model: str) -> bool:
         """Determine if the model is from Anthropic provider.

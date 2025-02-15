@@ -13,20 +13,30 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
+@pytest.mark.parametrize("model,location,expected", [
+    ("vertex_ai/gemini-2.0-flash", "europe-west4", "europe-west4"),
+    ("gpt-4", "europe-west4", None),  # Non-vertex model ignores location
+    ("vertex_ai/gemini-2.0-flash", None, None),  # No location provided
+])
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_vertex_ai_location():
-    """Test that Vertex AI location setting is respected."""
-    location = "europe-west4"
-    llm = LLM(
-        model="vertex_ai/gemini-2.0-flash",
-        location=location,
-    )
-    
-    # Verify location is set correctly
-    assert litellm.vertex_location == location
+def test_vertex_ai_location_setting(model, location, expected):
+    """Test Vertex AI location setting behavior."""
+    llm = LLM(model=model, location=location)
+    assert litellm.vertex_location == expected
     
     # Reset location after test
     litellm.vertex_location = None
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_vertex_ai_location_validation():
+    """Test Vertex AI location validation."""
+    # Test invalid location type
+    with pytest.raises(ValueError, match="Location must be a string"):
+        LLM(model="vertex_ai/gemini-2.0-flash", location=123)
+    
+    # Test invalid region
+    with pytest.raises(ValueError, match="Invalid Vertex AI region"):
+        LLM(model="vertex_ai/gemini-2.0-flash", location="invalid-region")
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_callback_replacement():
