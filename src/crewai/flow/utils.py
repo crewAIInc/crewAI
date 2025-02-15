@@ -109,7 +109,7 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     -------
     Dict[str, int]
         Dictionary mapping method names to their hierarchical levels.
-            Notes
+        Notes
     -----
     - Start methods are assigned level 0
     - Each subsequent connected node is assigned level = parent_level + 1
