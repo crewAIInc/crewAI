@@ -66,7 +66,7 @@ ENV_VARS = {
     "azure": [
         {
             "prompt": "Enter your Azure deployment name (must start with 'azure/')",
-            "key_name": "MODEL",
+            "key_name": "MODEL",  # Uppercase MODEL used for consistency across environment variables
         },
         {
             "prompt": "Enter your AZURE API key (press Enter to skip)",
@@ -84,7 +84,7 @@ ENV_VARS = {
     "cerebras": [
         {
             "prompt": "Enter your Cerebras model name (must start with 'cerebras/')",
-            "key_name": "MODEL",
+            "key_name": "MODEL",  # Uppercase MODEL used for consistency across environment variables
         },
         {
             "prompt": "Enter your Cerebras API version (press Enter to skip)",
