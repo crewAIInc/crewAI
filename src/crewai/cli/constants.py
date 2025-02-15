@@ -67,6 +67,7 @@ ENV_VARS = {
         {
             "prompt": "Enter your Azure deployment name (must start with 'azure/')",
             "key_name": "MODEL",  # Uppercase MODEL used for consistency across environment variables
+            "validator": lambda x: x.startswith("azure/") or "Model name must start with 'azure/'"
         },
         {
             "prompt": "Enter your AZURE API key (press Enter to skip)",
@@ -85,6 +86,7 @@ ENV_VARS = {
         {
             "prompt": "Enter your Cerebras model name (must start with 'cerebras/')",
             "key_name": "MODEL",  # Uppercase MODEL used for consistency across environment variables
+            "validator": lambda x: x.startswith("cerebras/") or "Model name must start with 'cerebras/'"
         },
         {
             "prompt": "Enter your Cerebras API version (press Enter to skip)",

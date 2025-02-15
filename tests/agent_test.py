@@ -21,14 +21,16 @@ from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
 
 
-def test_agent_azure_model_env_var():
-    """Test Azure MODEL environment variable handling with various cases."""
+def test_agent_model_env_var():
+    """Test MODEL environment variable handling with various cases."""
     # Store original environment variables
     original_model = os.environ.get("MODEL")
 
     test_cases = [
-        ("azure/test-model", "azure/test-model"),  # Valid case
-        ("azure/minimal", "azure/minimal"),  # Another valid case
+        ("azure/test-model", "azure/test-model"),  # Valid Azure case
+        ("azure/minimal", "azure/minimal"),  # Another valid Azure case
+        ("cerebras/test-model", "cerebras/test-model"),  # Valid Cerebras case
+        ("cerebras/minimal", "cerebras/minimal"),  # Another valid Cerebras case
     ]
 
     for input_model, expected_model in test_cases:
