@@ -14,6 +14,7 @@ from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.project import crew
@@ -46,6 +47,41 @@ writer = Agent(
     backstory="You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
     allow_delegation=False,
 )
+
+
+def test_crew_with_only_conditional_tasks_raises_error():
+    """Test that creating a crew with only conditional tasks raises an error."""
+
+    def condition_func(task_output: TaskOutput) -> bool:
+        return True
+
+    conditional1 = ConditionalTask(
+        description="Conditional task 1",
+        expected_output="Output 1",
+        agent=researcher,
+        condition=condition_func,
+    )
+    conditional2 = ConditionalTask(
+        description="Conditional task 2",
+        expected_output="Output 2",
+        agent=researcher,
+        condition=condition_func,
+    )
+    conditional3 = ConditionalTask(
+        description="Conditional task 3",
+        expected_output="Output 3",
+        agent=researcher,
+        condition=condition_func,
+    )
+
+    with pytest.raises(
+        pydantic_core._pydantic_core.ValidationError,
+        match="Crew must include at least one non-conditional task",
+    ):
+        Crew(
+            agents=[researcher],
+            tasks=[conditional1, conditional2, conditional3],
+        )
 
 
 def test_crew_config_conditional_requirement():
@@ -1466,7 +1502,6 @@ def test_dont_set_agents_step_callback_if_already_set():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_function_calling_llm():
-
     from crewai import LLM
     from crewai.tools import tool
 
@@ -1917,6 +1952,78 @@ def test_task_callback_on_crew():
         assert isinstance(args[0], TaskOutput)
 
 
+def test_task_callback_both_on_task_and_crew():
+    from unittest.mock import MagicMock, patch
+
+    mock_callback_on_task = MagicMock()
+    mock_callback_on_crew = MagicMock()
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+        callback=mock_callback_on_task,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        task_callback=mock_callback_on_crew,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+
+        assert list_ideas.callback is not None
+        mock_callback_on_task.assert_called_once_with(list_ideas.output)
+        mock_callback_on_crew.assert_called_once_with(list_ideas.output)
+
+
+def test_task_same_callback_both_on_task_and_crew():
+    from unittest.mock import MagicMock, patch
+
+    mock_callback = MagicMock()
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+        callback=mock_callback,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        task_callback=mock_callback,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+
+        assert list_ideas.callback is not None
+        mock_callback.assert_called_once_with(list_ideas.output)
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tools_with_custom_caching():
     from unittest.mock import patch
@@ -1987,6 +2094,210 @@ def test_tools_with_custom_caching():
                 output=12,
             )
             assert result.raw == "3"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_task_uses_last_output():
+    """Test that conditional tasks use the last task output for condition evaluation."""
+    task1 = Task(
+        description="First task",
+        expected_output="First output",
+        agent=researcher,
+    )
+
+    def condition_fails(task_output: TaskOutput) -> bool:
+        # This condition will never be met
+        return "never matches" in task_output.raw.lower()
+
+    def condition_succeeds(task_output: TaskOutput) -> bool:
+        # This condition will match first task's output
+        return "first success" in task_output.raw.lower()
+
+    conditional_task1 = ConditionalTask(
+        description="Second task - conditional that fails condition",
+        expected_output="Second output",
+        agent=researcher,
+        condition=condition_fails,
+    )
+
+    conditional_task2 = ConditionalTask(
+        description="Third task - conditional that succeeds using first task output",
+        expected_output="Third output",
+        agent=writer,
+        condition=condition_succeeds,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, conditional_task1, conditional_task2],
+    )
+
+    # Mock outputs for tasks
+    mock_first = TaskOutput(
+        description="First task output",
+        raw="First success output",  # Will be used by third task's condition
+        agent=researcher.role,
+    )
+    mock_third = TaskOutput(
+        description="Third task output",
+        raw="Third task executed",  # Output when condition succeeds using first task output
+        agent=writer.role,
+    )
+
+    # Set up mocks for task execution and conditional logic
+    with patch.object(ConditionalTask, "should_execute") as mock_should_execute:
+        # First conditional fails, second succeeds
+        mock_should_execute.side_effect = [False, True]
+        with patch.object(Task, "execute_sync") as mock_execute:
+            mock_execute.side_effect = [mock_first, mock_third]
+            result = crew.kickoff()
+
+            # Verify execution behavior
+            assert mock_execute.call_count == 2  # Only first and third tasks execute
+            assert mock_should_execute.call_count == 2  # Both conditionals checked
+
+            # Verify outputs collection:
+            # First executed task output, followed by an automatically generated (skipped) output, then the conditional execution
+            assert len(result.tasks_output) == 3
+            assert (
+                result.tasks_output[0].raw == "First success output"
+            )  # First task succeeded
+            assert (
+                result.tasks_output[1].raw == ""
+            )  # Second task skipped (condition failed)
+            assert (
+                result.tasks_output[2].raw == "Third task executed"
+            )  # Third task used first task's output
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_tasks_result_collection():
+    """Test that task outputs are properly collected based on execution status."""
+    task1 = Task(
+        description="Normal task that always executes",
+        expected_output="First output",
+        agent=researcher,
+    )
+
+    def condition_never_met(task_output: TaskOutput) -> bool:
+        return "never matches" in task_output.raw.lower()
+
+    def condition_always_met(task_output: TaskOutput) -> bool:
+        return "success" in task_output.raw.lower()
+
+    task2 = ConditionalTask(
+        description="Conditional task that never executes",
+        expected_output="Second output",
+        agent=researcher,
+        condition=condition_never_met,
+    )
+
+    task3 = ConditionalTask(
+        description="Conditional task that always executes",
+        expected_output="Third output",
+        agent=writer,
+        condition=condition_always_met,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2, task3],
+    )
+
+    # Mock outputs for different execution paths
+    mock_success = TaskOutput(
+        description="Success output",
+        raw="Success output",  # Triggers third task's condition
+        agent=researcher.role,
+    )
+    mock_conditional = TaskOutput(
+        description="Conditional output",
+        raw="Conditional task executed",
+        agent=writer.role,
+    )
+
+    # Set up mocks for task execution and conditional logic
+    with patch.object(ConditionalTask, "should_execute") as mock_should_execute:
+        # First conditional fails, second succeeds
+        mock_should_execute.side_effect = [False, True]
+        with patch.object(Task, "execute_sync") as mock_execute:
+            mock_execute.side_effect = [mock_success, mock_conditional]
+            result = crew.kickoff()
+
+            # Verify execution behavior
+            assert mock_execute.call_count == 2  # Only first and third tasks execute
+            assert mock_should_execute.call_count == 2  # Both conditionals checked
+
+            # Verify task output collection:
+            # There should be three outputs: normal task, skipped conditional task (empty output),
+            # and the conditional task that executed.
+            assert len(result.tasks_output) == 3
+            assert (
+                result.tasks_output[0].raw == "Success output"
+            )  # Normal task executed
+            assert result.tasks_output[1].raw == ""  # Second task skipped
+            assert (
+                result.tasks_output[2].raw == "Conditional task executed"
+            )  # Third task executed
+
+            # Verify task output collection
+            assert len(result.tasks_output) == 3
+            assert (
+                result.tasks_output[0].raw == "Success output"
+            )  # Normal task executed
+            assert result.tasks_output[1].raw == ""  # Second task skipped
+            assert (
+                result.tasks_output[2].raw == "Conditional task executed"
+            )  # Third task executed
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_multiple_conditional_tasks():
+    """Test that having multiple conditional tasks in sequence works correctly."""
+    task1 = Task(
+        description="Initial research task",
+        expected_output="Research output",
+        agent=researcher,
+    )
+
+    def condition1(task_output: TaskOutput) -> bool:
+        return "success" in task_output.raw.lower()
+
+    def condition2(task_output: TaskOutput) -> bool:
+        return "proceed" in task_output.raw.lower()
+
+    task2 = ConditionalTask(
+        description="First conditional task",
+        expected_output="Conditional output 1",
+        agent=writer,
+        condition=condition1,
+    )
+
+    task3 = ConditionalTask(
+        description="Second conditional task",
+        expected_output="Conditional output 2",
+        agent=writer,
+        condition=condition2,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2, task3],
+    )
+
+    # Mock different task outputs to test conditional logic
+    mock_success = TaskOutput(
+        description="Mock success",
+        raw="Success and proceed output",
+        agent=researcher.role,
+    )
+
+    # Set up mocks for task execution
+    with patch.object(Task, "execute_sync", return_value=mock_success) as mock_execute:
+        result = crew.kickoff()
+        # Verify all tasks were executed (no IndexError)
+        assert mock_execute.call_count == 3
+        assert len(result.tasks_output) == 3
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -3480,10 +3791,12 @@ def test_crew_guardrail_feedback_in_context():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_callback():
-    from crewai.project import CrewBase, agent, before_kickoff, crew, task
+    from crewai.project import CrewBase, agent, before_kickoff, task
 
     @CrewBase
     class TestCrewClass:
+        from crewai.project import crew
+
         agents_config = None
         tasks_config = None
 
@@ -3492,7 +3805,6 @@ def test_before_kickoff_callback():
 
         @before_kickoff
         def modify_inputs(self, inputs):
-
             self.inputs_modified = True
             inputs["modified"] = True
             return inputs
@@ -3510,7 +3822,7 @@ def test_before_kickoff_callback():
             task = Task(
                 description="Test task description",
                 expected_output="Test expected output",
-                agent=self.my_agent(),  # Use the agent instance
+                agent=self.my_agent(),
             )
             return task
 
@@ -3520,28 +3832,30 @@ def test_before_kickoff_callback():
 
     test_crew_instance = TestCrewClass()
 
-    crew = test_crew_instance.crew()
+    test_crew = test_crew_instance.crew()
 
     # Verify that the before_kickoff_callbacks are set
-    assert len(crew.before_kickoff_callbacks) == 1
+    assert len(test_crew.before_kickoff_callbacks) == 1
 
     # Prepare inputs
     inputs = {"initial": True}
 
     # Call kickoff
-    crew.kickoff(inputs=inputs)
+    test_crew.kickoff(inputs=inputs)
 
     # Check that the before_kickoff function was called and modified inputs
     assert test_crew_instance.inputs_modified
-    assert inputs.get("modified") == True
+    assert inputs.get("modified")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_without_inputs():
-    from crewai.project import CrewBase, agent, before_kickoff, crew, task
+    from crewai.project import CrewBase, agent, before_kickoff, task
 
     @CrewBase
     class TestCrewClass:
+        from crewai.project import crew
+
         agents_config = None
         tasks_config = None
 
@@ -3579,12 +3893,12 @@ def test_before_kickoff_without_inputs():
     # Instantiate the class
     test_crew_instance = TestCrewClass()
     # Build the crew
-    crew = test_crew_instance.crew()
+    test_crew = test_crew_instance.crew()
     # Verify that the before_kickoff_callback is registered
-    assert len(crew.before_kickoff_callbacks) == 1
+    assert len(test_crew.before_kickoff_callbacks) == 1
 
     # Call kickoff without passing inputs
-    output = crew.kickoff()
+    test_crew.kickoff()
 
     # Check that the before_kickoff function was called
     assert test_crew_instance.inputs_modified
@@ -3592,3 +3906,21 @@ def test_before_kickoff_without_inputs():
     # Verify that the inputs were initialized and modified inside the before_kickoff method
     assert test_crew_instance.received_inputs is not None
     assert test_crew_instance.received_inputs.get("modified") is True
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_with_knowledge_sources_works_with_copy():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[Task(description="test", expected_output="test", agent=researcher)],
+        knowledge_sources=[string_source],
+    )
+
+    crew_copy = crew.copy()
+
+    assert crew_copy.knowledge_sources == crew.knowledge_sources
+    assert len(crew_copy.agents) == len(crew.agents)
+    assert len(crew_copy.tasks) == len(crew.tasks)

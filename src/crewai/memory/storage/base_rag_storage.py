@@ -13,7 +13,7 @@ class BaseRAGStorage(ABC):
         self,
         type: str,
         allow_reset: bool = True,
-        embedder_config: Optional[Any] = None,
+        embedder_config: Optional[Dict[str, Any]] = None,
         crew: Any = None,
     ):
         self.type = type
