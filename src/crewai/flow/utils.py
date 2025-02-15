@@ -97,6 +97,8 @@ def get_possible_return_constants(function: Any) -> Optional[List[str]]:
 def calculate_node_levels(flow: Any) -> Dict[str, int]:
     """
     Calculate the hierarchical level of each node in the flow.
+
+
     Performs a breadth-first traversal of the flow graph to assign levels
     to nodes, starting with start methods at level 0.
 
@@ -109,13 +111,13 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     -------
     Dict[str, int]
         Dictionary mapping method names to their hierarchical levels.
-        Notes
+
+    Notes
     -----
     - Start methods are assigned level 0
     - Each subsequent connected node is assigned level = parent_level + 1
     - Handles both OR and AND conditions for listeners
     - Processes router paths separately
-
     """
     levels: Dict[str, int] = {}
     queue: Deque[str] = deque()
@@ -219,7 +221,10 @@ def build_ancestor_dict(flow: Any) -> Dict[str, Set[str]]:
 
 
 def dfs_ancestors(
-    node: str, ancestors: Dict[str, Set[str]], visited: Set[str], flow: Any
+    node: str,
+    ancestors: Dict[str, Set[str]],
+    visited: Set[str],
+    flow: Any
 ) -> None:
     """
     Perform depth-first search to build ancestor relationships.
@@ -263,9 +268,7 @@ def dfs_ancestors(
                     dfs_ancestors(listener_name, ancestors, visited, flow)
 
 
-def is_ancestor(
-    node: str, ancestor_candidate: str, ancestors: Dict[str, Set[str]]
-) -> bool:
+def is_ancestor(node: str, ancestor_candidate: str, ancestors: Dict[str, Set[str]]) -> bool:
     """
     Check if one node is an ancestor of another.
 
@@ -330,9 +333,7 @@ def build_parent_children_dict(flow: Any) -> Dict[str, List[str]]:
     return parent_children
 
 
-def get_child_index(
-    parent: str, child: str, parent_children: Dict[str, List[str]]
-) -> int:
+def get_child_index(parent: str, child: str, parent_children: Dict[str, List[str]]) -> int:
     """
     Get the index of a child node in its parent's sorted children list.
 
