@@ -101,8 +101,10 @@
         "how-to/conditional-tasks",
         "how-to/agentops-observability",
         "how-to/langtrace-observability",
+        "how-to/mlflow-observability",
         "how-to/openlit-observability",
-        "how-to/portkey-observability"
+        "how-to/portkey-observability",
+        "how-to/langfuse-observability"
       ]
     },
     {

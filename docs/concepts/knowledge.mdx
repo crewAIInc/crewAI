@@ -91,7 +91,7 @@ result = crew.kickoff(inputs={"question": "What city does John live in and how o
 ```
 
 
-Here's another example with the `CrewDoclingSource`. The CrewDoclingSource is actually quite versatile and can handle multiple file formats including TXT, PDF, DOCX, HTML, and more. 
+Here's another example with the `CrewDoclingSource`. The CrewDoclingSource is actually quite versatile and can handle multiple file formats including MD, PDF, DOCX, HTML, and more. 
 
 <Note>
   You need to install `docling` for the following example to work: `uv add docling`
@@ -152,10 +152,10 @@ Here are examples of how to use different types of knowledge sources:
 
 ### Text File Knowledge Source
 ```python
-from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
+from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
 
 # Create a text file knowledge source
-text_source = CrewDoclingSource(
+text_source = TextFileKnowledgeSource(
     file_paths=["document.txt", "another.txt"]
 )
 
@@ -324,6 +324,13 @@ agent = Agent(
     verbose=True,
     allow_delegation=False,
     llm=gemini_llm,
+    embedder={
+        "provider": "google",
+        "config": {
+            "model": "models/text-embedding-004",
+            "api_key": GEMINI_API_KEY,
+        }
+    }
 )
 
 task = Task(
