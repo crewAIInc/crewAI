@@ -98,7 +98,6 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     """
     Calculate the hierarchical level of each node in the flow.
 
-
     Performs a breadth-first traversal of the flow graph to assign levels
     to nodes, starting with start methods at level 0.
 
