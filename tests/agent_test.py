@@ -21,6 +21,22 @@ from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
 
 
+def test_agent_azure_model_env_var():
+    # Store original environment variables
+    original_model = os.environ.get("MODEL")
+
+    # Test with uppercase MODEL
+    os.environ["MODEL"] = "azure/test-model"
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+    assert agent.llm.model == "azure/test-model"
+
+    # Clean up environment variables
+    if original_model:
+        os.environ["MODEL"] = original_model
+    else:
+        del os.environ["MODEL"]
+
+
 def test_agent_llm_creation_with_env_vars():
     # Store original environment variables
     original_api_key = os.environ.get("OPENAI_API_KEY")
