@@ -56,7 +56,8 @@ def test():
     Test the crew execution and returns the results.
     """
     inputs = {
-        "topic": "AI LLMs"
+        "topic": "AI LLMs",
+        "current_year": str(datetime.now().year)
     }
     try:
         {{crew_name}}().crew().test(n_iterations=int(sys.argv[1]), openai_model_name=sys.argv[2], inputs=inputs)
