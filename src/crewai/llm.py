@@ -117,9 +117,19 @@ def suppress_warnings():
 
 
 class LLM:
+    """A wrapper around LiteLLM providing a unified interface for various LLM providers.
+
+    Args:
+        model (str): The identifier of the LLM model to use
+        location (Optional[str]): Optional location for provider-specific settings (e.g., Vertex AI region)
+        timeout (Optional[Union[float, int]]): Maximum time to wait for the model response
+        temperature (Optional[float]): Controls randomness in the model's output
+        top_p (Optional[float]): Controls diversity of the model's output
+    """
     def __init__(
         self,
         model: str,
+        location: Optional[str] = None,
         timeout: Optional[Union[float, int]] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
@@ -143,6 +153,7 @@ class LLM:
         **kwargs,
     ):
         self.model = model
+        self.location = location
         self.timeout = timeout
         self.temperature = temperature
         self.top_p = top_p
@@ -165,6 +176,10 @@ class LLM:
         self.reasoning_effort = reasoning_effort
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
+
+        # Set vertex location if provided for vertex models
+        if self.location and ("vertex" in self.model.lower() or self.model.startswith("gemini-")):
+            litellm.vertex_location = self.location
 
         litellm.drop_params = True
 

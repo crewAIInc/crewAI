@@ -3,6 +3,7 @@ from time import sleep
 from unittest.mock import MagicMock, patch
 
 import pytest
+import litellm
 from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
@@ -12,6 +13,21 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_vertex_ai_location():
+    """Test that Vertex AI location setting is respected."""
+    location = "europe-west4"
+    llm = LLM(
+        model="vertex_ai/gemini-2.0-flash",
+        location=location,
+    )
+    
+    # Verify location is set correctly
+    assert litellm.vertex_location == location
+    
+    # Reset location after test
+    litellm.vertex_location = None
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_callback_replacement():
     llm1 = LLM(model="gpt-4o-mini")
