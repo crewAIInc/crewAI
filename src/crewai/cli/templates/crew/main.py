@@ -4,7 +4,10 @@ import warnings
 
 from datetime import datetime
 
-from {{folder_name}}.crew import {{crew_name}}
+from solnai import Crew
+from {{crew_name}}.crew import {{crew_class_name}}Crew
+
+from dotenv import load_dotenv
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 

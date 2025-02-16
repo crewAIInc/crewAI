@@ -1,0 +1,132 @@
+---
+description: 
+globs: 
+---
+# TaskDetail Component
+
+## Purpose
+The TaskDetail component displays detailed information about a specific task in the system. It provides a comprehensive view of task properties, status, and allows for task management actions like marking a task as completed.
+
+## Location
+`frontend/nextjs/src/components/TaskDetail/TaskDetail.tsx`
+
+## Props
+```typescript
+interface TaskDetailProps {
+  taskId: string; // The unique identifier of the task to display
+}
+```
+
+## State Management
+The component uses Zustand store through the `useStore` hook to manage the following state:
+- `task`: The current task data
+- `isLoading`: Loading state while fetching task data
+- `error`: Error state if task fetch fails
+- `fetchTask`: Action to fetch task data
+
+## Data Fetching
+- Uses the `fetchTask` action from the store to retrieve task data
+- Fetches data on component mount using `useEffect`
+- Handles loading, error, and not found states appropriately
+
+## Loading State
+Displays a skeleton loading state using Shadcn UI's `Skeleton` component:
+```tsx
+<Card>
+  <CardHeader>
+    <Skeleton className="h-8 w-3/4" />
+    <Skeleton className="h-4 w-1/2 mt-2" />
+  </CardHeader>
+  <CardContent>
+    {/* Additional skeleton elements */}
+  </CardContent>
+</Card>
+```
+
+## Error Handling
+Displays error messages within a styled Card component:
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Error</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div role="alert" className="text-red-500">
+      Error: {error}
+    </div>
+  </CardContent>
+</Card>
+```
+
+## Task Display
+The component displays task information in a structured layout:
+- Task description and ID in the header
+- Status badge with appropriate styling
+- Grid layout for task details including:
+  - Crew ID
+  - Creation date
+  - Last updated date
+- Action buttons in the footer
+
+## Usage Example
+```tsx
+import TaskDetail from "@/components/TaskDetail";
+
+// In your page component
+const TaskPage = ({ params }: { params: { id: string } }) => {
+  return <TaskDetail taskId={params.id} />;
+};
+```
+
+## Styling
+Uses Shadcn UI components for consistent styling:
+- Card components for layout structure
+- Badge for status display
+- Button for actions
+- Skeleton for loading states
+- Tailwind CSS for custom styling and layout
+
+## Dependencies
+- @/components/ui/badge
+- @/components/ui/button
+- @/components/ui/card
+- @/components/ui/skeleton
+- @/lib/store
+- next/link
+- react
+
+## Accessibility
+- Uses semantic HTML structure with Card components
+- Includes ARIA roles for interactive elements
+- Provides clear error messaging with role="alert"
+- Maintains keyboard navigation support
+- Uses appropriate color contrast for status badges
+- Includes descriptive labels for all interactive elements
+
+## Testing
+Comprehensive test suite covering:
+- Loading state rendering
+- Error state handling
+- Task not found state
+- Task details display
+- Conditional rendering of complete button
+- Data fetching on mount
+
+## Performance Considerations
+- Uses skeleton loading for better perceived performance
+- Efficient re-renders through proper state management
+- Conditional rendering to prevent unnecessary DOM updates
+- Optimized imports for better bundle size
+
+## Security
+- Validates taskId prop before data fetching
+- Sanitizes displayed data
+- Handles errors gracefully
+- No sensitive data exposure in error messages
+
+## Changelog
+- v1.0.0: Initial implementation with Shadcn UI components
+  - Added comprehensive task detail display
+  - Implemented loading and error states
+  - Added task completion functionality
+  - Included accessibility features 

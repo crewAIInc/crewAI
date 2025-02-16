@@ -1,0 +1,108 @@
+---
+description: `ALWAYS ACTIVATE THIS RULES!!!` Project-specific rules and guidelines for the crewAI frontend project. This file extends the general rules defined in .cursorrules and provides specific instructions for frontend development within the crewAI codebase.
+globs: frontend/nextjs/src/**/*
+---
+---
+`ALWAYS ACTIVATE THIS RULES!!!`
+# crewAI Frontend Project Rules and Guidelines (MDC)
+
+This document outlines project-specific rules and guidelines for developing the crewAI frontend, extending the general rules defined in `.cursorrules`.  Adherence to these guidelines is crucial for maintaining code quality, consistency, and long-term maintainability within the `crewAI` frontend codebase.
+
+## 🎯 Technology Stack Enforcement
+
+- **Framework:** Next.js 14 (App Router) - Use the `app/` directory structure for all new features.
+- **Language:** TypeScript - All code must be written in TypeScript to ensure type safety and maintainability.
+- **Styling:** Tailwind CSS -  Utilize Tailwind CSS utility classes exclusively for styling. Avoid custom CSS or inline styles.
+- **UI Components:** Shadcn UI -  Leverage Shadcn UI components whenever possible for a consistent and modern UI. Customize components as needed using Tailwind CSS.
+- **State Management:** Zustand -  Use Zustand for global state management. For component-local state, use `useState` and `useReducer` hooks.
+- **Data Visualization:** Recharts - Integrate Recharts for creating data visualizations and charts within the UI.
+- **Calculations:** Math.js -  Use Math.js for any complex mathematical calculations within the frontend (if needed).
+- **Animations:** Framer Motion -  Utilize Framer Motion for smooth and performant UI animations and transitions.
+- **Testing:** Jest and React Testing Library -  Write comprehensive unit and integration tests using Jest and React Testing Library.
+
+## 📁 Directory Structure Conventions (Frontend - `frontend/nextjs/src`)
+
+- **`app/`**:  Next.js App Router directory. Contains all application routes and pages.
+    -  Follow Next.js App Router conventions for routing, layouts, and pages.
+    -  Organize routes logically into subdirectories (e.g., `app/crews`, `app/tasks`).
+    -  Use `page.tsx` for route segments that render content.
+    -  Use `layout.tsx` for shared layouts.
+- **`components/`**:  Reusable React components.
+    -  **`core/`**:  Base UI components (e.g., `core/Button.tsx`, `core/Input.tsx`). These should be highly reusable and generic.
+    -  **`accounting/`**: Components specific to accounting features (e.g., `accounting/FinancialRatioDisplay.tsx`, `accounting/DepreciationCalculator.tsx`).
+    -  **`shared/`**: Cross-cutting components used across multiple features (e.g., `shared/DataTable.tsx`, `shared/LoadingSpinner.tsx`).
+    -  Component files should be named using PascalCase (e.g., `CrewList.tsx`).
+    -  Component documentation (MDC files) should be placed in `frontend/nextjs/docs/components/`.
+    -  Component tests (`.test.tsx` files) should be located in the same directory as the component (e.g., `components/CrewList.test.tsx`).
+- **`lib/`**: Utility functions, API client, state management, and types.
+    -  `apiClient.ts`:  Contains all API client functions for backend communication.
+    -  `hooks/`: Custom React hooks (e.g., `hooks/useCrews.ts`).
+    -  `utils/`: General utility functions (e.g., formatting, data transformation).
+    -  `validation/`: Zod validation schemas for data validation.
+    -  `types.ts`: TypeScript type definitions for shared data structures (e.g., `Crew`, `Agent`, `Task` interfaces).
+    -  `store.ts`: Zustand store definition for global state management.
+- **`styles/`**: Global CSS styles (if any). Tailwind CSS should be primarily used, minimizing the need for global CSS.
+- **`public/`**: Static assets (images, fonts, etc.).
+
+## 🎨 UI/UX and Styling Rules
+
+- **Mobile-First Responsive Design:**  Prioritize mobile responsiveness. Design and test UI on mobile devices first, then scale up for larger screens. Tailwind CSS makes responsive design efficient.
+- **Tailwind CSS Utility Classes:**  Style all elements exclusively using Tailwind CSS utility classes.  Customize Tailwind configuration (`tailwind.config.ts`) as needed, but avoid writing custom CSS.
+- **Shadcn UI Component Usage:**  Utilize Shadcn UI components as the foundation for the UI. Customize their appearance using Tailwind CSS to maintain a consistent design language.
+- **Accessibility First:**  Prioritize accessibility in all UI components. Implement ARIA attributes, keyboard navigation, and ensure screen reader compatibility.
+- **Consistent UI Patterns:**  Maintain consistency in UI patterns, typography, spacing, and color schemes across the application.  Refer to design guidelines (if available) or establish a consistent visual style.
+- **Loading and Error States:** Implement clear loading and error states for all data fetching operations and user interactions to provide a smooth user experience.
+- **Dark Mode Support:**  Ensure that the UI supports both light and dark modes. Tailwind CSS makes implementing dark mode relatively straightforward.
+
+## 🧑‍💻 Coding Style and Conventions (Frontend)
+
+- **TypeScript Usage:**  Strictly enforce TypeScript. All components, functions, and modules must be written in TypeScript with proper type annotations.
+- **Early Returns:**  Use early returns to improve code readability and reduce nesting.
+- **`const` for Functions:** Define functional components and utility functions using `const` and arrow function syntax (e.g., `const MyComponent = () => { ... };`).
+- **Descriptive Naming:** Use clear, descriptive names for variables, functions, components, and files.
+    -  Components: PascalCase (e.g., `CrewList`, `TaskDetail`).
+    -  Functions/Variables: camelCase (e.g., `getCrews`, `isLoading`).
+    -  Event Handlers: Prefix with `handle` (e.g., `handleClick`, `handleSubmit`).
+- **Component Props and State:**
+    - Define component props using interfaces (e.g., `interface CrewListProps { ... }`).
+    - Use `useState` for component-local state and Zustand for global state.
+- **Comments and Documentation:**
+    - Write clear, concise inline comments to explain complex logic or non-obvious code sections.
+    - Document all React components in `frontend/nextjs/docs/components` using Markdown Content (.mdc) files, as per the documentation standards.
+- **Code Reusability:**  Design components and utility functions to be reusable across the application.  Follow the DRY (Don't Repeat Yourself) principle.
+- **Error Handling:** Implement robust error handling for API calls, form submissions, and other potential error sources. Display user-friendly error messages.
+- **Accessibility Attributes:**  Include accessibility attributes (ARIA labels, `tabindex`, keyboard event handlers) by default for all interactive elements.
+
+## 🧪 Testing Guidelines (Frontend)
+
+- **Unit Tests:** Write unit tests for all core components using Jest and React Testing Library.
+    -  Focus on testing component rendering, event handling, state updates, and basic logic.
+    -  Mock API calls using Jest mocks to isolate component tests.
+- **Integration Tests (as needed):** For more complex components or workflows, consider writing integration tests to verify interactions between components or with mocked API responses.
+- **Accessibility Tests:**  Use accessibility testing tools (e.g., `jest-axe`) to automatically check for accessibility violations in components.
+- **Test File Location:**  Place test files (`.test.tsx` or `.spec.tsx`) in the same directory as the component they are testing (e.g., `components/CrewList.test.tsx`).
+- **Test Coverage:** Aim for high test coverage, especially for core components and critical functionality.
+
+## 📝 Documentation Standards (Frontend - MDC Files in `frontend/nextjs/docs/components`)
+
+- **Component Documentation Files:** Create a Markdown Content (.mdc) file for each significant React component in `frontend/nextjs/docs/components/`.
+- **MDC File Structure:**  Each component documentation file should include:
+    - `# Component Name` (e.g., `# CrewList Component`)
+    - `## Purpose`:  A clear description of the component's role and functionality.
+    - `## Location`:  The file path of the component (e.g., `frontend/nextjs/src/components/CrewList.tsx`).
+    - `## Props`: A table documenting all component props:
+        | Prop Name | Type        | Description                                       | Required | Default Value |
+        | --------- | ----------- | ------------------------------------------------- | -------- | ------------- |
+    - `## State`:  A description of the component's internal state (using `useState`, `useReducer`, or Zustand).
+    - `## Data Fetching`: If the component fetches data, explain the data fetching logic, API calls used, and how loading and error states are handled.
+    - `## Real-time Updates`: If the component handles real-time updates (Websockets), explain the websocket integration and event handling.
+    - `## Usage Example`:  Provide a code example demonstrating how to use the component in a parent component.
+    - `## Styling`: Briefly describe the styling approach (Tailwind CSS) and any key styling considerations.
+
+By adhering to these project-specific rules and guidelines, we can ensure a consistent, high-quality, and maintainable frontend codebase for the crewAI project.  These rules are designed to be a practical extension of the general coding principles and are tailored to our chosen technology stack and project requirements.
+
+---
+description: `ALWAYS ACTIVATE THIS RULES!!!` Rules specific to the crewAI frontend project, extending the general .cursorrules for detailed frontend development guidance.
+globs: frontend/nextjs/src/**/*
+---
+

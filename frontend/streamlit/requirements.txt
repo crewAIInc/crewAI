@@ -1,0 +1,2 @@
+streamlit==1.31.1
+python-dateutil==2.8.2

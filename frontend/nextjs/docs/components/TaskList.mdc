@@ -1,0 +1,195 @@
+# TaskList Component
+
+## Purpose
+
+The `TaskList` component displays a list of tasks for the Soln.ai application. It fetches tasks from the backend and presents them in a table format. The component handles loading, error, and empty states, providing a user-friendly experience. It also includes a link to view the details of each task.
+
+## Location
+
+`frontend/nextjs/src/components/TaskList/TaskList.tsx`
+
+## Props
+
+The `TaskList` component does not accept any props.
+
+| Prop Name | Type | Description | Required | Default Value |
+| --------- | ---- | ----------- | -------- | ------------- |
+|           |      |             |          |               |
+
+## State Management
+
+The component uses the Zustand store (`@/lib/store.ts`) to manage its state. It accesses the following state variables and actions:
+
+*   **`tasks`:** `Task[]` - An array of `Task` objects representing the tasks to be displayed.
+*   **`fetchTasks`:** `() => Promise<void>` - An action function to fetch tasks from the backend.
+*   **`isLoading`:** `boolean` - Indicates whether the task data is currently being fetched.
+*   **`error`:** `string | null` - Contains an error message if an error occurred during data fetching.
+
+## Data Fetching
+
+The component fetches task data from the backend using the `fetchTasks` action from the Zustand store. This action, in turn, uses the `getTasks` function from the API client (`@/lib/apiClient.ts`). The fetch occurs when the component mounts (inside a `useEffect` hook).
+
+## Loading State
+
+The component uses Shadcn UI's `Skeleton` component to display a loading state while data is being fetched. The loading state maintains the same layout as the loaded content, providing a smooth user experience:
+
+```tsx
+if (isLoading) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Tasks</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## Error Handling
+
+The component handles errors during data fetching by displaying an error message within a styled `Card` component:
+
+```tsx
+if (error) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Tasks</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div role="alert" className="text-red-500">
+          Error: {error}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## Empty State
+
+When no tasks are found, the component displays a user-friendly message:
+
+```tsx
+{tasks.length === 0 ? (
+  <p className="text-muted-foreground">No tasks found.</p>
+) : (
+  // Table content
+)}
+```
+
+## Task Display
+
+Tasks are displayed in a table format with the following columns:
+- Description: The task's description
+- Status: The task's current status (with a color-coded badge)
+- Crew: The associated crew ID
+- Actions: A link to view task details
+
+Each task status is displayed using a `Badge` component that changes color based on the status:
+```tsx
+<Badge variant={task.status === "completed" ? "success" : "default"}>
+  {task.status}
+</Badge>
+```
+
+## Usage Example
+
+```typescript jsx
+import TaskList from '@/components/TaskList';
+
+const TasksPage = () => {
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Tasks</h1>
+      <TaskList />
+    </div>
+  );
+};
+
+export default TasksPage;
+```
+
+## Styling
+
+The component is styled using Tailwind CSS utility classes and utilizes Shadcn UI components for a consistent and modern look and feel:
+
+*   **Table Components:**
+    * `Table`: Main table container
+    * `TableHeader`: Table header section
+    * `TableBody`: Table body section
+    * `TableHead`: Column header cells
+    * `TableRow`: Table rows
+    * `TableCell`: Table cells
+
+*   **Card Components:**
+    * `Card`: Main container
+    * `CardHeader`: Header section
+    * `CardContent`: Content section
+    * `CardTitle`: Title text
+
+*   **Other Components:**
+    * `Badge`: Status indicator
+    * `Skeleton`: Loading state placeholder
+
+## Dependencies
+
+*   `react`: React library
+*   `@/lib/store`: Zustand store for state management
+*   `@/lib/apiClient`: API client for data fetching
+*   `@/lib/types`: TypeScript type definitions
+*   `next/link`: Next.js Link component for navigation
+*   `@shadcn/ui`: Shadcn UI components:
+    * Table components (Table, TableBody, TableCell, etc.)
+    * Card components (Card, CardContent, CardHeader, CardTitle)
+    * Badge component
+    * Skeleton component
+
+## Accessibility
+
+The component follows accessibility best practices:
+
+*   **Semantic HTML:** Uses semantic table elements (`<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>`).
+*   **ARIA Roles:**
+    * `role="alert"` for error messages
+    * Proper table roles through semantic HTML
+*   **Status Indication:** Uses color and text to indicate task status, ensuring information is not conveyed by color alone
+*   **Loading State:** Provides clear visual indication of loading state
+*   **Error Messages:** Clearly displays error messages with proper ARIA roles
+*   **Links:** Uses semantic `<Link>` components with clear text for navigation
+
+## Performance Considerations
+
+1. **Data Fetching:**
+   * Fetches data only on component mount
+   * Uses centralized store to prevent redundant fetches
+   * Implements proper loading states
+
+2. **Rendering:**
+   * Uses appropriate key prop for list rendering
+   * Maintains consistent layout during loading/error states
+   * Efficient status badge rendering
+
+## Security
+
+1. **Data Display:**
+   * Safely displays task data
+   * Proper escaping of user-generated content
+   * Secure routing for task details
+
+2. **Error Handling:**
+   * Safe display of error messages
+   * Proper error boundaries
+   * Type-safe data handling
+
+## Changelog
+
+- v1.0.34: Initial implementation with Shadcn UI components
+- v1.0.35: Added comprehensive documentation 

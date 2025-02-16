@@ -1,0 +1,106 @@
+---
+description: `ALWAYS ACTIVATE THIS RULES!!!` Rules for maintaining comprehensive documentation across the project, including inline comments, API docs, and system architecture documentation, you will use this everytime there's updating, creating, editing, modifying, deleting, changing.
+globs: 
+---
+`ALWAYS ACTIVATE THIS RULES!!!`
+# Documentation Standards and Best Practices Guide
+
+This comprehensive guide outlines our documentation standards and best practices for maintaining high-quality documentation across the project. These standards apply to all documentation updates, creation, editing, modifications, and deletions.
+
+## Core Documentation Principles
+
+1. **Automated Documentation Management**
+
+   - Must always include descriptive inline comments in every files and don't remove them, remove if it's not necessary or 
+     not used anymore
+   - All documentation must be quantum-detailed, providing deep insights into code functionality
+   - Documentation should be context-aware, explaining how components fit into the larger system
+   - Cross-referencing between related documentation is required
+   - Real-time updates must be maintained as code changes
+   - Documentation maintenance should be automated where possible
+
+2. **Documentation Categories**
+
+   A. **Inline Code Documentation**
+   Every code block must include:
+   - Quantum documentation maintained by AI
+   - Feature context explaining the component's role
+   - Dependency listings that auto-update
+   - Usage examples that stay current
+   - Performance considerations
+   - Security implications
+   - Changelog entries
+
+   B. **Feature Documentation**
+   Each feature requires:
+   - AI-generated feature overview
+   - Detailed implementation explanations
+   - Comprehensive dependency mapping
+   - Current usage examples
+   - Performance metrics tracking
+   - Security consideration notes
+   - Change history tracking
+
+   C. **API Documentation**
+   All APIs must document:
+   - Route context and purpose
+   - Request/response schemas
+   - Live examples
+   - Performance metrics
+   - Security measures
+   - Real-time updates
+
+3. **Project Documentation Structure**
+
+   Root Level Documentation:
+   - README.md: Main project overview
+   - ARCHITECTURE.md: System design documentation
+   - CHANGELOG.md: Automatically updated changes with versioning
+
+5. **Quality Standards**
+
+   Completeness:
+   - Full coverage of all features
+   - Comprehensive depth
+   - Clear context
+   - Practical examples
+
+   Accuracy:
+   - Technical verification
+   - Real-time updates
+   - Consistency maintenance
+   - High relevance
+
+   Accessibility:
+   - Clear readability
+   - Logical structure
+   - Intuitive navigation
+   - Efficient searchability
+
+6. **Update Protocol**
+
+   Documentation updates are triggered by:
+   - Code changes
+   - Feature additions
+   - API updates
+   - Security patches
+   - Performance changes
+
+   Required Actions:
+   - Update inline documentation
+   - Regenerate README files
+   - Refresh architecture diagrams
+   - Sync code examples
+   - Validate documentation
+
+   Verification Steps:
+   - Check completeness
+   - Verify accuracy
+   - Ensure freshness
+   - Maintain consistency
+
+## Important Notes:
+- Existing inline comments must never be removed
+- The @docs/ and @.cursor/ directory serves as the source of truth
+- Each subdirectory in @/docs must maintain its own specific documentation
+- All documentation changes must follow these standards without exception

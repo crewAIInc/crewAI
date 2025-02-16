@@ -1,0 +1,107 @@
+---
+description: 
+globs: 
+---
+# CrewDetail Component
+
+## Purpose
+
+The `CrewDetail` component displays detailed information about a specific crew, including its name, status, description, agents, and a count of associated tasks.  It fetches data from the backend based on the crew's ID, provided via a dynamic route parameter. The component supports real-time updates through a WebSocket connection, ensuring that the displayed information is always current.
+
+## Location
+
+`frontend/nextjs/src/components/CrewDetail/CrewDetail.tsx`
+
+## Props
+
+The `CrewDetail` component does not accept any props directly. It retrieves the crew ID from the URL parameters using `next/navigation`'s `useParams` hook.
+
+| Prop Name | Type | Description | Required | Default Value |
+| --------- | ---- | ----------- | -------- | ------------- |
+|           |      |             |          |               |
+
+## State Management
+
+The `CrewDetail` component utilizes the Zustand store (`@/lib/store.ts`) for managing its state. It accesses the following state variables and actions:
+
+*   **`crews`:** `Crew[]` - An array of all crews. The component searches this array for the crew matching the ID from the URL.
+*   **`isLoading`:** `boolean` - Indicates whether the crew data is currently being fetched.
+*   **`error`:** `string | null` - Contains an error message if an error occurred during data fetching.
+*   **`fetchCrew`:** `(id: string) => Promise<void>` - An action function to fetch a specific crew by ID.
+
+## Data Fetching
+
+The component fetches crew data from the backend using the `getCrew(id)` function from the API client (`@/lib/apiClient.ts`). The fetch occurs within a `useEffect` hook, triggered when the component mounts or when the `crewId` (derived from the URL parameters) changes.
+
+## Real-time Updates
+
+The component leverages the Zustand store's integrated WebSocket client (`wsClient`) to receive real-time updates. The store subscribes to the following WebSocket events:
+
+*   `crew_updated`:  When a crew is updated, the store's `crews` array is updated. The `CrewDetail` component re-renders automatically because it reads from this array.
+* `error`: Updates the error state.
+
+The WebSocket connection is managed centrally in the `apiClient`, ensuring a single connection for the entire application. The `store` handles all event subscriptions.
+
+## Error Handling
+
+The component handles the following error scenarios:
+
+*   **API Errors:** If the `getCrew` API call fails, an error message is stored in the `error` state, and an error message is displayed to the user.
+*   **Missing Crew ID:** If the `crewId` is missing from the URL parameters, an error message is displayed.
+*   **Crew Not Found:** If the fetched crew data is `null` (indicating that no crew with the given ID exists), a "Crew not found" message is displayed.
+*   **WebSocket Errors:** The API client handles WebSocket errors, the store.ts has the main implementation.
+
+## Usage Example
+
+```tsx
+// In app/crews/[id]/page.tsx
+import CrewDetail from '@/components/CrewDetail';
+import { Metadata } from 'next';
+
+interface PageParams {
+    params: {
+        id: string;
+    };
+}
+
+export default function Page({ params }: PageParams) {
+    return (
+        <main className="container mx-auto px-4 py-8">
+            <CrewDetail />
+        </main>
+    );
+}
+
+// Metadata for better SEO
+export const metadata: Metadata = {
+    title: 'Crew Details',
+    description: 'Detailed view of selected crew',
+};
+```
+
+## Styling
+
+The component is styled using Tailwind CSS utility classes:
+- Responsive grid layout for agents list (grid-cols-1 md:grid-cols-2 lg:grid-cols-3)
+- Card-based design for agent information
+- Proper spacing and typography hierarchy
+- Mobile-first responsive design
+
+## Dependencies
+
+*   `react`:  React library.
+*   `next/navigation`:  Next.js navigation utilities (specifically, `useParams`).
+*   `@/lib/apiClient`:  API client for fetching data.
+*   `@/lib/types`:  TypeScript type definitions.
+*   `@/lib/store`: Zustand store for state management
+
+## Accessibility
+
+The component implements several accessibility features:
+- Uses semantic HTML structure with proper heading hierarchy
+- Implements ARIA live regions for dynamic content updates
+- Provides proper roles and ARIA labels for interactive elements
+- Maintains keyboard navigation support
+- Uses appropriate color contrast ratios
+- Includes proper error message announcements
+- Implements loading state indicators with aria-live 

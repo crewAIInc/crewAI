@@ -1,13 +1,13 @@
 <div align="center">
 
-![Logo of CrewAI](./docs/crewai_logo.png)
+![Logo of Soln.ai](./docs/crewai_logo.png)
 
-# **CrewAI**
+# **Soln.ai**
 
-**CrewAI**: Production-grade framework for orchestrating sophisticated AI agent systems. From simple automations to complex real-world applications, CrewAI provides precise control and deep customization. By fostering collaborative intelligence through flexible, production-ready architecture, CrewAI empowers agents to work together seamlessly, tackling complex business challenges with predictable, consistent results.
+**Soln.ai**: Production-grade framework for orchestrating sophisticated AI agent systems. From simple automations to complex real-world applications, Soln.ai provides precise control and deep customization. By fostering collaborative intelligence through flexible, production-ready architecture, Soln.ai empowers agents to work together seamlessly, tackling complex business challenges with predictable, consistent results.
 
-**CrewAI Enterprise**
-Want to plan, build (+ no code), deploy, monitor and interare your agents: [CrewAI Enterprise](https://www.crewai.com/enterprise). Designed for complex, real-world applications, our enterprise solution offers:
+**Soln.ai Enterprise**
+Want to plan, build (+ no code), deploy, monitor and interare your agents: [Soln.ai Enterprise](https://www.crewai.com/enterprise). Designed for complex, real-world applications, our enterprise solution offers:
 
 - **Seamless Integrations**
 - **Scalable & Secure Deployment**
@@ -27,11 +27,11 @@ Want to plan, build (+ no code), deploy, monitor and interare your agents: [Crew
 
 ## Table of contents
 
-- [Why CrewAI?](#why-crewai)
+- [Why Soln.ai?](#why-solnai)
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
 - [Understanding Flows and Crews](#understanding-flows-and-crews)
-- [CrewAI vs LangGraph](#how-crewai-compares)
+- [Soln.ai vs LangGraph](#how-solnai-compares)
 - [Examples](#examples)
   - [Quick Tutorial](#quick-tutorial)
   - [Write Job Descriptions](#write-job-descriptions)
@@ -39,30 +39,32 @@ Want to plan, build (+ no code), deploy, monitor and interare your agents: [Crew
   - [Stock Analysis](#stock-analysis)
   - [Using Crews and Flows Together](#using-crews-and-flows-together)
 - [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
-- [How CrewAI Compares](#how-crewai-compares)
+- [How Soln.ai Compares](#how-solnai-compares)
 - [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
 - [Contribution](#contribution)
 - [Telemetry](#telemetry)
 - [License](#license)
 
-## Why CrewAI?
+## Why Soln.ai?
 
 The power of AI collaboration has too much to offer.
-CrewAI is a standalone framework, built from the ground up without dependencies on Langchain or other agent frameworks. It's designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, CrewAI provides the backbone for sophisticated multi-agent interactions.
+Soln.ai is a standalone framework, built from the ground up without dependencies on Langchain or other agent frameworks. It's designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, Soln.ai provides the backbone for sophisticated multi-agent interactions.
 
 ## Getting Started
 
 ### Learning Resources
 
-Learn CrewAI through our comprehensive courses:
-- [Multi AI Agent Systems with CrewAI](https://www.deeplearning.ai/short-courses/multi-ai-agent-systems-with-crewai/) - Master the fundamentals of multi-agent systems
+Learn Soln.ai through our comprehensive courses:
+
+- [Multi AI Agent Systems with Soln.ai](https://www.deeplearning.ai/short-courses/multi-ai-agent-systems-with-crewai/) - Master the fundamentals of multi-agent systems
 - [Practical Multi AI Agents and Advanced Use Cases](https://www.deeplearning.ai/short-courses/practical-multi-ai-agents-and-advanced-use-cases-with-crewai/) - Deep dive into advanced implementations
 
 ### Understanding Flows and Crews
 
-CrewAI offers two powerful, complementary approaches that work seamlessly together to build sophisticated AI applications:
+Soln.ai offers two powerful, complementary approaches that work seamlessly together to build sophisticated AI applications:
 
 1. **Crews**: Teams of AI agents with true autonomy and agency, working together to accomplish complex tasks through role-based collaboration. Crews enable:
+
    - Natural, autonomous decision-making between agents
    - Dynamic task delegation and collaboration
    - Specialized roles with defined goals and expertise
@@ -74,7 +76,8 @@ CrewAI offers two powerful, complementary approaches that work seamlessly togeth
    - Clean integration of AI agents with production Python code
    - Conditional branching for complex business logic
 
-The true power of CrewAI emerges when combining Crews and Flows. This synergy allows you to:
+The true power of Soln.ai emerges when combining Crews and Flows. This synergy allows you to:
+
 - Build complex, production-grade applications
 - Balance autonomy with precise control
 - Handle sophisticated real-world scenarios
@@ -82,22 +85,24 @@ The true power of CrewAI emerges when combining Crews and Flows. This synergy al
 
 ### Getting Started with Installation
 
-To get started with CrewAI, follow these simple steps:
+To get started with Soln.ai, follow these simple steps:
 
 ### 1. Installation
 
-Ensure you have Python >=3.10 <3.13 installed on your system. CrewAI uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+Ensure you have Python >=3.10 <3.13 installed on your system. Soln.ai uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
 
-First, install CrewAI:
-
-```shell
-pip install crewai
-```
-If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
+First, install Soln.ai:
 
 ```shell
-pip install 'crewai[tools]'
+pip install solnai
 ```
+
+If you want to install the 'solnai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
+
+```shell
+pip install 'solnai[tools]'
+```
+
 The command above installs the basic package and also adds extra components which require more dependencies to function.
 
 ### Troubleshooting Dependencies
@@ -107,8 +112,9 @@ If you encounter issues during installation or usage, here are some common solut
 #### Common Issues
 
 1. **ModuleNotFoundError: No module named 'tiktoken'**
-   - Install tiktoken explicitly: `pip install 'crewai[embeddings]'`
-   - If using embedchain or other tools: `pip install 'crewai[tools]'`
+
+   - Install tiktoken explicitly: `pip install 'solnai[embeddings]'`
+   - If using embedchain or other tools: `pip install 'solnai[tools]'`
 
 2. **Failed building wheel for tiktoken**
    - Ensure Rust compiler is installed (see installation steps above)
@@ -118,10 +124,10 @@ If you encounter issues during installation or usage, here are some common solut
 
 ### 2. Setting Up Your Crew with the YAML Configuration
 
-To create a new CrewAI project, run the following CLI (Command Line Interface) command:
+To create a new Soln.ai project, run the following CLI (Command Line Interface) command:
 
 ```shell
-crewai create crew <project_name>
+solnai create crew <project_name>
 ```
 
 This command creates a new project folder with the following structure:
@@ -160,7 +166,7 @@ You can now start developing your crew by editing the files in the `src/my_proje
 Instantiate your crew:
 
 ```shell
-crewai create crew latest-ai-development
+solnai create crew latest-ai-development
 ```
 
 Modify the files as needed to fit your use case:
@@ -192,7 +198,7 @@ reporting_analyst:
 
 **tasks.yaml**
 
-```yaml
+````yaml
 # src/my_project/config/tasks.yaml
 research_task:
   description: >
@@ -212,15 +218,15 @@ reporting_task:
     Formatted as markdown without '```'
   agent: reporting_analyst
   output_file: report.md
-```
+````
 
 **crew.py**
 
 ```python
 # src/my_project/crew.py
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import SerperDevTool
+from solnai import Agent, Crew, Process, Task
+from solnai.project import CrewBase, agent, crew, task
+from solnai_tools import SerperDevTool
 
 @CrewBase
 class LatestAiDevelopmentCrew():
@@ -294,13 +300,13 @@ Lock the dependencies and install them by using the CLI command but first, navig
 
 ```shell
 cd my_project
-crewai install (Optional)
+solnai install (Optional)
 ```
 
 To run your crew, execute the following command in the root of your project:
 
 ```bash
-crewai run
+solnai run
 ```
 
 or
@@ -309,10 +315,10 @@ or
 python src/my_project/main.py
 ```
 
-If an error happens due to the usage of poetry, please run the following command to update your crewai package:
+If an error happens due to the usage of poetry, please run the following command to update your solnai package:
 
 ```bash
-crewai update
+solnai update
 ```
 
 You should see the output in the console and the `report.md` file should be created in the root of your project with the full final report.
@@ -321,22 +327,22 @@ In addition to the sequential process, you can use the hierarchical process, whi
 
 ## Key Features
 
-**Note**: CrewAI is a standalone framework built from the ground up, without dependencies on Langchain or other agent frameworks.
+**Note**: Soln.ai is a standalone framework built from the ground up, without dependencies on Langchain or other agent frameworks.
 
 - **Deep Customization**: Build sophisticated agents with full control over the system - from overriding inner prompts to accessing low-level APIs. Customize roles, goals, tools, and behaviors while maintaining clean abstractions.
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enabling complex problem-solving in real-world scenarios.
 - **Flexible Task Management**: Define and customize tasks with granular control, from simple operations to complex multi-step processes.
 - **Production-Grade Architecture**: Support for both high-level abstractions and low-level customization, with robust error handling and state management.
 - **Predictable Results**: Ensure consistent, accurate outputs through programmatic guardrails, agent training capabilities, and flow-based execution control. See our [documentation on guardrails](https://docs.crewai.com/how-to/guardrails/) for implementation details.
-- **Model Flexibility**: Run your crew using OpenAI or open source models with production-ready integrations. See [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) for detailed configuration options.
+- **Model Flexibility**: Run your crew using OpenAI or open source models with production-ready integrations. See [Connect Soln.ai to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) for detailed configuration options.
 - **Event-Driven Flows**: Build complex, real-world workflows with precise control over execution paths, state management, and conditional logic.
 - **Process Orchestration**: Achieve any workflow pattern through flows - from simple sequential and hierarchical processes to complex, custom orchestration patterns with conditional branching and parallel execution.
 
-![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
+![Soln.ai Mind Map](./docs/crewAI-mindmap.png "Soln.ai Mind Map")
 
 ## Examples
 
-You can test different real life examples of AI crews in the [CrewAI-examples repo](https://github.com/crewAIInc/crewAI-examples?tab=readme-ov-file):
+You can test different real life examples of AI crews in the [Soln.ai-examples repo](https://github.com/crewAIInc/crewAI-examples?tab=readme-ov-file):
 
 - [Landing Page Generator](https://github.com/crewAIInc/crewAI-examples/tree/main/landing_page_generator)
 - [Having Human input on the execution](https://docs.crewai.com/how-to/Human-Input-on-Execution)
@@ -345,7 +351,7 @@ You can test different real life examples of AI crews in the [CrewAI-examples re
 
 ### Quick Tutorial
 
-[![CrewAI Tutorial](https://img.youtube.com/vi/tnejrr-0a94/maxresdefault.jpg)](https://www.youtube.com/watch?v=tnejrr-0a94 "CrewAI Tutorial")
+[![Soln.ai Tutorial](https://img.youtube.com/vi/tnejrr-0a94/maxresdefault.jpg)](https://www.youtube.com/watch?v=tnejrr-0a94 "Soln.ai Tutorial")
 
 ### Write Job Descriptions
 
@@ -367,11 +373,11 @@ You can test different real life examples of AI crews in the [CrewAI-examples re
 
 ### Using Crews and Flows Together
 
-CrewAI's power truly shines when combining Crews with Flows to create sophisticated automation pipelines. Here's how you can orchestrate multiple Crews within a Flow:
+Soln.ai's power truly shines when combining Crews with Flows to create sophisticated automation pipelines. Here's how you can orchestrate multiple Crews within a Flow:
 
 ```python
-from crewai.flow.flow import Flow, listen, start, router
-from crewai import Crew, Agent, Task
+from solnai.flow.flow import Flow, listen, start, router
+from solnai import Crew, Agent, Task
 from pydantic import BaseModel
 
 # Define structured state for precise control
@@ -452,6 +458,7 @@ class AdvancedAnalysisFlow(Flow[MarketState]):
 ```
 
 This example demonstrates how to:
+
 1. Use Python code for basic data operations
 2. Create and execute Crews as steps in your workflow
 3. Use Flow decorators to manage the sequence of operations
@@ -459,17 +466,17 @@ This example demonstrates how to:
 
 ## Connecting Your Crew to a Model
 
-CrewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
+Soln.ai supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
-Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
+Please refer to the [Connect Soln.ai to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
 
-## How CrewAI Compares
+## How Soln.ai Compares
 
-**CrewAI's Advantage**: CrewAI combines autonomous agent intelligence with precise workflow control through its unique Crews and Flows architecture. The framework excels at both high-level orchestration and low-level customization, enabling complex, production-grade systems with granular control.
+**Soln.ai's Advantage**: Soln.ai combines autonomous agent intelligence with precise workflow control through its unique Crews and Flows architecture. The framework excels at both high-level orchestration and low-level customization, enabling complex, production-grade systems with granular control.
 
 - **LangGraph**: While LangGraph provides a foundation for building agent workflows, its approach requires significant boilerplate code and complex state management patterns. The framework's tight coupling with LangChain can limit flexibility when implementing custom agent behaviors or integrating with external systems.
 
-*P.S. CrewAI demonstrates significant performance advantages over LangGraph, executing 5.76x faster in certain cases like this QA task example ([see comparison](https://github.com/crewAIInc/crewAI-examples/tree/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/QA%20Agent)) while achieving higher evaluation scores with faster completion times in certain coding tasks, like in this example ([detailed analysis](https://github.com/crewAIInc/crewAI-examples/blob/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/Coding%20Assistant/coding_assistant_eval.ipynb)).*
+_P.S. Soln.ai demonstrates significant performance advantages over LangGraph, executing 5.76x faster in certain cases like this QA task example ([see comparison](https://github.com/crewAIInc/crewAI-examples/tree/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/QA%20Agent)) while achieving higher evaluation scores with faster completion times in certain coding tasks, like in this example ([detailed analysis](https://github.com/crewAIInc/crewAI-examples/blob/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/Coding%20Assistant/coding_assistant_eval.ipynb))._
 
 - **Autogen**: While Autogen excels at creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
 
@@ -477,7 +484,7 @@ Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-
 
 ## Contribution
 
-CrewAI is open-source and we welcome contributions. If you're looking to contribute, please:
+Soln.ai is open-source and we welcome contributions. If you're looking to contribute, please:
 
 - Fork the repository.
 - Create a new branch for your feature.
@@ -530,13 +537,13 @@ pip install dist/*.tar.gz
 
 ## Telemetry
 
-CrewAI uses anonymous telemetry to collect usage data with the main purpose of helping us improve the library by focusing our efforts on the most used features, integrations and tools.
+Soln.ai uses anonymous telemetry to collect usage data with the main purpose of helping us improve the library by focusing our efforts on the most used features, integrations and tools.
 
 It's pivotal to understand that **NO data is collected** concerning prompts, task descriptions, agents' backstories or goals, usage of tools, API calls, responses, any data processed by the agents, or secrets and environment variables, with the exception of the conditions mentioned. When the `share_crew` feature is enabled, detailed data including task descriptions, agents' backstories or goals, and other specific attributes are collected to provide deeper insights while respecting user privacy. Users can disable telemetry by setting the environment variable OTEL_SDK_DISABLED to true.
 
 Data collected includes:
 
-- Version of CrewAI
+- Version of Soln.ai
   - So we can understand how many users are using the latest version
 - Version of Python
   - So we can decide on what versions to better support
@@ -561,43 +568,56 @@ Users can opt-in to Further Telemetry, sharing the complete telemetry data by se
 
 ## License
 
-CrewAI is released under the [MIT License](https://github.com/crewAIInc/crewAI/blob/main/LICENSE).
+Soln.ai is released under the [MIT License](https://github.com/crewAIInc/crewAI/blob/main/LICENSE).
 
 ## Frequently Asked Questions (FAQ)
 
-### Q: What is CrewAI?
-A: CrewAI is a cutting-edge framework for orchestrating role-playing, autonomous AI agents. It enables agents to work together seamlessly, tackling complex tasks through collaborative intelligence.
+### Q: What is Soln.ai?
 
-### Q: How do I install CrewAI?
-A: You can install CrewAI using pip:
+A: Soln.ai is a cutting-edge framework for orchestrating role-playing, autonomous AI agents. It enables agents to work together seamlessly, tackling complex tasks through collaborative intelligence.
+
+### Q: How do I install Soln.ai?
+
+A: You can install Soln.ai using pip:
+
 ```shell
-pip install crewai
+pip install solnai
 ```
+
 For additional tools, use:
+
 ```shell
-pip install 'crewai[tools]'
+pip install 'solnai[tools]'
 ```
 
-### Q: Can I use CrewAI with local models?
-A: Yes, CrewAI supports various LLMs, including local models. You can configure your agents to use local models via tools like Ollama & LM Studio. Check the [LLM Connections documentation](https://docs.crewai.com/how-to/LLM-Connections/) for more details.
+### Q: Can I use Soln.ai with local models?
 
-### Q: What are the key features of CrewAI?
+A: Yes, Soln.ai supports various LLMs, including local models. You can configure your agents to use local models via tools like Ollama & LM Studio. Check the [LLM Connections documentation](https://docs.crewai.com/how-to/LLM-Connections/) for more details.
+
+### Q: What are the key features of Soln.ai?
+
 A: Key features include role-based agent design, autonomous inter-agent delegation, flexible task management, process-driven execution, output saving as files, and compatibility with both open-source and proprietary models.
 
-### Q: How does CrewAI compare to other AI orchestration tools?
-A: CrewAI is designed with production in mind, offering flexibility similar to Autogen's conversational agents and structured processes like ChatDev, but with more adaptability for real-world applications.
+### Q: How does Soln.ai compare to other AI orchestration tools?
 
-### Q: Is CrewAI open-source?
-A: Yes, CrewAI is open-source and welcomes contributions from the community.
+A: Soln.ai is designed with production in mind, offering flexibility similar to Autogen's conversational agents and structured processes like ChatDev, but with more adaptability for real-world applications.
 
-### Q: Does CrewAI collect any data?
-A: CrewAI uses anonymous telemetry to collect usage data for improvement purposes. No sensitive data (like prompts, task descriptions, or API calls) is collected. Users can opt-in to share more detailed data by setting `share_crew=True` on their Crews.
+### Q: Is Soln.ai open-source?
 
-### Q: Where can I find examples of CrewAI in action?
-A: You can find various real-life examples in the [CrewAI-examples repository](https://github.com/crewAIInc/crewAI-examples), including trip planners, stock analysis tools, and more.
+A: Yes, Soln.ai is open-source and welcomes contributions from the community.
+
+### Q: Does Soln.ai collect any data?
+
+A: Soln.ai uses anonymous telemetry to collect usage data for improvement purposes. No sensitive data (like prompts, task descriptions, or API calls) is collected. Users can opt-in to share more detailed data by setting `share_crew=True` on their Crews.
+
+### Q: Where can I find examples of Soln.ai in action?
+
+A: You can find various real-life examples in the [Soln.ai-examples repository](https://github.com/crewAIInc/crewAI-examples), including trip planners, stock analysis tools, and more.
 
 ### Q: What is the difference between Crews and Flows?
-A: Crews and Flows serve different but complementary purposes in CrewAI. Crews are teams of AI agents working together to accomplish specific tasks through role-based collaboration, delivering accurate and predictable results. Flows, on the other hand, are event-driven workflows that can orchestrate both Crews and regular Python code, allowing you to build complex automation pipelines with secure state management and conditional execution paths.
 
-### Q: How can I contribute to CrewAI?
+A: Crews and Flows serve different but complementary purposes in Soln.ai. Crews are teams of AI agents working together to accomplish specific tasks through role-based collaboration, delivering accurate and predictable results. Flows, on the other hand, are event-driven workflows that can orchestrate both Crews and regular Python code, allowing you to build complex automation pipelines with secure state management and conditional execution paths.
+
+### Q: How can I contribute to Soln.ai?
+
 A: Contributions are welcome! You can fork the repository, create a new branch for your feature, add your improvement, and send a pull request. Check the Contribution section in the README for more details.

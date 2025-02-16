@@ -1,3 +1,8 @@
+site_name: Soln.ai
+site_author: Soln.ai, Inc
+site_description: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, Soln.ai empowers agents to work together seamlessly, tackling complex tasks.
+repo_name: Soln.ai
+repo_url: https://github.com/solnaiInc/solnai
 site_name: crewAI
 site_author: crewAI, Inc
 site_description: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.

@@ -39,21 +39,6 @@ next-env.d.ts
 
 .pytest_cache
 __pycache__
-dist/
-.env
-assets/*
-test/
-docs_crew/
-chroma.sqlite3
-old_en.json
-db/
-test.py
-rc-tests/*
-*.pkl
-temp/*
-.codesight
-.mypy_cache
-.ruff_cache
 .venv
 agentops.log
 

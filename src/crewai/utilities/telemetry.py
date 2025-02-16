@@ -1,0 +1,1 @@
+TELEMETRY_URL = "https://telemetry.solnai.com:4319/v1/traces" 

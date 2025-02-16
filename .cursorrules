@@ -1,0 +1,143 @@
+This document serves as your comprehensive guide for project interaction and development. Throughout all user interactions, you must maintain three key files: @memories.md for interaction history, @lessons-learned.md for knowledge retention, and @scratchpad.md for active task management.
+
+CORE DEVELOPMENT PRINCIPLES:
+-Be consistent to all of the rules and instructions, don't be lazy and be attentive. Always write clean, maintainable code with early returns and clear patterns. Every component must include comprehensive accessibility features (ARIA labels, keyboard navigation, screen reader support, and focus management). Use consistent naming conventions - prefix event handlers with "handle" (e.g., handleClick), create clear variable/component names, and include TypeScript type definitions. Treat each interaction as a teaching opportunity by explaining concepts clearly, providing context for decisions, and sharing best practices. Follow mobile-first responsive design, ensure proper error handling with TypeScript, and optimize for performance and SEO. Use your chain of thought with tree of thought when having a problem, issue, bug to identify the root cause. Cross-reference with @memories.md, @lessons-learned.md, project-requirements.md, and @scratchpad.md for context and best practices.
+
+
+MODE SYSTEM OPERATION:
+The Mode System is your primary operational framework that strictly controls task execution and state management. You must follow these precise operational rules:
+
+1. Plan Mode (Triggered by "plan"):
+Create a new Chat Session with exact format in the scratchpad.md file:
+# Mode: PLAN 🎯
+Current Task: [Extract task from user input - be specific and detailed]
+Understanding: [List all requirements and constraints identified]
+Questions: [Number each question clearly]
+Confidence: [Calculate as percentage based on unknowns]
+Next Steps: [Bullet point each required action]
+
+2. Processing Steps (Mandatory):
+- Parse user input for task requirements
+- Cross-reference with project requirements
+- Generate minimum 3 clarifying questions
+- Calculate initial confidence score
+- Create task breakdown in Scratchpad
+- Monitor and update confidence after each user response
+- Continue question loop until 95%-100% confidence achieved
+
+3. Agent Mode (Triggered by "agent"):
+Activation Requirements (ALL must be met):
+- Confidence level ≥ 95%
+- All clarifying questions answered
+- Tasks defined in Scratchpad
+- No blocking issues identified
+- Project requirements verified
+
+Enabled Capabilities (Only when activated):
+- Code modifications
+- Descriptive inline comments
+- File operations
+- Command execution
+- System changes
+- Scratchpad updates
+
+`MODE SYSTEM TYPES (DO NOT DELETE!):
+1. Implementation Type (New Features):
+   - Trigger: User requests new implementation
+   - Format: MODE: Implementation, FOCUS: New functionality
+   - Requirements: Detailed planning, architecture review, documentation
+   - Process: Plan mode (🎯) → 95% confidence → Agent mode (⚡)
+
+2. Bug Fix Type (Issue Resolution):
+   - Trigger: User reports bug/issue
+   - Format: MODE: Bug Fix, FOCUS: Issue resolution
+   - Requirements: Problem diagnosis, root cause analysis, solution verification
+   - Process: Plan mode (🎯) → Chain of thought analysis → Agent mode (⚡)
+
+Cross-reference with @memories.md, @lessons-learned.md, @project-requirements.md, docs/phases/PHASE-*.md files for context and best practices.`
+
+SCRATCHPAD MANAGEMENT:
+The Scratchpad system (@scratchpad.md) is your active task management tool. Follow these strict formatting and update rules:
+
+1. Phase Structure (Required format):
+```
+Current Phase: [PHASE-X]
+Mode Context: [FROM_MODE_SYSTEM]
+Status: [Active/Planning/Review]
+Confidence: [Current percentage]
+Last Updated: [Version]
+
+Tasks:
+[ID-001] Description
+Status: [ ] Priority: [High/Medium/Low]
+Dependencies: [List any blockers]
+Progress Notes:
+- [Version] Update details
+```
+
+2. Progress Tracking Rules:
+- Use ONLY these markers:
+  [X] = Completed (100% done, verified)
+  [-] = In Progress (actively being worked on)
+  [ ] = Planned (not started)
+  [!] = Blocked (has dependencies)
+  [?] = Needs Review (requires verification)
+
+3. Task Management Protocol:
+- Generate unique ID for each task
+- Link tasks to Mode System context
+- Update status in real-time
+- Document all changes with timestamps
+- Track dependencies explicitly
+- Maintain task hierarchy
+- Cross-reference with memories
+
+4. Phase Transition Rules:
+- Clear completed phase content
+- Archive to /docs/phases/PHASE-X/
+- Initialize new phase structure
+- Maintain mode system context
+- Transfer relevant tasks
+- Update confidence metrics
+
+5. Integration Requirements:
+- Sync with Mode System state
+- Update on confidence changes
+- Track all user interactions
+- Maintain task relationships
+- Document decision points
+- Link to relevant memories
+
+-------------------MEMORY TRACKING AND DOCUMENTATION PROTOCOL-------------------
+The `@memories.md` file serves as your comprehensive historical record, capturing every interaction, exact query from the user, decision, and development activity in precise chronological order. This critical documentation process requires two distinct update paths and must be updated after every user interaction and at the end of each conversation. In a single line you need to make it long and detailed:
+
+For all development-related activities (user query/requests, including code implementation, feature development, bug fixes, project setup, agent mode, configuration changes, and documentation updates), automatically generate entries using:
+- [Version] Development: Provide an exhaustive description of all changes made, technical decisions taken, implementation details, and final outcomes. Include specific code modifications, architectural choices, and impact on the overall system. Example: "[v1.0.2] Development: Implemented responsive Card component with TypeScript interfaces, ARIA accessibility labels, keyboard navigation support, and optimized render performance through useMemo hooks. Changes improve mobile UX and meet WCAG 2.1 standards."
+
+For user-initiated documentation (triggered by the "mems" keyword), used during planning sessions, requirements gathering, technical discussions, and project status reviews, format entries as:
+- [Version] Manual Update: Document comprehensive details of all discussions, decisions made, requirements gathered, and strategic planning outcomes. Include context, rationale, and implications for future development. Example: "[v1.1.0] Manual Update: Team planning session established new accessibility requirements - all interactive elements must support keyboard navigation, include ARIA labels, and maintain visible focus states. Decision impacts component library development roadmap."
+
+Maintain strict chronological ordering, never delete past entries, long single line plain text, and create overflow files (@memories2.md, etc.) when exceeding 1000 lines. Cross-reference between memory files to maintain continuity and context. Tag entries appropriately (#feature, #bug, #improvement) and always include relevant timestamps and entry types (Development, Manual, Planning, Discussion) to ensure easy searchability and clear activity tracking. The memories must be updated after every interaction with the user and at the conclusion of each conversation to maintain a complete and accurate record of all project activities.
+
+-------------------LESSONS LEARNED PROTOCOL-------------------
+The @lessons-learned.md file serves as a critical knowledge base for capturing, documenting, and sharing development insights, solutions, and best practices. Each lesson must be documented in a comprehensive, single-line format that includes: [Timestamp] Category: Detailed description of issue → Complete solution → Clear explanation of importance and impact. For example: "[2024-02-08 16:20] Component Error: Issue: TextInput props incompatible with DatePicker causing type errors during component composition → Fix: Implemented strict prop type validation and interface checks before component extension → Why: Critical for preventing runtime type mismatches and ensuring component reusability." Follow a strict priority system where Critical issues (security vulnerabilities, data integrity problems, breaking changes, severe performance bottlenecks) must be addressed immediately, Important items (accessibility improvements, code organization needs, testing coverage gaps, documentation updates) should be handled in near-term sprints, and Enhancement suggestions (style optimizations, refactoring opportunities, developer experience improvements) can be addressed when resources permit. Capture lessons after bug resolutions (documenting root cause and solution), during code reviews (noting patterns and improvements), from user feedback (recording usability insights), following performance optimizations (logging techniques), and when establishing new patterns (documenting reusable solutions). Each entry must include Problem description (what went wrong), Solution details (how it was fixed), Prevention strategy (how to avoid future occurrences), Impact assessment (why it matters), Code examples (when applicable), and Related file/commit references. Entries must be categorized under Component Development (architecture, props, state, events), TypeScript Implementation (types, interfaces, generics, guards), Error Resolution (patterns, debugging, prevention), Performance Optimization (load time, runtime, memory, network), Security Practices (data protection, validation, auth), Accessibility Standards (ARIA, keyboard, screen readers), Code Organization (structure, patterns, modules), and Testing Strategies (unit, integration, E2E). Update protocol requires evaluating importance, writing clear actionable entries, providing relevant examples, cross-referencing with memories, checking for duplicates, verifying solutions, ensuring reusability, and appropriate tagging.
+
+PROJECT REQUIREMENTS ENFORCEMENT:
+Before any implementation, verify against @docs/project-requirements.md. Issue warnings for any deviations:
+⚠️ WARNING: [Category]
+- Project Information: [Project name, description, goals, overview and purpose]
+- List of Project Requirements: [tech stack, UI/UX, design, functionality, performance, security, accessibility, SEO, and other relevant criteria]
+- Roadmap: [Phases, milestones, systematic approach, feature implementation order, best approach based on the project requirements]
+- Don't create the roadmap first, when the project information is not fully completed. Inform the user if the project information and list of project requirements are not completed.
+
+PHASE DOCUMENTATION:
+When completing a phase, create detailed documentation in /docs/phases/PHASE-X/[FEATURE-NAME].md including:
+- Implemented components
+- Technical decisions
+- Code examples
+- Best practices
+- Lessons learned
+- Clear objectives and achievements
+- Memory and lesson references
+
+This system ensures consistent, high-quality development while maintaining comprehensive project documentation and knowledge retention. Follow these guidelines strictly for all user interactions.

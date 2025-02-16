@@ -1,0 +1,208 @@
+---
+description: 
+globs: 
+---
+# CreateCrewForm Component
+
+## Purpose
+The `CreateCrewForm` component provides a form for creating new crews in the Soln.ai application. It allows users to specify the crew's name, description, and add multiple agents to the crew. The component supports dynamic addition and removal of agents, with conditional rendering of form fields based on the selected agent type (Soln.ai or AutoGen). It integrates with the backend API for crew and agent creation, handles form validation, loading states, success/error messages, and redirects the user after successful crew creation.
+
+## Location
+`frontend/nextjs/src/components/CreateCrewForm/CreateCrewForm.tsx`
+
+## Props
+The `CreateCrewForm` component does not accept any props.
+
+| Prop Name | Type | Description | Required | Default Value |
+| --------- | ---- | ----------- | -------- | ------------- |
+|           |      |             |          |               |
+
+## State Management
+The component uses a combination of `react-hook-form` for form state management and the Zustand store (`@/lib/store.ts`) for global state management and API interaction.
+
+### react-hook-form
+The `useForm` hook is used to manage the form state, including:
+
+*   `register`: Function to register input fields with the form.
+*   `handleSubmit`: Function to handle form submission.
+*   `formState`: Object containing form state information, including:
+    *   `errors`: Validation errors for each field.
+    *   `isSubmitting`: Boolean indicating whether the form is currently submitting.
+*   `control`:  Object that provides control over the form, used with `useFieldArray`.
+*   `watch`: Function to watch specific form field values (used for conditional rendering).
+*   `reset`:  Function to reset the form to its default values.
+
+The `useFieldArray` hook is used to manage the dynamic array of agents:
+
+*   `fields`: An array of objects, each representing an agent in the form.
+*   `append`: A function to add a new agent to the array.
+*   `remove`: A function to remove an agent from the array.
+
+### Zustand
+The component uses the following from the Zustand store:
+
+*   `createCrew`:  An action function to create a new crew (which in turn calls the API).
+*   `isLoading`:  A boolean indicating whether an API request is in progress.
+*   `error`:  An error object, if an error occurred during API interaction.
+
+### Local State
+* `successMessage`: String to store the success message.
+* `errorMessage`: String to store the error message.
+
+## Data Fetching
+The component does *not* directly fetch data. It *submits* data to the backend via the `createCrew` action in the Zustand store, and indirectly, the `createAgent` function.
+
+## Form Handling
+The `onSubmit` function handles the form submission logic:
+
+1.  **Agent Creation:** It iterates through the `agents` array in the form data.  For each agent, it calls the `apiClient.createAgent` function. This creates the agents on the backend *before* creating the crew. The function waits for all agent creations to complete (using `Promise.all`).
+2.  **Crew Creation:** It extracts the IDs of the newly created agents. It then creates a `crewData` object containing the crew name, description, and an array of agent *IDs*. It calls the `createCrew` action (from the Zustand store) with this `crewData`.
+3.  **Success Handling:** If the `createCrew` call is successful:
+    *   A success message is displayed.
+    *   The form is reset using `reset()`.
+    *   The user is redirected to the `/crews` route (using `next/navigation`'s `useRouter` hook).
+4.  **Error Handling:** If any error occurs during agent creation or crew creation, an error message is displayed.
+
+## Dynamic Agent Fields
+The form supports dynamic addition and removal of agent fields using `react-hook-form`'s `useFieldArray` hook.  Users can add multiple agents to a crew.
+
+## Conditional Rendering
+The form fields for each agent are conditionally rendered based on the selected agent type:
+
+*   **Soln.ai Agent:**
+    *   Name (text input, required)
+    *   Role (text input, required)
+    *   Goal (textarea, required)
+    *   Backstory (textarea, optional)
+    *   LLM (select, required, options: GPT-4 Turbo, GPT-3.5 Turbo, o3-mini, Gemini 2.0 Flash, Gemini 2.0 Pro)
+
+*   **AutoGen Agent:**
+    *   Name (text input, required)
+    *   Role (text input, required)
+    *   Model (select, required, options: gpt-4-turbo-preview, gpt-3.5-turbo-instruct, o3-mini, gemini-2.0-flash, gemini-2.0-pro)
+    *   Temperature (number input, optional, default: 0.7)
+    *   Max Tokens (number input, optional, default: 256)
+
+## Form Validation
+The form uses `react-hook-form`'s built-in validation capabilities. The following validation rules are applied:
+
+*   **Crew Name:** Required.
+*   **Agent Name:** Required.
+*   **Agent Role:** Required.
+*   **Agent Goal:** Required (for Soln.ai agents).
+*   **LLM:** Required (for Soln.ai agents).
+*   **Model:** Required (for AutoGen agents)
+*   **Temperature (AutoGen):**
+    *   Must be a number.
+    *   Must be greater than or equal to 0.
+    *   Must be less than or equal to 1.
+*   **Max Tokens (AutoGen):**
+    *   Must be a number.
+    *   Must be greater than 0.
+
+Validation errors are displayed inline next to the corresponding fields.
+
+## API Integration
+The component interacts with the backend API through the following functions:
+
+*   `apiClient.createCrew(crewData)`: Creates a new crew (called after creating agents).
+*   `apiClient.createAgent(agentData)`: Creates a new agent.
+
+## Usage Example
+```typescript jsx
+import CreateCrewForm from '@/components/CreateCrewForm';
+
+const CreateCrewPage = () => {
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Create New Crew</h1>
+      <CreateCrewForm />
+    </div>
+  );
+};
+
+export default CreateCrewPage;
+```
+
+## Styling
+The component is styled using Tailwind CSS utility classes, and it uses Shadcn UI components for the form elements.
+
+## Dependencies
+*   `react`: React library.
+*   `react-hook-form`: Form handling and validation.
+*   `@/lib/types`: TypeScript type definitions.
+*   `@/lib/apiClient`: API client for interacting with the backend.
+*   `@/lib/store`: Zustand store for global state management.
+*   `next/navigation`: Next.js router.
+*   `uuid`: For generating unique keys.
+*  `@shadcn/ui`:  Shadcn UI components (Input, Textarea, Select, Button, Form).
+* `@radix-ui/react-label`: Radix UI primitive for form labels.
+* `@radix-ui/react-slot`: Radix UI primitive for component composition.
+* `class-variance-authority`: For creating reusable component variants.
+* `clsx`: For conditionally joining class names.
+* `lucide-react`: For icons.
+* `tailwind-merge`: For merging Tailwind CSS classes.
+
+## Accessibility
+The component is designed with accessibility in mind:
+
+*   **Semantic HTML:** Uses semantic HTML elements (e.g., `<form>`, `<label>`, `<input>`, `<textarea>`, `<button>`).
+*   **ARIA Attributes:** Includes appropriate ARIA attributes (e.g., `aria-label`, `aria-describedby`, `aria-invalid`, `role`) for assistive technologies.
+*   **Keyboard Navigation:** Supports keyboard navigation (tabbing, form submission with Enter key).
+*   **Focus Management:** Uses appropriate focus styling (provided by Tailwind CSS and Shadcn UI).
+*   **Error Messages:** Error messages are clearly associated with their corresponding input fields.
+* **Loading states:** Uses loading states to improve UX.
+
+## Testing
+The component includes comprehensive test coverage:
+
+* **Unit Tests:**
+  * Form rendering and initial state
+  * Dynamic agent field management
+  * Conditional rendering based on agent type
+  * Form validation
+  * Success and error states
+  * Loading states
+
+* **Integration Tests:**
+  * Form submission flow
+  * API integration
+  * Navigation after submission
+  * Error handling
+
+* **Accessibility Tests:**
+  * ARIA attributes
+  * Keyboard navigation
+  * Screen reader compatibility
+
+Test file location: `frontend/nextjs/src/components/CreateCrewForm/CreateCrewForm.test.tsx`
+
+## Performance Considerations
+1. **Form State Management:**
+   * Efficient use of `useFieldArray` for dynamic fields
+   * Proper cleanup on unmount
+   * Optimized re-renders with dependency arrays
+
+2. **API Integration:**
+   * Loading state management
+   * Error boundaries
+   * Efficient form reset
+
+## Security
+1. **Input Validation:**
+   * Server-side validation
+   * Type checking
+   * Input sanitization
+
+2. **API Security:**
+   * Error handling
+   * Type-safe integration
+   * Secure data transmission
+
+## Changelog
+- v1.0.21: Enhanced with dynamic agent fields, accessibility features
+- v1.0.23: Integrated with backend API and Zustand store
+- v1.0.24: Added comprehensive test coverage
+- v1.0.26: Added support for o3-mini and Gemini 2.0 models, set gpt-4-turbo-preview as default
+- v1.0.31: Integrated Shadcn UI components for improved UI consistency and accessibility
+- v1.0.32: Updated test suite for Shadcn UI integration 
