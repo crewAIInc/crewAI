@@ -314,6 +314,15 @@ class BaseAgent(ABC, BaseModel):
 
         return copied_agent
 
+    def _interpolate_only(self, input_string: str, inputs: Dict[str, Any]) -> str:
+        """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched."""
+        escaped_string = input_string.replace("{", "{{").replace("}", "}}")
+
+        for key in inputs.keys():
+            escaped_string = escaped_string.replace(f"{{{{{key}}}}}", f"{{{key}}}")
+
+        return escaped_string.format(**inputs)
+
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""
         if self._original_role is None:
@@ -324,9 +333,9 @@ class BaseAgent(ABC, BaseModel):
             self._original_backstory = self.backstory
 
         if inputs:
-            self.role = self._original_role.format(**inputs)
-            self.goal = self._original_goal.format(**inputs)
-            self.backstory = self._original_backstory.format(**inputs)
+            self.role = self._interpolate_only(self._original_role, inputs)
+            self.goal = self._interpolate_only(self._original_goal, inputs)
+            self.backstory = self._interpolate_only(self._original_backstory, inputs)
 
     def set_cache_handler(self, cache_handler: CacheHandler) -> None:
         """Set the cache handler for the agent.
