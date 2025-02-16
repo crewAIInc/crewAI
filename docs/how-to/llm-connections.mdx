@@ -23,6 +23,7 @@ LiteLLM supports a wide range of providers, including but not limited to:
 - Azure OpenAI
 - AWS (Bedrock, SageMaker)
 - Cohere
+- VoyageAI
 - Hugging Face
 - Ollama
 - Mistral AI
@@ -32,6 +33,8 @@ LiteLLM supports a wide range of providers, including but not limited to:
 - Cloudflare Workers AI
 - DeepInfra
 - Groq
+- SambaNova
+- [NVIDIA NIMs](https://docs.api.nvidia.com/nim/reference/models-1)
 - And many more!
 
 For a complete and up-to-date list of supported providers, please refer to the [LiteLLM Providers documentation](https://docs.litellm.ai/docs/providers).
@@ -125,10 +128,10 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
     </Tab>
     <Tab title="Using LLM Class Attributes">
         <CodeGroup>
-        ```python Code
-        llm = LLM(
-            model="custom-model-name",
-            api_key="your-api-key",
+            ```python Code
+            llm = LLM(
+                model="custom-model-name",
+                api_key="your-api-key",
                 base_url="https://api.your-provider.com/v1"
             )
             agent = Agent(llm=llm, ...)

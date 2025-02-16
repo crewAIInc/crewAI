@@ -1,4 +1,3 @@
-import importlib.metadata
 import os
 import shutil
 import sys
@@ -9,8 +8,8 @@ import click
 import tomli
 from rich.console import Console
 
-from crewai.cli.authentication.utils import TokenManager
 from crewai.cli.constants import ENV_VARS
+from crewai.crew import Crew
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -35,26 +34,6 @@ def copy_template(src, dst, name, class_name, folder_name):
     click.secho(f"  - Created {dst}", fg="green")
 
 
-# Drop the simple_toml_parser when we move to python3.11
-def simple_toml_parser(content):
-    result = {}
-    current_section = result
-    for line in content.split("\n"):
-        line = line.strip()
-        if line.startswith("[") and line.endswith("]"):
-            # New section
-            section = line[1:-1].split(".")
-            current_section = result
-            for key in section:
-                current_section = current_section.setdefault(key, {})
-        elif "=" in line:
-            key, value = line.split("=", 1)
-            key = key.strip()
-            value = value.strip().strip('"')
-            current_section[key] = value
-    return result
-
-
 def read_toml(file_path: str = "pyproject.toml"):
     """Read the content of a TOML file and return it as a dictionary."""
     with open(file_path, "rb") as f:
@@ -65,7 +44,7 @@ def read_toml(file_path: str = "pyproject.toml"):
 def parse_toml(content):
     if sys.version_info >= (3, 11):
         return tomllib.loads(content)
-    return simple_toml_parser(content)
+    return tomli.loads(content)
 
 
 def get_project_name(
@@ -137,11 +116,6 @@ def _get_nested_value(data: Dict[str, Any], keys: List[str]) -> Any:
     return reduce(dict.__getitem__, keys, data)
 
 
-def get_crewai_version() -> str:
-    """Get the version number of CrewAI running the CLI"""
-    return importlib.metadata.version("crewai")
-
-
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
     """Fetch the environment variables from a .env file and return them as a dictionary."""
     try:
@@ -164,14 +138,6 @@ def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
         print(f"Error reading the .env file: {e}")
 
     return {}
-
-
-def get_auth_token() -> str:
-    """Get the authentication token."""
-    access_token = TokenManager().get_token()
-    if not access_token:
-        raise Exception()
-    return access_token
 
 
 def tree_copy(source, destination):
@@ -282,3 +248,64 @@ def write_env_file(folder_path, env_vars):
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
             file.write(f"{key}={value}\n")
+
+
+def get_crew(crew_path: str = "crew.py", require: bool = False) -> Crew | None:
+    """Get the crew instance from the crew.py file."""
+    try:
+        import importlib.util
+        import os
+
+        for root, _, files in os.walk("."):
+            if "crew.py" in files:
+                crew_path = os.path.join(root, "crew.py")
+                try:
+                    spec = importlib.util.spec_from_file_location(
+                        "crew_module", crew_path
+                    )
+                    if not spec or not spec.loader:
+                        continue
+                    module = importlib.util.module_from_spec(spec)
+                    try:
+                        sys.modules[spec.name] = module
+                        spec.loader.exec_module(module)
+
+                        for attr_name in dir(module):
+                            attr = getattr(module, attr_name)
+                            try:
+                                if callable(attr) and hasattr(attr, "crew"):
+                                    crew_instance = attr().crew()
+                                    return crew_instance
+
+                            except Exception as e:
+                                print(f"Error processing attribute {attr_name}: {e}")
+                                continue
+
+                    except Exception as exec_error:
+                        print(f"Error executing module: {exec_error}")
+                        import traceback
+
+                        print(f"Traceback: {traceback.format_exc()}")
+
+                except (ImportError, AttributeError) as e:
+                    if require:
+                        console.print(
+                            f"Error importing crew from {crew_path}: {str(e)}",
+                            style="bold red",
+                        )
+                        continue
+
+                break
+
+        if require:
+            console.print("No valid Crew instance found in crew.py", style="bold red")
+            raise SystemExit
+        return None
+
+    except Exception as e:
+        if require:
+            console.print(
+                f"Unexpected error while loading crew: {str(e)}", style="bold red"
+            )
+            raise SystemExit
+        return None

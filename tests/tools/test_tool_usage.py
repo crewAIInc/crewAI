@@ -6,8 +6,8 @@ import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Task
-from crewai.tools.tool_usage import ToolUsage
 from crewai.tools import BaseTool
+from crewai.tools.tool_usage import ToolUsage
 
 
 class RandomNumberToolInput(BaseModel):
@@ -121,3 +121,365 @@ def test_tool_usage_render():
         "Tool Name: Random Number Generator\nTool Arguments: {'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}, 'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}}\nTool Description: Generates a random number within a specified range"
         in rendered
     )
+
+
+def test_validate_tool_input_booleans_and_none():
+    # Create a ToolUsage instance with mocks
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    # Input with booleans and None
+    tool_input = '{"key1": True, "key2": False, "key3": None}'
+    expected_arguments = {"key1": True, "key2": False, "key3": None}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_mixed_types():
+    # Create a ToolUsage instance with mocks
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    # Input with mixed types
+    tool_input = '{"number": 123, "text": "Some text", "flag": True}'
+    expected_arguments = {"number": 123, "text": "Some text", "flag": True}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_single_quotes():
+    # Create a ToolUsage instance with mocks
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    # Input with single quotes instead of double quotes
+    tool_input = "{'key': 'value', 'flag': True}"
+    expected_arguments = {"key": "value", "flag": True}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_invalid_json_repairable():
+    # Create a ToolUsage instance with mocks
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    # Invalid JSON input that can be repaired
+    tool_input = '{"key": "value", "list": [1, 2, 3,]}'
+    expected_arguments = {"key": "value", "list": [1, 2, 3]}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_with_special_characters():
+    # Create a ToolUsage instance with mocks
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=MagicMock(),
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    # Input with special characters
+    tool_input = '{"message": "Hello, world! \u263A", "valid": True}'
+    expected_arguments = {"message": "Hello, world! ☺", "valid": True}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_none_input():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    arguments = tool_usage._validate_tool_input(None)
+    assert arguments == {}
+
+
+def test_validate_tool_input_valid_json():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    tool_input = '{"key": "value", "number": 42, "flag": true}'
+    expected_arguments = {"key": "value", "number": 42, "flag": True}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_python_dict():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    tool_input = "{'key': 'value', 'number': 42, 'flag': True}"
+    expected_arguments = {"key": "value", "number": 42, "flag": True}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_json5_unquoted_keys():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    tool_input = "{key: 'value', number: 42, flag: true}"
+    expected_arguments = {"key": "value", "number": 42, "flag": True}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_with_trailing_commas():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    tool_input = '{"key": "value", "number": 42, "flag": true,}'
+    expected_arguments = {"key": "value", "number": 42, "flag": True}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_invalid_input():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    invalid_inputs = [
+        "Just a string",
+        "['list', 'of', 'values']",
+        "12345",
+        "",
+    ]
+
+    for invalid_input in invalid_inputs:
+        with pytest.raises(Exception) as e_info:
+            tool_usage._validate_tool_input(invalid_input)
+        assert (
+            "Tool input must be a valid dictionary in JSON or Python literal format"
+            in str(e_info.value)
+        )
+
+    # Test for None input separately
+    arguments = tool_usage._validate_tool_input(None)
+    assert arguments == {}  # Expecting an empty dictionary
+
+
+def test_validate_tool_input_complex_structure():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    tool_input = """
+    {
+        "user": {
+            "name": "Alice",
+            "age": 30
+        },
+        "items": [
+            {"id": 1, "value": "Item1"},
+            {"id": 2, "value": "Item2",}
+        ],
+        "active": true,
+    }
+    """
+    expected_arguments = {
+        "user": {"name": "Alice", "age": 30},
+        "items": [
+            {"id": 1, "value": "Item1"},
+            {"id": 2, "value": "Item2"},
+        ],
+        "active": True,
+    }
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_code_content():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    tool_input = '{"filename": "script.py", "content": "def hello():\\n    print(\'Hello, world!\')"}'
+    expected_arguments = {
+        "filename": "script.py",
+        "content": "def hello():\n    print('Hello, world!')",
+    }
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_with_escaped_quotes():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    tool_input = '{"text": "He said, \\"Hello, world!\\""}'
+    expected_arguments = {"text": 'He said, "Hello, world!"'}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_large_json_content():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    # Simulate a large JSON content
+    tool_input = (
+        '{"data": ' + json.dumps([{"id": i, "value": i * 2} for i in range(1000)]) + "}"
+    )
+    expected_arguments = {"data": [{"id": i, "value": i * 2} for i in range(1000)]}
+
+    arguments = tool_usage._validate_tool_input(tool_input)
+    assert arguments == expected_arguments
+
+
+def test_validate_tool_input_none_input():
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[],
+        original_tools=[],
+        tools_description="",
+        tools_names="",
+        task=MagicMock(),
+        function_calling_llm=None,
+        agent=MagicMock(),
+        action=MagicMock(),
+    )
+
+    arguments = tool_usage._validate_tool_input(None)
+    assert arguments == {}  # Expecting an empty dictionary

@@ -23,16 +23,15 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Language** _(optional)_             | `language`             | Language used for the crew, defaults to English.                                                                                                                                                                                                          |
 | **Language File** _(optional)_        | `language_file`        | Path to the language file to be used for the crew.                                                                                                                                                                                                        |
 | **Memory** _(optional)_               | `memory`               | Utilized for storing execution memories (short-term, long-term, entity memory).                                                                                                                                                                           |
-| **Memory Config** _(optional)_        | `memory_config`        | Configuration for the memory provider to be used by the crew.                                                                                                                                                                                          |
-| **Cache** _(optional)_                | `cache`                | Specifies whether to use a cache for storing the results of tools' execution. Defaults to `True`.                                                                                                                                                          |
-| **Embedder** _(optional)_             | `embedder`             | Configuration for the embedder to be used by the crew. Mostly used by memory for now. Default is `{"provider": "openai"}`.                                                                                                                                                                     |
-| **Full Output** _(optional)_          | `full_output`          | Whether the crew should return the full output with all tasks outputs or just the final output. Defaults to `False`.                                                                                                                                       |
+| **Memory Config** _(optional)_        | `memory_config`        | Configuration for the memory provider to be used by the crew.                                                                                                                                                                                             |
+| **Cache** _(optional)_                | `cache`                | Specifies whether to use a cache for storing the results of tools' execution. Defaults to `True`.                                                                                                                                                         |
+| **Embedder** _(optional)_             | `embedder`             | Configuration for the embedder to be used by the crew. Mostly used by memory for now. Default is `{"provider": "openai"}`.                                                                                                                                |
+| **Full Output** _(optional)_          | `full_output`          | Whether the crew should return the full output with all tasks outputs or just the final output. Defaults to `False`.                                                                                                                                      |
 | **Step Callback** _(optional)_        | `step_callback`        | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations; it won't override the agent-specific `step_callback`.                                                               |
 | **Task Callback** _(optional)_        | `task_callback`        | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution.                                                                                                                          |
 | **Share Crew** _(optional)_           | `share_crew`           | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models.                                                                                                      |
-| **Output Log File** _(optional)_      | `output_log_file`      | Whether you want to have a file with the complete crew output and execution. You can set it using True and it will default to the folder you are currently in and it will be called logs.txt or passing a string with the full path and name of the file. |
+| **Output Log File** _(optional)_      | `output_log_file`      | Set to True to save logs as logs.txt in the current directory or provide a file path. Logs will be in JSON format if the filename ends in .json, otherwise .txt. Defautls to `None`.                                                                      |
 | **Manager Agent** _(optional)_        | `manager_agent`        | `manager` sets a custom agent that will be used as a manager.                                                                                                                                                                                             |
-| **Manager Callbacks** _(optional)_    | `manager_callbacks`    | `manager_callbacks` takes a list of callback handlers to be executed by the manager agent when a hierarchical process is used.                                                                                                                            |
 | **Prompt File** _(optional)_          | `prompt_file`          | Path to the prompt JSON file to be used for the crew.                                                                                                                                                                                                     |
 | **Planning** *(optional)*             | `planning`             | Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.                                                     |
 | **Planning LLM** *(optional)*         | `planning_llm`         | The language model used by the AgentPlanner in a planning process.                                                                                                                                                                                        |
@@ -41,6 +40,155 @@ A crew in crewAI represents a collaborative group of agents working together to 
 **Crew Max RPM**: The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
 </Tip>
 
+## Creating Crews
+
+There are two ways to create crews in CrewAI: using **YAML configuration (recommended)** or defining them **directly in code**.
+
+### YAML Configuration (Recommended)
+
+Using YAML configuration provides a cleaner, more maintainable way to define crews and is consistent with how agents and tasks are defined in CrewAI projects.
+
+After creating your CrewAI project as outlined in the [Installation](/installation) section, you can define your crew in a class that inherits from `CrewBase` and uses decorators to define agents, tasks, and the crew itself.
+
+#### Example Crew Class with Decorators
+
+```python code
+from crewai import Agent, Crew, Task, Process
+from crewai.project import CrewBase, agent, task, crew, before_kickoff, after_kickoff
+
+
+@CrewBase
+class YourCrewName:
+    """Description of your crew"""
+
+    # Paths to your YAML configuration files
+    # To see an example agent and task defined in YAML, checkout the following:
+    # - Task: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
+    # - Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
+    agents_config = 'config/agents.yaml' 
+    tasks_config = 'config/tasks.yaml' 
+
+    @before_kickoff
+    def prepare_inputs(self, inputs):
+        # Modify inputs before the crew starts
+        inputs['additional_data'] = "Some extra information"
+        return inputs
+
+    @after_kickoff
+    def process_output(self, output):
+        # Modify output after the crew finishes
+        output.raw += "\nProcessed after kickoff."
+        return output
+
+    @agent
+    def agent_one(self) -> Agent:
+        return Agent(
+            config=self.agents_config['agent_one'],
+            verbose=True
+        )
+
+    @agent
+    def agent_two(self) -> Agent:
+        return Agent(
+            config=self.agents_config['agent_two'],
+            verbose=True
+        )
+
+    @task
+    def task_one(self) -> Task:
+        return Task(
+            config=self.tasks_config['task_one']
+        )
+
+    @task
+    def task_two(self) -> Task:
+        return Task(
+            config=self.tasks_config['task_two']
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,  # Automatically collected by the @agent decorator
+            tasks=self.tasks,    # Automatically collected by the @task decorator. 
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+<Note>
+Tasks will be executed in the order they are defined.
+</Note>
+
+The `CrewBase` class, along with these decorators, automates the collection of agents and tasks, reducing the need for manual management.
+
+#### Decorators overview from `annotations.py`
+
+CrewAI provides several decorators in the `annotations.py` file that are used to mark methods within your crew class for special handling:
+
+- `@CrewBase`: Marks the class as a crew base class.
+- `@agent`: Denotes a method that returns an `Agent` object.
+- `@task`: Denotes a method that returns a `Task` object.
+- `@crew`: Denotes the method that returns the `Crew` object.
+- `@before_kickoff`: (Optional) Marks a method to be executed before the crew starts.
+- `@after_kickoff`: (Optional) Marks a method to be executed after the crew finishes.
+
+These decorators help in organizing your crew's structure and automatically collecting agents and tasks without manually listing them.
+
+### Direct Code Definition (Alternative)
+
+Alternatively, you can define the crew directly in code without using YAML configuration files.
+
+```python code
+from crewai import Agent, Crew, Task, Process
+from crewai_tools import YourCustomTool
+
+class YourCrewName:
+    def agent_one(self) -> Agent:
+        return Agent(
+            role="Data Analyst",
+            goal="Analyze data trends in the market",
+            backstory="An experienced data analyst with a background in economics",
+            verbose=True,
+            tools=[YourCustomTool()]
+        )
+
+    def agent_two(self) -> Agent:
+        return Agent(
+            role="Market Researcher",
+            goal="Gather information on market dynamics",
+            backstory="A diligent researcher with a keen eye for detail",
+            verbose=True
+        )
+
+    def task_one(self) -> Task:
+        return Task(
+            description="Collect recent market data and identify trends.",
+            expected_output="A report summarizing key trends in the market.",
+            agent=self.agent_one()
+        )
+
+    def task_two(self) -> Task:
+        return Task(
+            description="Research factors affecting market dynamics.",
+            expected_output="An analysis of factors influencing the market.",
+            agent=self.agent_two()
+        )
+
+    def crew(self) -> Crew:
+        return Crew(
+            agents=[self.agent_one(), self.agent_two()],
+            tasks=[self.task_one(), self.task_two()],
+            process=Process.sequential,
+            verbose=True
+        )
+```
+
+In this example:
+
+- Agents and tasks are defined directly within the class without decorators.
+- We manually create and manage the list of agents and tasks.
+- This approach provides more control but can be less maintainable for larger projects.
 
 ## Crew Output
 
@@ -92,6 +240,23 @@ print(f"Tasks Output: {crew_output.tasks_output}")
 print(f"Token Usage: {crew_output.token_usage}")
 ```
 
+## Accessing Crew Logs
+
+You can see real time log of the crew execution, by setting `output_log_file` as a `True(Boolean)` or a `file_name(str)`. Supports logging of events as both `file_name.txt` and `file_name.json`.
+In case of `True(Boolean)` will save as `logs.txt`.
+
+In case of `output_log_file` is set as `False(Booelan)` or `None`, the logs will not be populated.
+
+```python Code
+# Save crew logs
+crew = Crew(output_log_file = True)  # Logs will be saved as logs.txt
+crew = Crew(output_log_file = file_name)  # Logs will be saved as file_name.txt
+crew = Crew(output_log_file = file_name.txt)  # Logs will be saved as file_name.txt
+crew = Crew(output_log_file = file_name.json)  # Logs will be saved as file_name.json
+```
+
+
+
 ## Memory Utilization
 
 Crews can utilize memory (short-term, long-term, and entity memory) to enhance their execution and learning over time. This feature allows crews to store and recall execution memories, aiding in decision-making and task execution strategies.
@@ -131,9 +296,9 @@ print(result)
 Once your crew is assembled, initiate the workflow with the appropriate kickoff method. CrewAI provides several methods for better control over the kickoff process: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, and `kickoff_for_each_async()`.
 
 - `kickoff()`: Starts the execution process according to the defined process flow.
-- `kickoff_for_each()`: Executes tasks for each agent individually.
+- `kickoff_for_each()`: Executes tasks sequentially for each provided input event or item in the collection.
 - `kickoff_async()`: Initiates the workflow asynchronously.
-- `kickoff_for_each_async()`: Executes tasks for each agent individually in an asynchronous manner.
+- `kickoff_for_each_async()`: Executes tasks concurrently for each provided input event or item, leveraging asynchronous processing.
 
 ```python Code
 # Start the crew's task execution

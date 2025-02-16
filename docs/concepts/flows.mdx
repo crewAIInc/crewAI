@@ -18,68 +18,79 @@ Flows allow you to create structured, event-driven workflows. They provide a sea
 
 4. **Flexible Control Flow**: Implement conditional logic, loops, and branching within your workflows.
 
-5. **Input Flexibility**: Flows can accept inputs to initialize or update their state, with different handling for structured and unstructured state management.
-
 ## Getting Started
 
 Let's create a simple Flow where you will use OpenAI to generate a random city in one task and then use that city to generate a fun fact in another task.
 
-### Passing Inputs to Flows
+```python Code
 
-Flows can accept inputs to initialize or update their state before execution. The way inputs are handled depends on whether the flow uses structured or unstructured state management.
-
-#### Structured State Management
-
-In structured state management, the flow's state is defined using a Pydantic `BaseModel`. Inputs must match the model's schema, and any updates will overwrite the default values.
-
-```python
 from crewai.flow.flow import Flow, listen, start
-from pydantic import BaseModel
+from dotenv import load_dotenv
+from litellm import completion
 
-class ExampleState(BaseModel):
-    counter: int = 0
-    message: str = ""
 
-class StructuredExampleFlow(Flow[ExampleState]):
+class ExampleFlow(Flow):
+    model = "gpt-4o-mini"
+
     @start()
-    def first_method(self):
-        # Implementation
+    def generate_city(self):
+        print("Starting flow")
+        # Each flow state automatically gets a unique ID
+        print(f"Flow State ID: {self.state['id']}")
 
-flow = StructuredExampleFlow()
-flow.kickoff(inputs={"counter": 10})
-```
+        response = completion(
+            model=self.model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Return the name of a random city in the world.",
+                },
+            ],
+        )
 
-In this example, the `counter` is initialized to `10`, while `message` retains its default value.
+        random_city = response["choices"][0]["message"]["content"]
+        # Store the city in our state
+        self.state["city"] = random_city
+        print(f"Random City: {random_city}")
 
-#### Unstructured State Management
+        return random_city
 
-In unstructured state management, the flow's state is a dictionary. You can pass any dictionary to update the state.
+    @listen(generate_city)
+    def generate_fun_fact(self, random_city):
+        response = completion(
+            model=self.model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Tell me a fun fact about {random_city}",
+                },
+            ],
+        )
 
-```python
-from crewai.flow.flow import Flow, listen, start
+        fun_fact = response["choices"][0]["message"]["content"]
+        # Store the fun fact in our state
+        self.state["fun_fact"] = fun_fact
+        return fun_fact
 
-class UnstructuredExampleFlow(Flow):
-    @start()
-    def first_method(self):
-        # Implementation
 
-flow = UnstructuredExampleFlow()
-flow.kickoff(inputs={"counter": 5, "message": "Initial message"})
-```
 
-Here, both `counter` and `message` are updated based on the provided inputs.
+flow = ExampleFlow()
+result = flow.kickoff()
 
-**Note:** Ensure that inputs for structured state management adhere to the defined schema to avoid validation errors.
-
-### Example Flow
-
-```python
-# Existing example code
+print(f"Generated fun fact: {result}")
 ```
 
 In the above example, we have created a simple Flow that generates a random city using OpenAI and then generates a fun fact about that city. The Flow consists of two tasks: `generate_city` and `generate_fun_fact`. The `generate_city` task is the starting point of the Flow, and the `generate_fun_fact` task listens for the output of the `generate_city` task.
 
-When you run the Flow, it will generate a random city and then generate a fun fact about that city. The output will be printed to the console.
+Each Flow instance automatically receives a unique identifier (UUID) in its state, which helps track and manage flow executions. The state can also store additional data (like the generated city and fun fact) that persists throughout the flow's execution.
+
+When you run the Flow, it will:
+1. Generate a unique ID for the flow state
+2. Generate a random city and store it in the state
+3. Generate a fun fact about that city and store it in the state
+4. Print the results to the console
+
+The state's unique ID and stored data can be useful for tracking flow executions and maintaining context between tasks.
 
 **Note:** Ensure you have set up your `.env` file to store your `OPENAI_API_KEY`. This key is necessary for authenticating requests to the OpenAI API.
 
@@ -97,14 +108,14 @@ The `@listen()` decorator can be used in several ways:
 
 1. **Listening to a Method by Name**: You can pass the name of the method you want to listen to as a string. When that method completes, the listener method will be triggered.
 
-   ```python
+   ```python Code
    @listen("generate_city")
    def generate_fun_fact(self, random_city):
        # Implementation
    ```
 
 2. **Listening to a Method Directly**: You can pass the method itself. When that method completes, the listener method will be triggered.
-   ```python
+   ```python Code
    @listen(generate_city)
    def generate_fun_fact(self, random_city):
        # Implementation
@@ -121,7 +132,7 @@ When you run a Flow, the final output is determined by the last method that comp
 Here's how you can access the final output:
 
 <CodeGroup>
-```python
+```python Code
 from crewai.flow.flow import Flow, listen, start
 
 class OutputExampleFlow(Flow):
@@ -133,17 +144,18 @@ class OutputExampleFlow(Flow):
     def second_method(self, first_output):
         return f"Second method received: {first_output}"
 
+
 flow = OutputExampleFlow()
 final_output = flow.kickoff()
 
 print("---- Final Output ----")
 print(final_output)
-```
+````
 
-```text
+```text Output
 ---- Final Output ----
 Second method received: Output from first_method
-```
+````
 
 </CodeGroup>
 
@@ -158,7 +170,7 @@ Here's an example of how to update and access the state:
 
 <CodeGroup>
 
-```python
+```python Code
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel
 
@@ -186,7 +198,7 @@ print("Final State:")
 print(flow.state)
 ```
 
-```text
+```text Output
 Final Output: Hello from first_method - updated by second_method
 Final State:
 counter=2 message='Hello from first_method - updated by second_method'
@@ -209,32 +221,38 @@ allowing developers to choose the approach that best fits their application's ne
 
 In unstructured state management, all state is stored in the `state` attribute of the `Flow` class.
 This approach offers flexibility, enabling developers to add or modify state attributes on the fly without defining a strict schema.
+Even with unstructured states, CrewAI Flows automatically generates and maintains a unique identifier (UUID) for each state instance.
 
-```python
+```python Code
 from crewai.flow.flow import Flow, listen, start
 
 class UnstructuredExampleFlow(Flow):
 
     @start()
     def first_method(self):
-        self.state.message = "Hello from structured flow"
-        self.state.counter = 0
+        # The state automatically includes an 'id' field
+        print(f"State ID: {self.state['id']}")
+        self.state['counter'] = 0
+        self.state['message'] = "Hello from structured flow"
 
     @listen(first_method)
     def second_method(self):
-        self.state.counter += 1
-        self.state.message += " - updated"
+        self.state['counter'] += 1
+        self.state['message'] += " - updated"
 
     @listen(second_method)
     def third_method(self):
-        self.state.counter += 1
-        self.state.message += " - updated again"
+        self.state['counter'] += 1
+        self.state['message'] += " - updated again"
 
         print(f"State after third_method: {self.state}")
+
 
 flow = UnstructuredExampleFlow()
 flow.kickoff()
 ```
+
+**Note:** The `id` field is automatically generated and preserved throughout the flow's execution. You don't need to manage or set it manually, and it will be maintained even when updating the state with new data.
 
 **Key Points:**
 
@@ -246,18 +264,25 @@ flow.kickoff()
 Structured state management leverages predefined schemas to ensure consistency and type safety across the workflow.
 By using models like Pydantic's `BaseModel`, developers can define the exact shape of the state, enabling better validation and auto-completion in development environments.
 
-```python
+Each state in CrewAI Flows automatically receives a unique identifier (UUID) to help track and manage state instances. This ID is automatically generated and managed by the Flow system.
+
+```python Code
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel
 
+
 class ExampleState(BaseModel):
+    # Note: 'id' field is automatically added to all states
     counter: int = 0
     message: str = ""
+
 
 class StructuredExampleFlow(Flow[ExampleState]):
 
     @start()
     def first_method(self):
+        # Access the auto-generated ID if needed
+        print(f"State ID: {self.state.id}")
         self.state.message = "Hello from structured flow"
 
     @listen(first_method)
@@ -271,6 +296,7 @@ class StructuredExampleFlow(Flow[ExampleState]):
         self.state.message += " - updated again"
 
         print(f"State after third_method: {self.state}")
+
 
 flow = StructuredExampleFlow()
 flow.kickoff()
@@ -297,6 +323,91 @@ flow.kickoff()
 
 By providing both unstructured and structured state management options, CrewAI Flows empowers developers to build AI workflows that are both flexible and robust, catering to a wide range of application requirements.
 
+## Flow Persistence
+
+The @persist decorator enables automatic state persistence in CrewAI Flows, allowing you to maintain flow state across restarts or different workflow executions. This decorator can be applied at either the class level or method level, providing flexibility in how you manage state persistence.
+
+### Class-Level Persistence
+
+When applied at the class level, the @persist decorator automatically persists all flow method states:
+
+```python
+@persist  # Using SQLiteFlowPersistence by default
+class MyFlow(Flow[MyState]):
+    @start()
+    def initialize_flow(self):
+        # This method will automatically have its state persisted
+        self.state.counter = 1
+        print("Initialized flow. State ID:", self.state.id)
+
+    @listen(initialize_flow)
+    def next_step(self):
+        # The state (including self.state.id) is automatically reloaded
+        self.state.counter += 1
+        print("Flow state is persisted. Counter:", self.state.counter)
+```
+
+### Method-Level Persistence
+
+For more granular control, you can apply @persist to specific methods:
+
+```python
+class AnotherFlow(Flow[dict]):
+    @persist  # Persists only this method's state
+    @start()
+    def begin(self):
+        if "runs" not in self.state:
+            self.state["runs"] = 0
+        self.state["runs"] += 1
+        print("Method-level persisted runs:", self.state["runs"])
+```
+
+### How It Works
+
+1. **Unique State Identification**
+   - Each flow state automatically receives a unique UUID
+   - The ID is preserved across state updates and method calls
+   - Supports both structured (Pydantic BaseModel) and unstructured (dictionary) states
+
+2. **Default SQLite Backend**
+   - SQLiteFlowPersistence is the default storage backend
+   - States are automatically saved to a local SQLite database
+   - Robust error handling ensures clear messages if database operations fail
+
+3. **Error Handling**
+   - Comprehensive error messages for database operations
+   - Automatic state validation during save and load
+   - Clear feedback when persistence operations encounter issues
+
+### Important Considerations
+
+- **State Types**: Both structured (Pydantic BaseModel) and unstructured (dictionary) states are supported
+- **Automatic ID**: The `id` field is automatically added if not present
+- **State Recovery**: Failed or restarted flows can automatically reload their previous state
+- **Custom Implementation**: You can provide your own FlowPersistence implementation for specialized storage needs
+
+### Technical Advantages
+
+1. **Precise Control Through Low-Level Access**
+   - Direct access to persistence operations for advanced use cases
+   - Fine-grained control via method-level persistence decorators
+   - Built-in state inspection and debugging capabilities
+   - Full visibility into state changes and persistence operations
+
+2. **Enhanced Reliability**
+   - Automatic state recovery after system failures or restarts
+   - Transaction-based state updates for data integrity
+   - Comprehensive error handling with clear error messages
+   - Robust validation during state save and load operations
+
+3. **Extensible Architecture**
+   - Customizable persistence backend through FlowPersistence interface
+   - Support for specialized storage solutions beyond SQLite
+   - Compatible with both structured (Pydantic) and unstructured (dict) states
+   - Seamless integration with existing CrewAI flow patterns
+
+The persistence system's architecture emphasizes technical precision and customization options, allowing developers to maintain full control over state management while benefiting from built-in reliability features.
+
 ## Flow Control
 
 ### Conditional Logic: `or`
@@ -305,7 +416,7 @@ The `or_` function in Flows allows you to listen to multiple methods and trigger
 
 <CodeGroup>
 
-```python
+```python Code
 from crewai.flow.flow import Flow, listen, or_, start
 
 class OrExampleFlow(Flow):
@@ -322,11 +433,13 @@ class OrExampleFlow(Flow):
     def logger(self, result):
         print(f"Logger: {result}")
 
+
+
 flow = OrExampleFlow()
 flow.kickoff()
 ```
 
-```text
+```text Output
 Logger: Hello from the start method
 Logger: Hello from the second method
 ```
@@ -342,7 +455,7 @@ The `and_` function in Flows allows you to listen to multiple methods and trigge
 
 <CodeGroup>
 
-```python
+```python Code
 from crewai.flow.flow import Flow, and_, listen, start
 
 class AndExampleFlow(Flow):
@@ -364,7 +477,7 @@ flow = AndExampleFlow()
 flow.kickoff()
 ```
 
-```text
+```text Output
 ---- Logger ----
 {'greeting': 'Hello from the start method', 'joke': 'What do computers eat? Microchips.'}
 ```
@@ -381,7 +494,7 @@ You can specify different routes based on the output of the method, allowing you
 
 <CodeGroup>
 
-```python
+```python Code
 import random
 from crewai.flow.flow import Flow, listen, router, start
 from pydantic import BaseModel
@@ -412,11 +525,12 @@ class RouterFlow(Flow[ExampleState]):
     def fourth_method(self):
         print("Fourth method running")
 
+
 flow = RouterFlow()
 flow.kickoff()
 ```
 
-```text
+```text Output
 Starting the structured flow
 Third method running
 Fourth method running
@@ -479,7 +593,7 @@ The `main.py` file is where you create your flow and connect the crews together.
 
 Here's an example of how you can connect the `poem_crew` in the `main.py` file:
 
-```python
+```python Code
 #!/usr/bin/env python
 from random import randint
 
@@ -555,42 +669,6 @@ uv run kickoff
 
 The flow will execute, and you should see the output in the console.
 
-
-### Adding Additional Crews Using the CLI
-
-Once you have created your initial flow, you can easily add additional crews to your project using the CLI. This allows you to expand your flow's capabilities by integrating new crews without starting from scratch.
-
-To add a new crew to your existing flow, use the following command:
-
-```bash
-crewai flow add-crew <crew_name>
-```
-
-This command will create a new directory for your crew within the `crews` folder of your flow project. It will include the necessary configuration files and a crew definition file, similar to the initial setup.
-
-#### Folder Structure
-
-After adding a new crew, your folder structure will look like this:
-
-| Directory/File         | Description                                                        |
-| :--------------------- | :----------------------------------------------------------------- |
-| `name_of_flow/`        | Root directory for the flow.                                       |
-| ├── `crews/`           | Contains directories for specific crews.                           |
-| │   ├── `poem_crew/`   | Directory for the "poem_crew" with its configurations and scripts. |
-| │   │   ├── `config/`  | Configuration files directory for the "poem_crew".                 |
-| │   │   │  ├── `agents.yaml` | YAML file defining the agents for "poem_crew".                     |
-| │   │   │  └── `tasks.yaml`  | YAML file defining the tasks for "poem_crew".                      |
-| │   │   └── `poem_crew.py`    | Script for "poem_crew" functionality.                              |
-| └── `name_of_crew/`       | Directory for the new crew.                                          |
-|     ├── `config/`         | Configuration files directory for the new crew.                     |
-|     │   ├── `agents.yaml` | YAML file defining the agents for the new crew.                     |
-|     │   └── `tasks.yaml`  | YAML file defining the tasks for the new crew.                      |
-|     └── `name_of_crew.py` | Script for the new crew functionality.                              |
-
-You can then customize the `agents.yaml` and `tasks.yaml` files to define the agents and tasks for your new crew. The `name_of_crew.py` file will contain the crew's logic, which you can modify to suit your needs.
-
-By using the CLI to add additional crews, you can efficiently build complex AI workflows that leverage multiple crews working together.
-
 ## Plot Flows
 
 Visualizing your AI workflows can provide valuable insights into the structure and execution paths of your flows. CrewAI offers a powerful visualization tool that allows you to generate interactive plots of your flows, making it easier to understand and optimize your AI workflows.
@@ -607,7 +685,7 @@ CrewAI provides two convenient methods to generate plots of your flows:
 
 If you are working directly with a flow instance, you can generate a plot by calling the `plot()` method on your flow object. This method will create an HTML file containing the interactive plot of your flow.
 
-```python
+```python Code
 # Assuming you have a flow instance
 flow.plot("my_flow_plot")
 ```
@@ -630,114 +708,13 @@ The generated plot will display nodes representing the tasks in your flow, with 
 
 By visualizing your flows, you can gain a clearer understanding of the workflow's structure, making it easier to debug, optimize, and communicate your AI processes to others.
 
+### Conclusion
 
-## Advanced
-
-In this section, we explore more complex use cases of CrewAI Flows, starting with a self-evaluation loop. This pattern is crucial for developing AI systems that can iteratively improve their outputs through feedback.
-
-### 1) Self-Evaluation Loop
-
-The self-evaluation loop is a powerful pattern that allows AI workflows to automatically assess and refine their outputs. This example demonstrates how to set up a flow that generates content, evaluates it, and iterates based on feedback until the desired quality is achieved.
-
-#### Overview
-
-The self-evaluation loop involves two main Crews:
-
-1. **ShakespeareanXPostCrew**: Generates a Shakespearean-style post on a given topic.
-2. **XPostReviewCrew**: Evaluates the generated post, providing feedback on its validity and quality.
-
-The process iterates until the post meets the criteria or a maximum retry limit is reached. This approach ensures high-quality outputs through iterative refinement.
-
-#### Importance
-
-This pattern is essential for building robust AI systems that can adapt and improve over time. By automating the evaluation and feedback loop, developers can ensure that their AI workflows produce reliable and high-quality results.
-
-#### Main Code Highlights
-
-Below is the `main.py` file for the self-evaluation loop flow:
-
-```python
-from typing import Optional
-from crewai.flow.flow import Flow, listen, router, start
-from pydantic import BaseModel
-from self_evaluation_loop_flow.crews.shakespeare_crew.shakespeare_crew import (
-    ShakespeareanXPostCrew,
-)
-from self_evaluation_loop_flow.crews.x_post_review_crew.x_post_review_crew import (
-    XPostReviewCrew,
-)
-
-class ShakespeareXPostFlowState(BaseModel):
-    x_post: str = ""
-    feedback: Optional[str] = None
-    valid: bool = False
-    retry_count: int = 0
-
-class ShakespeareXPostFlow(Flow[ShakespeareXPostFlowState]):
-
-    @start("retry")
-    def generate_shakespeare_x_post(self):
-        print("Generating Shakespearean X post")
-        topic = "Flying cars"
-        result = (
-            ShakespeareanXPostCrew()
-            .crew()
-            .kickoff(inputs={"topic": topic, "feedback": self.state.feedback})
-        )
-        print("X post generated", result.raw)
-        self.state.x_post = result.raw
-
-    @router(generate_shakespeare_x_post)
-    def evaluate_x_post(self):
-        if self.state.retry_count > 3:
-            return "max_retry_exceeded"
-        result = XPostReviewCrew().crew().kickoff(inputs={"x_post": self.state.x_post})
-        self.state.valid = result["valid"]
-        self.state.feedback = result["feedback"]
-        print("valid", self.state.valid)
-        print("feedback", self.state.feedback)
-        self.state.retry_count += 1
-        if self.state.valid:
-            return "complete"
-        return "retry"
-
-    @listen("complete")
-    def save_result(self):
-        print("X post is valid")
-        print("X post:", self.state.x_post)
-        with open("x_post.txt", "w") as file:
-            file.write(self.state.x_post)
-
-    @listen("max_retry_exceeded")
-    def max_retry_exceeded_exit(self):
-        print("Max retry count exceeded")
-        print("X post:", self.state.x_post)
-        print("Feedback:", self.state.feedback)
-
-def kickoff():
-    shakespeare_flow = ShakespeareXPostFlow()
-    shakespeare_flow.kickoff()
-
-def plot():
-    shakespeare_flow = ShakespeareXPostFlow()
-    shakespeare_flow.plot()
-
-if __name__ == "__main__":
-    kickoff()
-```
-
-#### Code Highlights
-
-- **Retry Mechanism**: The flow uses a retry mechanism to regenerate the post if it doesn't meet the criteria, up to a maximum of three retries.
-- **Feedback Loop**: Feedback from the `XPostReviewCrew` is used to refine the post iteratively.
-- **State Management**: The flow maintains state using a Pydantic model, ensuring type safety and clarity.
-
-For a complete example and further details, please refer to the [Self Evaluation Loop Flow repository](https://github.com/crewAIInc/crewAI-examples/tree/main/self_evaluation_loop_flow).
-
+Plotting your flows is a powerful feature of CrewAI that enhances your ability to design and manage complex AI workflows. Whether you choose to use the `plot()` method or the command line, generating plots will provide you with a visual representation of your workflows, aiding in both development and presentation.
 
 ## Next Steps
 
-If you're interested in exploring additional examples of flows, we have a variety of recommendations in our examples repository. Here are five specific flow examples, each showcasing unique use cases to help you match your current problem type to a specific example:
+If you're interested in exploring additional examples of flows, we have a variety of recommendations in our examples repository. Here are four specific flow examples, each showcasing unique use cases to help you match your current problem type to a specific example:
 
 1. **Email Auto Responder Flow**: This example demonstrates an infinite loop where a background job continually runs to automate email responses. It's a great use case for tasks that need to be performed repeatedly without manual intervention. [View Example](https://github.com/crewAIInc/crewAI-examples/tree/main/email_auto_responder_flow)
 
@@ -746,8 +723,6 @@ If you're interested in exploring additional examples of flows, we have a variet
 3. **Write a Book Flow**: This example excels at chaining multiple crews together, where the output of one crew is used by another. Specifically, one crew outlines an entire book, and another crew generates chapters based on the outline. Eventually, everything is connected to produce a complete book. This flow is perfect for complex, multi-step processes that require coordination between different tasks. [View Example](https://github.com/crewAIInc/crewAI-examples/tree/main/write_a_book_with_flows)
 
 4. **Meeting Assistant Flow**: This flow demonstrates how to broadcast one event to trigger multiple follow-up actions. For instance, after a meeting is completed, the flow can update a Trello board, send a Slack message, and save the results. It's a great example of handling multiple outcomes from a single event, making it ideal for comprehensive task management and notification systems. [View Example](https://github.com/crewAIInc/crewAI-examples/tree/main/meeting_assistant_flow)
-
-5. **Self Evaluation Loop Flow**: This flow demonstrates a self-evaluation loop where AI workflows automatically assess and refine their outputs through feedback. It involves generating content, evaluating it, and iterating until the desired quality is achieved. This pattern is crucial for developing robust AI systems that can adapt and improve over time. [View Example](https://github.com/crewAIInc/crewAI-examples/tree/main/self_evaluation_loop_flow)
 
 By exploring these examples, you can gain insights into how to leverage CrewAI Flows for various use cases, from automating repetitive tasks to managing complex, multi-step processes with dynamic decision-making and human feedback.
 

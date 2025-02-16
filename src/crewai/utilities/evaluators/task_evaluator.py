@@ -1,4 +1,3 @@
-import os
 from typing import List
 
 from pydantic import BaseModel, Field
@@ -6,26 +5,16 @@ from pydantic import BaseModel, Field
 from crewai.utilities import Converter
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
+agentops = None
+try:
+    from agentops import track_agent  # type: ignore
+except ImportError:
 
-def mock_agent_ops_provider():
-    def track_agent(*args, **kwargs):
+    def track_agent(name):
         def noop(f):
             return f
 
         return noop
-
-    return track_agent
-
-
-agentops = None
-
-if os.environ.get("AGENTOPS_API_KEY"):
-    try:
-        from agentops import track_agent
-    except ImportError:
-        track_agent = mock_agent_ops_provider()
-else:
-    track_agent = mock_agent_ops_provider()
 
 
 class Entity(BaseModel):
@@ -103,13 +92,34 @@ class TaskEvaluator:
         """
 
         output_training_data = training_data[agent_id]
-
         final_aggregated_data = ""
-        for _, data in output_training_data.items():
+
+        for iteration, data in output_training_data.items():
+            improved_output = data.get("improved_output")
+            initial_output = data.get("initial_output")
+            human_feedback = data.get("human_feedback")
+
+            if not all([improved_output, initial_output, human_feedback]):
+                missing_fields = [
+                    field
+                    for field in ["improved_output", "initial_output", "human_feedback"]
+                    if not data.get(field)
+                ]
+                error_msg = (
+                    f"Critical training data error: Missing fields ({', '.join(missing_fields)}) "
+                    f"for agent {agent_id} in iteration {iteration}.\n"
+                    "This indicates a broken training process. "
+                    "Cannot proceed with evaluation.\n"
+                    "Please check your training implementation."
+                )
+                raise ValueError(error_msg)
+
             final_aggregated_data += (
-                f"Initial Output:\n{data['initial_output']}\n\n"
-                f"Human Feedback:\n{data['human_feedback']}\n\n"
-                f"Improved Output:\n{data['improved_output']}\n\n"
+                f"Iteration: {iteration}\n"
+                f"Initial Output:\n{initial_output}\n\n"
+                f"Human Feedback:\n{human_feedback}\n\n"
+                f"Improved Output:\n{improved_output}\n\n"
+                "------------------------------------------------\n\n"
             )
 
         evaluation_query = (

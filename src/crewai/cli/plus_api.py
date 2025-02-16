@@ -1,8 +1,10 @@
-from typing import Optional
-import requests
 from os import getenv
-from crewai.cli.utils import get_crewai_version
+from typing import Optional
 from urllib.parse import urljoin
+
+import requests
+
+from crewai.cli.version import get_crewai_version
 
 
 class PlusAPI:

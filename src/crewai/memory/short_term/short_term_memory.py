@@ -1,4 +1,7 @@
 from typing import Any, Dict, Optional
+
+from pydantic import PrivateAttr
+
 from crewai.memory.memory import Memory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.memory.storage.rag_storage import RAGStorage
@@ -13,13 +16,15 @@ class ShortTermMemory(Memory):
     MemoryItem instances.
     """
 
-    def __init__(self, crew=None, embedder_config=None, storage=None):
-        if hasattr(crew, "memory_config") and crew.memory_config is not None:
-            self.memory_provider = crew.memory_config.get("provider")
-        else:
-            self.memory_provider = None
+    _memory_provider: Optional[str] = PrivateAttr()
 
-        if self.memory_provider == "mem0":
+    def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
+        if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
+            memory_provider = crew.memory_config.get("provider")
+        else:
+            memory_provider = None
+
+        if memory_provider == "mem0":
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
             except ImportError:
@@ -32,10 +37,14 @@ class ShortTermMemory(Memory):
                 storage
                 if storage
                 else RAGStorage(
-                    type="short_term", embedder_config=embedder_config, crew=crew
+                    type="short_term",
+                    embedder_config=embedder_config,
+                    crew=crew,
+                    path=path,
                 )
             )
-        super().__init__(storage)
+        super().__init__(storage=storage)
+        self._memory_provider = memory_provider
 
     def save(
         self,
@@ -44,7 +53,7 @@ class ShortTermMemory(Memory):
         agent: Optional[str] = None,
     ) -> None:
         item = ShortTermMemoryItem(data=value, metadata=metadata, agent=agent)
-        if self.memory_provider == "mem0":
+        if self._memory_provider == "mem0":
             item.data = f"Remember the following insights from Agent run: {item.data}"
 
         super().save(value=item.data, metadata=item.metadata, agent=item.agent)

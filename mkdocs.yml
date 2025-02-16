@@ -129,7 +129,6 @@ nav:
     - Processes: 'core-concepts/Processes.md'
     - Crews: 'core-concepts/Crews.md'
     - Collaboration: 'core-concepts/Collaboration.md'
-    - Pipeline: 'core-concepts/Pipeline.md'
     - Training: 'core-concepts/Training-Crew.md'
     - Memory: 'core-concepts/Memory.md'
     - Planning: 'core-concepts/Planning.md'
@@ -152,6 +151,8 @@ nav:
     - Conditional Tasks: 'how-to/Conditional-Tasks.md'
     - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
     - Agent Monitoring with LangTrace: 'how-to/Langtrace-Observability.md'
+    - Agent Monitoring with OpenLIT: 'how-to/openlit-Observability.md'
+    - Agent Monitoring with MLflow: 'how-to/mlflow-Observability.md'
   - Tools Docs:
     - Browserbase Web Loader: 'tools/BrowserbaseLoadTool.md'
     - Code Docs RAG Search: 'tools/CodeDocsSearchTool.md'

@@ -117,7 +117,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         published_handle = publish_response.json()["handle"]
         console.print(
-            f"Succesfully published {published_handle} ({project_version}).\nInstall it in other projects with crewai tool install {published_handle}",
+            f"Successfully published {published_handle} ({project_version}).\nInstall it in other projects with crewai tool install {published_handle}",
             style="bold green",
         )
 
@@ -138,7 +138,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         self._add_package(get_response.json())
 
-        console.print(f"Succesfully installed {handle}", style="bold green")
+        console.print(f"Successfully installed {handle}", style="bold green")
 
     def login(self):
         login_response = self.plus_api_client.login_to_tool_repository()

@@ -39,6 +39,7 @@ def create_folder_structure(name, parent_folder=None):
 
     folder_path.mkdir(parents=True)
     (folder_path / "tests").mkdir(exist_ok=True)
+    (folder_path / "knowledge").mkdir(exist_ok=True)
     if not parent_folder:
         (folder_path / "src" / folder_name).mkdir(parents=True)
         (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
@@ -52,7 +53,14 @@ def copy_template_files(folder_path, name, class_name, parent_folder):
     templates_dir = package_dir / "templates" / "crew"
 
     root_template_files = (
-        [".gitignore", "pyproject.toml", "README.md"] if not parent_folder else []
+        [
+            ".gitignore",
+            "pyproject.toml",
+            "README.md",
+            "knowledge/user_preference.txt",
+        ]
+        if not parent_folder
+        else []
     )
     tools_template_files = ["tools/custom_tool.py", "tools/__init__.py"]
     config_template_files = ["config/agents.yaml", "config/tasks.yaml"]
@@ -168,7 +176,9 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
     templates_dir = package_dir / "templates" / "crew"
 
     root_template_files = (
-        [".gitignore", "pyproject.toml", "README.md"] if not parent_folder else []
+        [".gitignore", "pyproject.toml", "README.md", "knowledge/user_preference.txt"]
+        if not parent_folder
+        else []
     )
     tools_template_files = ["tools/custom_tool.py", "tools/__init__.py"]
     config_template_files = ["config/agents.yaml", "config/tasks.yaml"]

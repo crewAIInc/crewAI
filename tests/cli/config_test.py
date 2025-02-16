@@ -1,9 +1,11 @@
-import unittest
 import json
-import tempfile
 import shutil
+import tempfile
+import unittest
 from pathlib import Path
+
 from crewai.cli.config import Settings
+
 
 class TestSettings(unittest.TestCase):
     def setUp(self):
@@ -20,8 +22,7 @@ class TestSettings(unittest.TestCase):
 
     def test_initialization_with_data(self):
         settings = Settings(
-            config_path=self.config_path,
-            tool_repository_username="user1"
+            config_path=self.config_path, tool_repository_username="user1"
         )
         self.assertEqual(settings.tool_repository_username, "user1")
         self.assertIsNone(settings.tool_repository_password)
@@ -37,22 +38,23 @@ class TestSettings(unittest.TestCase):
     def test_merge_file_and_input_data(self):
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         with self.config_path.open("w") as f:
-            json.dump({
-                "tool_repository_username": "file_user",
-                "tool_repository_password": "file_pass"
-            }, f)
+            json.dump(
+                {
+                    "tool_repository_username": "file_user",
+                    "tool_repository_password": "file_pass",
+                },
+                f,
+            )
 
         settings = Settings(
-            config_path=self.config_path,
-            tool_repository_username="new_user"
+            config_path=self.config_path, tool_repository_username="new_user"
         )
         self.assertEqual(settings.tool_repository_username, "new_user")
         self.assertEqual(settings.tool_repository_password, "file_pass")
 
     def test_dump_new_settings(self):
         settings = Settings(
-            config_path=self.config_path,
-            tool_repository_username="user1"
+            config_path=self.config_path, tool_repository_username="user1"
         )
         settings.dump()
 
@@ -67,8 +69,7 @@ class TestSettings(unittest.TestCase):
             json.dump({"existing_setting": "value"}, f)
 
         settings = Settings(
-            config_path=self.config_path,
-            tool_repository_username="user1"
+            config_path=self.config_path, tool_repository_username="user1"
         )
         settings.dump()
 
@@ -79,10 +80,7 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(saved_data["tool_repository_username"], "user1")
 
     def test_none_values(self):
-        settings = Settings(
-            config_path=self.config_path,
-            tool_repository_username=None
-        )
+        settings = Settings(config_path=self.config_path, tool_repository_username=None)
         settings.dump()
 
         with self.config_path.open("r") as f:

@@ -1,15 +1,20 @@
-from datetime import datetime, date
+"""JSON encoder for handling CrewAI specific types."""
+
 import json
-from uuid import UUID
-from pydantic import BaseModel
+from datetime import date, datetime
 from decimal import Decimal
+from enum import Enum
+from uuid import UUID
+
+from pydantic import BaseModel
 
 
 class CrewJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder for CrewAI objects and special types."""
     def default(self, obj):
         if isinstance(obj, BaseModel):
             return self._handle_pydantic_model(obj)
-        elif isinstance(obj, UUID) or isinstance(obj, Decimal):
+        elif isinstance(obj, UUID) or isinstance(obj, Decimal) or isinstance(obj, Enum):
             return str(obj)
 
         elif isinstance(obj, datetime) or isinstance(obj, date):

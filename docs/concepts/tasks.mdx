@@ -1,48 +1,179 @@
 ---
 title: Tasks
-description: Detailed guide on managing and creating tasks within the CrewAI framework, reflecting the latest codebase updates.
+description: Detailed guide on managing and creating tasks within the CrewAI framework.
 icon: list-check
 ---
 
 ## Overview of a Task
 
-In the CrewAI framework, a `Task` is a specific assignment completed by an `Agent`. 
+In the CrewAI framework, a `Task` is a specific assignment completed by an `Agent`.
 
-They provide all necessary details for execution, such as a description, the agent responsible, required tools, and more, facilitating a wide range of action complexities.
-
+Tasks provide all necessary details for execution, such as a description, the agent responsible, required tools, and more, facilitating a wide range of action complexities.
 
 Tasks within CrewAI can be collaborative, requiring multiple agents to work together. This is managed through the task properties and orchestrated by the Crew's process, enhancing teamwork and efficiency.
+
+### Task Execution Flow
+
+Tasks can be executed in two ways:
+- **Sequential**: Tasks are executed in the order they are defined
+- **Hierarchical**: Tasks are assigned to agents based on their roles and expertise
+
+The execution flow is defined when creating the crew:
+```python Code
+crew = Crew(
+    agents=[agent1, agent2],
+    tasks=[task1, task2],
+    process=Process.sequential  # or Process.hierarchical
+)
+```
 
 ## Task Attributes
 
 | Attribute                        | Parameters        | Type                          | Description                                                                                                          |
 | :------------------------------- | :---------------- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------- |
 | **Description**                  | `description`     | `str`                         | A clear, concise statement of what the task entails.                                                                 |
-| **Agent**                        | `agent`           | `Optional[BaseAgent]`         | The agent responsible for the task, assigned either directly or by the crew's process.                               |
 | **Expected Output**              | `expected_output` | `str`                         | A detailed description of what the task's completion looks like.                                                     |
-| **Tools** _(optional)_           | `tools`           | `Optional[List[Any]]`         | The functions or capabilities the agent can utilize to perform the task. Defaults to an empty list.                  |
-| **Async Execution** _(optional)_ | `async_execution` | `Optional[bool]`              | If set, the task executes asynchronously, allowing progression without waiting for completion. Defaults to False.    |
-| **Context** _(optional)_         | `context`         | `Optional[List["Task"]]`      | Specifies tasks whose outputs are used as context for this task.                                                     |
-| **Config** _(optional)_          | `config`          | `Optional[Dict[str, Any]]`    | Additional configuration details for the agent executing the task, allowing further customization. Defaults to None. |
-| **Output JSON** _(optional)_     | `output_json`     | `Optional[Type[BaseModel]]`   | Outputs a JSON object, requiring an OpenAI client. Only one output format can be set.                                |
-| **Output Pydantic** _(optional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`   | Outputs a Pydantic model object, requiring an OpenAI client. Only one output format can be set.                      |
-| **Output File** _(optional)_     | `output_file`     | `Optional[str]`               | Saves the task output to a file. If used with `Output JSON` or `Output Pydantic`, specifies how the output is saved. |
-| **Output** _(optional)_          | `output`          | `Optional[TaskOutput]`        | An instance of `TaskOutput`, containing the raw, JSON, and Pydantic output plus additional details.                  |
-| **Callback** _(optional)_        | `callback`        | `Optional[Any]`               | A callable that is executed with the task's output upon completion.                                                  |
-| **Human Input** _(optional)_     | `human_input`     | `Optional[bool]`              | Indicates if the task should involve human review at the end, useful for tasks needing human oversight. Defaults to False.|
-| **Converter Class** _(optional)_ | `converter_cls`   | `Optional[Type[Converter]]`   | A converter class used to export structured output. Defaults to None.                                                |
+| **Name** _(optional)_            | `name`            | `Optional[str]`               | A name identifier for the task.                                                                                      |
+| **Agent** _(optional)_           | `agent`           | `Optional[BaseAgent]`         | The agent responsible for executing the task.                                                                        |
+| **Tools** _(optional)_           | `tools`           | `List[BaseTool]`              | The tools/resources the agent is limited to use for this task.                                                       |
+| **Context** _(optional)_         | `context`         | `Optional[List["Task"]]`      | Other tasks whose outputs will be used as context for this task.                                                     |
+| **Async Execution** _(optional)_ | `async_execution` | `Optional[bool]`              | Whether the task should be executed asynchronously. Defaults to False.                                               |
+| **Human Input** _(optional)_     | `human_input`     | `Optional[bool]`              | Whether the task should have a human review the final answer of the agent. Defaults to False.                        |
+| **Config** _(optional)_          | `config`          | `Optional[Dict[str, Any]]`    | Task-specific configuration parameters.                                                                              |
+| **Output File** _(optional)_     | `output_file`     | `Optional[str]`               | File path for storing the task output.                                                                               |
+| **Output JSON** _(optional)_     | `output_json`     | `Optional[Type[BaseModel]]`   | A Pydantic model to structure the JSON output.                                                                       |
+| **Output Pydantic** _(optional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`   | A Pydantic model for task output.                                                                                    |
+| **Callback** _(optional)_        | `callback`        | `Optional[Any]`               | Function/object to be executed after task completion.                                                                |
 
-## Creating a Task
+## Creating Tasks
 
-Creating a task involves defining its scope, responsible agent, and any additional attributes for flexibility:
+There are two ways to create tasks in CrewAI: using **YAML configuration (recommended)** or defining them **directly in code**.
 
+### YAML Configuration (Recommended)
+
+Using YAML configuration provides a cleaner, more maintainable way to define tasks. We strongly recommend using this approach to define tasks in your CrewAI projects.
+
+After creating your CrewAI project as outlined in the [Installation](/installation) section, navigate to the `src/latest_ai_development/config/tasks.yaml` file and modify the template to match your specific task requirements.
+
+<Note>
+Variables in your YAML files (like `{topic}`) will be replaced with values from your inputs when running the crew:
 ```python Code
+crew.kickoff(inputs={'topic': 'AI Agents'})
+```
+</Note>
+
+Here's an example of how to configure tasks using YAML:
+
+```yaml tasks.yaml
+research_task:
+  description: >
+    Conduct a thorough research about {topic}
+    Make sure you find any interesting and relevant information given
+    the current year is 2025.
+  expected_output: >
+    A list with 10 bullet points of the most relevant information about {topic}
+  agent: researcher
+
+reporting_task:
+  description: >
+    Review the context you got and expand each topic into a full section for a report.
+    Make sure the report is detailed and contains any and all relevant information.
+  expected_output: >
+    A fully fledge reports with the mains topics, each with a full section of information.
+    Formatted as markdown without '```'
+  agent: reporting_analyst
+  output_file: report.md
+```
+
+To use this YAML configuration in your code, create a crew class that inherits from `CrewBase`:
+
+```python crew.py
+# src/latest_ai_development/crew.py
+
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai_tools import SerperDevTool
+
+@CrewBase
+class LatestAiDevelopmentCrew():
+  """LatestAiDevelopment crew"""
+
+  @agent
+  def researcher(self) -> Agent:
+    return Agent(
+      config=self.agents_config['researcher'],
+      verbose=True,
+      tools=[SerperDevTool()]
+    )
+
+  @agent
+  def reporting_analyst(self) -> Agent:
+    return Agent(
+      config=self.agents_config['reporting_analyst'],
+      verbose=True
+    )
+
+  @task
+  def research_task(self) -> Task:
+    return Task(
+      config=self.tasks_config['research_task']
+    )
+
+  @task
+  def reporting_task(self) -> Task:
+    return Task(
+      config=self.tasks_config['reporting_task']
+    )
+
+  @crew
+  def crew(self) -> Crew:
+    return Crew(
+      agents=[
+        self.researcher(),
+        self.reporting_analyst()
+      ],
+      tasks=[
+        self.research_task(),
+        self.reporting_task()
+      ],
+      process=Process.sequential
+    )
+```
+
+<Note>
+The names you use in your YAML files (`agents.yaml` and `tasks.yaml`) should match the method names in your Python code.
+</Note>
+
+### Direct Code Definition (Alternative)
+
+Alternatively, you can define tasks directly in your code without using YAML configuration:
+
+```python task.py
 from crewai import Task
 
-task = Task(
-    description='Find and summarize the latest and most relevant news on AI',
-    agent=sales_agent,
-    expected_output='A bullet list summary of the top 5 most important AI news',
+research_task = Task(
+    description="""
+        Conduct a thorough research about AI Agents.
+        Make sure you find any interesting and relevant information given
+        the current year is 2025.
+    """,
+    expected_output="""
+        A list with 10 bullet points of the most relevant information about AI Agents
+    """,
+    agent=researcher
+)
+
+reporting_task = Task(
+    description="""
+        Review the context you got and expand each topic into a full section for a report.
+        Make sure the report is detailed and contains any and all relevant information.
+    """,
+    expected_output="""
+        A fully fledge reports with the mains topics, each with a full section of information.
+        Formatted as markdown without '```'
+    """,
+    agent=reporting_analyst,
+    output_file="report.md"
 )
 ```
 
@@ -51,6 +182,8 @@ task = Task(
 </Tip>
 
 ## Task Output
+
+Understanding task outputs is crucial for building effective AI workflows. CrewAI provides a structured way to handle task results through the `TaskOutput` class, which supports multiple output formats and can be easily passed between tasks.
 
 The output of a task in CrewAI framework is encapsulated within the `TaskOutput` class. This class provides a structured way to access results of a task, including various formats such as raw output, JSON, and Pydantic models.
 
@@ -112,6 +245,326 @@ if task_output.pydantic:
     print(f"Pydantic Output: {task_output.pydantic}")
 ```
 
+## Task Dependencies and Context
+
+Tasks can depend on the output of other tasks using the `context` attribute. For example:
+
+```python Code
+research_task = Task(
+    description="Research the latest developments in AI",
+    expected_output="A list of recent AI developments",
+    agent=researcher
+)
+
+analysis_task = Task(
+    description="Analyze the research findings and identify key trends",
+    expected_output="Analysis report of AI trends",
+    agent=analyst,
+    context=[research_task]  # This task will wait for research_task to complete
+)
+```
+
+## Task Guardrails
+
+Task guardrails provide a way to validate and transform task outputs before they
+are passed to the next task. This feature helps ensure data quality and provides
+feedback to agents when their output doesn't meet specific criteria.
+
+### Using Task Guardrails
+
+To add a guardrail to a task, provide a validation function through the `guardrail` parameter:
+
+```python Code
+from typing import Tuple, Union, Dict, Any
+
+def validate_blog_content(result: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+    """Validate blog content meets requirements."""
+    try:
+        # Check word count
+        word_count = len(result.split())
+        if word_count > 200:
+            return (False, {
+                "error": "Blog content exceeds 200 words",
+                "code": "WORD_COUNT_ERROR",
+                "context": {"word_count": word_count}
+            })
+
+        # Additional validation logic here
+        return (True, result.strip())
+    except Exception as e:
+        return (False, {
+            "error": "Unexpected error during validation",
+            "code": "SYSTEM_ERROR"
+        })
+
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail=validate_blog_content  # Add the guardrail function
+)
+```
+
+### Guardrail Function Requirements
+
+1. **Function Signature**:
+   - Must accept exactly one parameter (the task output)
+   - Should return a tuple of `(bool, Any)`
+   - Type hints are recommended but optional
+
+2. **Return Values**:
+   - Success: Return `(True, validated_result)`
+   - Failure: Return `(False, error_details)`
+
+### Error Handling Best Practices
+
+1. **Structured Error Responses**:
+```python Code
+def validate_with_context(result: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+    try:
+        # Main validation logic
+        validated_data = perform_validation(result)
+        return (True, validated_data)
+    except ValidationError as e:
+        return (False, {
+            "error": str(e),
+            "code": "VALIDATION_ERROR",
+            "context": {"input": result}
+        })
+    except Exception as e:
+        return (False, {
+            "error": "Unexpected error",
+            "code": "SYSTEM_ERROR"
+        })
+```
+
+2. **Error Categories**:
+   - Use specific error codes
+   - Include relevant context
+   - Provide actionable feedback
+
+3. **Validation Chain**:
+```python Code
+from typing import Any, Dict, List, Tuple, Union
+
+def complex_validation(result: str) -> Tuple[bool, Union[str, Dict[str, Any]]]:
+    """Chain multiple validation steps."""
+    # Step 1: Basic validation
+    if not result:
+        return (False, {"error": "Empty result", "code": "EMPTY_INPUT"})
+
+    # Step 2: Content validation
+    try:
+        validated = validate_content(result)
+        if not validated:
+            return (False, {"error": "Invalid content", "code": "CONTENT_ERROR"})
+
+        # Step 3: Format validation
+        formatted = format_output(validated)
+        return (True, formatted)
+    except Exception as e:
+        return (False, {
+            "error": str(e),
+            "code": "VALIDATION_ERROR",
+            "context": {"step": "content_validation"}
+        })
+```
+
+### Handling Guardrail Results
+
+When a guardrail returns `(False, error)`:
+1. The error is sent back to the agent
+2. The agent attempts to fix the issue
+3. The process repeats until:
+   - The guardrail returns `(True, result)`
+   - Maximum retries are reached
+
+Example with retry handling:
+```python Code
+from typing import Optional, Tuple, Union
+
+def validate_json_output(result: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+    """Validate and parse JSON output."""
+    try:
+        # Try to parse as JSON
+        data = json.loads(result)
+        return (True, data)
+    except json.JSONDecodeError as e:
+        return (False, {
+            "error": "Invalid JSON format",
+            "code": "JSON_ERROR",
+            "context": {"line": e.lineno, "column": e.colno}
+        })
+
+task = Task(
+    description="Generate a JSON report",
+    expected_output="A valid JSON object",
+    agent=analyst,
+    guardrail=validate_json_output,
+    max_retries=3  # Limit retry attempts
+)
+```
+
+## Getting Structured Consistent Outputs from Tasks
+
+<Note>
+It's also important to note that the output of the final task of a crew becomes the final output of the actual crew itself.
+</Note>
+
+### Using `output_pydantic`
+The `output_pydantic` property allows you to define a Pydantic model that the task output should conform to. This ensures that the output is not only structured but also validated according to the Pydantic model.
+
+Here’s an example demonstrating how to use output_pydantic:
+
+```python Code
+import json
+
+from crewai import Agent, Crew, Process, Task
+from pydantic import BaseModel
+
+
+class Blog(BaseModel):
+    title: str
+    content: str
+
+
+blog_agent = Agent(
+    role="Blog Content Generator Agent",
+    goal="Generate a blog title and content",
+    backstory="""You are an expert content creator, skilled in crafting engaging and informative blog posts.""",
+    verbose=False,
+    allow_delegation=False,
+    llm="gpt-4o",
+)
+
+task1 = Task(
+    description="""Create a blog title and content on a given topic. Make sure the content is under 200 words.""",
+    expected_output="A compelling blog title and well-written content.",
+    agent=blog_agent,
+    output_pydantic=Blog,
+)
+
+# Instantiate your crew with a sequential process
+crew = Crew(
+    agents=[blog_agent],
+    tasks=[task1],
+    verbose=True,
+    process=Process.sequential,
+)
+
+result = crew.kickoff()
+
+# Option 1: Accessing Properties Using Dictionary-Style Indexing
+print("Accessing Properties - Option 1")
+title = result["title"]
+content = result["content"]
+print("Title:", title)
+print("Content:", content)
+
+# Option 2: Accessing Properties Directly from the Pydantic Model
+print("Accessing Properties - Option 2")
+title = result.pydantic.title
+content = result.pydantic.content
+print("Title:", title)
+print("Content:", content)
+
+# Option 3: Accessing Properties Using the to_dict() Method
+print("Accessing Properties - Option 3")
+output_dict = result.to_dict()
+title = output_dict["title"]
+content = output_dict["content"]
+print("Title:", title)
+print("Content:", content)
+
+# Option 4: Printing the Entire Blog Object
+print("Accessing Properties - Option 5")
+print("Blog:", result)
+
+```
+In this example:
+* A Pydantic model Blog is defined with title and content fields.
+* The task task1 uses the output_pydantic property to specify that its output should conform to the Blog model.
+* After executing the crew, you can access the structured output in multiple ways as shown.
+
+#### Explanation of Accessing the Output
+1. Dictionary-Style Indexing: You can directly access the fields using result["field_name"]. This works because the CrewOutput class implements the __getitem__ method.
+2. Directly from Pydantic Model: Access the attributes directly from the result.pydantic object.
+3. Using to_dict() Method: Convert the output to a dictionary and access the fields.
+4. Printing the Entire Object: Simply print the result object to see the structured output.
+
+### Using `output_json`
+The `output_json` property allows you to define the expected output in JSON format. This ensures that the task's output is a valid JSON structure that can be easily parsed and used in your application.
+
+Here’s an example demonstrating how to use `output_json`:
+
+```python Code
+import json
+
+from crewai import Agent, Crew, Process, Task
+from pydantic import BaseModel
+
+
+# Define the Pydantic model for the blog
+class Blog(BaseModel):
+    title: str
+    content: str
+
+
+# Define the agent
+blog_agent = Agent(
+    role="Blog Content Generator Agent",
+    goal="Generate a blog title and content",
+    backstory="""You are an expert content creator, skilled in crafting engaging and informative blog posts.""",
+    verbose=False,
+    allow_delegation=False,
+    llm="gpt-4o",
+)
+
+# Define the task with output_json set to the Blog model
+task1 = Task(
+    description="""Create a blog title and content on a given topic. Make sure the content is under 200 words.""",
+    expected_output="A JSON object with 'title' and 'content' fields.",
+    agent=blog_agent,
+    output_json=Blog,
+)
+
+# Instantiate the crew with a sequential process
+crew = Crew(
+    agents=[blog_agent],
+    tasks=[task1],
+    verbose=True,
+    process=Process.sequential,
+)
+
+# Kickoff the crew to execute the task
+result = crew.kickoff()
+
+# Option 1: Accessing Properties Using Dictionary-Style Indexing
+print("Accessing Properties - Option 1")
+title = result["title"]
+content = result["content"]
+print("Title:", title)
+print("Content:", content)
+
+# Option 2: Printing the Entire Blog Object
+print("Accessing Properties - Option 2")
+print("Blog:", result)
+```
+
+In this example:
+* A Pydantic model Blog is defined with title and content fields, which is used to specify the structure of the JSON output.
+* The task task1 uses the output_json property to indicate that it expects a JSON output conforming to the Blog model.
+* After executing the crew, you can access the structured JSON output in two ways as shown.
+
+#### Explanation of Accessing the Output
+
+1. Accessing Properties Using Dictionary-Style Indexing: You can access the fields directly using result["field_name"]. This is possible because the CrewOutput class implements the __getitem__ method, allowing you to treat the output like a dictionary. In this option, we're retrieving the title and content from the result.
+2. Printing the Entire Blog Object: By printing result, you get the string representation of the CrewOutput object. Since the __str__ method is implemented to return the JSON output, this will display the entire output as a formatted string representing the Blog object.
+
+---
+
+By using output_pydantic or output_json, you ensure that your tasks produce outputs in a consistent and structured format, making it easier to process and utilize the data within your application or across multiple tasks.
+
 ## Integrating Tools with Tasks
 
 Leverage tools from the [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools) for enhanced task performance and agent interaction.
@@ -167,16 +620,16 @@ This is useful when you have a task that depends on the output of another task t
 # ...
 
 research_ai_task = Task(
-    description='Find and summarize the latest AI news',
-    expected_output='A bullet list summary of the top 5 most important AI news',
+    description="Research the latest developments in AI",
+    expected_output="A list of recent AI developments",
     async_execution=True,
     agent=research_agent,
     tools=[search_tool]
 )
 
 research_ops_task = Task(
-    description='Find and summarize the latest AI Ops news',
-    expected_output='A bullet list summary of the top 5 most important AI Ops news',
+    description="Research the latest developments in AI Ops",
+    expected_output="A list of recent AI Ops developments",
     async_execution=True,
     agent=research_agent,
     tools=[search_tool]
@@ -184,7 +637,7 @@ research_ops_task = Task(
 
 write_blog_task = Task(
     description="Write a full blog post about the importance of AI and its latest news",
-    expected_output='Full blog post that is 4 paragraphs long',
+    expected_output="Full blog post that is 4 paragraphs long",
     agent=writer_agent,
     context=[research_ai_task, research_ops_task]
 )
@@ -296,6 +749,114 @@ While creating and executing tasks, certain validation mechanisms are in place t
 
 These validations help in maintaining the consistency and reliability of task executions within the crewAI framework.
 
+## Task Guardrails
+
+Task guardrails provide a powerful way to validate, transform, or filter task outputs before they are passed to the next task. Guardrails are optional functions that execute before the next task starts, allowing you to ensure that task outputs meet specific requirements or formats.
+
+### Basic Usage
+
+```python Code
+from typing import Tuple, Union
+from crewai import Task
+
+def validate_json_output(result: str) -> Tuple[bool, Union[dict, str]]:
+    """Validate that the output is valid JSON."""
+    try:
+        json_data = json.loads(result)
+        return (True, json_data)
+    except json.JSONDecodeError:
+        return (False, "Output must be valid JSON")
+
+task = Task(
+    description="Generate JSON data",
+    expected_output="Valid JSON object",
+    guardrail=validate_json_output
+)
+```
+
+### How Guardrails Work
+
+1. **Optional Attribute**: Guardrails are an optional attribute at the task level, allowing you to add validation only where needed.
+2. **Execution Timing**: The guardrail function is executed before the next task starts, ensuring valid data flow between tasks.
+3. **Return Format**: Guardrails must return a tuple of `(success, data)`:
+   - If `success` is `True`, `data` is the validated/transformed result
+   - If `success` is `False`, `data` is the error message
+4. **Result Routing**:
+   - On success (`True`), the result is automatically passed to the next task
+   - On failure (`False`), the error is sent back to the agent to generate a new answer
+
+### Common Use Cases
+
+#### Data Format Validation
+```python Code
+def validate_email_format(result: str) -> Tuple[bool, Union[str, str]]:
+    """Ensure the output contains a valid email address."""
+    import re
+    email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    if re.match(email_pattern, result.strip()):
+        return (True, result.strip())
+    return (False, "Output must be a valid email address")
+```
+
+#### Content Filtering
+```python Code
+def filter_sensitive_info(result: str) -> Tuple[bool, Union[str, str]]:
+    """Remove or validate sensitive information."""
+    sensitive_patterns = ['SSN:', 'password:', 'secret:']
+    for pattern in sensitive_patterns:
+        if pattern.lower() in result.lower():
+            return (False, f"Output contains sensitive information ({pattern})")
+    return (True, result)
+```
+
+#### Data Transformation
+```python Code
+def normalize_phone_number(result: str) -> Tuple[bool, Union[str, str]]:
+    """Ensure phone numbers are in a consistent format."""
+    import re
+    digits = re.sub(r'\D', '', result)
+    if len(digits) == 10:
+        formatted = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        return (True, formatted)
+    return (False, "Output must be a 10-digit phone number")
+```
+
+### Advanced Features
+
+#### Chaining Multiple Validations
+```python Code
+def chain_validations(*validators):
+    """Chain multiple validators together."""
+    def combined_validator(result):
+        for validator in validators:
+            success, data = validator(result)
+            if not success:
+                return (False, data)
+            result = data
+        return (True, result)
+    return combined_validator
+
+# Usage
+task = Task(
+    description="Get user contact info",
+    expected_output="Email and phone",
+    guardrail=chain_validations(
+        validate_email_format,
+        filter_sensitive_info
+    )
+)
+```
+
+#### Custom Retry Logic
+```python Code
+task = Task(
+    description="Generate data",
+    expected_output="Valid data",
+    guardrail=validate_data,
+    max_retries=5  # Override default retry limit
+)
+```
+
 ## Creating Directories when Saving Files
 
 You can now specify if a task should create directories when saving its output to a file. This is particularly useful for organizing outputs and ensuring that file paths are correctly structured.
@@ -317,7 +878,7 @@ save_output_task = Task(
 
 ## Conclusion
 
-Tasks are the driving force behind the actions of agents in CrewAI. 
-By properly defining tasks and their outcomes, you set the stage for your AI agents to work effectively, either independently or as a collaborative unit. 
-Equipping tasks with appropriate tools, understanding the execution process, and following robust validation practices are crucial for maximizing CrewAI's potential, 
+Tasks are the driving force behind the actions of agents in CrewAI.
+By properly defining tasks and their outcomes, you set the stage for your AI agents to work effectively, either independently or as a collaborative unit.
+Equipping tasks with appropriate tools, understanding the execution process, and following robust validation practices are crucial for maximizing CrewAI's potential,
 ensuring agents are effectively prepared for their assignments and that tasks are executed as intended.

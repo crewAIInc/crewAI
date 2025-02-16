@@ -4,12 +4,13 @@ import logging
 import os
 import shutil
 import uuid
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api import ClientAPI
-from chromadb.api.types import validate_embedding_function
+
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
+from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
 
 
@@ -38,146 +39,25 @@ class RAGStorage(BaseRAGStorage):
 
     app: ClientAPI | None = None
 
-    def __init__(self, type, allow_reset=True, embedder_config=None, crew=None):
+    def __init__(
+        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
+    ):
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         self.agents = agents
+        self.storage_file_name = self._build_storage_file_name(type, agents)
 
         self.type = type
 
         self.allow_reset = allow_reset
+        self.path = path
         self._initialize_app()
 
     def _set_embedder_config(self):
-        if self.embedder_config is None:
-            self.embedder_config = self._create_default_embedding_function()
-
-        if isinstance(self.embedder_config, dict):
-            provider = self.embedder_config.get("provider")
-            config = self.embedder_config.get("config", {})
-            model_name = config.get("model")
-            if provider == "openai":
-                from chromadb.utils.embedding_functions.openai_embedding_function import (
-                    OpenAIEmbeddingFunction,
-                )
-
-                self.embedder_config = OpenAIEmbeddingFunction(
-                    api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
-                    model_name=model_name,
-                )
-            elif provider == "azure":
-                from chromadb.utils.embedding_functions.openai_embedding_function import (
-                    OpenAIEmbeddingFunction,
-                )
-
-                self.embedder_config = OpenAIEmbeddingFunction(
-                    api_key=config.get("api_key"),
-                    api_base=config.get("api_base"),
-                    api_type=config.get("api_type", "azure"),
-                    api_version=config.get("api_version"),
-                    model_name=model_name,
-                )
-            elif provider == "ollama":
-                from chromadb.utils.embedding_functions.ollama_embedding_function import (
-                    OllamaEmbeddingFunction,
-                )
-
-                self.embedder_config = OllamaEmbeddingFunction(
-                    url=config.get("url", "http://localhost:11434/api/embeddings"),
-                    model_name=model_name,
-                )
-            elif provider == "vertexai":
-                from chromadb.utils.embedding_functions.google_embedding_function import (
-                    GoogleVertexEmbeddingFunction,
-                )
-
-                self.embedder_config = GoogleVertexEmbeddingFunction(
-                    model_name=model_name,
-                    api_key=config.get("api_key"),
-                )
-            elif provider == "google":
-                from chromadb.utils.embedding_functions.google_embedding_function import (
-                    GoogleGenerativeAiEmbeddingFunction,
-                )
-
-                self.embedder_config = GoogleGenerativeAiEmbeddingFunction(
-                    model_name=model_name,
-                    api_key=config.get("api_key"),
-                )
-            elif provider == "cohere":
-                from chromadb.utils.embedding_functions.cohere_embedding_function import (
-                    CohereEmbeddingFunction,
-                )
-
-                self.embedder_config = CohereEmbeddingFunction(
-                    model_name=model_name,
-                    api_key=config.get("api_key"),
-                )
-            elif provider == "bedrock":
-                from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
-                    AmazonBedrockEmbeddingFunction,
-                )
-
-                self.embedder_config = AmazonBedrockEmbeddingFunction(
-                    session=config.get("session"),
-                )
-            elif provider == "huggingface":
-                from chromadb.utils.embedding_functions.huggingface_embedding_function import (
-                    HuggingFaceEmbeddingServer,
-                )
-
-                self.embedder_config = HuggingFaceEmbeddingServer(
-                    url=config.get("api_url"),
-                )
-            elif provider == "watson":
-                try:
-                    import ibm_watsonx_ai.foundation_models as watson_models
-                    from ibm_watsonx_ai import Credentials
-                    from ibm_watsonx_ai.metanames import (
-                        EmbedTextParamsMetaNames as EmbedParams,
-                    )
-                except ImportError as e:
-                    raise ImportError(
-                        "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
-                    ) from e
-
-                class WatsonEmbeddingFunction(EmbeddingFunction):
-                    def __call__(self, input: Documents) -> Embeddings:
-                        if isinstance(input, str):
-                            input = [input]
-
-                        embed_params = {
-                            EmbedParams.TRUNCATE_INPUT_TOKENS: 3,
-                            EmbedParams.RETURN_OPTIONS: {"input_text": True},
-                        }
-
-                        embedding = watson_models.Embeddings(
-                            model_id=config.get("model"),
-                            params=embed_params,
-                            credentials=Credentials(
-                                api_key=config.get("api_key"), url=config.get("api_url")
-                            ),
-                            project_id=config.get("project_id"),
-                        )
-
-                        try:
-                            embeddings = embedding.embed_documents(input)
-                            return cast(Embeddings, embeddings)
-
-                        except Exception as e:
-                            print("Error during Watson embedding:", e)
-                            raise e
-
-                self.embedder_config = WatsonEmbeddingFunction()
-            else:
-                raise Exception(
-                    f"Unsupported embedding provider: {provider}, supported providers: [openai, azure, ollama, vertexai, google, cohere, huggingface, watson]"
-                )
-        else:
-            validate_embedding_function(self.embedder_config)
-            self.embedder_config = self.embedder_config
+        configurator = EmbeddingConfigurator()
+        self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
         import chromadb
@@ -185,7 +65,7 @@ class RAGStorage(BaseRAGStorage):
 
         self._set_embedder_config()
         chroma_client = chromadb.PersistentClient(
-            path=f"{db_storage_path()}/{self.type}/{self.agents}",
+            path=self.path if self.path else self.storage_file_name,
             settings=Settings(allow_reset=self.allow_reset),
         )
 
@@ -205,6 +85,20 @@ class RAGStorage(BaseRAGStorage):
         Sanitizes agent roles to ensure valid directory names.
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+
+    def _build_storage_file_name(self, type: str, file_name: str) -> str:
+        """
+        Ensures file name does not exceed max allowed by OS
+        """
+        base_path = f"{db_storage_path()}/{type}"
+
+        if len(file_name) > MAX_FILE_NAME_LENGTH:
+            logging.warning(
+                f"Trimming file name from {len(file_name)} to {MAX_FILE_NAME_LENGTH} characters."
+            )
+            file_name = file_name[:MAX_FILE_NAME_LENGTH]
+
+        return f"{base_path}/{file_name}"
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
@@ -256,9 +150,11 @@ class RAGStorage(BaseRAGStorage):
 
     def reset(self) -> None:
         try:
-            shutil.rmtree(f"{db_storage_path()}/{self.type}")
             if self.app:
                 self.app.reset()
+                shutil.rmtree(f"{db_storage_path()}/{self.type}")
+                self.app = None
+                self.collection = None
         except Exception as e:
             if "attempt to write a readonly database" in str(e):
                 # Ignore this specific error

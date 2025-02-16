@@ -3,7 +3,8 @@ import subprocess
 import click
 from packaging import version
 
-from crewai.cli.utils import get_crewai_version, read_toml
+from crewai.cli.utils import read_toml
+from crewai.cli.version import get_crewai_version
 
 
 def run_crew() -> None:

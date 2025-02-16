@@ -5,6 +5,8 @@ from typing import Any, Dict
 import requests
 from rich.console import Console
 
+from crewai.cli.tools.main import ToolCommand
+
 from .constants import AUTH0_AUDIENCE, AUTH0_CLIENT_ID, AUTH0_DOMAIN
 from .utils import TokenManager, validate_token
 
@@ -63,7 +65,24 @@ class AuthenticationCommand:
                 validate_token(token_data["id_token"])
                 expires_in = 360000  # Token expiration time in seconds
                 self.token_manager.save_tokens(token_data["access_token"], expires_in)
-                console.print("\nWelcome to CrewAI+ !!", style="green")
+
+                try:
+                    ToolCommand().login()
+                except Exception:
+                    console.print(
+                        "\n[bold yellow]Warning:[/bold yellow] Authentication with the Tool Repository failed.",
+                        style="yellow",
+                    )
+                    console.print(
+                        "Other features will work normally, but you may experience limitations "
+                        "with downloading and publishing tools."
+                        "\nRun [bold]crewai login[/bold] to try logging in again.\n",
+                        style="yellow",
+                    )
+
+                console.print(
+                    "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"
+                )
                 return
 
             if token_data["error"] not in ("authorization_pending", "slow_down"):

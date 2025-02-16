@@ -1,6 +1,7 @@
 from unittest import mock
 
 import pytest
+
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task
@@ -11,7 +12,7 @@ from crewai.utilities.evaluators.crew_evaluator_handler import (
 )
 
 
-class TestCrewEvaluator:
+class InternalCrewEvaluator:
     @pytest.fixture
     def crew_planner(self):
         agent = Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1")

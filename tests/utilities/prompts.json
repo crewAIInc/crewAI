@@ -26,7 +26,7 @@
   },
   "errors": {
     "force_final_answer": "Lorem ipsum dolor sit amet",
-    "agent_tool_unexsiting_coworker": "Lorem ipsum dolor sit amet",
+    "agent_tool_unexisting_coworker": "Lorem ipsum dolor sit amet",
     "task_repeated_usage": "Lorem ipsum dolor sit amet",
     "tool_usage_error": "Lorem ipsum dolor sit amet",
     "tool_arguments_error": "Lorem ipsum dolor sit amet",
