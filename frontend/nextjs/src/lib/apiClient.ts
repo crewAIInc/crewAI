@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
+import { mockCrews, mockTasks, simulateApiDelay } from "./mockData";
 import {
   Agent,
   ApiErrorResponse,
@@ -20,6 +21,7 @@ const WS_BASE_URL =
   process.env.NEXT_PUBLIC_WS_BASE_URL || "ws://localhost:8000";
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
+const USE_MOCK_DATA = true; // Toggle this to switch between mock and real API
 
 // Custom error class for API errors
 export class ApiError extends Error {
@@ -80,6 +82,40 @@ const fetchWithOptions = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
+  if (USE_MOCK_DATA) {
+    await simulateApiDelay();
+    switch (endpoint) {
+      case "/crews":
+        return options.method === "POST"
+          ? handleMockCreateCrew(JSON.parse(options.body as string))
+          : (mockCrews as unknown as T);
+      case "/tasks":
+        return options.method === "POST"
+          ? handleMockCreateTask(JSON.parse(options.body as string))
+          : (mockTasks as unknown as T);
+      default:
+        if (endpoint.startsWith("/crews/") && endpoint.includes("/tasks")) {
+          const crewId = endpoint.split("/")[2];
+          return mockTasks.filter(
+            (task) => task.crew_id === crewId
+          ) as unknown as T;
+        }
+        if (endpoint.startsWith("/crews/")) {
+          const crewId = endpoint.split("/")[2];
+          const crew = mockCrews.find((c) => c.id === crewId);
+          if (!crew) throw new ApiError("Crew not found", 404);
+          return crew as unknown as T;
+        }
+        if (endpoint.startsWith("/tasks/")) {
+          const taskId = endpoint.split("/")[2];
+          const task = mockTasks.find((t) => t.id === taskId);
+          if (!task) throw new ApiError("Task not found", 404);
+          return task as unknown as T;
+        }
+        throw new ApiError("Not implemented in mock data", 501);
+    }
+  }
+
   const defaultOptions: RequestInit = {
     headers: {
       "Content-Type": "application/json",
@@ -92,6 +128,35 @@ const fetchWithOptions = async <T>(
     const response = await fetch(`${API_BASE_URL}${endpoint}`, defaultOptions);
     return handleResponse<T>(response);
   });
+};
+
+// Mock data handlers
+const handleMockCreateCrew = (crewData: CreateCrewInput): Crew => {
+  const newCrew: Crew = {
+    id: uuidv4(),
+    name: crewData.name,
+    description: crewData.description,
+    status: "active",
+    agents: [],
+    tasks: [],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  mockCrews.push(newCrew);
+  return newCrew;
+};
+
+const handleMockCreateTask = (taskData: CreateTaskInput): Task => {
+  const newTask: Task = {
+    id: uuidv4(),
+    ...taskData,
+    status: taskData.status || "open",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    completed_at: undefined,
+  };
+  mockTasks.push(newTask);
+  return newTask;
 };
 
 // --- Crew API Functions ---
@@ -143,25 +208,26 @@ export const updateTaskStatus = async (
   id: string,
   status: TaskStatus
 ): Promise<Task> => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  // In a real implementation, you would make an API call here
-  // to update the task status on the backend.
-  // For now, we'll just return a modified task object.
-  const task = await getTask(id);
-  if (task) {
-    const updatedTask: Task = {
-      ...task,
-      status: status,
-      updated_at: new Date().toISOString(),
-      completed_at:
-        status === "completed" ? new Date().toISOString() : task.completed_at,
-    };
-    return updatedTask;
-  } else {
-    throw new ApiError("Task not found to update.", 404, "TASK_NOT_FOUND");
+  if (USE_MOCK_DATA) {
+    await simulateApiDelay();
+    const taskIndex = mockTasks.findIndex((t) => t.id === id);
+    if (taskIndex === -1) {
+      throw new ApiError("Task not found", 404);
+    }
+    const task = { ...mockTasks[taskIndex] };
+    task.status = status;
+    task.updated_at = new Date().toISOString();
+    if (status === "completed") {
+      task.completed_at = new Date().toISOString();
+    }
+    mockTasks[taskIndex] = task;
+    return task;
   }
+
+  return fetchWithOptions<Task>(`/tasks/${id}/status`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  });
 };
 
 // --- Agent API Functions ---
@@ -170,30 +236,24 @@ export const getAgents = () => fetchWithOptions<Agent[]>("/agents");
 export const getAgent = (id: string) =>
   fetchWithOptions<Agent>(`/agents/${id}`);
 
-// Temporarily replace the real implementation with a mocked one
 export const createAgent = async (
   agentData: CreateAgentInput
 ): Promise<Agent> => {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  // In a real implementation, you would make an API call here
-  // and return the newly created agent object from the backend.
-  // For now, we'll just generate a unique ID and return the agent data
-  const newAgent: Agent = {
-    id: uuidv4(), // Use a UUID for the ID
-    ...agentData,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-
-  if (agentData.agent_type === "autogen") {
-    newAgent.autogen_config = agentData.autogen_config;
-  } else {
-    newAgent.llm = agentData.llm;
+  if (USE_MOCK_DATA) {
+    await simulateApiDelay();
+    const newAgent: Agent = {
+      id: uuidv4(),
+      ...agentData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    return newAgent;
   }
 
-  return newAgent;
+  return fetchWithOptions<Agent>("/agents", {
+    method: "POST",
+    body: JSON.stringify(agentData),
+  });
 };
 
 export const updateAgent = (id: string, agentData: UpdateAgentInput) =>
@@ -251,9 +311,9 @@ export class WebSocketClient {
       this.attemptReconnect();
     };
 
-    this.ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      this.onError?.(error);
+    this.ws.onerror = (event) => {
+      console.error("WebSocket error:", event);
+      this.onError?.(event);
     };
   }
 
@@ -272,11 +332,9 @@ export class WebSocketClient {
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+    console.log(`Attempting to reconnect in ${delay}ms...`);
 
     setTimeout(() => {
-      console.log(
-        `Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-      );
       this.connect();
     }, delay);
   }
@@ -288,17 +346,14 @@ export class WebSocketClient {
     if (!this.eventHandlers.has(event)) {
       this.eventHandlers.set(event, new Set());
     }
-    // Type assertion here is safe because we know the handler will only be called with the correct type
-    this.eventHandlers.get(event)!.add(handler as (data: unknown) => void);
 
-    // Return unsubscribe function
+    const handlers = this.eventHandlers.get(event)!;
+    handlers.add(handler as (data: unknown) => void);
+
     return () => {
-      const handlers = this.eventHandlers.get(event);
-      if (handlers) {
-        handlers.delete(handler as (data: unknown) => void);
-        if (handlers.size === 0) {
-          this.eventHandlers.delete(event);
-        }
+      handlers.delete(handler as (data: unknown) => void);
+      if (handlers.size === 0) {
+        this.eventHandlers.delete(event);
       }
     };
   }

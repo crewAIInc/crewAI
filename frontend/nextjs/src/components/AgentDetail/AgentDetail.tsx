@@ -11,45 +11,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import * as api from "@/lib/apiClient";
 import { useStore } from "@/lib/store";
-import { TaskStatus } from "@/lib/types";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-interface TaskDetailProps {
-  taskId: string;
+interface AgentDetailProps {
+  agentId: string;
 }
 
-const TaskDetail = ({ taskId }: TaskDetailProps) => {
-  const { task, fetchTask, isLoading, error } = useStore();
-  const [completeLoading, setCompleteLoading] = useState(false);
-  const [completeError, setCompleteError] = useState<string | null>(null);
+const AgentDetail = ({ agentId }: AgentDetailProps) => {
+  const { selectedAgent: agent, fetchAgent, isLoading, error } = useStore();
 
   useEffect(() => {
-    fetchTask(taskId);
-  }, [fetchTask, taskId]);
-
-  const handleCompleteTask = async () => {
-    if (!task) return;
-    setCompleteLoading(true);
-    setCompleteError(null);
-    try {
-      await api.updateTaskStatus(task.id, "completed" as TaskStatus);
-      // Refetch the task to update the UI
-      await fetchTask(taskId);
-    } catch (err) {
-      // Type-safe error handling
-      const error = err as unknown;
-      if (error instanceof Error) {
-        setCompleteError(error.message);
-      } else {
-        setCompleteError("Failed to update task status.");
-      }
-    } finally {
-      setCompleteLoading(false);
-    }
-  };
+    fetchAgent(agentId);
+  }, [fetchAgent, agentId]);
 
   if (isLoading) {
     return (
@@ -86,27 +61,27 @@ const TaskDetail = ({ taskId }: TaskDetailProps) => {
         </CardContent>
         <CardFooter>
           <Button asChild variant="outline">
-            <Link href="/tasks">Back to Tasks</Link>
+            <Link href="/agents">Back to Agents</Link>
           </Button>
         </CardFooter>
       </Card>
     );
   }
 
-  if (!task) {
+  if (!agent) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Task Not Found</CardTitle>
+          <CardTitle>Agent Not Found</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            The requested task could not be found.
+            The requested agent could not be found.
           </p>
         </CardContent>
         <CardFooter>
           <Button asChild variant="outline">
-            <Link href="/tasks">Back to Tasks</Link>
+            <Link href="/agents">Back to Agents</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -118,64 +93,67 @@ const TaskDetail = ({ taskId }: TaskDetailProps) => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-2xl">{task.description}</CardTitle>
-            <CardDescription>Task ID: {task.id}</CardDescription>
+            <CardTitle className="text-2xl">{agent.name}</CardTitle>
+            <CardDescription>Agent ID: {agent.id}</CardDescription>
           </div>
           <Badge
-            variant={task.status === "completed" ? "success" : "default"}
+            variant={agent.agent_type === "solnai" ? "default" : "secondary"}
             className="ml-4"
           >
-            {task.status}
+            {agent.agent_type}
           </Badge>
         </div>
-        {completeError && (
-          <div role="alert" className="text-red-500 mt-2">
-            {completeError}
-          </div>
-        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <h3 className="font-semibold mb-2">Details</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Crew ID</p>
-              <p>{task.crew_id}</p>
+              <p className="text-sm text-muted-foreground">Role</p>
+              <p>{agent.role}</p>
             </div>
+            {agent.goal && (
+              <div>
+                <p className="text-sm text-muted-foreground">Goal</p>
+                <p>{agent.goal}</p>
+              </div>
+            )}
+            {agent.backstory && (
+              <div>
+                <p className="text-sm text-muted-foreground">Backstory</p>
+                <p>{agent.backstory}</p>
+              </div>
+            )}
+            {agent.agent_type === "solnai" && agent.llm && (
+              <div>
+                <p className="text-sm text-muted-foreground">LLM</p>
+                <p>{agent.llm}</p>
+              </div>
+            )}
+            {agent.agent_type === "autogen" && agent.autogen_config && (
+              <div>
+                <p className="text-sm text-muted-foreground">Model</p>
+                <p>{agent.autogen_config.llm_config?.model}</p>
+              </div>
+            )}
             <div>
               <p className="text-sm text-muted-foreground">Created</p>
-              <p>{new Date(task.created_at).toLocaleString()}</p>
+              <p>{new Date(agent.created_at).toLocaleString()}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Last Updated</p>
-              <p>{new Date(task.updated_at).toLocaleString()}</p>
+              <p>{new Date(agent.updated_at).toLocaleString()}</p>
             </div>
-            {task.completed_at && (
-              <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p>{new Date(task.completed_at).toLocaleString()}</p>
-              </div>
-            )}
           </div>
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button asChild variant="outline">
-          <Link href="/tasks">Back to Tasks</Link>
+          <Link href="/agents">Back to Agents</Link>
         </Button>
-        {task.status !== "completed" && (
-          <Button
-            variant="default"
-            onClick={handleCompleteTask}
-            disabled={completeLoading}
-            aria-label="Mark task as completed"
-          >
-            {completeLoading ? "Completing..." : "Mark as Completed"}
-          </Button>
-        )}
       </CardFooter>
     </Card>
   );
 };
 
-export default TaskDetail;
+export default AgentDetail;

@@ -1,5 +1,10 @@
 {
   "devDependencies": {
     "@types/jest": "^29.5.14"
+  },
+  "dependencies": {
+    "@geist-ui/core": "^2.3.8",
+    "@geist-ui/icons": "^1.0.2",
+    "geist": "^1.3.1"
   }
 }

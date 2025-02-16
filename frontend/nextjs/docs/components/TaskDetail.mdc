@@ -5,103 +5,127 @@ globs:
 # TaskDetail Component
 
 ## Purpose
-The TaskDetail component displays detailed information about a specific task in the system. It provides a comprehensive view of task properties, status, and allows for task management actions like marking a task as completed.
+
+The `TaskDetail` component displays detailed information about a specific task within the Soln.ai application. It fetches task data based on a `taskId` prop (passed from the route parameters) and presents the information in a user-friendly format. The component handles loading states, error states (including a "task not found" state), and provides a button to mark a task as completed (with associated loading and error handling for that action). It uses Shadcn UI components for a consistent and accessible UI.
 
 ## Location
+
 `frontend/nextjs/src/components/TaskDetail/TaskDetail.tsx`
 
 ## Props
-```typescript
-interface TaskDetailProps {
-  taskId: string; // The unique identifier of the task to display
-}
-```
+
+| Prop Name | Type   | Description                                   | Required | Default Value |
+| :-------- | :----- | :-------------------------------------------- | :------- | :------------ |
+| `taskId`  | string | The unique identifier of the task to display. | Yes      | N/A           |
 
 ## State Management
-The component uses Zustand store through the `useStore` hook to manage the following state:
-- `task`: The current task data
-- `isLoading`: Loading state while fetching task data
-- `error`: Error state if task fetch fails
-- `fetchTask`: Action to fetch task data
+
+The component utilizes the Zustand store (`@/lib/store.ts`) for managing its primary state and data fetching. It accesses:
+
+*   **`task`:** The `Task` object representing the currently displayed task. This will be `null` if the task is loading, not found, or if there's an error.
+*   **`fetchTask(taskId: string): Promise<void>`:** An action function provided by the Zustand store to fetch a task by its ID.
+*   **`isLoading`:** A `boolean` indicating whether the task data is currently being fetched.
+*   **`error`:** A `string | null` containing an error message if an error occurred during the initial data fetch.
+
+In addition to the Zustand store, the component uses *local* state for managing the loading and error states *specifically related to the "Mark as Completed" action*:
+
+*   **`completeLoading`:** `boolean` - Indicates whether the "Mark as Completed" action is in progress.
+*   **`completeError`:** `string | null` - Stores any error message related to the "Mark as Completed" action.
 
 ## Data Fetching
-- Uses the `fetchTask` action from the store to retrieve task data
-- Fetches data on component mount using `useEffect`
-- Handles loading, error, and not found states appropriately
 
-## Loading State
-Displays a skeleton loading state using Shadcn UI's `Skeleton` component:
-```tsx
-<Card>
-  <CardHeader>
-    <Skeleton className="h-8 w-3/4" />
-    <Skeleton className="h-4 w-1/2 mt-2" />
-  </CardHeader>
-  <CardContent>
-    {/* Additional skeleton elements */}
-  </CardContent>
-</Card>
-```
+The component fetches task data when it mounts (or when the `taskId` prop changes) using the `fetchTask(taskId)` action from the Zustand store. This action, in turn, calls the `apiClient.getTask(id)` function.
+
+## Real-time Updates
+The component is ready to handle real time updates with a websocket connection.
 
 ## Error Handling
-Displays error messages within a styled Card component:
-```tsx
-<Card>
-  <CardHeader>
-    <CardTitle>Error</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div role="alert" className="text-red-500">
-      Error: {error}
-    </div>
-  </CardContent>
-</Card>
-```
 
-## Task Display
-The component displays task information in a structured layout:
-- Task description and ID in the header
-- Status badge with appropriate styling
-- Grid layout for task details including:
-  - Crew ID
-  - Creation date
-  - Last updated date
-- Action buttons in the footer
+The component handles several error scenarios:
+
+*   **Initial Fetch Error:** If the `fetchTask` action fails (e.g., network error, API error), the `error` state from the Zustand store is used to display a general error message.
+*   **Task Not Found:** If the `fetchTask` action succeeds, but no task with the given `taskId` is found, a "Task Not Found" message is displayed.
+*   **Completion Error:** If the `updateTaskStatus` API call (triggered by the "Mark as Completed" button) fails, the `completeError` state is updated, and an error message is displayed *above* the task details.
+
+## UI Structure
+
+The component uses Shadcn UI components to structure the UI:
+
+*   **`Card`:** Provides the main container for the task details.
+*   **`CardHeader`:** Contains the task description (as the title) and the task ID (as a description).
+*   **`CardTitle`:** Displays the task description.
+*   **`CardDescription`:** Displays the task ID.
+*   **`Badge`:** Displays the task status (with different variants for "completed" and other statuses).
+*   **`CardContent`:** Contains the main details of the task (crew ID, created/updated/completed timestamps).
+*   **`CardFooter`:** Contains the "Back to Tasks" button and the "Mark as Completed" button (conditionally rendered).
+*   **`Button`:** Used for the "Back to Tasks" and "Mark as Completed" buttons.
+*   **`Skeleton`:** Used to display a loading skeleton while the task data is being fetched.
+* **`Link`:** Used inside the Button to go back to the tasks.
 
 ## Usage Example
-```tsx
-import TaskDetail from "@/components/TaskDetail";
 
-// In your page component
-const TaskPage = ({ params }: { params: { id: string } }) => {
-  return <TaskDetail taskId={params.id} />;
+```typescript jsx
+// In app/tasks/[id]/page.tsx
+import TaskDetail from '@/components/TaskDetail';
+import { Metadata } from 'next';
+
+interface PageParams {
+  params: {
+    id: string;
+  };
+}
+
+export default function TaskDetailPage({ params }: PageParams) {
+  return (
+    <main className="container mx-auto p-4">
+      <TaskDetail taskId={params.id} />
+    </main>
+  );
+}
+
+export const metadata: Metadata = {
+    title: 'Task Detail | Soln.ai',
+    description: 'View task details',
 };
 ```
 
 ## Styling
-Uses Shadcn UI components for consistent styling:
-- Card components for layout structure
-- Badge for status display
-- Button for actions
-- Skeleton for loading states
-- Tailwind CSS for custom styling and layout
+
+The component is styled using Tailwind CSS utility classes, provided through the Shadcn UI components.
 
 ## Dependencies
-- @/components/ui/badge
-- @/components/ui/button
-- @/components/ui/card
-- @/components/ui/skeleton
-- @/lib/store
-- next/link
-- react
+
+*   `react`: React library.
+*   `@/lib/store`: Zustand store for state management.
+*   `@/lib/apiClient`: API client for data fetching and updates.
+*   `@/lib/types`: TypeScript type definitions.
+*   `next/link`: Next.js Link component for navigation.
+*   `@shadcn/ui`: Shadcn UI components (Badge, Button, Card, Skeleton).
+*  `next/navigation`: Next js to get the params.
 
 ## Accessibility
-- Uses semantic HTML structure with Card components
-- Includes ARIA roles for interactive elements
-- Provides clear error messaging with role="alert"
-- Maintains keyboard navigation support
-- Uses appropriate color contrast for status badges
-- Includes descriptive labels for all interactive elements
+
+*   **Semantic HTML:** Uses semantic HTML elements (e.g., `<div>`, `<p>`, `<h3>`, `<button>`, `<a>`).
+*   **ARIA Attributes:**
+    *   `role="status"`: Used for the loading state.
+    *   `role="alert"`: Used for error messages.
+    *   `aria-label`: Used on the "Mark as Completed" button.
+    *   `aria-live`: Used on loading message.
+*   **Keyboard Navigation:** The "Mark as Completed" button and the "Back to Tasks" link are focusable and operable with the keyboard.
+* **Loading States:**  Uses skeleton loading indicators to provide feedback to the user while data is being fetched.
+* **Error Messages:** Displays clear and concise error messages to the user.
+
+## Task Completion
+
+The "Mark as Completed" button triggers the following actions:
+
+1.  **Loading State:** Sets `completeLoading` to `true` to disable the button and display "Completing...".
+2.  **API Call:** Calls `apiClient.updateTaskStatus(task.id, 'completed')` to update the task's status on the backend.
+3.  **Refetch:**  Calls `fetchTask(taskId)` to refetch the task data and update the UI.
+4.  **Error Handling:**  If the API call fails, sets `completeError` with an error message.
+5.  **Loading State Reset:**  Sets `completeLoading` to `false` in a `finally` block to re-enable the button.
+
+The button is only displayed if the task is *not* already completed.
 
 ## Testing
 Comprehensive test suite covering:

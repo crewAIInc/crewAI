@@ -1,0 +1,104 @@
+# AgentDetail Component
+
+## Purpose
+
+The `AgentDetail` component displays detailed information about a specific agent within the Soln.ai application. It fetches agent data based on an `agentId` prop (passed from the route parameters) and presents the agent's attributes in a user-friendly format. The component handles loading states, error states (including an "agent not found" state), and uses Shadcn UI components for a consistent and accessible UI. It differentiates between "solnai" and "autogen" agent types, displaying relevant information for each.
+
+## Location
+
+`frontend/nextjs/src/components/AgentDetail/AgentDetail.tsx`
+
+## Props
+
+| Prop Name | Type   | Description                                   | Required | Default Value |
+| :-------- | :----- | :-------------------------------------------- | :------- | :------------ |
+| `agentId` | string | The unique identifier of the agent to display. | Yes      | N/A           |
+
+## State Management
+
+The component utilizes the Zustand store (`@/lib/store.ts`) for managing its state and data fetching. It accesses:
+
+*   **`selectedAgent`:** The `Agent` object representing the currently displayed agent. This will be `null` if the agent is loading, not found, or if there's an error.  The component accesses this using the `selectedAgent` alias.
+*   **`fetchAgent(agentId: string): Promise<void>`:** An action function provided by the Zustand store to fetch an agent by its ID.
+*   **`isLoading`:** A `boolean` indicating whether the agent data is currently being fetched.
+*   **`error`:** A `string | null` containing an error message if an error occurred during the initial data fetch.
+
+## Data Fetching
+
+The component fetches agent data when it mounts (or when the `agentId` prop changes) using the `fetchAgent(agentId)` action from the Zustand store. This action, in turn, calls the `apiClient.getAgent(id)` function.
+
+## Real-time Updates
+The component is ready to handle real time updates with a websocket connection.
+
+## Error Handling
+
+The component handles several error scenarios:
+
+*   **Initial Fetch Error:** If the `fetchAgent` action fails (e.g., network error, API error), the `error` state from the Zustand store is used to display a general error message.
+*   **Agent Not Found:** If the `fetchAgent` action succeeds, but no agent with the given `agentId` is found, an "Agent Not Found" message is displayed.
+
+## UI Structure
+
+The component uses Shadcn UI components to structure the UI:
+
+*   **`Card`:** Provides the main container for the agent details.
+*   **`CardHeader`:** Contains the agent name (as the title) and the agent ID (as a description).
+*   **`CardTitle`:** Displays the agent name.
+*   **`CardDescription`:** Displays the agent ID.
+*   **`Badge`:** Displays the agent type ("solnai" or "autogen"), with different styling for each type.
+*   **`CardContent`:** Contains the main details of the agent (role, goal, backstory, LLM/model, created/updated timestamps).
+*   **`CardFooter`:** Contains the "Back to Agents" button.
+*   **`Button`:** Used for the "Back to Agents" button.
+*   **`Skeleton`:** Used to display a loading skeleton while the agent data is being fetched.
+*   **`Link`:** Used inside the Button to go back to the agents list.
+
+## Usage Example
+
+```typescript jsx
+// In app/agents/[id]/page.tsx
+import AgentDetail from '@/components/AgentDetail';
+import { Metadata } from 'next';
+
+interface PageParams {
+  params: {
+    id: string;
+  };
+}
+
+export const metadata: Metadata = {
+    title: 'Agent Detail | Soln.ai',
+    description: 'View agent details',
+};
+
+export default function AgentDetailPage({ params }: PageParams) {
+    return (
+        <main className="container mx-auto p-4">
+            <AgentDetail agentId={params.id} />
+        </main>
+    );
+}
+```
+
+## Styling
+
+The component is styled using Tailwind CSS utility classes, provided through the Shadcn UI components.
+
+## Dependencies
+
+*   `react`: React library.
+*   `@/lib/store`: Zustand store for state management.
+*   `@/lib/apiClient`: API client for data fetching.
+*   `@/lib/types`: TypeScript type definitions.
+*   `next/link`: Next.js Link component for navigation.
+*   `@shadcn/ui`: Shadcn UI components (Badge, Button, Card, Skeleton).
+*  `next/navigation`: Next js to get the params.
+
+## Accessibility
+
+*   **Semantic HTML:** Uses semantic HTML elements.
+*   **ARIA Attributes:**
+    *   `role="status"`: Used for the loading state.
+    *   `role="alert"`: Used for error messages.
+*   **Keyboard Navigation:** The "Back to Agents" link is focusable and operable with the keyboard.
+* **Loading States:**  Uses skeleton loading indicators to provide feedback to the user while data is being fetched.
+* **Error Messages:** Displays clear and concise error messages to the user. 

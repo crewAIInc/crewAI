@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 import * as api from "@/lib/apiClient";
 import { useStore } from "@/lib/store";
-import type { Task } from "@/lib/types";
+import type { Task, TaskStatus } from "@/lib/types";
 import "@testing-library/jest-dom/extend-expect";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
@@ -152,13 +152,12 @@ describe("TaskDetail", () => {
       ...mockTask,
       status: "completed",
       updated_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
     });
 
     render(<TaskDetail taskId="task-123" />);
 
     const completeButton = screen.getByRole("button", {
-      name: /mark task as completed/i,
+      name: /mark as completed/i,
     });
     expect(completeButton).toBeInTheDocument();
 
@@ -191,19 +190,21 @@ describe("TaskDetail", () => {
     render(<TaskDetail taskId="task-123" />);
 
     const completeButton = screen.getByRole("button", {
-      name: /mark task as completed/i,
+      name: /mark as completed/i,
     });
     fireEvent.click(completeButton);
 
     await waitFor(() => {
-      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+      const errorElement = screen.queryByText(errorMessage);
+      expect(errorElement).not.toBeNull();
+      expect(errorElement).toBeInTheDocument();
       expect(completeButton).not.toBeDisabled();
       expect(completeButton).toHaveTextContent("Mark as Completed");
     });
   });
 
   it("does not show complete button for completed tasks", async () => {
-    const completedTask = { ...mockTask, status: "completed" };
+    const completedTask = { ...mockTask, status: "completed" as TaskStatus };
     mockUseStore.mockImplementation(() => ({
       task: completedTask,
       isLoading: false,
@@ -215,7 +216,7 @@ describe("TaskDetail", () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("button", { name: /mark task as completed/i })
+        screen.queryByRole("button", { name: /mark as completed/i })
       ).not.toBeInTheDocument();
     });
   });
