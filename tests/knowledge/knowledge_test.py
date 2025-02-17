@@ -37,6 +37,28 @@ def reset_knowledge_storage(mock_vector_db):
     yield
 
 
+def test_string_knowledge_source(mock_vector_db):
+    """Test StringKnowledgeSource with simple text content."""
+    content = "Users name is John. He is 30 years old and lives in San Francisco."
+    string_source = StringKnowledgeSource(content=content)
+    mock_vector_db.sources = [string_source]
+    mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
+
+    # Test initialization
+    assert string_source.content == content
+    
+    # Test adding content
+    string_source.add()
+    assert len(string_source.chunks) > 0
+    
+    # Test querying
+    query = "Where does John live?"
+    results = mock_vector_db.query(query)
+    assert len(results) > 0
+    assert "San Francisco" in results[0]["context"]
+    mock_vector_db.query.assert_called_once()
+
+
 def test_single_short_string(mock_vector_db):
     # Create a knowledge base with a single short string
     content = "Brandon's favorite color is blue and he likes Mexican food."
@@ -416,6 +438,9 @@ def test_hybrid_string_and_files(mock_vector_db, tmpdir):
     # Assert that the correct information is retrieved
     assert any("the alchemist" in result["context"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
+
+
+
 
 
 def test_pdf_knowledge_source(mock_vector_db):

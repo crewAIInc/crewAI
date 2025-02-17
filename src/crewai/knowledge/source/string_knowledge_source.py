@@ -12,8 +12,12 @@ class StringKnowledgeSource(BaseKnowledgeSource):
     collection_name: Optional[str] = Field(default=None)
 
     def model_post_init(self, _):
-        """Post-initialization method to validate content."""
+        """Post-initialization method to validate content and initialize storage."""
         self.validate_content()
+        if self.storage is None:
+            from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+            self.storage = KnowledgeStorage(collection_name=self.collection_name)
+        self.storage.initialize_knowledge_storage()
 
     def validate_content(self):
         """Validate string content."""
