@@ -17,12 +17,51 @@ The SeleniumScrapingTool is crafted for high-efficiency web scraping tasks.
 It allows for precise extraction of content from web pages by using CSS selectors to target specific elements. 
 Its design caters to a wide range of scraping needs, offering flexibility to work with any provided website URL.
 
+## Prerequisites
+
+- Python 3.7 or higher
+- Chrome browser installed (for ChromeDriver)
+
 ## Installation
 
-To get started with the SeleniumScrapingTool, install the required packages using pip:
-
+### Option 1: All-in-one installation
 ```shell
-pip install 'crewai[tools]' selenium webdriver-manager
+pip install 'crewai[tools]' selenium>=4.0.0 webdriver-manager>=3.8.0
+```
+
+### Option 2: Step-by-step installation
+```shell
+pip install 'crewai[tools]'
+pip install selenium>=4.0.0
+pip install webdriver-manager>=3.8.0
+```
+
+### Common Installation Issues
+
+1. If you encounter WebDriver issues, ensure your Chrome browser is up-to-date
+2. For Linux users, you might need to install additional system packages:
+   ```shell
+   sudo apt-get install chromium-chromedriver
+   ```
+
+## Basic Usage
+
+Here's a simple example to get you started with error handling:
+
+```python
+from crewai_tools import SeleniumScrapingTool
+
+try:
+    # Initialize the tool with a specific website
+    tool = SeleniumScrapingTool(website_url='https://example.com')
+    
+    # Extract content
+    content = tool.run()
+    print(content)
+except Exception as e:
+    print(f"Error during scraping: {str(e)}")
+    # Ensure proper cleanup in case of errors
+    tool.cleanup()
 ```
 
 ## Usage Examples
