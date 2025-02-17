@@ -273,7 +273,7 @@ def get_crew(crew_path: str = "crew.py", require: bool = False) -> Crew | None:
                         for attr_name in dir(module):
                             attr = getattr(module, attr_name)
                             try:
-                                if not callable(attr) and hasattr(attr, "kickoff"):
+                                if isinstance(attr, Crew) and hasattr(attr, "kickoff"):
                                     print(f"Found valid crew object in attribute '{attr_name}'.")
                                     return attr
 
