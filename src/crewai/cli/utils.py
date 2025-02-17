@@ -3,7 +3,6 @@ import shutil
 import sys
 from functools import reduce
 from typing import Any, Dict, List
-
 import click
 import tomli
 from rich.console import Console
