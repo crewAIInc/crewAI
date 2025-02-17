@@ -3,6 +3,7 @@ import shutil
 import sys
 from functools import reduce
 from typing import Any, Dict, List
+
 import click
 import tomli
 from rich.console import Console
@@ -273,7 +274,9 @@ def get_crew(crew_path: str = "crew.py", require: bool = False) -> Crew | None:
                             attr = getattr(module, attr_name)
                             try:
                                 if isinstance(attr, Crew) and hasattr(attr, "kickoff"):
-                                    print(f"Found valid crew object in attribute '{attr_name}'.")
+                                    print(
+                                        f"Found valid crew object in attribute '{attr_name}'."
+                                    )
                                     return attr
 
                             except Exception as e:
