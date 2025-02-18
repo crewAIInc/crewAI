@@ -140,7 +140,7 @@ class EventListener(BaseEventListener):
             )
 
         @crewai_event_bus.on(TaskCompletedEvent)
-        def on_task_completed(source, event):
+        def on_task_completed(source, event: TaskCompletedEvent):
             if source._execution_span:
                 self._telemetry.task_ended(
                     source._execution_span, source, source.agent.crew
