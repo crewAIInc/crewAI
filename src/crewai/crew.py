@@ -275,12 +275,26 @@ class Crew(BaseModel):
                 if self.entity_memory
                 else EntityMemory(crew=self, embedder_config=self.embedder)
             )
-            if hasattr(self, "memory_config") and self.memory_config is not None:
-                self._user_memory = (
-                    self.user_memory if self.user_memory else UserMemory(crew=self)
-                )
+            if (
+                self.memory_config and "user_memory" in self.memory_config
+            ):  # Check for user_memory in config
+                user_memory_config = self.memory_config["user_memory"]
+                if isinstance(
+                    user_memory_config, UserMemory
+                ):  # Check if it is already an instance
+                    self._user_memory = user_memory_config
+                elif isinstance(
+                    user_memory_config, dict
+                ):  # Check if it's a configuration dict
+                    self._user_memory = UserMemory(
+                        crew=self, **user_memory_config
+                    )  # Initialize with config
+                else:
+                    raise TypeError(
+                        "user_memory must be a UserMemory instance or a configuration dictionary"
+                    )
             else:
-                self._user_memory = None
+                self._user_memory = None  # No user memory if not in config
         return self
 
     @model_validator(mode="after")
@@ -454,8 +468,6 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
-
-
 
     @property
     def key(self) -> str:
@@ -928,13 +940,13 @@ class Crew(BaseModel):
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
-            
+
         # Filter out empty outputs and get the last valid one as the main output
         valid_outputs = [t for t in task_outputs if t.raw]
         if not valid_outputs:
             raise ValueError("No valid task outputs available to create crew output.")
         final_task_output = valid_outputs[-1]
-            
+
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         token_usage = self.calculate_usage_metrics()
@@ -1148,19 +1160,24 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        openai_model_name: Optional[str] = None,
+        eval_llm: Union[str, InstanceOf[LLM]],
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         test_crew = self.copy()
 
+        eval_llm = create_llm(eval_llm)
+
+        if not eval_llm:
+            raise ValueError("Failed to create LLM instance.")
+
         self._test_execution_span = test_crew._telemetry.test_execution_span(
             test_crew,
             n_iterations,
             inputs,
-            openai_model_name,  # type: ignore[arg-type]
+            eval_llm.model,  # type: ignore[arg-type]
         )  # type: ignore[arg-type]
-        evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
+        evaluator = CrewEvaluator(test_crew, eval_llm)  # type: ignore[arg-type]
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)
