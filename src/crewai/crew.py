@@ -281,12 +281,26 @@ class Crew(BaseModel):
                 if self.entity_memory
                 else EntityMemory(crew=self, embedder_config=self.embedder)
             )
-            if hasattr(self, "memory_config") and self.memory_config is not None:
-                self._user_memory = (
-                    self.user_memory if self.user_memory else UserMemory(crew=self)
-                )
+            if (
+                self.memory_config and "user_memory" in self.memory_config
+            ):  # Check for user_memory in config
+                user_memory_config = self.memory_config["user_memory"]
+                if isinstance(
+                    user_memory_config, UserMemory
+                ):  # Check if it is already an instance
+                    self._user_memory = user_memory_config
+                elif isinstance(
+                    user_memory_config, dict
+                ):  # Check if it's a configuration dict
+                    self._user_memory = UserMemory(
+                        crew=self, **user_memory_config
+                    )  # Initialize with config
+                else:
+                    raise TypeError(
+                        "user_memory must be a UserMemory instance or a configuration dictionary"
+                    )
             else:
-                self._user_memory = None
+                self._user_memory = None  # No user memory if not in config
         return self
 
     @model_validator(mode="after")
@@ -1182,7 +1196,7 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        openai_model_name: Optional[str] = None,
+        eval_llm: Union[str, InstanceOf[LLM]],
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
@@ -1192,12 +1206,12 @@ class Crew(BaseModel):
                 CrewTestStartedEvent(
                     crew_name=self.name or "crew",
                     n_iterations=n_iterations,
-                    openai_model_name=openai_model_name,
+                    eval_llm=eval_llm,
                     inputs=inputs,
                 ),
             )
             test_crew = self.copy()
-            evaluator = CrewEvaluator(test_crew, openai_model_name or "gpt-4o-mini")
+            evaluator = CrewEvaluator(test_crew, eval_llm)
 
             for i in range(1, n_iterations + 1):
                 evaluator.set_iteration(i)
