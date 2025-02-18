@@ -14,6 +14,7 @@ from crewai.utilities.events import (
     MethodExecutionStartedEvent,
     crewai_event_bus,
 )
+from crewai.utilities.events.flow_events import FlowPlotEvent
 
 
 def test_simple_sequential_flow():
@@ -627,3 +628,29 @@ def test_stateless_flow_event_emission():
         == "Deeds will not be less valiant because they are unpraised."
     )
     assert isinstance(received_events[5].timestamp, datetime)
+
+
+def test_flow_plotting():
+    class StatelessFlow(Flow):
+        @start()
+        def init(self):
+            return "Initializing flow..."
+
+        @listen(init)
+        def process(self):
+            return "Deeds will not be less valiant because they are unpraised."
+
+    flow = StatelessFlow()
+    flow.kickoff()
+    received_events = []
+
+    @crewai_event_bus.on(FlowPlotEvent)
+    def handle_flow_plot(source, event):
+        received_events.append(event)
+
+    flow.plot("test_flow")
+
+    assert len(received_events) == 1
+    assert isinstance(received_events[0], FlowPlotEvent)
+    assert received_events[0].flow_name == "StatelessFlow"
+    assert isinstance(received_events[0].timestamp, datetime)

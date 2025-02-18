@@ -22,16 +22,16 @@ from pydantic import BaseModel, Field, ValidationError
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
-from crewai.telemetry import Telemetry
-from crewai.utilities.events import (
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
+    FlowPlotEvent,
     FlowStartedEvent,
+    MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.events.flow_events import MethodExecutionFailedEvent
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
@@ -1045,7 +1045,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow") -> None:
-        Telemetry().flow_plotting_span(
-            self.__class__.__name__, list(self._methods.keys())
+        crewai_event_bus.emit(
+            self,
+            FlowPlotEvent(
+                type="flow_plot",
+                flow_name=self.__class__.__name__,
+            ),
         )
         plot_flow(self, filename)

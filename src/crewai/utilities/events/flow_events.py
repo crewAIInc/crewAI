@@ -20,12 +20,12 @@ class FlowStartedEvent(FlowEvent):
     type: str = "flow_started"
 
 
-
 class FlowCreatedEvent(FlowEvent):
     """Event emitted when a flow is created"""
 
     flow_name: str
     type: str = "flow_created"
+
 
 class MethodExecutionStartedEvent(FlowEvent):
     """Event emitted when a flow method starts execution"""
@@ -45,7 +45,7 @@ class MethodExecutionFinishedEvent(FlowEvent):
     result: Any = None
     state: Union[Dict[str, Any], BaseModel]
     type: str = "method_execution_finished"
-    
+
 
 class MethodExecutionFailedEvent(FlowEvent):
     """Event emitted when a flow method fails execution"""
@@ -62,3 +62,10 @@ class FlowFinishedEvent(FlowEvent):
     flow_name: str
     result: Optional[Any] = None
     type: str = "flow_finished"
+
+
+class FlowPlotEvent(FlowEvent):
+    """Event emitted when a flow plot is created"""
+
+    flow_name: str
+    type: str = "flow_plot"

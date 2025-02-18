@@ -19,6 +19,7 @@ from .flow_events import (
     FlowCreatedEvent,
     FlowStartedEvent,
     FlowFinishedEvent,
+    FlowPlotEvent,
     MethodExecutionStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionFailedEvent,

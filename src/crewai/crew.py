@@ -574,8 +574,7 @@ class Crew(BaseModel):
                 CrewKickoffStartedEvent(crew_name=self.name or "crew", inputs=inputs),
             )
 
-            """Starts the crew to work on its assigned tasks."""
-            # self._execution_span = self._telemetry.crew_execution_span(self, inputs) # TODO: drop this
+            # Starts the crew to work on its assigned tasks.
             self._task_output_handler.reset()
             self._logging_color = "bold_purple"
 
