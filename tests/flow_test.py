@@ -12,7 +12,7 @@ from crewai.utilities.events import (
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
-    event_bus,
+    crewai_event_bus,
 )
 
 
@@ -440,15 +440,15 @@ def test_unstructured_flow_event_emission():
     flow = PoemFlow()
     received_events = []
 
-    @event_bus.on(FlowStartedEvent)
+    @crewai_event_bus.on(FlowStartedEvent)
     def handle_flow_start(source, event):
         received_events.append(event)
 
-    @event_bus.on(MethodExecutionStartedEvent)
+    @crewai_event_bus.on(MethodExecutionStartedEvent)
     def handle_method_start(source, event):
         received_events.append(event)
 
-    @event_bus.on(FlowFinishedEvent)
+    @crewai_event_bus.on(FlowFinishedEvent)
     def handle_flow_end(source, event):
         received_events.append(event)
 
@@ -519,19 +519,19 @@ def test_structured_flow_event_emission():
 
     received_events = []
 
-    @event_bus.on(FlowStartedEvent)
+    @crewai_event_bus.on(FlowStartedEvent)
     def handle_flow_start(source, event):
         received_events.append(event)
 
-    @event_bus.on(MethodExecutionStartedEvent)
+    @crewai_event_bus.on(MethodExecutionStartedEvent)
     def handle_method_start(source, event):
         received_events.append(event)
 
-    @event_bus.on(MethodExecutionFinishedEvent)
+    @crewai_event_bus.on(MethodExecutionFinishedEvent)
     def handle_method_end(source, event):
         received_events.append(event)
 
-    @event_bus.on(FlowFinishedEvent)
+    @crewai_event_bus.on(FlowFinishedEvent)
     def handle_flow_end(source, event):
         received_events.append(event)
 
@@ -585,19 +585,19 @@ def test_stateless_flow_event_emission():
     flow = StatelessFlow()
     received_events = []
 
-    @event_bus.on(FlowStartedEvent)
+    @crewai_event_bus.on(FlowStartedEvent)
     def handle_flow_start(source, event):
         received_events.append(event)
 
-    @event_bus.on(MethodExecutionStartedEvent)
+    @crewai_event_bus.on(MethodExecutionStartedEvent)
     def handle_method_start(source, event):
         received_events.append(event)
 
-    @event_bus.on(MethodExecutionFinishedEvent)
+    @crewai_event_bus.on(MethodExecutionFinishedEvent)
     def handle_method_end(source, event):
         received_events.append(event)
 
-    @event_bus.on(FlowFinishedEvent)
+    @crewai_event_bus.on(FlowFinishedEvent)
     def handle_flow_end(source, event):
         received_events.append(event)
 

@@ -17,7 +17,7 @@ from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
-from crewai.utilities.events import event_bus
+from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
@@ -156,11 +156,10 @@ def test_agent_execution_with_tools():
     )
     received_events = []
 
-    @event_bus.on(ToolUsageFinishedEvent)
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    # with patch.object(EventBus, "emit") as emit:
     output = agent.execute_task(task)
     assert output == "The result of the multiplication is 12."
 
@@ -256,7 +255,7 @@ def test_cache_hitting():
     }
     received_events = []
 
-    @event_bus.on(ToolUsageFinishedEvent)
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
     def handle_tool_end(source, event):
         received_events.append(event)
 

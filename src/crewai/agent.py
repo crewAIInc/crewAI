@@ -23,7 +23,7 @@ from crewai.utilities.events.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
 )
-from crewai.utilities.events.event_bus import event_bus
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -240,7 +240,7 @@ class Agent(BaseAgent):
                 }
             )["output"]
         except Exception as e:
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 event=AgentExecutionErrorEvent(
                     agent=self,
@@ -265,7 +265,7 @@ class Agent(BaseAgent):
         for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
-        event_bus.emit(
+        crewai_event_bus.emit(
             self,
             event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
         )

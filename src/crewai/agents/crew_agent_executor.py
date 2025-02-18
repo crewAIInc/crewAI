@@ -22,7 +22,7 @@ from crewai.utilities.events import (
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
-from crewai.utilities.events.event_bus import event_bus
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -91,7 +91,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if self.agent and self.task:
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 event=AgentExecutionStartedEvent(
                     agent=self.agent,
@@ -193,7 +193,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _handle_unknown_error(self, exception: Exception) -> None:
         """Handle unknown errors by informing the user."""
         if self.agent:
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 event=AgentExecutionErrorEvent(
                     agent=self.agent, task=self.task, error=str(exception)

@@ -25,7 +25,7 @@ from crewai.utilities import Logger
 from crewai.utilities.events import (
     CrewTrainCompletedEvent,
     CrewTrainStartedEvent,
-    event_bus,
+    crewai_event_bus,
 )
 from crewai.utilities.events.crew_events import (
     CrewTestCompletedEvent,
@@ -860,7 +860,7 @@ def test_crew_verbose_output(capsys):
         "[🤖 AGENT 'SENIOR WRITER' STARTED TASK]",
         "[✅ AGENT 'SENIOR WRITER' COMPLETED TASK]",
         "[✅ TASK COMPLETED: WRITE ABOUT AI IN HEALTHCARE.]",
-        "[✅ CREW 'CREW' COMPLETED]"
+        "[✅ CREW 'CREW' COMPLETED]",
     ]
     captured = capsys.readouterr()
     for log in expected_listener_logs:
@@ -2590,11 +2590,11 @@ def test_crew_train_success(
 
     received_events = []
 
-    @event_bus.on(CrewTrainStartedEvent)
+    @crewai_event_bus.on(CrewTrainStartedEvent)
     def on_crew_train_started(source, event: CrewTrainStartedEvent):
         received_events.append(event)
 
-    @event_bus.on(CrewTrainCompletedEvent)
+    @crewai_event_bus.on(CrewTrainCompletedEvent)
     def on_crew_train_completed(source, event: CrewTrainCompletedEvent):
         received_events.append(event)
 
@@ -3378,11 +3378,11 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
 
     received_events = []
 
-    @event_bus.on(CrewTestStartedEvent)
+    @crewai_event_bus.on(CrewTestStartedEvent)
     def on_crew_test_started(source, event: CrewTestStartedEvent):
         received_events.append(event)
 
-    @event_bus.on(CrewTestCompletedEvent)
+    @crewai_event_bus.on(CrewTestCompletedEvent)
     def on_crew_test_completed(source, event: CrewTestCompletedEvent):
         received_events.append(event)
 

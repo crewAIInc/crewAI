@@ -43,7 +43,7 @@ from crewai.utilities.events import (
     TaskFailedEvent,
     TaskStartedEvent,
 )
-from crewai.utilities.events.event_bus import event_bus
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 
@@ -364,7 +364,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            event_bus.emit(self, TaskStartedEvent(context=context))
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context))
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -440,11 +440,11 @@ class Task(BaseModel):
                     else result
                 )
                 self._save_file(content)
-            event_bus.emit(self, TaskCompletedEvent(output=task_output))
+            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output))
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            event_bus.emit(self, TaskFailedEvent(error=str(e)))
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e)))
             raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:

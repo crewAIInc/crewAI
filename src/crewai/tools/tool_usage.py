@@ -22,7 +22,7 @@ from crewai.utilities.events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.utilities.events.event_bus import event_bus
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
@@ -138,8 +138,8 @@ class ToolUsage:
         tool: Any,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
-        event_data = self._prepare_event_data(tool, calling) # type: ignore
-        event_bus.emit(self, ToolUsageStartedEvent(**event_data))
+        event_data = self._prepare_event_data(tool, calling)  # type: ignore
+        crewai_event_bus.emit(self, ToolUsageStartedEvent(**event_data))
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -458,7 +458,7 @@ class ToolUsage:
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
-        event_bus.emit(
+        crewai_event_bus.emit(
             self, event=ToolUsageErrorEvent(**{**event_data, "error": e})
         )
 
@@ -474,7 +474,7 @@ class ToolUsage:
                 "from_cache": from_cache,
             }
         )
-        event_bus.emit(self, event=ToolUsageFinishedEvent(**event_data))
+        crewai_event_bus.emit(self, event=ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
         return {

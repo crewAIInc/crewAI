@@ -30,7 +30,7 @@ from crewai.utilities.events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.utilities.events.event_bus import event_bus
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.flow_events import MethodExecutionFailedEvent
 from crewai.utilities.printer import Printer
 
@@ -469,7 +469,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if kwargs:
             self._initialize_state(kwargs)
 
-        event_bus.emit(
+        crewai_event_bus.emit(
             self,
             FlowCreatedEvent(
                 type="flow_created",
@@ -744,7 +744,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._initialize_state(filtered_inputs)
 
         # Start flow execution
-        event_bus.emit(
+        crewai_event_bus.emit(
             self,
             FlowStartedEvent(
                 type="flow_started",
@@ -773,7 +773,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         final_output = self._method_outputs[-1] if self._method_outputs else None
 
-        event_bus.emit(
+        crewai_event_bus.emit(
             self,
             FlowFinishedEvent(
                 type="flow_finished",
@@ -810,8 +810,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
         try:
-            dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
-            event_bus.emit(
+            dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
+                kwargs or {}
+            )
+            crewai_event_bus.emit(
                 self,
                 MethodExecutionStartedEvent(
                     type="method_execution_started",
@@ -822,19 +824,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 ),
             )
 
-            
             result = (
                 await method(*args, **kwargs)
                 if asyncio.iscoroutinefunction(method)
                 else method(*args, **kwargs)
             )
-        
+
             self._method_outputs.append(result)
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1
             )
 
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
@@ -847,7 +848,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             return result
         except Exception as e:
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 MethodExecutionFailedEvent(
                     type="method_execution_failed",
@@ -1043,7 +1044,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif level == "warning":
             logger.warning(message)
 
-    def plot(self, filename: str = "crewai_flow") -> None: 
+    def plot(self, filename: str = "crewai_flow") -> None:
         Telemetry().flow_plotting_span(
             self.__class__.__name__, list(self._methods.keys())
         )

@@ -54,7 +54,7 @@ from crewai.utilities.events.crew_events import (
     CrewTrainFailedEvent,
     CrewTrainStartedEvent,
 )
-from crewai.utilities.events.event_bus import event_bus
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -220,10 +220,6 @@ class Crew(BaseModel):
     knowledge: Optional[Knowledge] = Field(
         default=None,
         description="Knowledge for the crew.",
-    )
-    listen_to_events: Optional[bool] = Field(
-        default=True,
-        description="Whether the crew should listen to events.",
     )
 
     @field_validator("id", mode="before")
@@ -518,7 +514,7 @@ class Crew(BaseModel):
     ) -> None:
         """Trains the crew for a given number of iterations."""
         try:
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 CrewTrainStartedEvent(
                     crew_name=self.name or "crew",
@@ -545,7 +541,7 @@ class Crew(BaseModel):
                         agent_id=str(agent.role), trained_data=result.model_dump()
                     )
 
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 CrewTrainCompletedEvent(
                     crew_name=self.name or "crew",
@@ -554,11 +550,9 @@ class Crew(BaseModel):
                 ),
             )
         except Exception as e:
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
-                CrewTrainFailedEvent(
-                    error=str(e), crew_name=self.name or "crew"
-                ),
+                CrewTrainFailedEvent(error=str(e), crew_name=self.name or "crew"),
             )
             self._logger.log("error", f"Training failed: {e}", color="red")
             CrewTrainingHandler(TRAINING_DATA_FILE).clear()
@@ -575,7 +569,7 @@ class Crew(BaseModel):
                     inputs = {}
                 inputs = before_callback(inputs)
 
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 CrewKickoffStartedEvent(crew_name=self.name or "crew", inputs=inputs),
             )
@@ -629,11 +623,9 @@ class Crew(BaseModel):
                 self.usage_metrics.add_usage_metrics(metric)
             return result
         except Exception as e:
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
-                CrewKickoffFailedEvent(
-                    error=str(e), crew_name=self.name or "crew"
-                ),
+                CrewKickoffFailedEvent(error=str(e), crew_name=self.name or "crew"),
             )
             raise
 
@@ -983,7 +975,7 @@ class Crew(BaseModel):
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         token_usage = self.calculate_usage_metrics()
-        event_bus.emit(
+        crewai_event_bus.emit(
             self,
             CrewKickoffCompletedEvent(
                 crew_name=self.name or "crew", output=final_task_output
@@ -1196,7 +1188,7 @@ class Crew(BaseModel):
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         try:
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 CrewTestStartedEvent(
                     crew_name=self.name or "crew",
@@ -1214,18 +1206,16 @@ class Crew(BaseModel):
 
             evaluator.print_crew_evaluation_result()
 
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
                 CrewTestCompletedEvent(
                     crew_name=self.name or "crew",
                 ),
             )
         except Exception as e:
-            event_bus.emit(
+            crewai_event_bus.emit(
                 self,
-                CrewTestFailedEvent(
-                    error=str(e), crew_name=self.name or "crew"
-                ),
+                CrewTestFailedEvent(error=str(e), crew_name=self.name or "crew"),
             )
             raise
 
