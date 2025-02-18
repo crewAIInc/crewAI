@@ -206,16 +206,11 @@ def test_agent_emits_execution_started_and_completed_events():
     assert received_events[0].agent == base_agent
     assert received_events[0].task == base_task
     assert received_events[0].tools == []
-    assert received_events[0].inputs == {
-        "ask_for_human_input": False,
-        "input": "Just say hi\n"
-        "\n"
-        "This is the expected criteria for your final answer: hi\n"
-        "you MUST return the actual complete content as the final answer, not a "
-        "summary.",
-        "tool_names": "",
-        "tools": "",
-    }
+    assert isinstance(received_events[0].task_prompt, str)
+    assert (
+        received_events[0].task_prompt
+        == "Just say hi\n\nThis is the expected criteria for your final answer: hi\nyou MUST return the actual complete content as the final answer, not a summary."
+    )
     assert isinstance(received_events[0].timestamp, datetime)
     assert received_events[0].type == "agent_execution_started"
     assert isinstance(received_events[1].timestamp, datetime)
