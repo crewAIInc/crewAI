@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel
 
-from .crew_events import CrewEvent
+from .base_events import CrewEvent
 
 
 class FlowEvent(CrewEvent):

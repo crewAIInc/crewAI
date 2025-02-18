@@ -4,7 +4,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 
-from .crew_events import CrewEvent
+from .base_events import CrewEvent
 
 if TYPE_CHECKING:
     from crewai.agents.agent_builder.base_agent import BaseAgent

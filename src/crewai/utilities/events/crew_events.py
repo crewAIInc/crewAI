@@ -1,14 +1,8 @@
-from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import InstanceOf
 
-
-class CrewEvent(BaseModel):
-    """Base class for all crew events"""
-
-    timestamp: datetime = Field(default_factory=datetime.now)
-    type: str
+from crewai.utilities.events.base_events import CrewEvent
 
 
 class CrewKickoffStartedEvent(CrewEvent):
@@ -67,7 +61,7 @@ class CrewTestStartedEvent(CrewEvent):
 
     crew_name: Optional[str]
     n_iterations: int
-    openai_model_name: Optional[str]
+    eval_llm: Optional[Union[str, Any]]
     inputs: Optional[Dict[str, Any]]
     type: str = "crew_test_started"
 

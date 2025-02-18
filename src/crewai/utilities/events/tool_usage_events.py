@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Callable, Dict
 
-from .crew_events import CrewEvent
+from .base_events import CrewEvent
 
 
 class ToolUsageEvent(CrewEvent):

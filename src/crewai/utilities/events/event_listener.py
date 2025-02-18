@@ -85,7 +85,7 @@ class EventListener(BaseEventListener):
                 cloned_crew,
                 event.n_iterations,
                 event.inputs,
-                event.openai_model_name,
+                event.eval_llm,
             )
             self.logger.log(
                 f"🚀 Crew '{event.crew_name}' started test",

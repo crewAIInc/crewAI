@@ -1201,6 +1201,10 @@ class Crew(BaseModel):
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         try:
+            eval_llm = create_llm(eval_llm)
+            if not eval_llm:
+                raise ValueError("Failed to create LLM instance.")
+
             crewai_event_bus.emit(
                 self,
                 CrewTestStartedEvent(
@@ -1211,7 +1215,7 @@ class Crew(BaseModel):
                 ),
             )
             test_crew = self.copy()
-            evaluator = CrewEvaluator(test_crew, eval_llm)
+            evaluator = CrewEvaluator(test_crew, eval_llm)  # type: ignore[arg-type]
 
             for i in range(1, n_iterations + 1):
                 evaluator.set_iteration(i)
