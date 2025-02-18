@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import inspect
 import logging
 from typing import (
@@ -572,6 +573,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
 
+    def _copy_state(self) -> T:
+        return copy.deepcopy(self._state)
+
     @property
     def state(self) -> T:
         return self._state
@@ -743,6 +747,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             event=FlowStartedEvent(
                 type="flow_started",
                 flow_name=self.__class__.__name__,
+                inputs=inputs,
             ),
         )
         self._log_flow_event(
@@ -811,6 +816,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
+        dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
+        self.event_emitter.send(
+            self,
+            event=MethodExecutionStartedEvent(
+                type="method_execution_started",
+                method_name=method_name,
+                flow_name=self.__class__.__name__,
+                params=dumped_params,
+                state=self._copy_state(),
+            ),
+        )
+
         result = (
             await method(*args, **kwargs)
             if asyncio.iscoroutinefunction(method)
@@ -820,6 +837,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._method_execution_counts[method_name] = (
             self._method_execution_counts.get(method_name, 0) + 1
         )
+
+        self.event_emitter.send(
+            self,
+            event=MethodExecutionFinishedEvent(
+                type="method_execution_finished",
+                method_name=method_name,
+                flow_name=self.__class__.__name__,
+                state=self._copy_state(),
+                result=result,
+            ),
+        )
+
         return result
 
     async def _execute_listeners(self, trigger_method: str, result: Any) -> None:
@@ -958,16 +987,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         try:
             method = self._methods[listener_name]
-
-            self.event_emitter.send(
-                self,
-                event=MethodExecutionStartedEvent(
-                    type="method_execution_started",
-                    method_name=listener_name,
-                    flow_name=self.__class__.__name__,
-                ),
-            )
-
             sig = inspect.signature(method)
             params = list(sig.parameters.values())
             method_params = [p for p in params if p.name != "self"]
@@ -978,15 +997,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
             else:
                 listener_result = await self._execute_method(listener_name, method)
-
-            self.event_emitter.send(
-                self,
-                event=MethodExecutionFinishedEvent(
-                    type="method_execution_finished",
-                    method_name=listener_name,
-                    flow_name=self.__class__.__name__,
-                ),
-            )
 
             # Execute listeners (and possibly routers) of this listener
             await self._execute_listeners(listener_name, listener_result)
