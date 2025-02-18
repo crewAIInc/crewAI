@@ -349,7 +349,7 @@ def test_convert_with_instructions():
     assert output.age == 30
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"], record_mode="new_episodes")
 def test_converter_with_llama3_2_model():
     llm = LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434")
 
@@ -370,7 +370,7 @@ def test_converter_with_llama3_2_model():
     assert output.age == 30
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"], record_mode="new_episodes")
 def test_converter_with_llama3_1_model():
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     sample_text = "Name: Alice Llama, Age: 30"
