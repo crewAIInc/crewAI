@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 from crewai.flow import Flow
-from crewai.flow.state_utils import export_state
+from crewai.flow.state_utils import export_state, to_string
 
 
 class Address(BaseModel):
@@ -119,16 +119,10 @@ def test_pydantic_model_serialization(mock_flow):
     )
 
     result = export_state(flow)
-
-    assert result["single_model"]["street"] == "123 Main St"
-
-    assert result["nested_model"]["name"] == "John Doe"
-    assert result["nested_model"]["address"]["city"] == "Tech City"
-    assert result["nested_model"]["birthday"] == "1994-01-01"
-
-    assert len(result["model_list"]) == 2
-    assert all(m["street"] == "123 Main St" for m in result["model_list"])
-    assert result["model_dict"]["home"]["city"] == "Tech City"
+    assert (
+        to_string(result)
+        == '{"single_model": {"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}, "nested_model": {"name": "John Doe", "age": 30, "address": {"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}, "birthday": "1994-01-01", "skills": ["Python", "Testing"]}, "model_list": [{"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}, {"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}], "model_dict": {"home": {"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}}}'
+    )
 
 
 def test_depth_limit(mock_flow):
