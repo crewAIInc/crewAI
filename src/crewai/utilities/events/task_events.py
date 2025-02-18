@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities.events.crew_events import CrewEvent
+from crewai.utilities.events.base_events import CrewEvent
 
 
 class TaskStartedEvent(CrewEvent):
@@ -11,13 +11,11 @@ class TaskStartedEvent(CrewEvent):
     context: Optional[str]
 
 
-
 class TaskCompletedEvent(CrewEvent):
     """Event emitted when a task completes"""
 
     output: TaskOutput
     type: str = "task_completed"
-
 
 
 class TaskFailedEvent(CrewEvent):
