@@ -21,16 +21,114 @@ interactions:
     uri: http://localhost:11434/api/generate
   response:
     body:
-      string: '{"model":"llama3.2:3b","created_at":"2025-02-18T21:19:33.600962Z","response":"{\n  \"name\":
-        \"Alice Llama\", \n  \"age\": 30 }","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,744,512,5618,5625,279,2768,1495,1139,2764,4823,382,5207,27785,279,2764,4823,323,4400,775,382,791,4823,2011,1833,420,3645,7041,512,517,220,330,609,794,610,345,220,330,425,794,528,198,633,14711,2724,512,678,25,30505,445,81101,11,13381,25,220,966,271,128009,128006,78191,128007,271,517,220,330,609,794,330,62786,445,81101,498,720,220,330,425,794,220,966,335],"total_duration":687782916,"load_duration":32144708,"prompt_eval_count":82,"prompt_eval_duration":323000000,"eval_count":19,"eval_duration":332000000}'
+      string: '{"model":"llama3.2:3b","created_at":"2025-02-18T21:35:26.651835Z","response":"{\n  \"name\":
+        \"Alice Llama\", \n  \"age\": 30","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,744,512,5618,5625,279,2768,1495,1139,2764,4823,382,5207,27785,279,2764,4823,323,4400,775,382,791,4823,2011,1833,420,3645,7041,512,517,220,330,609,794,610,345,220,330,425,794,528,198,633,14711,2724,512,678,25,30505,445,81101,11,13381,25,220,966,271,128009,128006,78191,128007,271,517,220,330,609,794,330,62786,445,81101,498,720,220,330,425,794,220,966],"total_duration":2277785459,"load_duration":819153792,"prompt_eval_count":82,"prompt_eval_duration":1153000000,"eval_count":18,"eval_duration":303000000}'
     headers:
       Content-Length:
-      - '783'
+      - '780'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Tue, 18 Feb 2025 21:19:33 GMT
+      - Tue, 18 Feb 2025 21:35:26 GMT
     status:
       code: 200
       message: OK
+- request:
+    body: '{"name": "ollama/llama3.2:3b"}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '30'
+      content-type:
+      - application/json
+      host:
+      - localhost:11434
+      user-agent:
+      - litellm/1.50.1
+    method: POST
+    uri: http://localhost:11434/api/show
+  response:
+    body:
+      string: '{"error":"model ''ollama/llama3.2:3b'' not found"}'
+    headers:
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 18 Feb 2025 21:35:26 GMT
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{"model": "llama3.2:3b", "prompt": "### System:\nPlease convert the following
+      text into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe
+      JSON must follow this format exactly:\n{\n  \"name\": str,\n  \"age\": int\n}\n\n###
+      User:\nName: Alice Llama, Age: 30\n\n", "options": {"stop": []}, "stream": false}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '321'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.2
+    method: POST
+    uri: http://localhost:11434/api/generate
+  response:
+    body:
+      string: '{"model":"llama3.2:3b","created_at":"2025-02-18T21:35:27.275264Z","response":"{\"name\":
+        \"Alice Llama\", \"age\": 30}","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,744,512,5618,5625,279,2768,1495,1139,2764,4823,382,5207,27785,279,2764,4823,323,4400,775,382,791,4823,2011,1833,420,3645,7041,512,517,220,330,609,794,610,345,220,330,425,794,528,198,633,14711,2724,512,678,25,30505,445,81101,11,13381,25,220,966,271,128009,128006,78191,128007,271,5018,609,794,330,62786,445,81101,498,330,425,794,220,966,92],"total_duration":284212459,"load_duration":13514542,"prompt_eval_count":82,"prompt_eval_duration":23000000,"eval_count":15,"eval_duration":246000000}'
+    headers:
+      Content-Length:
+      - '757'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 18 Feb 2025 21:35:27 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"name": "ollama/llama3.2:3b"}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '30'
+      content-type:
+      - application/json
+      host:
+      - localhost:11434
+      user-agent:
+      - litellm/1.50.1
+    method: POST
+    uri: http://localhost:11434/api/show
+  response:
+    body:
+      string: '{"error":"model ''ollama/llama3.2:3b'' not found"}'
+    headers:
+      Content-Length:
+      - '48'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 18 Feb 2025 21:35:27 GMT
+    status:
+      code: 404
+      message: Not Found
 version: 1
