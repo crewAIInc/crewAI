@@ -336,6 +336,19 @@ def test_validate_tool_input_with_trailing_commas():
 
 
 def test_validate_tool_input_invalid_input():
+    # Create mock agent with proper string values
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"  # Must be a string
+    mock_agent.role = "test_agent_role"  # Must be a string
+    mock_agent._original_role = "test_agent_role"  # Must be a string
+    mock_agent.i18n = MagicMock()
+    mock_agent.verbose = False
+
+    # Create mock action with proper string value
+    mock_action = MagicMock()
+    mock_action.tool = "test_tool"  # Must be a string
+    mock_action.tool_input = "test_input"  # Must be a string
+
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -344,8 +357,8 @@ def test_validate_tool_input_invalid_input():
         tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
-        agent=MagicMock(),
-        action=MagicMock(),
+        agent=mock_agent,
+        action=mock_action,
     )
 
     invalid_inputs = [
@@ -365,7 +378,7 @@ def test_validate_tool_input_invalid_input():
 
     # Test for None input separately
     arguments = tool_usage._validate_tool_input(None)
-    assert arguments == {}  # Expecting an empty dictionary
+    assert arguments == {}
 
 
 def test_validate_tool_input_complex_structure():
