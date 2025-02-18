@@ -120,11 +120,16 @@ If you encounter issues during installation or usage, here are some common solut
 
 To create a new CrewAI project, run the following CLI (Command Line Interface) command:
 
+``` Note: This guide is compatible with CrewAI v[0.102.0] and above.```
+
 ```shell
 crewai create crew <project_name>
 ```
-It will then ask you to choose a provider to setup:
+## Provider Selection
+
+The CLI will present you with a list of available providers:
 ```shell
+
 Select a provider to set up:
 1. openai
 2. anthropic
@@ -140,20 +145,67 @@ Select a provider to set up:
 12. other
 q. Quit
 ```
-For Example:
+Available Providers
+
+| Provider    | Description                               | Key Required |
+|-------------|-------------------------------------------|--------------|
+| OpenAI      | GPT models for general purpose AI         | Yes          |
+| Anthropic   | Claude models for enhanced reasoning      | Yes          |
+| Gemini      | Google's AI models                        | Yes          |
+| Nvidia NIM  | High-performance AI models                | Yes          |
+| Groq        | Fast inference AI models                  | Yes          |
+| Ollama      | Local open-source models                  | No           |
+| Watson      | IBM's enterprise AI solution              | Yes          |
+| Bedrock     | AWS managed AI models                     | Yes          |
+| Azure       | Microsoft's cloud AI platform             | Yes          |
+| Cerebras    | Specialized AI hardware acceleration      | Yes          |
+| SambaNova   | Enterprise AI solutions                   | Yes          |
+
+## Example: Setting Up Anthropic
+
+Here's an example of setting up Anthropic as your provider:
 ```shell
-//I choose anthropic which is option no. 2
+# Select Anthropic (option 2)
 Enter the number of your choice or 'q' to quit: 2
+
+# Choose your preferred model
 Select a model to use for Anthropic:
 1. claude-3-5-sonnet-20240620
 2. claude-3-sonnet-20240229
 3. claude-3-opus-20240229
 4. claude-3-haiku-20240307
 q. Quit
-Enter the number of your choice or 'q' to quit: 1
-Enter your ANTHROPIC API key (press Enter to skip):
 
+Enter the number of your choice or 'q' to quit: 1
+
+# Enter your API key when prompted
+Enter your ANTHROPIC API key (press Enter to skip):
 ```
+
+## Model Selection Guide
+
+Each Anthropic model is optimized for different use cases:
+
+- claude-3-5-sonnet-20240620: Best for general-purpose tasks with balanced performance and cost
+- claude-3-sonnet-20240229: Suitable for everyday tasks requiring strong reasoning
+- claude-3-opus-20240229: Ideal for complex tasks requiring deep analysis
+- claude-3-haiku-20240307: Optimized for quick, simple tasks with faster response times
+
+## What Happens Next
+After entering your API key:
+
+1. The configuration will be saved to your project
+2. You can start using the selected provider in your CrewAI project
+3. To change the provider later, edit the config file in your project directory
+
+## Troubleshooting
+If you encounter any issues:
+
+- Verify that your API key is valid and has the necessary permissions
+- Ensure you're using a compatible CrewAI version
+- Check that the selected model is available in your region
+
+```⚠️ Security Note: Store your API keys securely and never commit them to version control. Consider using environment variables or a secure secrets manager.```
 
 This command creates a new project folder with the following structure:
 
