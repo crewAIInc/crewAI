@@ -94,8 +94,13 @@ class CrewAgentParser:
 
         elif includes_answer:
             final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
-            # Remove all backticks (```) from the final answer
-            final_answer = final_answer.replace("```", "").strip()
+            # Check whether the final answer ends with triple backticks.
+            if final_answer.endswith("```"):
+                # Count occurrences of triple backticks in the final answer.
+                count = final_answer.count("```")
+                # If count is odd then it's an unmatched trailing set; remove it.
+                if count % 2 != 0:
+                    final_answer = final_answer[:-3].rstrip()
             return AgentFinish(thought, final_answer, text)
 
         if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
