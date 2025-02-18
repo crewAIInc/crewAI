@@ -94,6 +94,8 @@ class CrewAgentParser:
 
         elif includes_answer:
             final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
+            # Remove all backticks (```) from the final answer
+            final_answer = final_answer.replace("```", "").strip()
             return AgentFinish(thought, final_answer, text)
 
         if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
