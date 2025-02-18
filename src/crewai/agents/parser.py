@@ -122,7 +122,10 @@ class CrewAgentParser:
         regex = r"(.*?)(?:\n\nAction|\n\nFinal Answer)"
         thought_match = re.search(regex, text, re.DOTALL)
         if thought_match:
-            return thought_match.group(1).strip()
+            thought = thought_match.group(1).strip()
+            # Remove any triple backticks from the thought string
+            thought = thought.replace("```", "").strip()
+            return thought
         return ""
 
     def _clean_action(self, text: str) -> str:
