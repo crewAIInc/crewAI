@@ -17,12 +17,14 @@ from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
-from crewai.utilities.events import (
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.tool_usage_events import (
+    ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
+    ToolValidateInputErrorEvent,
 )
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
@@ -306,14 +308,33 @@ class ToolUsage:
             ):
                 return tool
         self.task.increment_tools_errors()
+        tool_selection_data = {
+            "agent_key": self.agent.key,
+            "agent_role": self.agent.role,
+            "tool_name": tool_name,
+            "tool_args": {},
+            "tool_class": self.tools_description,
+        }
         if tool_name and tool_name != "":
-            raise Exception(
-                f"Action '{tool_name}' don't exist, these are the only available Actions:\n{self.tools_description}"
+            error = f"Action '{tool_name}' don't exist, these are the only available Actions:\n{self.tools_description}"
+            crewai_event_bus.emit(
+                self,
+                ToolSelectionErrorEvent(
+                    **tool_selection_data,
+                    error=error,
+                ),
             )
+            raise Exception(error)
         else:
-            raise Exception(
-                f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+            error = f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+            crewai_event_bus.emit(
+                self,
+                ToolSelectionErrorEvent(
+                    **tool_selection_data,
+                    error=error,
+                ),
             )
+            raise Exception(error)
 
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
@@ -449,18 +470,33 @@ class ToolUsage:
             if isinstance(arguments, dict):
                 return arguments
         except Exception as e:
-            self._printer.print(content=f"Failed to repair JSON: {e}", color="red")
+            error = f"Failed to repair JSON: {e}"
+            self._printer.print(content=error, color="red")
 
-        # If all parsing attempts fail, raise an error
-        raise Exception(
+        error_message = (
             "Tool input must be a valid dictionary in JSON or Python literal format"
+        )
+        self._emit_validate_input_error(error_message)
+        # If all parsing attempts fail, raise an error
+        raise Exception(error_message)
+
+    def _emit_validate_input_error(self, final_error: str):
+        tool_selection_data = {
+            "agent_key": self.agent.key,
+            "agent_role": self.agent.role,
+            "tool_name": self.action.tool,
+            "tool_args": str(self.action.tool_input),
+            "tool_class": self.__class__.__name__,
+        }
+
+        crewai_event_bus.emit(
+            self,
+            ToolValidateInputErrorEvent(**tool_selection_data, error=final_error),
         )
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
-        crewai_event_bus.emit(
-            self, event=ToolUsageErrorEvent(**{**event_data, "error": e})
-        )
+        crewai_event_bus.emit(self, ToolUsageErrorEvent(**{**event_data, "error": e}))
 
     def on_tool_use_finished(
         self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float
@@ -474,7 +510,7 @@ class ToolUsage:
                 "from_cache": from_cache,
             }
         )
-        crewai_event_bus.emit(self, event=ToolUsageFinishedEvent(**event_data))
+        crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
         return {

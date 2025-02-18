@@ -1,5 +1,6 @@
+import json
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import Field
@@ -10,6 +11,7 @@ from crewai.crew import Crew
 from crewai.flow.flow import Flow, listen, start
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.events.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -34,7 +36,9 @@ from crewai.utilities.events.task_events import (
     TaskFailedEvent,
     TaskStartedEvent,
 )
-from crewai.utilities.events.tool_usage_events import ToolUsageErrorEvent
+from crewai.utilities.events.tool_usage_events import (
+    ToolUsageErrorEvent,
+)
 
 base_agent = Agent(
     role="base_agent",

@@ -16,7 +16,7 @@ class AgentExecutionStartedEvent(CrewEvent):
     agent: BaseAgent
     task: Any
     tools: Optional[Sequence[Union[BaseTool, CrewStructuredTool]]]
-    inputs: Dict[str, Any]
+    task_prompt: str
     type: str = "agent_execution_started"
 
     model_config = {"arbitrary_types_allowed": True}

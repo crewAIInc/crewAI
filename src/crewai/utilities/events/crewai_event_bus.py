@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Type, TypeVar, cast
 from blinker import Signal
 
 from crewai.utilities.events.crew_events import CrewEvent
+from crewai.utilities.events.event_types import EventTypes
 
 EventT = TypeVar("EventT", bound=CrewEvent)
 
@@ -29,9 +30,7 @@ class CrewAIEventsBus:
     def _initialize(self) -> None:
         """Initialize the event bus internal state"""
         self._signal = Signal("crewai_event_bus")
-        self._handlers: Dict[
-            Type[CrewEvent], List[Callable[[Any, CrewEvent], None]]
-        ] = {}
+        self._handlers: Dict[Type[CrewEvent], List[Callable]] = {}
 
     def on(
         self, event_type: Type[EventT]
@@ -54,7 +53,7 @@ class CrewAIEventsBus:
             if event_type not in self._handlers:
                 self._handlers[event_type] = []
             self._handlers[event_type].append(
-                cast(Callable[[Any, CrewEvent], None], handler)
+                cast(Callable[[Any, EventT], None], handler)
             )
             return handler
 
@@ -79,13 +78,13 @@ class CrewAIEventsBus:
         self._handlers.clear()
 
     def register_handler(
-        self, event_type: Type[EventT], handler: Callable[[Any, EventT], None]
+        self, event_type: Type[EventTypes], handler: Callable[[Any, EventTypes], None]
     ) -> None:
         """Register an event handler for a specific event type"""
         if event_type not in self._handlers:
             self._handlers[event_type] = []
         self._handlers[event_type].append(
-            cast(Callable[[Any, CrewEvent], None], handler)
+            cast(Callable[[Any, EventTypes], None], handler)
         )
 
     @contextmanager
