@@ -220,10 +220,13 @@ def test_get_conversion_instructions_gpt():
         supports_function_calling.return_value = True
         instructions = get_conversion_instructions(SimpleModel, llm)
         model_schema = PydanticSchemaParser(model=SimpleModel).get_schema()
-        assert (
-            instructions
-            == f"Please convert the following text into valid JSON.\n\nThe JSON should follow this schema:\n```json\n{model_schema}\n```"
+        expected_instructions = (
+            "Please convert the following text into valid JSON.\n\n"
+            "Output ONLY the valid JSON and nothing else.\n\n"
+            "The JSON must follow this schema exactly:\n```json\n"
+            f"{model_schema}\n```"
         )
+        assert instructions == expected_instructions
 
 
 def test_get_conversion_instructions_non_gpt():
@@ -563,7 +566,7 @@ def test_converter_with_ambiguous_input():
     with pytest.raises(ConverterError) as exc_info:
         output = converter.to_pydantic()
 
-    assert "validation error" in str(exc_info.value).lower()
+    assert "failed to convert text into a pydantic model" in str(exc_info.value).lower()
 
 
 # Tests for function calling support
