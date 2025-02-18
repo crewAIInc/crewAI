@@ -123,6 +123,37 @@ To create a new CrewAI project, run the following CLI (Command Line Interface) c
 ```shell
 crewai create crew <project_name>
 ```
+It will then ask you to choose a provider to setup:
+```shell
+Select a provider to set up:
+1. openai
+2. anthropic
+3. gemini
+4. nvidia_nim
+5. groq
+6. ollama
+7. watson
+8. bedrock
+9. azure
+10. cerebras
+11. sambanova
+12. other
+q. Quit
+```
+For Example:
+```shell
+//I choose anthropic which is option no. 2
+Enter the number of your choice or 'q' to quit: 2
+Select a model to use for Anthropic:
+1. claude-3-5-sonnet-20240620
+2. claude-3-sonnet-20240229
+3. claude-3-opus-20240229
+4. claude-3-haiku-20240307
+q. Quit
+Enter the number of your choice or 'q' to quit: 1
+Enter your ANTHROPIC API key (press Enter to skip):
+
+```
 
 This command creates a new project folder with the following structure:
 
