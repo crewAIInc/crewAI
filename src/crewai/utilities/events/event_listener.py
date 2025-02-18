@@ -2,6 +2,7 @@ from pydantic import PrivateAttr
 
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
+from crewai.utilities.constants import EMITTER_COLOR
 from crewai.utilities.events.base_event_listener import BaseEventListener
 
 from .agent_events import AgentExecutionCompletedEvent, AgentExecutionStartedEvent
@@ -33,14 +34,22 @@ from .tool_usage_events import (
 
 
 class EventListener(BaseEventListener):
+    _instance = None
     _telemetry: Telemetry = PrivateAttr(default_factory=lambda: Telemetry())
-    logger = Logger(verbose=True)
-    color = "bold_blue"
+    logger = Logger(verbose=True, default_color=EMITTER_COLOR)
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
 
     def __init__(self):
-        super().__init__()
-        self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
+        if not hasattr(self, "_initialized") or not self._initialized:
+            super().__init__()
+            self._telemetry = Telemetry()
+            self._telemetry.set_tracer()
+            self._initialized = True
 
     # Crew Events: kickoff, test, train
     def setup_listeners(self, crewai_event_bus):
@@ -49,7 +58,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"🚀 Crew '{event.crew_name}' started",
                 event.timestamp,
-                color=self.color,
             )
             self._telemetry.crew_execution_span(source, event.inputs)
 
@@ -60,7 +68,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"✅ Crew '{event.crew_name}' completed",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
@@ -68,7 +75,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"❌ Crew '{event.crew_name}' failed",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(CrewTestStartedEvent)
@@ -83,7 +89,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"🚀 Crew '{event.crew_name}' started test",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(CrewTestCompletedEvent)
@@ -91,7 +96,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"✅ Crew '{event.crew_name}' completed test",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(CrewTestFailedEvent)
@@ -99,7 +103,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"❌ Crew '{event.crew_name}' failed test",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(CrewTrainStartedEvent)
@@ -107,7 +110,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"📋 Crew '{event.crew_name}' started train",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(CrewTrainCompletedEvent)
@@ -115,7 +117,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"✅ Crew '{event.crew_name}' completed train",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(CrewTrainFailedEvent)
@@ -123,7 +124,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"❌ Crew '{event.crew_name}' failed train",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(TaskStartedEvent)
@@ -134,7 +134,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"📋 Task started: {source.description}",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(TaskCompletedEvent)
@@ -146,7 +145,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"✅ Task completed: {source.description}",
                 event.timestamp,
-                color=self.color,
             )
             source._execution_span = None
 
@@ -161,7 +159,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"❌ Task failed: {source.description}",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(AgentExecutionStartedEvent)
@@ -169,7 +166,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"🤖 Agent '{event.agent.role}' started task",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(AgentExecutionCompletedEvent)
@@ -177,7 +173,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"✅ Agent '{event.agent.role}' completed task",
                 event.timestamp,
-                color=self.color,
             )
 
         # Flow Events
@@ -188,7 +183,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"🌊 Flow Created: '{event.flow_name}'",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(FlowStartedEvent)
@@ -199,7 +193,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"🤖 Flow Started: '{event.flow_name}'",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(FlowFinishedEvent)
@@ -207,7 +200,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"👍 Flow Finished: '{event.flow_name}'",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
@@ -215,7 +207,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"🤖 Flow Method Started: '{event.method_name}'",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(MethodExecutionFailedEvent)
@@ -223,7 +214,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"❌ Flow Method Failed: '{event.method_name}'",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
@@ -231,7 +221,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"👍 Flow Method Finished: '{event.method_name}'",
                 event.timestamp,
-                color=self.color,
             )
 
         # Tool Usage Events
@@ -240,7 +229,6 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"🤖 Tool Usage Started: '{event.tool_name}'",
                 event.timestamp,
-                color=self.color,
             )
 
         @crewai_event_bus.on(ToolUsageFinishedEvent)
@@ -248,7 +236,7 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"✅ Tool Usage Finished: '{event.tool_name}'",
                 event.timestamp,
-                color=self.color,
+                #
             )
 
         @crewai_event_bus.on(ToolUsageErrorEvent)
@@ -256,7 +244,7 @@ class EventListener(BaseEventListener):
             self.logger.log(
                 f"❌ Tool Usage Error: '{event.tool_name}'",
                 event.timestamp,
-                color=self.color,
+                #
             )
 
 
