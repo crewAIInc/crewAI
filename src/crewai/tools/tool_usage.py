@@ -22,7 +22,6 @@ from crewai.utilities.events.tool_usage_events import (
     ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
-    ToolUsageStartedEvent,
     ToolValidateInputErrorEvent,
 )
 
@@ -140,8 +139,6 @@ class ToolUsage:
         tool: Any,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
-        event_data = self._prepare_event_data(tool, calling)  # type: ignore
-        crewai_event_bus.emit(self, ToolUsageStartedEvent(**event_data))
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
