@@ -51,7 +51,8 @@ class EventListener(BaseEventListener):
             self._telemetry.set_tracer()
             self._initialized = True
 
-    # Crew Events: kickoff, test, train
+    # ----------- CREW EVENTS -----------
+
     def setup_listeners(self, crewai_event_bus):
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source, event: CrewKickoffStartedEvent):
@@ -126,6 +127,8 @@ class EventListener(BaseEventListener):
                 event.timestamp,
             )
 
+        # ----------- TASK EVENTS -----------
+
         @crewai_event_bus.on(TaskStartedEvent)
         def on_task_started(source, event: TaskStartedEvent):
             source._execution_span = self._telemetry.task_started(
@@ -161,6 +164,8 @@ class EventListener(BaseEventListener):
                 event.timestamp,
             )
 
+        # ----------- AGENT EVENTS -----------
+
         @crewai_event_bus.on(AgentExecutionStartedEvent)
         def on_agent_execution_started(source, event: AgentExecutionStartedEvent):
             self.logger.log(
@@ -175,7 +180,7 @@ class EventListener(BaseEventListener):
                 event.timestamp,
             )
 
-        # Flow Events
+        # ----------- FLOW EVENTS -----------
 
         @crewai_event_bus.on(FlowCreatedEvent)
         def on_flow_created(source, event: FlowCreatedEvent):
@@ -223,7 +228,8 @@ class EventListener(BaseEventListener):
                 event.timestamp,
             )
 
-        # Tool Usage Events
+        # ----------- TOOL USAGE EVENTS -----------
+
         @crewai_event_bus.on(ToolUsageStartedEvent)
         def on_tool_usage_started(source, event: ToolUsageStartedEvent):
             self.logger.log(

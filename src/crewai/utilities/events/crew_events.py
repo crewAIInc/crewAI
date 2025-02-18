@@ -1,14 +1,7 @@
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
-
-
-class RunType(Enum):
-    KICKOFF = "kickoff"
-    TEST = "test"
-    TRAIN = "train"
 
 
 class CrewEvent(BaseModel):
