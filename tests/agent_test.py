@@ -1366,6 +1366,51 @@ def test_handle_context_length_exceeds_limit_cli_no():
             mock_handle_context.assert_not_called()
 
 
+def test_interpolate_inputs_with_tool_description():
+    from crewai.tools import BaseTool
+    
+    class DummyTool(BaseTool):
+        name: str = "dummy_tool"
+        description: str = "Tool Arguments: {'arg': {'description': 'test arg', 'type': 'str'}}"
+        
+        def _run(self, arg: str) -> str:
+            """Run the tool."""
+            return f"Dummy result for: {arg}"
+    
+    tool = DummyTool()
+    agent = Agent(
+        role="{topic} specialist",
+        goal="Figure {goal} out",
+        backstory="I am the master of {role}\nTools: {tool_desc}",
+    )
+
+    agent.interpolate_inputs({
+        "topic": "AI",
+        "goal": "life",
+        "role": "all things",
+        "tool_desc": tool.description
+    })
+    assert "Tool Arguments: {'arg': {'description': 'test arg', 'type': 'str'}}" in agent.backstory
+
+def test_interpolate_only_error_handling():
+    agent = Agent(
+        role="{topic} specialist",
+        goal="Figure {goal} out",
+        backstory="I am the master of {role}",
+    )
+    
+    # Test empty input string
+    with pytest.raises(ValueError, match="Input string cannot be None or empty"):
+        agent._interpolate_only("", {"topic": "AI"})
+        
+    # Test empty inputs dictionary
+    with pytest.raises(ValueError, match="Inputs dictionary cannot be empty"):
+        agent._interpolate_only("test {topic}", {})
+        
+    # Test missing template variable
+    with pytest.raises(KeyError, match="Missing required template variable"):
+        agent._interpolate_only("test {missing}", {"topic": "AI"})
+
 def test_agent_with_all_llm_attributes():
     agent = Agent(
         role="test role",
