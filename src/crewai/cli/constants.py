@@ -215,7 +215,7 @@ MODELS = {
         "watsonx/mistral/mistral-large",
         "watsonx/ibm/granite-3-8b-instruct",
     ],
-        "bedrock": [
+    "bedrock": [
         "bedrock/amazon.nova-pro-v1:0",
         "bedrock/amazon.nova-micro-v1:0",
         "bedrock/amazon.nova-lite-v1:0",
