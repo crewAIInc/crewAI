@@ -26,6 +26,9 @@ def run_crew() -> None:
             fg="red",
         )
 
+    if pyproject_data.get("tool", {}).get("crewai", {}).get("type") == "flow":
+        command = ["uv", "run", "kickoff"]
+    
     try:
         subprocess.run(command, capture_output=False, text=True, check=True)
 
