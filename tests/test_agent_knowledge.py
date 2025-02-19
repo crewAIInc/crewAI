@@ -1,10 +1,9 @@
-import pytest
-from unittest.mock import patch, MagicMock
-
 from chromadb.api.types import EmbeddingFunction
 from crewai import Agent, Crew, Task
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.process import Process
+import pytest
+from unittest.mock import MagicMock, patch
 
 class MockEmbeddingFunction(EmbeddingFunction):
     def __call__(self, texts):
