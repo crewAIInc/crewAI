@@ -2,9 +2,11 @@
 
 import asyncio
 from datetime import datetime
+from typing import Dict, List, Optional, Set, Tuple
+from uuid import uuid4
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.flow.flow_events import (
@@ -346,6 +348,315 @@ def test_flow_uuid_structured():
     # Verify other state fields were properly updated
     assert flow.state.counter == 2
     assert flow.state.message == "final"
+
+
+def test_flow_with_thread_lock():
+    """Test that Flow properly handles thread locks in state."""
+    import threading
+    
+    class LockFlow(Flow):
+        def __init__(self):
+            super().__init__()
+            self.lock = threading.RLock()
+            self.counter = 0
+            
+        @start()
+        async def step_1(self):
+            with self.lock:
+                self.counter += 1
+                return "step 1"
+                
+        @listen(step_1)
+        async def step_2(self, result):
+            with self.lock:
+                self.counter += 1
+                return result + " -> step 2"
+
+    flow = LockFlow()
+    result = flow.kickoff()
+    
+    assert result == "step 1 -> step 2"
+    assert flow.counter == 2
+
+
+def test_flow_with_nested_objects_and_locks():
+    """Test that Flow properly handles nested objects containing locks."""
+    import threading
+    from dataclasses import dataclass
+    from typing import Dict, List, Optional
+    
+    @dataclass
+    class NestedState:
+        value: str
+        lock: threading.RLock = None
+        
+        def __post_init__(self):
+            if self.lock is None:
+                self.lock = threading.RLock()
+                
+        def __pydantic_validate__(self):
+            return {"value": self.value, "lock": threading.RLock()}
+            
+        @classmethod
+        def __get_pydantic_core_schema__(cls, source_type, handler):
+            from pydantic_core.core_schema import (
+                str_schema,
+                with_info_plain_validator_function,
+            )
+            def validate(value, _):
+                if isinstance(value, cls):
+                    return value
+                if isinstance(value, dict):
+                    return cls(value["value"])
+                raise ValueError(f"Invalid value type for {cls.__name__}")
+            return with_info_plain_validator_function(validate)
+        
+    class ComplexState(BaseModel):
+        id: str = Field(default_factory=lambda: str(uuid4()))
+        name: str
+        nested: NestedState
+        items: List[NestedState]
+        mapping: Dict[str, NestedState]
+        optional: Optional[NestedState] = None
+        
+    class ComplexStateFlow(Flow[ComplexState]):
+        def __init__(self):
+            self.initial_state = ComplexState(
+                name="test",
+                nested=NestedState("nested", threading.RLock()),
+                items=[
+                    NestedState("item1", threading.RLock()),
+                    NestedState("item2", threading.RLock())
+                ],
+                mapping={
+                    "key1": NestedState("map1", threading.RLock()),
+                    "key2": NestedState("map2", threading.RLock())
+                },
+                optional=NestedState("optional", threading.RLock())
+            )
+            super().__init__()
+            
+        @start()
+        async def step_1(self):
+            with self.state.nested.lock:
+                return "step 1"
+                
+        @listen(step_1)
+        async def step_2(self, result):
+            with self.state.items[0].lock:
+                with self.state.mapping["key1"].lock:
+                    with self.state.optional.lock:
+                        return result + " -> step 2"
+
+    flow = ComplexStateFlow()
+    result = flow.kickoff()
+    
+    assert result == "step 1 -> step 2"
+    
+def test_flow_with_nested_locks():
+    """Test that Flow properly handles nested thread locks."""
+    import threading
+    
+    class NestedLockFlow(Flow):
+        def __init__(self):
+            super().__init__()
+            self.outer_lock = threading.RLock()
+            self.inner_lock = threading.RLock()
+            self.counter = 0
+            
+        @start()
+        async def step_1(self):
+            with self.outer_lock:
+                with self.inner_lock:
+                    self.counter += 1
+                    return "step 1"
+                
+        @listen(step_1)
+        async def step_2(self, result):
+            with self.outer_lock:
+                with self.inner_lock:
+                    self.counter += 1
+                    return result + " -> step 2"
+
+    flow = NestedLockFlow()
+    result = flow.kickoff()
+    
+    assert result == "step 1 -> step 2"
+    assert flow.counter == 2
+
+
+@pytest.mark.asyncio
+async def test_flow_with_async_locks():
+    """Test that Flow properly handles locks in async context."""
+    import asyncio
+    import threading
+    
+    class AsyncLockFlow(Flow):
+        def __init__(self):
+            super().__init__()
+            self.lock = threading.RLock()
+            self.async_lock = asyncio.Lock()
+            self.counter = 0
+            
+        @start()
+        async def step_1(self):
+            async with self.async_lock:
+                with self.lock:
+                    self.counter += 1
+                    return "step 1"
+                
+        @listen(step_1)
+        async def step_2(self, result):
+            async with self.async_lock:
+                with self.lock:
+                    self.counter += 1
+                    return result + " -> step 2"
+
+    flow = AsyncLockFlow()
+    result = await flow.kickoff_async()
+    
+    assert result == "step 1 -> step 2"
+    assert flow.counter == 2
+
+
+def test_flow_with_complex_nested_objects():
+    """Test that Flow properly handles complex nested objects."""
+    import asyncio
+    import threading
+    from dataclasses import dataclass
+    
+    @dataclass
+    class ThreadSafePrimitives:
+        thread_lock: threading.Lock
+        rlock: threading.RLock
+        semaphore: threading.Semaphore
+        event: threading.Event
+        async_lock: asyncio.Lock
+        async_event: asyncio.Event
+        
+        def __post_init__(self):
+            self.thread_lock = self.thread_lock or threading.Lock()
+            self.rlock = self.rlock or threading.RLock()
+            self.semaphore = self.semaphore or threading.Semaphore()
+            self.event = self.event or threading.Event()
+            self.async_lock = self.async_lock or asyncio.Lock()
+            self.async_event = self.async_event or asyncio.Event()
+            
+        def __pydantic_validate__(self):
+            return {
+                "thread_lock": None,
+                "rlock": None,
+                "semaphore": None,
+                "event": None,
+                "async_lock": None,
+                "async_event": None
+            }
+            
+        @classmethod
+        def __get_pydantic_core_schema__(cls, source_type, handler):
+            from pydantic_core.core_schema import with_info_plain_validator_function
+            def validate(value, _):
+                if isinstance(value, cls):
+                    return value
+                if isinstance(value, dict):
+                    return cls(
+                        thread_lock=None,
+                        rlock=None,
+                        semaphore=None,
+                        event=None,
+                        async_lock=None,
+                        async_event=None
+                    )
+                raise ValueError(f"Invalid value type for {cls.__name__}")
+            return with_info_plain_validator_function(validate)
+        
+    @dataclass
+    class NestedContainer:
+        name: str
+        primitives: ThreadSafePrimitives
+        items: List[ThreadSafePrimitives]
+        mapping: Dict[str, ThreadSafePrimitives]
+        optional: Optional[ThreadSafePrimitives]
+        
+        def __post_init__(self):
+            self.primitives = self.primitives or ThreadSafePrimitives(None, None, None, None, None, None)
+            self.items = self.items or []
+            self.mapping = self.mapping or {}
+            
+        def __pydantic_validate__(self):
+            return {
+                "name": self.name,
+                "primitives": self.primitives.__pydantic_validate__(),
+                "items": [item.__pydantic_validate__() for item in self.items],
+                "mapping": {k: v.__pydantic_validate__() for k, v in self.mapping.items()},
+                "optional": self.optional.__pydantic_validate__() if self.optional else None
+            }
+            
+        @classmethod
+        def __get_pydantic_core_schema__(cls, source_type, handler):
+            from pydantic_core.core_schema import with_info_plain_validator_function
+            def validate(value, _):
+                if isinstance(value, cls):
+                    return value
+                if isinstance(value, dict):
+                    return cls(
+                        name=value["name"],
+                        primitives=ThreadSafePrimitives(None, None, None, None, None, None),
+                        items=[],
+                        mapping={},
+                        optional=None
+                    )
+                raise ValueError(f"Invalid value type for {cls.__name__}")
+            return with_info_plain_validator_function(validate)
+        
+    class ComplexState(BaseModel):
+        id: str = Field(default_factory=lambda: str(uuid4()))
+        name: str
+        nested: NestedContainer
+        items: List[NestedContainer]
+        mapping: Dict[str, NestedContainer]
+        optional: Optional[NestedContainer] = None
+        
+    class ComplexStateFlow(Flow[ComplexState]):
+        def __init__(self):
+            primitives = ThreadSafePrimitives(
+                thread_lock=threading.Lock(),
+                rlock=threading.RLock(),
+                semaphore=threading.Semaphore(),
+                event=threading.Event(),
+                async_lock=asyncio.Lock(),
+                async_event=asyncio.Event()
+            )
+            container = NestedContainer(
+                name="test",
+                primitives=primitives,
+                items=[primitives],
+                mapping={"key": primitives},
+                optional=primitives
+            )
+            self.initial_state = ComplexState(
+                name="test",
+                nested=container,
+                items=[container],
+                mapping={"key": container},
+                optional=container
+            )
+            super().__init__()
+            
+        @start()
+        async def step_1(self):
+            with self.state.nested.primitives.rlock:
+                return "step 1"
+                
+        @listen(step_1)
+        async def step_2(self, result):
+            with self.state.items[0].primitives.rlock:
+                return result + " -> step 2"
+
+    flow = ComplexStateFlow()
+    result = flow.kickoff()
+    
+    assert result == "step 1 -> step 2"
 
 
 def test_router_with_multiple_conditions():
