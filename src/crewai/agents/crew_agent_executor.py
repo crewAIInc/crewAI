@@ -549,14 +549,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _get_llm_feedback_response(self, feedback: str) -> Optional[str]:
         """Get LLM classification of whether feedback requires changes."""
-        prompt = self._i18n.slice("human_feedback_classification").format(
+        system_prompt = self._i18n.slice("human_feedback_classification")
+        system_message = self._format_msg(system_prompt, role="system")
+
+        user_prompt = self._i18n.slice("feedback").format(
             feedback=feedback
         )
-        message = self._format_msg(prompt, role="system")
+        user_message = self._format_msg(user_prompt, role="user")
 
         for retry in range(MAX_LLM_RETRY):
             try:
-                response = self.llm.call([message], callbacks=self.callbacks)
+                response = self.llm.call([system_message,user_message], callbacks=self.callbacks)
                 return response.strip().lower() if response else None
             except Exception as error:
                 self._log_feedback_error(retry, error)
