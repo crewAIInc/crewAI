@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import uuid
+import logging
 import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
@@ -58,6 +59,7 @@ try:
 except ImportError:
     agentops = None
 
+logger = logging.getLogger(__name__)
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -741,7 +743,6 @@ class Crew(BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
-
         task_outputs: List[TaskOutput] = []
         futures: List[Tuple[Task, Future[TaskOutput], int]] = []
         last_sync_output: Optional[TaskOutput] = None
@@ -894,15 +895,78 @@ class Crew(BaseModel):
         code_tools = agent.get_code_execution_tools()
         return self._merge_tools(tools, code_tools)
 
-    def _add_delegation_tools(self, task: Task, tools: List[Tool]):
-        agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
-        if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
-            if not tools:
-                tools = []
-            tools = self._inject_delegation_tools(
-                tools, task.agent, agents_for_delegation
-            )
+    def _add_delegation_tools(self, task: Task, tools: List[Tool]) -> List[Tool]:
+        """Add delegation tools to the agent's toolkit.
+        
+        Args:
+            task: The task requiring delegation tools
+            tools: Existing tools list
+            
+        Returns:
+            Updated tools list with delegation capabilities
+            
+        Raises:
+            TaskDelegationError: If delegation tool setup fails
+        """
+        try:
+            return self._setup_agent_delegation(task, tools)
+        except Exception as e:
+            logger.error(f"Failed to add delegation tools: {str(e)}")
+
+    def _setup_agent_delegation(self, task: Task, tools: List[Tool]) -> List[Tool]:
+        """Configure delegation tools for an agent.
+        
+        Args:
+            task: The task requiring delegation
+            tools: Existing tools list
+            
+        Returns:
+            Updated tools list
+        """
+        if not task.agent or not task.agent.allow_delegation:
+            logger.debug(f"Delegation not allowed for agent: {task.agent.role if task.agent else 'None'}")
+            return tools
+
+        delegation_candidates = self._get_delegation_candidates(task.agent)
+        if delegation_candidates:
+            logger.debug(f"Setting up delegation tools for agent {task.agent.role}")
+            return self._inject_delegation_tools(tools, task.agent, delegation_candidates)
         return tools
+
+    def _get_delegation_candidates(self, agent: BaseAgent) -> List[BaseAgent]:
+        """Get list of agents that can be delegated to.
+        
+        Args:
+            agent: The agent requesting delegation
+            
+        Returns:
+            List of available agents for delegation
+        """
+        candidates = []
+        for candidate in self.agents:
+            if candidate == agent:
+                continue
+                
+            if self._can_delegate_to(agent, candidate):
+                logger.debug(f"Adding {candidate.role} as delegation candidate")
+                candidates.append(candidate)
+                
+        return candidates
+
+    def _can_delegate_to(self, delegator: BaseAgent, target: BaseAgent) -> bool:
+        """Check if an agent can delegate to another agent.
+        
+        Args:
+            delegator: Agent attempting to delegate
+            target: Potential delegation target
+            
+        Returns:
+            True if delegation is allowed, False otherwise
+        """
+        if delegator.allowed_agents is None:
+            return True
+            
+        return target.role in delegator.allowed_agents or target in delegator.allowed_agents
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
