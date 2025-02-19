@@ -31,8 +31,8 @@ with warnings.catch_warnings():
     from litellm.utils import supports_response_schema
 
 
-from crewai.utilities.events import crewai_event_bus
 from crewai.traces.unified_trace_controller import trace_llm_call
+from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )

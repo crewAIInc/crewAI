@@ -22,6 +22,10 @@ from pydantic import BaseModel, Field, ValidationError
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
+from crewai.traces.unified_trace_controller import (
+    init_flow_main_trace,
+    trace_flow_step,
+)
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.flow_events import (
     FlowCreatedEvent,
@@ -31,14 +35,6 @@ from crewai.utilities.events.flow_events import (
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
-)
-from crewai.flow.flow_visualizer import plot_flow
-from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.utils import get_possible_return_constants
-from crewai.telemetry import Telemetry
-from crewai.traces.unified_trace_controller import (
-    init_flow_main_trace,
-    trace_flow_step,
 )
 from crewai.utilities.printer import Printer
 
