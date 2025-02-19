@@ -39,6 +39,15 @@ def mock_vector_db():
 
 def test_agent_invalid_embedder_config():
     """Test that an invalid embedder configuration raises a ValueError."""
+    with pytest.raises(ValueError, match="embedder_config must be a dictionary"):
+        Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            knowledge_sources=[StringKnowledgeSource(content="test content")],
+            embedder_config="invalid"
+        )
+
     with pytest.raises(ValueError, match="embedder_config must contain 'provider' key"):
         Agent(
             role="test role",
@@ -55,6 +64,15 @@ def test_agent_invalid_embedder_config():
             backstory="test backstory",
             knowledge_sources=[StringKnowledgeSource(content="test content")],
             embedder_config={"provider": "custom"}
+        )
+
+    with pytest.raises(ValueError, match="Unsupported embedding provider"):
+        Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            knowledge_sources=[StringKnowledgeSource(content="test content")],
+            embedder_config={"provider": "invalid", "config": {}}
         )
 
 def test_agent_knowledge_with_custom_embedder(mock_vector_db):
