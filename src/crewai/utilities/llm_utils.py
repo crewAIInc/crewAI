@@ -44,6 +44,7 @@ def create_llm(
         # Extract attributes with explicit types
         model = (
             getattr(llm_value, "model_name", None)
+            or getattr(llm_value, "model", None)
             or getattr(llm_value, "deployment_name", None)
             or str(llm_value)
         )
