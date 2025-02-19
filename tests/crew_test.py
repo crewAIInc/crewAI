@@ -2322,6 +2322,12 @@ def test_using_contextual_memory():
         agents=[math_researcher],
         tasks=[task1],
         memory=True,
+        embedder_config={
+            "provider": "openai",
+            "config": {
+                "api_key": "fake-api-key"
+            }
+        }
     )
 
     with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
