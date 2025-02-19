@@ -135,6 +135,19 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
+        # If this is a manager agent, ensure it only has delegation tools
+        if self.role == "Manager" and self.allow_delegation and self.crew:
+            try:
+                self.tools = self.get_delegation_tools(self.crew.agents)
+                self._logger.log(
+                    "info",
+                    f"Manager agent has delegation tools: {[tool.name for tool in self.tools]}",
+                    color="blue",
+                )
+            except Exception as e:
+                self._logger.log("error", f"Failed to set delegation tools: {str(e)}", color="red")
+                raise ValueError(f"Failed to set delegation tools: {str(e)}")
+
         return self
 
     def _setup_agent_executor(self):
@@ -325,21 +338,33 @@ class Agent(BaseAgent):
         return tools
 
     def get_multimodal_tools(self) -> Sequence[BaseTool]:
-        from crewai.tools.agent_tools.add_image_tool import AddImageTool
+        """Get multimodal tools for the agent.
+        
+        Returns:
+            List[BaseTool]: List containing the AddImageTool if agent is multimodal
+        """
+        if self.multimodal:
+            from crewai.tools.agent_tools.add_image_tool import AddImageTool
+            return [AddImageTool()]
+        return []
 
-        return [AddImageTool()]
-
-    def get_code_execution_tools(self):
-        try:
-            from crewai_tools import CodeInterpreterTool  # type: ignore
-
-            # Set the unsafe_mode based on the code_execution_mode attribute
-            unsafe_mode = self.code_execution_mode == "unsafe"
-            return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
-        except ModuleNotFoundError:
-            self._logger.log(
-                "info", "Coding tools not available. Install crewai_tools. "
-            )
+    def get_code_execution_tools(self) -> Sequence[BaseTool]:
+        """Get code execution tools for the agent.
+        
+        Returns:
+            List[BaseTool]: List containing the CodeInterpreterTool if code execution is allowed
+        """
+        if self.allow_code_execution:
+            try:
+                from crewai_tools import CodeInterpreterTool  # type: ignore
+                # Set the unsafe_mode based on the code_execution_mode attribute
+                unsafe_mode = self.code_execution_mode == "unsafe"
+                return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
+            except ModuleNotFoundError:
+                self._logger.log(
+                    "warning", "Coding tools not available. Install crewai_tools.", color="yellow"
+                )
+        return []
 
     def get_output_converter(self, llm, text, model, instructions):
         return Converter(llm=llm, text=text, model=model, instructions=instructions)

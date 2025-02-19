@@ -358,6 +358,8 @@ class Task(BaseModel):
         self.start_time = datetime.datetime.now()
         self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
 
+        # Track delegation is now handled in _execute_tasks to ensure proper counting
+
         self.prompt_context = context
         tools = tools or self.tools or []
 
