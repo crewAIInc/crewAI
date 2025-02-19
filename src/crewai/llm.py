@@ -21,6 +21,8 @@ from typing import (
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
@@ -30,6 +32,7 @@ with warnings.catch_warnings():
 
 
 from crewai.traces.unified_trace_controller import trace_llm_call
+from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -335,7 +338,7 @@ class LLM:
                 # --- 5) Handle the tool call
                 tool_call = tool_calls[0]
                 function_name = tool_call.function.name
-
+                print("function_name", function_name)
                 if function_name in available_functions:
                     try:
                         function_args = json.loads(tool_call.function.arguments)
@@ -352,6 +355,15 @@ class LLM:
                     except Exception as e:
                         logging.error(
                             f"Error executing function '{function_name}': {e}"
+                        )
+                        crewai_event_bus.emit(
+                            self,
+                            event=ToolExecutionErrorEvent(
+                                tool_name=function_name,
+                                tool_args=function_args,
+                                tool_class=fn,
+                                error=str(e),
+                            ),
                         )
                         return text_response
 

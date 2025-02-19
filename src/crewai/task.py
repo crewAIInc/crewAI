@@ -21,7 +21,6 @@ from typing import (
     Union,
 )
 
-from opentelemetry.trace import Span
 from pydantic import (
     UUID4,
     BaseModel,
@@ -36,10 +35,15 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
+from crewai.utilities.events import (
+    TaskCompletedEvent,
+    TaskFailedEvent,
+    TaskStartedEvent,
+)
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 
@@ -183,8 +187,6 @@ class Task(BaseModel):
                     )
         return v
 
-    _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
-    _execution_span: Optional[Span] = PrivateAttr(default=None)
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _original_output_file: Optional[str] = PrivateAttr(default=None)
@@ -348,100 +350,102 @@ class Task(BaseModel):
         tools: Optional[List[Any]],
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
-        agent = agent or self.agent
-        self.agent = agent
-        if not agent:
-            raise Exception(
-                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+        try:
+            agent = agent or self.agent
+            self.agent = agent
+            if not agent:
+                raise Exception(
+                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                )
+
+            self.start_time = datetime.datetime.now()
+
+            self.prompt_context = context
+            tools = tools or self.tools or []
+
+            self.processed_by_agents.add(agent.role)
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context))
+            result = agent.execute_task(
+                task=self,
+                context=context,
+                tools=tools,
             )
 
-        self.start_time = datetime.datetime.now()
-        self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
+            pydantic_output, json_output = self._export_output(result)
+            task_output = TaskOutput(
+                name=self.name,
+                description=self.description,
+                expected_output=self.expected_output,
+                raw=result,
+                pydantic=pydantic_output,
+                json_dict=json_output,
+                agent=agent.role,
+                output_format=self._get_output_format(),
+            )
 
-        self.prompt_context = context
-        tools = tools or self.tools or []
+            if self.guardrail:
+                guardrail_result = GuardrailResult.from_tuple(
+                    self.guardrail(task_output)
+                )
+                if not guardrail_result.success:
+                    if self.retry_count >= self.max_retries:
+                        raise Exception(
+                            f"Task failed guardrail validation after {self.max_retries} retries. "
+                            f"Last error: {guardrail_result.error}"
+                        )
 
-        self.processed_by_agents.add(agent.role)
+                    self.retry_count += 1
+                    context = self.i18n.errors("validation_error").format(
+                        guardrail_result_error=guardrail_result.error,
+                        task_output=task_output.raw,
+                    )
+                    printer = Printer()
+                    printer.print(
+                        content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
+                        color="yellow",
+                    )
+                    return self._execute_core(agent, context, tools)
 
-        result = agent.execute_task(
-            task=self,
-            context=context,
-            tools=tools,
-        )
-
-        pydantic_output, json_output = self._export_output(result)
-        task_output = TaskOutput(
-            name=self.name,
-            description=self.description,
-            expected_output=self.expected_output,
-            raw=result,
-            pydantic=pydantic_output,
-            json_dict=json_output,
-            agent=agent.role,
-            output_format=self._get_output_format(),
-        )
-
-        if self.guardrail:
-            guardrail_result = GuardrailResult.from_tuple(self.guardrail(task_output))
-            if not guardrail_result.success:
-                if self.retry_count >= self.max_retries:
+                if guardrail_result.result is None:
                     raise Exception(
-                        f"Task failed guardrail validation after {self.max_retries} retries. "
-                        f"Last error: {guardrail_result.error}"
+                        "Task guardrail returned None as result. This is not allowed."
                     )
 
-                self.retry_count += 1
-                context = self.i18n.errors("validation_error").format(
-                    guardrail_result_error=guardrail_result.error,
-                    task_output=task_output.raw,
+                if isinstance(guardrail_result.result, str):
+                    task_output.raw = guardrail_result.result
+                    pydantic_output, json_output = self._export_output(
+                        guardrail_result.result
+                    )
+                    task_output.pydantic = pydantic_output
+                    task_output.json_dict = json_output
+                elif isinstance(guardrail_result.result, TaskOutput):
+                    task_output = guardrail_result.result
+
+            self.output = task_output
+            self.end_time = datetime.datetime.now()
+
+            if self.callback:
+                self.callback(self.output)
+
+            crew = self.agent.crew  # type: ignore[union-attr]
+            if crew and crew.task_callback and crew.task_callback != self.callback:
+                crew.task_callback(self.output)
+
+            if self.output_file:
+                content = (
+                    json_output
+                    if json_output
+                    else pydantic_output.model_dump_json()
+                    if pydantic_output
+                    else result
                 )
-                printer = Printer()
-                printer.print(
-                    content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
-                    color="yellow",
-                )
-                return self._execute_core(agent, context, tools)
-
-            if guardrail_result.result is None:
-                raise Exception(
-                    "Task guardrail returned None as result. This is not allowed."
-                )
-
-            if isinstance(guardrail_result.result, str):
-                task_output.raw = guardrail_result.result
-                pydantic_output, json_output = self._export_output(
-                    guardrail_result.result
-                )
-                task_output.pydantic = pydantic_output
-                task_output.json_dict = json_output
-            elif isinstance(guardrail_result.result, TaskOutput):
-                task_output = guardrail_result.result
-
-        self.output = task_output
-        self.end_time = datetime.datetime.now()
-
-        if self.callback:
-            self.callback(self.output)
-
-        crew = self.agent.crew  # type: ignore[union-attr]
-        if crew and crew.task_callback and crew.task_callback != self.callback:
-            crew.task_callback(self.output)
-
-        if self._execution_span:
-            self._telemetry.task_ended(self._execution_span, self, agent.crew)
-            self._execution_span = None
-
-        if self.output_file:
-            content = (
-                json_output
-                if json_output
-                else pydantic_output.model_dump_json()
-                if pydantic_output
-                else result
-            )
-            self._save_file(content)
-
-        return task_output
+                self._save_file(content)
+            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output))
+            return task_output
+        except Exception as e:
+            self.end_time = datetime.datetime.now()
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e)))
+            raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:
         """Prompt the task.
@@ -716,10 +720,9 @@ class Task(BaseModel):
                     file.write(str(result))
         except (OSError, IOError) as e:
             raise RuntimeError(
-                "\n".join([
-                    f"Failed to save output file: {e}",
-                    FILEWRITER_RECOMMENDATION
-                ])
+                "\n".join(
+                    [f"Failed to save output file: {e}", FILEWRITER_RECOMMENDATION]
+                )
             )
         return None
 

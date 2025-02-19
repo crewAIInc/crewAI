@@ -19,25 +19,17 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
+from crewai.utilities.events.agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionErrorEvent,
+    AgentExecutionStartedEvent,
+)
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-agentops = None
 
-try:
-    import agentops  # type: ignore # Name "agentops" is already defined
-    from agentops import track_agent  # type: ignore
-except ImportError:
-
-    def track_agent():
-        def noop(f):
-            return f
-
-        return noop
-
-
-@track_agent()
 class Agent(BaseAgent):
     """Represents an agent in a system.
 
@@ -240,6 +232,15 @@ class Agent(BaseAgent):
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
 
         try:
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionStartedEvent(
+                    agent=self,
+                    tools=self.tools,
+                    task_prompt=task_prompt,
+                    task=task,
+                ),
+            )
             result = self.agent_executor.invoke(
                 {
                     "input": task_prompt,
@@ -251,9 +252,25 @@ class Agent(BaseAgent):
         except Exception as e:
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionErrorEvent(
+                        agent=self,
+                        task=task,
+                        error=str(e),
+                    ),
+                )
                 raise e
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionErrorEvent(
+                        agent=self,
+                        task=task,
+                        error=str(e),
+                    ),
+                )
                 raise e
             result = self.execute_task(task, context, tools)
 
@@ -266,7 +283,10 @@ class Agent(BaseAgent):
         for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
-
+        crewai_event_bus.emit(
+            self,
+            event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
+        )
         return result
 
     def create_agent_executor(
