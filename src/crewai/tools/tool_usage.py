@@ -2,6 +2,7 @@ import ast
 import datetime
 import json
 import time
+from datetime import UTC
 from difflib import SequenceMatcher
 from json import JSONDecodeError
 from textwrap import dedent
@@ -116,7 +117,10 @@ class ToolUsage:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
 
-        if isinstance(tool, CrewStructuredTool) and tool.name == self._i18n.tools("add_image")["name"]:  # type: ignore
+        if (
+            isinstance(tool, CrewStructuredTool)
+            and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
+        ):
             try:
                 result = self._use(tool_string=tool_string, tool=tool, calling=calling)
                 return result
@@ -154,6 +158,7 @@ class ToolUsage:
                 self.task.increment_tools_errors()
 
         started_at = time.time()
+        started_at_trace = datetime.datetime.now(UTC)
         from_cache = False
 
         result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
@@ -181,7 +186,9 @@ class ToolUsage:
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.model_json_schema()["properties"].keys()  # type: ignore
+                        acceptable_args = tool.args_schema.model_json_schema()[
+                            "properties"
+                        ].keys()  # type: ignore
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
@@ -202,7 +209,7 @@ class ToolUsage:
                         error=e, tool=tool.name, tool_inputs=tool.description
                     )
                     error = ToolUsageErrorException(
-                        f'\n{error_message}.\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                        f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                     ).message
                     self.task.increment_tools_errors()
                     if self.agent.verbose:
@@ -244,6 +251,7 @@ class ToolUsage:
             "result": result,
             "tool_name": tool.name,
             "tool_args": calling.arguments,
+            "start_time": started_at_trace,
         }
 
         self.on_tool_use_finished(
@@ -368,7 +376,7 @@ class ToolUsage:
                 raise
             else:
                 return ToolUsageErrorException(
-                    f'{self._i18n.errors("tool_arguments_error")}'
+                    f"{self._i18n.errors('tool_arguments_error')}"
                 )
 
         if not isinstance(arguments, dict):
@@ -376,7 +384,7 @@ class ToolUsage:
                 raise
             else:
                 return ToolUsageErrorException(
-                    f'{self._i18n.errors("tool_arguments_error")}'
+                    f"{self._i18n.errors('tool_arguments_error')}"
                 )
 
         return ToolCalling(
@@ -404,7 +412,7 @@ class ToolUsage:
                 if self.agent.verbose:
                     self._printer.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
-                    f'{self._i18n.errors("tool_usage_error").format(error=e)}\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                    f"{self._i18n.errors('tool_usage_error').format(error=e)}\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                 )
             return self._tool_calling(tool_string)
 
