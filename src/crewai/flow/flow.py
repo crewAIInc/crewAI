@@ -32,6 +32,14 @@ from crewai.utilities.events.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.flow.flow_visualizer import plot_flow
+from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.utils import get_possible_return_constants
+from crewai.telemetry import Telemetry
+from crewai.traces.unified_trace_controller import (
+    init_flow_main_trace,
+    trace_flow_step,
+)
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
@@ -759,8 +767,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if inputs is not None and "id" not in inputs:
             self._initialize_state(inputs)
 
-        return asyncio.run(self.kickoff_async())
+        async def run_flow():
+            return await self.kickoff_async()
 
+        return asyncio.run(run_flow())
+
+    @init_flow_main_trace
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         if not self._start_methods:
             raise ValueError("No start method defined")
@@ -806,6 +818,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
         await self._execute_listeners(start_method_name, result)
 
+    @trace_flow_step
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
