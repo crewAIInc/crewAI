@@ -992,8 +992,8 @@ def test_agent_human_input():
     # Side effect function for _ask_human_input to simulate multiple feedback iterations
     feedback_responses = iter(
         [
-            "Don't say hi, say Hello instead!",  # First feedback
-            "looks good",  # Second feedback to exit loop
+            "Don't say hi, say Hello instead!",  # First feedback: instruct change from "Hi" to "Hello"
+            "",  # Second feedback: empty string to signal acceptance and exit loop
         ]
     )
 
