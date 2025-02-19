@@ -45,7 +45,13 @@ def test_knowledge_included_in_planning(mock_chroma):
             StringKnowledgeSource(
                 content="AI systems require careful training and validation."
             )
-        ]
+        ],
+        embedder_config={
+            "provider": "openai",
+            "config": {
+                "api_key": "fake-api-key"
+            }
+        }
     )
 
     # Create a task for the agent

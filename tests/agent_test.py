@@ -1596,6 +1596,12 @@ def test_agent_with_knowledge_sources():
             backstory="You have access to specific knowledge sources.",
             llm=LLM(model="gpt-4o-mini"),
             knowledge_sources=[string_source],
+            embedder_config={
+                "provider": "openai",
+                "config": {
+                    "api_key": "fake-api-key"
+                }
+            }
         )
 
         # Create a task that requires the agent to use the knowledge
@@ -1631,6 +1637,12 @@ def test_agent_with_knowledge_sources_works_with_copy():
             backstory="You have access to specific knowledge sources.",
             llm=LLM(model="gpt-4o-mini"),
             knowledge_sources=[string_source],
+            embedder_config={
+                "provider": "openai",
+                "config": {
+                    "api_key": "fake-api-key"
+                }
+            }
         )
 
         with patch(

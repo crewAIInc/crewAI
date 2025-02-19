@@ -3,7 +3,7 @@ import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Sequence, Union
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import Field, InstanceOf, PrivateAttr, field_validator, model_validator
 
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -16,7 +16,7 @@ from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.utilities import Converter, Prompts
+from crewai.utilities import Converter, EmbeddingConfigurator, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.llm_utils import create_llm
@@ -115,10 +115,47 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    embedder: Optional[Dict[str, Any]] = Field(
+    embedder_config: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Embedder configuration for the agent.",
+        description="Embedder configuration for the agent. Must include 'provider' and relevant configuration parameters.",
     )
+
+    @field_validator("embedder_config")
+    @classmethod
+    def validate_embedder_config(cls, v: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Validate embedder configuration.
+        
+        Args:
+            v: The embedder configuration to validate.
+                Must include 'provider' and 'config' keys.
+                Example:
+                {
+                    'provider': 'openai',
+                    'config': {
+                        'api_key': 'your-key',
+                        'model': 'text-embedding-3-small'
+                    }
+                }
+            
+        Returns:
+            The validated embedder configuration.
+            
+        Raises:
+            ValueError: If the embedder configuration is invalid.
+        """
+        if v is not None:
+            if not isinstance(v, dict):
+                raise ValueError("embedder_config must be a dictionary")
+            if "provider" not in v:
+                raise ValueError("embedder_config must contain 'provider' key")
+            if "config" not in v:
+                raise ValueError("embedder_config must contain 'config' key")
+            if v["provider"] not in EmbeddingConfigurator().embedding_functions:
+                raise ValueError(
+                    f"Unsupported embedding provider: {v['provider']}, "
+                    f"supported providers: {list(EmbeddingConfigurator().embedding_functions.keys())}"
+                )
+        return v
 
     @model_validator(mode="after")
     def post_init_setup(self):
@@ -150,9 +187,14 @@ class Agent(BaseAgent):
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
+                    # Use agent's embedder config if provided, otherwise use crew's
+                    embedder_config = self.embedder_config
+                    if not embedder_config and self.crew:
+                        embedder_config = self.crew.embedder_config
+                    
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
-                        embedder=self.embedder,
+                        embedder_config=embedder_config,
                         collection_name=knowledge_agent_name,
                         storage=self.knowledge_storage or None,
                     )
