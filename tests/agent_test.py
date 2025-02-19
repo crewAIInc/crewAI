@@ -17,9 +17,9 @@ from crewai.llm import LLM
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
-from crewai.utilities.events import Emitter
+from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -155,15 +155,19 @@ def test_agent_execution_with_tools():
         agent=agent,
         expected_output="The result of the multiplication.",
     )
-    with patch.object(Emitter, "emit") as emit:
-        output = agent.execute_task(task)
-        assert output == "The result of the multiplication is 12."
-        assert emit.call_count == 1
-        args, _ = emit.call_args
-        assert isinstance(args[1], ToolUsageFinished)
-        assert not args[1].from_cache
-        assert args[1].tool_name == "multiplier"
-        assert args[1].tool_args == {"first_number": 3, "second_number": 4}
+    received_events = []
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def handle_tool_end(source, event):
+        received_events.append(event)
+
+    output = agent.execute_task(task)
+    assert output == "The result of the multiplication is 12."
+
+    assert len(received_events) == 1
+    assert isinstance(received_events[0], ToolUsageFinishedEvent)
+    assert received_events[0].tool_name == "multiplier"
+    assert received_events[0].tool_args == {"first_number": 3, "second_number": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -250,10 +254,14 @@ def test_cache_hitting():
         "multiplier-{'first_number': 3, 'second_number': 3}": 9,
         "multiplier-{'first_number': 12, 'second_number': 3}": 36,
     }
+    received_events = []
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def handle_tool_end(source, event):
+        received_events.append(event)
 
     with (
         patch.object(CacheHandler, "read") as read,
-        patch.object(Emitter, "emit") as emit,
     ):
         read.return_value = "0"
         task = Task(
@@ -266,10 +274,9 @@ def test_cache_hitting():
         read.assert_called_with(
             tool="multiplier", input={"first_number": 2, "second_number": 6}
         )
-        assert emit.call_count == 1
-        args, _ = emit.call_args
-        assert isinstance(args[1], ToolUsageFinished)
-        assert args[1].from_cache
+        assert len(received_events) == 1
+        assert isinstance(received_events[0], ToolUsageFinishedEvent)
+        assert received_events[0].from_cache
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
