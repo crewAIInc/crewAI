@@ -17,7 +17,7 @@ class TestState(FlowState):
     message: str = ""
 
 
-def test_persist_decorator_saves_state(tmp_path):
+def test_persist_decorator_saves_state(tmp_path, caplog):
     """Test that @persist decorator saves state in SQLite."""
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
@@ -174,3 +174,39 @@ def test_multiple_method_persistence(tmp_path):
     final_state = flow2.state
     assert final_state.counter == 99999
     assert final_state.message == "Step 99999"
+
+def test_persist_decorator_verbose_logging(tmp_path, caplog):
+    """Test that @persist decorator's verbose parameter controls logging."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    # Test with verbose=False (default)
+    class QuietFlow(Flow[Dict[str, str]]):
+        initial_state = dict()
+
+        @start()
+        @persist(persistence)  # Default verbose=False
+        def init_step(self):
+            self.state["message"] = "Hello, World!"
+            self.state["id"] = "test-uuid-1"
+
+    flow = QuietFlow(persistence=persistence)
+    flow.kickoff()
+    assert "Saving flow state to memory for ID: test-uuid-1" not in caplog.text
+
+    # Clear the log
+    caplog.clear()
+
+    # Test with verbose=True
+    class VerboseFlow(Flow[Dict[str, str]]):
+        initial_state = dict()
+
+        @start()
+        @persist(persistence, verbose=True)
+        def init_step(self):
+            self.state["message"] = "Hello, World!"
+            self.state["id"] = "test-uuid-2"
+
+    flow = VerboseFlow(persistence=persistence)
+    flow.kickoff()
+    assert "Saving flow state to memory for ID: test-uuid-2" in caplog.text
