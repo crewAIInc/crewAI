@@ -1,7 +1,8 @@
-import pytest
 from unittest.mock import MagicMock, patch
+import pytest
 
 from chromadb.api.types import EmbeddingFunction
+
 from crewai import Agent, Crew, Task
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.process import Process
