@@ -18,6 +18,12 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
+from crewai.utilities.events import (
+    ToolUsageErrorEvent,
+    ToolUsageStartedEvent,
+    crewai_event_bus,
+)
+from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -107,11 +113,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
             raise
         except Exception as e:
+            self._handle_unknown_error(e)
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
                 raise e
             else:
-                self._handle_unknown_error(e)
                 raise e
 
         if self.ask_for_human_input:
@@ -349,40 +355,68 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 )
 
     def _execute_tool_and_check_finality(self, agent_action: AgentAction) -> ToolResult:
-        tool_usage = ToolUsage(
-            tools_handler=self.tools_handler,
-            tools=self.tools,
-            original_tools=self.original_tools,
-            tools_description=self.tools_description,
-            tools_names=self.tools_names,
-            function_calling_llm=self.function_calling_llm,
-            task=self.task,  # type: ignore[arg-type]
-            agent=self.agent,
-            action=agent_action,
-        )
-        tool_calling = tool_usage.parse_tool_calling(agent_action.text)
-
-        if isinstance(tool_calling, ToolUsageErrorException):
-            tool_result = tool_calling.message
-            return ToolResult(result=tool_result, result_as_answer=False)
-        else:
-            if tool_calling.tool_name.casefold().strip() in [
-                name.casefold().strip() for name in self.tool_name_to_tool_map
-            ] or tool_calling.tool_name.casefold().replace("_", " ") in [
-                name.casefold().strip() for name in self.tool_name_to_tool_map
-            ]:
-                tool_result = tool_usage.use(tool_calling, agent_action.text)
-                tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
-                if tool:
-                    return ToolResult(
-                        result=tool_result, result_as_answer=tool.result_as_answer
-                    )
-            else:
-                tool_result = self._i18n.errors("wrong_tool_name").format(
-                    tool=tool_calling.tool_name,
-                    tools=", ".join([tool.name.casefold() for tool in self.tools]),
+        try:
+            if self.agent:
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageStartedEvent(
+                        agent_key=self.agent.key,
+                        agent_role=self.agent.role,
+                        tool_name=agent_action.tool,
+                        tool_args=agent_action.tool_input,
+                        tool_class=agent_action.tool,
+                    ),
                 )
-        return ToolResult(result=tool_result, result_as_answer=False)
+            tool_usage = ToolUsage(
+                tools_handler=self.tools_handler,
+                tools=self.tools,
+                original_tools=self.original_tools,
+                tools_description=self.tools_description,
+                tools_names=self.tools_names,
+                function_calling_llm=self.function_calling_llm,
+                task=self.task,  # type: ignore[arg-type]
+                agent=self.agent,
+                action=agent_action,
+            )
+            tool_calling = tool_usage.parse_tool_calling(agent_action.text)
+
+            if isinstance(tool_calling, ToolUsageErrorException):
+                tool_result = tool_calling.message
+                return ToolResult(result=tool_result, result_as_answer=False)
+            else:
+                if tool_calling.tool_name.casefold().strip() in [
+                    name.casefold().strip() for name in self.tool_name_to_tool_map
+                ] or tool_calling.tool_name.casefold().replace("_", " ") in [
+                    name.casefold().strip() for name in self.tool_name_to_tool_map
+                ]:
+                    tool_result = tool_usage.use(tool_calling, agent_action.text)
+                    tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
+                    if tool:
+                        return ToolResult(
+                            result=tool_result, result_as_answer=tool.result_as_answer
+                        )
+                else:
+                    tool_result = self._i18n.errors("wrong_tool_name").format(
+                        tool=tool_calling.tool_name,
+                        tools=", ".join([tool.name.casefold() for tool in self.tools]),
+                    )
+                return ToolResult(result=tool_result, result_as_answer=False)
+
+        except Exception as e:
+            # TODO: drop
+            if self.agent:
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(  # validation error
+                        agent_key=self.agent.key,
+                        agent_role=self.agent.role,
+                        tool_name=agent_action.tool,
+                        tool_args=agent_action.tool_input,
+                        tool_class=agent_action.tool,
+                        error=str(e),
+                    ),
+                )
+            raise e
 
     def _summarize_messages(self) -> None:
         messages_groups = []
