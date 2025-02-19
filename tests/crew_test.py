@@ -6,7 +6,6 @@ from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import instructor
 import pydantic_core
 import pytest
 
@@ -540,6 +539,7 @@ def test_crew_with_delegating_agents():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_task_tools():
+
     from typing import Type
 
     from pydantic import BaseModel, Field

@@ -82,7 +82,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             tool.name: tool for tool in self.tools
         }
         self.stop = stop_words
-        self.llm.stop = list(set(self.llm.stop + self.stop))
+        self.llm.stop = list(set((self.llm.stop or []) + self.stop))
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
