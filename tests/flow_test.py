@@ -1,6 +1,7 @@
 """Test Flow creation and execution basic functionality."""
 
 import asyncio
+import time
 from datetime import datetime
 
 import pytest
@@ -620,3 +621,35 @@ def test_stateless_flow_event_emission():
         == "Deeds will not be less valiant because they are unpraised."
     )
     assert isinstance(event_log[5].timestamp, datetime)
+
+
+def test_parallel_flow():
+    """Test a flow where multiple listeners execute in parallel."""
+    execution_order = []
+    execution_times = {}
+
+    class ParallelFlow(Flow):
+        @start()
+        def start_method(self):
+            execution_order.append("start")
+            return "start"
+
+        @listen(start_method)
+        async def parallel_1(self):
+            await asyncio.sleep(0.1)
+            execution_times["parallel_1"] = time.time()
+            execution_order.append("parallel_1")
+
+        @listen(start_method)
+        async def parallel_2(self):
+            await asyncio.sleep(0.1)
+            execution_times["parallel_2"] = time.time()
+            execution_order.append("parallel_2")
+
+    flow = ParallelFlow()
+    flow.kickoff()
+
+    assert "start" in execution_order
+    assert "parallel_1" in execution_order
+    assert "parallel_2" in execution_order
+    assert abs(execution_times["parallel_1"] - execution_times["parallel_2"]) < 0.05
