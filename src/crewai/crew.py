@@ -138,7 +138,7 @@ class Crew(BaseModel):
         default=None,
         description="An instance of the UserMemory to be used by the Crew to store/fetch memories of a specific user.",
     )
-    embedder: Optional[dict] = Field(
+    embedder_config: Optional[dict] = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
@@ -308,7 +308,7 @@ class Crew(BaseModel):
                 ):
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
-                        embedder=self.embedder,
+                        embedder_config=self.embedder_config,
                         collection_name="crew",
                     )
 

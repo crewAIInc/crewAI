@@ -48,11 +48,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
+        embedder_config: Optional[Dict[str, Any]] = None,
         collection_name: Optional[str] = None,
     ):
         self.collection_name = collection_name
-        self._set_embedder_config(embedder)
+        self._set_embedder_config(embedder_config)
 
     def search(
         self,
@@ -179,15 +179,14 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise
 
     def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
+        raise ValueError(
+            "No embedder configuration provided. Please provide an embedder configuration "
+            "either at the crew level or agent level. You can configure embeddings using "
+            "the 'embedder_config' parameter with providers like 'openai', 'watson', etc. "
+            "Example: embedder_config={'provider': 'openai', 'config': {'api_key': 'your-key'}}"
         )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
-
-    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
+    def _set_embedder_config(self, embedder_config: Optional[Dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.
 
         Args:
@@ -195,7 +194,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 If None or empty, defaults to the default embedding function.
         """
         self.embedder = (
-            EmbeddingConfigurator().configure_embedder(embedder)
-            if embedder
+            EmbeddingConfigurator().configure_embedder(embedder_config)
+            if embedder_config
             else self._create_default_embedding_function()
         )

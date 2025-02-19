@@ -115,7 +115,7 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    embedder: Optional[Dict[str, Any]] = Field(
+    embedder_config: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
     )
@@ -150,9 +150,14 @@ class Agent(BaseAgent):
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
+                    # Use agent's embedder config if provided, otherwise use crew's
+                    embedder_config = self.embedder_config
+                    if not embedder_config and self.crew:
+                        embedder_config = self.crew.embedder_config
+                    
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
-                        embedder=self.embedder,
+                        embedder_config=embedder_config,
                         collection_name=knowledge_agent_name,
                         storage=self.knowledge_storage or None,
                     )

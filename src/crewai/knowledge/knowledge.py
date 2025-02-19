@@ -15,29 +15,30 @@ class Knowledge(BaseModel):
     Args:
         sources: List[BaseKnowledgeSource] = Field(default_factory=list)
         storage: Optional[KnowledgeStorage] = Field(default=None)
-        embedder: Optional[Dict[str, Any]] = None
+        embedder_config: Optional[Dict[str, Any]] = None
     """
 
     sources: List[BaseKnowledgeSource] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: Optional[KnowledgeStorage] = Field(default=None)
-    embedder: Optional[Dict[str, Any]] = None
+    embedder_config: Optional[Dict[str, Any]] = None
     collection_name: Optional[str] = None
 
     def __init__(
         self,
         collection_name: str,
         sources: List[BaseKnowledgeSource],
-        embedder: Optional[Dict[str, Any]] = None,
+        embedder_config: Optional[Dict[str, Any]] = None,
         storage: Optional[KnowledgeStorage] = None,
         **data,
     ):
         super().__init__(**data)
+        self.embedder_config = embedder_config
         if storage:
             self.storage = storage
         else:
             self.storage = KnowledgeStorage(
-                embedder=embedder, collection_name=collection_name
+                embedder_config=embedder_config, collection_name=collection_name
             )
         self.sources = sources
         self.storage.initialize_knowledge_storage()
