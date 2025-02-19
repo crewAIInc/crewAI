@@ -537,36 +537,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         answer = current_answer
 
         while self.ask_for_human_input:
-            response = self._get_llm_feedback_response(feedback)
-
-            if not self._feedback_requires_changes(response):
+            # If the user provides a blank response, assume they are happy with the result
+            if feedback.strip() == "":
                 self.ask_for_human_input = False
             else:
                 answer = self._process_feedback_iteration(feedback)
                 feedback = self._ask_human_input(answer.output)
 
         return answer
-
-    def _get_llm_feedback_response(self, feedback: str) -> Optional[str]:
-        """Get LLM classification of whether feedback requires changes."""
-        prompt = self._i18n.slice("human_feedback_classification").format(
-            feedback=feedback
-        )
-        message = self._format_msg(prompt, role="system")
-
-        for retry in range(MAX_LLM_RETRY):
-            try:
-                response = self.llm.call([message], callbacks=self.callbacks)
-                return response.strip().lower() if response else None
-            except Exception as error:
-                self._log_feedback_error(retry, error)
-
-        self._log_max_retries_exceeded()
-        return None
-
-    def _feedback_requires_changes(self, response: Optional[str]) -> bool:
-        """Determine if feedback response indicates need for changes."""
-        return response == "true" if response else False
 
     def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
         """Process a single feedback iteration."""
