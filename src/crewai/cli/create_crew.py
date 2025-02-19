@@ -157,10 +157,19 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
                     # Prompt for non-default key-value pairs
                     prompt = details["prompt"]
                     key_name = details["key_name"]
-                    api_key_value = click.prompt(prompt, default="", show_default=False)
+                    while True:
+                        api_key_value = click.prompt(prompt, default="", show_default=False)
+                        if not api_key_value.strip():
+                            break
 
-                    if api_key_value.strip():
+                        if "validator" in details:
+                            validation_result = details["validator"](api_key_value)
+                            if isinstance(validation_result, str):
+                                click.secho(f"Invalid input: {validation_result}", fg="red")
+                                continue
+
                         env_vars[key_name] = api_key_value
+                        break
 
         if env_vars:
             write_env_file(folder_path, env_vars)

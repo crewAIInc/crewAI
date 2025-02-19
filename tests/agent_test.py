@@ -22,6 +22,38 @@ from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
 
 
+def test_agent_model_env_var():
+    """Test MODEL environment variable handling with various cases."""
+    # Store original environment variables
+    original_model = os.environ.get("MODEL")
+
+    test_cases = [
+        ("azure/test-model", "azure/test-model"),  # Valid Azure case
+        ("azure/minimal", "azure/minimal"),  # Another valid Azure case
+        ("cerebras/test-model", "cerebras/test-model"),  # Valid Cerebras case
+        ("cerebras/minimal", "cerebras/minimal"),  # Another valid Cerebras case
+    ]
+
+    for input_model, expected_model in test_cases:
+        # Set test MODEL value
+        os.environ["MODEL"] = input_model
+        agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+        assert agent.llm.model == expected_model
+
+    # Test missing MODEL env var
+    if "MODEL" in os.environ:
+        del os.environ["MODEL"]
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+    assert agent.llm.model == "gpt-4o-mini"  # Default model
+
+    # Clean up environment variables
+    if original_model:
+        os.environ["MODEL"] = original_model
+    else:
+        if "MODEL" in os.environ:
+            del os.environ["MODEL"]
+
+
 def test_agent_llm_creation_with_env_vars():
     # Store original environment variables
     original_api_key = os.environ.get("OPENAI_API_KEY")
