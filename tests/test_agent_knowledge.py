@@ -36,6 +36,26 @@ def mock_vector_db():
         instance.reset.return_value = None
         yield instance
 
+def test_agent_invalid_embedder_config():
+    """Test that an invalid embedder configuration raises a ValueError."""
+    with pytest.raises(ValueError, match="embedder_config must contain 'provider' key"):
+        Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            knowledge_sources=[StringKnowledgeSource(content="test content")],
+            embedder_config={"invalid": "config"}
+        )
+
+    with pytest.raises(ValueError, match="embedder_config must contain 'config' key"):
+        Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            knowledge_sources=[StringKnowledgeSource(content="test content")],
+            embedder_config={"provider": "custom"}
+        )
+
 def test_agent_knowledge_with_custom_embedder(mock_vector_db):
     agent = Agent(
         role="test role",

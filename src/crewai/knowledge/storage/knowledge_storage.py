@@ -190,8 +190,18 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         """Set the embedding configuration for the knowledge storage.
 
         Args:
-            embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
-                If None or empty, defaults to the default embedding function.
+            embedder_config: Must include 'provider' and relevant configuration parameters.
+                For example:
+                {
+                    'provider': 'openai',
+                    'config': {
+                        'api_key': 'your-key',
+                        'model': 'text-embedding-3-small'
+                    }
+                }
+
+        Raises:
+            ValueError: If no configuration is provided or if the configuration is invalid.
         """
         self.embedder = (
             EmbeddingConfigurator().configure_embedder(embedder_config)

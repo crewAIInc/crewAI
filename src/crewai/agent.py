@@ -117,8 +117,28 @@ class Agent(BaseAgent):
     )
     embedder_config: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Embedder configuration for the agent.",
+        description="Embedder configuration for the agent. Must include 'provider' and relevant configuration parameters.",
     )
+
+    @validator("embedder_config")
+    def validate_embedder_config(cls, v):
+        """Validate embedder configuration.
+        
+        Args:
+            v: The embedder configuration to validate.
+            
+        Returns:
+            The validated embedder configuration.
+            
+        Raises:
+            ValueError: If the embedder configuration is invalid.
+        """
+        if v is not None:
+            if not isinstance(v, dict) or "provider" not in v:
+                raise ValueError("embedder_config must contain 'provider' key")
+            if "config" not in v:
+                raise ValueError("embedder_config must contain 'config' key")
+        return v
 
     @model_validator(mode="after")
     def post_init_setup(self):
