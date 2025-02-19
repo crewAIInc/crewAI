@@ -392,6 +392,13 @@ def test_converter_with_llama3_1_model():
     assert output.age == 30
 
 
+# Skip tests that call external APIs when running in CI/CD
+skip_external_api = pytest.mark.skipif(
+    os.getenv("CI") is not None, reason="Skipping tests that call external API in CI/CD"
+)
+
+
+@skip_external_api
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_converter_with_nested_model():
     llm = LLM(model="gpt-4o-mini")
