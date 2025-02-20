@@ -2,7 +2,6 @@
 
 import asyncio
 from datetime import datetime
-
 from typing import Any
 
 import pytest
