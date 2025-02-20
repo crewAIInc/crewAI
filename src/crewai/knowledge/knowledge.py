@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.utilities.embedding_configurator import EmbeddingConfig
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
@@ -21,14 +22,14 @@ class Knowledge(BaseModel):
     sources: List[BaseKnowledgeSource] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: Optional[KnowledgeStorage] = Field(default=None)
-    embedder: Optional[Dict[str, Any]] = None
+    embedder: Optional[EmbeddingConfig] = None
     collection_name: Optional[str] = None
 
     def __init__(
         self,
         collection_name: str,
         sources: List[BaseKnowledgeSource],
-        embedder: Optional[Dict[str, Any]] = None,
+        embedder: Optional[EmbeddingConfig] = None,
         storage: Optional[KnowledgeStorage] = None,
         **data,
     ):

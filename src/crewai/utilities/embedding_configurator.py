@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional, cast
+from typing import Any, Callable, cast
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
@@ -14,7 +14,7 @@ class EmbeddingProviderConfig(BaseModel):
     task_type: str | None = None
     session: str | None = None
     api_url: str | None = None
-    embedder: str | callable | None = None
+    embedder: str | Callable | None = None
     api_key: str | None = None
     api_base: str | None = None
     api_type: str | None = None
