@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -15,7 +15,7 @@ class TaskOutput(BaseModel):
         description="Expected output of the task", default=None
     )
     summary: Optional[str] = Field(description="Summary of the task", default=None)
-    raw: str = Field(description="Raw output of the task", default="")
+    raw: Union[str, Dict[str, Any]] = Field(description="Raw output of the task", default="")
     pydantic: Optional[BaseModel] = Field(
         description="Pydantic output of task", default=None
     )
