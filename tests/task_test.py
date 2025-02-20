@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from functools import partial
+from typing import Tuple, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -241,11 +242,11 @@ def test_guardrail_type_error():
             return (True, x)
 
         @classmethod
-        def guardrail_class_fn(cls, x: TaskOutput) -> tuple[bool, TaskOutput]:
+        def guardrail_class_fn(cls, x: TaskOutput) -> tuple[bool, str]:
             return (True, x)
 
         @staticmethod
-        def guardrail_static_fn(x: TaskOutput) -> tuple[bool, TaskOutput]:
+        def guardrail_static_fn(x: TaskOutput) -> tuple[bool, Union[str, TaskOutput]]:
             return (True, x)
 
     obj = Object()
@@ -268,7 +269,7 @@ def test_guardrail_type_error():
         guardrail=Object.guardrail_static_fn,
     )
 
-    def error_fn(x: TaskOutput, y: bool) -> tuple[bool, TaskOutput]:
+    def error_fn(x: TaskOutput, y: bool) -> Tuple[bool, TaskOutput]:
         return (y, x)
 
     Task(

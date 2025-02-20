@@ -19,6 +19,8 @@ from typing import (
     Tuple,
     Type,
     Union,
+    get_args,
+    get_origin,
 )
 
 from pydantic import (
@@ -183,7 +185,6 @@ class Task(BaseModel):
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
-                from typing import get_args, get_origin
 
                 return_annotation_args = get_args(return_annotation)
                 if not (
@@ -194,6 +195,7 @@ class Task(BaseModel):
                         return_annotation_args[1] is Any
                         or return_annotation_args[1] is str
                         or return_annotation_args[1] is TaskOutput
+                        or return_annotation_args[1] == Union[str, TaskOutput]
                     )
                 ):
                     raise ValueError(
