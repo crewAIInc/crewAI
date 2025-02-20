@@ -216,7 +216,6 @@ def convert_with_instructions(
 
 def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
     instructions = "Please convert the following text into valid JSON."
-    print("Using function calling: ", llm.supports_function_calling())
     if llm.supports_function_calling():
         model_schema = PydanticSchemaParser(model=model).get_schema()
         instructions += (
@@ -225,7 +224,6 @@ def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
         )
     else:
         model_description = generate_model_description(model)
-        print("Model description: ", model_description)
         instructions += (
             f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
             f"The JSON must follow this format exactly:\n{model_description}"
