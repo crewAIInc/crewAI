@@ -1,5 +1,5 @@
 import os
-from typing import Any, Callable, cast
+from typing import Any, Callable, Literal, cast
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
@@ -26,7 +26,19 @@ class EmbeddingProviderConfig(BaseModel):
 
 
 class EmbeddingConfig(BaseModel):
-    provider: str
+    provider: Literal[
+        "openai",
+        "azure",
+        "ollama",
+        "vertexai",
+        "google",
+        "cohere",
+        "voyageai",
+        "bedrock",
+        "huggingface",
+        "watson",
+        "custom",
+    ]
     config: EmbeddingProviderConfig | None = None
 
 
