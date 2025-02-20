@@ -115,7 +115,7 @@ class Task(BaseModel):
         description="Task output, it's final result after being executed", default=None
     )
     tools: Optional[List[BaseTool]] = Field(
-        default_factory=list,
+        default_factory=list[BaseTool],
         description="Tools the agent is limited to use for this task.",
     )
     id: UUID4 = Field(
@@ -131,7 +131,7 @@ class Task(BaseModel):
         description="A converter class used to export structured output",
         default=None,
     )
-    processed_by_agents: Set[str] = Field(default_factory=set)
+    processed_by_agents: Set[str] = Field(default_factory=set[str])
     guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
         default=None,
         description="Function to validate task output before proceeding to next task",
@@ -232,7 +232,7 @@ class Task(BaseModel):
                 # Check if the normalized annotation matches any valid pattern
                 is_valid = (
                     normalized_annotation == 'tuple[bool,any]' or
-                    normalized_annotation in VALID_RETURN_TYPES
+                    any(normalized_annotation == pattern for pattern in VALID_RETURN_TYPES)
                 )
                 
                 if not is_valid:
@@ -669,7 +669,12 @@ class Task(BaseModel):
         self.delegations += 1
 
     def copy(
-        self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
+        self,
+        *,
+        include: AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any] | None = None,
+        exclude: AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any] | None = None,
+        update: dict[str, Any] | None = None,
+        deep: bool = False,
     ) -> "Task":
         """Create a deep copy of the Task."""
         exclude = {
