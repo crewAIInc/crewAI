@@ -479,13 +479,12 @@ class Task(BaseModel):
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
                 elif isinstance(guardrail_result.result, dict):
-                    task_output.raw = guardrail_result.result
+                    task_output.raw = json.dumps(guardrail_result.result)
                     task_output.json_dict = guardrail_result.result
                     pydantic_output, json_output = self._export_output(
-                        json.dumps(guardrail_result.result)
+                        task_output.raw
                     )
                     task_output.pydantic = pydantic_output
-                    task_output.json_dict = json_output
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
