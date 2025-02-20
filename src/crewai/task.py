@@ -695,8 +695,6 @@ class Task(BaseModel):
             
         return copied
 
-        return copied_task
-
     def _export_output(
         self, result: str
     ) -> Tuple[Optional[BaseModel], Optional[Dict[str, Any]]]:
