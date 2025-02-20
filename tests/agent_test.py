@@ -917,7 +917,7 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_usage_information_is_appended_to_agent():
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     from crewai.tools import BaseTool
     from crewai.utilities.datetime_compat import UTC
@@ -930,7 +930,7 @@ def test_tool_usage_information_is_appended_to_agent():
             return "Howdy!"
 
     fixed_datetime = datetime(2025, 2, 10, 12, 0, 0, tzinfo=UTC)
-    with patch("crewai.tools.tool_usage.datetime") as mock_datetime:
+    with patch("crewai.tools.tool_usage.datetime", autospec=True) as mock_datetime:
         mock_datetime.now.return_value = fixed_datetime
         mock_datetime.fromtimestamp = datetime.fromtimestamp
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
