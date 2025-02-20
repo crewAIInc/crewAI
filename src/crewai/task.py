@@ -232,10 +232,9 @@ class Task(BaseModel):
                 }
                 
                 # Check if the normalized annotation matches any valid pattern
-                is_valid = (
-                    normalized_annotation == 'tuple[bool,any]' or
-                    any(normalized_annotation == pattern for pattern in VALID_RETURN_TYPES)
-                )
+                is_valid = normalized_annotation == 'tuple[bool,any]'
+                if not is_valid:
+                    is_valid = normalized_annotation in VALID_RETURN_TYPES
                 
                 if not is_valid:
                     raise GuardrailValidationError(
