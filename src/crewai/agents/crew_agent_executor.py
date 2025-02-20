@@ -514,10 +514,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self, initial_answer: AgentFinish, feedback: str
     ) -> AgentFinish:
         """Process feedback for training scenarios with single iteration."""
-        self._printer.print(
-            content="\nProcessing training feedback.\n",
-            color="yellow",
-        )
         self._handle_crew_training_output(initial_answer, feedback)
         self.messages.append(
             self._format_msg(
