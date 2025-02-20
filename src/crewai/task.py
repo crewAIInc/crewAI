@@ -479,7 +479,7 @@ class Task(BaseModel):
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
                 elif isinstance(guardrail_result.result, dict):
-                    task_output.raw = json.dumps(guardrail_result.result)
+                    task_output.raw = guardrail_result.result
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
@@ -671,28 +671,72 @@ class Task(BaseModel):
 
     def copy(
         self,
+        agents: List["BaseAgent"] | None = None,
+        task_mapping: Dict[str, "Task"] | None = None,
         *,
         include: AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any] | None = None,
         exclude: AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any] | None = None,
         update: dict[str, Any] | None = None,
         deep: bool = False,
     ) -> "Task":
-        """Create a deep copy of the Task."""
-        # Call parent's copy method
-        copied = super().copy(
-            include=include,
-            exclude=exclude,
-            update=update,
-            deep=deep,
-        )
+        """Create a deep copy of the Task.
         
-        # Copy mutable fields
-        if self.tools:
-            copied.tools = copy(self.tools)
-        if self.context:
-            copied.context = copy(self.context)
+        Args:
+            agents: Optional list of agents to copy agent references
+            task_mapping: Optional mapping of task keys to tasks for context
+            include: Fields to include in the copy
+            exclude: Fields to exclude from the copy
+            update: Fields to update in the copy
+            deep: Whether to perform a deep copy
+        """
+        if agents is None and task_mapping is None:
+            # New style copy using BaseModel
+            copied = super().copy(
+                include=include,
+                exclude=exclude,
+                update=update,
+                deep=deep,
+            )
             
-        return copied
+            # Copy mutable fields
+            if self.tools:
+                copied.tools = copy(self.tools)
+            if self.context:
+                copied.context = copy(self.context)
+                
+            return copied
+            
+        # Legacy copy behavior
+        exclude_fields = {
+            "id",
+            "agent",
+            "context",
+            "tools",
+        }
+
+        copied_data = self.model_dump(exclude=exclude_fields)
+        copied_data = {k: v for k, v in copied_data.items() if v is not None}
+
+        cloned_context = (
+            [task_mapping[context_task.key] for context_task in self.context]
+            if self.context and task_mapping
+            else None
+        )
+
+        def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
+            if not agents:
+                return None
+            return next((agent for agent in agents if agent.role == role), None)
+
+        cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
+        cloned_tools = copy(self.tools) if self.tools else []
+
+        return Task(
+            **copied_data,
+            context=cloned_context,
+            agent=cloned_agent,
+            tools=cloned_tools,
+        )
 
     def _export_output(
         self, result: str
