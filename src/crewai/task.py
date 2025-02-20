@@ -232,7 +232,7 @@ class Task(BaseModel):
                 # Check if the normalized annotation matches any valid pattern
                 is_valid = (
                     normalized_annotation == 'tuple[bool,any]' or
-                    any(normalized_annotation == pattern for pattern in VALID_RETURN_TYPES)
+                    normalized_annotation in VALID_RETURN_TYPES
                 )
                 
                 if not is_valid:
@@ -478,7 +478,7 @@ class Task(BaseModel):
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
                 elif isinstance(guardrail_result.result, dict):
-                    task_output.raw = str(guardrail_result.result)
+                    task_output.raw = json.dumps(guardrail_result.result)
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
