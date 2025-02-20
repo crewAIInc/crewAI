@@ -127,3 +127,45 @@ def test_guardrail_error_in_context():
 
     assert "Task failed guardrail validation" in str(exc_info.value)
     assert "Expected JSON, got string" in str(exc_info.value)
+
+
+def test_guardrail_with_new_style_annotation():
+    """Test guardrail with new style tuple annotation."""
+    def guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (True, result.raw.upper())
+    
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "test result"
+    agent.crew = None
+
+    task = Task(
+        description="Test task",
+        expected_output="Output",
+        guardrail=guardrail
+    )
+
+    result = task.execute_sync(agent=agent)
+    assert isinstance(result, TaskOutput)
+    assert result.raw == "TEST RESULT"
+
+
+def test_guardrail_with_optional_params():
+    """Test guardrail with optional parameters."""
+    def guardrail(result: TaskOutput, optional_param: str = "default") -> tuple[bool, str]:
+        return (True, f"{result.raw}-{optional_param}")
+    
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "test"
+    agent.crew = None
+
+    task = Task(
+        description="Test task",
+        expected_output="Output",
+        guardrail=guardrail
+    )
+
+    result = task.execute_sync(agent=agent)
+    assert isinstance(result, TaskOutput)
+    assert result.raw == "test-default"

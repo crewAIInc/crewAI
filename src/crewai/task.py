@@ -172,18 +172,29 @@ class Task(BaseModel):
         """
         if v is not None:
             sig = inspect.signature(v)
-            if len(sig.parameters) != 1:
-                raise ValueError("Guardrail function must accept exactly one parameter")
+            # Get required parameters (excluding those with defaults)
+            required_params = [
+                param for param in sig.parameters.values()
+                if param.default == inspect.Parameter.empty
+            ]
+            if len(required_params) != 1:
+                raise ValueError("Guardrail function must accept exactly one required parameter")
 
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
-                if not (
-                    return_annotation == Tuple[bool, Any]
-                    or str(return_annotation) == "Tuple[bool, Any]"
-                ):
+                # Convert annotation to string for comparison
+                annotation_str = str(return_annotation).lower()
+                valid_patterns = [
+                    'tuple[bool, any]',
+                    'typing.tuple[bool, any]',
+                    'tuple[bool, str]',
+                    'tuple[bool, taskoutput]'
+                ]
+                if not any(pattern in annotation_str for pattern in valid_patterns):
                     raise ValueError(
-                        "If return type is annotated, it must be Tuple[bool, Any]"
+                        "Return type must be tuple[bool, Any] or a specific type like "
+                        "tuple[bool, str] or tuple[bool, TaskOutput]"
                     )
         return v
 
