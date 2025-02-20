@@ -239,7 +239,7 @@ class Task(BaseModel):
                 if not is_valid:
                     raise GuardrailValidationError(
                         f"Invalid return type annotation. Expected one of: "
-                        f"{', '.join(VALID_RETURN_TYPES.keys())}",
+                        f"{', '.join(VALID_RETURN_TYPES)}",
                         {"got": annotation_str}
                     )
         return v
