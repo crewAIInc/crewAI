@@ -230,11 +230,10 @@ class Task(BaseModel):
                 }
                 
                 # Check if the normalized annotation matches any valid pattern
-                is_valid = False
-                for pattern in VALID_RETURN_TYPES:
-                    if pattern == normalized_annotation or pattern == 'tuple[bool,any]':
-                        is_valid = True
-                        break
+                is_valid = (
+                    normalized_annotation == 'tuple[bool,any]' or
+                    any(normalized_annotation == pattern for pattern in VALID_RETURN_TYPES)
+                )
                 
                 if not is_valid:
                     raise GuardrailValidationError(
@@ -479,7 +478,7 @@ class Task(BaseModel):
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
                 elif isinstance(guardrail_result.result, dict):
-                    task_output.raw = guardrail_result.result
+                    task_output.raw = str(guardrail_result.result)
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
