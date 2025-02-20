@@ -1,6 +1,6 @@
 """Tests for task guardrails functionality."""
 
-from typing import Dict, Any
+from typing import Any, Dict
 from unittest.mock import Mock
 
 import pytest
