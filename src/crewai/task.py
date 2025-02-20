@@ -198,23 +198,45 @@ class Task(BaseModel):
                 if param.default == inspect.Parameter.empty 
                 and param.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
             ]
-            if len(required_params) != 1:
-                raise ValueError("Guardrail function must accept exactly one required positional parameter")
+            keyword_only_params = [
+                param for param in sig.parameters.values()
+                if param.kind == inspect.Parameter.KEYWORD_ONLY
+            ]
+            if len(required_params) != 1 or (len(keyword_only_params) > 0 and any(p.default == inspect.Parameter.empty for p in keyword_only_params)):
+                raise GuardrailValidationError(
+                    "Guardrail function must accept exactly one required positional parameter and no required keyword-only parameters",
+                    {"params": [str(p) for p in sig.parameters.values()]}
+                )
 
             # Check return annotation if present, but don't require it
             type_hints = typing.get_type_hints(v)
             return_annotation = type_hints.get('return')
             if return_annotation:
                 # Convert annotation to string for comparison
-                annotation_str = str(return_annotation).lower()
+                annotation_str = str(return_annotation).lower().replace(' ', '')
+                
+                # Normalize type strings
+                normalized_annotation = (
+                    annotation_str.replace('typing.', '')
+                    .replace('dict[str,typing.any]', 'dict[str,any]')
+                    .replace('dict[str, any]', 'dict[str,any]')
+                )
+                
                 VALID_RETURN_TYPES = {
-                    'tuple[bool, any]': True,
-                    'typing.tuple[bool, any]': True,
-                    'tuple[bool, str]': True,
-                    'tuple[bool, dict]': True,
-                    'tuple[bool, taskoutput]': True
+                    'tuple[bool,any]',
+                    'tuple[bool,str]',
+                    'tuple[bool,dict[str,any]]',
+                    'tuple[bool,taskoutput]'
                 }
-                if not any(pattern in annotation_str for pattern in VALID_RETURN_TYPES):
+                
+                # Check if the normalized annotation matches any valid pattern
+                is_valid = False
+                for pattern in VALID_RETURN_TYPES:
+                    if pattern == normalized_annotation or pattern == 'tuple[bool,any]':
+                        is_valid = True
+                        break
+                
+                if not is_valid:
                     raise GuardrailValidationError(
                         f"Invalid return type annotation. Expected one of: "
                         f"{', '.join(VALID_RETURN_TYPES.keys())}",
@@ -446,6 +468,7 @@ class Task(BaseModel):
                         "Task guardrail returned None as result. This is not allowed."
                     )
 
+                # Handle different result types
                 if isinstance(guardrail_result.result, str):
                     task_output.raw = guardrail_result.result
                     pydantic_output, json_output = self._export_output(
@@ -455,6 +478,8 @@ class Task(BaseModel):
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
+                elif isinstance(guardrail_result.result, dict):
+                    task_output.raw = guardrail_result.result
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
