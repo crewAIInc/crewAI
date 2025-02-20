@@ -15,7 +15,7 @@ class TaskOutput(BaseModel):
         description="Expected output of the task", default=None
     )
     summary: Optional[str] = Field(description="Summary of the task", default=None)
-    raw: Union[str, Dict[str, Any]] = Field(description="Raw output of the task", default="")
+    raw: Any = Field(description="Raw output of the task", default="")
     pydantic: Optional[BaseModel] = Field(
         description="Pydantic output of task", default=None
     )
