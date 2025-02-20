@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+from functools import partial
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -212,6 +213,75 @@ def test_multiple_output_type_error():
             expected_output="Bullet point list of 5 interesting ideas.",
             output_json=Output,
             output_pydantic=Output,
+        )
+
+
+def test_guardrail_type_error():
+    desc = "Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting."
+    expected_output = "Bullet point list of 5 interesting ideas."
+    # Lambda function
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=lambda x: (True, x),
+    )
+
+    # Function
+    def guardrail_fn(x: TaskOutput) -> tuple[bool, TaskOutput]:
+        return (True, x)
+
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=guardrail_fn,
+    )
+
+    class Object:
+        def guardrail_fn(self, x: TaskOutput) -> tuple[bool, TaskOutput]:
+            return (True, x)
+
+        @classmethod
+        def guardrail_class_fn(cls, x: TaskOutput) -> tuple[bool, TaskOutput]:
+            return (True, x)
+
+        @staticmethod
+        def guardrail_static_fn(x: TaskOutput) -> tuple[bool, TaskOutput]:
+            return (True, x)
+
+    obj = Object()
+    # Method
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=obj.guardrail_fn,
+    )
+    # Class method
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=Object.guardrail_class_fn,
+    )
+    # Static method
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=Object.guardrail_static_fn,
+    )
+
+    def error_fn(x: TaskOutput, y: bool) -> tuple[bool, TaskOutput]:
+        return (y, x)
+
+    Task(
+        description=desc,
+        expected_output=expected_output,
+        guardrail=partial(error_fn, y=True),
+    )
+
+    with pytest.raises(ValidationError):
+        Task(
+            description=desc,
+            expected_output=expected_output,
+            guardrail=error_fn,
         )
 
 
