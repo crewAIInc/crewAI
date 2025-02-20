@@ -10,11 +10,13 @@ from copy import copy
 from hashlib import md5
 from pathlib import Path
 from typing import (
+    AbstractSet,
     Any,
     Callable,
     ClassVar,
     Dict,
     List,
+    Mapping,
     Optional,
     Set,
     Tuple,
@@ -677,34 +679,21 @@ class Task(BaseModel):
         deep: bool = False,
     ) -> "Task":
         """Create a deep copy of the Task."""
-        exclude = {
-            "id",
-            "agent",
-            "context",
-            "tools",
-        }
-
-        copied_data = self.model_dump(exclude=exclude)
-        copied_data = {k: v for k, v in copied_data.items() if v is not None}
-
-        cloned_context = (
-            [task_mapping[context_task.key] for context_task in self.context]
-            if self.context
-            else None
+        # Call parent's copy method
+        copied = super().copy(
+            include=include,
+            exclude=exclude,
+            update=update,
+            deep=deep,
         )
-
-        def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
-            return next((agent for agent in agents if agent.role == role), None)
-
-        cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
-        cloned_tools = copy(self.tools) if self.tools else []
-
-        copied_task = Task(
-            **copied_data,
-            context=cloned_context,
-            agent=cloned_agent,
-            tools=cloned_tools,
-        )
+        
+        # Copy mutable fields
+        if self.tools:
+            copied.tools = copy(self.tools)
+        if self.context:
+            copied.context = copy(self.context)
+            
+        return copied
 
         return copied_task
 
