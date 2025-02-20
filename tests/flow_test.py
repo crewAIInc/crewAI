@@ -3,18 +3,20 @@
 import asyncio
 from datetime import datetime
 
+from typing import Any
+
 import pytest
 from pydantic import BaseModel
 
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.utilities.events import (
     FlowFinishedEvent,
+    FlowPlotEvent,
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
     crewai_event_bus,
 )
-from crewai.utilities.events.flow_events import FlowPlotEvent
 
 
 def test_simple_sequential_flow():
@@ -407,6 +409,96 @@ def test_router_with_multiple_conditions():
 
     # final_step should run after router_and
     assert execution_order.index("log_final_step") > execution_order.index("router_and")
+
+
+@pytest.fixture(autouse=True)
+def cleanup_event_bus():
+    """Clean up event bus after each test."""
+    crewai_event_bus._handlers = {}
+    yield
+    crewai_event_bus._handlers = {}
+
+@pytest.mark.asyncio
+async def test_multiple_concurrent_routers():
+    """Test that multiple routers triggered by the same method all execute their events."""
+    execution_order = []
+
+    # Setup event handlers
+    @crewai_event_bus.on(FlowStartedEvent)
+    def handle_flow_start(source: Any, event: FlowStartedEvent):
+        pass
+
+    @crewai_event_bus.on(MethodExecutionStartedEvent)
+    def handle_method_start(source: Any, event: MethodExecutionStartedEvent):
+        pass
+
+    @crewai_event_bus.on(MethodExecutionFinishedEvent)
+    def handle_method_end(source: Any, event: MethodExecutionFinishedEvent):
+        pass
+
+    @crewai_event_bus.on(FlowFinishedEvent)
+    def handle_flow_end(source: Any, event: FlowFinishedEvent):
+        pass
+
+    class MultiRouterFlow(Flow):
+        def __init__(self):
+            print("Initializing MultiRouterFlow")
+            super().__init__(diagnosed_conditions="ABCDH")
+            print(f"State after init: {self._state}")
+
+        @start()
+        async def diagnose_conditions(self):
+            print("Running diagnose_conditions")
+            execution_order.append("diagnose_conditions")
+            print(f"State in diagnose_conditions: {self._state}")
+            return self._state.get("diagnosed_conditions", "")
+
+        @router(diagnose_conditions)
+        async def diabetes_router(self):
+            execution_order.append("diabetes_router")
+            conditions = self._state.get("diagnosed_conditions", "")
+            print(f"Checking diabetes condition in: {conditions}")
+            if "D" in conditions:
+                return "diabetes"
+            return None
+
+        @router(diagnose_conditions)
+        async def hypertension_router(self):
+            execution_order.append("hypertension_router")
+            conditions = self._state.get("diagnosed_conditions", "")
+            print(f"Checking hypertension condition in: {conditions}")
+            if "H" in conditions:
+                return "hypertension"
+            return None
+
+        @listen("diabetes")
+        async def diabetes_analysis(self):
+            execution_order.append("diabetes_analysis")
+
+        @listen("hypertension")
+        async def hypertension_analysis(self):
+            execution_order.append("hypertension_analysis")
+
+    flow = MultiRouterFlow()
+    try:
+        await asyncio.wait_for(flow.kickoff_async(), timeout=10.0)
+    except asyncio.TimeoutError:
+        print("Flow execution timed out")
+        pytest.fail("Flow execution timed out")
+
+    print("Execution order:", execution_order)
+    
+    # Verify both routers and their listeners executed
+    assert "diabetes_router" in execution_order
+    assert "hypertension_router" in execution_order
+    assert "diabetes_analysis" in execution_order
+    assert "hypertension_analysis" in execution_order
+    
+    # Verify execution order is correct
+    assert execution_order.index("diagnose_conditions") < execution_order.index("diabetes_router")
+    assert execution_order.index("diagnose_conditions") < execution_order.index("hypertension_router")
+    assert execution_order.index("diabetes_router") < execution_order.index("diabetes_analysis")
+    assert execution_order.index("hypertension_router") < execution_order.index("hypertension_analysis")
 
 
 def test_unstructured_flow_event_emission():

@@ -873,8 +873,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Executes all listeners and routers triggered by a method completion.
 
         This internal method manages the execution flow by:
-        1. First executing all triggered routers sequentially
-        2. Then executing all triggered listeners in parallel
+        1. First executing all triggered routers sequentially and collecting their paths
+        2. Then executing listeners for each router path in parallel
+        3. Finally executing listeners for the original trigger method
 
         Parameters
         ----------
@@ -887,26 +888,45 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Notes
         -----
         - Routers are executed sequentially to maintain flow control
-        - Each router's result becomes the new trigger_method
+        - Each router's result is collected and processed independently
         - Normal listeners are executed in parallel for efficiency
         - Listeners can receive the trigger method's result as a parameter
         """
-        # First, handle routers repeatedly until no router triggers anymore
-        while True:
-            routers_triggered = self._find_triggered_methods(
-                trigger_method, router_only=True
-            )
-            if not routers_triggered:
-                break
-            for router_name in routers_triggered:
-                await self._execute_single_listener(router_name, result)
-                # After executing router, the router's result is the path
-                # The last router executed sets the trigger_method
-                # The router result is the last element in self._method_outputs
-                trigger_method = self._method_outputs[-1]
+        # First, execute all routers for the trigger method
+        router_paths = []  # Store all router paths
+        routers_triggered = self._find_triggered_methods(
+            trigger_method, router_only=True
+        )
+        print(f"Found routers for {trigger_method}: {routers_triggered}")
+        
+        # Execute all routers and collect their results
+        for router_name in routers_triggered:
+            print(f"Executing router: {router_name}")
+            await self._execute_single_listener(router_name, result)
+            # After executing router, add its result to paths
+            router_result = self._method_outputs[-1]
+            print(f"Router {router_name} result: {router_result}")
+            if router_result:  # Only add non-None results
+                router_paths.append(router_result)
 
-        # Now that no more routers are triggered by current trigger_method,
-        # execute normal listeners
+        # Process all router paths
+        print(f"Processing router paths: {router_paths}")
+        for path in router_paths:
+            # Execute normal listeners for each router path
+            listeners_triggered = self._find_triggered_methods(
+                path, router_only=False
+            )
+            print(f"Found listeners for path {path}: {listeners_triggered}")
+            if listeners_triggered:
+                print(f"Executing listeners for path {path}")
+                tasks = [
+                    self._execute_single_listener(listener_name, result)
+                    for listener_name in listeners_triggered
+                ]
+                await asyncio.gather(*tasks)
+                print(f"Finished executing listeners for path {path}")
+
+        # Now execute normal listeners for the original trigger method
         listeners_triggered = self._find_triggered_methods(
             trigger_method, router_only=False
         )
