@@ -1,8 +1,7 @@
 import ast
-import datetime
 import json
 import time
-from datetime import UTC
+from datetime import datetime
 from difflib import SequenceMatcher
 from json import JSONDecodeError
 from textwrap import dedent
@@ -18,6 +17,7 @@ from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
+from crewai.utilities.datetime_compat import UTC
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import (
     ToolSelectionErrorEvent,
@@ -158,7 +158,7 @@ class ToolUsage:
                 self.task.increment_tools_errors()
 
         started_at = time.time()
-        started_at_trace = datetime.datetime.now(UTC)
+        started_at_trace = datetime.now(UTC)
         from_cache = False
 
         result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
@@ -506,8 +506,8 @@ class ToolUsage:
         event_data = self._prepare_event_data(tool, tool_calling)
         event_data.update(
             {
-                "started_at": datetime.datetime.fromtimestamp(started_at),
-                "finished_at": datetime.datetime.fromtimestamp(finished_at),
+                "started_at": datetime.fromtimestamp(started_at),
+                "finished_at": datetime.fromtimestamp(finished_at),
                 "from_cache": from_cache,
             }
         )

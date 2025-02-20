@@ -1,4 +1,5 @@
 from .converter import Converter, ConverterError
+from .datetime_compat import UTC
 from .file_handler import FileHandler
 from .i18n import I18N
 from .internal_instructor import InternalInstructor
@@ -22,6 +23,7 @@ __all__ = [
     "Printer",
     "Prompts",
     "RPMController",
+    "UTC",
     "YamlParser",
     "LLMContextLengthExceededException",
     "EmbeddingConfigurator",

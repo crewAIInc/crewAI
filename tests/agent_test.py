@@ -1,7 +1,7 @@
 """Test Agent creation and execution basic functionality."""
 
 import os
-from datetime import UTC, datetime, timezone
+from datetime import datetime, timezone
 from unittest import mock
 from unittest.mock import patch
 
@@ -18,6 +18,7 @@ from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
+from crewai.utilities.datetime_compat import UTC
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
@@ -916,9 +917,10 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_usage_information_is_appended_to_agent():
-    from datetime import UTC, datetime
+    from datetime import datetime
 
     from crewai.tools import BaseTool
+    from crewai.utilities.datetime_compat import UTC
 
     class MyCustomTool(BaseTool):
         name: str = "Decide Greetings"
@@ -928,8 +930,9 @@ def test_tool_usage_information_is_appended_to_agent():
             return "Howdy!"
 
     fixed_datetime = datetime(2025, 2, 10, 12, 0, 0, tzinfo=UTC)
-    with patch("datetime.datetime") as mock_datetime:
+    with patch("crewai.tools.tool_usage.datetime") as mock_datetime:
         mock_datetime.now.return_value = fixed_datetime
+        mock_datetime.fromtimestamp = datetime.fromtimestamp
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
 
         agent1 = Agent(
