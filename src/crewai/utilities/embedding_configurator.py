@@ -7,22 +7,61 @@ from pydantic import BaseModel
 
 
 class EmbeddingProviderConfig(BaseModel):
+    """Configuration model for embedding providers.
+
+    Attributes:
+        # Core Model Configuration
+        model (str | None): The model identifier for embeddings, used across multiple providers
+            like OpenAI, Azure, Watson, etc.
+        embedder (str | Callable | None): Custom embedding function or callable for custom
+            embedding implementations.
+
+        # API Authentication & Configuration
+        api_key (str | None): Authentication key for various providers (OpenAI, VertexAI,
+            Google, Cohere, VoyageAI, Watson).
+        api_base (str | None): Base API URL override for OpenAI and Azure services.
+        api_type (str | None): API type specification, particularly used for Azure configuration.
+        api_version (str | None): API version for OpenAI and Azure services.
+        api_url (str | None): API endpoint URL, used by HuggingFace and Watson services.
+        url (str | None): Base URL for the embedding service, primarily used for Ollama and
+            HuggingFace endpoints.
+
+        # Service-Specific Configuration
+        project_id (str | None): Project identifier used by VertexAI and Watson services.
+        organization_id (str | None): Organization identifier for OpenAI and Azure services.
+        deployment_id (str | None): Deployment identifier for OpenAI and Azure services.
+        region (str | None): Geographic region for VertexAI services.
+        session (str | None): Session configuration for Amazon Bedrock embeddings.
+
+        # Request Configuration
+        task_type (str | None): Specifies the task type for Google Generative AI embeddings.
+        default_headers (str | None): Custom headers for OpenAI and Azure API requests.
+        dimensions (str | None): Output dimensions specification for OpenAI and Azure embeddings.
+    """
+
+    # Core Model Configuration
     model: str | None = None
-    url: str | None = None
-    project_id: str | None = None
-    region: str | None = None
-    task_type: str | None = None
-    session: str | None = None
-    api_url: str | None = None
     embedder: str | Callable | None = None
+
+    # API Authentication & Configuration
     api_key: str | None = None
     api_base: str | None = None
     api_type: str | None = None
     api_version: str | None = None
+    api_url: str | None = None
+    url: str | None = None
+
+    # Service-Specific Configuration
+    project_id: str | None = None
+    organization_id: str | None = None
+    deployment_id: str | None = None
+    region: str | None = None
+    session: str | None = None
+
+    # Request Configuration
+    task_type: str | None = None
     default_headers: str | None = None
     dimensions: str | None = None
-    deployment_id: str | None = None
-    organization_id: str | None = None
 
 
 class EmbeddingConfig(BaseModel):
