@@ -17,19 +17,25 @@ from typing import (
 )
 from uuid import uuid4
 
-from blinker import Signal
 from pydantic import BaseModel, Field, ValidationError
 
-from crewai.flow.flow_events import (
-    FlowFinishedEvent,
-    FlowStartedEvent,
-    MethodExecutionFinishedEvent,
-    MethodExecutionStartedEvent,
-)
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
-from crewai.telemetry import Telemetry
+from crewai.traces.unified_trace_controller import (
+    init_flow_main_trace,
+    trace_flow_step,
+)
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.flow_events import (
+    FlowCreatedEvent,
+    FlowFinishedEvent,
+    FlowPlotEvent,
+    FlowStartedEvent,
+    MethodExecutionFailedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
+)
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
@@ -427,7 +433,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
 
-    _telemetry = Telemetry()
     _printer = Printer()
 
     _start_methods: List[str] = []
@@ -435,7 +440,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _routers: Set[str] = set()
     _router_paths: Dict[str, List[str]] = {}
     initial_state: Union[Type[T], T, None] = None
-    event_emitter = Signal("event_emitter")
 
     def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
         class _FlowGeneric(cls):  # type: ignore
@@ -469,7 +473,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if kwargs:
             self._initialize_state(kwargs)
 
-        self._telemetry.flow_creation_span(self.__class__.__name__)
+        crewai_event_bus.emit(
+            self,
+            FlowCreatedEvent(
+                type="flow_created",
+                flow_name=self.__class__.__name__,
+            ),
+        )
 
         # Register all flow-related methods
         for method_name in dir(self):
@@ -738,9 +748,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._initialize_state(filtered_inputs)
 
         # Start flow execution
-        self.event_emitter.send(
+        crewai_event_bus.emit(
             self,
-            event=FlowStartedEvent(
+            FlowStartedEvent(
                 type="flow_started",
                 flow_name=self.__class__.__name__,
                 inputs=inputs,
@@ -753,15 +763,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if inputs is not None and "id" not in inputs:
             self._initialize_state(inputs)
 
-        return asyncio.run(self.kickoff_async())
+        async def run_flow():
+            return await self.kickoff_async()
 
+        return asyncio.run(run_flow())
+
+    @init_flow_main_trace
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         if not self._start_methods:
             raise ValueError("No start method defined")
-
-        self._telemetry.flow_execution_span(
-            self.__class__.__name__, list(self._methods.keys())
-        )
 
         tasks = [
             self._execute_start_method(start_method)
@@ -771,9 +781,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         final_output = self._method_outputs[-1] if self._method_outputs else None
 
-        self.event_emitter.send(
+        crewai_event_bus.emit(
             self,
-            event=FlowFinishedEvent(
+            FlowFinishedEvent(
                 type="flow_finished",
                 flow_name=self.__class__.__name__,
                 result=final_output,
@@ -804,43 +814,59 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
         await self._execute_listeners(start_method_name, result)
 
+    @trace_flow_step
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
-        dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
-        self.event_emitter.send(
-            self,
-            event=MethodExecutionStartedEvent(
-                type="method_execution_started",
-                method_name=method_name,
-                flow_name=self.__class__.__name__,
-                params=dumped_params,
-                state=self._copy_state(),
-            ),
-        )
+        try:
+            dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
+                kwargs or {}
+            )
+            crewai_event_bus.emit(
+                self,
+                MethodExecutionStartedEvent(
+                    type="method_execution_started",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    params=dumped_params,
+                    state=self._copy_state(),
+                ),
+            )
 
-        result = (
-            await method(*args, **kwargs)
-            if asyncio.iscoroutinefunction(method)
-            else method(*args, **kwargs)
-        )
-        self._method_outputs.append(result)
-        self._method_execution_counts[method_name] = (
-            self._method_execution_counts.get(method_name, 0) + 1
-        )
+            result = (
+                await method(*args, **kwargs)
+                if asyncio.iscoroutinefunction(method)
+                else method(*args, **kwargs)
+            )
 
-        self.event_emitter.send(
-            self,
-            event=MethodExecutionFinishedEvent(
-                type="method_execution_finished",
-                method_name=method_name,
-                flow_name=self.__class__.__name__,
-                state=self._copy_state(),
-                result=result,
-            ),
-        )
+            self._method_outputs.append(result)
+            self._method_execution_counts[method_name] = (
+                self._method_execution_counts.get(method_name, 0) + 1
+            )
 
-        return result
+            crewai_event_bus.emit(
+                self,
+                MethodExecutionFinishedEvent(
+                    type="method_execution_finished",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    state=self._copy_state(),
+                    result=result,
+                ),
+            )
+
+            return result
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                MethodExecutionFailedEvent(
+                    type="method_execution_failed",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    error=e,
+                ),
+            )
+            raise e
 
     async def _execute_listeners(self, trigger_method: str, result: Any) -> None:
         """
@@ -978,6 +1004,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         try:
             method = self._methods[listener_name]
+
             sig = inspect.signature(method)
             params = list(sig.parameters.values())
             method_params = [p for p in params if p.name != "self"]
@@ -1027,7 +1054,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow") -> None:
-        self._telemetry.flow_plotting_span(
-            self.__class__.__name__, list(self._methods.keys())
+        crewai_event_bus.emit(
+            self,
+            FlowPlotEvent(
+                type="flow_plot",
+                flow_name=self.__class__.__name__,
+            ),
         )
         plot_flow(self, filename)
