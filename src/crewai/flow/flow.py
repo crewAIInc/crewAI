@@ -1232,7 +1232,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif level == "warning":
             logger.warning(message)
 
-<<<<<<< HEAD
     def plot(self, filename: Optional[str] = "crewai_flow") -> None:
         """Plot the flow graph visualization.
         
@@ -1245,8 +1244,5 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 type="flow_plot",
                 flow_name=self.__class__.__name__,
             ),
-        )
-        self._telemetry.flow_plotting_span(
-            self.__class__.__name__, list(self._methods.keys())
         )
         plot_flow(self, filename)
