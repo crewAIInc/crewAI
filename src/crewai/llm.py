@@ -21,15 +21,18 @@ from typing import (
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
-    from litellm import Choices, get_supported_openai_params
+    from litellm import Choices
     from litellm.types.utils import ModelResponse
-    from litellm.utils import supports_response_schema
+    from litellm.utils import get_supported_openai_params, supports_response_schema
 
 
 from crewai.traces.unified_trace_controller import trace_llm_call
+from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -335,7 +338,7 @@ class LLM:
                 # --- 5) Handle the tool call
                 tool_call = tool_calls[0]
                 function_name = tool_call.function.name
-
+                print("function_name", function_name)
                 if function_name in available_functions:
                     try:
                         function_args = json.loads(tool_call.function.arguments)
@@ -352,6 +355,15 @@ class LLM:
                     except Exception as e:
                         logging.error(
                             f"Error executing function '{function_name}': {e}"
+                        )
+                        crewai_event_bus.emit(
+                            self,
+                            event=ToolExecutionErrorEvent(
+                                tool_name=function_name,
+                                tool_args=function_args,
+                                tool_class=fn,
+                                error=str(e),
+                            ),
                         )
                         return text_response
 
@@ -437,7 +449,7 @@ class LLM:
     def supports_function_calling(self) -> bool:
         try:
             params = get_supported_openai_params(model=self.model)
-            return "response_format" in params
+            return params is not None and "tools" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {str(e)}")
             return False
@@ -445,7 +457,7 @@ class LLM:
     def supports_stop_words(self) -> bool:
         try:
             params = get_supported_openai_params(model=self.model)
-            return "stop" in params
+            return params is not None and "stop" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {str(e)}")
             return False
