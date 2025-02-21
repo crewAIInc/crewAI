@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
-from crewai.llm import LLM
+from crewai.llm import LLM, CONTEXT_WINDOW_USAGE_RATIO
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -284,6 +284,23 @@ def test_o3_mini_reasoning_effort_medium():
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
+
+def test_context_window_validation():
+    """Test that context window validation works correctly."""
+    # Test valid window size
+    llm = LLM(model="o3-mini")
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    # Test invalid window size
+    with pytest.raises(ValueError) as excinfo:
+        with patch.dict(
+            "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
+            {"test-model": 500},  # Below minimum
+            clear=True,
+        ):
+            llm = LLM(model="test-model")
+            llm.get_context_window_size()
+    assert "must be between 1024 and 2097152" in str(excinfo.value)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
