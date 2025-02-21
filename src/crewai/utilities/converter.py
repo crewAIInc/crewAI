@@ -327,9 +327,9 @@ def generate_model_description(model: Type[BaseModel]) -> str:
         elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
             return generate_model_description(field_type)
         elif hasattr(field_type, "__name__"):
-            return field_type.__name__
+            return f'"{field_type.__name__}"'
         else:
-            return str(field_type)
+            return f'"{str(field_type)}"'
 
     fields = model.model_fields
     field_descriptions = []
