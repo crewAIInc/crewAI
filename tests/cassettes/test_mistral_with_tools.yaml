@@ -1,0 +1,76 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "Use the dummy tool with param
+      ''test''"}], "model": "mistral-large-latest", "stop": [], "tools": [{"type":
+      "function", "function": {"name": "dummy_tool", "description": "A simple test
+      tool.", "parameters": {"type": "object", "properties": {"param": {"type": "string",
+      "description": "A test parameter"}}, "required": ["param"]}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '372'
+      content-type:
+      - application/json
+      host:
+      - api.mistral.ai
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.mistral.ai/v1/chat/completions
+  response:
+    content: "{\n  \"message\":\"Unauthorized\",\n  \"request_id\":\"96ca5615d43f134988d0fc4b1ded1455\"\n}"
+    headers:
+      CF-RAY:
+      - 9158bb5adad376f1-SEA
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '81'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Fri, 21 Feb 2025 18:17:12 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=MGDKyTo6P8HCsRCn9L6BcLQuWlHhR_Oyx0OAG2lNook-1740161832-1.0.1.1-4TQjjEAQkY4UdlzBET20v1w7G87AU38G8amFRICHPql3I0aHI5pV3Bez0qKp6f3cBT351xkaHyInoOA6FeoJqQ;
+        path=/; expires=Fri, 21-Feb-25 18:47:12 GMT; domain=.mistral.ai; HttpOnly;
+        Secure; SameSite=None
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      www-authenticate:
+      - Key
+      x-kong-request-id:
+      - 96ca5615d43f134988d0fc4b1ded1455
+      x-kong-response-latency:
+      - '0'
+    http_version: HTTP/1.1
+    status_code: 401
+version: 1
