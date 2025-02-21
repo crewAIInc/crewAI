@@ -21,6 +21,8 @@ from typing import (
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+logger = logging.getLogger(__name__)
+
 from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
 
 with warnings.catch_warnings():
@@ -133,6 +135,9 @@ def suppress_warnings():
 
 
 class LLM:
+    # Constants for model identification
+    MISTRAL_IDENTIFIERS = {'mistral', 'mixtral'}
+
     def __init__(
         self,
         model: str,
@@ -392,9 +397,11 @@ class LLM:
         Returns:
             List of formatted messages according to provider requirements.
             For Anthropic models, ensures first message has 'user' role.
+            For Mistral models, converts 'assistant' roles to 'user' roles.
 
         Raises:
             TypeError: If messages is None or contains invalid message format.
+            Exception: If message formatting fails for any provider-specific reason.
         """
         if messages is None:
             raise TypeError("Messages cannot be None")
@@ -407,12 +414,17 @@ class LLM:
                 )
 
         # Handle Mistral role requirements
-        if "mistral" in self.model.lower():
-            messages_copy = [dict(message) for message in messages]  # Deep copy
-            for message in messages_copy:
-                if message.get("role") == "assistant":
-                    message["role"] = "user"
-            return messages_copy
+        if any(identifier in self.model.lower() for identifier in self.MISTRAL_IDENTIFIERS):
+            try:
+                from copy import deepcopy
+                messages_copy = deepcopy(messages)
+                for message in messages_copy:
+                    if message.get("role") == "assistant":
+                        message["role"] = "user"
+                return messages_copy
+            except Exception as e:
+                logger.error(f"Error formatting messages for Mistral: {str(e)}")
+                raise
 
         if not self.is_anthropic:
             return messages

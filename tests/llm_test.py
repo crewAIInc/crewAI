@@ -14,24 +14,61 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_mistral_with_tools():
-    """Test that Mistral LLM correctly handles role requirements with tools."""
-    llm = LLM(model="mistral/mistral-large-latest")
-    messages = [
-        {"role": "user", "content": "Test message"},
-        {"role": "assistant", "content": "Assistant response"}
-    ]
+@pytest.mark.mistral
+class TestMistralLLM:
+    """Test suite for Mistral LLM functionality."""
     
-    # Get the formatted messages
-    formatted_messages = llm._format_messages_for_provider(messages)
+    @pytest.fixture
+    def mistral_llm(self):
+        """Fixture providing a Mistral LLM instance."""
+        return LLM(model="mistral/mistral-large-latest")
     
-    # Verify that assistant role was changed to user for Mistral
-    assert any(msg["role"] == "user" for msg in formatted_messages if msg["content"] == "Assistant response")
-    assert not any(msg["role"] == "assistant" for msg in formatted_messages)
+    def test_mistral_role_handling(self, mistral_llm):
+        """
+        Verify that roles are handled correctly in various scenarios:
+        - Assistant roles are converted to user roles
+        - Original messages remain unchanged
+        - System messages are preserved
+        """
+        messages = [
+            {"role": "system", "content": "System message"},
+            {"role": "user", "content": "Test message"},
+            {"role": "assistant", "content": "Assistant response"}
+        ]
+        
+        formatted_messages = mistral_llm._format_messages_for_provider(messages)
+        
+        # Verify role conversions
+        assert any(msg["role"] == "user" for msg in formatted_messages if msg["content"] == "Assistant response")
+        assert not any(msg["role"] == "assistant" for msg in formatted_messages)
+        assert any(msg["role"] == "system" for msg in formatted_messages)
+        
+        # Original messages should not be modified
+        assert any(msg["role"] == "assistant" for msg in messages)
     
-    # Original messages should not be modified
-    assert any(msg["role"] == "assistant" for msg in messages)
+    def test_mistral_empty_messages(self, mistral_llm):
+        """Test handling of empty message list."""
+        messages = []
+        formatted_messages = mistral_llm._format_messages_for_provider(messages)
+        assert formatted_messages == []
+    
+    def test_mistral_multiple_assistant_messages(self, mistral_llm):
+        """Test handling of multiple consecutive assistant messages."""
+        messages = [
+            {"role": "user", "content": "User 1"},
+            {"role": "assistant", "content": "Assistant 1"},
+            {"role": "assistant", "content": "Assistant 2"},
+            {"role": "user", "content": "User 2"}
+        ]
+        
+        formatted_messages = mistral_llm._format_messages_for_provider(messages)
+        
+        # All assistant messages should be converted to user
+        assert all(msg["role"] == "user" for msg in formatted_messages 
+                  if msg["content"] in ["Assistant 1", "Assistant 2"])
+        
+        # Original messages should not be modified
+        assert len([msg for msg in messages if msg["role"] == "assistant"]) == 2
 
 
 def test_mistral_role_handling():
