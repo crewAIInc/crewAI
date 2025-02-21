@@ -14,6 +14,47 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_mistral_with_tools():
+    """Test that Mistral LLM correctly handles role requirements with tools."""
+    llm = LLM(model="mistral/mistral-large-latest")
+    messages = [
+        {"role": "user", "content": "Test message"},
+        {"role": "assistant", "content": "Assistant response"}
+    ]
+    
+    # Get the formatted messages
+    formatted_messages = llm._format_messages_for_provider(messages)
+    
+    # Verify that assistant role was changed to user for Mistral
+    assert any(msg["role"] == "user" for msg in formatted_messages if msg["content"] == "Assistant response")
+    assert not any(msg["role"] == "assistant" for msg in formatted_messages)
+    
+    # Original messages should not be modified
+    assert any(msg["role"] == "assistant" for msg in messages)
+
+
+def test_mistral_role_handling():
+    """Test that Mistral LLM correctly handles role requirements."""
+    llm = LLM(model="mistral/mistral-large-latest")
+    messages = [
+        {"role": "system", "content": "System message"},
+        {"role": "user", "content": "User message"},
+        {"role": "assistant", "content": "Assistant message"}
+    ]
+    
+    # Get the formatted messages
+    formatted_messages = llm._format_messages_for_provider(messages)
+    
+    # Verify that assistant role was changed to user for Mistral
+    assert any(msg["role"] == "user" for msg in formatted_messages if msg["content"] == "Assistant message")
+    assert not any(msg["role"] == "assistant" for msg in formatted_messages)
+    
+    # Original messages should not be modified
+    assert any(msg["role"] == "assistant" for msg in messages)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_callback_replacement():
     llm1 = LLM(model="gpt-4o-mini")
     llm2 = LLM(model="gpt-4o-mini")

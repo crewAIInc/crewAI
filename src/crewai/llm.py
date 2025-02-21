@@ -406,6 +406,14 @@ class LLM:
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
 
+        # Handle Mistral role requirements
+        if "mistral" in self.model.lower():
+            messages_copy = [dict(message) for message in messages]  # Deep copy
+            for message in messages_copy:
+                if message.get("role") == "assistant":
+                    message["role"] = "user"
+            return messages_copy
+
         if not self.is_anthropic:
             return messages
 
