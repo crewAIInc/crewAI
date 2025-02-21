@@ -15,162 +15,124 @@ icon: wrench
   If you need to update Python, visit [python.org/downloads](https://python.org/downloads)
 </Note>
 
-# Setting Up Your Environment
+CrewAI uses the `uv` as its dependency management and package handling tool. It simplifies project setup and execution, offering a seamless experience.
 
-Before installing CrewAI, it's recommended to set up a virtual environment. This helps isolate your project dependencies and avoid conflicts.
-
-<Steps>
-    <Step title="Create a Virtual Environment">
-        Choose your preferred method to create a virtual environment:
-
-        **Using venv (Python's built-in tool):**
-        ```shell Terminal
-        python3 -m venv .venv
-        ```
-
-        **Using conda:**
-        ```shell Terminal
-        conda create -n crewai-env python=3.12
-        ```
-    </Step>
-
-    <Step title="Activate the Virtual Environment">
-        Activate your virtual environment based on your platform:
-
-        **On macOS/Linux (venv):**
-        ```shell Terminal
-        source .venv/bin/activate
-        ```
-
-        **On Windows (venv):**
-        ```shell Terminal
-        .venv\Scripts\activate
-        ```
-
-        **Using conda (all platforms):**
-        ```shell Terminal
-        conda activate crewai-env
-        ```
-    </Step>
-</Steps>
-
-# Installing CrewAI
-
-Now let's get you set up! 🚀
+If you haven't installed `uv` yet, follow step `1` to quickly get it set up on your system, else you can skip to step `2`.
 
 <Steps>
-    <Step title="Install CrewAI">
-        Install CrewAI with all recommended tools using either method:
-        ```shell Terminal
-        pip install 'crewai[tools]'
+    <Step title="Install uv">
+      - **On macOS/Linux:**
+
+        Use `curl` to download the script and execute it with `sh`:
+
+        ```shell
+        curl -LsSf https://astral.sh/uv/install.sh | sh
         ```
-        or
-        ```shell Terminal
-        pip install crewai crewai-tools
+        If your system doesn't have `curl`, you can use `wget`:
+
+        ```shell
+        wget -qO- https://astral.sh/uv/install.sh | sh
         ```
 
-        <Note>
-          Both methods install the core package and additional tools needed for most use cases.
-        </Note>
+      - **On Windows:**
+
+        Use `irm` to download the script and `iex` to execute it:
+
+        ```shell
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+        ```
+        If you run into any issues, refer to [UV's installation guide](https://docs.astral.sh/uv/getting-started/installation/) for more information.
     </Step>
 
-    <Step title="Upgrade CrewAI (Existing Installations Only)">
-        If you have an older version of CrewAI installed, you can upgrade it:
-        ```shell Terminal
-        pip install --upgrade crewai crewai-tools
+    <Step title="Install CrewAI 🚀">
+      - Run the following command to install CrewAI with all recommended tools:
+        ```shell
+        uv tool install 'crewai[tools]'
         ```
-
-        <Warning>
-            If you see a Poetry-related warning, you'll need to migrate to our new dependency manager:
-            ```shell Terminal
-            crewai update
+          <Warning>
+            If you encounter the `PATH` warning, run this command to update your shell:
+            ```shell
+            uv tool update-shell
             ```
-            This will update your project to use [UV](https://github.com/astral-sh/uv), our new faster dependency manager.
-        </Warning>
+          </Warning>
 
-        <Note>
-            Skip this step if you're doing a fresh installation.
-        </Note>
-    </Step>
-
-    <Step title="Verify Installation">
-        Check your installed versions:
-        ```shell Terminal
-        pip freeze | grep crewai
+      - To verify that `crewai` and `crewai-tools` are installed, run:
+        ```shell
+        uv pip freeze | grep crewai
         ```
-
-        You should see something like:
-        ```markdown Output
+      - You should see something like:
+        ```markdown
         crewai==X.X.X
         crewai-tools==X.X.X
         ```
-        <Check>Installation successful! You're ready to create your first crew.</Check>
+      <Check>Installation successful! You're ready to create your first crew! 🎉</Check>
     </Step>
 </Steps>
 
-# Creating a New Project
+# Creating a CrewAI Project
 
-<Tip>
-  We recommend using the YAML Template scaffolding for a structured approach to defining agents and tasks.
-</Tip>
+We recommend using the `YAML` template scaffolding for a structured approach to defining agents and tasks. Here's how to get started:
 
 <Steps>
-  <Step title="Generate Project Structure">
-    Run the CrewAI CLI command:
-    ```shell Terminal
-    crewai create crew <project_name>
-    ```
+  <Step title="Generate Project Scaffolding">
+    - Run the CrewAI CLI command:
+      ```shell
+      crewai create crew <project_name>
+      ```
 
-    This creates a new project with the following structure:
-    <Frame>
-    ```
-    my_project/
-    ├── .gitignore
-    ├── pyproject.toml
-    ├── README.md
-    ├── .env
-    └── src/
-        └── my_project/
-            ├── __init__.py
-            ├── main.py
-            ├── crew.py
-            ├── tools/
-            │   ├── custom_tool.py
-            │   └── __init__.py
-            └── config/
-                ├── agents.yaml
-                └── tasks.yaml
-    ```
-    </Frame>
-  </Step>
-
-  <Step title="Install Additional Tools">
-    You can install additional tools using UV:
-    ```shell Terminal
-    uv add <tool-name>
-    ```
-
-    <Tip>
-      UV is our preferred package manager as it's significantly faster than pip and provides better dependency resolution.
-    </Tip>
+    - This creates a new project with the following structure:
+      <Frame>
+      ```
+      my_project/
+      ├── .gitignore
+      ├── knowledge/
+      ├── pyproject.toml
+      ├── README.md
+      ├── .env
+      └── src/
+          └── my_project/
+              ├── __init__.py
+              ├── main.py
+              ├── crew.py
+              ├── tools/
+              │   ├── custom_tool.py
+              │   └── __init__.py
+              └── config/
+                  ├── agents.yaml
+                  └── tasks.yaml
+      ```
+      </Frame>
   </Step>
 
   <Step title="Customize Your Project">
-    Your project will contain these essential files:
+    - Your project will contain these essential files:
+      | File | Purpose |
+      | --- | --- |
+      | `agents.yaml` | Define your AI agents and their roles |
+      | `tasks.yaml` | Set up agent tasks and workflows |
+      | `.env` | Store API keys and environment variables |
+      | `main.py` | Project entry point and execution flow |
+      | `crew.py` | Crew orchestration and coordination |
+      | `tools/` | Directory for custom agent tools |
+      | `knowledge/` | Directory for knowledge base |
 
-    | File | Purpose |
-    | --- | --- |
-    | `agents.yaml` | Define your AI agents and their roles |
-    | `tasks.yaml` | Set up agent tasks and workflows |
-    | `.env` | Store API keys and environment variables |
-    | `main.py` | Project entry point and execution flow |
-    | `crew.py` | Crew orchestration and coordination |
-    | `tools/` | Directory for custom agent tools |
+    - Start by editing `agents.yaml` and `tasks.yaml` to define your crew's behavior.
+    - Keep sensitive information like API keys in `.env`.
+  </Step>
 
-    <Tip>
-      Start by editing `agents.yaml` and `tasks.yaml` to define your crew's behavior.
-      Keep sensitive information like API keys in `.env`.
-    </Tip>
+  <Step title="Run your Crew">
+    - Before you run your crew, make sure to run:
+      ```bash
+      crewai install
+      ```
+    - If you need to install additional packages, use:
+      ```shell
+      uv add <package-name>
+      ```
+    - To run your crew, execute the following command in the root of your project:
+      ```bash
+      crewai run
+      ```
   </Step>
 </Steps>
 
