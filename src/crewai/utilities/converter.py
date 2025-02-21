@@ -1,5 +1,7 @@
 import json
 import re
+import logging
+from functools import lru_cache
 from typing import Any, Optional, Type, Union, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
@@ -7,6 +9,8 @@ from pydantic import BaseModel, ValidationError
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+
+logger = logging.getLogger(__name__)
 
 
 class ConverterError(Exception):
@@ -253,44 +257,79 @@ def create_converter(
     return converter
 
 
+FIELD_TYPE_KEY = "type"
+FIELD_DESC_KEY = "description"
+
 def generate_model_description(model: Type[BaseModel]) -> str:
     """
     Generate a string description of a Pydantic model's fields and their types.
 
     This function takes a Pydantic model class and returns a string that describes
     the model's fields and their respective types. The description includes handling
-    of complex types such as `Optional`, `List`, and `Dict`, as well as nested Pydantic
-    models.
+@lru_cache(maxsize=100)
+def generate_model_description(model: Type[BaseModel]) -> str:
+    models and field descriptions when available.
+
+    Args:
+        model: A Pydantic BaseModel class to generate description for
+
+    Returns:
+        str: A JSON-like string describing the model's fields, their types, and descriptions
     """
 
-    def describe_field(field_type, field_info=None):
+    def describe_field(field_type: Any, field_info: Optional[Any] = None) -> Union[str, dict]:
+        """
+        Generate a description for a model field including its type and description.
+
+        Args:
+            field_type: The type annotation of the field
+            field_info: Optional field information containing description
+
+        Returns:
+            Union[str, dict]: Field description either as string (type only) or
+                            dict with type and description
+        """
+        try:
+            type_desc = get_type_description(field_type)
+            if field_info and field_info.description:
+                return {FIELD_TYPE_KEY: type_desc, FIELD_DESC_KEY: field_info.description}
+            return type_desc
+        except Exception as e:
+            logger.warning(f"Error processing field description: {e}")
+            return str(field_type)
+
+    def get_type_description(field_type: Any) -> str:
+        """
+        Get the type description for a field type.
+
+        Args:
+            field_type: The type annotation to describe
+
+        Returns:
+            str: A string representation of the type
+        """
         origin = get_origin(field_type)
         args = get_args(field_type)
 
-        type_desc = ""
         if origin is Union or (origin is None and len(args) > 0):
             # Handle both Union and the new '|' syntax
             non_none_args = [arg for arg in args if arg is not type(None)]
             if len(non_none_args) == 1:
-                type_desc = f"Optional[{describe_field(non_none_args[0])}]"
+                return f"Optional[{get_type_description(non_none_args[0])}]"
             else:
-                type_desc = f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
+                return f"Optional[Union[{', '.join(get_type_description(arg) for arg in non_none_args)}]]"
         elif origin is list:
-            type_desc = f"List[{describe_field(args[0])}]"
+            return f"List[{get_type_description(args[0])}]"
         elif origin is dict:
-            key_type = describe_field(args[0])
-            value_type = describe_field(args[1])
-            type_desc = f"Dict[{key_type}, {value_type}]"
+            key_type = get_type_description(args[0])
+            value_type = get_type_description(args[1])
+            return f"Dict[{key_type}, {value_type}]"
         elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
-            type_desc = generate_model_description(field_type)
+            return generate_model_description(field_type)
         elif hasattr(field_type, "__name__"):
-            type_desc = field_type.__name__
+            return field_type.__name__
         else:
-            type_desc = str(field_type)
-
-        if field_info and field_info.description:
-            return {"type": type_desc, "description": field_info.description}
-        return type_desc
+            return str(field_type)
 
     fields = model.model_fields
     field_descriptions = []

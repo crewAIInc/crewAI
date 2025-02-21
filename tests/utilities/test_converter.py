@@ -328,7 +328,12 @@ def test_generate_model_description_dict_field():
     assert description == expected_description
 
 
+@pytest.mark.field_descriptions
 def test_generate_model_description_with_field_descriptions():
+    """
+    Verify that the model description generator correctly includes field descriptions
+    when they are provided via Field(..., description='...').
+    """
     class ModelWithDescriptions(BaseModel):
         name: str = Field(..., description="The user's full name")
         age: int = Field(..., description="The user's age in years")
@@ -338,13 +343,33 @@ def test_generate_model_description_with_field_descriptions():
     assert description == expected
 
 
+@pytest.mark.field_descriptions
 def test_generate_model_description_mixed_fields():
+    """
+    Verify that the model description generator correctly handles a mix of fields
+    with and without descriptions.
+    """
     class MixedModel(BaseModel):
         name: str = Field(..., description="The user's name")
         age: int  # No description
         
     description = generate_model_description(MixedModel)
     expected = '{\n  "name": {"type": "str", "description": "The user\'s name"},\n  "age": int\n}'
+    assert description == expected
+
+
+@pytest.mark.field_descriptions
+def test_generate_model_description_with_empty_description():
+    """
+    Verify that the model description generator correctly handles fields with empty
+    descriptions by treating them as fields without descriptions.
+    """
+    class ModelWithEmptyDescription(BaseModel):
+        name: str = Field(..., description="")
+        age: int = Field(..., description=None)
+        
+    description = generate_model_description(ModelWithEmptyDescription)
+    expected = '{\n  "name": "str",\n  "age": "int"\n}'
     assert description == expected
 
 
