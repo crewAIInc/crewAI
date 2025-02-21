@@ -5,7 +5,6 @@ import logging
 from typing import (
     Any,
     Callable,
-    Coroutine,
     Dict,
     Generic,
     List,
