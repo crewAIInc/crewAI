@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
-from crewai.llm import LLM, CONTEXT_WINDOW_USAGE_RATIO
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
 from crewai.utilities.token_counter_callback import TokenCalcHandler
