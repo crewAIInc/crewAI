@@ -369,7 +369,7 @@ def test_generate_model_description_with_empty_description():
         age: int = Field(..., description=None)
         
     description = generate_model_description(ModelWithEmptyDescription)
-    expected = '{\n  "name": "str",\n  "age": "int"\n}'
+    expected = '{\n  "name": str,\n  "age": int\n}'
     assert description == expected
 
 
