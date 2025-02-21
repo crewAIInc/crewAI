@@ -71,6 +71,7 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4-turbo": 128000,
     "o1-preview": 128000,
     "o1-mini": 128000,
+    "o3-mini": 200000,
     # gemini
     "gemini-2.0-flash": 1048576,
     "gemini-1.5-pro": 2097152,
