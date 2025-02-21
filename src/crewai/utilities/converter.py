@@ -263,32 +263,41 @@ def generate_model_description(model: Type[BaseModel]) -> str:
     models.
     """
 
-    def describe_field(field_type):
+    def describe_field(field_type, field_info=None):
         origin = get_origin(field_type)
         args = get_args(field_type)
 
+        type_desc = ""
         if origin is Union or (origin is None and len(args) > 0):
             # Handle both Union and the new '|' syntax
             non_none_args = [arg for arg in args if arg is not type(None)]
             if len(non_none_args) == 1:
-                return f"Optional[{describe_field(non_none_args[0])}]"
+                type_desc = f"Optional[{describe_field(non_none_args[0])}]"
             else:
-                return f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
+                type_desc = f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
         elif origin is list:
-            return f"List[{describe_field(args[0])}]"
+            type_desc = f"List[{describe_field(args[0])}]"
         elif origin is dict:
             key_type = describe_field(args[0])
             value_type = describe_field(args[1])
-            return f"Dict[{key_type}, {value_type}]"
+            type_desc = f"Dict[{key_type}, {value_type}]"
         elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
-            return generate_model_description(field_type)
+            type_desc = generate_model_description(field_type)
         elif hasattr(field_type, "__name__"):
-            return field_type.__name__
+            type_desc = field_type.__name__
         else:
-            return str(field_type)
+            type_desc = str(field_type)
 
-    fields = model.__annotations__
-    field_descriptions = [
-        f'"{name}": {describe_field(type_)}' for name, type_ in fields.items()
-    ]
+        if field_info and field_info.description:
+            return {"type": type_desc, "description": field_info.description}
+        return type_desc
+
+    fields = model.model_fields
+    field_descriptions = []
+    for name, field in fields.items():
+        field_desc = describe_field(field.annotation, field)
+        if isinstance(field_desc, dict):
+            field_descriptions.append(f'"{name}": {json.dumps(field_desc)}')
+        else:
+            field_descriptions.append(f'"{name}": {field_desc}')
     return "{\n  " + ",\n  ".join(field_descriptions) + "\n}"
