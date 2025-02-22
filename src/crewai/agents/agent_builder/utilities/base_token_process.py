@@ -1,5 +1,6 @@
-from crewai.types.usage_metrics import UsageMetrics
 import logging
+
+from crewai.types.usage_metrics import UsageMetrics
 
 
 logger = logging.getLogger(__name__)
