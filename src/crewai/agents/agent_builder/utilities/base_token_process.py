@@ -18,7 +18,18 @@ class TokenProcess:
         self.total_tokens += tokens
 
     def sum_cached_prompt_tokens(self, tokens: int | None) -> None:
+        """
+        Adds the given token count to cached prompt tokens.
+        
+        Args:
+            tokens (int | None): Number of tokens to add. None values are ignored.
+            
+        Raises:
+            ValueError: If tokens is negative.
+        """
         if tokens is not None:
+            if tokens < 0:
+                raise ValueError("Token count cannot be negative")
             self.cached_prompt_tokens += tokens
 
     def sum_successful_requests(self, requests: int) -> None:
