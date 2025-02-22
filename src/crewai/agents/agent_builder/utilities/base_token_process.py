@@ -17,8 +17,9 @@ class TokenProcess:
         self.completion_tokens += tokens
         self.total_tokens += tokens
 
-    def sum_cached_prompt_tokens(self, tokens: int) -> None:
-        self.cached_prompt_tokens += tokens
+    def sum_cached_prompt_tokens(self, tokens: int | None) -> None:
+        if tokens is not None:
+            self.cached_prompt_tokens += tokens
 
     def sum_successful_requests(self, requests: int) -> None:
         self.successful_requests += requests
