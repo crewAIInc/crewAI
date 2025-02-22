@@ -10,7 +10,12 @@ from crewai.cli.provider import (
     select_model,
     select_provider,
 )
-from crewai.cli.utils import copy_template, load_env_vars, write_env_file
+from crewai.cli.utils import (
+    copy_template,
+    load_env_vars,
+    validate_api_keys,
+    write_env_file,
+)
 
 
 def create_folder_structure(name, parent_folder=None):
@@ -162,14 +167,13 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
                     if api_key_value.strip():
                         env_vars[key_name] = api_key_value
 
-        # Only write env file if we have API keys
-        has_api_keys = any(
-            key in env_vars and env_vars[key].strip()
-            for key in ["MISTRAL_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
-        )
-        if has_api_keys:
-            write_env_file(folder_path, env_vars)
-            click.secho("API keys and model saved to .env file", fg="green")
+        if validate_api_keys(env_vars):
+            try:
+                write_env_file(folder_path, env_vars)
+                click.secho("API keys and model saved to .env file", fg="green")
+            except IOError as e:
+                click.secho(f"Error writing .env file: {str(e)}", fg="red")
+                raise
         else:
             click.secho(
                 "No API keys provided. Skipping .env file creation.", fg="yellow"

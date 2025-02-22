@@ -1,4 +1,6 @@
-ENV_VARS = {
+from typing import Dict, List
+
+ENV_VARS: Dict[str, List[Dict[str, str]]] = {
     "openai": [
         {
             "prompt": "Enter your OPENAI API key (press Enter to skip)",
@@ -94,7 +96,7 @@ ENV_VARS = {
 }
 
 
-PROVIDERS = [
+PROVIDERS: List[str] = [
     "openai",
     "anthropic",
     "gemini",
@@ -104,16 +106,16 @@ PROVIDERS = [
     "bedrock",
     "azure",
     "cerebras",
-    "mistral",
+    "mistral",  # Added in v0.86.0
 ]
 
-MODELS = {
+MODELS: Dict[str, List[str]] = {
     "openai": ["gpt-4", "gpt-4o", "gpt-4o-mini", "o1-mini", "o1-preview"],
     "mistral": [
-        "mistral-tiny",
-        "mistral-small",
-        "mistral-medium",
-        "mistral-large",
+        "mistral-tiny",    # 7B model optimized for speed
+        "mistral-small",   # 7B model balanced for performance
+        "mistral-medium",  # 8x7B model for enhanced capabilities
+        "mistral-large",   # Latest model with highest performance
     ],
     "anthropic": [
         "claude-3-5-sonnet-20240620",

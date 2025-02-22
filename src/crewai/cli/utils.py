@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 from functools import reduce
+from pathlib import Path
 from typing import Any, Dict, List
 
 import click
@@ -235,15 +236,38 @@ def update_env_vars(env_vars, provider, model):
     return env_vars
 
 
-def write_env_file(folder_path, env_vars):
+def validate_api_keys(env_vars: Dict[str, str]) -> bool:
+    """
+    Validates that at least one API key is present and non-empty in the environment variables.
+
+    Args:
+        env_vars (Dict[str, str]): Dictionary of environment variables
+
+    Returns:
+        bool: True if at least one API key is present and non-empty
+    """
+    api_keys = ["MISTRAL_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
+    return any(
+        key in env_vars and env_vars[key].strip()
+        for key in api_keys
+    )
+
+def write_env_file(folder_path: Path, env_vars: Dict[str, str]) -> None:
     """
     Writes environment variables to a .env file in the specified folder.
 
     Args:
-    - folder_path (Path): The path to the folder where the .env file will be written.
-    - env_vars (dict): A dictionary of environment variables to write.
+        folder_path (Path): The path to the folder where the .env file will be written.
+        env_vars (Dict[str, str]): A dictionary of environment variables to write.
+
+    Raises:
+        IOError: If there is an error writing to the .env file
     """
     env_file_path = folder_path / ".env"
-    with open(env_file_path, "w") as file:
-        for key, value in env_vars.items():
-            file.write(f"{key}={value}\n")
+    try:
+        with open(env_file_path, "w") as file:
+            for key, value in env_vars.items():
+                file.write(f"{key}={value}\n")
+    except IOError as e:
+        click.secho(f"Error writing .env file: {str(e)}", fg="red")
+        raise

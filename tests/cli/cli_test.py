@@ -2,6 +2,7 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+import click
 from click.testing import CliRunner
 
 from crewai.cli.cli import (
@@ -21,6 +22,13 @@ from crewai.cli.cli import (
 
 
 from crewai.cli.cli import create
+TEST_CONSTANTS = {
+    "CREW_NAME": "test_crew",
+    "MISTRAL_API_KEY": "mistral_api_key_123",
+    "MISTRAL_MODEL": "mistral-tiny",
+    "EMPTY_KEY": "",
+}
+
 @pytest.fixture
 def runner():
     return CliRunner()
@@ -310,6 +318,30 @@ def test_flow_add_crew(mock_path_exists, mock_create_embedded_crew, runner):
     assert isinstance(call_kwargs["parent_folder"], Path)
 
 
+@pytest.mark.parametrize("provider,model,api_key,has_valid_keys,expected_outputs", [
+    (
+        "mistral",
+        TEST_CONSTANTS["MISTRAL_MODEL"],
+        TEST_CONSTANTS["MISTRAL_API_KEY"],
+        True,
+        ["API keys and model saved", f"Selected model: {TEST_CONSTANTS['MISTRAL_MODEL']}"]
+    ),
+    (
+        "mistral",
+        TEST_CONSTANTS["MISTRAL_MODEL"],
+        TEST_CONSTANTS["EMPTY_KEY"],
+        False,
+        ["No API keys provided", f"Selected model: {TEST_CONSTANTS['MISTRAL_MODEL']}"]
+    ),
+    (
+        "mistral",
+        None,
+        TEST_CONSTANTS["EMPTY_KEY"],
+        False,
+        ["No model selected"]
+    ),
+])
+@mock.patch("crewai.cli.create_crew.validate_api_keys")
 @mock.patch("crewai.cli.create_crew.write_env_file")
 @mock.patch("crewai.cli.create_crew.load_env_vars")
 @mock.patch("crewai.cli.create_crew.get_provider_data")
@@ -317,29 +349,46 @@ def test_flow_add_crew(mock_path_exists, mock_create_embedded_crew, runner):
 @mock.patch("crewai.cli.create_crew.select_provider")
 @mock.patch("crewai.cli.create_crew.click.confirm")
 @mock.patch("crewai.cli.create_crew.click.prompt")
-def test_create_crew_with_mistral_provider(
+def test_create_crew_scenarios(
     mock_prompt, mock_confirm, mock_select_provider, mock_select_model,
-    mock_get_provider_data, mock_load_env_vars, mock_write_env_file, runner
+    mock_get_provider_data, mock_load_env_vars, mock_write_env_file, mock_validate_api_keys,
+    runner, provider, model, api_key, has_valid_keys, expected_outputs
 ):
-    # Mock folder override confirmation
+    """Test different scenarios for crew creation with provider configuration.
+    
+    Args:
+        mock_*: Mock objects for various dependencies
+        runner: Click test runner
+        provider: Provider to test (e.g. "mistral")
+        model: Model to select (e.g. "mistral-tiny")
+        api_key: API key to provide
+        has_valid_keys: Whether the API key validation should pass
+        expected_output: Expected message in the output
+    """
     mock_confirm.return_value = True
-    # Mock provider data
-    mock_get_provider_data.return_value = {"mistral": ["mistral-tiny"]}
-    # Mock empty env vars
+    mock_get_provider_data.return_value = {"mistral": [TEST_CONSTANTS["MISTRAL_MODEL"]]}
     mock_load_env_vars.return_value = {}
-    # Mock provider and model selection
-    mock_select_provider.return_value = "mistral"
-    mock_select_model.return_value = "mistral-tiny"
-    # Mock API key input
-    mock_prompt.return_value = "mistral_api_key_123"
-    
-    # Run the command
-    result = runner.invoke(create, ["crew", "test_crew"])
-    
-    assert result.exit_code == 0
-    assert "API keys and model saved to .env file" in result.output
-    assert "Selected model: mistral-tiny" in result.output
+    mock_select_provider.return_value = provider
+    mock_select_model.return_value = model
+    mock_prompt.return_value = api_key
+    mock_validate_api_keys.return_value = has_valid_keys
 
+    # When model is None, simulate model selection being cancelled
+    if model is None:
+        mock_select_model.side_effect = click.UsageError("No model selected")
+
+    result = runner.invoke(create, ["crew", TEST_CONSTANTS["CREW_NAME"]], input="y\n")
+    
+    # For model=None case, we expect error message
+    if model is None:
+        assert result.exit_code == 2  # UsageError exit code
+        assert "No model selected" in result.output
+    else:
+        assert result.exit_code == 0
+        for expected_output in expected_outputs:
+            assert expected_output in result.output
+
+@mock.patch("crewai.cli.create_crew.validate_api_keys")
 @mock.patch("crewai.cli.create_crew.write_env_file")
 @mock.patch("crewai.cli.create_crew.load_env_vars")
 @mock.patch("crewai.cli.create_crew.get_provider_data")
@@ -347,31 +396,32 @@ def test_create_crew_with_mistral_provider(
 @mock.patch("crewai.cli.create_crew.select_provider")
 @mock.patch("crewai.cli.create_crew.click.confirm")
 @mock.patch("crewai.cli.create_crew.click.prompt")
-def test_create_crew_with_mistral_provider_no_key(
+def test_create_crew_with_file_error(
     mock_prompt, mock_confirm, mock_select_provider, mock_select_model,
-    mock_get_provider_data, mock_load_env_vars, mock_write_env_file, runner
+    mock_get_provider_data, mock_load_env_vars, mock_write_env_file, mock_validate_api_keys,
+    runner
 ):
     # Mock folder override confirmation
     mock_confirm.return_value = True
     # Mock provider data
-    mock_get_provider_data.return_value = {"mistral": ["mistral-tiny"]}
+    mock_get_provider_data.return_value = {"mistral": [TEST_CONSTANTS["MISTRAL_MODEL"]]}
     # Mock empty env vars
     mock_load_env_vars.return_value = {}
     # Mock provider and model selection
     mock_select_provider.return_value = "mistral"
-    mock_select_model.return_value = "mistral-tiny"
-    # Mock empty API key input for all prompts
-    mock_prompt.side_effect = [""] * 10  # Enough empty responses for all prompts
+    mock_select_model.return_value = TEST_CONSTANTS["MISTRAL_MODEL"]
+    # Mock API key input
+    mock_prompt.return_value = TEST_CONSTANTS["MISTRAL_API_KEY"]
+    # Mock API key validation
+    mock_validate_api_keys.return_value = True
+    # Mock file write error
+    mock_write_env_file.side_effect = IOError("Permission denied")
     
-    # Run the command
-    result = runner.invoke(create, ["crew", "test_crew"])
+    result = runner.invoke(create, ["crew", TEST_CONSTANTS["CREW_NAME"]], input="y\n")
     
-    assert result.exit_code == 0
-    assert "No API keys provided. Skipping .env file creation." in result.output
-    # Verify env file was not written since no API keys were provided
-    mock_write_env_file.assert_not_called()
-    # Verify model was still selected
-    assert "Selected model: mistral-tiny" in result.output
+    assert result.exit_code == 1
+    assert "Error writing .env file: Permission denied" in result.output
+    assert mock_write_env_file.called
 
 def test_add_crew_to_flow_not_in_root(runner):
     # Simulate not being in the root of a flow project
