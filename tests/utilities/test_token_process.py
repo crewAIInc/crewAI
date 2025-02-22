@@ -1,5 +1,5 @@
-import unittest
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
+import unittest
 
 
 class TestTokenProcess(unittest.TestCase):
