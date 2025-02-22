@@ -162,7 +162,12 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
                     if api_key_value.strip():
                         env_vars[key_name] = api_key_value
 
-        if env_vars:
+        # Only write env file if we have API keys
+        has_api_keys = any(
+            key in env_vars and env_vars[key].strip()
+            for key in ["MISTRAL_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
+        )
+        if has_api_keys:
             write_env_file(folder_path, env_vars)
             click.secho("API keys and model saved to .env file", fg="green")
         else:

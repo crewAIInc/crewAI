@@ -5,6 +5,12 @@ ENV_VARS = {
             "key_name": "OPENAI_API_KEY",
         }
     ],
+    "mistral": [
+        {
+            "prompt": "Enter your MISTRAL API key (press Enter to skip)",
+            "key_name": "MISTRAL_API_KEY",
+        }
+    ],
     "anthropic": [
         {
             "prompt": "Enter your ANTHROPIC API key (press Enter to skip)",
@@ -98,10 +104,17 @@ PROVIDERS = [
     "bedrock",
     "azure",
     "cerebras",
+    "mistral",
 ]
 
 MODELS = {
     "openai": ["gpt-4", "gpt-4o", "gpt-4o-mini", "o1-mini", "o1-preview"],
+    "mistral": [
+        "mistral-tiny",
+        "mistral-small",
+        "mistral-medium",
+        "mistral-large",
+    ],
     "anthropic": [
         "claude-3-5-sonnet-20240620",
         "claude-3-sonnet-20240229",

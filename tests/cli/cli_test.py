@@ -20,6 +20,7 @@ from crewai.cli.cli import (
 )
 
 
+from crewai.cli.cli import create
 @pytest.fixture
 def runner():
     return CliRunner()
@@ -308,6 +309,69 @@ def test_flow_add_crew(mock_path_exists, mock_create_embedded_crew, runner):
     assert "parent_folder" in call_kwargs
     assert isinstance(call_kwargs["parent_folder"], Path)
 
+
+@mock.patch("crewai.cli.create_crew.write_env_file")
+@mock.patch("crewai.cli.create_crew.load_env_vars")
+@mock.patch("crewai.cli.create_crew.get_provider_data")
+@mock.patch("crewai.cli.create_crew.select_model")
+@mock.patch("crewai.cli.create_crew.select_provider")
+@mock.patch("crewai.cli.create_crew.click.confirm")
+@mock.patch("crewai.cli.create_crew.click.prompt")
+def test_create_crew_with_mistral_provider(
+    mock_prompt, mock_confirm, mock_select_provider, mock_select_model,
+    mock_get_provider_data, mock_load_env_vars, mock_write_env_file, runner
+):
+    # Mock folder override confirmation
+    mock_confirm.return_value = True
+    # Mock provider data
+    mock_get_provider_data.return_value = {"mistral": ["mistral-tiny"]}
+    # Mock empty env vars
+    mock_load_env_vars.return_value = {}
+    # Mock provider and model selection
+    mock_select_provider.return_value = "mistral"
+    mock_select_model.return_value = "mistral-tiny"
+    # Mock API key input
+    mock_prompt.return_value = "mistral_api_key_123"
+    
+    # Run the command
+    result = runner.invoke(create, ["crew", "test_crew"])
+    
+    assert result.exit_code == 0
+    assert "API keys and model saved to .env file" in result.output
+    assert "Selected model: mistral-tiny" in result.output
+
+@mock.patch("crewai.cli.create_crew.write_env_file")
+@mock.patch("crewai.cli.create_crew.load_env_vars")
+@mock.patch("crewai.cli.create_crew.get_provider_data")
+@mock.patch("crewai.cli.create_crew.select_model")
+@mock.patch("crewai.cli.create_crew.select_provider")
+@mock.patch("crewai.cli.create_crew.click.confirm")
+@mock.patch("crewai.cli.create_crew.click.prompt")
+def test_create_crew_with_mistral_provider_no_key(
+    mock_prompt, mock_confirm, mock_select_provider, mock_select_model,
+    mock_get_provider_data, mock_load_env_vars, mock_write_env_file, runner
+):
+    # Mock folder override confirmation
+    mock_confirm.return_value = True
+    # Mock provider data
+    mock_get_provider_data.return_value = {"mistral": ["mistral-tiny"]}
+    # Mock empty env vars
+    mock_load_env_vars.return_value = {}
+    # Mock provider and model selection
+    mock_select_provider.return_value = "mistral"
+    mock_select_model.return_value = "mistral-tiny"
+    # Mock empty API key input for all prompts
+    mock_prompt.side_effect = [""] * 10  # Enough empty responses for all prompts
+    
+    # Run the command
+    result = runner.invoke(create, ["crew", "test_crew"])
+    
+    assert result.exit_code == 0
+    assert "No API keys provided. Skipping .env file creation." in result.output
+    # Verify env file was not written since no API keys were provided
+    mock_write_env_file.assert_not_called()
+    # Verify model was still selected
+    assert "Selected model: mistral-tiny" in result.output
 
 def test_add_crew_to_flow_not_in_root(runner):
     # Simulate not being in the root of a flow project
