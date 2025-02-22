@@ -318,29 +318,32 @@ def test_flow_add_crew(mock_path_exists, mock_create_embedded_crew, runner):
     assert isinstance(call_kwargs["parent_folder"], Path)
 
 
-@pytest.mark.parametrize("provider,model,api_key,has_valid_keys,expected_outputs", [
-    (
-        "mistral",
-        TEST_CONSTANTS["MISTRAL_MODEL"],
-        TEST_CONSTANTS["MISTRAL_API_KEY"],
-        True,
-        ["API keys and model saved", f"Selected model: {TEST_CONSTANTS['MISTRAL_MODEL']}"]
-    ),
-    (
-        "mistral",
-        TEST_CONSTANTS["MISTRAL_MODEL"],
-        TEST_CONSTANTS["EMPTY_KEY"],
-        False,
-        ["No API keys provided", f"Selected model: {TEST_CONSTANTS['MISTRAL_MODEL']}"]
-    ),
-    (
-        "mistral",
-        None,
-        TEST_CONSTANTS["EMPTY_KEY"],
-        False,
-        ["No model selected"]
-    ),
-])
+@pytest.mark.parametrize(
+    "provider,model,api_key,has_valid_keys,expected_outputs",
+    [
+        (
+            "mistral",
+            TEST_CONSTANTS["MISTRAL_MODEL"],
+            TEST_CONSTANTS["MISTRAL_API_KEY"],
+            True,
+            ["API keys and model saved", f"Selected model: {TEST_CONSTANTS['MISTRAL_MODEL']}"]
+        ),
+        (
+            "mistral",
+            TEST_CONSTANTS["MISTRAL_MODEL"],
+            TEST_CONSTANTS["EMPTY_KEY"],
+            False,
+            ["No API keys provided", f"Selected model: {TEST_CONSTANTS['MISTRAL_MODEL']}"]
+        ),
+        (
+            "mistral",
+            None,
+            TEST_CONSTANTS["EMPTY_KEY"],
+            False,
+            ["No model selected"]
+        ),
+    ]
+)
 @mock.patch("crewai.cli.create_crew.validate_api_keys")
 @mock.patch("crewai.cli.create_crew.write_env_file")
 @mock.patch("crewai.cli.create_crew.load_env_vars")

@@ -252,6 +252,7 @@ def validate_api_keys(env_vars: Dict[str, str]) -> bool:
         for key in api_keys
     )
 
+
 def write_env_file(folder_path: Path, env_vars: Dict[str, str]) -> None:
     """
     Writes environment variables to a .env file in the specified folder.
