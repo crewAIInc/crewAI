@@ -94,7 +94,7 @@ class Crew(BaseModel):
 
     __hash__ = object.__hash__  # type: ignore
     _execution_span: Any = PrivateAttr()
-    _rpm_controller: RPMController = PrivateAttr()
+    _rpm_controller: Optional[RPMController] = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
@@ -259,6 +259,32 @@ class Crew(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def initialize_dependencies(self) -> "Crew":
+        # Create a cache handler if caching is enabled
+        if self.cache:
+            self._cache_handler = CacheHandler()
+        else:
+            self._cache_handler = None
+
+        # Create the Crew-level RPM controller if a max RPM is specified
+        if self.max_rpm is not None:
+            self._rpm_controller = RPMController(
+                max_rpm=self.max_rpm, logger=Logger(verbose=self.verbose)
+            )
+        else:
+            self._rpm_controller = None
+
+        # Now inject these external dependencies into each agent
+        for agent in self.agents:
+            agent.crew = self  # ensure the agent's crew reference is set
+            # If cache is disabled (_cache_handler is None) provide a new CacheHandler instance
+            agent.configure_executor(
+                self._cache_handler or CacheHandler(), self._rpm_controller
+            )
+
+        return self
+
+    @model_validator(mode="after")
     def create_crew_memory(self) -> "Crew":
         """Set private attributes."""
         if self.memory:
@@ -357,10 +383,7 @@ class Crew(BaseModel):
 
         if self.agents:
             for agent in self.agents:
-                if self.cache:
-                    agent.set_cache_handler(self._cache_handler)
-                if self.max_rpm:
-                    agent.set_rpm_controller(self._rpm_controller)
+                agent.configure_executor(self._cache_handler, self._rpm_controller)
         return self
 
     @model_validator(mode="after")
@@ -1173,7 +1196,7 @@ class Crew(BaseModel):
             agent.interpolate_inputs(inputs)
 
     def _finish_execution(self, final_string_output: str) -> None:
-        if self.max_rpm:
+        if self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()
 
     def calculate_usage_metrics(self) -> UsageMetrics:
