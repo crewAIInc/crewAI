@@ -606,7 +606,7 @@ def test_llm_emits_call_failed_event():
         received_events.append(event)
 
     error_message = "Simulated LLM call failure"
-    with patch.object(LLM, "_call_llm", side_effect=Exception(error_message)):
+    with patch("crewai.llm.litellm.completion", side_effect=Exception(error_message)):
         llm = LLM(model="gpt-4o-mini")
         with pytest.raises(Exception) as exc_info:
             llm.call("Hello, how are you?")

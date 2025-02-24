@@ -37,7 +37,6 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import Tool
-from crewai.traces.unified_trace_controller import init_crew_main_trace
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -571,7 +570,6 @@ class Crew(BaseModel):
             CrewTrainingHandler(filename).clear()
             raise
 
-    @init_crew_main_trace
     def kickoff(
         self,
         inputs: Optional[Dict[str, Any]] = None,
