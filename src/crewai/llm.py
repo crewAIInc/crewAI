@@ -382,6 +382,12 @@ class LLM:
                                 error=str(e),
                             ),
                         )
+                        crewai_event_bus.emit(
+                            self,
+                            event=LLMCallFailedEvent(
+                                error=f"Tool execution error: {str(e)}"
+                            ),
+                        )
                         return text_response
 
                 else:
