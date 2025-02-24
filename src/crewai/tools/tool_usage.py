@@ -19,6 +19,7 @@ from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.logger import Logger
 from crewai.utilities.events.tool_usage_events import (
     ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
@@ -74,6 +75,7 @@ class ToolUsage:
         self._i18n: I18N = agent.i18n
         self._printer: Printer = Printer()
         self._telemetry: Telemetry = Telemetry()
+        self._logger: Logger = Logger()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
         self._remember_format_after_usages: int = 3
@@ -298,10 +300,15 @@ class ToolUsage:
             bool: True if the tool is being called with the same name and arguments as
                  the last call, False otherwise.
         """
+        self._logger.debug(f"Checking repeated usage for tool: {calling.tool_name}")
         if not self.tools_handler or not self.tools_handler.last_used_tool:
             return False
 
         last_tool_usage = self.tools_handler.last_used_tool
+        self._logger.debug(
+            f"Comparing with last tool: {last_tool_usage.tool_name}, "
+            f"args: {last_tool_usage.arguments}"
+        )
         if calling.tool_name != last_tool_usage.tool_name:
             return False
 
