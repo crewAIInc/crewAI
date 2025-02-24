@@ -410,9 +410,7 @@ class LLM:
         """
         crewai_event_bus.emit(
             self,
-            event=LLMCallCompletedEvent(
-                response=response, call_type=LLMCallType(call_type)
-            ),
+            event=LLMCallCompletedEvent(response=response, call_type=call_type),
         )
 
     def _format_messages_for_provider(
