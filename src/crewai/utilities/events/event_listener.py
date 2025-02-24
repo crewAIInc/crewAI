@@ -6,6 +6,11 @@ from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
 from crewai.utilities.constants import EMITTER_COLOR
 from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.utilities.events.llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+)
 
 from .agent_events import AgentExecutionCompletedEvent, AgentExecutionStartedEvent
 from .crew_events import (
@@ -253,6 +258,29 @@ class EventListener(BaseEventListener):
                 f"❌ Tool Usage Error: '{event.tool_name}'",
                 event.timestamp,
                 #
+            )
+
+        # ----------- LLM EVENTS -----------
+
+        @crewai_event_bus.on(LLMCallStartedEvent)
+        def on_llm_call_started(source, event: LLMCallStartedEvent):
+            self.logger.log(
+                f"🤖 LLM Call Started",
+                event.timestamp,
+            )
+
+        @crewai_event_bus.on(LLMCallCompletedEvent)
+        def on_llm_call_completed(source, event: LLMCallCompletedEvent):
+            self.logger.log(
+                f"✅ LLM Call Completed",
+                event.timestamp,
+            )
+
+        @crewai_event_bus.on(LLMCallFailedEvent)
+        def on_llm_call_failed(source, event: LLMCallFailedEvent):
+            self.logger.log(
+                f"❌ LLM Call Failed: '{event.error}'",
+                event.timestamp,
             )
 
 

@@ -33,6 +33,12 @@ from crewai.utilities.events.flow_events import (
     MethodExecutionFailedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.utilities.events.llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+    LLMCallType,
+)
 from crewai.utilities.events.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
@@ -569,3 +575,43 @@ def test_flow_emits_method_execution_failed_event():
     assert received_events[0].flow_name == "TestFlow"
     assert received_events[0].type == "method_execution_failed"
     assert received_events[0].error == error
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_emits_call_started_event():
+    received_events = []
+
+    @crewai_event_bus.on(LLMCallStartedEvent)
+    def handle_llm_call_started(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(LLMCallCompletedEvent)
+    def handle_llm_call_completed(source, event):
+        received_events.append(event)
+
+    llm = LLM(model="gpt-4o-mini")
+    llm.call("Hello, how are you?")
+
+    assert len(received_events) == 2
+    assert received_events[0].type == "llm_call_started"
+    assert received_events[1].type == "llm_call_completed"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_emits_call_failed_event():
+    received_events = []
+
+    @crewai_event_bus.on(LLMCallFailedEvent)
+    def handle_llm_call_failed(source, event):
+        received_events.append(event)
+
+    error_message = "Simulated LLM call failure"
+    with patch.object(LLM, "_call_llm", side_effect=Exception(error_message)):
+        llm = LLM(model="gpt-4o-mini")
+        with pytest.raises(Exception) as exc_info:
+            llm.call("Hello, how are you?")
+
+        assert str(exc_info.value) == error_message
+        assert len(received_events) == 1
+        assert received_events[0].type == "llm_call_failed"
+        assert received_events[0].error == error_message
