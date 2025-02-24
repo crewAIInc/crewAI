@@ -863,7 +863,7 @@ def test_crew_verbose_output(capsys):
         for line in captured.out.split("\n")
         if not line.startswith("[") and line.strip() and not line.startswith("\x1b")
     )
-    assert filtered_output == ""  # No output when verbose is False
+    assert filtered_output == ""
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
