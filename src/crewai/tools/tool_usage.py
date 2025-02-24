@@ -300,15 +300,10 @@ class ToolUsage:
             bool: True if the tool is being called with the same name and arguments as
                  the last call, False otherwise.
         """
-        self._logger.debug(f"Checking repeated usage for tool: {calling.tool_name}")
         if not self.tools_handler or not self.tools_handler.last_used_tool:
             return False
 
         last_tool_usage = self.tools_handler.last_used_tool
-        self._logger.debug(
-            f"Comparing with last tool: {last_tool_usage.tool_name}, "
-            f"args: {last_tool_usage.arguments}"
-        )
         if calling.tool_name != last_tool_usage.tool_name:
             return False
 
