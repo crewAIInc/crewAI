@@ -12,7 +12,7 @@ class LLMCallType(Enum):
 
 
 class LLMCallStartedEvent(CrewEvent):
-    """Event emitted when a task starts"""
+    """Event emitted when a LLM call starts"""
 
     type: str = "llm_call_started"
     messages: Union[str, List[Dict[str, str]]]
@@ -22,7 +22,7 @@ class LLMCallStartedEvent(CrewEvent):
 
 
 class LLMCallCompletedEvent(CrewEvent):
-    """Event emitted when a task completes"""
+    """Event emitted when a LLM call completes"""
 
     type: str = "llm_call_completed"
     response: Any
@@ -30,7 +30,7 @@ class LLMCallCompletedEvent(CrewEvent):
 
 
 class LLMCallFailedEvent(CrewEvent):
-    """Event emitted when a task fails"""
+    """Event emitted when a LLM call fails"""
 
     error: str
     type: str = "llm_call_failed"
