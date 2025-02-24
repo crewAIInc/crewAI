@@ -1278,11 +1278,11 @@ class Crew(BaseModel):
     def _reset_all_memories(self) -> None:
         """Reset all available memory systems."""
         memory_systems = [
-            ("short term", self._short_term_memory),
-            ("entity", self._entity_memory),
-            ("long term", self._long_term_memory),
-            ("task output", self._task_output_handler),
-            ("knowledge", self.knowledge),
+            ("short term", getattr(self, "_short_term_memory", None)),
+            ("entity", getattr(self, "_entity_memory", None)),
+            ("long term", getattr(self, "_long_term_memory", None)),
+            ("task output", getattr(self, "_task_output_handler", None)),
+            ("knowledge", getattr(self, "knowledge", None)),
         ]
 
         for name, system in memory_systems:
