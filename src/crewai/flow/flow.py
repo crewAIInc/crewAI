@@ -22,10 +22,6 @@ from pydantic import BaseModel, Field, ValidationError
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
-from crewai.traces.unified_trace_controller import (
-    init_flow_main_trace,
-    trace_flow_step,
-)
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.flow_events import (
     FlowCreatedEvent,
@@ -725,7 +721,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         return asyncio.run(run_flow())
 
-    @init_flow_main_trace
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         """
         Start the flow execution asynchronously.
@@ -782,18 +777,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
             f"Flow started with ID: {self.flow_id}", color="bold_magenta"
         )
 
-        if not self._start_methods:
-            raise ValueError("No start method defined")
+        if inputs is not None and "id" not in inputs:
+            self._initialize_state(inputs)
 
-        # Execute all start methods concurrently.
         tasks = [
             self._execute_start_method(start_method)
             for start_method in self._start_methods
         ]
         await asyncio.gather(*tasks)
+
         final_output = self._method_outputs[-1] if self._method_outputs else None
 
-        # Emit FlowFinishedEvent after all processing is complete.
         crewai_event_bus.emit(
             self,
             FlowFinishedEvent(
@@ -802,6 +796,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 result=final_output,
             ),
         )
+
         return final_output
 
     async def _execute_start_method(self, start_method_name: str) -> None:
@@ -827,7 +822,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
         await self._execute_listeners(start_method_name, result)
 
-    @trace_flow_step
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
