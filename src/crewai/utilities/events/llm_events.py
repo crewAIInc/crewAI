@@ -25,7 +25,7 @@ class LLMCallCompletedEvent(CrewEvent):
     """Event emitted when a task completes"""
 
     type: str = "llm_call_completed"
-    response: str
+    response: Any
     call_type: LLMCallType
 
 

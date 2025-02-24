@@ -401,7 +401,7 @@ class LLM:
                     logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
-    def _handle_emit_call_events(self, response: str, call_type: LLMCallType):
+    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):
         """Handle the events for the LLM call.
 
         Args:
