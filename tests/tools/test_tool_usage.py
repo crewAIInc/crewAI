@@ -6,7 +6,9 @@ import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Task
+from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools import BaseTool
+from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import (
@@ -126,6 +128,78 @@ def test_tool_usage_render():
         "Tool Name: Random Number Generator\nTool Arguments: {'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}, 'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}}\nTool Description: Generates a random number within a specified range"
         in rendered
     )
+
+
+class WebSocketToolInput(BaseModel):
+    question: str = Field(..., description="Question to ask")
+
+
+class MockWebSocketTool(BaseTool):
+    name: str = "WebSocket Tool"
+    description: str = "A tool that uses WebSocket for communication"
+    args_schema: type[BaseModel] = WebSocketToolInput
+
+    def _run(self, question: str) -> str:
+        return f"Answer to: {question}"
+
+    def invoke(self, input: dict) -> str:
+        return self._run(**input)
+
+
+def test_websocket_tool_repeated_usage():
+    tool = MockWebSocketTool()
+    agent = Agent(
+        role="Test Agent",
+        goal="Test WebSocket tools",
+        backstory="Testing WebSocket tool execution",
+        tools=[tool],
+        verbose=True,
+    )
+
+    task = Task(
+        description="Test WebSocket tool",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    tool_usage = ToolUsage(
+        tools_handler=ToolsHandler(),
+        tools=[tool],
+        original_tools=[tool],
+        tools_description="WebSocket tool for testing",
+        tools_names="websocket_tool",
+        task=task,
+        function_calling_llm=MagicMock(),
+        agent=agent,
+        action=MagicMock(),
+    )
+
+    # First call
+    calling1 = ToolCalling(
+        tool_name="WebSocket Tool",
+        arguments={"question": "Test question"},
+        log="Test log",
+    )
+    result1 = tool_usage.use(calling1, "Test string")
+    assert "Answer to: Test question" in result1
+
+    # Same question should be detected as repeated
+    calling2 = ToolCalling(
+        tool_name="WebSocket Tool",
+        arguments={"question": "Test question"},
+        log="Test log",
+    )
+    result2 = tool_usage.use(calling2, "Test string")
+    assert "reusing the same input" in result2.lower()
+
+    # Different question should work
+    calling3 = ToolCalling(
+        tool_name="WebSocket Tool",
+        arguments={"question": "Different question"},
+        log="Test log",
+    )
+    result3 = tool_usage.use(calling3, "Test string")
+    assert "Answer to: Different question" in result3
 
 
 def test_validate_tool_input_booleans_and_none():

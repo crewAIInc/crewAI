@@ -283,13 +283,22 @@ class ToolUsage:
 
     def _check_tool_repeated_usage(
         self, calling: Union[ToolCalling, InstructorToolCalling]
-    ) -> None:
+    ) -> bool:
         if not self.tools_handler:
-            return False  # type: ignore # No return value expected
+            return False
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (  # type: ignore # No return value expected
-                calling.arguments == last_tool_usage.arguments
+            # For WebSocket tools, we need to check if the question is the same
+            if "question" in calling.arguments and "question" in last_tool_usage.arguments:
+                return (
+                    calling.tool_name == last_tool_usage.tool_name
+                    and calling.arguments["question"] == last_tool_usage.arguments["question"]
+                )
+            # For other tools, check all arguments
+            return (
+                calling.tool_name == last_tool_usage.tool_name
+                and calling.arguments == last_tool_usage.arguments
             )
+        return False
 
     def _select_tool(self, tool_name: str) -> Any:
         order_tools = sorted(
