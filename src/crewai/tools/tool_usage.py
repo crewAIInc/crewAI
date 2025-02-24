@@ -186,22 +186,24 @@ class ToolUsage:
                     )
                     self.task.increment_delegations(coworker)
 
-                if calling.arguments:
-                    try:
-                        acceptable_args = tool.args_schema.model_json_schema()[
-                            "properties"
-                        ].keys()  # type: ignore
-                        arguments = {
-                            k: v
-                            for k, v in calling.arguments.items()
-                            if k in acceptable_args
-                        }
-                        result = tool.invoke(input=arguments)
-                    except Exception:
-                        arguments = calling.arguments
-                        result = tool.invoke(input=arguments)
-                else:
-                    result = tool.invoke(input={})
+                if not calling.arguments:
+                    raise ValueError("Tool arguments cannot be empty")
+
+                try:
+                    acceptable_args = tool.args_schema.model_json_schema()[
+                        "properties"
+                    ].keys()  # type: ignore
+                    arguments = {
+                        k: v
+                        for k, v in calling.arguments.items()
+                        if k in acceptable_args
+                    }
+                    result = tool.invoke(input=arguments)
+                except Exception as e:
+                    if isinstance(e, TypeError) and "missing 1 required positional argument" in str(e):
+                        raise ValueError("Required arguments missing for tool")
+                    arguments = calling.arguments
+                    result = tool.invoke(input=arguments)
             except Exception as e:
                 self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                 self._run_attempts += 1
