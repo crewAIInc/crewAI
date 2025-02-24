@@ -19,13 +19,13 @@ from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.logger import Logger
 from crewai.utilities.events.tool_usage_events import (
     ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolValidateInputErrorEvent,
 )
+from crewai.utilities.logger import Logger
 
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
