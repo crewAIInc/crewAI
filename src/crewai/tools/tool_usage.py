@@ -284,24 +284,36 @@ class ToolUsage:
     def _check_tool_repeated_usage(
         self, calling: Union[ToolCalling, InstructorToolCalling]
     ) -> bool:
-        if not self.tools_handler:
+        """Check if a tool is being called with the same arguments as the last call.
+        
+        This method prevents duplicate tool executions by comparing the current tool call
+        with the last one. For WebSocket tools, it specifically checks if the 'question'
+        argument is identical. For other tools, it compares all arguments.
+        
+        Args:
+            calling: The tool calling to check for repetition, containing the tool name
+                    and arguments.
+        
+        Returns:
+            bool: True if the tool is being called with the same name and arguments as
+                 the last call, False otherwise.
+        """
+        if not self.tools_handler or not self.tools_handler.last_used_tool:
             return False
-        if last_tool_usage := self.tools_handler.last_used_tool:
-            # For WebSocket tools, we need to check if the question is the same
-            if (calling.arguments is not None and last_tool_usage.arguments is not None and
-                "question" in calling.arguments and "question" in last_tool_usage.arguments):
-                return (
-                    calling.tool_name == last_tool_usage.tool_name
-                    and calling.arguments["question"] == last_tool_usage.arguments["question"]
-                )
-            # For other tools, check all arguments
-            return (
-                calling.tool_name == last_tool_usage.tool_name
-                and calling.arguments is not None
-                and last_tool_usage.arguments is not None
-                and calling.arguments == last_tool_usage.arguments
-            )
-        return False
+
+        last_tool_usage = self.tools_handler.last_used_tool
+        if calling.tool_name != last_tool_usage.tool_name:
+            return False
+
+        if not calling.arguments or not last_tool_usage.arguments:
+            return False
+
+        try:
+            if "question" in calling.arguments and "question" in last_tool_usage.arguments:
+                return calling.arguments["question"] == last_tool_usage.arguments["question"]
+            return calling.arguments == last_tool_usage.arguments
+        except (KeyError, TypeError):
+            return False
 
     def _select_tool(self, tool_name: str) -> Any:
         order_tools = sorted(
