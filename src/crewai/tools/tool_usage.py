@@ -304,34 +304,34 @@ class ToolUsage:
             bool: True if the tool is being called with the same name and arguments as
                  the last call, False otherwise.
         """
-        self._logger.debug(f"Checking for repeated usage of tool: {calling.tool_name}")
+        self._logger.log("debug", f"Checking for repeated usage of tool: {calling.tool_name}")
 
         if not self.tools_handler or not self.tools_handler.last_used_tool:
-            self._logger.debug("No previous tool usage found")
+            self._logger.log("debug", "No previous tool usage found")
             return False
 
         last_tool_usage = self.tools_handler.last_used_tool
         if calling.tool_name != last_tool_usage.tool_name:
-            self._logger.debug(f"Different tool name: {calling.tool_name} vs {last_tool_usage.tool_name}")
+            self._logger.log("debug", f"Different tool name: {calling.tool_name} vs {last_tool_usage.tool_name}")
             return False
 
         if not calling.arguments or not last_tool_usage.arguments:
-            self._logger.debug("Missing arguments in current or last tool usage")
+            self._logger.log("debug", "Missing arguments in current or last tool usage")
             return False
 
         try:
             # For WebSocket tools, only compare the question argument
             if "question" in calling.arguments and "question" in last_tool_usage.arguments:
                 is_repeated = calling.arguments["question"] == last_tool_usage.arguments["question"]
-                self._logger.debug(f"WebSocket tool question comparison: {is_repeated}")
+                self._logger.log("debug", f"WebSocket tool question comparison: {is_repeated}")
                 return is_repeated
 
             # For other tools, compare all arguments
             is_repeated = calling.arguments == last_tool_usage.arguments
-            self._logger.debug(f"Full arguments comparison: {is_repeated}")
+            self._logger.log("debug", f"Full arguments comparison: {is_repeated}")
             return is_repeated
         except (KeyError, TypeError) as e:
-            self._logger.debug(f"Error comparing arguments: {str(e)}")
+            self._logger.log("debug", f"Error comparing arguments: {str(e)}")
             return False
 
     def _select_tool(self, tool_name: str) -> Any:
