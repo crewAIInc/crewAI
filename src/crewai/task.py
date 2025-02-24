@@ -144,6 +144,9 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
+    execution_span: Optional[Any] = Field(
+        default=None, description="Open Telemetry Span of the task execution"
+    )
 
     @field_validator("guardrail")
     @classmethod

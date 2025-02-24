@@ -57,7 +57,7 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source, event: CrewKickoffStartedEvent):
             self.logger.log(
-                f"🚀 Crew '{event.crew_name}' started",
+                f"🚀 Crew '{event.crew_name}' started, {source.id}",
                 event.timestamp,
             )
             self._telemetry.crew_execution_span(source, event.inputs)
@@ -67,28 +67,28 @@ class EventListener(BaseEventListener):
             final_string_output = event.output.raw
             self._telemetry.end_crew(source, final_string_output)
             self.logger.log(
-                f"✅ Crew '{event.crew_name}' completed",
+                f"✅ Crew '{event.crew_name}' completed, {source.id}",
                 event.timestamp,
             )
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source, event: CrewKickoffFailedEvent):
             self.logger.log(
-                f"❌ Crew '{event.crew_name}' failed",
+                f"❌ Crew '{event.crew_name}' failed, {source.id}",
                 event.timestamp,
             )
 
         @crewai_event_bus.on(CrewTestStartedEvent)
         def on_crew_test_started(source, event: CrewTestStartedEvent):
             cloned_crew = source.copy()
-            cloned_crew._telemetry.test_execution_span(
+            self._telemetry.test_execution_span(
                 cloned_crew,
                 event.n_iterations,
                 event.inputs,
-                event.eval_llm,
+                event.eval_llm or "",
             )
             self.logger.log(
-                f"🚀 Crew '{event.crew_name}' started test",
+                f"🚀 Crew '{event.crew_name}' started test, {source.id}",
                 event.timestamp,
             )
 
@@ -131,9 +131,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(TaskStartedEvent)
         def on_task_started(source, event: TaskStartedEvent):
-            source._execution_span = self._telemetry.task_started(
-                crew=source.agent.crew, task=source
-            )
+            span = self._telemetry.task_started(crew=source.agent.crew, task=source)
+            source.execution_span = span
             self.logger.log(
                 f"📋 Task started: {source.description}",
                 event.timestamp,
@@ -141,24 +140,24 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source, event: TaskCompletedEvent):
-            if source._execution_span:
+            if source.execution_span:
                 self._telemetry.task_ended(
-                    source._execution_span, source, source.agent.crew
+                    source.execution_span, source, source.agent.crew
                 )
             self.logger.log(
                 f"✅ Task completed: {source.description}",
                 event.timestamp,
             )
-            source._execution_span = None
+            source.execution_span = None
 
         @crewai_event_bus.on(TaskFailedEvent)
         def on_task_failed(source, event: TaskFailedEvent):
-            if source._execution_span:
+            if source.execution_span:
                 if source.agent and source.agent.crew:
                     self._telemetry.task_ended(
-                        source._execution_span, source, source.agent.crew
+                        source.execution_span, source, source.agent.crew
                     )
-                source._execution_span = None
+                source.execution_span = None
             self.logger.log(
                 f"❌ Task failed: {source.description}",
                 event.timestamp,
@@ -184,7 +183,7 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(FlowCreatedEvent)
         def on_flow_created(source, event: FlowCreatedEvent):
-            self._telemetry.flow_creation_span(self.__class__.__name__)
+            self._telemetry.flow_creation_span(event.flow_name)
             self.logger.log(
                 f"🌊 Flow Created: '{event.flow_name}'",
                 event.timestamp,
@@ -193,17 +192,17 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source, event: FlowStartedEvent):
             self._telemetry.flow_execution_span(
-                source.__class__.__name__, list(source._methods.keys())
+                event.flow_name, list(source._methods.keys())
             )
             self.logger.log(
-                f"🤖 Flow Started: '{event.flow_name}'",
+                f"🤖 Flow Started: '{event.flow_name}', {source.flow_id}",
                 event.timestamp,
             )
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event: FlowFinishedEvent):
             self.logger.log(
-                f"👍 Flow Finished: '{event.flow_name}'",
+                f"👍 Flow Finished: '{event.flow_name}', {source.flow_id}",
                 event.timestamp,
             )
 

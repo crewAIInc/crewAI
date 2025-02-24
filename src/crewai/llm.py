@@ -338,7 +338,6 @@ class LLM:
                 # --- 5) Handle the tool call
                 tool_call = tool_calls[0]
                 function_name = tool_call.function.name
-                print("function_name", function_name)
                 if function_name in available_functions:
                     try:
                         function_args = json.loads(tool_call.function.arguments)
