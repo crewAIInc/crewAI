@@ -288,7 +288,8 @@ class ToolUsage:
             return False
         if last_tool_usage := self.tools_handler.last_used_tool:
             # For WebSocket tools, we need to check if the question is the same
-            if "question" in calling.arguments and "question" in last_tool_usage.arguments:
+            if (calling.arguments is not None and last_tool_usage.arguments is not None and
+                "question" in calling.arguments and "question" in last_tool_usage.arguments):
                 return (
                     calling.tool_name == last_tool_usage.tool_name
                     and calling.arguments["question"] == last_tool_usage.arguments["question"]
