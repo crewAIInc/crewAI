@@ -297,6 +297,8 @@ class ToolUsage:
             # For other tools, check all arguments
             return (
                 calling.tool_name == last_tool_usage.tool_name
+                and calling.arguments is not None
+                and last_tool_usage.arguments is not None
                 and calling.arguments == last_tool_usage.arguments
             )
         return False
