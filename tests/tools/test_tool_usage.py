@@ -288,7 +288,7 @@ class TestWebSocketToolUsage:
             arguments={},
             log="Test log",
         )
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Tool arguments cannot be empty"):
             tool_usage.use(calling, "Test string")
 
         # Test with None arguments
@@ -297,8 +297,8 @@ class TestWebSocketToolUsage:
             arguments=None,
             log="Test log",
         )
-        result = tool_usage.use(calling, "Test string")
-        assert "error" in result.lower()
+        with pytest.raises(ValueError, match="Tool arguments cannot be empty"):
+            tool_usage.use(calling, "Test string")
 
 
 def test_validate_tool_input_booleans_and_none():
