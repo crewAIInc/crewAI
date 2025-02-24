@@ -263,14 +263,14 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(source, event: LLMCallStartedEvent):
             self.logger.log(
-                f"🤖 LLM Call Started: '{event.messages}'",
+                f"🤖 LLM Call Started",
                 event.timestamp,
             )
 
         @crewai_event_bus.on(LLMCallCompletedEvent)
         def on_llm_call_completed(source, event: LLMCallCompletedEvent):
             self.logger.log(
-                f"✅ LLM Call Completed: '{event.response}'",
+                f"✅ LLM Call Completed",
                 event.timestamp,
             )
 
