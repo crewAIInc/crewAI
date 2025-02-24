@@ -35,7 +35,6 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import Tool
 from crewai.traces.unified_trace_controller import init_crew_main_trace
@@ -258,8 +257,6 @@ class Crew(BaseModel):
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
-        self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
         return self
 
     @model_validator(mode="after")
@@ -1115,7 +1112,6 @@ class Crew(BaseModel):
             "_short_term_memory",
             "_long_term_memory",
             "_entity_memory",
-            "_telemetry",
             "agents",
             "tasks",
             "knowledge_sources",
