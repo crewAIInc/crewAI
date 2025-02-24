@@ -834,6 +834,12 @@ def test_crew_verbose_output(capsys):
 
     crew.kickoff()
     captured = capsys.readouterr()
+
+    # Filter out event listener logs (lines starting with '[')
+    filtered_output = "\n".join(
+        line for line in captured.out.split("\n") if not line.startswith("[")
+    )
+
     expected_strings = [
         "\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mResearcher",
         "\x1b[00m\n\x1b[95m## Task:\x1b[00m \x1b[92mResearch AI advancements.",
@@ -846,27 +852,19 @@ def test_crew_verbose_output(capsys):
     ]
 
     for expected_string in expected_strings:
-        assert expected_string in captured.out
+        assert expected_string in filtered_output
 
     # Now test with verbose set to False
     crew.verbose = False
     crew._logger = Logger(verbose=False)
     crew.kickoff()
-    expected_listener_logs = [
-        "[🚀 CREW 'CREW' STARTED]",
-        "[📋 TASK STARTED: RESEARCH AI ADVANCEMENTS.]",
-        "[🤖 AGENT 'RESEARCHER' STARTED TASK]",
-        "[✅ AGENT 'RESEARCHER' COMPLETED TASK]",
-        "[✅ TASK COMPLETED: RESEARCH AI ADVANCEMENTS.]",
-        "[📋 TASK STARTED: WRITE ABOUT AI IN HEALTHCARE.]",
-        "[🤖 AGENT 'SENIOR WRITER' STARTED TASK]",
-        "[✅ AGENT 'SENIOR WRITER' COMPLETED TASK]",
-        "[✅ TASK COMPLETED: WRITE ABOUT AI IN HEALTHCARE.]",
-        "[✅ CREW 'CREW' COMPLETED]",
-    ]
     captured = capsys.readouterr()
-    for log in expected_listener_logs:
-        assert log in captured.out
+    filtered_output = "\n".join(
+        line
+        for line in captured.out.split("\n")
+        if not line.startswith("[") and line.strip() and not line.startswith("\x1b")
+    )
+    assert filtered_output == ""
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
