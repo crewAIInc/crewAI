@@ -1,4 +1,3 @@
-import inspect
 import json
 import logging
 import os
@@ -6,17 +5,7 @@ import sys
 import threading
 import warnings
 from contextlib import contextmanager
-from typing import (
-    Any,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, Dict, List, Literal, Optional, Type, Union, cast
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -31,12 +20,10 @@ with warnings.catch_warnings():
     from litellm.utils import get_supported_openai_params, supports_response_schema
 
 
-from crewai.traces.unified_trace_controller import trace_llm_call
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
-from crewai.utilities.protocols import AgentExecutorProtocol
 
 load_dotenv()
 
@@ -180,7 +167,6 @@ class LLM:
         self.context_window_size = 0
         self.reasoning_effort = reasoning_effort
         self.additional_params = kwargs
-        self._message_history: List[Dict[str, str]] = []
         self.is_anthropic = self._is_anthropic_model(model)
 
         litellm.drop_params = True
@@ -195,12 +181,6 @@ class LLM:
 
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
-
-    @trace_llm_call
-    def _call_llm(self, params: Dict[str, Any]) -> Any:
-        with suppress_warnings():
-            response = litellm.completion(**params)
-            return response
 
     def _is_anthropic_model(self, model: str) -> bool:
         """Determine if the model is from Anthropic provider.
@@ -311,7 +291,7 @@ class LLM:
                 params = {k: v for k, v in params.items() if v is not None}
 
                 # --- 2) Make the completion call
-                response = self._call_llm(params)
+                response = litellm.completion(**params)
                 response_message = cast(Choices, cast(ModelResponse, response).choices)[
                     0
                 ].message
@@ -531,95 +511,3 @@ class LLM:
 
                 litellm.success_callback = success_callbacks
                 litellm.failure_callback = failure_callbacks
-
-    def _get_execution_context(self) -> Tuple[Optional[Any], Optional[Any]]:
-        """Get the agent and task from the execution context.
-
-        Returns:
-            tuple: (agent, task) from any AgentExecutor context, or (None, None) if not found
-        """
-        frame = inspect.currentframe()
-        caller_frame = frame.f_back if frame else None
-        agent = None
-        task = None
-
-        # Add a maximum depth to prevent infinite loops
-        max_depth = 100  # Reasonable limit for call stack depth
-        current_depth = 0
-
-        while caller_frame and current_depth < max_depth:
-            if "self" in caller_frame.f_locals:
-                caller_self = caller_frame.f_locals["self"]
-                if isinstance(caller_self, AgentExecutorProtocol):
-                    agent = caller_self.agent
-                    task = caller_self.task
-                    break
-            caller_frame = caller_frame.f_back
-            current_depth += 1
-
-        return agent, task
-
-    def _get_new_messages(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """Get only the new messages that haven't been processed before."""
-        if not hasattr(self, "_message_history"):
-            self._message_history = []
-
-        new_messages = []
-        for message in messages:
-            message_key = (message["role"], message["content"])
-            if message_key not in [
-                (m["role"], m["content"]) for m in self._message_history
-            ]:
-                new_messages.append(message)
-                self._message_history.append(message)
-        return new_messages
-
-    def _get_new_tool_results(self, agent) -> List[Dict]:
-        """Get only the new tool results that haven't been processed before."""
-        if not agent or not agent.tools_results:
-            return []
-
-        if not hasattr(self, "_tool_results_history"):
-            self._tool_results_history: List[Dict] = []
-
-        new_tool_results = []
-
-        for result in agent.tools_results:
-            # Process tool arguments to extract actual values
-            processed_args = {}
-            if isinstance(result["tool_args"], dict):
-                for key, value in result["tool_args"].items():
-                    if isinstance(value, dict) and "type" in value:
-                        # Skip metadata and just store the actual value
-                        continue
-                    processed_args[key] = value
-
-            # Create a clean result with processed arguments
-            clean_result = {
-                "tool_name": result["tool_name"],
-                "tool_args": processed_args,
-                "result": result["result"],
-                "content": result.get("content", ""),
-                "start_time": result.get("start_time", ""),
-            }
-
-            # Check if this exact tool execution exists in history
-            is_duplicate = False
-            for history_result in self._tool_results_history:
-                if (
-                    clean_result["tool_name"] == history_result["tool_name"]
-                    and str(clean_result["tool_args"])
-                    == str(history_result["tool_args"])
-                    and str(clean_result["result"]) == str(history_result["result"])
-                    and clean_result["content"] == history_result.get("content", "")
-                    and clean_result["start_time"]
-                    == history_result.get("start_time", "")
-                ):
-                    is_duplicate = True
-                    break
-
-            if not is_duplicate:
-                new_tool_results.append(clean_result)
-                self._tool_results_history.append(clean_result)
-
-        return new_tool_results
