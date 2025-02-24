@@ -21,6 +21,12 @@ from typing import (
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from crewai.utilities.events.llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+    LLMCallType,
+)
 from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
 
 with warnings.catch_warnings():
@@ -259,6 +265,15 @@ class LLM:
             >>> print(response)
             "The capital of France is Paris."
         """
+        crewai_event_bus.emit(
+            self,
+            event=LLMCallStartedEvent(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+            ),
+        )
         # Validate parameters before proceeding with the call.
         self._validate_call_params()
 
@@ -333,12 +348,13 @@ class LLM:
 
                 # --- 4) If no tool calls, return the text response
                 if not tool_calls or not available_functions:
+                    self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL)
                     return text_response
 
                 # --- 5) Handle the tool call
                 tool_call = tool_calls[0]
                 function_name = tool_call.function.name
-                print("function_name", function_name)
+
                 if function_name in available_functions:
                     try:
                         function_args = json.loads(tool_call.function.arguments)
@@ -350,6 +366,7 @@ class LLM:
                     try:
                         # Call the actual tool function
                         result = fn(**function_args)
+                        self._handle_emit_call_events(result, LLMCallType.TOOL_CALL)
                         return result
 
                     except Exception as e:
@@ -365,6 +382,12 @@ class LLM:
                                 error=str(e),
                             ),
                         )
+                        crewai_event_bus.emit(
+                            self,
+                            event=LLMCallFailedEvent(
+                                error=f"Tool execution error: {str(e)}"
+                            ),
+                        )
                         return text_response
 
                 else:
@@ -374,11 +397,27 @@ class LLM:
                     return text_response
 
             except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=LLMCallFailedEvent(error=str(e)),
+                )
                 if not LLMContextLengthExceededException(
                     str(e)
                 )._is_context_limit_error(str(e)):
                     logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
+
+    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):
+        """Handle the events for the LLM call.
+
+        Args:
+            response (str): The response from the LLM call.
+            call_type (str): The type of call, either "tool_call" or "llm_call".
+        """
+        crewai_event_bus.emit(
+            self,
+            event=LLMCallCompletedEvent(response=response, call_type=call_type),
+        )
 
     def _format_messages_for_provider(
         self, messages: List[Dict[str, str]]
