@@ -146,60 +146,159 @@ class MockWebSocketTool(BaseTool):
         return self._run(**input)
 
 
-def test_websocket_tool_repeated_usage():
-    tool = MockWebSocketTool()
-    agent = Agent(
-        role="Test Agent",
-        goal="Test WebSocket tools",
-        backstory="Testing WebSocket tool execution",
-        tools=[tool],
-        verbose=True,
-    )
+class TestWebSocketToolUsage:
+    """Test cases for WebSocket tool usage and duplicate detection."""
 
-    task = Task(
-        description="Test WebSocket tool",
-        expected_output="Test output",
-        agent=agent,
-    )
+    @pytest.fixture
+    def setup_websocket_tool(self):
+        """Fixture to set up WebSocket tool and agent for testing."""
+        tool = MockWebSocketTool()
+        agent = Agent(
+            role="Test Agent",
+            goal="Test WebSocket tools",
+            backstory="Testing WebSocket tool execution",
+            tools=[tool],
+            verbose=True,
+        )
+        return tool, agent
 
-    tool_usage = ToolUsage(
-        tools_handler=ToolsHandler(),
-        tools=[tool],
-        original_tools=[tool],
-        tools_description="WebSocket tool for testing",
-        tools_names="websocket_tool",
-        task=task,
-        function_calling_llm=MagicMock(),
-        agent=agent,
-        action=MagicMock(),
-    )
+    def test_first_execution(self, setup_websocket_tool):
+        """Test first execution of WebSocket tool."""
+        tool, agent = setup_websocket_tool
+        task = Task(
+            description="Test WebSocket tool",
+            expected_output="Test output",
+            agent=agent,
+        )
+        tool_usage = ToolUsage(
+            tools_handler=ToolsHandler(),
+            tools=[tool],
+            original_tools=[tool],
+            tools_description="WebSocket tool for testing",
+            tools_names="websocket_tool",
+            task=task,
+            function_calling_llm=MagicMock(),
+            agent=agent,
+            action=MagicMock(),
+        )
+        calling = ToolCalling(
+            tool_name="WebSocket Tool",
+            arguments={"question": "Test question"},
+            log="Test log",
+        )
+        result = tool_usage.use(calling, "Test string")
+        assert "Answer to: Test question" in result
 
-    # First call
-    calling1 = ToolCalling(
-        tool_name="WebSocket Tool",
-        arguments={"question": "Test question"},
-        log="Test log",
-    )
-    result1 = tool_usage.use(calling1, "Test string")
-    assert "Answer to: Test question" in result1
+    def test_repeated_execution(self, setup_websocket_tool):
+        """Test repeated execution with same question is detected."""
+        tool, agent = setup_websocket_tool
+        task = Task(
+            description="Test WebSocket tool",
+            expected_output="Test output",
+            agent=agent,
+        )
+        tool_usage = ToolUsage(
+            tools_handler=ToolsHandler(),
+            tools=[tool],
+            original_tools=[tool],
+            tools_description="WebSocket tool for testing",
+            tools_names="websocket_tool",
+            task=task,
+            function_calling_llm=MagicMock(),
+            agent=agent,
+            action=MagicMock(),
+        )
+        # First call
+        calling1 = ToolCalling(
+            tool_name="WebSocket Tool",
+            arguments={"question": "Test question"},
+            log="Test log",
+        )
+        result1 = tool_usage.use(calling1, "Test string")
+        assert "Answer to: Test question" in result1
 
-    # Same question should be detected as repeated
-    calling2 = ToolCalling(
-        tool_name="WebSocket Tool",
-        arguments={"question": "Test question"},
-        log="Test log",
-    )
-    result2 = tool_usage.use(calling2, "Test string")
-    assert "reusing the same input" in result2.lower()
+        # Same question should be detected as repeated
+        calling2 = ToolCalling(
+            tool_name="WebSocket Tool",
+            arguments={"question": "Test question"},
+            log="Test log",
+        )
+        result2 = tool_usage.use(calling2, "Test string")
+        assert "reusing the same input" in result2.lower()
 
-    # Different question should work
-    calling3 = ToolCalling(
-        tool_name="WebSocket Tool",
-        arguments={"question": "Different question"},
-        log="Test log",
-    )
-    result3 = tool_usage.use(calling3, "Test string")
-    assert "Answer to: Different question" in result3
+    def test_different_question(self, setup_websocket_tool):
+        """Test execution with different questions works."""
+        tool, agent = setup_websocket_tool
+        task = Task(
+            description="Test WebSocket tool",
+            expected_output="Test output",
+            agent=agent,
+        )
+        tool_usage = ToolUsage(
+            tools_handler=ToolsHandler(),
+            tools=[tool],
+            original_tools=[tool],
+            tools_description="WebSocket tool for testing",
+            tools_names="websocket_tool",
+            task=task,
+            function_calling_llm=MagicMock(),
+            agent=agent,
+            action=MagicMock(),
+        )
+        # First question
+        calling1 = ToolCalling(
+            tool_name="WebSocket Tool",
+            arguments={"question": "First question"},
+            log="Test log",
+        )
+        result1 = tool_usage.use(calling1, "Test string")
+        assert "Answer to: First question" in result1
+
+        # Different question should work
+        calling2 = ToolCalling(
+            tool_name="WebSocket Tool",
+            arguments={"question": "Second question"},
+            log="Test log",
+        )
+        result2 = tool_usage.use(calling2, "Test string")
+        assert "Answer to: Second question" in result2
+
+    def test_invalid_arguments(self, setup_websocket_tool):
+        """Test handling of invalid arguments."""
+        tool, agent = setup_websocket_tool
+        task = Task(
+            description="Test WebSocket tool",
+            expected_output="Test output",
+            agent=agent,
+        )
+        tool_usage = ToolUsage(
+            tools_handler=ToolsHandler(),
+            tools=[tool],
+            original_tools=[tool],
+            tools_description="WebSocket tool for testing",
+            tools_names="websocket_tool",
+            task=task,
+            function_calling_llm=MagicMock(),
+            agent=agent,
+            action=MagicMock(),
+        )
+        # Test with empty arguments
+        calling = ToolCalling(
+            tool_name="WebSocket Tool",
+            arguments={},
+            log="Test log",
+        )
+        with pytest.raises(ValueError):
+            tool_usage.use(calling, "Test string")
+
+        # Test with None arguments
+        calling = ToolCalling(
+            tool_name="WebSocket Tool",
+            arguments=None,
+            log="Test log",
+        )
+        result = tool_usage.use(calling, "Test string")
+        assert "error" in result.lower()
 
 
 def test_validate_tool_input_booleans_and_none():
