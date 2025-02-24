@@ -25,6 +25,7 @@ from crewai.utilities.events.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolValidateInputErrorEvent,
 )
+from crewai.utilities.logger import Logger
 
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
@@ -74,6 +75,7 @@ class ToolUsage:
         self._i18n: I18N = agent.i18n
         self._printer: Printer = Printer()
         self._telemetry: Telemetry = Telemetry()
+        self._logger: Logger = Logger()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
         self._remember_format_after_usages: int = 3
@@ -184,22 +186,26 @@ class ToolUsage:
                     )
                     self.task.increment_delegations(coworker)
 
-                if calling.arguments:
-                    try:
-                        acceptable_args = tool.args_schema.model_json_schema()[
-                            "properties"
-                        ].keys()  # type: ignore
-                        arguments = {
-                            k: v
-                            for k, v in calling.arguments.items()
-                            if k in acceptable_args
-                        }
-                        result = tool.invoke(input=arguments)
-                    except Exception:
-                        arguments = calling.arguments
-                        result = tool.invoke(input=arguments)
-                else:
-                    result = tool.invoke(input={})
+                if not calling.arguments:
+                    raise ValueError("Tool arguments cannot be empty")
+
+                try:
+                    acceptable_args = tool.args_schema.model_json_schema()[
+                        "properties"
+                    ].keys()  # type: ignore
+                    arguments = {
+                        k: v
+                        for k, v in calling.arguments.items()
+                        if k in acceptable_args
+                    }
+                    result = tool.invoke(input=arguments)
+                except Exception as e:
+                    if isinstance(e, TypeError) and "missing 1 required positional argument" in str(e):
+                        raise ValueError("Required arguments missing for tool")
+                    arguments = calling.arguments
+                    result = tool.invoke(input=arguments)
+            except ValueError as ve:
+                raise ve
             except Exception as e:
                 self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                 self._run_attempts += 1
@@ -283,13 +289,50 @@ class ToolUsage:
 
     def _check_tool_repeated_usage(
         self, calling: Union[ToolCalling, InstructorToolCalling]
-    ) -> None:
-        if not self.tools_handler:
-            return False  # type: ignore # No return value expected
-        if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (  # type: ignore # No return value expected
-                calling.arguments == last_tool_usage.arguments
-            )
+    ) -> bool:
+        """Check if a tool is being called with the same arguments as the last call.
+        
+        This method prevents duplicate tool executions by comparing the current tool call
+        with the last one. For WebSocket tools, it specifically checks if the 'question'
+        argument is identical. For other tools, it compares all arguments.
+        
+        Args:
+            calling: The tool calling to check for repetition, containing the tool name
+                    and arguments.
+        
+        Returns:
+            bool: True if the tool is being called with the same name and arguments as
+                 the last call, False otherwise.
+        """
+        self._logger.log("debug", f"Checking for repeated usage of tool: {calling.tool_name}")
+
+        if not self.tools_handler or not self.tools_handler.last_used_tool:
+            self._logger.log("debug", "No previous tool usage found")
+            return False
+
+        last_tool_usage = self.tools_handler.last_used_tool
+        if calling.tool_name != last_tool_usage.tool_name:
+            self._logger.log("debug", f"Different tool name: {calling.tool_name} vs {last_tool_usage.tool_name}")
+            return False
+
+        if not calling.arguments or not last_tool_usage.arguments:
+            self._logger.log("debug", "Missing arguments in current or last tool usage")
+            return False
+
+        try:
+            # For WebSocket tools, only compare the question argument
+            if "question" in calling.arguments and "question" in last_tool_usage.arguments:
+                is_repeated = calling.arguments["question"] == last_tool_usage.arguments["question"]
+                self._logger.log("debug", f"WebSocket tool question comparison: {is_repeated}")
+                return is_repeated
+
+            # For other tools, compare all arguments
+            is_repeated = calling.arguments == last_tool_usage.arguments
+            self._logger.log("debug", f"Full arguments comparison: {is_repeated}")
+            return is_repeated
+        except (KeyError, TypeError) as e:
+            self._logger.log("debug", f"Error comparing arguments: {str(e)}")
+            return False
 
     def _select_tool(self, tool_name: str) -> Any:
         order_tools = sorted(
