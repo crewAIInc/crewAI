@@ -204,6 +204,8 @@ class ToolUsage:
                         raise ValueError("Required arguments missing for tool")
                     arguments = calling.arguments
                     result = tool.invoke(input=arguments)
+            except ValueError as ve:
+                raise ve
             except Exception as e:
                 self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                 self._run_attempts += 1
