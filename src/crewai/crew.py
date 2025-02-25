@@ -35,10 +35,8 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import Tool
-from crewai.traces.unified_trace_controller import init_crew_main_trace
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -258,8 +256,6 @@ class Crew(BaseModel):
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
-        self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
         return self
 
     @model_validator(mode="after")
@@ -574,7 +570,6 @@ class Crew(BaseModel):
             CrewTrainingHandler(filename).clear()
             raise
 
-    @init_crew_main_trace
     def kickoff(
         self,
         inputs: Optional[Dict[str, Any]] = None,
@@ -1115,7 +1110,6 @@ class Crew(BaseModel):
             "_short_term_memory",
             "_long_term_memory",
             "_entity_memory",
-            "_telemetry",
             "agents",
             "tasks",
             "knowledge_sources",
@@ -1278,11 +1272,11 @@ class Crew(BaseModel):
     def _reset_all_memories(self) -> None:
         """Reset all available memory systems."""
         memory_systems = [
-            ("short term", self._short_term_memory),
-            ("entity", self._entity_memory),
-            ("long term", self._long_term_memory),
-            ("task output", self._task_output_handler),
-            ("knowledge", self.knowledge),
+            ("short term", getattr(self, "_short_term_memory", None)),
+            ("entity", getattr(self, "_entity_memory", None)),
+            ("long term", getattr(self, "_long_term_memory", None)),
+            ("task output", getattr(self, "_task_output_handler", None)),
+            ("knowledge", getattr(self, "knowledge", None)),
         ]
 
         for name, system in memory_systems:
