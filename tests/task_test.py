@@ -1283,3 +1283,109 @@ def test_interpolate_valid_types():
     assert parsed["optional"] is None
     assert parsed["nested"]["flag"] is True
     assert parsed["nested"]["empty"] is None
+
+
+def test_guardrail_with_new_style_annotations():
+    """Test that guardrails with new-style type annotations work correctly."""
+
+    # Define a guardrail with new-style annotation
+    def guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (True, result.raw.upper())
+
+    agent = MagicMock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "test result"
+    agent.crew = None
+
+    task = Task(description="Test task", expected_output="Output", guardrail=guardrail)
+
+    result = task.execute_sync(agent=agent)
+    assert isinstance(result, TaskOutput)
+    assert result.raw == "TEST RESULT"
+
+
+def test_guardrail_with_specific_return_type():
+    """Test that guardrails with specific return types work correctly."""
+
+    # Define a guardrail with specific return type
+    def guardrail(result: TaskOutput) -> tuple[bool, TaskOutput]:
+        if "error" in result.raw.lower():
+            return (False, "Contains error")
+        return (True, result)
+
+    agent = MagicMock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "success result"
+    agent.crew = None
+
+    task = Task(description="Test task", expected_output="Output", guardrail=guardrail)
+
+    result = task.execute_sync(agent=agent)
+    assert isinstance(result, TaskOutput)
+    assert result.raw == "success result"
+
+
+def test_guardrail_with_positional_and_default_args():
+    """Test that guardrails with positional and default arguments work correctly."""
+
+    # Define a guardrail with a positional argument and a default argument
+    def guardrail(result: TaskOutput, optional_arg=None) -> tuple[bool, str]:
+        return (True, result.raw.upper())
+
+    agent = MagicMock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "test result"
+    agent.crew = None
+
+    # This should now work with the updated validator
+    task = Task(description="Test task", expected_output="Output", guardrail=guardrail)
+
+    result = task.execute_sync(agent=agent)
+    assert isinstance(result, TaskOutput)
+    assert result.raw == "TEST RESULT"
+
+
+def test_guardrail_with_multiple_positional_args():
+    """Test that guardrails with multiple positional arguments are rejected."""
+
+    # Define a guardrail with multiple positional arguments
+    def guardrail(result: TaskOutput, another_required_arg) -> tuple[bool, str]:
+        return (True, result.raw.upper())
+
+    agent = MagicMock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "test result"
+    agent.crew = None
+
+    # This should raise a ValueError because guardrail must accept exactly one positional parameter
+    with pytest.raises(ValueError) as excinfo:
+        Task(description="Test task", expected_output="Output", guardrail=guardrail)
+
+    assert "Guardrail function must accept exactly one parameter" in str(excinfo.value)
+
+
+def test_guardrail_with_positional_and_default_args():
+    """Validate that the guardrail function has the correct signature and behavior.
+
+    While type hints provide static checking, this validator ensures runtime safety by:
+    1. Verifying the function accepts exactly one required parameter (the TaskOutput)
+       (additional parameters with default values are allowed)
+    2. Checking return type annotations match Tuple[bool, Any] or tuple[bool, Any] if present
+    3. Providing clear, immediate error messages for debugging
+    """
+
+    # Define a guardrail with a positional argument and a default argument
+    def guardrail(result: TaskOutput, optional_arg=None) -> tuple[bool, str]:
+        return (True, result.raw.upper())
+
+    agent = MagicMock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "test result"
+    agent.crew = None
+
+    # This should now work with the updated validator
+    task = Task(description="Test task", expected_output="Output", guardrail=guardrail)
+
+    result = task.execute_sync(agent=agent)
+    assert isinstance(result, TaskOutput)
+    assert result.raw == "TEST RESULT"
