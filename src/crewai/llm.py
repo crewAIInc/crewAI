@@ -230,7 +230,10 @@ class LLM:
 
     def supports_function_calling(self) -> bool:
         try:
-            params = get_supported_openai_params(model=self.model)
+            # Handle None model case
+            if self.model is None:
+                return False
+            params = get_supported_openai_params(model=str(self.model))
             return "response_format" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {str(e)}")
@@ -238,7 +241,10 @@ class LLM:
 
     def supports_stop_words(self) -> bool:
         try:
-            params = get_supported_openai_params(model=self.model)
+            # Handle None model case
+            if self.model is None:
+                return False
+            params = get_supported_openai_params(model=str(self.model))
             return "stop" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {str(e)}")

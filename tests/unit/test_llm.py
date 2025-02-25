@@ -1,5 +1,6 @@
-from crewai.llm import LLM
 import pytest
+
+from crewai.llm import LLM
 
 
 @pytest.mark.parametrize(
