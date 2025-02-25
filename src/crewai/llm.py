@@ -137,6 +137,13 @@ class LLM:
         self.context_window_size = 0
         self.kwargs = kwargs
 
+        # Validate model ID to ensure it's not a numeric value without a provider prefix
+        if isinstance(self.model, (int, float)) or (isinstance(self.model, str) and self.model.isdigit()):
+            raise ValueError(
+                f"Invalid model ID: {self.model}. Model ID cannot be a numeric value without a provider prefix. "
+                "Please specify a valid model ID with a provider prefix, e.g., 'openai/gpt-4'."
+            )
+
         litellm.drop_params = True
         litellm.set_verbose = False
         self.set_callbacks(callbacks)
