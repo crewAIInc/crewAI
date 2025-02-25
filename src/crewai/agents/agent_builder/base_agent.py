@@ -134,6 +134,9 @@ class BaseAgent(ABC, BaseModel):
     @model_validator(mode="before")
     @classmethod
     def process_model_config(cls, values):
+        # Handle case where values is a function (can happen with CrewBase decorator)
+        if callable(values) and not isinstance(values, dict):
+            return values
         return process_config(values, cls)
 
     @field_validator("tools")

@@ -79,7 +79,14 @@ def crew(func) -> Callable[..., Crew]:
 
         # Instantiate tasks in order
         for task_name, task_method in tasks:
+            # Get the task instance
             task_instance = task_method(self)
+            
+            # Handle case where agent is a method (function) from CrewBase
+            if hasattr(task_instance, 'agent') and task_instance.agent and callable(task_instance.agent) and not isinstance(task_instance.agent, type):
+                # Call the agent method to get the agent instance
+                task_instance.agent = task_instance.agent()
+                
             instantiated_tasks.append(task_instance)
             agent_instance = getattr(task_instance, "agent", None)
             if agent_instance and agent_instance.role not in agent_roles:

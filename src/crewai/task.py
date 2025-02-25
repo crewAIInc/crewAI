@@ -61,6 +61,15 @@ class Task(BaseModel):
         output_pydantic: Pydantic model for task output.
         tools: List of tools/resources limited for task execution.
     """
+    
+    def __init__(self, **data):
+        # Handle case where agent is a callable (can happen with CrewBase decorator)
+        if 'agent' in data and callable(data['agent']) and not isinstance(data['agent'], type):
+            # Call the agent method to get the agent instance
+            data['agent'] = data['agent']()
+        
+        # Call the parent class __init__ method
+        super().__init__(**data)
 
     __hash__ = object.__hash__  # type: ignore
     logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
