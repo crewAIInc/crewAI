@@ -1,4 +1,8 @@
+import logging
+
 from crewai.types.usage_metrics import UsageMetrics
+
+logger = logging.getLogger(__name__)
 
 
 class TokenProcess:
@@ -17,7 +21,21 @@ class TokenProcess:
         self.completion_tokens += tokens
         self.total_tokens += tokens
 
-    def sum_cached_prompt_tokens(self, tokens: int) -> None:
+    def sum_cached_prompt_tokens(self, tokens: int | None) -> None:
+        """
+        Adds the given token count to cached prompt tokens.
+        
+        Args:
+            tokens (int | None): Number of tokens to add. None values are ignored.
+            
+        Raises:
+            ValueError: If tokens is negative.
+        """
+        if tokens is None:
+            logger.debug("Received None value for token count")
+            return
+        if tokens < 0:
+            raise ValueError("Token count cannot be negative")
         self.cached_prompt_tokens += tokens
 
     def sum_successful_requests(self, requests: int) -> None:
