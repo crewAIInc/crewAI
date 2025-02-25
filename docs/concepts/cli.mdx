@@ -136,16 +136,20 @@ crewai test -n 5 -m gpt-3.5-turbo
 
 ### 8. Run
 
-Run the crew.
+Run the crew or flow.
 
 ```shell Terminal
 crewai run
 ```
+
+<Note>
+Starting from version 0.103.0, the `crewai run` command can be used to run both standard crews and flows. For flows, it automatically detects the type from pyproject.toml and runs the appropriate command. This is now the recommended way to run both crews and flows.
+</Note>
+
 <Note>
 Make sure to run these commands from the directory where your CrewAI project is set up. 
 Some commands may require additional configuration or setup within your project structure.
 </Note>
-
 
 ### 9. Chat
 
@@ -174,7 +178,6 @@ def crew(self) -> Crew:
     )
 ```
 </Note>
-
 
 ### 10. API Keys
 
