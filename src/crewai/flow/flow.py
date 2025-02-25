@@ -17,19 +17,21 @@ from typing import (
 )
 from uuid import uuid4
 
-from blinker import Signal
 from pydantic import BaseModel, Field, ValidationError
 
-from crewai.flow.flow_events import (
-    FlowFinishedEvent,
-    FlowStartedEvent,
-    MethodExecutionFinishedEvent,
-    MethodExecutionStartedEvent,
-)
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
-from crewai.telemetry import Telemetry
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.flow_events import (
+    FlowCreatedEvent,
+    FlowFinishedEvent,
+    FlowPlotEvent,
+    FlowStartedEvent,
+    MethodExecutionFailedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
+)
 from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
@@ -427,7 +429,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
 
-    _telemetry = Telemetry()
     _printer = Printer()
 
     _start_methods: List[str] = []
@@ -435,7 +436,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _routers: Set[str] = set()
     _router_paths: Dict[str, List[str]] = {}
     initial_state: Union[Type[T], T, None] = None
-    event_emitter = Signal("event_emitter")
 
     def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
         class _FlowGeneric(cls):  # type: ignore
@@ -469,7 +469,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if kwargs:
             self._initialize_state(kwargs)
 
-        self._telemetry.flow_creation_span(self.__class__.__name__)
+        crewai_event_bus.emit(
+            self,
+            FlowCreatedEvent(
+                type="flow_created",
+                flow_name=self.__class__.__name__,
+            ),
+        )
 
         # Register all flow-related methods
         for method_name in dir(self):
@@ -703,16 +709,34 @@ class Flow(Generic[T], metaclass=FlowMeta):
             raise TypeError(f"State must be dict or BaseModel, got {type(self._state)}")
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
-        """Start the flow execution.
+        """
+        Start the flow execution in a synchronous context.
+
+        This method wraps kickoff_async so that all state initialization and event
+        emission is handled in the asynchronous method.
+        """
+
+        async def run_flow():
+            return await self.kickoff_async(inputs)
+
+        return asyncio.run(run_flow())
+
+    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
+        """
+        Start the flow execution asynchronously.
+
+        This method performs state restoration (if an 'id' is provided and persistence is available)
+        and updates the flow state with any additional inputs. It then emits the FlowStartedEvent,
+        logs the flow startup, and executes all start methods. Once completed, it emits the
+        FlowFinishedEvent and returns the final output.
 
         Args:
-            inputs: Optional dictionary containing input values and potentially a state ID to restore
-        """
-        # Handle state restoration if ID is provided in inputs
-        if inputs and "id" in inputs and self._persistence is not None:
-            restore_uuid = inputs["id"]
-            stored_state = self._persistence.load_state(restore_uuid)
+            inputs: Optional dictionary containing input values and/or a state ID for restoration.
 
+        Returns:
+            The final output from the flow, which is the result of the last executed method.
+        """
+        if inputs:
             # Override the id in the state if it exists in inputs
             if "id" in inputs:
                 if isinstance(self._state, dict):
@@ -720,27 +744,30 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 elif isinstance(self._state, BaseModel):
                     setattr(self._state, "id", inputs["id"])
 
-            if stored_state:
-                self._log_flow_event(
-                    f"Loading flow state from memory for UUID: {restore_uuid}",
-                    color="yellow",
-                )
-                # Restore the state
-                self._restore_state(stored_state)
-            else:
-                self._log_flow_event(
-                    f"No flow state found for UUID: {restore_uuid}", color="red"
-                )
+            # If persistence is enabled, attempt to restore the stored state using the provided id.
+            if "id" in inputs and self._persistence is not None:
+                restore_uuid = inputs["id"]
+                stored_state = self._persistence.load_state(restore_uuid)
+                if stored_state:
+                    self._log_flow_event(
+                        f"Loading flow state from memory for UUID: {restore_uuid}",
+                        color="yellow",
+                    )
+                    self._restore_state(stored_state)
+                else:
+                    self._log_flow_event(
+                        f"No flow state found for UUID: {restore_uuid}", color="red"
+                    )
 
-            # Apply any additional inputs after restoration
+            # Update state with any additional inputs (ignoring the 'id' key)
             filtered_inputs = {k: v for k, v in inputs.items() if k != "id"}
             if filtered_inputs:
                 self._initialize_state(filtered_inputs)
 
-        # Start flow execution
-        self.event_emitter.send(
+        # Emit FlowStartedEvent and log the start of the flow.
+        crewai_event_bus.emit(
             self,
-            event=FlowStartedEvent(
+            FlowStartedEvent(
                 type="flow_started",
                 flow_name=self.__class__.__name__,
                 inputs=inputs,
@@ -753,16 +780,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if inputs is not None and "id" not in inputs:
             self._initialize_state(inputs)
 
-        return asyncio.run(self.kickoff_async())
-
-    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
-        if not self._start_methods:
-            raise ValueError("No start method defined")
-
-        self._telemetry.flow_execution_span(
-            self.__class__.__name__, list(self._methods.keys())
-        )
-
         tasks = [
             self._execute_start_method(start_method)
             for start_method in self._start_methods
@@ -771,14 +788,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         final_output = self._method_outputs[-1] if self._method_outputs else None
 
-        self.event_emitter.send(
+        crewai_event_bus.emit(
             self,
-            event=FlowFinishedEvent(
+            FlowFinishedEvent(
                 type="flow_finished",
                 flow_name=self.__class__.__name__,
                 result=final_output,
             ),
         )
+
         return final_output
 
     async def _execute_start_method(self, start_method_name: str) -> None:
@@ -807,40 +825,55 @@ class Flow(Generic[T], metaclass=FlowMeta):
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
-        dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (kwargs or {})
-        self.event_emitter.send(
-            self,
-            event=MethodExecutionStartedEvent(
-                type="method_execution_started",
-                method_name=method_name,
-                flow_name=self.__class__.__name__,
-                params=dumped_params,
-                state=self._copy_state(),
-            ),
-        )
+        try:
+            dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
+                kwargs or {}
+            )
+            crewai_event_bus.emit(
+                self,
+                MethodExecutionStartedEvent(
+                    type="method_execution_started",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    params=dumped_params,
+                    state=self._copy_state(),
+                ),
+            )
 
-        result = (
-            await method(*args, **kwargs)
-            if asyncio.iscoroutinefunction(method)
-            else method(*args, **kwargs)
-        )
-        self._method_outputs.append(result)
-        self._method_execution_counts[method_name] = (
-            self._method_execution_counts.get(method_name, 0) + 1
-        )
+            result = (
+                await method(*args, **kwargs)
+                if asyncio.iscoroutinefunction(method)
+                else method(*args, **kwargs)
+            )
 
-        self.event_emitter.send(
-            self,
-            event=MethodExecutionFinishedEvent(
-                type="method_execution_finished",
-                method_name=method_name,
-                flow_name=self.__class__.__name__,
-                state=self._copy_state(),
-                result=result,
-            ),
-        )
+            self._method_outputs.append(result)
+            self._method_execution_counts[method_name] = (
+                self._method_execution_counts.get(method_name, 0) + 1
+            )
 
-        return result
+            crewai_event_bus.emit(
+                self,
+                MethodExecutionFinishedEvent(
+                    type="method_execution_finished",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    state=self._copy_state(),
+                    result=result,
+                ),
+            )
+
+            return result
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                MethodExecutionFailedEvent(
+                    type="method_execution_failed",
+                    method_name=method_name,
+                    flow_name=self.__class__.__name__,
+                    error=e,
+                ),
+            )
+            raise e
 
     async def _execute_listeners(self, trigger_method: str, result: Any) -> None:
         """
@@ -978,6 +1011,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         try:
             method = self._methods[listener_name]
+
             sig = inspect.signature(method)
             params = list(sig.parameters.values())
             method_params = [p for p in params if p.name != "self"]
@@ -1027,7 +1061,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow") -> None:
-        self._telemetry.flow_plotting_span(
-            self.__class__.__name__, list(self._methods.keys())
+        crewai_event_bus.emit(
+            self,
+            FlowPlotEvent(
+                type="flow_plot",
+                flow_name=self.__class__.__name__,
+            ),
         )
         plot_flow(self, filename)

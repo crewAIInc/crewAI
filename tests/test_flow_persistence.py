@@ -13,11 +13,12 @@ from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
 class TestState(FlowState):
     """Test state model with required id field."""
+
     counter: int = 0
     message: str = ""
 
 
-def test_persist_decorator_saves_state(tmp_path):
+def test_persist_decorator_saves_state(tmp_path, caplog):
     """Test that @persist decorator saves state in SQLite."""
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
@@ -73,7 +74,6 @@ def test_flow_state_restoration(tmp_path):
 
     # First flow execution to create initial state
     class RestorableFlow(Flow[TestState]):
-
         @start()
         @persist(persistence)
         def set_message(self):
@@ -89,10 +89,7 @@ def test_flow_state_restoration(tmp_path):
 
     # Test case 1: Restore using restore_uuid with field override
     flow2 = RestorableFlow(persistence=persistence)
-    flow2.kickoff(inputs={
-        "id": original_uuid,
-        "counter": 43
-    })
+    flow2.kickoff(inputs={"id": original_uuid, "counter": 43})
 
     # Verify state restoration and selective field override
     assert flow2.state.id == original_uuid
@@ -101,10 +98,7 @@ def test_flow_state_restoration(tmp_path):
 
     # Test case 2: Restore using kwargs['id']
     flow3 = RestorableFlow(persistence=persistence)
-    flow3.kickoff(inputs={
-        "id": original_uuid,
-        "message": "Updated message"
-    })
+    flow3.kickoff(inputs={"id": original_uuid, "message": "Updated message"})
 
     # Verify state restoration and selective field override
     assert flow3.state.id == original_uuid
@@ -174,3 +168,43 @@ def test_multiple_method_persistence(tmp_path):
     final_state = flow2.state
     assert final_state.counter == 99999
     assert final_state.message == "Step 99999"
+
+
+def test_persist_decorator_verbose_logging(tmp_path, caplog):
+    """Test that @persist decorator's verbose parameter controls logging."""
+    # Set logging level to ensure we capture all logs
+    caplog.set_level("INFO")
+
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    # Test with verbose=False (default)
+    class QuietFlow(Flow[Dict[str, str]]):
+        initial_state = dict()
+
+        @start()
+        @persist(persistence)  # Default verbose=False
+        def init_step(self):
+            self.state["message"] = "Hello, World!"
+            self.state["id"] = "test-uuid-1"
+
+    flow = QuietFlow(persistence=persistence)
+    flow.kickoff()
+    assert "Saving flow state" not in caplog.text
+
+    # Clear the log
+    caplog.clear()
+
+    # Test with verbose=True
+    class VerboseFlow(Flow[Dict[str, str]]):
+        initial_state = dict()
+
+        @start()
+        @persist(persistence, verbose=True)
+        def init_step(self):
+            self.state["message"] = "Hello, World!"
+            self.state["id"] = "test-uuid-2"
+
+    flow = VerboseFlow(persistence=persistence)
+    flow.kickoff()
+    assert "Saving flow state" in caplog.text

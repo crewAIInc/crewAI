@@ -257,11 +257,11 @@ def get_crew(crew_path: str = "crew.py", require: bool = False) -> Crew | None:
         import os
 
         for root, _, files in os.walk("."):
-            if "crew.py" in files:
-                crew_path = os.path.join(root, "crew.py")
+            if crew_path in files:
+                crew_os_path = os.path.join(root, crew_path)
                 try:
                     spec = importlib.util.spec_from_file_location(
-                        "crew_module", crew_path
+                        "crew_module", crew_os_path
                     )
                     if not spec or not spec.loader:
                         continue
@@ -273,9 +273,11 @@ def get_crew(crew_path: str = "crew.py", require: bool = False) -> Crew | None:
                         for attr_name in dir(module):
                             attr = getattr(module, attr_name)
                             try:
-                                if callable(attr) and hasattr(attr, "crew"):
-                                    crew_instance = attr().crew()
-                                    return crew_instance
+                                if isinstance(attr, Crew) and hasattr(attr, "kickoff"):
+                                    print(
+                                        f"Found valid crew object in attribute '{attr_name}' at {crew_os_path}."
+                                    )
+                                    return attr
 
                             except Exception as e:
                                 print(f"Error processing attribute {attr_name}: {e}")

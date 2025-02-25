@@ -35,7 +35,6 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import Tool
 from crewai.types.usage_metrics import UsageMetrics
@@ -43,6 +42,18 @@ from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.events.crew_events import (
+    CrewKickoffCompletedEvent,
+    CrewKickoffFailedEvent,
+    CrewKickoffStartedEvent,
+    CrewTestCompletedEvent,
+    CrewTestFailedEvent,
+    CrewTestStartedEvent,
+    CrewTrainCompletedEvent,
+    CrewTrainFailedEvent,
+    CrewTrainStartedEvent,
+)
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -51,12 +62,6 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
-
-try:
-    import agentops  # type: ignore
-except ImportError:
-    agentops = None
-
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -251,8 +256,6 @@ class Crew(BaseModel):
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
-        self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
         return self
 
     @model_validator(mode="after")
@@ -275,12 +278,26 @@ class Crew(BaseModel):
                 if self.entity_memory
                 else EntityMemory(crew=self, embedder_config=self.embedder)
             )
-            if hasattr(self, "memory_config") and self.memory_config is not None:
-                self._user_memory = (
-                    self.user_memory if self.user_memory else UserMemory(crew=self)
-                )
+            if (
+                self.memory_config and "user_memory" in self.memory_config
+            ):  # Check for user_memory in config
+                user_memory_config = self.memory_config["user_memory"]
+                if isinstance(
+                    user_memory_config, UserMemory
+                ):  # Check if it is already an instance
+                    self._user_memory = user_memory_config
+                elif isinstance(
+                    user_memory_config, dict
+                ):  # Check if it's a configuration dict
+                    self._user_memory = UserMemory(
+                        crew=self, **user_memory_config
+                    )  # Initialize with config
+                else:
+                    raise TypeError(
+                        "user_memory must be a UserMemory instance or a configuration dictionary"
+                    )
             else:
-                self._user_memory = None
+                self._user_memory = None  # No user memory if not in config
         return self
 
     @model_validator(mode="after")
@@ -455,8 +472,6 @@ class Crew(BaseModel):
                         )
         return self
 
-
-
     @property
     def key(self) -> str:
         source = [agent.key for agent in self.agents] + [
@@ -509,10 +524,19 @@ class Crew(BaseModel):
         self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = {}
     ) -> None:
         """Trains the crew for a given number of iterations."""
-        train_crew = self.copy()
-        train_crew._setup_for_training(filename)
-
         try:
+            crewai_event_bus.emit(
+                self,
+                CrewTrainStartedEvent(
+                    crew_name=self.name or "crew",
+                    n_iterations=n_iterations,
+                    filename=filename,
+                    inputs=inputs,
+                ),
+            )
+            train_crew = self.copy()
+            train_crew._setup_for_training(filename)
+
             for n_iteration in range(n_iterations):
                 train_crew._train_iteration = n_iteration
                 train_crew.kickoff(inputs=inputs)
@@ -527,7 +551,20 @@ class Crew(BaseModel):
                     CrewTrainingHandler(filename).save_trained_data(
                         agent_id=str(agent.role), trained_data=result.model_dump()
                     )
+
+            crewai_event_bus.emit(
+                self,
+                CrewTrainCompletedEvent(
+                    crew_name=self.name or "crew",
+                    n_iterations=n_iterations,
+                    filename=filename,
+                ),
+            )
         except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                CrewTrainFailedEvent(error=str(e), crew_name=self.name or "crew"),
+            )
             self._logger.log("error", f"Training failed: {e}", color="red")
             CrewTrainingHandler(TRAINING_DATA_FILE).clear()
             CrewTrainingHandler(filename).clear()
@@ -537,60 +574,70 @@ class Crew(BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
-        for before_callback in self.before_kickoff_callbacks:
-            if inputs is None:
-                inputs = {}
-            inputs = before_callback(inputs)
+        try:
+            for before_callback in self.before_kickoff_callbacks:
+                if inputs is None:
+                    inputs = {}
+                inputs = before_callback(inputs)
 
-        """Starts the crew to work on its assigned tasks."""
-        self._execution_span = self._telemetry.crew_execution_span(self, inputs)
-        self._task_output_handler.reset()
-        self._logging_color = "bold_purple"
-
-        if inputs is not None:
-            self._inputs = inputs
-            self._interpolate_inputs(inputs)
-        self._set_tasks_callbacks()
-
-        i18n = I18N(prompt_file=self.prompt_file)
-
-        for agent in self.agents:
-            agent.i18n = i18n
-            # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
-            agent.crew = self  # type: ignore[attr-defined]
-            # TODO: Create an AgentFunctionCalling protocol for future refactoring
-            if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
-                agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
-
-            if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
-                agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
-
-            agent.create_agent_executor()
-
-        if self.planning:
-            self._handle_crew_planning()
-
-        metrics: List[UsageMetrics] = []
-
-        if self.process == Process.sequential:
-            result = self._run_sequential_process()
-        elif self.process == Process.hierarchical:
-            result = self._run_hierarchical_process()
-        else:
-            raise NotImplementedError(
-                f"The process '{self.process}' is not implemented yet."
+            crewai_event_bus.emit(
+                self,
+                CrewKickoffStartedEvent(crew_name=self.name or "crew", inputs=inputs),
             )
 
-        for after_callback in self.after_kickoff_callbacks:
-            result = after_callback(result)
+            # Starts the crew to work on its assigned tasks.
+            self._task_output_handler.reset()
+            self._logging_color = "bold_purple"
 
-        metrics += [agent._token_process.get_summary() for agent in self.agents]
+            if inputs is not None:
+                self._inputs = inputs
+                self._interpolate_inputs(inputs)
+            self._set_tasks_callbacks()
 
-        self.usage_metrics = UsageMetrics()
-        for metric in metrics:
-            self.usage_metrics.add_usage_metrics(metric)
+            i18n = I18N(prompt_file=self.prompt_file)
 
-        return result
+            for agent in self.agents:
+                agent.i18n = i18n
+                # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+                agent.crew = self  # type: ignore[attr-defined]
+                # TODO: Create an AgentFunctionCalling protocol for future refactoring
+                if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
+                    agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
+
+                if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
+                    agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
+
+                agent.create_agent_executor()
+
+            if self.planning:
+                self._handle_crew_planning()
+
+            metrics: List[UsageMetrics] = []
+
+            if self.process == Process.sequential:
+                result = self._run_sequential_process()
+            elif self.process == Process.hierarchical:
+                result = self._run_hierarchical_process()
+            else:
+                raise NotImplementedError(
+                    f"The process '{self.process}' is not implemented yet."
+                )
+
+            for after_callback in self.after_kickoff_callbacks:
+                result = after_callback(result)
+
+            metrics += [agent._token_process.get_summary() for agent in self.agents]
+
+            self.usage_metrics = UsageMetrics()
+            for metric in metrics:
+                self.usage_metrics.add_usage_metrics(metric)
+            return result
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                CrewKickoffFailedEvent(error=str(e), crew_name=self.name or "crew"),
+            )
+            raise
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
         """Executes the Crew's workflow for each input in the list and aggregates results."""
@@ -928,17 +975,22 @@ class Crew(BaseModel):
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
-            
+
         # Filter out empty outputs and get the last valid one as the main output
         valid_outputs = [t for t in task_outputs if t.raw]
         if not valid_outputs:
             raise ValueError("No valid task outputs available to create crew output.")
         final_task_output = valid_outputs[-1]
-            
+
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         token_usage = self.calculate_usage_metrics()
-
+        crewai_event_bus.emit(
+            self,
+            CrewKickoffCompletedEvent(
+                crew_name=self.name or "crew", output=final_task_output
+            ),
+        )
         return CrewOutput(
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
@@ -1058,7 +1110,6 @@ class Crew(BaseModel):
             "_short_term_memory",
             "_long_term_memory",
             "_entity_memory",
-            "_telemetry",
             "agents",
             "tasks",
             "knowledge_sources",
@@ -1124,13 +1175,6 @@ class Crew(BaseModel):
     def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
-        if agentops:
-            agentops.end_session(
-                end_state="Success",
-                end_state_reason="Finished Execution",
-                is_auto_end=True,
-            )
-        self._telemetry.end_crew(self, final_string_output)
 
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
@@ -1148,25 +1192,45 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        openai_model_name: Optional[str] = None,
+        eval_llm: Union[str, InstanceOf[LLM]],
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
-        test_crew = self.copy()
+        try:
+            eval_llm = create_llm(eval_llm)
+            if not eval_llm:
+                raise ValueError("Failed to create LLM instance.")
 
-        self._test_execution_span = test_crew._telemetry.test_execution_span(
-            test_crew,
-            n_iterations,
-            inputs,
-            openai_model_name,  # type: ignore[arg-type]
-        )  # type: ignore[arg-type]
-        evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
+            crewai_event_bus.emit(
+                self,
+                CrewTestStartedEvent(
+                    crew_name=self.name or "crew",
+                    n_iterations=n_iterations,
+                    eval_llm=eval_llm,
+                    inputs=inputs,
+                ),
+            )
+            test_crew = self.copy()
+            evaluator = CrewEvaluator(test_crew, eval_llm)  # type: ignore[arg-type]
 
-        for i in range(1, n_iterations + 1):
-            evaluator.set_iteration(i)
-            test_crew.kickoff(inputs=inputs)
+            for i in range(1, n_iterations + 1):
+                evaluator.set_iteration(i)
+                test_crew.kickoff(inputs=inputs)
 
-        evaluator.print_crew_evaluation_result()
+            evaluator.print_crew_evaluation_result()
+
+            crewai_event_bus.emit(
+                self,
+                CrewTestCompletedEvent(
+                    crew_name=self.name or "crew",
+                ),
+            )
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                CrewTestFailedEvent(error=str(e), crew_name=self.name or "crew"),
+            )
+            raise
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
@@ -1208,11 +1272,11 @@ class Crew(BaseModel):
     def _reset_all_memories(self) -> None:
         """Reset all available memory systems."""
         memory_systems = [
-            ("short term", self._short_term_memory),
-            ("entity", self._entity_memory),
-            ("long term", self._long_term_memory),
-            ("task output", self._task_output_handler),
-            ("knowledge", self.knowledge),
+            ("short term", getattr(self, "_short_term_memory", None)),
+            ("entity", getattr(self, "_entity_memory", None)),
+            ("long term", getattr(self, "_long_term_memory", None)),
+            ("task output", getattr(self, "_task_output_handler", None)),
+            ("knowledge", getattr(self, "knowledge", None)),
         ]
 
         for name, system in memory_systems:
