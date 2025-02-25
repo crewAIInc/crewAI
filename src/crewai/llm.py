@@ -10,14 +10,23 @@ from typing import Any, Dict, List, Literal, Optional, Type, Union, cast
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from crewai.utilities.events.llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+    LLMCallType,
+)
+from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
-    from litellm import Choices, get_supported_openai_params
+    from litellm import Choices
     from litellm.types.utils import ModelResponse
-    from litellm.utils import supports_response_schema
+    from litellm.utils import get_supported_openai_params, supports_response_schema
 
 
+from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -181,14 +190,14 @@ class LLM:
 
     def _is_anthropic_model(self, model: str) -> bool:
         """Determine if the model is from Anthropic provider.
-        
+
         Args:
             model: The model identifier string.
-            
+
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        ANTHROPIC_PREFIXES = ('anthropic/', 'claude-', 'claude/')
+        ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
         return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
 
     def call(
@@ -199,7 +208,7 @@ class LLM:
         available_functions: Optional[Dict[str, Any]] = None,
     ) -> Union[str, Any]:
         """High-level LLM call method.
-        
+
         Args:
             messages: Input messages for the LLM.
                      Can be a string or list of message dictionaries.
@@ -211,22 +220,22 @@ class LLM:
                       during and after the LLM call.
             available_functions: Optional dict mapping function names to callables
                                that can be invoked by the LLM.
-        
+
         Returns:
             Union[str, Any]: Either a text response from the LLM (str) or
                            the result of a tool function call (Any).
-        
+
         Raises:
             TypeError: If messages format is invalid
             ValueError: If response format is not supported
             LLMContextLengthExceededException: If input exceeds model's context limit
-        
+
         Examples:
             # Example 1: Simple string input
             >>> response = llm.call("Return the name of a random city.")
             >>> print(response)
             "Paris"
-            
+
             # Example 2: Message list with system and user messages
             >>> messages = [
             ...     {"role": "system", "content": "You are a geography expert"},
@@ -236,6 +245,15 @@ class LLM:
             >>> print(response)
             "The capital of France is Paris."
         """
+        crewai_event_bus.emit(
+            self,
+            event=LLMCallStartedEvent(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+            ),
+        )
         # Validate parameters before proceeding with the call.
         self._validate_call_params()
 
@@ -310,6 +328,7 @@ class LLM:
 
                 # --- 4) If no tool calls, return the text response
                 if not tool_calls or not available_functions:
+                    self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL)
                     return text_response
 
                 # --- 5) Handle the tool call
@@ -327,11 +346,27 @@ class LLM:
                     try:
                         # Call the actual tool function
                         result = fn(**function_args)
+                        self._handle_emit_call_events(result, LLMCallType.TOOL_CALL)
                         return result
 
                     except Exception as e:
                         logging.error(
                             f"Error executing function '{function_name}': {e}"
+                        )
+                        crewai_event_bus.emit(
+                            self,
+                            event=ToolExecutionErrorEvent(
+                                tool_name=function_name,
+                                tool_args=function_args,
+                                tool_class=fn,
+                                error=str(e),
+                            ),
+                        )
+                        crewai_event_bus.emit(
+                            self,
+                            event=LLMCallFailedEvent(
+                                error=f"Tool execution error: {str(e)}"
+                            ),
                         )
                         return text_response
 
@@ -342,42 +377,62 @@ class LLM:
                     return text_response
 
             except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=LLMCallFailedEvent(error=str(e)),
+                )
                 if not LLMContextLengthExceededException(
                     str(e)
                 )._is_context_limit_error(str(e)):
                     logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
-    def _format_messages_for_provider(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):
+        """Handle the events for the LLM call.
+
+        Args:
+            response (str): The response from the LLM call.
+            call_type (str): The type of call, either "tool_call" or "llm_call".
+        """
+        crewai_event_bus.emit(
+            self,
+            event=LLMCallCompletedEvent(response=response, call_type=call_type),
+        )
+
+    def _format_messages_for_provider(
+        self, messages: List[Dict[str, str]]
+    ) -> List[Dict[str, str]]:
         """Format messages according to provider requirements.
-        
+
         Args:
             messages: List of message dictionaries with 'role' and 'content' keys.
                      Can be empty or None.
-        
+
         Returns:
             List of formatted messages according to provider requirements.
             For Anthropic models, ensures first message has 'user' role.
-        
+
         Raises:
             TypeError: If messages is None or contains invalid message format.
         """
         if messages is None:
             raise TypeError("Messages cannot be None")
-            
+
         # Validate message format first
         for msg in messages:
             if not isinstance(msg, dict) or "role" not in msg or "content" not in msg:
-                raise TypeError("Invalid message format. Each message must be a dict with 'role' and 'content' keys")
-            
+                raise TypeError(
+                    "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
+                )
+
         if not self.is_anthropic:
             return messages
-            
+
         # Anthropic requires messages to start with 'user' role
         if not messages or messages[0]["role"] == "system":
             # If first message is system or empty, add a placeholder user message
             return [{"role": "user", "content": "."}, *messages]
-                
+
         return messages
 
     def _get_custom_llm_provider(self) -> str:
@@ -413,7 +468,7 @@ class LLM:
     def supports_function_calling(self) -> bool:
         try:
             params = get_supported_openai_params(model=self.model)
-            return "response_format" in params
+            return params is not None and "tools" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {str(e)}")
             return False
@@ -421,7 +476,7 @@ class LLM:
     def supports_stop_words(self) -> bool:
         try:
             params = get_supported_openai_params(model=self.model)
-            return "stop" in params
+            return params is not None and "stop" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {str(e)}")
             return False

@@ -114,10 +114,15 @@ class CrewAgentExecutorMixin:
             prompt = (
                 "\n\n=====\n"
                 "## HUMAN FEEDBACK: Provide feedback on the Final Result and Agent's actions.\n"
-                "Respond with 'looks good' to accept or provide specific improvement requests.\n"
-                "You can provide multiple rounds of feedback until satisfied.\n"
+                "Please follow these guidelines:\n"
+                " - If you are happy with the result, simply hit Enter without typing anything.\n"
+                " - Otherwise, provide specific improvement requests.\n"
+                " - You can provide multiple rounds of feedback until satisfied.\n"
                 "=====\n"
             )
 
         self._printer.print(content=prompt, color="bold_yellow")
-        return input()
+        response = input()
+        if response.strip() != "":
+            self._printer.print(content="\nProcessing your feedback...", color="cyan")
+        return response

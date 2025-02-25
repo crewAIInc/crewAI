@@ -58,7 +58,7 @@ class PersistenceDecorator:
     _printer = Printer()  # Class-level printer instance
 
     @classmethod
-    def persist_state(cls, flow_instance: Any, method_name: str, persistence_instance: FlowPersistence) -> None:
+    def persist_state(cls, flow_instance: Any, method_name: str, persistence_instance: FlowPersistence, verbose: bool = False) -> None:
         """Persist flow state with proper error handling and logging.
 
         This method handles the persistence of flow state data, including proper
@@ -68,6 +68,7 @@ class PersistenceDecorator:
             flow_instance: The flow instance whose state to persist
             method_name: Name of the method that triggered persistence
             persistence_instance: The persistence backend to use
+            verbose: Whether to log persistence operations
 
         Raises:
             ValueError: If flow has no state or state lacks an ID
@@ -88,9 +89,10 @@ class PersistenceDecorator:
             if not flow_uuid:
                 raise ValueError("Flow state must have an 'id' field for persistence")
 
-            # Log state saving with consistent message
-            cls._printer.print(LOG_MESSAGES["save_state"].format(flow_uuid), color="cyan")
-            logger.info(LOG_MESSAGES["save_state"].format(flow_uuid))
+            # Log state saving only if verbose is True
+            if verbose:
+                cls._printer.print(LOG_MESSAGES["save_state"].format(flow_uuid), color="cyan")
+                logger.info(LOG_MESSAGES["save_state"].format(flow_uuid))
 
             try:
                 persistence_instance.save_state(
@@ -115,7 +117,7 @@ class PersistenceDecorator:
             raise ValueError(error_msg) from e
 
 
-def persist(persistence: Optional[FlowPersistence] = None):
+def persist(persistence: Optional[FlowPersistence] = None, verbose: bool = False):
     """Decorator to persist flow state.
 
     This decorator can be applied at either the class level or method level.
@@ -126,6 +128,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
     Args:
         persistence: Optional FlowPersistence implementation to use.
                     If not provided, uses SQLiteFlowPersistence.
+        verbose: Whether to log persistence operations. Defaults to False.
 
     Returns:
         A decorator that can be applied to either a class or method
@@ -135,13 +138,12 @@ def persist(persistence: Optional[FlowPersistence] = None):
         RuntimeError: If state persistence fails
 
     Example:
-        @persist  # Class-level persistence with default SQLite
+        @persist(verbose=True)  # Class-level persistence with logging
         class MyFlow(Flow[MyState]):
             @start()
             def begin(self):
                 pass
     """
-
     def decorator(target: Union[Type, Callable[..., T]]) -> Union[Type, Callable[..., T]]:
         """Decorator that handles both class and method decoration."""
         actual_persistence = persistence or SQLiteFlowPersistence()
@@ -179,7 +181,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
                         @functools.wraps(original_method)
                         async def method_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
                             result = await original_method(self, *args, **kwargs)
-                            PersistenceDecorator.persist_state(self, method_name, actual_persistence)
+                            PersistenceDecorator.persist_state(self, method_name, actual_persistence, verbose)
                             return result
                         return method_wrapper
 
@@ -199,7 +201,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
                         @functools.wraps(original_method)
                         def method_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
                             result = original_method(self, *args, **kwargs)
-                            PersistenceDecorator.persist_state(self, method_name, actual_persistence)
+                            PersistenceDecorator.persist_state(self, method_name, actual_persistence, verbose)
                             return result
                         return method_wrapper
 
@@ -228,7 +230,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
                         result = await method_coro
                     else:
                         result = method_coro
-                    PersistenceDecorator.persist_state(flow_instance, method.__name__, actual_persistence)
+                    PersistenceDecorator.persist_state(flow_instance, method.__name__, actual_persistence, verbose)
                     return result
 
                 for attr in ["__is_start_method__", "__trigger_methods__", "__condition_type__", "__is_router__"]:
@@ -240,7 +242,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
                 @functools.wraps(method)
                 def method_sync_wrapper(flow_instance: Any, *args: Any, **kwargs: Any) -> T:
                     result = method(flow_instance, *args, **kwargs)
-                    PersistenceDecorator.persist_state(flow_instance, method.__name__, actual_persistence)
+                    PersistenceDecorator.persist_state(flow_instance, method.__name__, actual_persistence, verbose)
                     return result
 
                 for attr in ["__is_start_method__", "__trigger_methods__", "__condition_type__", "__is_router__"]:
