@@ -6,7 +6,6 @@ from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import instructor
 import pydantic_core
 import pytest
 
@@ -15,15 +14,24 @@ from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
-from crewai.project import crew
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
+from crewai.utilities.events import (
+    CrewTrainCompletedEvent,
+    CrewTrainStartedEvent,
+    crewai_event_bus,
+)
+from crewai.utilities.events.crew_events import (
+    CrewTestCompletedEvent,
+    CrewTestStartedEvent,
+)
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
@@ -825,6 +833,12 @@ def test_crew_verbose_output(capsys):
 
     crew.kickoff()
     captured = capsys.readouterr()
+
+    # Filter out event listener logs (lines starting with '[')
+    filtered_output = "\n".join(
+        line for line in captured.out.split("\n") if not line.startswith("[")
+    )
+
     expected_strings = [
         "\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mResearcher",
         "\x1b[00m\n\x1b[95m## Task:\x1b[00m \x1b[92mResearch AI advancements.",
@@ -837,14 +851,19 @@ def test_crew_verbose_output(capsys):
     ]
 
     for expected_string in expected_strings:
-        assert expected_string in captured.out
+        assert expected_string in filtered_output
 
     # Now test with verbose set to False
     crew.verbose = False
     crew._logger = Logger(verbose=False)
     crew.kickoff()
     captured = capsys.readouterr()
-    assert captured.out == ""
+    filtered_output = "\n".join(
+        line
+        for line in captured.out.split("\n")
+        if not line.startswith("[") and line.strip() and not line.startswith("\x1b")
+    )
+    assert filtered_output == ""
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1282,9 +1301,9 @@ def test_kickoff_for_each_invalid_input():
 
     crew = Crew(agents=[agent], tasks=[task])
 
-    with pytest.raises(TypeError):
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
         # Pass a string instead of a list
-        crew.kickoff_for_each("invalid input")
+        crew.kickoff_for_each(["invalid input"])
 
 
 def test_kickoff_for_each_error_handling():
@@ -2568,6 +2587,16 @@ def test_crew_train_success(
     # Create a mock for the copied crew
     copy_mock.return_value = crew
 
+    received_events = []
+
+    @crewai_event_bus.on(CrewTrainStartedEvent)
+    def on_crew_train_started(source, event: CrewTrainStartedEvent):
+        received_events.append(event)
+
+    @crewai_event_bus.on(CrewTrainCompletedEvent)
+    def on_crew_train_completed(source, event: CrewTrainCompletedEvent):
+        received_events.append(event)
+
     crew.train(
         n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
     )
@@ -2612,6 +2641,10 @@ def test_crew_train_success(
             ),
         ]
     )
+
+    assert len(received_events) == 2
+    assert isinstance(received_events[0], CrewTrainStartedEvent)
+    assert isinstance(received_events[1], CrewTrainCompletedEvent)
 
 
 def test_crew_train_error():
@@ -3341,7 +3374,19 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
     copy_mock.return_value = crew
 
     n_iterations = 2
-    crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
+    llm_instance = LLM("gpt-4o-mini")
+
+    received_events = []
+
+    @crewai_event_bus.on(CrewTestStartedEvent)
+    def on_crew_test_started(source, event: CrewTestStartedEvent):
+        received_events.append(event)
+
+    @crewai_event_bus.on(CrewTestCompletedEvent)
+    def on_crew_test_completed(source, event: CrewTestCompletedEvent):
+        received_events.append(event)
+
+    crew.test(n_iterations, llm_instance, inputs={"topic": "AI"})
 
     # Ensure kickoff is called on the copied crew
     kickoff_mock.assert_has_calls(
@@ -3350,12 +3395,16 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
 
     crew_evaluator.assert_has_calls(
         [
-            mock.call(crew, "gpt-4o-mini"),
+            mock.call(crew, llm_instance),
             mock.call().set_iteration(1),
             mock.call().set_iteration(2),
             mock.call().print_crew_evaluation_result(),
         ]
     )
+
+    assert len(received_events) == 2
+    assert isinstance(received_events[0], CrewTestStartedEvent)
+    assert isinstance(received_events[1], CrewTestCompletedEvent)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

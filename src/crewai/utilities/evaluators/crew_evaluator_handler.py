@@ -1,11 +1,12 @@
 from collections import defaultdict
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, InstanceOf
 from rich.box import HEAVY_EDGE
 from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
@@ -23,7 +24,7 @@ class CrewEvaluator:
 
     Attributes:
         crew (Crew): The crew of agents to evaluate.
-        openai_model_name (str): The model to use for evaluating the performance of the agents (for now ONLY OpenAI accepted).
+        eval_llm (LLM): Language model instance to use for evaluations
         tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
         iteration (int): The current iteration of the evaluation.
     """
@@ -32,9 +33,9 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, openai_model_name: str):
+    def __init__(self, crew, eval_llm: InstanceOf[LLM]):
         self.crew = crew
-        self.openai_model_name = openai_model_name
+        self.llm = eval_llm
         self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
@@ -51,7 +52,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=self.openai_model_name,
+            llm=self.llm,
         )
 
     def _evaluation_task(
@@ -181,7 +182,7 @@ class CrewEvaluator:
                 self.crew,
                 evaluation_result.pydantic.quality,
                 current_task.execution_duration,
-                self.openai_model_name,
+                self.llm.model,
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
