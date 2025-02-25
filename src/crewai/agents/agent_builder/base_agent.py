@@ -134,6 +134,16 @@ class BaseAgent(ABC, BaseModel):
     @model_validator(mode="before")
     @classmethod
     def process_model_config(cls, values):
+        """
+        Process model configuration values.
+        
+        Args:
+            values: Configuration values or callable agent
+                When using CrewBase decorator, this can be a callable that returns an agent
+        
+        Returns:
+            Processed configuration or callable agent
+        """
         # Handle case where values is a function (can happen with CrewBase decorator)
         if callable(values) and not isinstance(values, dict):
             return values

@@ -65,8 +65,18 @@ class Task(BaseModel):
     def __init__(self, **data):
         # Handle case where agent is a callable (can happen with CrewBase decorator)
         if 'agent' in data and callable(data['agent']) and not isinstance(data['agent'], type):
-            # Call the agent method to get the agent instance
-            data['agent'] = data['agent']()
+            try:
+                # Call the agent method to get the agent instance
+                agent = data['agent']()
+                
+                # Verify that the agent is a valid instance
+                from crewai.agents.agent_builder.base_agent import BaseAgent
+                if agent is not None and not isinstance(agent, BaseAgent):
+                    raise ValueError(f"Expected BaseAgent instance, got {type(agent)}")
+                    
+                data['agent'] = agent
+            except Exception as e:
+                raise ValueError(f"Failed to initialize agent from callable: {e}")
         
         # Call the parent class __init__ method
         super().__init__(**data)
