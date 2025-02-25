@@ -3,7 +3,7 @@ import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Sequence, Union
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator, field_validator
+from pydantic import Field, InstanceOf, PrivateAttr, field_validator, model_validator
 
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
