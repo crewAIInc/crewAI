@@ -6,7 +6,7 @@ from crewai.project import CrewBase, agent, crew, task
 # https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
 
 @CrewBase
-class {{crew_name}}():
+class {{crew_name}}:
 	"""{{crew_name}} crew"""
 
 	# Learn more about YAML configuration files here:
