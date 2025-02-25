@@ -506,7 +506,7 @@ my_crew = Crew(
 )
 ```
 
-### Resetting Memory
+### Resetting Memory via cli
 
 ```shell
 crewai reset-memories [OPTIONS]
@@ -520,7 +520,45 @@ crewai reset-memories [OPTIONS]
 | `-s`, `--short`    | Reset SHORT TERM memory.         | Flag (boolean) | False   |
 | `-e`, `--entities` | Reset ENTITIES memory.           | Flag (boolean) | False   |
 | `-k`, `--kickoff-outputs` | Reset LATEST KICKOFF TASK OUTPUTS. | Flag (boolean) | False   |
+| `-kn`, `--knowledge` | Reset KNOWLEDEGE storage | Flag (boolean) | False   |
 | `-a`, `--all`      | Reset ALL memories.              | Flag (boolean) | False   |
+
+Note: To use the cli command you need to have your crew in a file called crew.py in the same directory.
+
+
+
+
+### Resetting Memory via crew object
+
+```python
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "custom",
+        "config": {
+            "embedder": CustomEmbedder()
+        }
+    }
+)
+
+my_crew.reset_memories(command_type = 'all') # Resets all the memory
+```
+
+#### Resetting Memory Options
+
+| Command Type       | Description                      |
+| :----------------- | :------------------------------- |
+| `long`             | Reset LONG TERM memory.          | 
+| `short`            | Reset SHORT TERM memory.         | 
+| `entities`         | Reset ENTITIES memory.           | 
+| `kickoff_outputs`  | Reset LATEST KICKOFF TASK OUTPUTS. |
+| `knowledge`        | Reset KNOWLEDGE memory.          |
+| `all`              | Reset ALL memories.              |
 
 
 ## Benefits of Using CrewAI's Memory System
