@@ -149,14 +149,11 @@ class LLM:
         callbacks: List[Any] = [],
         **kwargs,
     ):
-        # Validate model ID to ensure it's not empty, whitespace, or a numeric value without a provider prefix
-        if not model or (isinstance(model, str) and model.strip() == ""):
-            raise ValueError(
-                f"Invalid model ID: '{model}'. Model ID cannot be empty or whitespace. "
-                "Please specify a valid model ID with a provider prefix, e.g., 'openai/gpt-4'."
-            )
-        
-        if isinstance(model, (int, float)) or (isinstance(model, str) and model.isdigit()):
+        # Only validate model ID if it's not None and is a numeric value without a provider prefix
+        if model is not None and (
+            isinstance(model, (int, float)) or 
+            (isinstance(model, str) and model.strip() and model.strip().isdigit())
+        ):
             raise ValueError(
                 f"Invalid model ID: {model}. Model ID cannot be a numeric value without a provider prefix. "
                 "Please specify a valid model ID with a provider prefix, e.g., 'openai/gpt-4'."
