@@ -64,6 +64,7 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4-turbo": 128000,
     "o1-preview": 128000,
     "o1-mini": 128000,
+    "o3-mini": 200000,  # Based on official o3-mini specifications
     # gemini
     "gemini-2.0-flash": 1048576,
     "gemini-1.5-pro": 2097152,
@@ -485,9 +486,22 @@ class LLM:
         """
         Returns the context window size, using 75% of the maximum to avoid
         cutting off messages mid-thread.
+
+        Raises:
+            ValueError: If a model's context window size is outside valid bounds (1024-2097152)
         """
         if self.context_window_size != 0:
             return self.context_window_size
+
+        MIN_CONTEXT = 1024
+        MAX_CONTEXT = 2097152  # Current max from gemini-1.5-pro
+
+        # Validate all context window sizes
+        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
+            if value < MIN_CONTEXT or value > MAX_CONTEXT:
+                raise ValueError(
+                    f"Context window for {key} must be between {MIN_CONTEXT} and {MAX_CONTEXT}"
+                )
 
         self.context_window_size = int(
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
