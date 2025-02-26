@@ -1673,7 +1673,7 @@ def test_agent_uses_task_knowledge():
         try:
             # Configure the mock
             mock_knowledge = MockKnowledge.return_value
-            mock_knowledge.query.return_value = [{"content": content}]
+            mock_knowledge.query.return_value = [{"context": content}]
             
             # Create a real LLM but patch its call method
             agent = Agent(
