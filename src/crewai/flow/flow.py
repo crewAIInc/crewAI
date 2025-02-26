@@ -22,10 +22,6 @@ from pydantic import BaseModel, Field, ValidationError
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
-from crewai.traces.unified_trace_controller import (
-    init_flow_main_trace,
-    trace_flow_step,
-)
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.flow_events import (
     FlowCreatedEvent,
@@ -725,7 +721,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         return asyncio.run(run_flow())
 
-    @init_flow_main_trace
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         """
         Start the flow execution asynchronously.
@@ -782,18 +777,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
             f"Flow started with ID: {self.flow_id}", color="bold_magenta"
         )
 
-        if not self._start_methods:
-            raise ValueError("No start method defined")
+        if inputs is not None and "id" not in inputs:
+            self._initialize_state(inputs)
 
-        # Execute all start methods concurrently.
         tasks = [
             self._execute_start_method(start_method)
             for start_method in self._start_methods
         ]
         await asyncio.gather(*tasks)
+
         final_output = self._method_outputs[-1] if self._method_outputs else None
 
-        # Emit FlowFinishedEvent after all processing is complete.
         crewai_event_bus.emit(
             self,
             FlowFinishedEvent(
@@ -802,6 +796,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 result=final_output,
             ),
         )
+
         return final_output
 
     async def _execute_start_method(self, start_method_name: str) -> None:
@@ -827,7 +822,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
         await self._execute_listeners(start_method_name, result)
 
-    @trace_flow_step
     async def _execute_method(
         self, method_name: str, method: Callable, *args: Any, **kwargs: Any
     ) -> Any:
@@ -900,35 +894,45 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Notes
         -----
         - Routers are executed sequentially to maintain flow control
-        - Each router's result becomes the new trigger_method
+        - Each router's result becomes a new trigger_method
         - Normal listeners are executed in parallel for efficiency
         - Listeners can receive the trigger method's result as a parameter
         """
         # First, handle routers repeatedly until no router triggers anymore
+        router_results = []
+        current_trigger = trigger_method
+
         while True:
             routers_triggered = self._find_triggered_methods(
-                trigger_method, router_only=True
+                current_trigger, router_only=True
             )
             if not routers_triggered:
                 break
+
             for router_name in routers_triggered:
                 await self._execute_single_listener(router_name, result)
                 # After executing router, the router's result is the path
-                # The last router executed sets the trigger_method
-                # The router result is the last element in self._method_outputs
-                trigger_method = self._method_outputs[-1]
+                router_result = self._method_outputs[-1]
+                if router_result:  # Only add non-None results
+                    router_results.append(router_result)
+                current_trigger = (
+                    router_result  # Update for next iteration of router chain
+                )
 
-        # Now that no more routers are triggered by current trigger_method,
-        # execute normal listeners
-        listeners_triggered = self._find_triggered_methods(
-            trigger_method, router_only=False
-        )
-        if listeners_triggered:
-            tasks = [
-                self._execute_single_listener(listener_name, result)
-                for listener_name in listeners_triggered
-            ]
-            await asyncio.gather(*tasks)
+        # Now execute normal listeners for all router results and the original trigger
+        all_triggers = [trigger_method] + router_results
+
+        for current_trigger in all_triggers:
+            if current_trigger:  # Skip None results
+                listeners_triggered = self._find_triggered_methods(
+                    current_trigger, router_only=False
+                )
+                if listeners_triggered:
+                    tasks = [
+                        self._execute_single_listener(listener_name, result)
+                        for listener_name in listeners_triggered
+                    ]
+                    await asyncio.gather(*tasks)
 
     def _find_triggered_methods(
         self, trigger_method: str, router_only: bool
