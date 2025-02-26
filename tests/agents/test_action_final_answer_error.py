@@ -2,7 +2,12 @@ import pytest
 from unittest.mock import MagicMock
 
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
-from crewai.agents.parser import AgentAction, AgentFinish, OutputParserException, FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
+from crewai.agents.parser import (
+    AgentAction,
+    AgentFinish,
+    FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
+    OutputParserException,
+)
 
 
 def test_process_llm_response_with_action_and_final_answer():
