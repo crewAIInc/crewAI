@@ -382,3 +382,6 @@ class BaseAgent(ABC, BaseModel):
         # Use the injected RPM controller rather than auto-creating one
         if rpm_controller:
             self.set_rpm_controller(rpm_controller)
+
+    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+        pass
