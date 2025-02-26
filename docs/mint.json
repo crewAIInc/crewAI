@@ -139,6 +139,7 @@
         "tools/nl2sqltool",
         "tools/pdfsearchtool",
         "tools/pgsearchtool",
+        "tools/qdrantvectorsearchtool",
         "tools/scrapewebsitetool",
         "tools/seleniumscrapingtool",
         "tools/spidertool",
