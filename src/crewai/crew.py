@@ -37,7 +37,6 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import Tool
-from crewai.traces.unified_trace_controller import init_crew_main_trace
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -571,7 +570,6 @@ class Crew(BaseModel):
             CrewTrainingHandler(filename).clear()
             raise
 
-    @init_crew_main_trace
     def kickoff(
         self,
         inputs: Optional[Dict[str, Any]] = None,
@@ -602,6 +600,7 @@ class Crew(BaseModel):
                 agent.i18n = i18n
                 # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
                 agent.crew = self  # type: ignore[attr-defined]
+                agent.set_knowledge(crew_embedder=self.embedder)
                 # TODO: Create an AgentFunctionCalling protocol for future refactoring
                 if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
                     agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
