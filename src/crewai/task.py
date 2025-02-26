@@ -32,6 +32,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.knowledge import Knowledge
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -143,6 +144,10 @@ class Task(BaseModel):
     )
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
+    )
+    knowledge: Optional[Knowledge] = Field(
+        default=None,
+        description="Knowledge sources for the task. This knowledge will be used by the agent when executing the task.",
     )
 
     @field_validator("guardrail")
