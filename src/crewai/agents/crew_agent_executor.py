@@ -232,7 +232,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._format_answer(answer)
             except OutputParserException as e:
                 if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
-                    answer = answer.split("Observation:")[0].strip()
+                    # If both Action and Final Answer are present, prioritize the Action
+                    # by removing the Final Answer part
+                    if "Final Answer:" in answer:
+                        parts = answer.split("Final Answer:")
+                        answer = parts[0].strip()
+                    # If that doesn't work, try splitting at Observation
+                    elif "Observation:" in answer:
+                        answer = answer.split("Observation:")[0].strip()
 
         return self._format_answer(answer)
 
