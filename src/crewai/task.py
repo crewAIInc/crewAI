@@ -373,6 +373,7 @@ class Task(BaseModel):
 
             pydantic_output, json_output = self._export_output(result)
             task_output = TaskOutput(
+                key=self.key,
                 name=self.name,
                 description=self.description,
                 expected_output=self.expected_output,
