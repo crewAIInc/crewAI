@@ -111,6 +111,7 @@ def test_task_callback():
         task.execute_sync(agent=researcher)
         task_completed.assert_called_once_with(task.output)
 
+        assert task.output.key == task.key
         assert task.output.description == task.description
         assert task.output.expected_output == task.expected_output
         assert task.output.name == task.name
@@ -149,6 +150,7 @@ def test_task_callback_returns_task_output():
         assert isinstance(callback_data, str)
         output_dict = json.loads(callback_data)
         expected_output = {
+            "key": task.key,
             "description": task.description,
             "raw": "exported_ok",
             "pydantic": None,
