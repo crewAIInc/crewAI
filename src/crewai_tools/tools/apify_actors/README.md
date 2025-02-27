@@ -1,7 +1,7 @@
 # ApifyActorsTool
 
 ## Description
-The `ApifyActorsTool` is a powerful utility that enables seamless integration of [Apify Actors](https://apify.com/) into your CrewAI workflows. Apify Actors are cloud-based web scraping and automation programs that allow you to extract data, crawl websites, and automate tasks without managing infrastructure. This tool provides an efficient way to run Actors like the [RAG Web Browser](https://apify.com/apify/rag-web-browser) directly within your agents, making it ideal for tasks requiring real-time web data extraction or automation. For more Actors, visit the [Apify Store](https://apify.com/store).
+The `ApifyActorsTool` is a powerful utility that enables seamless integration of [Apify](https://apify.com/) into your CrewAI workflows. Apify Actors are cloud-based web scraping and automation programs that allow you to extract data, crawl websites, and automate tasks without managing infrastructure. This tool provides an efficient way to run Actors like the [RAG Web Browser](https://apify.com/apify/rag-web-browser) directly within your agents, making it ideal for tasks requiring real-time web data extraction or automation. For more Actors, visit the [Apify Store](https://apify.com/store).
 
 For more details on using Apify with CrewAI, visit the [Apify CrewAI integration documentation](https://docs.apify.com/platform/integrations/crewai).
 
@@ -37,8 +37,8 @@ print(results)
 ## Arguments
 The `ApifyActorsTool` requires a few key arguments to function correctly:
 
-- `actor_name`: A mandatory argument specifying the ID of the Apify Actor to run (e.g., `"apify/rag-web-browser"`). You can explore available Actors in the [Apify Actors documentation](https://docs.apify.com/platform/actors).
-- `run_input`: A dictionary containing the input parameters for the Actor, such as `query` or `maxResults`. The specific inputs depend on the Actor being used. Refer to the Actor's detail page for input schema; for example, [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser/input-schema)
+- `actor_name`: A mandatory argument specifying the ID of the Apify Actor to run (e.g., `"apify/rag-web-browser"`). You can explore available Actors in the [Apify Store](https://apify.com/store).
+- `run_input`: A dictionary containing the input parameters for the Actor, such as `query` or `maxResults`. The specific inputs depend on the Actor being used. Refer to the Actor's detail page for input schema; for example, [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser/input-schema).
 
 The tool dynamically adapts to the chosen Actor, offering flexibility and ease of use for a wide range of automation and scraping tasks.
 
