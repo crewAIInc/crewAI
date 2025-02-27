@@ -10,6 +10,7 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
+from crewai.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
@@ -1659,6 +1660,99 @@ def test_agent_with_knowledge_sources_works_with_copy():
             assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
             assert agent_copy.knowledge_sources[0].content == content
             assert isinstance(agent_copy.llm, LLM)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_uses_task_knowledge():
+    """Test that an agent uses the knowledge provided in the task."""
+    # Create a knowledge source with specific content
+    content = "The capital of France is Paris. The Eiffel Tower is located in Paris."
+    
+    # Create a mock Knowledge object
+    with patch("crewai.knowledge.Knowledge", autospec=True) as MockKnowledge:
+        try:
+            # Configure the mock
+            mock_knowledge = MockKnowledge.return_value
+            mock_knowledge.query.return_value = [{"context": content}]
+            
+            # Create a real LLM but patch its call method
+            agent = Agent(
+                role="Geography Teacher",
+                goal="Provide accurate geographic information",
+                backstory="You are a geography expert who teaches students about world capitals.",
+                llm=LLM(model="gpt-4o-mini"),
+            )
+            
+            # Create a task with knowledge
+            task = Task(
+                description="What is the capital of France?",
+                expected_output="The capital of France.",
+                agent=agent,
+                knowledge=mock_knowledge,
+            )
+            
+            # Mock the agent's execute_task method to avoid actual LLM calls
+            with patch.object(agent.llm, "call") as mock_llm_call:
+                mock_llm_call.return_value = "The capital of France is Paris, where the Eiffel Tower is located."
+                
+                # Execute the task
+                result = agent.execute_task(task)
+                
+                # Assert that the agent provides the correct information
+                assert "paris" in result.lower()
+                assert "eiffel tower" in result.lower()
+                
+                # Verify that the task's knowledge was queried
+                mock_knowledge.query.assert_called_once()
+                
+                # The query should include the task prompt
+                query_arg = mock_knowledge.query.call_args[0][0]
+                assert isinstance(query_arg, list)
+                assert "capital of france" in query_arg[0].lower()
+        finally:
+            MockKnowledge.reset_mock()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_empty_task_knowledge():
+    """Test that an agent handles empty task knowledge gracefully."""
+    # Create a mock Knowledge object
+    with patch("crewai.knowledge.Knowledge", autospec=True) as MockKnowledge:
+        try:
+            # Configure the mock to return empty results
+            mock_knowledge = MockKnowledge.return_value
+            mock_knowledge.query.return_value = []
+            
+            # Create a real LLM but patch its call method
+            agent = Agent(
+                role="Geography Teacher",
+                goal="Provide accurate geographic information",
+                backstory="You are a geography expert who teaches students about world capitals.",
+                llm=LLM(model="gpt-4o-mini"),
+            )
+            
+            # Create a task with empty knowledge
+            task = Task(
+                description="What is the capital of France?",
+                expected_output="The capital of France.",
+                agent=agent,
+                knowledge=mock_knowledge,
+            )
+            
+            # Mock the agent's execute_task method to avoid actual LLM calls
+            with patch.object(agent.llm, "call") as mock_llm_call:
+                mock_llm_call.return_value = "The capital of France is Paris."
+                
+                # Execute the task
+                result = agent.execute_task(task)
+                
+                # Assert that the agent still provides a response
+                assert "paris" in result.lower()
+                
+                # Verify that the task's knowledge was queried
+                mock_knowledge.query.assert_called_once()
+        finally:
+            MockKnowledge.reset_mock()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
