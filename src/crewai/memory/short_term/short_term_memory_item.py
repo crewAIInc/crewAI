@@ -10,6 +10,8 @@ class ShortTermMemoryItem:
         metadata: Optional[Dict[str, Any]] = None,
         timestamp: Optional[datetime] = None,
     ):
+        if timestamp is not None and timestamp > datetime.now():
+            raise ValueError("Timestamp cannot be in the future")
         self.data = data
         self.agent = agent
         self.metadata = metadata if metadata is not None else {}

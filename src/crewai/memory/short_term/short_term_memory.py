@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from pydantic import PrivateAttr
@@ -52,7 +53,26 @@ class ShortTermMemory(Memory):
         metadata: Optional[Dict[str, Any]] = None,
         agent: Optional[str] = None,
     ) -> None:
+        """
+        Save a memory item to the storage.
+        
+        Args:
+            value: The data to save.
+            metadata: Optional metadata to associate with the memory.
+            agent: Optional agent identifier.
+            
+        Raises:
+            ValueError: If the item's timestamp is in the future.
+        """
+        import logging
+        
         item = ShortTermMemoryItem(data=value, metadata=metadata, agent=agent)
+        
+        if item.timestamp > datetime.now():
+            raise ValueError("Cannot save memory item with future timestamp")
+            
+        logging.debug(f"Saving memory item with timestamp: {item.timestamp}")
+        
         if self._memory_provider == "mem0":
             item.data = f"Remember the following insights from Agent run: {item.data}"
 
