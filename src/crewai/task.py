@@ -32,6 +32,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.knowledge import Knowledge
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -144,6 +145,10 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
+    knowledge: Optional[Knowledge] = Field(
+        default=None,
+        description="Knowledge sources for the task. This knowledge will be used by the agent when executing the task.",
+    )
 
     @field_validator("guardrail")
     @classmethod
@@ -215,6 +220,24 @@ class Task(BaseModel):
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
 
+    @field_validator("knowledge")
+    @classmethod
+    def validate_knowledge(cls, knowledge):
+        """Validate that the knowledge field is an instance of Knowledge class.
+        
+        Args:
+            knowledge: The knowledge to validate. Can be None or an instance of Knowledge.
+            
+        Returns:
+            The validated knowledge object, or None if no knowledge was provided.
+            
+        Raises:
+            ValueError: If the knowledge is not an instance of Knowledge class.
+        """
+        if knowledge is not None and not isinstance(knowledge, Knowledge):
+            raise ValueError("Knowledge must be an instance of Knowledge class")
+        return knowledge
+        
     @field_validator("output_file")
     @classmethod
     def output_file_validation(cls, value: Optional[str]) -> Optional[str]:

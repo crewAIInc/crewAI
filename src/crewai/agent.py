@@ -1,9 +1,12 @@
+import logging
 import re
 import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Sequence, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+
+logger = logging.getLogger(__name__)
 
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -209,6 +212,27 @@ class Agent(BaseAgent):
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
+        # Check if the task has knowledge first
+        if hasattr(task, 'knowledge') and task.knowledge:
+            """
+            Knowledge is queried in the following priority order:
+            1. Task-specific knowledge
+            2. Agent's knowledge
+            3. Crew's knowledge
+            This ensures the most specific context is considered first.
+            """
+            try:
+                task_knowledge_snippets = task.knowledge.query([task.prompt()])
+                if task_knowledge_snippets:
+                    task_knowledge_context = extract_knowledge_context(
+                        task_knowledge_snippets
+                    )
+                    if task_knowledge_context:
+                        task_prompt += task_knowledge_context
+            except Exception as e:
+                logger.warning(f"Error querying task knowledge: {str(e)}")
+
+        # Then check agent's knowledge
         if self.knowledge:
             agent_knowledge_snippets = self.knowledge.query([task.prompt()])
             if agent_knowledge_snippets:
@@ -218,6 +242,7 @@ class Agent(BaseAgent):
                 if agent_knowledge_context:
                     task_prompt += agent_knowledge_context
 
+        # Finally check crew's knowledge
         if self.crew:
             knowledge_snippets = self.crew.query_knowledge([task.prompt()])
             if knowledge_snippets:

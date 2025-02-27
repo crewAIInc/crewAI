@@ -1,0 +1,77 @@
+interactions:
+- request:
+    body: '{"input": ["The capital of France is Paris. The Eiffel Tower is located
+      in Paris."], "model": "text-embedding-3-small", "encoding_format": "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '148'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n    \"error\": {\n        \"message\": \"Incorrect API key provided:
+      sk-proj-********************************************************************************************************************************************************sLcA.
+      You can find your API key at https://platform.openai.com/account/api-keys.\",\n
+      \       \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\":
+      \"invalid_api_key\"\n    }\n}\n"
+    headers:
+      CF-RAY:
+      - 917d03088faba9ba-SEA
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '414'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 26 Feb 2025 03:57:35 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=HYYT2XR.PKWNdkkixpkZ1Ng9oco3jg0qXKeCMokrXpg-1740542255-1.0.1.1-R8kmsL1ridzwjB7hh8WsXLH0.cFmLphr4rrzvoa34aVcYrHEMLhLjQMNEFk3785VyTO20pOk1s_XPYcrzP3IvQ;
+        path=/; expires=Wed, 26-Feb-25 04:27:35 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=sI_WkX3WMX8K_QEgvBkUG5bNf_iSQm5w662QY8C.4HY-1740542255564-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Origin
+      x-request-id:
+      - req_f655c752d31b6c29cd52118e474f5a48
+    http_version: HTTP/1.1
+    status_code: 401
+version: 1
