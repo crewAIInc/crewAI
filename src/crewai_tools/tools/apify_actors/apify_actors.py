@@ -1,6 +1,7 @@
 from crewai.tools import BaseTool
 from pydantic import Field
-from typing import Any
+from typing import Any, Dict, List
+import os
 
 try:
     from langchain_apify import ApifyActorsTool as _ApifyActorsTool
@@ -38,6 +39,14 @@ class ApifyActorsTool(BaseTool):
         *args: Any,
         **kwargs: Any
     ) -> None:
+        if not os.environ.get("APIFY_API_TOKEN"):
+            msg = (
+                "APIFY_API_TOKEN environment variable is not set. "
+                "Please set it to your API key, to learn how to get it, "
+                "see https://docs.apify.com/platform/integrations/api"
+            )
+            raise ValueError(msg)
+
         actor_tool = _ApifyActorsTool(actor_name)
 
         kwargs.update(
@@ -50,7 +59,15 @@ class ApifyActorsTool(BaseTool):
         super().__init__(*args, **kwargs)
         self.actor_tool = actor_tool
 
-    def _run(self, run_input: dict) -> list[dict]:
+    def _run(self, run_input: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Run the Actor tool with the given input.
+
+        Returns:
+            List[Dict[str, Any]]: Results from the actor execution.
+
+        Raises:
+            ValueError: If 'actor_tool' is not initialized.
+        """
         if self.actor_tool is None:
             msg = "ApifyActorsToolCrewAI is not initialized"
             raise ValueError(msg)
