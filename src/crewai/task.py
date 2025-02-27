@@ -3,17 +3,20 @@ import inspect
 import json
 import logging
 import threading
+import typing
 import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
 from pathlib import Path
 from typing import (
+    AbstractSet,
     Any,
     Callable,
     ClassVar,
     Dict,
     List,
+    Mapping,
     Optional,
     Set,
     Tuple,
@@ -32,6 +35,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tasks.exceptions import GuardrailValidationError
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -113,7 +117,7 @@ class Task(BaseModel):
         description="Task output, it's final result after being executed", default=None
     )
     tools: Optional[List[BaseTool]] = Field(
-        default_factory=list,
+        default_factory=list[BaseTool],
         description="Tools the agent is limited to use for this task.",
     )
     id: UUID4 = Field(
@@ -129,7 +133,7 @@ class Task(BaseModel):
         description="A converter class used to export structured output",
         default=None,
     )
-    processed_by_agents: Set[str] = Field(default_factory=set)
+    processed_by_agents: Set[str] = Field(default_factory=set[str])
     guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
         default=None,
         description="Function to validate task output before proceeding to next task",
@@ -151,14 +155,32 @@ class Task(BaseModel):
         """Validate that the guardrail function has the correct signature and behavior.
 
         While type hints provide static checking, this validator ensures runtime safety by:
-        1. Verifying the function accepts exactly one parameter (the TaskOutput)
-        2. Checking return type annotations match Tuple[bool, Any] if present
+        1. Verifying the function accepts exactly one required positional parameter (the TaskOutput)
+        2. Checking return type annotations match tuple[bool, Any] or specific types like tuple[bool, str]
         3. Providing clear, immediate error messages for debugging
 
         This runtime validation is crucial because:
         - Type hints are optional and can be ignored at runtime
         - Function signatures need immediate validation before task execution
         - Clear error messages help users debug guardrail implementation issues
+
+        Examples:
+            Simple validation with new style annotation:
+            >>> def validate_output(result: TaskOutput) -> tuple[bool, str]:
+            ...     return (True, result.raw.upper())
+
+            Validation with optional parameters:
+            >>> def validate_with_options(result: TaskOutput, strict: bool = True) -> tuple[bool, str]:
+            ...     if strict and not result.raw.isupper():
+            ...         return (False, "Text must be uppercase")
+            ...     return (True, result.raw)
+
+            Validation with specific return type:
+            >>> def validate_task_output(result: TaskOutput) -> tuple[bool, TaskOutput]:
+            ...     if not result.raw:
+            ...         return (False, result)
+            ...     result.raw = result.raw.strip()
+            ...     return (True, result)
 
         Args:
             v: The guardrail function to validate
@@ -168,22 +190,57 @@ class Task(BaseModel):
 
         Raises:
             ValueError: If the function signature is invalid or return annotation
-                       doesn't match Tuple[bool, Any]
+                       doesn't match tuple[bool, Any] or specific allowed types
         """
         if v is not None:
             sig = inspect.signature(v)
-            if len(sig.parameters) != 1:
-                raise ValueError("Guardrail function must accept exactly one parameter")
+            # Get required positional parameters (excluding those with defaults)
+            required_params = [
+                param for param in sig.parameters.values()
+                if param.default == inspect.Parameter.empty 
+                and param.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            ]
+            keyword_only_params = [
+                param for param in sig.parameters.values()
+                if param.kind == inspect.Parameter.KEYWORD_ONLY
+            ]
+            if len(required_params) != 1 or (len(keyword_only_params) > 0 and any(p.default == inspect.Parameter.empty for p in keyword_only_params)):
+                raise GuardrailValidationError(
+                    "Guardrail function must accept exactly one required positional parameter and no required keyword-only parameters",
+                    {"params": [str(p) for p in sig.parameters.values()]}
+                )
 
             # Check return annotation if present, but don't require it
-            return_annotation = sig.return_annotation
-            if return_annotation != inspect.Signature.empty:
-                if not (
-                    return_annotation == Tuple[bool, Any]
-                    or str(return_annotation) == "Tuple[bool, Any]"
-                ):
-                    raise ValueError(
-                        "If return type is annotated, it must be Tuple[bool, Any]"
+            type_hints = typing.get_type_hints(v)
+            return_annotation = type_hints.get('return')
+            if return_annotation:
+                # Convert annotation to string for comparison
+                annotation_str = str(return_annotation).lower().replace(' ', '')
+                
+                # Normalize type strings
+                normalized_annotation = (
+                    annotation_str.replace('typing.', '')
+                    .replace('dict[str,typing.any]', 'dict[str,any]')
+                    .replace('dict[str, any]', 'dict[str,any]')
+                )
+                
+                VALID_RETURN_TYPES = {
+                    'tuple[bool,any]',
+                    'tuple[bool,str]',
+                    'tuple[bool,dict[str,any]]',
+                    'tuple[bool,taskoutput]'
+                }
+                
+                # Check if the normalized annotation matches any valid pattern
+                is_valid = normalized_annotation == 'tuple[bool,any]'
+                if not is_valid:
+                    is_valid = normalized_annotation in VALID_RETURN_TYPES
+                
+                if not is_valid:
+                    raise GuardrailValidationError(
+                        f"Invalid return type annotation. Expected one of: "
+                        f"{', '.join(VALID_RETURN_TYPES)}",
+                        {"got": annotation_str}
                     )
         return v
 
@@ -411,6 +468,7 @@ class Task(BaseModel):
                         "Task guardrail returned None as result. This is not allowed."
                     )
 
+                # Handle different result types
                 if isinstance(guardrail_result.result, str):
                     task_output.raw = guardrail_result.result
                     pydantic_output, json_output = self._export_output(
@@ -420,6 +478,13 @@ class Task(BaseModel):
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
+                elif isinstance(guardrail_result.result, dict):
+                    task_output.raw = guardrail_result.result
+                    task_output.json_dict = guardrail_result.result
+                    pydantic_output, _ = self._export_output(
+                        json.dumps(guardrail_result.result)
+                    )
+                    task_output.pydantic = pydantic_output
 
             self.output = task_output
             self.end_time = datetime.datetime.now()
@@ -610,39 +675,73 @@ class Task(BaseModel):
         self.delegations += 1
 
     def copy(
-        self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
+        self,
+        agents: List["BaseAgent"] | None = None,
+        task_mapping: Dict[str, "Task"] | None = None,
+        *,
+        include: AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any] | None = None,
+        exclude: AbstractSet[int] | AbstractSet[str] | Mapping[int, Any] | Mapping[str, Any] | None = None,
+        update: dict[str, Any] | None = None,
+        deep: bool = False,
     ) -> "Task":
-        """Create a deep copy of the Task."""
-        exclude = {
+        """Create a deep copy of the Task.
+        
+        Args:
+            agents: Optional list of agents to copy agent references
+            task_mapping: Optional mapping of task keys to tasks for context
+            include: Fields to include in the copy
+            exclude: Fields to exclude from the copy
+            update: Fields to update in the copy
+            deep: Whether to perform a deep copy
+        """
+        if agents is None and task_mapping is None:
+            # New style copy using BaseModel
+            copied = super().copy(
+                include=include,
+                exclude=exclude,
+                update=update,
+                deep=deep,
+            )
+            
+            # Copy mutable fields
+            if self.tools:
+                copied.tools = copy(self.tools)
+            if self.context:
+                copied.context = copy(self.context)
+                
+            return copied
+            
+        # Legacy copy behavior
+        exclude_fields = {
             "id",
             "agent",
             "context",
             "tools",
         }
 
-        copied_data = self.model_dump(exclude=exclude)
+        copied_data = self.model_dump(exclude=exclude_fields)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         cloned_context = (
             [task_mapping[context_task.key] for context_task in self.context]
-            if self.context
+            if self.context and task_mapping
             else None
         )
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
+            if not agents:
+                return None
             return next((agent for agent in agents if agent.role == role), None)
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = copy(self.tools) if self.tools else []
 
-        copied_task = Task(
+        return Task(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
             tools=cloned_tools,
         )
-
-        return copied_task
 
     def _export_output(
         self, result: str
