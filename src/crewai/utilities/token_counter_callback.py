@@ -30,8 +30,14 @@ class TokenCalcHandler(CustomLogger):
                     if hasattr(usage, "prompt_tokens"):
                         self.token_cost_process.sum_prompt_tokens(usage.prompt_tokens)
                     if hasattr(usage, "completion_tokens"):
-                        self.token_cost_process.sum_completion_tokens(usage.completion_tokens)
-                    if hasattr(usage, "prompt_tokens_details") and usage.prompt_tokens_details:
+                        self.token_cost_process.sum_completion_tokens(
+                            usage.completion_tokens
+                        )
+                    if (
+                        hasattr(usage, "prompt_tokens_details")
+                        and usage.prompt_tokens_details
+                        and usage.prompt_tokens_details.cached_tokens
+                    ):
                         self.token_cost_process.sum_cached_prompt_tokens(
                             usage.prompt_tokens_details.cached_tokens
                         )
