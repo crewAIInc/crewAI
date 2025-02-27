@@ -77,6 +77,27 @@ def cache_handler(func):
     return memoize(func)
 
 
+def _resolve_agent(task_instance):
+    """
+    Resolve an agent from a task instance.
+    
+    If the agent is a callable (e.g., a method from CrewBase), call it to get the agent instance.
+    
+    Args:
+        task_instance: The task instance containing the agent
+    
+    Returns:
+        The resolved agent instance or None if no agent is present
+    """
+    if not hasattr(task_instance, 'agent') or not task_instance.agent:
+        return None
+        
+    if callable(task_instance.agent) and not isinstance(task_instance.agent, type):
+        return task_instance.agent()
+        
+    return task_instance.agent
+
+
 def crew(func) -> Callable[..., Crew]:
     """Marks a method as the main crew execution point."""
 
@@ -92,7 +113,14 @@ def crew(func) -> Callable[..., Crew]:
 
         # Instantiate tasks in order
         for task_name, task_method in tasks:
+            # Get the task instance
             task_instance = task_method(self)
+            
+            # Resolve the agent
+            agent = _resolve_agent(task_instance)
+            if agent:
+                task_instance.agent = agent
+                
             instantiated_tasks.append(task_instance)
             agent_instance = getattr(task_instance, "agent", None)
             if agent_instance and agent_instance.role not in agent_roles:
