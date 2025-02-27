@@ -623,6 +623,8 @@ class Crew(BaseModel):
                 raise NotImplementedError(
                     f"The process '{self.process}' is not implemented yet."
                 )
+            
+            ## ADDING FUNCTIONALITY TO ADD STREAMING ##
 
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
