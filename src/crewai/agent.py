@@ -3,7 +3,7 @@ import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Sequence, Union
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import Field, InstanceOf, PrivateAttr, field_validator, model_validator
 
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -111,14 +111,29 @@ class Agent(BaseAgent):
         default=None,
         description="Embedder configuration for the agent.",
     )
+    endpoint: Optional[str] = Field(
+        default=None,
+        description="Custom endpoint URL for the LLM API. Primarily used for Ollama models to specify alternative API endpoints.",
+        examples=["http://localhost:11434", "https://ollama.example.com:11434"],
+    )
+    
+    @field_validator("endpoint")
+    def validate_endpoint(cls, v):
+        if v is not None:
+            if not isinstance(v, str):
+                raise ValueError("Endpoint must be a string")
+            if not v.startswith(("http://", "https://")):
+                raise ValueError("Endpoint must start with http:// or https://")
+        return v
 
     @model_validator(mode="after")
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
 
-        self.llm = create_llm(self.llm)
+        # Pass endpoint to create_llm if it exists
+        self.llm = create_llm(self.llm, endpoint=self.endpoint)
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
-            self.function_calling_llm = create_llm(self.function_calling_llm)
+            self.function_calling_llm = create_llm(self.function_calling_llm, endpoint=self.endpoint)
 
         if not self.agent_executor:
             self._setup_agent_executor()
