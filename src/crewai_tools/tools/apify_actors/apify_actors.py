@@ -21,7 +21,7 @@ class ApifyActorsTool(BaseTool):
 
         Example:
             .. code-block:: python
-                from crewai.tools import ApifyActorsTool
+                from crewai_tools import ApifyActorsTool
 
                 tool = ApifyActorsTool(actor_id="apify/rag-web-browser")
 
