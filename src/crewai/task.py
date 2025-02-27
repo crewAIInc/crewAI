@@ -144,6 +144,14 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
+    rci: Optional[bool] = Field(
+        default=True,
+        description="Recursive Criticism and Iteration (RCI) to verify the output matches the expected output.",
+    )
+    rci_max_count: int = Field(
+        default=1,
+        description="Number of iterations to run the RCI process.",
+    )
 
     @field_validator("guardrail")
     @classmethod
@@ -367,6 +375,15 @@ class Task(BaseModel):
             crewai_event_bus.emit(self, TaskStartedEvent(context=context))
             result = agent.execute_task(
                 task=self,
+                context=context,
+                tools=tools,
+            )
+
+            result = self.critique_and_iterate(
+                agent=agent,
+                inital_output=result,
+                description=self.description,
+                expected_output=self.expected_output,
                 context=context,
                 tools=tools,
             )
@@ -728,3 +745,122 @@ class Task(BaseModel):
 
     def __repr__(self):
         return f"Task(description={self.description}, expected_output={self.expected_output})"
+
+    def critique_and_iterate(
+        self,
+        agent: BaseAgent,
+        inital_output: str,
+        description: str,
+        expected_output: str,
+        context: Optional[str],
+        tools: Optional[List[BaseTool]],
+    ) -> str:
+        """
+        Driver function to manage recursive criticism and iteration.
+        """
+        current_output = inital_output
+        original_description = description
+        original_expected_output = expected_output
+
+        for _ in range(self.rci_max_count):
+            critiques = self.critique(
+                agent=agent,
+                current_output=current_output,
+                description=description,
+                expected_output=expected_output,
+                context=context,
+                tools=tools,
+            )
+
+            self.description = original_description
+            self.expected_output = original_expected_output
+
+            if critiques == "NO ISSUES FOUND":
+                return current_output
+
+            current_output = self.rectifier(
+                agent=agent,
+                current_output=current_output,
+                description=description,
+                expected_output=expected_output,
+                context=context,
+                tools=tools,
+                critiques=critiques,
+            )
+
+            self.description = original_description
+            self.expected_output = original_expected_output
+
+        return current_output
+
+    def critique(
+        self,
+        agent: BaseAgent,
+        current_output: str,
+        description: str,
+        expected_output: str,
+        context: Optional[str],
+        tools: Optional[List[BaseTool]],
+    ) -> str:
+        """
+        Generates critiques for the current output based on the description and expected output.
+        """
+        critique_description = f"""
+        You are a critical evaluator reviewing an AI-generated output.
+        Description: {description}
+        Expected Output: {expected_output}
+        Current Output: {current_output}
+        """
+
+        critique_expected_output = f"""
+        Please provide only critical and necessary feedback. Minor paraphrasing and stylistic changes should be avoided.
+        Only focus on issues that prevent the output from aligning with the description and expected output.
+        If the output is satisfactory, respond with exactly: NO ISSUES FOUND"""
+
+        self.description = critique_description
+        self.expected_output = critique_expected_output
+
+        critique_response = agent.execute_task(
+            task=self,
+            context=context,
+            tools=tools,
+        )
+
+        return critique_response
+
+    def rectifier(
+        self,
+        agent: BaseAgent,
+        critiques: str,
+        current_output: str,
+        description: str,
+        expected_output: str,
+        context: Optional[str],
+        tools: Optional[List[BaseTool]],
+    ) -> str:
+        """
+        Rectifies the current output based on the critiques provided.
+        """
+        rectifier_description = f"""
+        You are an AI tasked with improving an output based on provided critiques.
+        Description: {description}
+        Expected Output: {expected_output}
+        Current Output: {current_output}
+        Critiques: {critiques}
+        Adjust the output only to resolve the identified issues. Keep other elements unchanged.
+        Provide only the corrected output without any preamble, reasoning, or conclusion.
+        """
+        rectified_expected_output = (
+            f"Rectified version of: {current_output} with critiques addressed."
+        )
+
+        self.description = rectifier_description
+        self.expected_output = rectified_expected_output
+
+        rectifier_response = agent.execute_task(
+            task=self,
+            context=context,
+            tools=tools,
+        )
+
+        return rectifier_response
