@@ -114,13 +114,14 @@ class RAGStorage(BaseRAGStorage):
         limit: int = 3,
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
+        recency_weight: float = 0.3,
     ) -> List[Any]:
         if not hasattr(self, "app"):
             self._initialize_app()
 
         try:
             with suppress_logging():
-                response = self.collection.query(query_texts=query, n_results=limit)
+                response = self.collection.query(query_texts=query, n_results=limit * 2)  # Get more results to allow for recency filtering
 
             results = []
             for i in range(len(response["ids"][0])):
@@ -130,10 +131,27 @@ class RAGStorage(BaseRAGStorage):
                     "context": response["documents"][0][i],
                     "score": response["distances"][0][i],
                 }
+                
+                # Apply recency boost if timestamp exists in metadata
+                if "timestamp" in result["metadata"]:
+                    try:
+                        from datetime import datetime
+                        timestamp = datetime.fromisoformat(result["metadata"]["timestamp"])
+                        now = datetime.now()
+                        # Calculate recency factor (newer = higher score)
+                        time_diff_seconds = (now - timestamp).total_seconds()
+                        recency_factor = max(0, 1 - (time_diff_seconds / (24 * 60 * 60)))  # Normalize to 1 day
+                        # Adjust score with recency factor
+                        result["score"] = result["score"] * (1 - recency_weight) + recency_factor * recency_weight
+                    except (ValueError, TypeError):
+                        pass  # If timestamp parsing fails, use original score
+
                 if result["score"] >= score_threshold:
                     results.append(result)
 
-            return results
+            # Sort by adjusted score (higher is better)
+            results.sort(key=lambda x: x["score"], reverse=True)
+            return results[:limit]  # Return only the requested number of results
         except Exception as e:
             logging.error(f"Error during {self.type} search: {str(e)}")
             return []

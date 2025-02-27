@@ -56,6 +56,11 @@ class ShortTermMemory(Memory):
         if self._memory_provider == "mem0":
             item.data = f"Remember the following insights from Agent run: {item.data}"
 
+        # Include timestamp in metadata
+        if item.metadata is None:
+            item.metadata = {}
+        item.metadata["timestamp"] = item.timestamp.isoformat()
+
         super().save(value=item.data, metadata=item.metadata, agent=item.agent)
 
     def search(
