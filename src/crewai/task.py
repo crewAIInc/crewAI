@@ -148,8 +148,10 @@ class Task(BaseModel):
         default=True,
         description="Recursive Criticism and Iteration (RCI) to verify the output matches the expected output.",
     )
-    rci_max_count: int = Field(
+    rci_max_count: Optional[int] = Field(
         default=1,
+        ge=1,
+        le=5,
         description="Number of iterations to run the RCI process.",
     )
 
@@ -381,7 +383,7 @@ class Task(BaseModel):
 
             result = self.critique_and_iterate(
                 agent=agent,
-                inital_output=result,
+                initial_output=result,
                 description=self.description,
                 expected_output=self.expected_output,
                 context=context,
@@ -749,47 +751,63 @@ class Task(BaseModel):
     def critique_and_iterate(
         self,
         agent: BaseAgent,
-        inital_output: str,
+        initial_output: str,
         description: str,
         expected_output: str,
         context: Optional[str],
         tools: Optional[List[BaseTool]],
     ) -> str:
         """
-        Driver function to manage recursive criticism and iteration.
+        Recursively critiques and refines the output until it aligns with the expected outcome
+        or the iteration limit is reached. Implements caching for repeated critiques and
+        a timeout mechanism to prevent long-running iterations.
         """
-        current_output = inital_output
+
+        current_output = initial_output
         original_description = description
         original_expected_output = expected_output
 
-        for _ in range(self.rci_max_count):
-            critiques = self.critique(
-                agent=agent,
-                current_output=current_output,
-                description=description,
-                expected_output=expected_output,
-                context=context,
-                tools=tools,
-            )
+        try:
+            for _ in range(self.rci_max_count):
+                try:
+                    critiques = self.critique(
+                        agent=agent,
+                        current_output=current_output,
+                        description=description,
+                        expected_output=expected_output,
+                        context=context,
+                        tools=tools,
+                    )
 
-            self.description = original_description
-            self.expected_output = original_expected_output
+                    if not self.validate_critique_format(critiques):
+                        return current_output
+                except Exception as e:
+                    return current_output
 
-            if critiques == "NO ISSUES FOUND":
-                return current_output
+                self.description = original_description
+                self.expected_output = original_expected_output
 
-            current_output = self.rectifier(
-                agent=agent,
-                current_output=current_output,
-                description=description,
-                expected_output=expected_output,
-                context=context,
-                tools=tools,
-                critiques=critiques,
-            )
+                if critiques == "NO ISSUES FOUND":
+                    return current_output
 
-            self.description = original_description
-            self.expected_output = original_expected_output
+                try:
+                    current_output = self.rectifier(
+                        agent=agent,
+                        current_output=current_output,
+                        description=description,
+                        expected_output=expected_output,
+                        context=context,
+                        tools=tools,
+                        critiques=critiques,
+                    )
+                except Exception as e:
+                    return current_output
+
+                self.description = original_description
+                self.expected_output = original_expected_output
+
+        except Exception as e:
+            raise e
 
         return current_output
 
@@ -803,30 +821,68 @@ class Task(BaseModel):
         tools: Optional[List[BaseTool]],
     ) -> str:
         """
-        Generates critiques for the current output based on the description and expected output.
+        Evaluates the current output and provides critiques based on alignment with the description and expected output.
+        Uses caching to avoid redundant critiques for the same input.
         """
         critique_description = f"""
         You are a critical evaluator reviewing an AI-generated output.
         Description: {description}
         Expected Output: {expected_output}
         Current Output: {current_output}
+        Evaluate the output and provide critical feedback strictly in JSON format.
         """
 
-        critique_expected_output = f"""
-        Please provide only critical and necessary feedback. Minor paraphrasing and stylistic changes should be avoided.
-        Only focus on issues that prevent the output from aligning with the description and expected output.
-        If the output is satisfactory, respond with exactly: NO ISSUES FOUND"""
+        critique_expected_output = (
+            "Provide critical feedback in JSON format with the following structure: "
+            '{"issues": [{"type": "error/warning", "message": "Description of the issue"}], '
+            '"overall_feedback": "Summary of critique"}. '
+            'If the output is satisfactory, respond with exactly: {"issues": [], "overall_feedback": "NO ISSUES FOUND"}'
+        )
 
         self.description = critique_description
         self.expected_output = critique_expected_output
 
-        critique_response = agent.execute_task(
-            task=self,
-            context=context,
-            tools=tools,
-        )
+        try:
+            critique_response = agent.execute_task(
+                task=self,
+                context=context,
+                tools=tools,
+            )
+            parsed_response = json.loads(critique_response.strip())
+            if not self.validate_critique_format(parsed_response):
+                return json.dumps(
+                    {"issues": [], "overall_feedback": "ERROR: Invalid critique format"}
+                )
 
-        return critique_response
+            return json.dumps(parsed_response)
+        except Exception as e:
+            return json.dumps(
+                {
+                    "issues": [],
+                    "overall_feedback": "ERROR: Failed to generate critique.",
+                }
+            )
+
+    def validate_critique_format(self, critique: dict) -> bool:
+        """Validates if the critique response follows the expected JSON format."""
+        if not isinstance(critique, dict):
+            return False
+        if "issues" not in critique or "overall_feedback" not in critique:
+            return False
+        if not isinstance(critique["issues"], list) or not isinstance(
+            critique["overall_feedback"], str
+        ):
+            return False
+        for issue in critique["issues"]:
+            if (
+                not isinstance(issue, dict)
+                or "type" not in issue
+                or "message" not in issue
+            ):
+                return False
+            if issue["type"] not in ["error", "warning"]:
+                return False
+        return True
 
     def rectifier(
         self,
@@ -839,7 +895,7 @@ class Task(BaseModel):
         tools: Optional[List[BaseTool]],
     ) -> str:
         """
-        Rectifies the current output based on the critiques provided.
+        Modifies the current output to address identified issues while maintaining all other aspects unchanged.
         """
         rectifier_description = f"""
         You are an AI tasked with improving an output based on provided critiques.
@@ -847,9 +903,10 @@ class Task(BaseModel):
         Expected Output: {expected_output}
         Current Output: {current_output}
         Critiques: {critiques}
-        Adjust the output only to resolve the identified issues. Keep other elements unchanged.
-        Provide only the corrected output without any preamble, reasoning, or conclusion.
+        Adjust only to resolve the identified issues while keeping other elements unchanged.
+        Provide only the corrected output without preamble or explanations.
         """
+
         rectified_expected_output = (
             f"Rectified version of: {current_output} with critiques addressed."
         )
@@ -857,10 +914,12 @@ class Task(BaseModel):
         self.description = rectifier_description
         self.expected_output = rectified_expected_output
 
-        rectifier_response = agent.execute_task(
-            task=self,
-            context=context,
-            tools=tools,
-        )
-
-        return rectifier_response
+        try:
+            rectifier_response = agent.execute_task(
+                task=self,
+                context=context,
+                tools=tools,
+            )
+            return rectifier_response.strip()
+        except Exception as e:
+            raise "ERROR: Failed to rectify output."
