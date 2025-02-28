@@ -1,8 +1,9 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+from langchain_core.agents import AgentFinish
 
 from crewai.task import Task
-from langchain_core.agents import AgentFinish
 
 
 class TestMultiRoundDialogue(unittest.TestCase):
