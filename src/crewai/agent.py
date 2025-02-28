@@ -327,7 +327,7 @@ class Agent(BaseAgent):
             request_within_rpm_limit=(
                 self._rpm_controller.check_or_wait if self._rpm_controller else None
             ),
-            callbacks=[TokenCalcHandler(self._token_process)],
+            callbacks=[TokenCalcHandler(self.token_process)],
         )
 
     def get_delegation_tools(self, agents: List[BaseAgent]):
