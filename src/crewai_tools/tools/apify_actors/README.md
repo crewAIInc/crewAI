@@ -1,7 +1,7 @@
 # ApifyActorsTool
 
 ## Description
-The `ApifyActorsTool` is a powerful utility that enables seamless integration of [Apify](https://apify.com/) into your CrewAI workflows. Apify Actors are cloud-based web scraping and automation programs that allow you to extract data, crawl websites, and automate tasks without managing infrastructure. This tool provides an efficient way to run Actors like the [RAG Web Browser](https://apify.com/apify/rag-web-browser) directly within your agents, making it ideal for tasks requiring real-time web data extraction or automation. For more Actors, visit the [Apify Store](https://apify.com/store).
+The `ApifyActorsTool` is a powerful utility that enables seamless integration of [Apify Actors](https://apify.com/) into your CrewAI workflows. Apify Actors are cloud-based web scraping and automation programs that allow you to extract data, crawl websites, and automate tasks without managing infrastructure. This tool provides an efficient way to run Actors like the [RAG Web Browser](https://apify.com/apify/rag-web-browser) directly within your agents, making it ideal for tasks requiring real-time web data extraction or automation. For more Actors, visit the [Apify Store](https://apify.com/store).
 
 For more details on using Apify with CrewAI, visit the [Apify CrewAI integration documentation](https://docs.apify.com/platform/integrations/crewai).
 
@@ -31,7 +31,9 @@ tool = ApifyActorsTool(actor_name="apify/rag-web-browser")
 
 # Run the tool with a specific input, e.g., a search query
 results = tool.run(run_input={"query": "What is CrewAI?", "maxResults": 5})
-print(results)
+for result in results:
+    print(result['metadata']['url'])
+    print(result['markdown'])
 ```
 
 ## Arguments

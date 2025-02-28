@@ -1,16 +1,10 @@
 from crewai.tools import BaseTool
 from pydantic import Field
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 import os
 
-try:
+if TYPE_CHECKING:
     from langchain_apify import ApifyActorsTool as _ApifyActorsTool
-except ImportError:
-    raise ImportError(
-        "Could not import langchain_apify python package. "
-        "Please install it with `pip install langchain-apify` or `uv add langchain-apify`."
-    )
-
 
 class ApifyActorsTool(BaseTool):
     """Tool that runs Apify Actors.
@@ -20,18 +14,30 @@ class ApifyActorsTool(BaseTool):
 
         For details, see https://docs.apify.com/platform/integrations/crewai
 
+        Args:
+            actor_name (str): The name of the Apify Actor to run.
+            *args: Variable length argument list passed to BaseTool.
+            **kwargs: Arbitrary keyword arguments passed to BaseTool.
+
+        Returns:
+            List[Dict[str, Any]]: Results from the actor execution.
+
+        Raises:
+            ValueError: If `APIFY_API_TOKEN` is not set or if the tool is not initialized.
+            ImportError: If `langchain_apify` package is not installed.
+
         Example:
             .. code-block:: python
                 from crewai_tools import ApifyActorsTool
 
-                tool = ApifyActorsTool(actor_id="apify/rag-web-browser")
+                tool = ApifyActorsTool(actor_name="apify/rag-web-browser")
 
-                results = tool.run({"query": "what is Apify?", "maxResults": 5})
-                print(results)
+                results = tool.run(run_input={"query": "What is CrewAI?", "maxResults": 5})
+                for result in results:
+                    print(result['metadata']['url'])
+                    print(result['markdown'])
         """
-    actor_tool: _ApifyActorsTool | None = Field(
-        default=None, description="Apify Actor Tool"
-    )
+    actor_tool: _ApifyActorsTool = Field(description="Apify Actor Tool")
 
     def __init__(
         self,
@@ -47,6 +53,13 @@ class ApifyActorsTool(BaseTool):
             )
             raise ValueError(msg)
 
+        try:
+            from langchain_apify import ApifyActorsTool as _ApifyActorsTool
+        except ImportError:
+            raise ImportError(
+                "Could not import langchain_apify python package. "
+                "Please install it with `pip install langchain-apify` or `uv add langchain-apify`."
+            )
         actor_tool = _ApifyActorsTool(actor_name)
 
         kwargs.update(
@@ -68,7 +81,12 @@ class ApifyActorsTool(BaseTool):
         Raises:
             ValueError: If 'actor_tool' is not initialized.
         """
-        if self.actor_tool is None:
-            msg = "ApifyActorsToolCrewAI is not initialized"
-            raise ValueError(msg)
-        return self.actor_tool._run(run_input)
+        try:
+            return self.actor_tool._run(run_input)
+        except Exception as e:
+            msg = (
+                f'Failed to run ApifyActorsTool {self.name}. '
+                'Please check your Apify account Actor run logs for more details.'
+                f'Error: {e}'
+            )
+            raise RuntimeError(msg) from e
