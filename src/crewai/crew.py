@@ -314,6 +314,19 @@ class Crew(BaseModel):
                         collection_name="crew",
                     )
 
+            except ValueError as e:
+                # Check if the error is related to missing google-generativeai package
+                if "The Google Generative AI python package is not installed" in str(e):
+                    self._logger.log(
+                        "error",
+                        "Google AI Studio embedder requires the google-generativeai package. "
+                        "Please install it with `pip install google-generativeai`",
+                        color="red",
+                    )
+                else:
+                    self._logger.log(
+                        "warning", f"Failed to init knowledge: {e}", color="yellow"
+                    )
             except Exception as e:
                 self._logger.log(
                     "warning", f"Failed to init knowledge: {e}", color="yellow"
