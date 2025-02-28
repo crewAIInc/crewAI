@@ -547,6 +547,7 @@ def test_crew_with_delegating_agents():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_task_tools():
+
     from typing import Type
 
     from pydantic import BaseModel, Field
