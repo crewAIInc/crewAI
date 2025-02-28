@@ -1,7 +1,9 @@
 # ApifyActorsTool
+
 Integrate [Apify Actors](https://apify.com/) into your CrewAI workflows with Ease.
 
 ## Description
+
 The `ApifyActorsTool` seamlessly integrates [Apify Actors](https://apify.com/) - cloud-based web scraping and automation programs—into your CrewAI workflows. Whether you need to extract data, crawl websites, or automate tasks, this tool simplifies the process without requiring infrastructure management.
 
 Key features:
@@ -12,9 +14,11 @@ Key features:
 For detailed integration guidance, see the [Apify CrewAI documentation](https://docs.apify.com/platform/integrations/crewai).
 
 ## Installation
+
 To use `ApifyActorsTool`, install the required packages and configure your Apify API token. You’ll need an API token from Apify - see the [Apify API documentation](https://docs.apify.com/platform/integrations/api) for instructions.
 
 ### Steps
+
 1. **Install Dependencies**
    Use pip to install `crewai[tools]` and `langchain-apify`:
    ```bash
@@ -41,6 +45,7 @@ To use `ApifyActorsTool`, install the required packages and configure your Apify
    Run `python -c "import langchain_apify; print('Setup complete')"` to ensure dependencies are installed.
 
 ## Usage example
+
 Here’s how to use `ApifyActorsTool` to run the [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser) for web searching within a CrewAI workflow:
 
 ```python
@@ -59,6 +64,7 @@ for result in results:
 ```
 
 ### Expected output
+
 ```
 URL: https://www.example.com/crewai-intro
 Content: CrewAI is a framework for building AI-powered workflows...
@@ -66,9 +72,12 @@ URL: https://docs.crewai.com/
 Content: Official documentation for CrewAI...
 ```
 
+For a more comprehensive example with tool-agent, see [CrewAI Apify Actor template](https://apify.com/templates/python-crewai).
+
 Try other Actors from the [Apify Store](https://apify.com/store) by changing `actor_name` and adjusting `run_input` per the Actor's input schema.
 
 ## Configuration
+
 The `ApifyActorsTool` requires specific inputs to operate:
 
 - **`actor_name` (str, required)**
@@ -81,6 +90,7 @@ The `ApifyActorsTool` requires specific inputs to operate:
 The tool adapts dynamically to the chosen Actor.
 
 ## Resources
+
 - **[Apify Platform](https://apify.com/)**: Explore the Apify ecosystem.
 - **[RAG Web Browser Actor](https://apify.com/apify/rag-web-browser)**: Try this popular Actor for web data retrieval.
 - **[Apify Actors Documentation](https://docs.apify.com/platform/actors)**: Learn how to use and create Actors.
