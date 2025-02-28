@@ -253,32 +253,43 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
-def test_validate_call_params_azure_openai_supported():
-    """Test that Azure OpenAI models that should support JSON mode can use response_format."""
-    # Test with gpt-4o
-    llm = LLM(model="azure/gpt-4o", response_format={"type": "json_object"})
-    # Should not raise any error
-    llm._validate_call_params()
+class TestAzureOpenAIResponseFormat:
+    @pytest.mark.parametrize("model_name", [
+        "azure/gpt-4o",
+        "azure/gpt-35-turbo",
+        "azure/gpt-4-turbo"
+    ])
+    def test_supported_models(self, model_name):
+        """Test that Azure OpenAI models that should support JSON mode can use response_format."""
+        llm = LLM(model=model_name, response_format={"type": "json_object"})
+        # Should not raise any error
+        llm._validate_call_params()
     
-    # Test with gpt-35-turbo
-    llm = LLM(model="azure/gpt-35-turbo", response_format={"type": "json_object"})
-    # Should not raise any error
-    llm._validate_call_params()
+    def test_unsupported_model(self):
+        """Test that Azure OpenAI models that don't support JSON mode cannot use response_format."""
+        with patch("crewai.llm.supports_response_schema", return_value=False):
+            llm = LLM(model="azure/text-davinci-003", response_format={"type": "json_object"})
+            with pytest.raises(ValueError) as excinfo:
+                llm._validate_call_params()
+            assert "does not support response_format" in str(excinfo.value)
     
-    # Test with gpt-4-turbo
-    llm = LLM(model="azure/gpt-4-turbo", response_format={"type": "json_object"})
-    # Should not raise any error
-    llm._validate_call_params()
-
-
-def test_validate_call_params_azure_openai_unsupported():
-    """Test that Azure OpenAI models that don't support JSON mode cannot use response_format."""
-    # Test with a model that doesn't support JSON mode
-    with patch("crewai.llm.supports_response_schema", return_value=False):
-        llm = LLM(model="azure/text-davinci-003", response_format={"type": "json_object"})
-        with pytest.raises(ValueError) as excinfo:
-            llm._validate_call_params()
-        assert "does not support response_format" in str(excinfo.value)
+    def test_validate_call_params_azure_invalid_response_format(self):
+        """Test that Azure OpenAI models validate the response_format type."""
+        # This test is a placeholder as the current implementation doesn't validate the response_format type
+        # If validation is added in the future, this test should be updated
+        llm = LLM(model="azure/gpt-4-turbo", response_format={"type": "json_object"})
+        # Should not raise any error
+        llm._validate_call_params()
+    
+    def test_validate_call_params_azure_none_provider(self):
+        """Test that non-Azure models with Azure model names don't skip validation."""
+        # This test verifies that the provider check is working correctly
+        with patch("crewai.llm.LLM._get_custom_llm_provider", return_value="openai"):
+            with patch("crewai.llm.supports_response_schema", return_value=False):
+                llm = LLM(model="gpt-4-turbo", response_format={"type": "json_object"})
+                with pytest.raises(ValueError) as excinfo:
+                    llm._validate_call_params()
+                assert "does not support response_format" in str(excinfo.value)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

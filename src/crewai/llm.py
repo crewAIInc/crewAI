@@ -127,6 +127,9 @@ def suppress_warnings():
 
 
 class LLM:
+    # Azure OpenAI models that support JSON mode
+    AZURE_JSON_SUPPORTED_MODELS = ["gpt-35-turbo", "gpt-4-turbo", "gpt-4o"]
+    
     def __init__(
         self,
         model: str,
@@ -446,21 +449,40 @@ class LLM:
         if "/" in self.model:
             return self.model.split("/")[0]
         return "openai"
+        
+    def _is_azure_json_supported_model(self) -> bool:
+        """
+        Check if the current model is an Azure OpenAI model that supports JSON mode.
+        
+        Returns:
+            bool: True if the model is an Azure OpenAI model that supports JSON mode, False otherwise.
+        """
+        return any(prefix in self.model for prefix in self.AZURE_JSON_SUPPORTED_MODELS)
 
     def _validate_call_params(self) -> None:
         """
         Validate parameters before making a call. Currently this only checks if
         a response_format is provided and whether the model supports it.
+        
+        Special handling for Azure OpenAI models that support JSON mode:
+        - gpt-35-turbo
+        - gpt-4-turbo
+        - gpt-4o
+        
         The custom_llm_provider is dynamically determined from the model:
           - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
           - "gemini/gemini-1.5-pro" yields "gemini"
           - If no slash is present, "openai" is assumed.
+          
+        Raises:
+            ValueError: If response_format is used with unsupported models
         """
         provider = self._get_custom_llm_provider()
         
         # Special case for Azure OpenAI models that support JSON mode
-        if (provider == "azure" and self.response_format is not None and
-            any(model_prefix in self.model for model_prefix in ["gpt-35-turbo", "gpt-4-turbo", "gpt-4o"])):
+        if (provider == "azure" and 
+            self.response_format is not None and 
+            self._is_azure_json_supported_model()):
             return  # Skip validation for Azure OpenAI models that support JSON mode
             
         if self.response_format is not None and not supports_response_schema(
