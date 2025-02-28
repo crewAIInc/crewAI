@@ -1,6 +1,6 @@
 # ApifyActorsTool
 
-Integrate [Apify Actors](https://apify.com/) into your CrewAI workflows with Ease.
+Integrate [Apify Actors](https://apify.com/) into your CrewAI workflows with ease.
 
 ## Description
 
@@ -65,7 +65,7 @@ for result in results:
 
 ### Expected output
 
-```
+```text
 URL: https://www.example.com/crewai-intro
 Content: CrewAI is a framework for building AI-powered workflows...
 URL: https://docs.crewai.com/
@@ -87,7 +87,7 @@ The `ApifyActorsTool` requires specific inputs to operate:
   - For `apify/rag-web-browser`: `{"query": "search term", "maxResults": 5}`
   - Check each Actor’s [input schema](https://apify.com/apify/rag-web-browser/input-schema) for details.
 
-The tool adapts dynamically to the chosen Actor.
+The tool adapts dynamically to the chosen [Actor](https://docs.apify.com/platform/actors).
 
 ## Resources
 
