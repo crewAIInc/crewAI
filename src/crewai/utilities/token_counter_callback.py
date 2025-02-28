@@ -217,4 +217,9 @@ class LangChainTokenCounter(BaseCallbackHandler, AbstractTokenCounter):
 
 
 # For backward compatibility
-TokenCalcHandler = LiteLLMTokenCounter
+class TokenCalcHandler(LiteLLMTokenCounter):
+    """
+    Alias for LiteLLMTokenCounter.
+    """
+
+    pass

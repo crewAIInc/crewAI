@@ -133,8 +133,14 @@ class TestTokenTracking:
         Integration test for token tracking with LangChainAgentAdapter.
         This test requires an OpenAI API key.
         """
+        # Skip if LangGraph is not installed
+        try:
+            from langgraph.prebuilt import ToolNode
+        except ImportError:
+            pytest.skip("LangGraph is not installed. Install it with: uv add langgraph")
+
         # Initialize a ChatOpenAI model
-        llm = ChatOpenAI(model="gpt-3.5-turbo")
+        llm = ChatOpenAI(model="gpt-4o")
 
         # Create a LangChainAgentAdapter with the direct LLM
         agent = LangChainAgentAdapter(
