@@ -457,6 +457,12 @@ class LLM:
           - If no slash is present, "openai" is assumed.
         """
         provider = self._get_custom_llm_provider()
+        
+        # Special case for Azure OpenAI models that support JSON mode
+        if (provider == "azure" and self.response_format is not None and
+            any(model_prefix in self.model for model_prefix in ["gpt-35-turbo", "gpt-4-turbo", "gpt-4o"])):
+            return  # Skip validation for Azure OpenAI models that support JSON mode
+            
         if self.response_format is not None and not supports_response_schema(
             model=self.model,
             custom_llm_provider=provider,
