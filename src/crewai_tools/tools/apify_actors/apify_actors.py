@@ -20,7 +20,7 @@ class ApifyActorsTool(BaseTool):
             **kwargs: Arbitrary keyword arguments passed to BaseTool.
 
         Returns:
-            List[Dict[str, Any]]: Results from the actor execution.
+            List[Dict[str, Any]]: Results from the Actor execution.
 
         Raises:
             ValueError: If `APIFY_API_TOKEN` is not set or if the tool is not initialized.
@@ -76,7 +76,7 @@ class ApifyActorsTool(BaseTool):
         """Run the Actor tool with the given input.
 
         Returns:
-            List[Dict[str, Any]]: Results from the actor execution.
+            List[Dict[str, Any]]: Results from the Actor execution.
 
         Raises:
             ValueError: If 'actor_tool' is not initialized.
