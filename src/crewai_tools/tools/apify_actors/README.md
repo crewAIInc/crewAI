@@ -55,7 +55,7 @@ results = tool.run(run_input={"query": "What is CrewAI?", "maxResults": 5})
 # Process the results
 for result in results:
     print(f"URL: {result['metadata']['url']}")
-    print(f"Content: {result['markdown'][:100]}...")  # Snippet of markdown content
+    print(f"Content: {result.get('markdown', 'N/A')[:100]}...")  # Snippet of markdown content
 ```
 
 ### Expected output

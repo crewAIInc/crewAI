@@ -34,8 +34,8 @@ class ApifyActorsTool(BaseTool):
 
                 results = tool.run(run_input={"query": "What is CrewAI?", "maxResults": 5})
                 for result in results:
-                    print(result['metadata']['url'])
-                    print(result['markdown'])
+                    print(f"URL: {result['metadata']['url']}")
+                    print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
         """
     actor_tool: _ApifyActorsTool = Field(description="Apify Actor Tool")
 
