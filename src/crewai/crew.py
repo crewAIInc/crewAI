@@ -248,7 +248,6 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
-        self._cache_handler = CacheHandler()
         self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
@@ -260,12 +259,7 @@ class Crew(BaseModel):
 
     @model_validator(mode="after")
     def initialize_dependencies(self) -> "Crew":
-        # Create a cache handler if caching is enabled
-        if self.cache:
-            self._cache_handler = CacheHandler()
-        else:
-            self._cache_handler = None
-
+        # Always create a cache handler, but it will only be used if self.cache is True
         # Create the Crew-level RPM controller if a max RPM is specified
         if self.max_rpm is not None:
             self._rpm_controller = RPMController(
@@ -277,10 +271,7 @@ class Crew(BaseModel):
         # Now inject these external dependencies into each agent
         for agent in self.agents:
             agent.crew = self  # ensure the agent's crew reference is set
-            # If cache is disabled (_cache_handler is None) provide a new CacheHandler instance
-            agent.configure_executor(
-                self._cache_handler or CacheHandler(), self._rpm_controller
-            )
+            agent.configure_executor(self._cache_handler, self._rpm_controller)
 
         return self
 
