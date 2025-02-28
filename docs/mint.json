@@ -116,6 +116,7 @@
     {
       "group": "Tools",
       "pages": [
+        "tools/apifyactorstool",
         "tools/browserbaseloadtool",
         "tools/codedocssearchtool",
         "tools/codeinterpretertool",
