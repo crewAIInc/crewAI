@@ -574,6 +574,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             AgentFinish: The final answer after processing feedback
         """
+        if max_rounds < 1:
+            raise ValueError("max_rounds must be positive")
+            
         feedback = initial_feedback
         answer = current_answer
         current_round = 1

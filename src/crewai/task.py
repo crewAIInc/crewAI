@@ -128,6 +128,8 @@ class Task(BaseModel):
     max_dialogue_rounds: int = Field(
         default=10,
         description="Maximum number of dialogue rounds for human input",
+        ge=1,  # Ensures positive integer
+        examples=[5, 10, 15],
     )
     converter_cls: Optional[Type[Converter]] = Field(
         description="A converter class used to export structured output",

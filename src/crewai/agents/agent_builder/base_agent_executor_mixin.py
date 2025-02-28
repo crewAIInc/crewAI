@@ -105,8 +105,9 @@ class CrewAgentExecutorMixin:
         Returns:
             str: The user's feedback
         """
+        round_info = f"\033[1m\033[93mRound {current_round}/{max_rounds}\033[00m"
         self._printer.print(
-            content=f"\033[1m\033[95m ## Result (Round {current_round}/{max_rounds}):\033[00m \033[92m{final_answer}\033[00m"
+            content=f"\033[1m\033[95m ## Result {round_info}:\033[00m \033[92m{final_answer}\033[00m"
         )
 
         # Training mode prompt (single iteration)
