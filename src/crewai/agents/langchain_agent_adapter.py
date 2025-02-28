@@ -1,18 +1,17 @@
 from typing import Any, List, Optional, Type, Union, cast
 
-from crewai.tools.base_tool import Tool
-
-try:
-    from langchain_core.tools import Tool as LangChainTool  # type: ignore
-except ImportError:
-    LangChainTool = None
-
 from pydantic import Field, field_validator
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.task import Task
 from crewai.tools import BaseTool
+from crewai.tools.base_tool import Tool
 from crewai.utilities.converter import Converter, generate_model_description
+from crewai.utilities.token_counter_callback import (
+    LangChainTokenCounter,
+    LiteLLMTokenCounter,
+)
 
 
 class LangChainAgentAdapter(BaseAgent):
@@ -51,6 +50,8 @@ class LangChainAgentAdapter(BaseAgent):
     i18n: Any = None
     crew: Any = None
     knowledge: Any = None
+    token_process: TokenProcess = Field(default_factory=TokenProcess, exclude=True)
+    token_callback: Optional[Any] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -72,16 +73,35 @@ class LangChainAgentAdapter(BaseAgent):
     def _extract_text(self, message: Any) -> str:
         """
         Helper to extract plain text from a message object.
-        This checks if the message is a dict with a "content" key, or has a "content" attribute.
+        This checks if the message is a dict with a "content" key, or has a "content" attribute,
+        or if it's a tuple from LangGraph's message format.
         """
-        if isinstance(message, dict) and "content" in message:
-            return message["content"]
+        # Handle LangGraph message tuple format (role, content)
+        if isinstance(message, tuple) and len(message) == 2:
+            return str(message[1])
+
+        # Handle dictionary with content key
+        elif isinstance(message, dict):
+            if "content" in message:
+                return message["content"]
+            # Handle LangGraph message format with additional metadata
+            elif "messages" in message and message["messages"]:
+                last_message = message["messages"][-1]
+                if isinstance(last_message, tuple) and len(last_message) == 2:
+                    return str(last_message[1])
+                return self._extract_text(last_message)
+
+        # Handle object with content attribute
         elif hasattr(message, "content") and isinstance(
             getattr(message, "content"), str
         ):
             return getattr(message, "content")
+
+        # Handle string directly
         elif isinstance(message, str):
             return message
+
+        # Default fallback
         return str(message)
 
     def execute_task(
@@ -161,19 +181,77 @@ class LangChainAgentAdapter(BaseAgent):
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
 
+        # Initialize token tracking callback if needed
+        if hasattr(self, "token_process") and self.token_callback is None:
+            # Determine if we're using LangChain or LiteLLM based on the agent type
+            if hasattr(self.langchain_agent, "client") and hasattr(
+                self.langchain_agent.client, "callbacks"
+            ):
+                # This is likely a LiteLLM-based agent
+                self.token_callback = LiteLLMTokenCounter(self.token_process)
+
+                # Add our callback to the LLM directly
+                if isinstance(self.langchain_agent.client.callbacks, list):
+                    self.langchain_agent.client.callbacks.append(self.token_callback)
+                else:
+                    self.langchain_agent.client.callbacks = [self.token_callback]
+            else:
+                # This is likely a LangChain-based agent
+                self.token_callback = LangChainTokenCounter(self.token_process)
+
+                # Add callback to the LangChain model
+                if hasattr(self.langchain_agent, "callbacks"):
+                    if self.langchain_agent.callbacks is None:
+                        self.langchain_agent.callbacks = [self.token_callback]
+                    elif isinstance(self.langchain_agent.callbacks, list):
+                        self.langchain_agent.callbacks.append(self.token_callback)
+                # For direct LLM models
+                elif hasattr(self.langchain_agent, "llm") and hasattr(
+                    self.langchain_agent.llm, "callbacks"
+                ):
+                    if self.langchain_agent.llm.callbacks is None:
+                        self.langchain_agent.llm.callbacks = [self.token_callback]
+                    elif isinstance(self.langchain_agent.llm.callbacks, list):
+                        self.langchain_agent.llm.callbacks.append(self.token_callback)
+                # Direct LLM case
+                elif not hasattr(self.langchain_agent, "agent"):
+                    # This might be a direct LLM, not an agent
+                    if (
+                        not hasattr(self.langchain_agent, "callbacks")
+                        or self.langchain_agent.callbacks is None
+                    ):
+                        self.langchain_agent.callbacks = [self.token_callback]
+                    elif isinstance(self.langchain_agent.callbacks, list):
+                        self.langchain_agent.callbacks.append(self.token_callback)
+
         init_state = {"messages": [("user", task_prompt)]}
+
+        # Estimate input tokens for tracking
+        if hasattr(self, "token_process"):
+            # Rough estimate based on characters (better than word count)
+            estimated_prompt_tokens = len(task_prompt) // 4  # ~4 chars per token
+            self.token_process.sum_prompt_tokens(estimated_prompt_tokens)
+
         state = self.agent_executor.invoke(init_state)
 
+        # Extract output from state based on its structure
         if "structured_response" in state:
             current_output = state["structured_response"]
         elif "messages" in state and state["messages"]:
             last_message = state["messages"][-1]
-            if isinstance(last_message, tuple):
-                current_output = last_message[1]
-            else:
-                current_output = self._extract_text(last_message)
+            current_output = self._extract_text(last_message)
+        elif "output" in state:
+            current_output = str(state["output"])
         else:
-            current_output = ""
+            # Fallback to extracting text from the entire state
+            current_output = self._extract_text(state)
+
+        # Estimate completion tokens for tracking if we don't have actual counts
+        if hasattr(self, "token_process"):
+            # Rough estimate based on characters
+            estimated_completion_tokens = len(current_output) // 4  # ~4 chars per token
+            self.token_process.sum_completion_tokens(estimated_completion_tokens)
+            self.token_process.sum_successful_requests(1)
 
         if task.human_input:
             current_output = self._handle_human_feedback(current_output)
@@ -203,20 +281,40 @@ class LangChainAgentAdapter(BaseAgent):
                 f"Specifically, display 10 bullet points in each section. Provide the complete updated answer below.\n\n"
                 f"Updated answer:"
             )
+
+            # Estimate input tokens for tracking
+            if hasattr(self, "token_process"):
+                # Rough estimate based on characters
+                estimated_prompt_tokens = len(new_prompt) // 4  # ~4 chars per token
+                self.token_process.sum_prompt_tokens(estimated_prompt_tokens)
+
             try:
                 new_state = self.agent_executor.invoke(
                     {"messages": [("user", new_prompt)]}
                 )
+                # Extract output from state based on its structure
                 if "structured_response" in new_state:
                     new_output = new_state["structured_response"]
                 elif "messages" in new_state and new_state["messages"]:
                     last_message = new_state["messages"][-1]
-                    if isinstance(last_message, tuple):
-                        new_output = last_message[1]
-                    else:
-                        new_output = self._extract_text(last_message)
+                    new_output = self._extract_text(last_message)
+                elif "output" in new_state:
+                    new_output = str(new_state["output"])
                 else:
-                    new_output = ""
+                    # Fallback to extracting text from the entire state
+                    new_output = self._extract_text(new_state)
+
+                # Estimate completion tokens for tracking
+                if hasattr(self, "token_process"):
+                    # Rough estimate based on characters
+                    estimated_completion_tokens = (
+                        len(new_output) // 4
+                    )  # ~4 chars per token
+                    self.token_process.sum_completion_tokens(
+                        estimated_completion_tokens
+                    )
+                    self.token_process.sum_successful_requests(1)
+
                 current_output = new_output
             except Exception as e:
                 print("Error during re-invocation with feedback:", e)
@@ -309,6 +407,52 @@ class LangChainAgentAdapter(BaseAgent):
 
         agent_role = getattr(self, "role", "agent")
         sanitized_role = re.sub(r"\s+", "_", agent_role)
+
+        # Initialize token tracking callback if needed
+        if hasattr(self, "token_process") and self.token_callback is None:
+            # Determine if we're using LangChain or LiteLLM based on the agent type
+            if hasattr(self.langchain_agent, "client") and hasattr(
+                self.langchain_agent.client, "callbacks"
+            ):
+                # This is likely a LiteLLM-based agent
+                self.token_callback = LiteLLMTokenCounter(self.token_process)
+
+                # Add our callback to the LLM directly
+                if isinstance(self.langchain_agent.client.callbacks, list):
+                    if self.token_callback not in self.langchain_agent.client.callbacks:
+                        self.langchain_agent.client.callbacks.append(
+                            self.token_callback
+                        )
+                else:
+                    self.langchain_agent.client.callbacks = [self.token_callback]
+            else:
+                # This is likely a LangChain-based agent
+                self.token_callback = LangChainTokenCounter(self.token_process)
+
+                # Add callback to the LangChain model
+                if hasattr(self.langchain_agent, "callbacks"):
+                    if self.langchain_agent.callbacks is None:
+                        self.langchain_agent.callbacks = [self.token_callback]
+                    elif isinstance(self.langchain_agent.callbacks, list):
+                        self.langchain_agent.callbacks.append(self.token_callback)
+                # For direct LLM models
+                elif hasattr(self.langchain_agent, "llm") and hasattr(
+                    self.langchain_agent.llm, "callbacks"
+                ):
+                    if self.langchain_agent.llm.callbacks is None:
+                        self.langchain_agent.llm.callbacks = [self.token_callback]
+                    elif isinstance(self.langchain_agent.llm.callbacks, list):
+                        self.langchain_agent.llm.callbacks.append(self.token_callback)
+                # Direct LLM case
+                elif not hasattr(self.langchain_agent, "agent"):
+                    # This might be a direct LLM, not an agent
+                    if (
+                        not hasattr(self.langchain_agent, "callbacks")
+                        or self.langchain_agent.callbacks is None
+                    ):
+                        self.langchain_agent.callbacks = [self.token_callback]
+                    elif isinstance(self.langchain_agent.callbacks, list):
+                        self.langchain_agent.callbacks.append(self.token_callback)
 
         self.agent_executor = create_react_agent(
             model=self.langchain_agent,

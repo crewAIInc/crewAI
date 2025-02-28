@@ -641,7 +641,7 @@ class Crew(BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
-            metrics += [agent._token_process.get_summary() for agent in self.agents]
+            metrics += [agent.token_process.get_summary() for agent in self.agents]
 
             self.usage_metrics = UsageMetrics()
             for metric in metrics:
@@ -1195,12 +1195,15 @@ class Crew(BaseModel):
         """Calculates and returns the usage metrics."""
         total_usage_metrics = UsageMetrics()
         for agent in self.agents:
-            if hasattr(agent, "_token_process"):
-                token_sum = agent._token_process.get_summary()
-                total_usage_metrics.add_usage_metrics(token_sum)
-        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
-            token_sum = self.manager_agent._token_process.get_summary()
+            # Directly access token_process since it's now a field in BaseAgent
+            token_sum = agent.token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
+
+        if self.manager_agent:
+            # Directly access token_process since it's now a field in BaseAgent
+            token_sum = self.manager_agent.token_process.get_summary()
+            total_usage_metrics.add_usage_metrics(token_sum)
+
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
 

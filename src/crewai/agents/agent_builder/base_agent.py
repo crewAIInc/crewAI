@@ -82,13 +82,18 @@ class BaseAgent(ABC, BaseModel):
     """
 
     __hash__ = object.__hash__  # type: ignore
+
+    model_config = {
+        "arbitrary_types_allowed": True,
+    }
+
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: Optional[RPMController] = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
     _original_role: Optional[str] = PrivateAttr(default=None)
     _original_goal: Optional[str] = PrivateAttr(default=None)
     _original_backstory: Optional[str] = PrivateAttr(default=None)
-    _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
+    token_process: TokenProcess = Field(default_factory=TokenProcess, exclude=True)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     formatting_errors: int = Field(
         default=0, description="Number of formatting errors."
@@ -198,8 +203,6 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = RPMController(
                 max_rpm=self.max_rpm, logger=self._logger
             )
-        if not self._token_process:
-            self._token_process = TokenProcess()
 
         return self
 
@@ -219,8 +222,7 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = RPMController(
                 max_rpm=self.max_rpm, logger=self._logger
             )
-        if not self._token_process:
-            self._token_process = TokenProcess()
+
         return self
 
     @property
@@ -268,7 +270,7 @@ class BaseAgent(ABC, BaseModel):
             "_logger",
             "_rpm_controller",
             "_request_within_rpm_limit",
-            "_token_process",
+            "token_process",
             "agent_executor",
             "tools",
             "tools_handler",
