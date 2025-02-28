@@ -315,22 +315,9 @@ class Crew(BaseModel):
                     )
 
             except ValueError as e:
-                # Check if the error is related to missing google-generativeai package
-                if "The Google Generative AI python package is not installed" in str(e):
-                    self._logger.log(
-                        "error",
-                        "Google AI Studio embedder requires the google-generativeai package. "
-                        "Please install it with `pip install google-generativeai`",
-                        color="red",
-                    )
-                else:
-                    self._logger.log(
-                        "warning", f"Failed to init knowledge: {e}", color="yellow"
-                    )
+                self._handle_value_error(e)
             except Exception as e:
-                self._logger.log(
-                    "warning", f"Failed to init knowledge: {e}", color="yellow"
-                )
+                self._log_init_error(e)
         return self
 
     @model_validator(mode="after")
@@ -484,6 +471,18 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
+
+    def _handle_value_error(self, e: ValueError) -> None:
+        """Handle ValueError exceptions during knowledge initialization."""
+        from crewai.utilities.constants import GOOGLE_EMBEDDER_PACKAGE_ERROR_MSG
+        if "The Google Generative AI python package is not installed" in str(e):
+            self._logger.log("error", GOOGLE_EMBEDDER_PACKAGE_ERROR_MSG, color="red")
+        else:
+            self._log_init_error(e)
+
+    def _log_init_error(self, e: Exception) -> None:
+        """Log initialization errors."""
+        self._logger.log("warning", f"Failed to init knowledge: {e}", color="yellow")
 
     @property
     def key(self) -> str:
