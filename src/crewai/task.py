@@ -125,6 +125,12 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    max_dialogue_rounds: int = Field(
+        default=10,
+        description="Maximum number of dialogue rounds for human input",
+        ge=1,  # Ensures positive integer
+        examples=[5, 10, 15],
+    )
     converter_cls: Optional[Type[Converter]] = Field(
         description="A converter class used to export structured output",
         default=None,
