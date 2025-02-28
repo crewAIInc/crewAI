@@ -8,23 +8,43 @@ icon: toolbox
 
 ## Description
 
-The `ApifyActorsTool` brings the power of [Apify Actors](https://apify.com/)—cloud-based web scraping and automation programs—into your CrewAI workflows. Whether you’re extracting data, crawling websites, or automating tasks, this tool simplifies the process without requiring infrastructure management. Key features include running Actors like the [RAG Web Browser](https://apify.com/apify/rag-web-browser) directly within CrewAI agents, fetching real-time web data, and exploring a variety of Actors from the [Apify Store](https://apify.com/store).
+The `ApifyActorsTool` seamlessly integrates [Apify Actors](https://apify.com/) - cloud-based web scraping and automation programs—into your CrewAI workflows. Whether you need to extract data, crawl websites, or automate tasks, this tool simplifies the process without requiring infrastructure management.
 
-For detailed integration guidance, refer to the [Apify CrewAI documentation](https://docs.apify.com/platform/integrations/crewai).
+Key features:
+- **Run Actors Directly**: Execute Actors like the [RAG Web Browser](https://apify.com/apify/rag-web-browser) within CrewAI agents.
+- **Real-Time Data**: Ideal for tasks requiring up-to-date web data or automation.
+- **Explore More**: Discover additional Actors in the [Apify Store](https://apify.com/store).
+
+For detailed integration guidance, see the [Apify CrewAI documentation](https://docs.apify.com/platform/integrations/crewai).
 
 ## Installation
 
-To use the `ApifyActorsTool`, install the necessary packages and configure your Apify API token. You’ll need an API token from Apify—see the [Apify API documentation](https://docs.apify.com/platform/integrations/api) for instructions.
+To use `ApifyActorsTool`, install the required packages and configure your Apify API token. You’ll need an API token from Apify - see the [Apify API documentation](https://docs.apify.com/platform/integrations/api) for instructions.
 
-```shell
-pip install 'crewai[tools]' langchain-apify
-```
+### Steps
+1. **Install Dependencies**
+   Use pip to install `crewai[tools]` and `langchain-apify`:
+   ```bash
+   pip install 'crewai[tools]' langchain-apify
+   ```
+   Alternatively, with `uv`:
+   ```bash
+   uv pip install 'crewai[tools]' langchain-apify
+   ```
 
-- Set your API token as an environment variable (`APIFY_API_TOKEN`):
-  - Linux/macOS: `export APIFY_API_TOKEN='your-api-token-here'`
-  - Windows: `set APIFY_API_TOKEN=your-api-token-here'`
+2. **Set Your API Token**
+   Export the token as an environment variable:
+   - On Linux/macOS:
+     ```bash
+     export APIFY_API_TOKEN='your-api-token-here'
+     ```
+   - On Windows (Command Prompt):
+     ```cmd
+     set APIFY_API_TOKEN=your-api-token-here
+     ```
+   - Or add it to your `.env` file and load it with a library like `python-dotenv`.
 
-## Example
+## Usage example
 
 Here’s how to use the `ApifyActorsTool` to run the [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser) for web searching within a CrewAI workflow:
 
@@ -43,12 +63,31 @@ for result in results:
     print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
 ```
 
+### Expected output
+
+```
+URL: https://www.example.com/crewai-intro
+Content: CrewAI is a framework for building AI-powered workflows...
+URL: https://docs.crewai.com/
+Content: Official documentation for CrewAI...
+```
+
+For a more comprehensive example with tool-agent, see [CrewAI Apify Actor template](https://apify.com/templates/python-crewai).
+
 Try other Actors from the [Apify Store](https://apify.com/store) by adjusting `actor_name` and `run_input` based on the Actor’s input schema.
 
-## Arguments
+## Configuration
 
-- `actor_name`: Required. A string specifying the ID of the Apify Actor to run (e.g., `"apify/rag-web-browser"`). Find Actors in the [Apify Store](https://apify.com/store).
-- `run_input`: Required at runtime. A dictionary of input parameters for the Actor (e.g., `{"query": "search term", "maxResults": 5}`). Refer to each Actor’s [input schema](https://apify.com/apify/rag-web-browser/input-schema) for details.
+The `ApifyActorsTool` requires specific inputs to operate:
+
+- **`actor_name` (str, required)**
+  The ID of the Apify Actor to run (e.g., `"apify/rag-web-browser"`). Find Actors in the [Apify Store](https://apify.com/store).
+- **`run_input` (dict, required at runtime)**
+  A dictionary of input parameters for the Actor. Examples:
+  - For `apify/rag-web-browser`: `{"query": "search term", "maxResults": 5}`
+  - Check each Actor’s [input schema](https://apify.com/apify/rag-web-browser/input-schema) for details.
+
+The tool adapts dynamically to the chosen Actor.
 
 ## Steps to Get Started
 
@@ -69,11 +108,11 @@ Try other Actors from the [Apify Store](https://apify.com/store) by adjusting `a
 
 ## Resources
 
-- [Apify Platform](https://apify.com/): Explore the Apify ecosystem.
-- [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser): A popular Actor for web data retrieval.
-- [Apify Actors Documentation](https://docs.apify.com/platform/actors): Learn more about using and creating Actors.
-- [CrewAI Integration Guide](https://docs.apify.com/platform/integrations/crewai): Official guide for integrating Apify with CrewAI.
+- **[Apify Platform](https://apify.com/)**: Explore the Apify ecosystem.
+- **[RAG Web Browser Actor](https://apify.com/apify/rag-web-browser)**: Try this popular Actor for web data retrieval.
+- **[Apify Actors Documentation](https://docs.apify.com/platform/actors)**: Learn how to use and create Actors.
+- **[CrewAI Integration Guide](https://docs.apify.com/platform/integrations/crewai)**: Official guide for Apify and CrewAI.
 
-## Conclusion
+---
 
-The `ApifyActorsTool` streamlines CrewAI workflows by combining Apify’s robust web scraping and automation capabilities with agent-based intelligence. By following the setup and usage instructions, you can easily integrate real-time data extraction and task automation into your projects.
+Streamline your CrewAI workflows with `ApifyActorsTool` - combine the power of Apify’s web scraping and automation with agent-based intelligence.
