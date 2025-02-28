@@ -37,7 +37,7 @@ class ApifyActorsTool(BaseTool):
                     print(f"URL: {result['metadata']['url']}")
                     print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
         """
-    actor_tool: _ApifyActorsTool = Field(description="Apify Actor Tool")
+    actor_tool: '_ApifyActorsTool' = Field(description="Apify Actor Tool")
 
     def __init__(
         self,
@@ -67,10 +67,10 @@ class ApifyActorsTool(BaseTool):
                 "name": actor_tool.name,
                 "description": actor_tool.description,
                 "args_schema": actor_tool.args_schema,
+                "actor_tool": actor_tool,
             }
         )
         super().__init__(*args, **kwargs)
-        self.actor_tool = actor_tool
 
     def _run(self, run_input: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Run the Actor tool with the given input.
