@@ -103,6 +103,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
+        max_rounds = int(inputs.get("max_dialogue_rounds", 10))
 
         try:
             formatted_answer = self._invoke_loop()
@@ -121,7 +122,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 raise e
 
         if self.ask_for_human_input:
-            formatted_answer = self._handle_human_feedback(formatted_answer)
+            formatted_answer = self._handle_human_feedback(formatted_answer, max_rounds)
 
         self._create_short_term_memory(formatted_answer)
         self._create_long_term_memory(formatted_answer)
@@ -524,21 +525,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         prompt = prompt.rstrip()
         return {"role": role, "content": prompt}
 
-    def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
+    def _handle_human_feedback(self, formatted_answer: AgentFinish, max_rounds: int = 10) -> AgentFinish:
         """Handle human feedback with different flows for training vs regular use.
 
         Args:
             formatted_answer: The initial AgentFinish result to get feedback on
+            max_rounds: Maximum number of dialogue rounds (default: 10)
 
         Returns:
             AgentFinish: The final answer after processing feedback
         """
-        human_feedback = self._ask_human_input(formatted_answer.output)
+        human_feedback = self._ask_human_input(formatted_answer.output, 1, max_rounds)
 
         if self._is_training_mode():
             return self._handle_training_feedback(formatted_answer, human_feedback)
 
-        return self._handle_regular_feedback(formatted_answer, human_feedback)
+        return self._handle_regular_feedback(formatted_answer, human_feedback, max_rounds)
 
     def _is_training_mode(self) -> bool:
         """Check if crew is in training mode."""
@@ -560,19 +562,30 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return improved_answer
 
     def _handle_regular_feedback(
-        self, current_answer: AgentFinish, initial_feedback: str
+        self, current_answer: AgentFinish, initial_feedback: str, max_rounds: int = 10
     ) -> AgentFinish:
-        """Process feedback for regular use with potential multiple iterations."""
+        """Process feedback for regular use with potential multiple iterations.
+        
+        Args:
+            current_answer: The initial AgentFinish result to get feedback on
+            initial_feedback: The initial feedback from the user
+            max_rounds: Maximum number of dialogue rounds (default: 10)
+            
+        Returns:
+            AgentFinish: The final answer after processing feedback
+        """
         feedback = initial_feedback
         answer = current_answer
+        current_round = 1
 
-        while self.ask_for_human_input:
+        while self.ask_for_human_input and current_round <= max_rounds:
             # If the user provides a blank response, assume they are happy with the result
             if feedback.strip() == "":
                 self.ask_for_human_input = False
             else:
                 answer = self._process_feedback_iteration(feedback)
-                feedback = self._ask_human_input(answer.output)
+                feedback = self._ask_human_input(answer.output, current_round, max_rounds)
+                current_round += 1
 
         return answer
 

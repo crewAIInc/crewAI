@@ -249,6 +249,7 @@ class Agent(BaseAgent):
                     "tool_names": self.agent_executor.tools_names,
                     "tools": self.agent_executor.tools_description,
                     "ask_for_human_input": task.human_input,
+                    "max_dialogue_rounds": task.max_dialogue_rounds,
                 }
             )["output"]
         except Exception as e:

@@ -94,10 +94,19 @@ class CrewAgentExecutorMixin:
                 print(f"Failed to add to long term memory: {e}")
                 pass
 
-    def _ask_human_input(self, final_answer: str) -> str:
-        """Prompt human input with mode-appropriate messaging."""
+    def _ask_human_input(self, final_answer: str, current_round: int = 1, max_rounds: int = 10) -> str:
+        """Prompt human input with mode-appropriate messaging.
+        
+        Args:
+            final_answer: The final answer from the agent
+            current_round: The current dialogue round (default: 1)
+            max_rounds: Maximum number of dialogue rounds (default: 10)
+            
+        Returns:
+            str: The user's feedback
+        """
         self._printer.print(
-            content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"
+            content=f"\033[1m\033[95m ## Result (Round {current_round}/{max_rounds}):\033[00m \033[92m{final_answer}\033[00m"
         )
 
         # Training mode prompt (single iteration)
@@ -113,7 +122,7 @@ class CrewAgentExecutorMixin:
         else:
             prompt = (
                 "\n\n=====\n"
-                "## HUMAN FEEDBACK: Provide feedback on the Final Result and Agent's actions.\n"
+                f"## HUMAN FEEDBACK (Round {current_round}/{max_rounds}): Provide feedback on the Result and Agent's actions.\n"
                 "Please follow these guidelines:\n"
                 " - If you are happy with the result, simply hit Enter without typing anything.\n"
                 " - Otherwise, provide specific improvement requests.\n"
