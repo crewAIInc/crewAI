@@ -1,6 +1,5 @@
-import json
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from pydantic import Field
@@ -9,9 +8,9 @@ from crewai.agent import Agent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.flow.flow import Flow, listen, start
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
-from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.events.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -21,8 +20,11 @@ from crewai.utilities.events.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
+    CrewTestCompletedEvent,
+    CrewTestStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.events.event_types import ToolUsageFinishedEvent
 from crewai.utilities.events.flow_events import (
     FlowCreatedEvent,
@@ -30,6 +32,12 @@ from crewai.utilities.events.flow_events import (
     FlowStartedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionStartedEvent,
+)
+from crewai.utilities.events.llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+    LLMCallType,
 )
 from crewai.utilities.events.task_events import (
     TaskCompletedEvent,
@@ -52,26 +60,35 @@ base_task = Task(
     expected_output="hi",
     agent=base_agent,
 )
+event_listener = EventListener()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_emits_start_kickoff_event():
     received_events = []
+    mock_span = Mock()
 
-    with crewai_event_bus.scoped_handlers():
+    @crewai_event_bus.on(CrewKickoffStartedEvent)
+    def handle_crew_start(source, event):
+        received_events.append(event)
 
-        @crewai_event_bus.on(CrewKickoffStartedEvent)
-        def handle_crew_start(source, event):
-            received_events.append(event)
-
-        crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
-
+    crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
+    with (
+        patch.object(
+            event_listener._telemetry, "crew_execution_span", return_value=mock_span
+        ) as mock_crew_execution_span,
+        patch.object(
+            event_listener._telemetry, "end_crew", return_value=mock_span
+        ) as mock_crew_ended,
+    ):
         crew.kickoff()
+    mock_crew_execution_span.assert_called_once_with(crew, None)
+    mock_crew_ended.assert_called_once_with(crew, "hi")
 
-        assert len(received_events) == 1
-        assert received_events[0].crew_name == "TestCrew"
-        assert isinstance(received_events[0].timestamp, datetime)
-        assert received_events[0].type == "crew_kickoff_started"
+    assert len(received_events) == 1
+    assert received_events[0].crew_name == "TestCrew"
+    assert isinstance(received_events[0].timestamp, datetime)
+    assert received_events[0].type == "crew_kickoff_started"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -90,6 +107,45 @@ def test_crew_emits_end_kickoff_event():
     assert received_events[0].crew_name == "TestCrew"
     assert isinstance(received_events[0].timestamp, datetime)
     assert received_events[0].type == "crew_kickoff_completed"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_emits_test_kickoff_type_event():
+    received_events = []
+    mock_span = Mock()
+
+    @crewai_event_bus.on(CrewTestStartedEvent)
+    def handle_crew_end(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(CrewTestCompletedEvent)
+    def handle_crew_test_end(source, event):
+        received_events.append(event)
+
+    eval_llm = LLM(model="gpt-4o-mini")
+    with (
+        patch.object(
+            event_listener._telemetry, "test_execution_span", return_value=mock_span
+        ) as mock_crew_execution_span,
+    ):
+        crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
+        crew.test(n_iterations=1, eval_llm=eval_llm)
+
+        # Verify the call was made with correct argument types and values
+        assert mock_crew_execution_span.call_count == 1
+        args = mock_crew_execution_span.call_args[0]
+        assert isinstance(args[0], Crew)
+        assert args[1] == 1
+        assert args[2] is None
+        assert args[3] == eval_llm
+
+    assert len(received_events) == 2
+    assert received_events[0].crew_name == "TestCrew"
+    assert isinstance(received_events[0].timestamp, datetime)
+    assert received_events[0].type == "crew_test_started"
+    assert received_events[1].crew_name == "TestCrew"
+    assert isinstance(received_events[1].timestamp, datetime)
+    assert received_events[1].type == "crew_test_completed"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -142,9 +198,20 @@ def test_crew_emits_end_task_event():
     def handle_task_end(source, event):
         received_events.append(event)
 
+    mock_span = Mock()
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
+    with (
+        patch.object(
+            event_listener._telemetry, "task_started", return_value=mock_span
+        ) as mock_task_started,
+        patch.object(
+            event_listener._telemetry, "task_ended", return_value=mock_span
+        ) as mock_task_ended,
+    ):
+        crew.kickoff()
 
-    crew.kickoff()
+    mock_task_started.assert_called_once_with(crew=crew, task=base_task)
+    mock_task_ended.assert_called_once_with(mock_span, base_task, crew)
 
     assert len(received_events) == 1
     assert isinstance(received_events[0].timestamp, datetime)
@@ -334,24 +401,29 @@ def test_tools_emits_error_events():
 
 def test_flow_emits_start_event():
     received_events = []
+    mock_span = Mock()
 
-    with crewai_event_bus.scoped_handlers():
+    @crewai_event_bus.on(FlowStartedEvent)
+    def handle_flow_start(source, event):
+        received_events.append(event)
 
-        @crewai_event_bus.on(FlowStartedEvent)
-        def handle_flow_start(source, event):
-            received_events.append(event)
+    class TestFlow(Flow[dict]):
+        @start()
+        def begin(self):
+            return "started"
 
-        class TestFlow(Flow[dict]):
-            @start()
-            def begin(self):
-                return "started"
-
+    with (
+        patch.object(
+            event_listener._telemetry, "flow_execution_span", return_value=mock_span
+        ) as mock_flow_execution_span,
+    ):
         flow = TestFlow()
         flow.kickoff()
 
-        assert len(received_events) == 1
-        assert received_events[0].flow_name == "TestFlow"
-        assert received_events[0].type == "flow_started"
+    mock_flow_execution_span.assert_called_once_with("TestFlow", ["begin"])
+    assert len(received_events) == 1
+    assert received_events[0].flow_name == "TestFlow"
+    assert received_events[0].type == "flow_started"
 
 
 def test_flow_emits_finish_event():
@@ -455,6 +527,7 @@ def test_multiple_handlers_for_same_event():
 
 def test_flow_emits_created_event():
     received_events = []
+    mock_span = Mock()
 
     @crewai_event_bus.on(FlowCreatedEvent)
     def handle_flow_created(source, event):
@@ -465,8 +538,15 @@ def test_flow_emits_created_event():
         def begin(self):
             return "started"
 
-    flow = TestFlow()
-    flow.kickoff()
+    with (
+        patch.object(
+            event_listener._telemetry, "flow_creation_span", return_value=mock_span
+        ) as mock_flow_creation_span,
+    ):
+        flow = TestFlow()
+        flow.kickoff()
+
+    mock_flow_creation_span.assert_called_once_with("TestFlow")
 
     assert len(received_events) == 1
     assert received_events[0].flow_name == "TestFlow"
@@ -495,3 +575,43 @@ def test_flow_emits_method_execution_failed_event():
     assert received_events[0].flow_name == "TestFlow"
     assert received_events[0].type == "method_execution_failed"
     assert received_events[0].error == error
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_emits_call_started_event():
+    received_events = []
+
+    @crewai_event_bus.on(LLMCallStartedEvent)
+    def handle_llm_call_started(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(LLMCallCompletedEvent)
+    def handle_llm_call_completed(source, event):
+        received_events.append(event)
+
+    llm = LLM(model="gpt-4o-mini")
+    llm.call("Hello, how are you?")
+
+    assert len(received_events) == 2
+    assert received_events[0].type == "llm_call_started"
+    assert received_events[1].type == "llm_call_completed"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_emits_call_failed_event():
+    received_events = []
+
+    @crewai_event_bus.on(LLMCallFailedEvent)
+    def handle_llm_call_failed(source, event):
+        received_events.append(event)
+
+    error_message = "Simulated LLM call failure"
+    with patch("crewai.llm.litellm.completion", side_effect=Exception(error_message)):
+        llm = LLM(model="gpt-4o-mini")
+        with pytest.raises(Exception) as exc_info:
+            llm.call("Hello, how are you?")
+
+        assert str(exc_info.value) == error_message
+        assert len(received_events) == 1
+        assert received_events[0].type == "llm_call_failed"
+        assert received_events[0].error == error_message
