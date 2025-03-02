@@ -17,7 +17,7 @@ icon: wrench
 
 CrewAI uses the `uv` as its dependency management and package handling tool. It simplifies project setup and execution, offering a seamless experience.
 
-If you haven't installed `uv` yet, follow step `1` to quickly get it set up on your system, else you can skip to step `2`.
+If you haven't installed `uv` yet, follow **step 1** to quickly get it set up on your system, else you can skip to **step 2**.
 
 <Steps>
     <Step title="Install uv">
@@ -45,25 +45,25 @@ If you haven't installed `uv` yet, follow step `1` to quickly get it set up on y
     </Step>
 
     <Step title="Install CrewAI 🚀">
-      - Run the following command to install CrewAI with all recommended tools:
+      - Run the following command to install `crewai` CLI:
         ```shell
-        uv tool install 'crewai[tools]'
+        uv tool install crewai
         ```
           <Warning>
-            If you encounter the `PATH` warning, run this command to update your shell:
+            If you encounter a `PATH` warning, run this command to update your shell:
             ```shell
             uv tool update-shell
             ```
           </Warning>
 
-      - To verify that `crewai` and `crewai-tools` are installed, run:
+      - To verify that `crewai` is installed, run:
         ```shell
-        uv pip freeze | grep crewai
+        uv tools list
         ```
       - You should see something like:
         ```markdown
-        crewai==X.X.X
-        crewai-tools==X.X.X
+        crewai v0.102.0
+        - crewai
         ```
       <Check>Installation successful! You're ready to create your first crew! 🎉</Check>
     </Step>
@@ -75,9 +75,9 @@ We recommend using the `YAML` template scaffolding for a structured approach to 
 
 <Steps>
   <Step title="Generate Project Scaffolding">
-    - Run the CrewAI CLI command:
+    - Run the `crewai` CLI command:
       ```shell
-      crewai create crew <project_name>
+      crewai create crew <your_project_name>
       ```
 
     - This creates a new project with the following structure:
