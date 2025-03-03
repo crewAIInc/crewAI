@@ -1115,9 +1115,15 @@ class Crew(BaseModel):
             "tasks",
             "knowledge_sources",
             "knowledge",
+            "manager_agent",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
+        
+        # Copy manager_agent if it exists
+        cloned_manager_agent = None
+        if self.manager_agent is not None:
+            cloned_manager_agent = self.manager_agent.copy()
 
         task_mapping = {}
 
@@ -1150,6 +1156,7 @@ class Crew(BaseModel):
             tasks=cloned_tasks,
             knowledge_sources=existing_knowledge_sources,
             knowledge=existing_knowledge,
+            manager_agent=cloned_manager_agent,
         )
 
         return copied_crew
