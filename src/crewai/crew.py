@@ -1099,7 +1099,16 @@ class Crew(BaseModel):
         return required_inputs
 
     def copy(self):
-        """Create a deep copy of the Crew."""
+        """
+        Creates a deep copy of the Crew instance.
+
+        Handles copying of:
+        - Basic attributes
+        - Manager agent and LLM configurations
+
+        Returns:
+            Crew: A new instance with copied components
+        """
 
         exclude = {
             "id",
