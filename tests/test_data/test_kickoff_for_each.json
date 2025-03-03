@@ -1,1 +1,8 @@
-{"foo": ["document1", "document2"]}
+{
+    "foo": ["document1", "document2"],
+    "empty": [],
+    "special_chars": ["doc#1", "doc@2"],
+    "nested": {
+        "documents": ["nested1", "nested2"]
+    }
+}
