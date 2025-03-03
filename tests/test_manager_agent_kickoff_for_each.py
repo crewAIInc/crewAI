@@ -1,9 +1,11 @@
 import json
 import os
 from typing import List
-import pytest
 from unittest.mock import patch
-from crewai import Agent, Task, Crew, Process
+
+import pytest
+
+from crewai import Agent, Crew, Process, Task
 from crewai.crews.crew_output import CrewOutput
 
 def test_manager_agent_with_kickoff_for_each():
