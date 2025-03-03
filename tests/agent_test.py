@@ -915,8 +915,6 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_usage_information_is_appended_to_agent():
-    from datetime import UTC, datetime
-
     from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
@@ -926,36 +924,30 @@ def test_tool_usage_information_is_appended_to_agent():
         def _run(self) -> str:
             return "Howdy!"
 
-    fixed_datetime = datetime(2025, 2, 10, 12, 0, 0, tzinfo=UTC)
-    with patch("datetime.datetime") as mock_datetime:
-        mock_datetime.now.return_value = fixed_datetime
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+    agent1 = Agent(
+        role="Friendly Neighbor",
+        goal="Make everyone feel welcome",
+        backstory="You are the friendly neighbor",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
 
-        agent1 = Agent(
-            role="Friendly Neighbor",
-            goal="Make everyone feel welcome",
-            backstory="You are the friendly neighbor",
-            tools=[MyCustomTool(result_as_answer=True)],
-        )
+    greeting = Task(
+        description="Say an appropriate greeting.",
+        expected_output="The greeting.",
+        agent=agent1,
+    )
+    tasks = [greeting]
+    crew = Crew(agents=[agent1], tasks=tasks)
 
-        greeting = Task(
-            description="Say an appropriate greeting.",
-            expected_output="The greeting.",
-            agent=agent1,
-        )
-        tasks = [greeting]
-        crew = Crew(agents=[agent1], tasks=tasks)
-
-        crew.kickoff()
-        assert agent1.tools_results == [
-            {
-                "result": "Howdy!",
-                "tool_name": "Decide Greetings",
-                "tool_args": {},
-                "result_as_answer": True,
-                "start_time": fixed_datetime,
-            }
-        ]
+    crew.kickoff()
+    assert agent1.tools_results == [
+        {
+            "result": "Howdy!",
+            "tool_name": "Decide Greetings",
+            "tool_args": {},
+            "result_as_answer": True,
+        }
+    ]
 
 
 def test_agent_definition_based_on_dict():
