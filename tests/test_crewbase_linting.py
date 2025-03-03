@@ -1,6 +1,6 @@
 import pytest
-from crewai import Agent, Crew, Task, Process
-from crewai.project import CrewBase, agent, task, crew
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
 
 
 @CrewBase
