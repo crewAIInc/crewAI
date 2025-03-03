@@ -1139,7 +1139,7 @@ class Crew(BaseModel):
         except Exception as e:
             self._logger.log("warning", f"Failed to copy manager_agent: {e}")
 
-        task_mapping = {}
+        task_mapping: Dict[str, Task] = {}
 
         cloned_tasks = []
         existing_knowledge_sources = shallow_copy(self.knowledge_sources)
