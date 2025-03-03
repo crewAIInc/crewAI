@@ -29,7 +29,16 @@ def CrewBase(cls: T) -> T:
         )
         original_tasks_config_path = getattr(cls, "tasks_config", "config/tasks.yaml")
 
+        # Initialize empty agents and tasks lists for linting purposes
+        # These will be populated by the @crew decorator when the crew method is called
+        _agents = []
+        _tasks = []
+        
         def __init__(self, *args, **kwargs):
+            # Initialize agents and tasks before anything else
+            self._agents = []
+            self._tasks = []
+            
             super().__init__(*args, **kwargs)
             self.load_configurations()
             self.map_all_agent_variables()
@@ -249,6 +258,32 @@ def CrewBase(cls: T) -> T:
                 self.tasks_config[task_name]["callbacks"] = [
                     callback_functions[callback]() for callback in callbacks
                 ]
+                
+        @property
+        def agents(self):
+            """
+            Returns the list of agents for this crew.
+            This property is populated by the @crew decorator when the crew method is called.
+            """
+            return self._agents
+            
+        @agents.setter
+        def agents(self, value):
+            """Sets the list of agents for this crew."""
+            self._agents = value
+            
+        @property
+        def tasks(self):
+            """
+            Returns the list of tasks for this crew.
+            This property is populated by the @crew decorator when the crew method is called.
+            """
+            return self._tasks
+            
+        @tasks.setter
+        def tasks(self, value):
+            """Sets the list of tasks for this crew."""
+            self._tasks = value
 
     # Include base class (qual)name in the wrapper class (qual)name.
     WrappedClass.__name__ = CrewBase.__name__ + "(" + cls.__name__ + ")"
