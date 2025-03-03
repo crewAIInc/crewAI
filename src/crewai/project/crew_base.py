@@ -1,7 +1,10 @@
 import inspect
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, Callable, Dict, List, TypeVar, cast
+
+from crewai.agent import Agent
+from crewai.task import Task
 
 import yaml
 from dotenv import load_dotenv
@@ -30,6 +33,10 @@ def CrewBase(cls: T) -> T:
         original_tasks_config_path = getattr(cls, "tasks_config", "config/tasks.yaml")
 
         def __init__(self, *args, **kwargs):
+            # Initialize agents and tasks before anything else
+            self._agents = []
+            self._tasks = []
+            
             super().__init__(*args, **kwargs)
             self.load_configurations()
             self.map_all_agent_variables()
@@ -249,6 +256,36 @@ def CrewBase(cls: T) -> T:
                 self.tasks_config[task_name]["callbacks"] = [
                     callback_functions[callback]() for callback in callbacks
                 ]
+                
+        @property
+        def agents(self) -> List["Agent"]:
+            """
+            Returns the list of agents for this crew.
+            This property is populated by the @crew decorator when the crew method is called.
+            """
+            return self._agents
+            
+        @agents.setter
+        def agents(self, value: List["Agent"]) -> None:
+            """Sets the list of agents for this crew."""
+            if not isinstance(value, list):
+                raise TypeError("Agents must be provided as a list")
+            self._agents = value
+            
+        @property
+        def tasks(self) -> List["Task"]:
+            """
+            Returns the list of tasks for this crew.
+            This property is populated by the @crew decorator when the crew method is called.
+            """
+            return self._tasks
+            
+        @tasks.setter
+        def tasks(self, value: List["Task"]) -> None:
+            """Sets the list of tasks for this crew."""
+            if not isinstance(value, list):
+                raise TypeError("Tasks must be provided as a list")
+            self._tasks = value
 
     # Include base class (qual)name in the wrapper class (qual)name.
     WrappedClass.__name__ = CrewBase.__name__ + "(" + cls.__name__ + ")"
