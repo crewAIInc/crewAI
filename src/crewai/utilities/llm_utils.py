@@ -5,18 +5,37 @@ from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
 from crewai.llm import LLM
 
 
+def is_ollama_model(model_name: str) -> bool:
+    """Check if a model name is an Ollama model."""
+    return bool(model_name and "ollama" in str(model_name).lower())
+
+
+def validate_and_set_endpoint(endpoint: str) -> str:
+    """Validate and format an endpoint URL."""
+    if not endpoint:
+        return endpoint
+    if not endpoint.startswith(("http://", "https://")):
+        raise ValueError(f"Invalid endpoint URL: {endpoint}. Must start with http:// or https://")
+    return endpoint.rstrip("/")
+
+
 def create_llm(
     llm_value: Union[str, LLM, Any, None] = None,
+    endpoint: Optional[str] = None,
 ) -> Optional[LLM]:
     """
     Creates or returns an LLM instance based on the given llm_value.
 
     Args:
         llm_value (str | LLM | Any | None):
-            - str: The model name (e.g., "gpt-4").
+            - str: Model name to use for instantiating a new LLM.
             - LLM: Already instantiated LLM, returned as-is.
             - Any: Attempt to extract known attributes like model_name, temperature, etc.
             - None: Use environment-based or fallback default model.
+        endpoint (str | None):
+            - Optional API endpoint URL. When provided for Ollama models,
+              this will override the default API endpoint. Should be a valid
+              HTTP/HTTPS URL (e.g., "http://localhost:11434").
 
     Returns:
         An LLM instance if successful, or None if something fails.
@@ -29,7 +48,11 @@ def create_llm(
     # 2) If llm_value is a string (model name)
     if isinstance(llm_value, str):
         try:
-            created_llm = LLM(model=llm_value)
+            # If endpoint is provided and model is Ollama, use it as api_base
+            if endpoint and is_ollama_model(llm_value):
+                created_llm = LLM(model=llm_value, api_base=validate_and_set_endpoint(endpoint))
+            else:
+                created_llm = LLM(model=llm_value)
             return created_llm
         except Exception as e:
             print(f"Failed to instantiate LLM with model='{llm_value}': {e}")
@@ -37,7 +60,7 @@ def create_llm(
 
     # 3) If llm_value is None, parse environment variables or use default
     if llm_value is None:
-        return _llm_via_environment_or_fallback()
+        return _llm_via_environment_or_fallback(endpoint=endpoint)
 
     # 4) Otherwise, attempt to extract relevant attributes from an unknown object
     try:
@@ -56,6 +79,10 @@ def create_llm(
         base_url: Optional[str] = getattr(llm_value, "base_url", None)
         api_base: Optional[str] = getattr(llm_value, "api_base", None)
 
+        # If endpoint is provided and model is Ollama, use it as api_base
+        if endpoint and is_ollama_model(model):
+            api_base = validate_and_set_endpoint(endpoint)
+
         created_llm = LLM(
             model=model,
             temperature=temperature,
@@ -72,9 +99,13 @@ def create_llm(
         return None
 
 
-def _llm_via_environment_or_fallback() -> Optional[LLM]:
+def _llm_via_environment_or_fallback(endpoint: Optional[str] = None) -> Optional[LLM]:
     """
     Helper function: if llm_value is None, we load environment variables or fallback default model.
+    
+    Args:
+        endpoint (str | None):
+            - Optional endpoint URL for the LLM API.
     """
     model_name = (
         os.environ.get("OPENAI_MODEL_NAME")
@@ -172,6 +203,10 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
 
     # Remove None values
     llm_params = {k: v for k, v in llm_params.items() if v is not None}
+
+    # If endpoint is provided and model is Ollama, use it as api_base
+    if endpoint and is_ollama_model(model_name):
+        llm_params["api_base"] = validate_and_set_endpoint(endpoint)
 
     # Try creating the LLM
     try:
