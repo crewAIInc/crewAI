@@ -9,6 +9,7 @@ from crewai.tasks.output_format import OutputFormat
 class TaskOutput(BaseModel):
     """Class that represents the result of a task."""
 
+    key: Optional[str] = Field(description="Key of the task", default=None)
     description: str = Field(description="Description of the task")
     name: Optional[str] = Field(description="Name of the task", default=None)
     expected_output: Optional[str] = Field(
