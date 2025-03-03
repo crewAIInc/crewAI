@@ -8,6 +8,7 @@ import pytest
 from crewai import Agent, Crew, Process, Task
 from crewai.crews.crew_output import CrewOutput
 
+
 def test_manager_agent_with_kickoff_for_each():
     """
     Test that using a manager agent with kickoff_for_each doesn't raise validation errors.
