@@ -3,6 +3,9 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, TypeVar, cast
 
+from crewai.agent import Agent
+from crewai.task import Task
+
 import yaml
 from dotenv import load_dotenv
 
