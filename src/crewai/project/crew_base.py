@@ -1,7 +1,7 @@
 import inspect
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, Callable, Dict, List, TypeVar, cast
 
 import yaml
 from dotenv import load_dotenv
@@ -29,11 +29,6 @@ def CrewBase(cls: T) -> T:
         )
         original_tasks_config_path = getattr(cls, "tasks_config", "config/tasks.yaml")
 
-        # Initialize empty agents and tasks lists for linting purposes
-        # These will be populated by the @crew decorator when the crew method is called
-        _agents = []
-        _tasks = []
-        
         def __init__(self, *args, **kwargs):
             # Initialize agents and tasks before anything else
             self._agents = []
@@ -260,7 +255,7 @@ def CrewBase(cls: T) -> T:
                 ]
                 
         @property
-        def agents(self):
+        def agents(self) -> List["Agent"]:
             """
             Returns the list of agents for this crew.
             This property is populated by the @crew decorator when the crew method is called.
@@ -268,12 +263,14 @@ def CrewBase(cls: T) -> T:
             return self._agents
             
         @agents.setter
-        def agents(self, value):
+        def agents(self, value: List["Agent"]) -> None:
             """Sets the list of agents for this crew."""
+            if not isinstance(value, list):
+                raise TypeError("Agents must be provided as a list")
             self._agents = value
             
         @property
-        def tasks(self):
+        def tasks(self) -> List["Task"]:
             """
             Returns the list of tasks for this crew.
             This property is populated by the @crew decorator when the crew method is called.
@@ -281,8 +278,10 @@ def CrewBase(cls: T) -> T:
             return self._tasks
             
         @tasks.setter
-        def tasks(self, value):
+        def tasks(self, value: List["Task"]) -> None:
             """Sets the list of tasks for this crew."""
+            if not isinstance(value, list):
+                raise TypeError("Tasks must be provided as a list")
             self._tasks = value
 
     # Include base class (qual)name in the wrapper class (qual)name.

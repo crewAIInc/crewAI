@@ -14,6 +14,12 @@ class TestCrewBaseLinting:
 
     @agent
     def agent_one(self) -> Agent:
+        """
+        Creates a test agent for validation purposes.
+        
+        Returns:
+            Agent: A configured test agent instance
+        """
         return Agent(
             role="Test Agent",
             goal="Test Goal",
@@ -22,7 +28,12 @@ class TestCrewBaseLinting:
 
     @task
     def task_one(self) -> Task:
-        # Create a task with an agent assigned to it
+        """
+        Creates a test task with an agent assigned to it.
+        
+        Returns:
+            Task: A configured test task instance with an agent assigned
+        """
         return Task(
             description="Test Description",
             expected_output="Test Output",
@@ -31,7 +42,13 @@ class TestCrewBaseLinting:
 
     @crew
     def crew(self) -> Crew:
-        # Access self.agents and self.tasks to verify no linting errors
+        """
+        Creates a test crew with agents and tasks.
+        This method accesses self.agents and self.tasks to verify no linting errors.
+        
+        Returns:
+            Crew: A configured test crew instance
+        """
         return Crew(
             agents=self.agents,  # Should not cause linting errors
             tasks=self.tasks,    # Should not cause linting errors
