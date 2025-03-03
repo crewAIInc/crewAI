@@ -1111,13 +1111,19 @@ class Crew(BaseModel):
             "_short_term_memory",
             "_long_term_memory",
             "_entity_memory",
+            "_telemetry",
             "agents",
             "tasks",
             "knowledge_sources",
             "knowledge",
+            "manager_agent",
+            "manager_llm",
+
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
+        manager_agent = self.manager_agent.copy() if self.manager_agent else None
+        manager_llm = shallow_copy(self.manager_llm) if self.manager_llm else None
 
         task_mapping = {}
 
@@ -1150,9 +1156,13 @@ class Crew(BaseModel):
             tasks=cloned_tasks,
             knowledge_sources=existing_knowledge_sources,
             knowledge=existing_knowledge,
+            manager_agent=manager_agent,
+            manager_llm=manager_llm,
         )
 
         return copied_crew
+
+
 
     def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
