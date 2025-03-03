@@ -59,7 +59,7 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
         goal: Conduct comprehensive research and analysis
         backstory: A dedicated research professional with years of experience
         verbose: true
-        llm: openai/gpt-4o-mini # your model here 
+        llm: openai/gpt-4o-mini # your model here
         # (see provider configuration examples below for more)
     ```
 
@@ -111,7 +111,7 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
 ## Provider Configuration Examples
 
 
-CrewAI supports a multitude of LLM providers, each offering unique features, authentication methods, and model capabilities. 
+CrewAI supports a multitude of LLM providers, each offering unique features, authentication methods, and model capabilities.
 In this section, you'll find detailed examples that help you select, configure, and optimize the LLM that best fits your project's needs.
 
 <AccordionGroup>
@@ -121,7 +121,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```toml Code
     # Required
     OPENAI_API_KEY=sk-...
-    
+
     # Optional
     OPENAI_API_BASE=<custom-base-url>
     OPENAI_ORGANIZATION=<your-org-id>
@@ -222,7 +222,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     AZURE_API_KEY=<your-api-key>
     AZURE_API_BASE=<your-resource-url>
     AZURE_API_VERSION=<api-version>
-    
+
     # Optional
     AZURE_AD_TOKEN=<your-azure-ad-token>
     AZURE_API_TYPE=<your-azure-api-type>
@@ -251,7 +251,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     )
     ```
   </Accordion>
-  
+
   <Accordion title="Amazon SageMaker">
     ```toml Code
     AWS_ACCESS_KEY_ID=<your-access-key>
@@ -396,7 +396,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     WATSONX_URL=<your-url>
     WATSONX_APIKEY=<your-apikey>
     WATSONX_PROJECT_ID=<your-project-id>
-    
+
     # Optional
     WATSONX_TOKEN=<your-token>
     WATSONX_DEPLOYMENT_SPACE_ID=<your-space-id>
@@ -413,7 +413,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
   <Accordion title="Ollama (Local LLMs)">
     1. Install Ollama: [ollama.ai](https://ollama.ai/)
-    2. Run a model: `ollama run llama2`
+    2. Run a model: `ollama run llama3`
     3. Configure:
 
     ```python Code
@@ -522,7 +522,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```toml Code
     OPENROUTER_API_KEY=<your-api-key>
     ```
-    
+
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
@@ -605,7 +605,7 @@ Learn how to get the most out of your LLM configuration:
         - Small tasks (up to 4K tokens): Standard models
         - Medium tasks (between 4K-32K): Enhanced models
         - Large tasks (over 32K): Large context models
-        
+
         ```python
         # Configure model with appropriate settings
         llm = LLM(
@@ -642,11 +642,11 @@ Learn how to get the most out of your LLM configuration:
     <Warning>
       Most authentication issues can be resolved by checking API key format and environment variable names.
     </Warning>
-    
+
     ```bash
     # OpenAI
     OPENAI_API_KEY=sk-...
-    
+
     # Anthropic
     ANTHROPIC_API_KEY=sk-ant-...
     ```
@@ -655,11 +655,11 @@ Learn how to get the most out of your LLM configuration:
     <Check>
       Always include the provider prefix in model names
     </Check>
-    
+
     ```python
     # Correct
     llm = LLM(model="openai/gpt-4")
-    
+
     # Incorrect
     llm = LLM(model="gpt-4")
     ```
@@ -668,7 +668,7 @@ Learn how to get the most out of your LLM configuration:
     <Tip>
       Use larger context models for extensive tasks
     </Tip>
-    
+
     ```python
     # Large context model
     llm = LLM(model="openai/gpt-4o")  # 128K tokens
