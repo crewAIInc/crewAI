@@ -11,6 +11,7 @@ from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
+    LLMStreamChunkEvent,
 )
 
 from .agent_events import AgentExecutionCompletedEvent, AgentExecutionStartedEvent
@@ -280,7 +281,14 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(LLMCallFailedEvent)
         def on_llm_call_failed(source, event: LLMCallFailedEvent):
             self.logger.log(
-                f"❌ LLM Call Failed: '{event.error}'",
+                f"❌ LLM call failed: {event.error}",
+                event.timestamp,
+            )
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def on_llm_stream_chunk(source, event: LLMStreamChunkEvent):
+            self.logger.log(
+                f"📝 LLM stream chunk received",
                 event.timestamp,
             )
 
