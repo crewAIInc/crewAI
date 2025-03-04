@@ -58,7 +58,7 @@ class ContextualMemory:
         Fetches historical data or insights from LTM that are relevant to the task's description and expected_output,
         formatted as bullet points.
         """
-        ltm_results = self.ltm.search(task, latest_n=2)
+        ltm_results = self.ltm.search(query=task, limit=2)
         if not ltm_results:
             return None
 
