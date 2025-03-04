@@ -4,7 +4,7 @@ Integrate [Apify Actors](https://apify.com/) into your CrewAI workflows.
 
 ## Description
 
-ApifyActorsTool connects [Apify Actors](https://apify.com/), cloud-based programs for web scraping and automation, to your CrewAI workflows. You can extract data, crawl websites, and automate tasks, all without requiring infrastructure management.
+The `ApifyActorsTool` connects [Apify Actors](https://apify.com/), cloud-based programs for web scraping and automation, to your CrewAI workflows. You can extract data, crawl websites, and automate tasks, all without requiring infrastructure management.
 
 **Key features**:
 - **Run Actors** directly, like the [RAG Web Browser](https://apify.com/apify/rag-web-browser), with CrewAI agents.
@@ -14,18 +14,14 @@ See the [Apify CrewAI documentation](https://docs.apify.com/platform/integration
 
 ## Installation
 
-To use ApifyActorsTool, install the necessary packages and set up your Apify API token. Follow the [Apify API documentation](https://docs.apify.com/platform/integrations/api) for steps to obtain the token.
+To use `ApifyActorsTool`, install the necessary packages and set up your Apify API token. Follow the [Apify API documentation](https://docs.apify.com/platform/integrations/api) for steps to obtain the token.
 
 ### Steps
 
 1. **Install dependencies**
-   Use pip to install `crewai[tools]` and `langchain-apify`:
+   Install `crewai[tools]` and `langchain-apify`:
    ```bash
    pip install 'crewai[tools]' langchain-apify
-   ```
-   Or, with `uv`:
-   ```bash
-   uv pip install 'crewai[tools]' langchain-apify
    ```
 
 2. **Set your API token**
@@ -36,7 +32,7 @@ To use ApifyActorsTool, install the necessary packages and set up your Apify API
 
 ## Usage example
 
-Use ApifyActorsTool to run the [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser) and perform a web search:
+Use `ApifyActorsTool` to run the [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser) and perform a web search:
 
 ```python
 from crewai_tools import ApifyActorsTool
@@ -70,7 +66,7 @@ For an example of usage with agents, see the [CrewAI Apify Actor template](https
 
 ## Configuration
 
-ApifyActorsTool requires these inputs to work:
+The `ApifyActorsTool` requires these inputs to work:
 
 - **`actor_name`**
   The ID of the Apify Actor to run, e.g., `"apify/rag-web-browser"`. Browse options in the [Apify Store](https://apify.com/store).
