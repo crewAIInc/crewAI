@@ -26,6 +26,7 @@ with warnings.catch_warnings():
     from litellm.utils import get_supported_openai_params, supports_response_schema
 
 
+from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -126,7 +127,7 @@ def suppress_warnings():
             sys.stderr = old_stderr
 
 
-class LLM:
+class LLM(BaseLLM):
     def __init__(
         self,
         model: str,
