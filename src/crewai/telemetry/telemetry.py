@@ -43,38 +43,49 @@ class Telemetry:
     Users can opt-in to sharing more complete data using the `share_crew`
     attribute in the Crew class.
     """
+    _instance = None
+    _initialized = False
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self):
-        self.ready = False
-        self.trace_set = False
-
-        if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
-            return
-
-        try:
-            telemetry_endpoint = "https://telemetry.crewai.com:4319"
-            self.resource = Resource(
-                attributes={SERVICE_NAME: "crewAI-telemetry"},
-            )
-            with suppress_warnings():
-                self.provider = TracerProvider(resource=self.resource)
-
-            processor = BatchSpanProcessor(
-                OTLPSpanExporter(
-                    endpoint=f"{telemetry_endpoint}/v1/traces",
-                    timeout=30,
-                )
-            )
-
-            self.provider.add_span_processor(processor)
-            self.ready = True
-        except Exception as e:
-            if isinstance(
-                e,
-                (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
-            ):
-                raise  # Re-raise the exception to not interfere with system signals
+        if not self._initialized:
             self.ready = False
+            self.trace_set = False
+
+            if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
+                self._initialized = True
+                return
+
+            try:
+                telemetry_endpoint = "https://telemetry.crewai.com:4319"
+                self.resource = Resource(
+                    attributes={SERVICE_NAME: "crewAI-telemetry"},
+                )
+                with suppress_warnings():
+                    self.provider = TracerProvider(resource=self.resource)
+
+                processor = BatchSpanProcessor(
+                    OTLPSpanExporter(
+                        endpoint=f"{telemetry_endpoint}/v1/traces",
+                        timeout=30,
+                    )
+                )
+
+                self.provider.add_span_processor(processor)
+                self.ready = True
+            except Exception as e:
+                if isinstance(
+                    e,
+                    (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
+                ):
+                    raise  # Re-raise the exception to not interfere with system signals
+                self.ready = False
+            
+            self._initialized = True
 
     def set_tracer(self):
         if self.ready and not self.trace_set:
