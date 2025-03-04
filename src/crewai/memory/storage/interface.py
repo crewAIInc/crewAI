@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, TypeVar, Generic, TypedDict, ClassVar, Protocol, runtime_checkable
+from typing import Any, ClassVar, Dict, Generic, List, Protocol, TypeVar, TypedDict, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict
 

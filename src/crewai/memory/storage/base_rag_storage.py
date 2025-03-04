@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from crewai.memory.storage.interface import Storage, SearchResult
+from crewai.memory.storage.interface import SearchResult, Storage
 
 
 class BaseRAGStorage(Storage, ABC):

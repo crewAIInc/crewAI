@@ -7,7 +7,7 @@ from crewai.crew import Crew
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
-from crewai.memory.storage.interface import Storage, SearchResult
+from crewai.memory.storage.interface import SearchResult, Storage
 from crewai.memory.user.user_memory import UserMemory
 
 

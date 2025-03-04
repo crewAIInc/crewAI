@@ -1,8 +1,8 @@
-from typing import Any, Dict, List, Optional, TypeVar, Generic, Callable, cast
+from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, cast
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from crewai.memory.storage.interface import Storage, SearchResult
+from crewai.memory.storage.interface import SearchResult, Storage
 
 T = TypeVar('T', bound=Storage)
 
