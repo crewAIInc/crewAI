@@ -65,8 +65,8 @@ class EntityMemory(Memory):
     def save(
         self,
         value: Any,
-        metadata: Dict[str, Any] = None,
-        agent: str = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        agent: Optional[str] = None,
     ) -> None:
         """Saves an entity item or value into the storage."""
         if isinstance(value, EntityMemoryItem):

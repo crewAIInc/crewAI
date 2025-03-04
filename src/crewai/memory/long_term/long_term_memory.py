@@ -54,8 +54,8 @@ class LongTermMemory(Memory):
     def save(
         self,
         value: Any,
-        metadata: Dict[str, Any] = None,
-        agent: str = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        agent: Optional[str] = None,
     ) -> None:
         """Saves a value into the memory."""
         if isinstance(value, LongTermMemoryItem):
