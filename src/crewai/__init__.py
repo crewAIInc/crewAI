@@ -4,7 +4,7 @@ from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
-from crewai.llm import LLM
+from crewai.llm import BaseLLM, LLM
 from crewai.process import Process
 from crewai.task import Task
 
@@ -21,6 +21,7 @@ __all__ = [
     "Process",
     "Task",
     "LLM",
+    "BaseLLM",
     "Flow",
     "Knowledge",
 ]

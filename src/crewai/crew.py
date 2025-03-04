@@ -26,7 +26,7 @@ from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.llm import LLM
+from crewai.llm import BaseLLM, LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
@@ -150,7 +150,7 @@ class Crew(BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
-    manager_llm: Optional[Any] = Field(
+    manager_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
     manager_agent: Optional[BaseAgent] = Field(
@@ -196,7 +196,7 @@ class Crew(BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
-    planning_llm: Optional[Any] = Field(
+    planning_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
         default=None,
         description="Language model that will run the AgentPlanner if planning is True.",
     )
@@ -212,7 +212,7 @@ class Crew(BaseModel):
         default=None,
         description="Knowledge sources for the crew. Add knowledge sources to the knowledge object.",
     )
-    chat_llm: Optional[Any] = Field(
+    chat_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
@@ -1193,7 +1193,7 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        eval_llm: Union[str, InstanceOf[LLM]],
+        eval_llm: Union[str, InstanceOf[BaseLLM]],
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
