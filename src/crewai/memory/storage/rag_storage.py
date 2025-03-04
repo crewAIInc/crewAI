@@ -4,14 +4,18 @@ import logging
 import os
 import shutil
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union, Collection
 
 from chromadb.api import ClientAPI
+from chromadb.api.models.Collection import Collection
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
+
+# Constants
+SQLITE_VERSION_ERROR = "ChromaDB requires SQLite3 >= 3.35.0. Current version is too old. Some features may be limited. Error: {}"
 
 
 @contextlib.contextmanager
@@ -89,7 +93,7 @@ class RAGStorage(BaseRAGStorage):
         except RuntimeError as e:
             if "unsupported version of sqlite3" in str(e).lower():
                 # Log a warning but continue without ChromaDB
-                logging.warning(f"ChromaDB requires SQLite3 >= 3.35.0. Current version is too old. Some features may be limited. Error: {e}")
+                logging.warning(SQLITE_VERSION_ERROR.format(e))
                 self.app = None
                 self.collection = None
             else:

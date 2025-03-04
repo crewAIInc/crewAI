@@ -31,3 +31,22 @@ class TestEmbeddingConfigurator(unittest.TestCase):
         
         # Verify that configure_embedder returns the mock embedding function
         self.assertEqual(configurator.configure_embedder(), "mock_embedding_function")
+        
+    @patch('crewai.utilities.embedding_configurator.CHROMADB_AVAILABLE', True)
+    def test_embedding_configurator_with_invalid_config(self):
+        from crewai.utilities.embedding_configurator import EmbeddingConfigurator
+        
+        # Create an instance of EmbeddingConfigurator
+        configurator = EmbeddingConfigurator()
+        
+        # Test with empty config
+        with self.assertRaises(ValueError):
+            configurator.configure_embedder({})
+            
+        # Test with missing required keys
+        with self.assertRaises(ValueError):
+            configurator.configure_embedder({"config": {}})
+            
+        # Test with unsupported provider
+        with self.assertRaises(Exception):
+            configurator.configure_embedder({"provider": "unsupported_provider", "config": {}})

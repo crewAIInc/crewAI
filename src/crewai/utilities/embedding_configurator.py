@@ -40,16 +40,45 @@ class EmbeddingConfigurator:
             "custom": self._configure_custom,
         }
 
+    def _validate_config(self, config: Dict[str, Any]) -> bool:
+        """Validates that the configuration contains the required keys.
+        
+        Args:
+            config: The configuration dictionary to validate
+            
+        Returns:
+            bool: True if the configuration is valid, False otherwise
+        """
+        if not config:
+            return False
+            
+        required_keys = {'provider'}
+        return all(key in config for key in required_keys)
+        
     def configure_embedder(
         self,
         embedder_config: Optional[Dict[str, Any]] = None,
     ) -> Optional[EmbeddingFunction]:
-        """Configures and returns an embedding function based on the provided config."""
+        """Configures and returns an embedding function based on the provided config.
+        
+        Args:
+            embedder_config: Configuration dictionary for the embedder
+            
+        Returns:
+            Optional[EmbeddingFunction]: The configured embedding function or None if ChromaDB is not available
+            
+        Raises:
+            ValueError: If the configuration is invalid
+            Exception: If the provider is not supported
+        """
         if not CHROMADB_AVAILABLE:
             return None
             
         if embedder_config is None:
             return self._create_default_embedding_function()
+            
+        if not self._validate_config(embedder_config):
+            raise ValueError("Invalid embedder configuration: missing required keys")
 
         provider = embedder_config.get("provider")
         config = embedder_config.get("config", {})
