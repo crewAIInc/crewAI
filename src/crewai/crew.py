@@ -263,7 +263,7 @@ class Crew(BaseModel):
         """Set private attributes."""
         if self.memory:
             self._long_term_memory = (
-                self.long_term_memory if self.long_term_memory else LongTermMemory()
+                self.long_term_memory if self.long_term_memory else LongTermMemory(crew=self, embedder_config=self.embedder)
             )
             self._short_term_memory = (
                 self.short_term_memory

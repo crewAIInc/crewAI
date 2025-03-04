@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from pydantic import PrivateAttr
 
@@ -17,47 +17,73 @@ class EntityMemory(Memory):
     _memory_provider: Optional[str] = PrivateAttr()
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
+        memory_provider = None
+        entity_storage = None
+        
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
             memory_provider = crew.memory_config.get("provider")
-        else:
-            memory_provider = None
+            storage_config = crew.memory_config.get("storage", {})
+            entity_storage = storage_config.get("entity")
+            
+        super().__init__(
+            storage=storage,
+            embedder_config=embedder_config,
+            memory_provider=memory_provider
+        )
 
-        if memory_provider == "mem0":
+        if storage:
+            # Use the provided storage
+            super().__init__(storage=storage, embedder_config=embedder_config)
+        elif entity_storage:
+            # Use the storage from memory_config
+            super().__init__(storage=entity_storage, embedder_config=embedder_config)
+        elif memory_provider == "mem0":
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
             except ImportError:
                 raise ImportError(
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 )
-            storage = Mem0Storage(type="entities", crew=crew)
+            super().__init__(
+                storage=Mem0Storage(type="entities", crew=crew),
+                embedder_config=embedder_config,
+            )
         else:
-            storage = (
-                storage
-                if storage
-                else RAGStorage(
+            # Use RAGStorage (default)
+            super().__init__(
+                storage=RAGStorage(
                     type="entities",
                     allow_reset=True,
-                    embedder_config=embedder_config,
                     crew=crew,
+                    embedder_config=embedder_config,
                     path=path,
-                )
+                ),
+                embedder_config=embedder_config,
             )
+        
 
-        super().__init__(storage=storage)
-        self._memory_provider = memory_provider
-
-    def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
-        """Saves an entity item into the SQLite storage."""
-        if self._memory_provider == "mem0":
-            data = f"""
-            Remember details about the following entity:
-            Name: {item.name}
-            Type: {item.type}
-            Entity Description: {item.description}
-            """
+    def save(
+        self,
+        value: Any,
+        metadata: Dict[str, Any] = None,
+        agent: str = None,
+    ) -> None:
+        """Saves an entity item or value into the storage."""
+        if isinstance(value, EntityMemoryItem):
+            item = value
+            if self.memory_provider == "mem0":
+                data = f"""
+                Remember details about the following entity:
+                Name: {item.name}
+                Type: {item.type}
+                Entity Description: {item.description}
+                """
+            else:
+                data = f"{item.name}({item.type}): {item.description}"
+            super().save(data, item.metadata)
         else:
-            data = f"{item.name}({item.type}): {item.description}"
-        super().save(data, item.metadata)
+            # Handle regular value and metadata
+            super().save(value, metadata, agent)
 
     def reset(self) -> None:
         try:

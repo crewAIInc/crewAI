@@ -20,7 +20,7 @@ def test_save_and_search(long_term_memory):
         metadata={"task": "test_task", "quality": 0.5},
     )
     long_term_memory.save(memory)
-    find = long_term_memory.search("test_task", latest_n=5)[0]
+    find = long_term_memory.search(query="test_task", limit=5)[0]
     assert find["score"] == 0.5
     assert find["datetime"] == "test_datetime"
     assert find["metadata"]["agent"] == "test_agent"
