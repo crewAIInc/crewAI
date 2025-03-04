@@ -1802,41 +1802,41 @@ def test_litellm_anthropic_error_handling():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_streaming_with_tool_calling():
     """Test that streaming works correctly with tool calling."""
-    received_chunks = []
-    tool_called = False
 
     # Define a tool that will be called
     @tool
-    def calculator(first_number: int, second_number: int) -> float:
-        """Calculate the product of two numbers."""
-        nonlocal tool_called
-        tool_called = True
-        return first_number * second_number
+    def retrieve_secret_information() -> str:
+        """Retrieve the super secret password from the secure database."""
+        return "SuperSecretPassword123!"
 
-    # Create an agent with streaming enabled
-    agent = Agent(
-        role="Math Assistant",
-        goal="Help users with mathematical calculations",
-        backstory="I am an AI assistant specialized in mathematics.",
-        verbose=True,
-        llm=LLM(model="gpt-4o", stream=True),  # Enable streaming
-        max_iter=3,
+    # Create an LLM with streaming enabled
+    llm = LLM(
+        model="gpt-4o-mini",
+        stream=True,
     )
 
-    # Create a task that will require tool calling
-    task = Task(
-        description="Calculate 23 * 45 using the calculator tool.",
-        agent=agent,
-        expected_output="The result of the calculation.",
+    # Create a secret agent
+    secret_agent = Agent(
+        role="Secret Information Specialist",
+        goal="Retrieve classified information securely",
+        backstory="A highly trained operative with clearance to access confidential data",
+        tools=[retrieve_secret_information],
+        llm=llm,
+        max_iter=3,  # Limit iterations to prevent infinite loops
+        max_execution_time=60,  # Add timeout of 60 seconds
     )
 
-    assert True
+    # Create a secret retrieval task
+    secret_task = Task(
+        description="Retrieve the super secret password using the appropriate tool",
+        agent=secret_agent,
+        expected_output="The retrieved super secret password",
+    )
 
-    # # Execute the task with the calculator tool
-    # output = agent.execute_task(task=task, tools=[calculator])
+    # Execute the task directly with the agent
+    output = secret_agent.execute_task(task=secret_task)
 
-    # # Verify that the tool was called
-    # assert tool_called, "Calculator tool was not called"
-
-    # # Verify the output contains the correct result (23 * 45 = 1035)
-    # assert "1035" in output, f"Expected result '1035' not found in output: {output}"
+    # Verify the output contains the secret password
+    assert (
+        "SuperSecretPassword123!" in output
+    ), f"Expected secret password not found in output: {output}"
