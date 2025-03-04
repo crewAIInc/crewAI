@@ -83,28 +83,37 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        chroma_client = chromadb.PersistentClient(
-            path=base_path,
-            settings=Settings(allow_reset=True),
-        )
-
-        self.app = chroma_client
-
         try:
-            collection_name = (
-                f"knowledge_{self.collection_name}"
-                if self.collection_name
-                else "knowledge"
+            base_path = os.path.join(db_storage_path(), "knowledge")
+            chroma_client = chromadb.PersistentClient(
+                path=base_path,
+                settings=Settings(allow_reset=True),
             )
-            if self.app:
-                self.collection = self.app.get_or_create_collection(
-                    name=collection_name, embedding_function=self.embedder
+
+            self.app = chroma_client
+
+            try:
+                collection_name = (
+                    f"knowledge_{self.collection_name}"
+                    if self.collection_name
+                    else "knowledge"
                 )
+                if self.app:
+                    self.collection = self.app.get_or_create_collection(
+                        name=collection_name, embedding_function=self.embedder
+                    )
+                else:
+                    raise Exception("Vector Database Client not initialized")
+            except Exception:
+                raise Exception("Failed to create or get collection")
+        except RuntimeError as e:
+            if "unsupported version of sqlite3" in str(e).lower():
+                # Log a warning but continue without ChromaDB
+                logging.warning(f"ChromaDB requires SQLite3 >= 3.35.0. Current version is too old. Some features may be limited. Error: {e}")
+                self.app = None
+                self.collection = None
             else:
-                raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
+                raise
 
     def reset(self):
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)

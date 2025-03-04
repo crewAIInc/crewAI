@@ -1,12 +1,31 @@
 import os
+import logging
 from typing import Any, Dict, Optional, cast
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
-from chromadb.api.types import validate_embedding_function
+# Import chromadb conditionally to handle SQLite3 version errors
+try:
+    from chromadb import Documents, EmbeddingFunction, Embeddings
+    from chromadb.api.types import validate_embedding_function
+    CHROMADB_AVAILABLE = True
+except RuntimeError as e:
+    if "unsupported version of sqlite3" in str(e).lower():
+        logging.warning(f"ChromaDB requires SQLite3 >= 3.35.0. Current version is too old. Some features may be limited. Error: {e}")
+        CHROMADB_AVAILABLE = False
+        # Define placeholder types for type hints
+        Documents = Any
+        EmbeddingFunction = Any
+        Embeddings = Any
+        validate_embedding_function = lambda x: x  # noqa: E731
+    else:
+        raise
 
 
 class EmbeddingConfigurator:
     def __init__(self):
+        if not CHROMADB_AVAILABLE:
+            self.embedding_functions = {}
+            return
+            
         self.embedding_functions = {
             "openai": self._configure_openai,
             "azure": self._configure_azure,
@@ -24,8 +43,11 @@ class EmbeddingConfigurator:
     def configure_embedder(
         self,
         embedder_config: Optional[Dict[str, Any]] = None,
-    ) -> EmbeddingFunction:
+    ) -> Optional[EmbeddingFunction]:
         """Configures and returns an embedding function based on the provided config."""
+        if not CHROMADB_AVAILABLE:
+            return None
+            
         if embedder_config is None:
             return self._create_default_embedding_function()
 
@@ -47,6 +69,9 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _create_default_embedding_function():
+        if not CHROMADB_AVAILABLE:
+            return None
+            
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )

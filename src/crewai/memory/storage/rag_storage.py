@@ -60,25 +60,40 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
-        import chromadb
-        from chromadb.config import Settings
-
-        self._set_embedder_config()
-        chroma_client = chromadb.PersistentClient(
-            path=self.path if self.path else self.storage_file_name,
-            settings=Settings(allow_reset=self.allow_reset),
-        )
-
-        self.app = chroma_client
-
         try:
-            self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
+            import chromadb
+            from chromadb.config import Settings
+            
+            self._set_embedder_config()
+            if self.embedder_config is None:
+                # ChromaDB is not available, skip initialization
+                self.app = None
+                self.collection = None
+                return
+                
+            chroma_client = chromadb.PersistentClient(
+                path=self.path if self.path else self.storage_file_name,
+                settings=Settings(allow_reset=self.allow_reset),
             )
-        except Exception:
-            self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
+
+            self.app = chroma_client
+
+            try:
+                self.collection = self.app.get_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+            except Exception:
+                self.collection = self.app.create_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+        except RuntimeError as e:
+            if "unsupported version of sqlite3" in str(e).lower():
+                # Log a warning but continue without ChromaDB
+                logging.warning(f"ChromaDB requires SQLite3 >= 3.35.0. Current version is too old. Some features may be limited. Error: {e}")
+                self.app = None
+                self.collection = None
+            else:
+                raise
 
     def _sanitize_role(self, role: str) -> str:
         """
