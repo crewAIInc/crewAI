@@ -1098,8 +1098,19 @@ class Crew(BaseModel):
 
         return required_inputs
 
-    def copy(self):
-        """Create a deep copy of the Crew."""
+    def copy(self) -> 'Crew':
+        """Create a deep copy of the Crew instance.
+        
+        This method creates a new Crew instance with copies of all agents, tasks,
+        and other attributes. It handles special cases for certain attributes that
+        require custom copying logic, such as agents, tasks, and the manager_agent.
+        
+        Returns:
+            Crew: A new Crew instance with copied components.
+            
+        Raises:
+            RuntimeError: If there is an error during the copying process.
+        """
 
         exclude = {
             "id",
@@ -1115,11 +1126,20 @@ class Crew(BaseModel):
             "tasks",
             "knowledge_sources",
             "knowledge",
+            "manager_agent",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
+        
+        # Copy manager_agent if it exists
+        cloned_manager_agent = None
+        try:
+            if self.manager_agent is not None:
+                cloned_manager_agent = self.manager_agent.copy()
+        except Exception as e:
+            self._logger.log("warning", f"Failed to copy manager_agent: {e}")
 
-        task_mapping = {}
+        task_mapping: Dict[str, Task] = {}
 
         cloned_tasks = []
         existing_knowledge_sources = shallow_copy(self.knowledge_sources)
@@ -1150,6 +1170,7 @@ class Crew(BaseModel):
             tasks=cloned_tasks,
             knowledge_sources=existing_knowledge_sources,
             knowledge=existing_knowledge,
+            manager_agent=cloned_manager_agent,
         )
 
         return copied_crew
