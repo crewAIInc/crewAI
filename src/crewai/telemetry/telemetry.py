@@ -67,39 +67,41 @@ class Telemetry:
 
     def __init__(self):
         if not self._initialized:
-            self.ready = False
-            self.trace_set = False
+            with self._instance_lock:
+                if not self._initialized:
+                    self.ready = False
+                    self.trace_set = False
 
-            if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
-                self._initialized = True
-                return
+                    if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
+                        self._initialized = True
+                        return
 
-            try:
-                telemetry_endpoint = "https://telemetry.crewai.com:4319"
-                self.resource = Resource(
-                    attributes={SERVICE_NAME: "crewAI-telemetry"},
-                )
-                with suppress_warnings():
-                    self.provider = TracerProvider(resource=self.resource)
+                    try:
+                        telemetry_endpoint = "https://telemetry.crewai.com:4319"
+                        self.resource = Resource(
+                            attributes={SERVICE_NAME: "crewAI-telemetry"},
+                        )
+                        with suppress_warnings():
+                            self.provider = TracerProvider(resource=self.resource)
 
-                processor = BatchSpanProcessor(
-                    OTLPSpanExporter(
-                        endpoint=f"{telemetry_endpoint}/v1/traces",
-                        timeout=30,
-                    )
-                )
+                        processor = BatchSpanProcessor(
+                            OTLPSpanExporter(
+                                endpoint=f"{telemetry_endpoint}/v1/traces",
+                                timeout=30,
+                            )
+                        )
 
-                self.provider.add_span_processor(processor)
-                self.ready = True
-            except Exception as e:
-                if isinstance(
-                    e,
-                    (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
-                ):
-                    raise  # Re-raise the exception to not interfere with system signals
-                self.ready = False
-            
-            self._initialized = True
+                        self.provider.add_span_processor(processor)
+                        self.ready = True
+                    except Exception as e:
+                        if isinstance(
+                            e,
+                            (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
+                        ):
+                            raise  # Re-raise the exception to not interfere with system signals
+                        self.ready = False
+                    
+                    self._initialized = True
 
     def __del__(self):
         """Clean up resources when the instance is destroyed."""
