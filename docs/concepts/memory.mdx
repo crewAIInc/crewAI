@@ -60,7 +60,7 @@ my_crew = Crew(
 ```python Code
 from crewai import Crew, Process
 from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
-from crewai.memory.storage import LTMSQLiteStorage, RAGStorage
+from crewai.memory.storage import LTMSQLiteStorage, ChromaRAGStorage
 from typing import List, Optional
 
 # Assemble your crew with memory capabilities
@@ -77,7 +77,7 @@ my_crew: Crew = Crew(
     ),
     # Short-term memory for current context using RAG
     short_term_memory = ShortTermMemory(
-        storage = RAGStorage(
+        storage = ChromaRAGStorage(
                 embedder_config={
                     "provider": "openai",
                     "config": {
@@ -91,7 +91,7 @@ my_crew: Crew = Crew(
     ),
     # Entity memory for tracking key information about entities
     entity_memory = EntityMemory(
-        storage=RAGStorage(
+        storage=ChromaRAGStorage(
             embedder_config={
                 "provider": "openai",
                 "config": {

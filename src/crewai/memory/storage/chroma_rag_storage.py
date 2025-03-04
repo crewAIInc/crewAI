@@ -31,7 +31,7 @@ def suppress_logging(
     logger.setLevel(original_level)
 
 
-class RAGStorage(BaseRAGStorage):
+class ChromaRAGStorage(BaseRAGStorage):
     """
     Extends Storage to handle embeddings for memory entries, improving
     search efficiency.
