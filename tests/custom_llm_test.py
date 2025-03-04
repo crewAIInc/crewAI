@@ -1,5 +1,6 @@
-import pytest
 from typing import Any, Dict, List, Optional, Union
+
+import pytest
 
 from crewai.llm import BaseLLM
 from crewai.utilities.llm_utils import create_llm

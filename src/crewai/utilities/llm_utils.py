@@ -2,7 +2,7 @@ import os
 from typing import Any, Dict, List, Optional, Union
 
 from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
-from crewai.llm import BaseLLM, LLM
+from crewai.llm import LLM, BaseLLM
 
 
 def create_llm(

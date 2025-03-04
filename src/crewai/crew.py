@@ -26,7 +26,7 @@ from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.llm import BaseLLM, LLM
+from crewai.llm import LLM, BaseLLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
