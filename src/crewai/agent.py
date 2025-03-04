@@ -1,9 +1,11 @@
 import re
 import shutil
 import subprocess
+import threading
 from typing import Any, Dict, List, Literal, Optional, Sequence, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+import timeout_decorator
 
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -153,6 +155,75 @@ class Agent(BaseAgent):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
+    def _execute_with_timeout(
+        self,
+        task: Task,
+        context: Optional[str],
+        tools: Optional[List[BaseTool]],
+        timeout: int
+    ) -> str:
+        """Execute task with timeout using thread-based timeout.
+        
+        Args:
+            task: The task to execute
+            context: Optional context for the task
+            tools: Optional list of tools to use
+            timeout: Maximum execution time in seconds (must be > 0)
+            
+        Returns:
+            The result of the task execution
+            
+        Raises:
+            ValueError: If timeout is not a positive integer
+            TimeoutError: If execution exceeds the timeout
+            Exception: Any error that occurs during execution
+        """
+        # Validate timeout before creating any resources
+        if not isinstance(timeout, int) or timeout <= 0:
+            raise ValueError("Timeout must be a positive integer greater than zero")
+
+        completion_event: threading.Event = threading.Event()
+        result_container: List[Optional[str]] = [None]
+        error_container: List[Optional[Exception]] = [None]
+        
+        def target() -> None:
+            try:
+                result_container[0] = self._execute_task_without_timeout(task, context, tools)
+            except Exception as e:
+                error_container[0] = e
+            finally:
+                completion_event.set()
+        
+        thread: threading.Thread = threading.Thread(target=target)
+        thread.daemon = True  # Ensures thread doesn't prevent program exit
+        thread.start()
+        
+        # Wait for either completion or timeout
+        completed: bool = completion_event.wait(timeout=timeout)
+        
+        if not completed:
+            self._logger.log("warning", f"Task execution timed out after {timeout} seconds")
+            thread.join(timeout=0.1) 
+            
+            # Clean up resources
+            if hasattr(self, 'agent_executor') and self.agent_executor:
+                self.agent_executor.llm = None  # Release LLM resources
+                if hasattr(self.agent_executor, 'close'):
+                    self.agent_executor.close()
+                
+            raise timeout_decorator.TimeoutError(f"Task execution timed out after {timeout} seconds")
+        
+        if error_container[0]:
+            error = error_container[0]
+            self._logger.log("error", f"Task execution failed: {str(error)}")
+            raise error
+        
+        if result_container[0] is None:
+            self._logger.log("warning", "Task execution completed but returned no result")
+            raise timeout_decorator.TimeoutError("Task execution completed but returned no result")
+        
+        return result_container[0]
+
     def execute_task(
         self,
         task: Task,
@@ -168,7 +239,38 @@ class Agent(BaseAgent):
 
         Returns:
             Output of the agent
+
+        Raises:
+            TimeoutError: If the task execution exceeds max_execution_time (if set)
+            Exception: For other execution errors
         """
+        if self.max_execution_time is None:
+            return self._execute_task_without_timeout(task, context, tools)
+
+        original_llm_timeout = getattr(self.llm, 'timeout', None)
+        try:
+            if hasattr(self.llm, 'timeout'):
+                self.llm.timeout = self.max_execution_time
+            
+            return self._execute_with_timeout(task, context, tools, self.max_execution_time)
+        except timeout_decorator.TimeoutError:
+            error_msg = (
+                f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. "
+                f"Consider increasing max_execution_time or optimizing the task."
+            )
+            self._logger.log("error", error_msg)
+            raise TimeoutError(error_msg)
+        finally:
+            if original_llm_timeout is not None and hasattr(self.llm, 'timeout'):
+                self.llm.timeout = original_llm_timeout
+
+    def _execute_task_without_timeout(
+        self,
+        task: Task,
+        context: Optional[str] = None,
+        tools: Optional[List[BaseTool]] = None,
+    ) -> str:
+        """Execute task without timeout - contains the original execute_task logic."""
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
