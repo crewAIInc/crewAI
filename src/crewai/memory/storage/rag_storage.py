@@ -38,7 +38,7 @@ class RAGStorage(BaseRAGStorage):
     search efficiency.
     """
 
-    app: ClientAPI | None = None
+    app: Optional[ClientAPI] = None
 
     def __init__(
         self, type, allow_reset=True, embedder_config=None, crew=None, path=None
@@ -137,7 +137,7 @@ class RAGStorage(BaseRAGStorage):
             logging.error(f"Error during {self.type} search: {str(e)}")
             return []
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
+    def _generate_embedding(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> Any:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 

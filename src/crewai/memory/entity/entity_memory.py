@@ -23,39 +23,41 @@ class EntityMemory(Memory):
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
             memory_config = crew.memory_config
             memory_provider = memory_config.get("provider")
-            
-        # Initialize with basic parameters
-        super().__init__(
-            storage=storage,
-            embedder_config=embedder_config,
-            memory_provider=memory_provider
-        )
         
-        try:
-            # Try to select storage using helper method
-            self.storage = self._select_storage(
-                storage=storage,
-                memory_config=memory_config,
-                storage_type="entity",
-                crew=crew,
-                path=path,
-                default_storage_factory=lambda path, crew: RAGStorage(
+        # If no storage is provided, try to create one
+        if storage is None:
+            try:
+                # Try to select storage using helper method
+                storage = self._select_storage(
+                    storage=storage,
+                    memory_config=memory_config,
+                    storage_type="entity",
+                    crew=crew,
+                    path=path,
+                    default_storage_factory=lambda path, crew: RAGStorage(
+                        type="entities",
+                        allow_reset=True,
+                        crew=crew,
+                        embedder_config=embedder_config,
+                        path=path,
+                    )
+                )
+            except ValueError:
+                # Fallback to default storage
+                storage = RAGStorage(
                     type="entities",
                     allow_reset=True,
                     crew=crew,
                     embedder_config=embedder_config,
                     path=path,
                 )
-            )
-        except ValueError:
-            # Fallback to default storage
-            self.storage = RAGStorage(
-                type="entities",
-                allow_reset=True,
-                crew=crew,
-                embedder_config=embedder_config,
-                path=path,
-            )
+        
+        # Initialize with parameters
+        super().__init__(
+            storage=storage,
+            embedder_config=embedder_config,
+            memory_provider=memory_provider
+        )
         
 
     def save(

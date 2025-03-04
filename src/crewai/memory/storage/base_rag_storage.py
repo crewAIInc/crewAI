@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from crewai.memory.storage.interface import SearchResult, Storage
 
 
-class BaseRAGStorage(Storage, ABC):
+class BaseRAGStorage(Storage[Any], ABC):
     """
     Base class for RAG-based Storage implementations.
     """
