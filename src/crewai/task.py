@@ -66,6 +66,25 @@ class Task(BaseModel):
         output_pydantic: Pydantic model for task output.
         tools: List of tools/resources limited for task execution.
     """
+    
+    def __init__(self, **data):
+        # Handle case where agent is a callable (can happen with CrewBase decorator)
+        if 'agent' in data and callable(data['agent']) and not isinstance(data['agent'], type):
+            try:
+                # Call the agent method to get the agent instance
+                agent = data['agent']()
+                
+                # Verify that the agent is a valid instance
+                from crewai.agents.agent_builder.base_agent import BaseAgent
+                if agent is not None and not isinstance(agent, BaseAgent):
+                    raise ValueError(f"Expected BaseAgent instance, got {type(agent)}")
+                    
+                data['agent'] = agent
+            except Exception as e:
+                raise ValueError(f"Failed to initialize agent from callable: {e}")
+        
+        # Call the parent class __init__ method
+        super().__init__(**data)
 
     __hash__ = object.__hash__  # type: ignore
     logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
