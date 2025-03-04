@@ -1,5 +1,6 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 
 class TestEmbeddingConfigurator(unittest.TestCase):
     @patch('crewai.utilities.embedding_configurator.CHROMADB_AVAILABLE', False)
