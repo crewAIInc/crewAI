@@ -1,5 +1,5 @@
-import threading
 import pytest
+import threading
 from crewai.telemetry import Telemetry
 
 
