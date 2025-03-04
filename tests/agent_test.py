@@ -1814,15 +1814,11 @@ def test_agent_streaming_with_tool_calling():
 
         # Define a tool that will be called
         @tool
-        def calculator(expression: str) -> str:
-            """Calculate the result of a mathematical expression."""
+        def calculator(first_number: int, second_number: int) -> float:
+            """Calculate the product of two numbers."""
             nonlocal tool_called
             tool_called = True
-            try:
-                result = eval(expression)
-                return f"The result of {expression} is {result}"
-            except Exception as e:
-                return f"Error calculating {expression}: {str(e)}"
+            return first_number * second_number
 
         # Create an agent with streaming enabled
         agent = Agent(
