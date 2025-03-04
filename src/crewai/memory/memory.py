@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Memory(BaseModel):
@@ -9,8 +9,8 @@ class Memory(BaseModel):
     """
 
     embedder_config: Optional[Dict[str, Any]] = None
-
     storage: Any
+    memory_provider: Optional[str] = Field(default=None, exclude=True)
 
     def __init__(self, storage: Any, **data: Any):
         super().__init__(storage=storage, **data)
