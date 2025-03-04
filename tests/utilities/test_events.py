@@ -630,7 +630,7 @@ def test_llm_emits_stream_chunk_events():
             received_chunks.append(event.chunk)
 
         # Create an LLM with streaming enabled
-        llm = LLM(model="gpt-3.5-turbo", stream=True)
+        llm = LLM(model="gpt-4o", stream=True)
 
         # Call the LLM with a simple message
         response = llm.call("Tell me a short joke")
@@ -654,7 +654,7 @@ def test_llm_no_stream_chunks_when_streaming_disabled():
             received_chunks.append(event.chunk)
 
         # Create an LLM with streaming disabled
-        llm = LLM(model="gpt-3.5-turbo", stream=False)
+        llm = LLM(model="gpt-4o", stream=False)
 
         # Call the LLM with a simple message
         response = llm.call("Tell me a short joke")
@@ -664,89 +664,6 @@ def test_llm_no_stream_chunks_when_streaming_disabled():
 
         # Verify we got a response
         assert response and isinstance(response, str)
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_tool_calling_with_streaming():
-    """Test that tool calling works correctly with streaming enabled."""
-    received_chunks = []
-    tool_called = False
-
-    def sample_tool(text: str) -> str:
-        nonlocal tool_called
-        tool_called = True
-        return f"Tool processed: {text}"
-
-    available_functions = {"sample_tool": sample_tool}
-
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "sample_tool",
-                "description": "A sample tool that processes text",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string", "description": "The text to process"}
-                    },
-                    "required": ["text"],
-                },
-            },
-        }
-    ]
-
-    with crewai_event_bus.scoped_handlers():
-
-        @crewai_event_bus.on(LLMStreamChunkEvent)
-        def handle_stream_chunk(source, event):
-            received_chunks.append(event.chunk)
-
-        # Create an LLM with streaming enabled
-        llm = LLM(model="gpt-4", stream=True)
-
-        # Store original methods
-        original_call = llm.call
-        original_handle_tool_call = llm._handle_tool_call
-
-        # Create a mock call method that simulates streaming and tool calling
-        def mock_call(messages, tools=None, callbacks=None, available_functions=None):
-            # Emit some chunks first
-            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="I'll process "))
-            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="that text "))
-            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="for you."))
-
-            # Call the tool
-            if available_functions and "sample_tool" in available_functions:
-                result = available_functions["sample_tool"]("Hello, world!")
-                return result
-
-            return "No tool was called"
-
-        # Replace the methods with our mocks
-        llm.call = mock_call
-
-        try:
-            # Call the LLM with a message that should trigger tool use
-            response = llm.call(
-                "Process this text with the sample tool: 'Hello, world!'",
-                tools=tools,
-                available_functions=available_functions,
-            )
-
-            # Verify that we received chunks
-            assert len(received_chunks) == 3
-            assert "".join(received_chunks) == "I'll process that text for you."
-
-            # Verify that the tool was called
-            assert tool_called
-
-            # Verify the response contains the tool's output
-            assert response == "Tool processed: Hello, world!"
-
-        finally:
-            # Restore the original methods
-            llm.call = original_call
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -762,7 +679,7 @@ def test_streaming_fallback_to_non_streaming():
             received_chunks.append(event.chunk)
 
         # Create an LLM with streaming enabled
-        llm = LLM(model="gpt-3.5-turbo", stream=True)
+        llm = LLM(model="gpt-4o", stream=True)
 
         # Store original methods
         original_call = llm.call

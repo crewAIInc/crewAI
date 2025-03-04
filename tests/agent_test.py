@@ -18,6 +18,7 @@ from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.llm_events import LLMStreamChunkEvent
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
@@ -259,9 +260,7 @@ def test_cache_hitting():
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    with (
-        patch.object(CacheHandler, "read") as read,
-    ):
+    with (patch.object(CacheHandler, "read") as read,):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -1798,3 +1797,66 @@ def test_litellm_anthropic_error_handling():
 
     # Verify the LLM call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_streaming_with_tool_calling():
+    """Test that streaming works correctly with tool calling."""
+    received_chunks = []
+    tool_called = False
+
+    # Set up event listener to capture streaming chunks
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def handle_stream_chunk(source, event):
+            received_chunks.append(event.chunk)
+
+        # Define a tool that will be called
+        @tool
+        def calculator(expression: str) -> str:
+            """Calculate the result of a mathematical expression."""
+            nonlocal tool_called
+            tool_called = True
+            try:
+                result = eval(expression)
+                return f"The result of {expression} is {result}"
+            except Exception as e:
+                return f"Error calculating {expression}: {str(e)}"
+
+        # Create an agent with streaming enabled
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help users with mathematical calculations",
+            backstory="I am an AI assistant specialized in mathematics.",
+            verbose=True,
+            llm=LLM(model="gpt-4o", stream=True),  # Enable streaming
+        )
+
+        # Create a task that will require tool calling
+        task = Task(
+            description="Calculate 23 * 45 using the calculator tool.",
+            agent=agent,
+            expected_output="The result of the calculation.",
+        )
+
+        # Execute the task with the calculator tool
+        output = agent.execute_task(task=task, tools=[calculator])
+
+        # Verify that streaming chunks were received
+        assert len(received_chunks) > 0, "No streaming chunks were received"
+
+        # Verify that the tool was called
+        assert tool_called, "Calculator tool was not called"
+
+        # Verify that the output contains the correct result
+        assert "1035" in output, f"Output does not contain the correct result: {output}"
+
+        # Verify that the streaming chunks form a coherent response
+        combined_chunks = "".join(received_chunks)
+        assert len(combined_chunks) > 0, "Combined chunks are empty"
+
+        # Log for debugging
+        print(f"Received {len(received_chunks)} chunks")
+        print(f"First few chunks: {received_chunks[:3]}")
+        print(f"Output: {output}")
