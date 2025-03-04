@@ -62,7 +62,12 @@ def test_custom_llm_implementation():
 
 
 class JWTAuthLLM(BaseLLM):
+    """Custom LLM implementation with JWT authentication."""
+    
     def __init__(self, jwt_token: str):
+        super().__init__()
+        if not jwt_token or not isinstance(jwt_token, str):
+            raise ValueError("Invalid JWT token")
         self.jwt_token = jwt_token
         self.calls = []
         self.stop = []
@@ -74,6 +79,7 @@ class JWTAuthLLM(BaseLLM):
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
     ) -> Union[str, Any]:
+        """Record the call and return a predefined response."""
         self.calls.append({
             "messages": messages, 
             "tools": tools,
@@ -85,12 +91,15 @@ class JWTAuthLLM(BaseLLM):
         return "Response from JWT-authenticated LLM"
         
     def supports_function_calling(self) -> bool:
+        """Return True to indicate that function calling is supported."""
         return True
         
     def supports_stop_words(self) -> bool:
+        """Return True to indicate that stop words are supported."""
         return True
         
     def get_context_window_size(self) -> int:
+        """Return a default context window size."""
         return 8192
 
 

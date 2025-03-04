@@ -14,7 +14,7 @@ from packaging import version
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
 from crewai.crew import Crew
-from crewai.llm import BaseLLM, LLM
+from crewai.llm import LLM, BaseLLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
 
