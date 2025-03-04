@@ -9,6 +9,7 @@ from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
 
+DEFAULT_EMBEDDING_DIM = 1536
 
 class MilvusRAGStorage(BaseRAGStorage):
     """
@@ -102,12 +103,12 @@ class MilvusRAGStorage(BaseRAGStorage):
                 field_name="id", 
                 datatype=DataType.VARCHAR,
                 is_primary=True,
-                max_length=36
+                max_length=65535
             )
             schema.add_field(
                 field_name="embedding", 
                 datatype=DataType.FLOAT_VECTOR, 
-                dim=1536
+                dim=DEFAULT_EMBEDDING_DIM
             )
             schema.add_field(
                 field_name="text", 
@@ -120,7 +121,6 @@ class MilvusRAGStorage(BaseRAGStorage):
             )
             
             index_params = self.client.prepare_index_params()
-            
             
             index_params.add_index(
                 field_name="embedding", 
@@ -137,7 +137,7 @@ class MilvusRAGStorage(BaseRAGStorage):
             logging.info(f"Successfully created collection: {self.collection_name}")
         except Exception as e:
             logging.error(f"Error creating collection: {str(e)}")
-            raise
+            raise RuntimeError(f"Failed to create Milvus collection: {str(e)}")
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         try:
@@ -168,7 +168,7 @@ class MilvusRAGStorage(BaseRAGStorage):
             embedding = self._generate_embedding(query, {})
             search_params = {
                 "metric_type": "L2", 
-                "params": {} 
+                "params": {"nprobe": 128},
             }
             
             search_args = {
