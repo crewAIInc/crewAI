@@ -4,10 +4,10 @@ import logging
 import os
 import shutil
 import uuid
-from typing import Any, Dict, List, Optional, Union, Collection
+from typing import Any, Dict, List, Optional, Union, Collection as TypeCollection
 
 from chromadb.api import ClientAPI
-from chromadb.api.models.Collection import Collection
+from chromadb.api.models.Collection import Collection as ChromaCollection
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
