@@ -94,7 +94,7 @@ class Crew(BaseModel):
 
     __hash__ = object.__hash__  # type: ignore
     _execution_span: Any = PrivateAttr()
-    _rpm_controller: RPMController = PrivateAttr()
+    _rpm_controller: Optional[RPMController] = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
@@ -248,13 +248,30 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
-        self._cache_handler = CacheHandler()
         self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)
+
+        return self
+
+    @model_validator(mode="after")
+    def initialize_dependencies(self) -> "Crew":
+        # Always create a cache handler, but it will only be used if self.cache is True
+        # Create the Crew-level RPM controller if a max RPM is specified
+        if self.max_rpm is not None:
+            self._rpm_controller = RPMController(
+                max_rpm=self.max_rpm, logger=Logger(verbose=self.verbose)
+            )
+        else:
+            self._rpm_controller = None
+
+        # Now inject these external dependencies into each agent
+        for agent in self.agents:
+            agent.crew = self  # ensure the agent's crew reference is set
+            agent.configure_executor(self._cache_handler, self._rpm_controller)
 
         return self
 
@@ -357,10 +374,7 @@ class Crew(BaseModel):
 
         if self.agents:
             for agent in self.agents:
-                if self.cache:
-                    agent.set_cache_handler(self._cache_handler)
-                if self.max_rpm:
-                    agent.set_rpm_controller(self._rpm_controller)
+                agent.configure_executor(self._cache_handler, self._rpm_controller)
         return self
 
     @model_validator(mode="after")
@@ -627,7 +641,7 @@ class Crew(BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
-            metrics += [agent._token_process.get_summary() for agent in self.agents]
+            metrics += [agent.token_process.get_summary() for agent in self.agents]
 
             self.usage_metrics = UsageMetrics()
             for metric in metrics:
@@ -1174,19 +1188,22 @@ class Crew(BaseModel):
             agent.interpolate_inputs(inputs)
 
     def _finish_execution(self, final_string_output: str) -> None:
-        if self.max_rpm:
+        if self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()
 
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
         total_usage_metrics = UsageMetrics()
         for agent in self.agents:
-            if hasattr(agent, "_token_process"):
-                token_sum = agent._token_process.get_summary()
-                total_usage_metrics.add_usage_metrics(token_sum)
-        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
-            token_sum = self.manager_agent._token_process.get_summary()
+            # Directly access token_process since it's now a field in BaseAgent
+            token_sum = agent.token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
+
+        if self.manager_agent:
+            # Directly access token_process since it's now a field in BaseAgent
+            token_sum = self.manager_agent.token_process.get_summary()
+            total_usage_metrics.add_usage_metrics(token_sum)
+
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
 

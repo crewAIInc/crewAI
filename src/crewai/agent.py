@@ -1,7 +1,7 @@
 import re
 import shutil
 import subprocess
-from typing import Any, Dict, List, Literal, Optional, Sequence, Union
+from typing import Any, Dict, List, Literal, Optional, Sequence, Union, cast
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -170,27 +170,19 @@ class Agent(BaseAgent):
             Output of the agent
         """
         if self.tools_handler:
-            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
-
+            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalli
         task_prompt = task.prompt()
 
         # If the task requires output in JSON or Pydantic format,
         # append specific instructions to the task prompt to ensure
         # that the final answer does not include any code block markers
         if task.output_json or task.output_pydantic:
-            # Generate the schema based on the output format
-            if task.output_json:
-                # schema = json.dumps(task.output_json, indent=2)
-                schema = generate_model_description(task.output_json)
-                task_prompt += "\n" + self.i18n.slice(
-                    "formatted_task_instructions"
-                ).format(output_format=schema)
-
-            elif task.output_pydantic:
-                schema = generate_model_description(task.output_pydantic)
-                task_prompt += "\n" + self.i18n.slice(
-                    "formatted_task_instructions"
-                ).format(output_format=schema)
+            # Choose the output format, preferring output_json if available
+            output_format = (
+                task.output_json if task.output_json else task.output_pydantic
+            )
+            schema = generate_model_description(cast(type, output_format))
+            task_prompt += f"\n{self.i18n.slice('formatted_task_instructions').format(output_format=schema)}"
 
         if context:
             task_prompt = self.i18n.slice("task_with_context").format(
@@ -276,9 +268,6 @@ class Agent(BaseAgent):
                 raise e
             result = self.execute_task(task, context, tools)
 
-        if self.max_rpm and self._rpm_controller:
-            self._rpm_controller.stop_rpm_counter()
-
         # If there was any tool in self.tools_results that had result_as_answer
         # set to True, return the results of the last tool that had
         # result_as_answer set to True
@@ -338,7 +327,7 @@ class Agent(BaseAgent):
             request_within_rpm_limit=(
                 self._rpm_controller.check_or_wait if self._rpm_controller else None
             ),
-            callbacks=[TokenCalcHandler(self._token_process)],
+            callbacks=[TokenCalcHandler(self.token_process)],
         )
 
     def get_delegation_tools(self, agents: List[BaseAgent]):

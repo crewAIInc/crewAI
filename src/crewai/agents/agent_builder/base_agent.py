@@ -73,20 +73,27 @@ class BaseAgent(ABC, BaseModel):
             Increment formatting errors.
         copy() -> "BaseAgent":
             Create a copy of the agent.
-        set_rpm_controller(rpm_controller: RPMController) -> None:
+        set_rpm_controller(rpm_controller: Optional[RPMController] = None) -> None:
             Set the rpm controller for the agent.
         set_private_attrs() -> "BaseAgent":
             Set private attributes.
+        configure_executor(cache_handler: CacheHandler, rpm_controller: RPMController) -> None:
+            Configure the agent's executor with both cache and RPM handling.
     """
 
     __hash__ = object.__hash__  # type: ignore
+
+    model_config = {
+        "arbitrary_types_allowed": True,
+    }
+
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: Optional[RPMController] = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
     _original_role: Optional[str] = PrivateAttr(default=None)
     _original_goal: Optional[str] = PrivateAttr(default=None)
     _original_backstory: Optional[str] = PrivateAttr(default=None)
-    _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
+    token_process: TokenProcess = Field(default_factory=TokenProcess, exclude=True)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     formatting_errors: int = Field(
         default=0, description="Number of formatting errors."
@@ -196,8 +203,6 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = RPMController(
                 max_rpm=self.max_rpm, logger=self._logger
             )
-        if not self._token_process:
-            self._token_process = TokenProcess()
 
         return self
 
@@ -217,8 +222,7 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = RPMController(
                 max_rpm=self.max_rpm, logger=self._logger
             )
-        if not self._token_process:
-            self._token_process = TokenProcess()
+
         return self
 
     @property
@@ -266,7 +270,7 @@ class BaseAgent(ABC, BaseModel):
             "_logger",
             "_rpm_controller",
             "_request_within_rpm_limit",
-            "_token_process",
+            "token_process",
             "agent_executor",
             "tools",
             "tools_handler",
@@ -337,20 +341,49 @@ class BaseAgent(ABC, BaseModel):
         if self.cache:
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
-        self.create_agent_executor()
+        # Only create the executor if it hasn't been created yet.
+        if self.agent_executor is None:
+            self.create_agent_executor()
 
     def increment_formatting_errors(self) -> None:
         self.formatting_errors += 1
 
-    def set_rpm_controller(self, rpm_controller: RPMController) -> None:
-        """Set the rpm controller for the agent.
-
-        Args:
-            rpm_controller: An instance of the RPMController class.
+    def set_rpm_controller(
+        self, rpm_controller: Optional[RPMController] = None
+    ) -> None:
         """
-        if not self._rpm_controller:
-            self._rpm_controller = rpm_controller
-            self.create_agent_executor()
+        Set the RPM controller for the agent. If no rpm_controller is provided, then:
+          - use self.max_rpm if set, or
+          - if self.crew exists and has max_rpm, use that.
+        """
+        if self._rpm_controller is None:
+            if rpm_controller is not None:
+                self._rpm_controller = rpm_controller
+            elif self.max_rpm:
+                self._rpm_controller = RPMController(
+                    max_rpm=self.max_rpm, logger=self._logger
+                )
+            elif self.crew and getattr(self.crew, "max_rpm", None):
+                self._rpm_controller = RPMController(
+                    max_rpm=self.crew.max_rpm, logger=self._logger
+                )
+            # else: no rpm limit provided – leave the controller None
+            if self.agent_executor is None:
+                self.create_agent_executor()
+
+    def configure_executor(
+        self, cache_handler: CacheHandler, rpm_controller: Optional[RPMController]
+    ) -> None:
+        """Configure the agent's executor with both cache and RPM handling.
+
+        This method delegates to set_cache_handler and set_rpm_controller, applying the configuration
+        only if the respective flags or values are set.
+        """
+        if self.cache:
+            self.set_cache_handler(cache_handler)
+        # Use the injected RPM controller rather than auto-creating one
+        if rpm_controller:
+            self.set_rpm_controller(rpm_controller)
 
     def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
         pass
