@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from pydantic import PrivateAttr
 
@@ -17,47 +17,71 @@ class EntityMemory(Memory):
     _memory_provider: Optional[str] = PrivateAttr()
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
+        memory_provider = None
+        memory_config = None
+        
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
-            memory_provider = crew.memory_config.get("provider")
-        else:
-            memory_provider = None
-
-        if memory_provider == "mem0":
+            memory_config = crew.memory_config
+            memory_provider = memory_config.get("provider")
+        
+        # If no storage is provided, try to create one
+        if storage is None:
             try:
-                from crewai.memory.storage.mem0_storage import Mem0Storage
-            except ImportError:
-                raise ImportError(
-                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
-                )
-            storage = Mem0Storage(type="entities", crew=crew)
-        else:
-            storage = (
-                storage
-                if storage
-                else RAGStorage(
-                    type="entities",
-                    allow_reset=True,
-                    embedder_config=embedder_config,
+                # Try to select storage using helper method
+                storage = self._select_storage(
+                    storage=storage,
+                    memory_config=memory_config,
+                    storage_type="entity",
                     crew=crew,
                     path=path,
+                    default_storage_factory=lambda path, crew: RAGStorage(
+                        type="entities",
+                        allow_reset=True,
+                        crew=crew,
+                        embedder_config=embedder_config,
+                        path=path,
+                    )
                 )
-            )
+            except ValueError:
+                # Fallback to default storage
+                storage = RAGStorage(
+                    type="entities",
+                    allow_reset=True,
+                    crew=crew,
+                    embedder_config=embedder_config,
+                    path=path,
+                )
+        
+        # Initialize with parameters
+        super().__init__(
+            storage=storage,
+            embedder_config=embedder_config,
+            memory_provider=memory_provider
+        )
+        
 
-        super().__init__(storage=storage)
-        self._memory_provider = memory_provider
-
-    def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
-        """Saves an entity item into the SQLite storage."""
-        if self._memory_provider == "mem0":
-            data = f"""
-            Remember details about the following entity:
-            Name: {item.name}
-            Type: {item.type}
-            Entity Description: {item.description}
-            """
+    def save(
+        self,
+        value: Any,
+        metadata: Optional[Dict[str, Any]] = None,
+        agent: Optional[str] = None,
+    ) -> None:
+        """Saves an entity item or value into the storage."""
+        if isinstance(value, EntityMemoryItem):
+            item = value
+            if self.memory_provider == "mem0":
+                data = f"""
+                Remember details about the following entity:
+                Name: {item.name}
+                Type: {item.type}
+                Entity Description: {item.description}
+                """
+            else:
+                data = f"{item.name}({item.type}): {item.description}"
+            super().save(data, item.metadata)
         else:
-            data = f"{item.name}({item.type}): {item.description}"
-        super().save(data, item.metadata)
+            # Handle regular value and metadata
+            super().save(value, metadata, agent)
 
     def reset(self) -> None:
         try:

@@ -19,32 +19,43 @@ class ShortTermMemory(Memory):
     _memory_provider: Optional[str] = PrivateAttr()
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
+        memory_provider = None
+        memory_config = None
+        
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
-            memory_provider = crew.memory_config.get("provider")
-        else:
-            memory_provider = None
-
-        if memory_provider == "mem0":
-            try:
-                from crewai.memory.storage.mem0_storage import Mem0Storage
-            except ImportError:
-                raise ImportError(
-                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
-                )
-            storage = Mem0Storage(type="short_term", crew=crew)
-        else:
-            storage = (
-                storage
-                if storage
-                else RAGStorage(
+            memory_config = crew.memory_config
+            memory_provider = memory_config.get("provider")
+            
+        # Initialize with basic parameters
+        super().__init__(
+            storage=storage,
+            embedder_config=embedder_config,
+            memory_provider=memory_provider
+        )
+        
+        try:
+            # Try to select storage using helper method
+            self.storage = self._select_storage(
+                storage=storage,
+                memory_config=memory_config,
+                storage_type="short_term",
+                crew=crew,
+                path=path,
+                default_storage_factory=lambda path, crew: RAGStorage(
                     type="short_term",
-                    embedder_config=embedder_config,
                     crew=crew,
+                    embedder_config=embedder_config,
                     path=path,
                 )
             )
-        super().__init__(storage=storage)
-        self._memory_provider = memory_provider
+        except ValueError:
+            # Fallback to default storage
+            self.storage = RAGStorage(
+                type="short_term",
+                crew=crew,
+                embedder_config=embedder_config,
+                path=path,
+            )
 
     def save(
         self,
@@ -53,7 +64,7 @@ class ShortTermMemory(Memory):
         agent: Optional[str] = None,
     ) -> None:
         item = ShortTermMemoryItem(data=value, metadata=metadata, agent=agent)
-        if self._memory_provider == "mem0":
+        if self.memory_provider == "mem0":
             item.data = f"Remember the following insights from Agent run: {item.data}"
 
         super().save(value=item.data, metadata=item.metadata, agent=item.agent)
