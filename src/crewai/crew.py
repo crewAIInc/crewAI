@@ -6,8 +6,10 @@ import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast, TypeVar
 
+from langchain_core.tools import BaseTool as LangchainBaseTool
+from crewai.tools.base_tool import BaseTool, Tool
 from pydantic import (
     UUID4,
     BaseModel,
@@ -184,7 +186,7 @@ class Crew(BaseModel):
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
     )
-    prompt_file: str = Field(
+    prompt_file: Optional[str] = Field(
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
@@ -798,7 +800,8 @@ class Crew(BaseModel):
 
             # Determine which tools to use - task tools take precedence over agent tools
             tools_for_task = task.tools or agent_to_use.tools or []
-            tools_for_task = self._prepare_tools(agent_to_use, task, tools_for_task)
+            # Prepare tools and ensure they're compatible with task execution
+            tools_for_task = self._prepare_tools(agent_to_use, task, cast(Union[List[Tool], List[BaseTool]], tools_for_task))
 
             self._log_task_start(task, agent_to_use.role)
 
@@ -817,7 +820,7 @@ class Crew(BaseModel):
                 future = task.execute_async(
                     agent=agent_to_use,
                     context=context,
-                    tools=tools_for_task,
+                    tools=cast(List[BaseTool], tools_for_task),
                 )
                 futures.append((task, future, task_index))
             else:
@@ -829,7 +832,7 @@ class Crew(BaseModel):
                 task_output = task.execute_sync(
                     agent=agent_to_use,
                     context=context,
-                    tools=tools_for_task,
+                    tools=cast(List[BaseTool], tools_for_task),
                 )
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
@@ -867,10 +870,10 @@ class Crew(BaseModel):
         return None
 
     def _prepare_tools(
-        self, agent: BaseAgent, task: Task, tools: List[Tool]
-    ) -> List[Tool]:
+        self, agent: BaseAgent, task: Task, tools: Union[List[Tool], List[BaseTool]]
+    ) -> List[BaseTool]:
         # Add delegation tools if agent allows delegation
-        if agent.allow_delegation:
+        if hasattr(agent, "allow_delegation") and getattr(agent, "allow_delegation", False):
             if self.process == Process.hierarchical:
                 if self.manager_agent:
                     tools = self._update_manager_tools(task, tools)
@@ -879,17 +882,18 @@ class Crew(BaseModel):
                         "Manager agent is required for hierarchical process."
                     )
 
-            elif agent and agent.allow_delegation:
+            elif agent:
                 tools = self._add_delegation_tools(task, tools)
 
         # Add code execution tools if agent allows code execution
-        if agent.allow_code_execution:
+        if hasattr(agent, "allow_code_execution") and getattr(agent, "allow_code_execution", False):
             tools = self._add_code_execution_tools(agent, tools)
 
-        if agent and agent.multimodal:
+        if agent and hasattr(agent, "multimodal") and getattr(agent, "multimodal", False):
             tools = self._add_multimodal_tools(agent, tools)
 
-        return tools
+        # Return a List[BaseTool] which is compatible with both Task.execute_sync and Task.execute_async
+        return cast(List[BaseTool], tools)
 
     def _get_agent_to_use(self, task: Task) -> Optional[BaseAgent]:
         if self.process == Process.hierarchical:
@@ -897,11 +901,11 @@ class Crew(BaseModel):
         return task.agent
 
     def _merge_tools(
-        self, existing_tools: List[Tool], new_tools: List[Tool]
-    ) -> List[Tool]:
+        self, existing_tools: Union[List[Tool], List[BaseTool]], new_tools: Union[List[Tool], List[BaseTool]]
+    ) -> List[BaseTool]:
         """Merge new tools into existing tools list, avoiding duplicates by tool name."""
         if not new_tools:
-            return existing_tools
+            return cast(List[BaseTool], existing_tools)
 
         # Create mapping of tool names to new tools
         new_tool_map = {tool.name: tool for tool in new_tools}
@@ -912,23 +916,32 @@ class Crew(BaseModel):
         # Add all new tools
         tools.extend(new_tools)
 
-        return tools
+        return cast(List[BaseTool], tools)
 
     def _inject_delegation_tools(
-        self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]
-    ):
-        delegation_tools = task_agent.get_delegation_tools(agents)
-        return self._merge_tools(tools, delegation_tools)
+        self, tools: Union[List[Tool], List[BaseTool]], task_agent: BaseAgent, agents: List[BaseAgent]
+    ) -> List[BaseTool]:
+        if hasattr(task_agent, "get_delegation_tools"):
+            delegation_tools = task_agent.get_delegation_tools(agents)
+            # Cast delegation_tools to the expected type for _merge_tools
+            return self._merge_tools(tools, cast(List[BaseTool], delegation_tools))
+        return cast(List[BaseTool], tools)
 
-    def _add_multimodal_tools(self, agent: BaseAgent, tools: List[Tool]):
-        multimodal_tools = agent.get_multimodal_tools()
-        return self._merge_tools(tools, multimodal_tools)
+    def _add_multimodal_tools(self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]) -> List[BaseTool]:
+        if hasattr(agent, "get_multimodal_tools"):
+            multimodal_tools = agent.get_multimodal_tools()
+            # Cast multimodal_tools to the expected type for _merge_tools
+            return self._merge_tools(tools, cast(List[BaseTool], multimodal_tools))
+        return cast(List[BaseTool], tools)
 
-    def _add_code_execution_tools(self, agent: BaseAgent, tools: List[Tool]):
-        code_tools = agent.get_code_execution_tools()
-        return self._merge_tools(tools, code_tools)
+    def _add_code_execution_tools(self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]) -> List[BaseTool]:
+        if hasattr(agent, "get_code_execution_tools"):
+            code_tools = agent.get_code_execution_tools()
+            # Cast code_tools to the expected type for _merge_tools
+            return self._merge_tools(tools, cast(List[BaseTool], code_tools))
+        return cast(List[BaseTool], tools)
 
-    def _add_delegation_tools(self, task: Task, tools: List[Tool]):
+    def _add_delegation_tools(self, task: Task, tools: Union[List[Tool], List[BaseTool]]) -> List[BaseTool]:
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
         if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
             if not tools:
@@ -936,7 +949,7 @@ class Crew(BaseModel):
             tools = self._inject_delegation_tools(
                 tools, task.agent, agents_for_delegation
             )
-        return tools
+        return cast(List[BaseTool], tools)
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
@@ -944,7 +957,7 @@ class Crew(BaseModel):
                 task_name=task.name, task=task.description, agent=role, status="started"
             )
 
-    def _update_manager_tools(self, task: Task, tools: List[Tool]):
+    def _update_manager_tools(self, task: Task, tools: Union[List[Tool], List[BaseTool]]) -> List[BaseTool]:
         if self.manager_agent:
             if task.agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
@@ -952,7 +965,7 @@ class Crew(BaseModel):
                 tools = self._inject_delegation_tools(
                     tools, self.manager_agent, self.agents
                 )
-        return tools
+        return cast(List[BaseTool], tools)
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
         context = (
@@ -1193,26 +1206,32 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        eval_llm: Union[str, InstanceOf[BaseLLM]],
+        eval_llm: Union[str, InstanceOf[LLM]],
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         try:
-            eval_llm = create_llm(eval_llm)
-            if not eval_llm:
+            # Create LLM instance and ensure it's of type LLM for CrewEvaluator
+            llm_instance = create_llm(eval_llm)
+            if not llm_instance:
                 raise ValueError("Failed to create LLM instance.")
+                
+            # Ensure we have an LLM instance (not just BaseLLM) for CrewEvaluator
+            from crewai.llm import LLM
+            if not isinstance(llm_instance, LLM):
+                raise TypeError("CrewEvaluator requires an LLM instance, not a BaseLLM instance.")
 
             crewai_event_bus.emit(
                 self,
                 CrewTestStartedEvent(
                     crew_name=self.name or "crew",
                     n_iterations=n_iterations,
-                    eval_llm=eval_llm,
+                    eval_llm=llm_instance,
                     inputs=inputs,
                 ),
             )
             test_crew = self.copy()
-            evaluator = CrewEvaluator(test_crew, eval_llm)  # type: ignore[arg-type]
+            evaluator = CrewEvaluator(test_crew, llm_instance)
 
             for i in range(1, n_iterations + 1):
                 evaluator.set_iteration(i)
