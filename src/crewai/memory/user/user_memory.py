@@ -13,47 +13,43 @@ class UserMemory(Memory):
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None, **kwargs):
         memory_provider = None
-        user_storage = None
+        memory_config = None
         
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
-            memory_provider = crew.memory_config.get("provider")
-            storage_config = crew.memory_config.get("storage", {})
-            user_storage = storage_config.get("user")
+            memory_config = crew.memory_config
+            memory_provider = memory_config.get("provider")
             
+        # Initialize with basic parameters
         super().__init__(
             storage=storage,
             embedder_config=embedder_config,
             memory_provider=memory_provider
         )
-
-        if storage:
-            # Use the provided storage
-            super().__init__(storage=storage, embedder_config=embedder_config)
-        elif user_storage:
-            # Use the storage from memory_config
-            super().__init__(storage=user_storage, embedder_config=embedder_config)
-        elif memory_provider == "mem0":
-            try:
-                from crewai.memory.storage.mem0_storage import Mem0Storage
-            except ImportError:
-                raise ImportError(
-                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
-                )
-            super().__init__(
-                storage=Mem0Storage(type="user", crew=crew),
-                embedder_config=embedder_config,
-            )
-        else:
-            # Use RAGStorage (default)
+        
+        try:
+            # Try to select storage using helper method
             from crewai.memory.storage.rag_storage import RAGStorage
-            super().__init__(
-                storage=RAGStorage(
+            self.storage = self._select_storage(
+                storage=storage,
+                memory_config=memory_config,
+                storage_type="user",
+                crew=crew,
+                path=path,
+                default_storage_factory=lambda path, crew: RAGStorage(
                     type="user",
                     crew=crew,
                     embedder_config=embedder_config,
                     path=path,
-                ),
+                )
+            )
+        except ValueError:
+            # Fallback to default storage
+            from crewai.memory.storage.rag_storage import RAGStorage
+            self.storage = RAGStorage(
+                type="user",
+                crew=crew,
                 embedder_config=embedder_config,
+                path=path,
             )
 
     def save(

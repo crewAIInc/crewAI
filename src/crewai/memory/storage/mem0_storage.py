@@ -111,3 +111,9 @@ class Mem0Storage(Storage):
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         return agents
+        
+    def reset(self) -> None:
+        """Reset the storage by clearing all memories."""
+        # Mem0 doesn't have a direct reset method, but we can implement
+        # this in the future if needed. For now, we'll just pass.
+        pass

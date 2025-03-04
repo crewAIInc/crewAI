@@ -20,46 +20,41 @@ class ShortTermMemory(Memory):
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
         memory_provider = None
-        short_term_storage = None
+        memory_config = None
         
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
-            memory_provider = crew.memory_config.get("provider")
-            storage_config = crew.memory_config.get("storage", {})
-            short_term_storage = storage_config.get("short_term")
+            memory_config = crew.memory_config
+            memory_provider = memory_config.get("provider")
             
+        # Initialize with basic parameters
         super().__init__(
             storage=storage,
             embedder_config=embedder_config,
             memory_provider=memory_provider
         )
-
-        if storage:
-            # Use the provided storage
-            super().__init__(storage=storage, embedder_config=embedder_config)
-        elif short_term_storage:
-            # Use the storage from memory_config
-            super().__init__(storage=short_term_storage, embedder_config=embedder_config)
-        elif memory_provider == "mem0":
-            try:
-                from crewai.memory.storage.mem0_storage import Mem0Storage
-            except ImportError:
-                raise ImportError(
-                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
-                )
-            super().__init__(
-                storage=Mem0Storage(type="short_term", crew=crew),
-                embedder_config=embedder_config,
-            )
-        else:
-            # Use RAGStorage (default)
-            super().__init__(
-                storage=RAGStorage(
+        
+        try:
+            # Try to select storage using helper method
+            self.storage = self._select_storage(
+                storage=storage,
+                memory_config=memory_config,
+                storage_type="short_term",
+                crew=crew,
+                path=path,
+                default_storage_factory=lambda path, crew: RAGStorage(
                     type="short_term",
                     crew=crew,
                     embedder_config=embedder_config,
                     path=path,
-                ),
+                )
+            )
+        except ValueError:
+            # Fallback to default storage
+            self.storage = RAGStorage(
+                type="short_term",
+                crew=crew,
                 embedder_config=embedder_config,
+                path=path,
             )
 
     def save(

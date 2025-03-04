@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 from chromadb.api import ClientAPI
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
+from crewai.memory.storage.interface import SearchResult
 from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
@@ -112,9 +113,8 @@ class RAGStorage(BaseRAGStorage):
         self,
         query: str,
         limit: int = 3,
-        filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> List[SearchResult]:
         if not hasattr(self, "app"):
             self._initialize_app()
 
@@ -124,8 +124,7 @@ class RAGStorage(BaseRAGStorage):
 
             results = []
             for i in range(len(response["ids"][0])):
-                result = {
-                    "id": response["ids"][0][i],
+                result: SearchResult = {
                     "metadata": response["metadatas"][0][i],
                     "context": response["documents"][0][i],
                     "score": response["distances"][0][i],

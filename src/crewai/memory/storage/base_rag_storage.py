@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
+from crewai.memory.storage.interface import Storage, SearchResult
 
-class BaseRAGStorage(ABC):
+
+class BaseRAGStorage(Storage, ABC):
     """
     Base class for RAG-based Storage implementations.
     """
@@ -44,9 +46,8 @@ class BaseRAGStorage(ABC):
         self,
         query: str,
         limit: int = 3,
-        filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> List[SearchResult]:
         """Search for entries in the storage."""
         pass
 

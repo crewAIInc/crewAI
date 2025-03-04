@@ -47,7 +47,7 @@ class ContextualMemory:
         stm_results = self.stm.search(query)
         formatted_results = "\n".join(
             [
-                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
+                f"- {result.get('memory', result.get('context', ''))}"
                 for result in stm_results
             ]
         )
@@ -80,9 +80,9 @@ class ContextualMemory:
         em_results = self.em.search(query)
         formatted_results = "\n".join(
             [
-                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
+                f"- {result.get('memory', result.get('context', ''))}"
                 for result in em_results
-            ]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
+            ]
         )
         return f"Entities:\n{formatted_results}" if em_results else ""
 
@@ -99,6 +99,6 @@ class ContextualMemory:
             return ""
 
         formatted_memories = "\n".join(
-            f"- {result['memory']}" for result in user_memories
+            f"- {result.get('memory', result.get('context', ''))}" for result in user_memories
         )
         return f"User memories/preferences:\n{formatted_memories}"

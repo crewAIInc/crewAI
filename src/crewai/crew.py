@@ -262,8 +262,19 @@ class Crew(BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Set private attributes."""
         if self.memory:
+            from crewai.memory.storage.rag_storage import RAGStorage
+            
+            # Create default storage instances for each memory type if needed
+            long_term_storage = RAGStorage(type="long_term", crew=self, embedder_config=self.embedder)
+            short_term_storage = RAGStorage(type="short_term", crew=self, embedder_config=self.embedder)
+            entity_storage = RAGStorage(type="entity", crew=self, embedder_config=self.embedder)
+            
             self._long_term_memory = (
-                self.long_term_memory if self.long_term_memory else LongTermMemory(crew=self, embedder_config=self.embedder)
+                self.long_term_memory if self.long_term_memory else LongTermMemory(
+                    crew=self, 
+                    embedder_config=self.embedder,
+                    storage=long_term_storage
+                )
             )
             self._short_term_memory = (
                 self.short_term_memory
@@ -271,12 +282,17 @@ class Crew(BaseModel):
                 else ShortTermMemory(
                     crew=self,
                     embedder_config=self.embedder,
+                    storage=short_term_storage
                 )
             )
             self._entity_memory = (
                 self.entity_memory
                 if self.entity_memory
-                else EntityMemory(crew=self, embedder_config=self.embedder)
+                else EntityMemory(
+                    crew=self, 
+                    embedder_config=self.embedder,
+                    storage=entity_storage
+                )
             )
             if (
                 self.memory_config and "user_memory" in self.memory_config
