@@ -1,6 +1,6 @@
 """Test knowledge utils functionality."""
 
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 import pytest
 
@@ -41,8 +41,10 @@ def test_extract_knowledge_context_with_missing_context():
 
 def test_knowledge_effectiveness():
     """Test that knowledge is effectively used in agent execution."""
+    from unittest.mock import MagicMock, patch
+
     import pytest
-    from unittest.mock import patch, MagicMock
+
     from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
     
     # Create mock knowledge snippets
