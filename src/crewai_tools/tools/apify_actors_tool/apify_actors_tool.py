@@ -9,34 +9,34 @@ if TYPE_CHECKING:
 class ApifyActorsTool(BaseTool):
     """Tool that runs Apify Actors.
 
-        To use, you should have the environment variable `APIFY_API_TOKEN` set
-        with your API key.
+       To use, you should have the environment variable `APIFY_API_TOKEN` set
+       with your API key.
 
-        For details, see https://docs.apify.com/platform/integrations/crewai
+       For details, see https://docs.apify.com/platform/integrations/crewai
 
-        Args:
-            actor_name (str): The name of the Apify Actor to run.
-            *args: Variable length argument list passed to BaseTool.
-            **kwargs: Arbitrary keyword arguments passed to BaseTool.
+       Args:
+           actor_name (str): The name of the Apify Actor to run.
+           *args: Variable length argument list passed to BaseTool.
+           **kwargs: Arbitrary keyword arguments passed to BaseTool.
 
-        Returns:
-            List[Dict[str, Any]]: Results from the Actor execution.
+       Returns:
+           List[Dict[str, Any]]: Results from the Actor execution.
 
-        Raises:
-            ValueError: If `APIFY_API_TOKEN` is not set or if the tool is not initialized.
-            ImportError: If `langchain_apify` package is not installed.
+       Raises:
+           ValueError: If `APIFY_API_TOKEN` is not set or if the tool is not initialized.
+           ImportError: If `langchain_apify` package is not installed.
 
-        Example:
-            .. code-block:: python
-                from crewai_tools import ApifyActorsTool
+       Example:
+           .. code-block:: python
+            from crewai_tools import ApifyActorsTool
 
-                tool = ApifyActorsTool(actor_name="apify/rag-web-browser")
+            tool = ApifyActorsTool(actor_name="apify/rag-web-browser")
 
-                results = tool.run(run_input={"query": "What is CrewAI?", "maxResults": 5})
-                for result in results:
-                    print(f"URL: {result['metadata']['url']}")
-                    print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
-        """
+            results = tool.run(run_input={"query": "What is CrewAI?", "maxResults": 5})
+            for result in results:
+                print(f"URL: {result['metadata']['url']}")
+                print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
+    """
     actor_tool: '_ApifyActorsTool' = Field(description="Apify Actor Tool")
 
     def __init__(
