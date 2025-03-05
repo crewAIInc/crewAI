@@ -1,0 +1,164 @@
+---
+title: Weaviate Vector Search
+description: The `WeaviateVectorSearchTool` is designed to search a Weaviate vector database for semantically similar documents.
+icon: database
+---
+
+# `WeaviateVectorSearchTool`
+
+## Description
+
+The `WeaviateVectorSearchTool` is specifically crafted for conducting semantic searches within documents stored in a Weaviate vector database. This tool allows you to find semantically similar documents to a given query, leveraging the power of vector embeddings for more accurate and contextually relevant search results.
+
+[Weaviate](https://weaviate.io/) is a vector database that stores and queries vector embeddings, enabling semantic search capabilities.
+
+## Installation
+
+To incorporate this tool into your project, you need to install the Weaviate client:
+
+```shell
+uv add weaviate-client
+```
+
+## Steps to Get Started
+
+To effectively use the `WeaviateVectorSearchTool`, follow these steps:
+
+1. **Package Installation**: Confirm that the `crewai[tools]` and `weaviate-client` packages are installed in your Python environment.
+2. **Weaviate Setup**: Set up a Weaviate cluster. You can follow the [Weaviate documentation](https://weaviate.io/developers/wcs/connect) for instructions.
+3. **API Keys**: Obtain your Weaviate cluster URL and API key.
+4. **OpenAI API Key**: Ensure you have an OpenAI API key set in your environment variables as `OPENAI_API_KEY`.
+
+## Example
+
+The following example demonstrates how to initialize the tool and execute a search:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+
+# Initialize the tool
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+
+@agent
+def search_agent(self) -> Agent:
+    '''
+    This agent uses the WeaviateVectorSearchTool to search for 
+    semantically similar documents in a Weaviate vector database.
+    '''
+    return Agent(
+        config=self.agents_config["search_agent"],
+        tools=[tool]
+    )
+```
+
+## Parameters
+
+The `WeaviateVectorSearchTool` accepts the following parameters:
+
+- **collection_name**: Required. The name of the collection to search within.
+- **weaviate_cluster_url**: Required. The URL of the Weaviate cluster.
+- **weaviate_api_key**: Required. The API key for the Weaviate cluster.
+- **limit**: Optional. The number of results to return. Default is `3`.
+- **vectorizer**: Optional. The vectorizer to use. If not provided, it will use `text2vec_openai` with the `nomic-embed-text` model.
+- **generative_model**: Optional. The generative model to use. If not provided, it will use OpenAI's `gpt-4o`.
+
+## Advanced Configuration
+
+You can customize the vectorizer and generative model used by the tool:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+from weaviate.classes.config import Configure
+
+# Setup custom model for vectorizer and generative model
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    vectorizer=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+    generative_model=Configure.Generative.openai(model="gpt-4o-mini"),
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## Preloading Documents
+
+You can preload your Weaviate database with documents before using the tool:
+
+```python Code
+import os
+from crewai_tools import WeaviateVectorSearchTool
+import weaviate
+from weaviate.classes.init import Auth
+
+# Connect to Weaviate
+client = weaviate.connect_to_weaviate_cloud(
+    cluster_url="https://your-weaviate-cluster-url.com",
+    auth_credentials=Auth.api_key("your-weaviate-api-key"),
+    headers={"X-OpenAI-Api-Key": "your-openai-api-key"}
+)
+
+# Get or create collection
+test_docs = client.collections.get("example_collections")
+if not test_docs:
+    test_docs = client.collections.create(
+        name="example_collections",
+        vectorizer_config=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+        generative_config=Configure.Generative.openai(model="gpt-4o"),
+    )
+
+# Load documents
+docs_to_load = os.listdir("knowledge")
+with test_docs.batch.dynamic() as batch:
+    for d in docs_to_load:
+        with open(os.path.join("knowledge", d), "r") as f:
+            content = f.read()
+        batch.add_object(
+            {
+                "content": content,
+                "year": d.split("_")[0],
+            }
+        )
+
+# Initialize the tool
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections', 
+    limit=3,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## Agent Integration Example
+
+Here's how to integrate the `WeaviateVectorSearchTool` with a CrewAI agent:
+
+```python Code
+from crewai import Agent
+from crewai_tools import WeaviateVectorSearchTool
+
+# Initialize the tool
+weaviate_tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+
+# Create an agent with the tool
+rag_agent = Agent(
+    name="rag_agent",
+    role="You are a helpful assistant that can answer questions with the help of the WeaviateVectorSearchTool.",
+    llm="gpt-4o-mini",
+    tools=[weaviate_tool],
+)
+```
+
+## Conclusion
+
+The `WeaviateVectorSearchTool` provides a powerful way to search for semantically similar documents in a Weaviate vector database. By leveraging vector embeddings, it enables more accurate and contextually relevant search results compared to traditional keyword-based searches. This tool is particularly useful for applications that require finding information based on meaning rather than exact matches. 
