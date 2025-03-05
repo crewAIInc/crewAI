@@ -295,6 +295,13 @@ class LLM:
         last_chunk = None
         chunk_count = 0
         debug_info = []
+        aggregated_usage = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "successful_requests": 0,
+            "cached_prompt_tokens": 0,
+        }
 
         # --- 2) Make sure stream is set to True
         params["stream"] = True
@@ -314,6 +321,13 @@ class LLM:
                 # Handle ModelResponse objects
                 if isinstance(chunk, ModelResponse):
                     debug_info.append("Chunk is ModelResponse")
+
+                    # Capture and aggregate usage information from the chunk if available
+                    chunk_usage = getattr(chunk, "usage", None)
+                    if isinstance(chunk_usage, dict):
+                        for key in aggregated_usage:
+                            aggregated_usage[key] += chunk_usage.get(key, 0)
+
                     choices = getattr(chunk, "choices", [])
                     if choices and len(choices) > 0:
                         choice = choices[0]
@@ -378,6 +392,12 @@ class LLM:
                 if last_chunk is not None:
                     # Try to extract any content from the last chunk
                     if isinstance(last_chunk, ModelResponse):
+                        # Capture and aggregate usage information from the last chunk if available
+                        chunk_usage = getattr(last_chunk, "usage", None)
+                        if isinstance(chunk_usage, dict):
+                            for key in aggregated_usage:
+                                aggregated_usage[key] += chunk_usage.get(key, 0)
+
                         choices = getattr(last_chunk, "choices", [])
                         if choices and len(choices) > 0:
                             choice = choices[0]
@@ -406,6 +426,12 @@ class LLM:
 
             # --- 7) Check for tool calls in the final response
             if isinstance(last_chunk, ModelResponse):
+                # Capture and aggregate usage information from the last chunk if available
+                chunk_usage = getattr(last_chunk, "usage", None)
+                if isinstance(chunk_usage, dict):
+                    for key in aggregated_usage:
+                        aggregated_usage[key] += chunk_usage.get(key, 0)
+
                 choices = getattr(last_chunk, "choices", [])
                 if choices and len(choices) > 0:
                     choice = choices[0]
@@ -418,7 +444,23 @@ class LLM:
                         if tool_result is not None:
                             return tool_result
 
-            # --- 8) Emit completion event and return response
+            # --- 8) Log token usage if available
+            # Use aggregated usage if any tokens were counted
+            if any(value > 0 for value in aggregated_usage.values()):
+                logging.info(
+                    f"Aggregated token usage from streaming response: {aggregated_usage}"
+                )
+                if self.callbacks and len(self.callbacks) > 0:
+                    for callback in self.callbacks:
+                        if hasattr(callback, "log_success_event"):
+                            callback.log_success_event(
+                                kwargs=params,
+                                response_obj={"usage": aggregated_usage},
+                                start_time=0,
+                                end_time=0,
+                            )
+
+            # --- 9) Emit completion event and return response
             self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
             return full_response
 
@@ -465,6 +507,16 @@ class LLM:
         """
         # --- 1) Make the completion call
         response = litellm.completion(**params)
+        # Extract usage info – if none is provided, default to zero
+        usage_info = getattr(response, "usage", None)
+        if usage_info is None:
+            usage_info = {
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_tokens": 0,
+                "successful_requests": 0,
+                "cached_prompt_tokens": 0,
+            }
 
         # --- 2) Extract response message and content
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
@@ -472,15 +524,29 @@ class LLM:
         ].message
         text_response = response_message.content or ""
 
-        # --- 3) Check for tool calls
+        # --- 3) Handle callbacks with usage info
+        if self.callbacks and len(self.callbacks) > 0:
+            for callback in self.callbacks:
+                if hasattr(callback, "log_success_event"):
+                    logging.info(
+                        f"Token usage from non-streaming response: {usage_info}"
+                    )
+                    callback.log_success_event(
+                        kwargs=params,
+                        response_obj={"usage": usage_info},
+                        start_time=0,
+                        end_time=0,
+                    )
+
+        # --- 4) Check for tool calls
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        # --- 4) Handle tool calls if present
+        # --- 5) Handle tool calls if present
         tool_result = self._handle_tool_call(tool_calls, available_functions)
         if tool_result is not None:
             return tool_result
 
-        # --- 5) Emit completion event and return response
+        # --- 6) Emit completion event and return response
         self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL)
         return text_response
 

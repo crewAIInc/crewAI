@@ -285,6 +285,7 @@ def test_o3_mini_reasoning_effort_medium():
     assert isinstance(result, str)
     assert "Paris" in result
 
+
 def test_context_window_validation():
     """Test that context window validation works correctly."""
     # Test valid window size
