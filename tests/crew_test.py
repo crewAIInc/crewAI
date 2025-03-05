@@ -996,6 +996,7 @@ def test_crew_kickoff_streaming_usage_metrics():
         goal="Express hot takes on {topic}.",
         backstory="You have a lot of experience with {topic}.",
         llm=LLM(model="gpt-4o", stream=True),
+        max_iter=3,
     )
 
     task = Task(
