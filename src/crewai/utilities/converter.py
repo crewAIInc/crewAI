@@ -79,7 +79,7 @@ class Converter(OutputConverter):
                 f"Failed to convert text into a Pydantic model due to error: {e}"
             )
 
-    def to_json(self, current_attempt: int = 1) -> Union[str, ConverterError]:
+    def to_json(self, current_attempt: int = 1) -> dict:
         """
         Convert text to JSON.
         
@@ -87,7 +87,7 @@ class Converter(OutputConverter):
             current_attempt: The current attempt number for retries.
             
         Returns:
-            A JSON string or a ConverterError if conversion fails.
+            A dictionary containing the JSON data or raises ConverterError if conversion fails.
         """
         try:
             if self.llm.supports_function_calling():
@@ -110,10 +110,15 @@ class Converter(OutputConverter):
                 self.logger.warning(f"JSON conversion failed, retrying (attempt {current_attempt})")
                 return self.to_json(current_attempt + 1)
             self.logger.error(f"JSON conversion failed after {self.max_attempts} attempts: {e}")
-            return ConverterError(f"Failed to convert text into JSON, error: {e}.")
+            raise ConverterError(f"Failed to convert text into JSON, error: {e}.")
 
-    def _fallback_json_conversion(self) -> str:
-        """Convert text to JSON using a simple approach without Instructor."""
+    def _fallback_json_conversion(self) -> dict:
+        """
+        Convert text to JSON using a simple approach without Instructor.
+        
+        Returns:
+            A dictionary containing the JSON data or raises ConverterError if conversion fails.
+        """
         self.logger.debug("Using fallback JSON conversion method")
         response = self.llm.call(
             [
@@ -124,12 +129,14 @@ class Converter(OutputConverter):
         
         # Try to parse the response as JSON to ensure it's valid
         try:
-            # If it's already a valid JSON string, just return it
+            # If it's already a valid JSON string, parse it to a dict
             if isinstance(response, str):
-                json.loads(response)
+                return json.loads(response)
+            # If it's already a dict, return it directly
+            if isinstance(response, dict):
                 return response
-            # If it's a dict or other JSON-serializable object, convert it to a JSON string
-            return json.dumps(response)
+            # Otherwise, try to convert it to a dict
+            return json.loads(json.dumps(response))
         except json.JSONDecodeError as e:
             self.logger.error(f"Invalid JSON in fallback conversion: {e}")
             raise ConverterError(f"Failed to convert text into JSON, error: {e}.")
