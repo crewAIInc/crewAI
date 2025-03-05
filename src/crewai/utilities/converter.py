@@ -72,7 +72,21 @@ class Converter(OutputConverter):
         """Convert text to json."""
         try:
             if self.llm.supports_function_calling():
-                return self._create_instructor().to_json()
+                try:
+                    return self._create_instructor().to_json()
+                except Exception as e:
+                    # Check if this is the specific Instructor error for multiple tool calls
+                    if "Instructor does not support multiple tool calls, use List[Model] instead" in str(e):
+                        # Fall back to non-function calling approach for custom OpenAI backends
+                        return json.dumps(
+                            self.llm.call(
+                                [
+                                    {"role": "system", "content": self.instructions},
+                                    {"role": "user", "content": self.text},
+                                ]
+                            )
+                        )
+                    raise e
             else:
                 return json.dumps(
                     self.llm.call(
