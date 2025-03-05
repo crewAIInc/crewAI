@@ -35,9 +35,19 @@ class PoemFlow(Flow[PoemState]):
     @listen(generate_poem)
     def save_poem(self):
         print("Saving poem")
-        with open("poem.txt", "w") as f:
-            f.write(self.state.poem)
-        return {'poem':self.state.poem, "sentence_count": self.state.sentence_count}
+        try:
+            with open("poem.txt", "w") as f:
+                f.write(self.state.poem)
+            return {
+                'poem': self.state.poem,
+                'sentence_count': self.state.sentence_count
+            }
+        except IOError as e:
+            print(f"Error saving poem: {e}")
+            return {
+                'error': str(e),
+                'status': 'failed'
+            }
 
 
 def kickoff():
