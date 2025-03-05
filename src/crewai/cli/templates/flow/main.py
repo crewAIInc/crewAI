@@ -37,6 +37,7 @@ class PoemFlow(Flow[PoemState]):
         print("Saving poem")
         with open("poem.txt", "w") as f:
             f.write(self.state.poem)
+        return {'poem':self.state.poem, "sentence_count": self.state.sentence_count}
 
 
 def kickoff():
