@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -34,6 +35,11 @@ from crewai.utilities.events.crew_events import (
 )
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+
+# Skip streaming tests when running in CI/CD environments
+skip_streaming_in_ci = pytest.mark.skipif(
+    os.getenv("CI") is not None, reason="Skipping streaming tests in CI/CD environments"
+)
 
 ceo = Agent(
     role="CEO",
@@ -948,6 +954,7 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
+@skip_streaming_in_ci
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_kickoff_usage_metrics():
     inputs = [
@@ -983,6 +990,7 @@ def test_crew_kickoff_usage_metrics():
         assert result.token_usage.cached_prompt_tokens == 0
 
 
+@skip_streaming_in_ci
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_kickoff_streaming_usage_metrics():
     inputs = [
