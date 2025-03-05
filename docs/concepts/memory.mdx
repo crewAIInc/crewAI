@@ -567,6 +567,81 @@ my_crew.reset_memories(command_type = 'all') # Resets all the memory
 - 🫡 **Enhanced Personalization:** Memory enables agents to remember user preferences and historical interactions, leading to personalized experiences.
 - 🧠 **Improved Problem Solving:** Access to a rich memory store aids agents in making more informed decisions, drawing on past learnings and contextual insights.
 
+## Chat Message History
+
+The `ChatMessageHistory` class provides a way to store and retrieve chat messages with roles (human, AI, system), similar to Langchain's ChatMessageHistory. This feature is particularly useful for maintaining conversation context across multiple interactions within a single REST session.
+
+### Basic Usage
+
+```python
+from crewai.memory import ChatMessageHistory, MessageRole
+
+# Create a chat message history
+chat_history = ChatMessageHistory()
+
+# Add messages
+chat_history.add_human_message("Hello, how are you?")
+chat_history.add_ai_message("I'm doing well, thank you!")
+chat_history.add_system_message("System message")
+
+# Get messages
+messages = chat_history.get_messages()
+
+# Get messages as dictionaries (useful for serialization)
+messages_dict = chat_history.get_messages_as_dict()
+
+# Search for messages
+results = chat_history.search("specific topic")
+
+# Clear messages
+chat_history.clear()
+```
+
+### Using with REST APIs
+
+For REST API applications, you can store the chat history between requests:
+
+```python
+# In your API endpoint
+def chat_endpoint(request):
+    # Get or create a session
+    session_id = request.session_id
+    
+    # Get or create chat history for this session
+    if session_id in session_storage:
+        chat_history_dict = session_storage[session_id]
+        chat_history = ChatMessageHistory()
+        
+        # Restore previous messages
+        for msg in chat_history_dict:
+            if msg["role"] == "human":
+                chat_history.add_human_message(msg["content"], msg.get("metadata", {}))
+            elif msg["role"] == "ai":
+                chat_history.add_ai_message(msg["content"], msg.get("metadata", {}))
+            elif msg["role"] == "system":
+                chat_history.add_system_message(msg["content"], msg.get("metadata", {}))
+    else:
+        chat_history = ChatMessageHistory()
+    
+    # Add the new message from the request
+    chat_history.add_human_message(request.message)
+    
+    # Process with CrewAI
+    crew = Crew(agents=[...], tasks=[...], memory=True)
+    result = crew.kickoff(inputs={"chat_history": chat_history.get_messages_as_dict()})
+    
+    # Add the response to the chat history
+    chat_history.add_ai_message(str(result))
+    
+    # Store the updated chat history
+    session_storage[session_id] = chat_history.get_messages_as_dict()
+    
+    # Return the response
+    return {"response": str(result)}
+```
+
+This allows for maintaining conversation context across multiple API calls within a single session.
+
 ## Conclusion
 
 Integrating CrewAI's memory system into your projects is straightforward. By leveraging the provided memory components and configurations, 
