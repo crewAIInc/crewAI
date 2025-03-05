@@ -1,11 +1,10 @@
 import json
 import pytest
+from pydantic import BaseModel
 from unittest.mock import Mock, patch
 
-from pydantic import BaseModel
-
-from crewai.utilities.converter import Converter
 from crewai.llm import LLM
+from crewai.utilities.converter import Converter
 
 
 class SimpleModel(BaseModel):
