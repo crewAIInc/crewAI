@@ -1,7 +1,7 @@
 interactions:
 - request:
     body: '{"messages": [{"role": "user", "content": "Tell me a short joke"}], "model":
-      "gpt-3.5-turbo", "stop": [], "stream": false}'
+      "gpt-4o", "stop": [], "stream": false}'
     headers:
       accept:
       - application/json
@@ -10,12 +10,9 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '122'
+      - '115'
       content-type:
       - application/json
-      cookie:
-      - _cfuvid=5wzaJSCvT1p1Eazad55wDvp1JsgxrlghhmmU9tx0fMs-1741025614868-0.0.1.1-604800000;
-        __cf_bm=Jydtg8l0yjWRI2vKmejdq.C1W.sasIwEbTrV2rUt6V0-1741025614-1.0.1.1-Af3gmq.j2ecn9QEa3aCVY09QU4VqoW2GTk9AjvzPA.jyAZlwhJd4paniSt3kSusH0tryW03iC8uaX826hb2xzapgcfSm6Jdh_eWh_BMCh_8
       host:
       - api.openai.com
       user-agent:
@@ -45,19 +42,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBahsxEL3vVwy65GIbr2M7xZdAKCW+tacWSlm00uyuUq1GkUZNjfG/
-        F60d74am0IsO8+Y93nuaYwEgjBY7EKqTrHpv5w93a/npm/myT/72kVpOH58/q+fHKNfrvRKzzKD6
-        CRW/shaKem+RDbkzrAJKxqxa3q3L5WqzLTcD0JNGm2mt5/ntYjPnFGqaL8vV5sLsyCiMYgffCwCA
-        4/Bmj07jb7GD5ex10mOMskWxuy4BiEA2T4SM0USWjsVsBBU5RjfY/todQFGy2t0wcIdQG3VQFiGT
-        NCQP9QEMR7TNPewZXmQEfiFgE1AvpqIBmxRlDuWStZf56erSUusD1fGCX+eNcSZ2VUAZyWVHkcmL
-        AT0VAD+GNtKbgMIH6j1XTD/RZcFydZYTY/8TcHsBmVjacb76MHtHrdLI0tg4aVMoqTrUI3OsXiZt
-        aAIUk8x/m3lP+5zbuPZ/5EdAKfSMuvIBtVFvA49rAfN1/mvt2vFgWEQMv4zCig2G/A8aG5ns+W5E
-        PETGvmqMazH4YIbjGf75VPwBAAD//wMAjEHT5jsDAAA=
+        H4sIAAAAAAAAAwAAAP//jFJBbtswELzrFVteerEKSZbrxpcCDuBTUfSUtigCgSZXEhuKJLirNEbg
+        vxeSHMtBXSAXHmZ2BjPLfU4AhNFiA0K1klUXbLpde/X1tvtW/tnfrW6//Lzb7UraLn8s2+xpJxaD
+        wu9/o+IX1Qflu2CRjXcTrSJKxsE1X5d5kRWrdT4SnddoB1kTOC19WmRFmWaf0uzjSdh6o5DEBn4l
+        AADP4ztEdBqfxAayxQvSIZFsUGzOQwAiejsgQhIZYulYLGZSecfoxtTf2wNo794zkDLo2BATcOyJ
+        QbLv6DNsUcmeELjFA3TyAaEPgI8YD9wa17y7NI5Y9ySHXq639oQfz0mtb0L0ezrxZ7w2zlBbRZTk
+        3ZCK2AcxsscE4H7cSP+qpAjRd4Er9g/oBsO8mOzE/AVXSPYs7YwX5eKKW6WRpbF0sVGhpGpRz8p5
+        /bLXxl8QyUXnf8Nc8556G9e8xX4mlMLAqKsQURv1uvA8FnE40P+NnXc8BhaE8dEorNhgHP5BYy17
+        O92OoAMxdlVtXIMxRDMdUB2qWt3UuV5ny5VIjslfAAAA//8DADx20t9JAwAA
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 91ab1bce28f6bcda-ATL
+      - 91bbfc033e461d6e-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -65,9 +60,15 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 03 Mar 2025 18:13:35 GMT
+      - Wed, 05 Mar 2025 19:22:51 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - __cf_bm=LecfSlhN6VGr4kTlMiMCqRPInNb1m8zOikTZxtsE_WM-1741202571-1.0.1.1-T8nh2g1PcqyLIV97_HH9Q_nSUyCtaiFAOzvMxlswn6XjJCcSLJhi_fmkbylwppwoRPTxgs4S6VsVH0mp4ZcDTABBbtemKj7vS8QRDpRrmsU;
+        path=/; expires=Wed, 05-Mar-25 19:52:51 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=wyMrJP5k5bgWyD8rsK4JPvAJ78JWrsrT0lyV9DP4WZM-1741202571727-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -76,10 +77,12 @@ interactions:
       - X-Request-ID
       alt-svc:
       - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '307'
+      - '416'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -87,17 +90,17 @@ interactions:
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '50000000'
+      - '30000000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '49999978'
+      - '29999978'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_2969fea72b69e352ff742a363ffcf465
+      - req_f42504d00bda0a492dced0ba3cf302d8
     status:
       code: 200
       message: OK
