@@ -1,6 +1,7 @@
 import pytest
-from crewai.tools.tool_usage import ToolUsage
 from unittest.mock import MagicMock, patch
+
+from crewai.tools.tool_usage import ToolUsage
 
 
 class TestToolInputValidation:
