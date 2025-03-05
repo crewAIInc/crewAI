@@ -1,6 +1,7 @@
 import json
+import logging
 import re
-from typing import Any, Optional, Type, Union, get_args, get_origin
+from typing import Any, ClassVar, Optional, Type, Union, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
@@ -17,8 +18,18 @@ class ConverterError(Exception):
         self.message = message
 
 
+class InstructorToolCallError(Exception):
+    """Error raised when Instructor does not support multiple tool calls."""
+
+    def __init__(self, message: str, *args: object) -> None:
+        super().__init__(message, *args)
+        self.message = message
+
+
 class Converter(OutputConverter):
     """Class that converts text into either pydantic or json."""
+    
+    logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
 
     def to_pydantic(self, current_attempt=1) -> BaseModel:
         """Convert text to pydantic."""
@@ -68,43 +79,71 @@ class Converter(OutputConverter):
                 f"Failed to convert text into a Pydantic model due to error: {e}"
             )
 
-    def to_json(self, current_attempt=1):
-        """Convert text to json."""
+    def to_json(self, current_attempt: int = 1) -> Union[str, ConverterError]:
+        """
+        Convert text to JSON.
+        
+        Args:
+            current_attempt: The current attempt number for retries.
+            
+        Returns:
+            A JSON string or a ConverterError if conversion fails.
+        """
         try:
             if self.llm.supports_function_calling():
                 try:
+                    self.logger.debug("Using Instructor for JSON conversion")
                     return self._create_instructor().to_json()
                 except Exception as e:
                     # Check if this is the specific Instructor error for multiple tool calls
                     if "Instructor does not support multiple tool calls, use List[Model] instead" in str(e):
-                        # Fall back to non-function calling approach for custom OpenAI backends
-                        return json.dumps(
-                            self.llm.call(
-                                [
-                                    {"role": "system", "content": self.instructions},
-                                    {"role": "user", "content": self.text},
-                                ]
-                            )
+                        self.logger.warning(
+                            "Instructor does not support multiple tool calls, falling back to simple JSON conversion"
                         )
+                        return self._fallback_json_conversion()
                     raise e
             else:
-                return json.dumps(
-                    self.llm.call(
-                        [
-                            {"role": "system", "content": self.instructions},
-                            {"role": "user", "content": self.text},
-                        ]
-                    )
-                )
+                self.logger.debug("Using simple JSON conversion (no function calling support)")
+                return self._fallback_json_conversion()
         except Exception as e:
             if current_attempt < self.max_attempts:
+                self.logger.warning(f"JSON conversion failed, retrying (attempt {current_attempt})")
                 return self.to_json(current_attempt + 1)
+            self.logger.error(f"JSON conversion failed after {self.max_attempts} attempts: {e}")
             return ConverterError(f"Failed to convert text into JSON, error: {e}.")
 
+    def _fallback_json_conversion(self) -> str:
+        """Convert text to JSON using a simple approach without Instructor."""
+        self.logger.debug("Using fallback JSON conversion method")
+        response = self.llm.call(
+            [
+                {"role": "system", "content": self.instructions},
+                {"role": "user", "content": self.text},
+            ]
+        )
+        
+        # Try to parse the response as JSON to ensure it's valid
+        try:
+            # If it's already a valid JSON string, just return it
+            if isinstance(response, str):
+                json.loads(response)
+                return response
+            # If it's a dict or other JSON-serializable object, convert it to a JSON string
+            return json.dumps(response)
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Invalid JSON in fallback conversion: {e}")
+            raise ConverterError(f"Failed to convert text into JSON, error: {e}.")
+
     def _create_instructor(self):
-        """Create an instructor."""
+        """
+        Create an instructor instance for JSON conversion.
+        
+        Returns:
+            An InternalInstructor instance.
+        """
         from crewai.utilities import InternalInstructor
 
+        self.logger.debug("Creating InternalInstructor instance")
         inst = InternalInstructor(
             llm=self.llm,
             model=self.model,
