@@ -343,6 +343,10 @@ class LLM:
                                     chunk_content = delta
 
                 if chunk_content:
+                    # Add the chunk content to the full response
+                    full_response += chunk_content
+
+                    # Emit the chunk event
                     crewai_event_bus.emit(
                         self,
                         event=LLMStreamChunkEvent(chunk=chunk_content),
