@@ -1,8 +1,9 @@
-import pytest
 from datetime import datetime
 
-from crewai.memory.chat_history.chat_message_history import ChatMessageHistory
+import pytest
+
 from crewai.memory.chat_history.chat_message import ChatMessage, MessageRole
+from crewai.memory.chat_history.chat_message_history import ChatMessageHistory
 
 
 @pytest.fixture
