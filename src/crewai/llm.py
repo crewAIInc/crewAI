@@ -343,8 +343,6 @@ class LLM:
                                     chunk_content = delta
 
                 if chunk_content:
-                    full_response += chunk_content
-                    print(f"Chunk content: {chunk_content}")
                     crewai_event_bus.emit(
                         self,
                         event=LLMStreamChunkEvent(chunk=chunk_content),
@@ -384,16 +382,7 @@ class LLM:
                                 f"Extracted text from last chunk: {full_response}"
                             )
 
-            # --- 6) If still empty, use a default response
-            if not full_response.strip():
-                logging.warning("Using default response as fallback")
-                full_response = "I apologize, but I couldn't generate a proper response. Please try again or rephrase your request."
-
-            print("LAST CHUNK:", last_chunk)
-            if hasattr(last_chunk, "usage"):
-                print("LAST CHUNK USAGE:", last_chunk.usage)
-
-            # --- 7) Check for tool calls in the final response
+            # --- 6) Check for tool calls in the final response
             if isinstance(last_chunk, ModelResponse):
                 usage_info = getattr(last_chunk, "usage", None)
                 choices = getattr(last_chunk, "choices", [])
@@ -408,8 +397,7 @@ class LLM:
                         if tool_result is not None:
                             return tool_result
 
-            # --- 8) Log token usage if available in streaming mode
-
+            # --- 7) Log token usage if available in streaming mode
             # Safely handle callbacks with usage info
             if callbacks and len(callbacks) > 0:
                 for callback in callbacks:
@@ -417,7 +405,6 @@ class LLM:
                         usage_info = (
                             getattr(last_chunk, "usage", None) if last_chunk else None
                         )
-                        print("USAGE INFO", usage_info)
                         if usage_info:
                             callback.log_success_event(
                                 kwargs=params,
@@ -426,7 +413,7 @@ class LLM:
                                 end_time=0,
                             )
 
-            # --- 9) Emit completion event and return response
+            # --- 8) Emit completion event and return response
             self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
             return full_response
 
