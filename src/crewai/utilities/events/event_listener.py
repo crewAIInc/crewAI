@@ -285,12 +285,12 @@ class EventListener(BaseEventListener):
                 event.timestamp,
             )
 
-        @crewai_event_bus.on(LLMStreamChunkEvent)
-        def on_llm_stream_chunk(source, event: LLMStreamChunkEvent):
-            self.logger.log(
-                f"📝 LLM stream chunk received",
-                event.timestamp,
-            )
+        # @crewai_event_bus.on(LLMStreamChunkEvent)
+        # def on_llm_stream_chunk(source, event: LLMStreamChunkEvent):
+        #     self.logger.log(
+        #         f"📝 LLM stream chunk received",
+        #         event.timestamp,
+        #     )
 
 
 event_listener = EventListener()
