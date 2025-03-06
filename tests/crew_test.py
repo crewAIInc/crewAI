@@ -954,7 +954,7 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
-@skip_streaming_in_ci
+# @skip_streaming_in_ci
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_kickoff_usage_metrics():
     inputs = [
@@ -990,7 +990,7 @@ def test_crew_kickoff_usage_metrics():
         assert result.token_usage.cached_prompt_tokens == 0
 
 
-@skip_streaming_in_ci
+# @skip_streaming_in_ci
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_kickoff_streaming_usage_metrics():
     inputs = [

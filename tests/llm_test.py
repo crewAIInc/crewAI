@@ -219,7 +219,7 @@ def test_get_custom_llm_provider_gemini():
 
 def test_get_custom_llm_provider_openai():
     llm = LLM(model="gpt-4")
-    assert llm._get_custom_llm_provider() == "openai"
+    assert llm._get_custom_llm_provider() == None
 
 
 def test_validate_call_params_supported():

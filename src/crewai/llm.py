@@ -294,6 +294,9 @@ class LLM:
 
         Returns:
             str: The complete response text
+
+        Raises:
+            Exception: If no content is received from the streaming response
         """
         # --- 1) Initialize response tracking
         full_response = ""
@@ -429,10 +432,11 @@ class LLM:
                             f"Last chunk format: {type(last_chunk)}, content: {last_chunk}"
                         )
 
-            # --- 6) If still empty, use a default response
+            # --- 6) If still empty, raise an error instead of using a default response
             if not full_response.strip():
-                logging.warning("Using default response as fallback")
-                full_response = "I apologize, but I couldn't generate a proper response. Please try again or rephrase your request."
+                raise Exception(
+                    "No content received from streaming response. Received empty chunks or failed to extract content."
+                )
 
             # --- 7) Check for tool calls in the final response
             try:
@@ -510,23 +514,13 @@ class LLM:
                 logging.warning(f"Returning partial response despite error: {str(e)}")
                 self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
                 return full_response
-            try:
-                logging.warning("Falling back to non-streaming after error")
-                non_streaming_params = params.copy()
-                non_streaming_params["stream"] = False
-                non_streaming_params.pop(
-                    "stream_options", None
-                )  # Remove stream_options for non-streaming call
-                return self._handle_non_streaming_response(
-                    non_streaming_params, callbacks, available_functions
-                )
-            except Exception as fallback_error:
-                logging.error(
-                    f"Fallback to non-streaming also failed: {str(fallback_error)}"
-                )
-                default_response = "I apologize, but I couldn't generate a proper response. Please try again or rephrase your request."
-                self._handle_emit_call_events(default_response, LLMCallType.LLM_CALL)
-                return default_response
+
+            # Emit failed event and re-raise the exception
+            crewai_event_bus.emit(
+                self,
+                event=LLMCallFailedEvent(error=str(e)),
+            )
+            raise Exception(f"Failed to get streaming response: {str(e)}")
 
     def _handle_non_streaming_response(
         self,
@@ -696,8 +690,6 @@ class LLM:
             try:
                 # --- 6) Prepare parameters for the completion call
                 params = self._prepare_completion_params(messages, tools)
-
-                print("IS STREAMING", self.stream)
 
                 # --- 7) Make the completion call and handle response
                 if self.stream:
