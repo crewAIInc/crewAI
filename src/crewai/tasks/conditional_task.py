@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Union, cast
 
 from pydantic import Field
 
@@ -14,17 +14,23 @@ class ConditionalTask(Task):
     """
 
     condition: Callable[[TaskOutput], bool] = Field(
-        default=None,
-        description="Maximum number of retries for an agent to execute a task when an error occurs.",
+        default=lambda _: True,  # Default to always execute
+        description="Function that determines whether the task should be executed or a boolean value.",
     )
 
     def __init__(
         self,
-        condition: Callable[[Any], bool],
+        condition: Union[Callable[[Any], bool], bool],
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.condition = condition
+
+        # If condition is a boolean, wrap it in a function that always returns that boolean
+        if isinstance(condition, bool):
+            bool_value = condition
+            self.condition = lambda _: bool_value
+        else:
+            self.condition = cast(Callable[[TaskOutput], bool], condition)
 
     def should_execute(self, context: TaskOutput) -> bool:
         """

@@ -184,7 +184,7 @@ class Crew(BaseModel):
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
     )
-    prompt_file: str = Field(
+    prompt_file: Optional[str] = Field(
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
@@ -808,6 +808,7 @@ class Crew(BaseModel):
                 )
                 if skipped_task_output:
                     task_outputs.append(skipped_task_output)
+                    last_sync_output = skipped_task_output
                     continue
 
             if task.async_execution:
@@ -821,8 +822,10 @@ class Crew(BaseModel):
                 )
                 futures.append((task, future, task_index))
             else:
+                # Process any pending async tasks before executing a sync task
                 if futures:
-                    task_outputs = self._process_async_tasks(futures, was_replayed)
+                    processed_outputs = self._process_async_tasks(futures, was_replayed)
+                    task_outputs.extend(processed_outputs)
                     futures.clear()
 
                 context = self._get_context(task, task_outputs)
@@ -832,11 +835,14 @@ class Crew(BaseModel):
                     tools=tools_for_task,
                 )
                 task_outputs.append(task_output)
+                last_sync_output = task_output
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
 
+        # Process any remaining async tasks at the end
         if futures:
-            task_outputs = self._process_async_tasks(futures, was_replayed)
+            processed_outputs = self._process_async_tasks(futures, was_replayed)
+            task_outputs.extend(processed_outputs)
 
         return self._create_crew_output(task_outputs)
 
@@ -848,12 +854,17 @@ class Crew(BaseModel):
         task_index: int,
         was_replayed: bool,
     ) -> Optional[TaskOutput]:
+        # Process any pending async tasks to ensure we have the most up-to-date context
         if futures:
-            task_outputs = self._process_async_tasks(futures, was_replayed)
+            processed_outputs = self._process_async_tasks(futures, was_replayed)
+            task_outputs.extend(processed_outputs)
             futures.clear()
 
+        # Get the previous output to evaluate the condition
         previous_output = task_outputs[-1] if task_outputs else None
-        if previous_output is not None and not task.should_execute(previous_output):
+
+        # If there's no previous output or the condition evaluates to False, skip the task
+        if previous_output is None or not task.should_execute(previous_output):
             self._logger.log(
                 "debug",
                 f"Skipping conditional task: {task.description}",
@@ -861,8 +872,13 @@ class Crew(BaseModel):
             )
             skipped_task_output = task.get_skipped_task_output()
 
+            # Store the execution log for the skipped task
             if not was_replayed:
                 self._store_execution_log(task, skipped_task_output, task_index)
+
+            # Set the output on the task itself so it can be referenced later
+            task.output = skipped_task_output
+
             return skipped_task_output
         return None
 
