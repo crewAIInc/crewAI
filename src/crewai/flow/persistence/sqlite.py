@@ -78,34 +78,53 @@ class SQLiteFlowPersistence(FlowPersistence):
             flow_uuid: Unique identifier for the flow instance
             method_name: Name of the method that just completed
             state_data: Current state data (either dict or Pydantic model)
-        """
-        # Convert state_data to dict, handling both Pydantic and dict cases
-        if isinstance(state_data, BaseModel):
-            state_dict = dict(state_data)  # Use dict() for better type compatibility
-        elif isinstance(state_data, dict):
-            state_dict = state_data
-        else:
-            raise ValueError(
-                f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
-            )
 
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute(
-                """
-            INSERT INTO flow_states (
-                flow_uuid,
-                method_name,
-                timestamp,
-                state_json
-            ) VALUES (?, ?, ?, ?)
-            """,
-                (
-                    flow_uuid,
-                    method_name,
-                    datetime.now(timezone.utc).isoformat(),
-                    json.dumps(state_dict),
-                ),
-            )
+        Raises:
+            ValueError: If state_data is neither a dict nor a BaseModel
+            RuntimeError: If database operations fail
+            TypeError: If JSON serialization fails
+        """
+        try:
+            # Convert state_data to a JSON-serializable dict using the helper method
+            state_dict = self._convert_to_dict(state_data)
+
+            # Try to serialize to JSON to catch any serialization issues early
+            try:
+                state_json = json.dumps(state_dict)
+            except (TypeError, ValueError, OverflowError) as json_err:
+                raise TypeError(
+                    f"Failed to serialize state to JSON: {json_err}"
+                ) from json_err
+
+            # Perform database operation with error handling
+            try:
+                with sqlite3.connect(self.db_path) as conn:
+                    conn.execute(
+                        """
+                    INSERT INTO flow_states (
+                        flow_uuid,
+                        method_name,
+                        timestamp,
+                        state_json
+                    ) VALUES (?, ?, ?, ?)
+                    """,
+                        (
+                            flow_uuid,
+                            method_name,
+                            datetime.now(timezone.utc).isoformat(),
+                            state_json,
+                        ),
+                    )
+            except sqlite3.Error as db_err:
+                raise RuntimeError(f"Database operation failed: {db_err}") from db_err
+
+        except Exception as e:
+            # Log the error but don't crash the application
+            import logging
+
+            logging.error(f"Failed to save flow state: {e}")
+            # Re-raise to allow caller to handle or ignore
+            raise
 
     def load_state(self, flow_uuid: str) -> Optional[Dict[str, Any]]:
         """Load the most recent state for a given flow UUID.
