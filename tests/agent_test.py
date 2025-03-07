@@ -18,6 +18,7 @@ from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.llm_events import LLMStreamChunkEvent
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
@@ -259,9 +260,7 @@ def test_cache_hitting():
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    with (
-        patch.object(CacheHandler, "read") as read,
-    ):
+    with (patch.object(CacheHandler, "read") as read,):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
