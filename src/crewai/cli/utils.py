@@ -274,9 +274,6 @@ def get_crew(crew_path: str = "crew.py", require: bool = False) -> Crew | None:
                             attr = getattr(module, attr_name)
                             try:
                                 if callable(attr) and hasattr(attr, "crew"):
-                                    print(
-                                        f"Found valid crew object in '{attr}' at {crew_os_path}."
-                                    )
                                     crew_instance = attr().crew()
                                     return crew_instance
 
