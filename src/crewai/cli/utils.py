@@ -273,11 +273,12 @@ def get_crew(crew_path: str = "crew.py", require: bool = False) -> Crew | None:
                         for attr_name in dir(module):
                             attr = getattr(module, attr_name)
                             try:
-                                if isinstance(attr, Crew) and hasattr(attr, "kickoff"):
+                                if callable(attr) and hasattr(attr, "crew"):
                                     print(
-                                        f"Found valid crew object in attribute '{attr_name}' at {crew_os_path}."
+                                        f"Found valid crew object in '{attr}' at {crew_os_path}."
                                     )
-                                    return attr
+                                    crew_instance = attr().crew()
+                                    return crew_instance
 
                             except Exception as e:
                                 print(f"Error processing attribute {attr_name}: {e}")
