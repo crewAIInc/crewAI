@@ -66,6 +66,20 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 
+class TaskSelectionReasoning(BaseModel):
+    """Model for task selection reasoning"""
+    selected: bool = Field(description="Whether the task was selected for execution")
+    reason: str = Field(description="Reasoning for selection or exclusion")
+    dependencies: List[int] = Field(default_factory=list, description="Task dependencies that influenced this decision")
+    assigned_agent: Optional[str] = Field(default=None, description="Suggested agent for task execution")
+
+class TaskSelectionOutput(BaseModel):
+    """Model for manager's task selection output"""
+    selected_tasks: List[int] = Field(description="Indices of tasks selected for execution")
+    analysis: Dict[int, TaskSelectionReasoning] = Field(description="Detailed analysis for each task")
+    execution_order: List[int] = Field(description="Suggested order of execution for selected tasks")
+
+
 class Crew(BaseModel):
     """
     Represents a group of agents, defining how they should collaborate and the tasks they should perform.
@@ -733,7 +747,130 @@ class Crew(BaseModel):
     def _run_hierarchical_process(self) -> CrewOutput:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
         self._create_manager_agent()
-        return self._execute_tasks(self.tasks)
+        selected_tasks = self._select_hierarchical_tasks()
+        print("Selected tasks:")
+        print(selected_tasks)
+        print("*********************")
+        return self._execute_tasks(selected_tasks)
+
+    def _select_hierarchical_tasks(self) -> List[Task]:
+        """
+        Allows the manager agent to analyze and select which tasks should be executed.
+        Returns a filtered list of tasks based on manager's analysis.
+        """
+        if not self.manager_agent:
+            raise ValueError("Manager agent is required for hierarchical task selection")
+
+        # Create task analysis prompt for manager
+        task_analysis_prompt = self._create_task_analysis_prompt()
+        
+        # Get manager's analysis and task selection
+        selection_task = Task(
+            description="Analyze the provided tasks and select the single most relevant task that best addresses the user's requirements and objectives.",
+            expected_output="A structured analysis of tasks with selection decisions, must be a single task index",
+            output_pydantic=TaskSelectionOutput
+        )
+
+        try:
+            selection_result = self.manager_agent.execute_task(
+                task=selection_task,
+                context=task_analysis_prompt,
+                tools=[]
+            )
+
+            # Parse result using pydantic model
+            if isinstance(selection_result, str):
+                selection = TaskSelectionOutput.parse_raw(selection_result)
+            else:
+                selection = selection_result
+
+            # Log selection reasoning if verbose
+            if self.verbose:
+                for task_idx, reasoning in selection.analysis.items():
+                    status = "Selected" if reasoning.selected else "Excluded"
+                    self._logger.log(
+                        "info",
+                        f"Task {task_idx} {status}: {reasoning.reason}",
+                        color="blue"
+                    )
+                    if reasoning.assigned_agent:
+                        self._logger.log(
+                            "info",
+                            f"Suggested agent for task {task_idx}: {reasoning.assigned_agent}",
+                            color="blue"
+                        )
+
+            # Filter and order tasks based on selection
+            selected_tasks = []
+            for idx in selection.execution_order:
+                if idx in selection.selected_tasks:
+                    task = self.tasks[idx]
+                    # Update task agent if suggested
+                    if selection.analysis[idx].assigned_agent:
+                        suggested_agent = next(
+                            (a for a in self.agents if a.role == selection.analysis[idx].assigned_agent),
+                            None
+                        )
+                        if suggested_agent:
+                            task.agent = suggested_agent
+                    selected_tasks.append(task)
+
+            return selected_tasks
+
+        except Exception as e:
+            self._logger.log(
+                "warning",
+                f"Failed to process manager's task selection: {str(e)}. Executing all tasks.",
+                color="yellow"
+            )
+            return self.tasks
+
+    def _create_task_analysis_prompt(self) -> str:
+        """
+        Creates a prompt for the manager to analyze tasks and their relationships.
+        """
+        task_descriptions = []
+        for i, task in enumerate(self.tasks):
+            agents = [a.role for a in self.agents]
+            task_desc = {
+                "index": i,
+                "description": task.description,
+                "expected_output": task.expected_output,
+                "assigned_agent": task.agent.role if task.agent else "Unassigned",
+                "available_agents": agents
+            }
+            task_descriptions.append(task_desc)
+
+        analysis_prompt = {
+            "objective": "Analyze the given task and determine if it should be executed based on its relevance and available agents.",
+            "tasks": task_descriptions,
+            "instructions": """
+            Analyze the task and determine:
+            1. Whether it should be executed
+            2. The reasoning behind your decision
+            3. The most suitable agent for execution
+
+            Return your analysis as a structured output with:
+            - Selected task index (if task should be executed)
+            - Detailed analysis for the task (selected/excluded, reason, suggested agent)
+            
+            The output should match the TaskSelectionOutput model with:
+            {
+                "selected_tasks": [task_index],
+                "analysis": {
+                    "task_index": {
+                        "selected": boolean,
+                        "reason": "explanation",
+                        "dependencies": [],
+                        "assigned_agent": "agent_role"
+                    }
+                },
+                "execution_order": [task_index]
+            }
+            """
+        }
+        
+        return json.dumps(analysis_prompt, indent=2)
 
     def _create_manager_agent(self):
         i18n = I18N(prompt_file=self.prompt_file)
