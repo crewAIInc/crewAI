@@ -37,6 +37,7 @@ dependencies = [
     "tomli>=2.0.2",
     "blinker>=1.9.0",
     "json5>=0.10.0",
+    "pymilvus[model]>=2.5.4",
 ]
 
 [project.urls]
