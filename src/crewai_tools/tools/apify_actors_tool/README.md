@@ -1,16 +1,13 @@
 # ApifyActorsTool
 
-Integrate [Apify Actors](https://apify.com/) into your CrewAI workflows.
+Integrate [Apify Actors](https://apify.com/actors) into your CrewAI workflows.
 
 ## Description
 
-The `ApifyActorsTool` connects [Apify Actors](https://apify.com/), cloud-based programs for web scraping and automation, to your CrewAI workflows. You can extract data, crawl websites, and automate tasks, all without requiring infrastructure management.
+The `ApifyActorsTool` connects [Apify Actors](https://apify.com/actors), cloud-based programs for web scraping and automation, to your CrewAI workflows.
+Use any of the 4,000+ Actors on [Apify Store](https://apify.com/store) for use cases such as extracting data from social media, search engines, online maps, e-commerce sites, travel portals, or general websites.
 
-**Key features**:
-- **Run Actors** directly, like the [RAG Web Browser](https://apify.com/apify/rag-web-browser), with CrewAI agents.
-- **Access real-time data** for tasks that need fresh web content or automation.
-
-See the [Apify CrewAI documentation](https://docs.apify.com/platform/integrations/crewai) for a detailed integration guide.
+For details, see the [Apify CrewAI integration](https://docs.apify.com/platform/integrations/crewai) in Apify documentation.
 
 ## Installation
 
@@ -32,7 +29,7 @@ To use `ApifyActorsTool`, install the necessary packages and set up your Apify A
 
 ## Usage example
 
-Use `ApifyActorsTool` to run the [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser) and perform a web search:
+Use the `ApifyActorsTool` manually to run the [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser) to perform a web search:
 
 ```python
 from crewai_tools import ApifyActorsTool
@@ -60,23 +57,39 @@ URL: https://docs.crewai.com/
 Content: Official documentation for CrewAI...
 ```
 
-Experiment with other Actors from the [Apify Store](https://apify.com/store) by updating `actor_name` and `run_input` based on each Actor's input schema.
+The `ApifyActorsTool` automatically fetches the Actor definition and input schema from Apify using the provided `actor_name` and then constructs the tool description and argument schema. This means you need to specify only a valid `actor_name`, and the tool handles the rest when used with agents—no need to specify the `run_input`. Here's how it works:
 
-For an example of usage with agents, see the [CrewAI Apify Actor template](https://apify.com/templates/python-crewai).
+```python
+from crewai import Agent
+from crewai_tools import ApifyActorsTool
+
+rag_browser = ApifyActorsTool(actor_name="apify/rag-web-browser")
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Find and summarize information about specific topics",
+    backstory="You are an experienced researcher with attention to detail",
+    tools=[rag_browser],
+)
+```
+
+You can run other Actors from [Apify Store](https://apify.com/store) simply by changing the `actor_name` and, when using it manually, adjusting the `run_input` based on the Actor input schema.
+
+For an example of usage with agents, see the [CrewAI Actor template](https://apify.com/templates/python-crewai).
 
 ## Configuration
 
 The `ApifyActorsTool` requires these inputs to work:
 
 - **`actor_name`**
-  The ID of the Apify Actor to run, e.g., `"apify/rag-web-browser"`. Browse options in the [Apify Store](https://apify.com/store).
+  The ID of the Apify Actor to run, e.g., `"apify/rag-web-browser"`. Browse all Actors on [Apify Store](https://apify.com/store).
 - **`run_input`**
-  A dictionary of input parameters for the Actor. Examples:
-  - For `apify/rag-web-browser`: `{"query": "search term", "maxResults": 5}`
-  - See each Actor's [input schema](https://apify.com/apify/rag-web-browser/input-schema) for details.
+  A dictionary of input parameters for the Actor when running the tool manually.
+  - For example, for the `apify/rag-web-browser` Actor: `{"query": "search term", "maxResults": 5}`
+  - See the Actor's [input schema](https://apify.com/apify/rag-web-browser/input-schema) for the list of input parameters.
 
 ## Resources
 
-- **[Apify Platform](https://apify.com/)**: Dive into the Apify ecosystem.
-- **[RAG Web Browser Actor](https://apify.com/apify/rag-web-browser)**: Test this popular Actor for web data retrieval.
-- **[CrewAI Integration Guide](https://docs.apify.com/platform/integrations/crewai)**: Follow the official guide for Apify and CrewAI.
+- **[Apify](https://apify.com/)**: Explore the Apify platform.
+- **[RAG Web Browser Actor](https://apify.com/apify/rag-web-browser)**: A popular Actor for web search for LLMs.
+- **[CrewAI Integration Guide](https://docs.apify.com/platform/integrations/crewai)**: Follow the official guide for integrating Apify and CrewAI.
