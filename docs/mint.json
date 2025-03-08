@@ -117,6 +117,7 @@
       "group": "Tools",
       "pages": [
         "tools/aimindtool",
+        "tools/apifyactorstool",
         "tools/bravesearchtool",
         "tools/browserbaseloadtool",
         "tools/codedocssearchtool",
