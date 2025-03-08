@@ -114,6 +114,19 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "Llama-3.2-11B-Vision-Instruct": 16384,
     "Meta-Llama-3.2-3B-Instruct": 4096,
     "Meta-Llama-3.2-1B-Instruct": 16384,
+    # mistral
+    "mistral-tiny": 32768,
+    "mistral-small-latest": 32768,
+    "mistral-medium-latest": 32768,
+    "mistral-large-latest": 32768,
+    "mistral-large-2407": 32768,
+    "mistral-large-2402": 32768,
+    "mistral/mistral-tiny": 32768,
+    "mistral/mistral-small-latest": 32768,
+    "mistral/mistral-medium-latest": 32768,
+    "mistral/mistral-large-latest": 32768,
+    "mistral/mistral-large-2407": 32768,
+    "mistral/mistral-large-2402": 32768,
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
@@ -788,6 +801,17 @@ class LLM:
                 else:
                     formatted_messages.append(msg)
             return formatted_messages
+
+        # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
+        if "mistral" in self.model.lower():
+            # Check if the last message has a role of 'assistant'
+            if messages and messages[-1]["role"] == "assistant":
+                # Add a dummy user message to ensure the last message has a role of 'user'
+                messages = (
+                    messages.copy()
+                )  # Create a copy to avoid modifying the original
+                messages.append({"role": "user", "content": "Please continue."})
+            return messages
 
         # Handle Anthropic models
         if not self.is_anthropic:
