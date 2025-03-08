@@ -31,12 +31,9 @@ tool = FirecrawlCrawlWebsiteTool(url='firecrawl.dev')
   - `onlyMainContent`: Optional. Only return the main content of the page excluding headers, navs, footers, etc.
   - `includeHtml`: Optional. Include the raw HTML content of the page. Will output a html key in the response.
 - `crawler_options`: Optional. Options for controlling the crawling behavior.
-  - `includes`: Optional. URL patterns to include in the crawl.
-  - `exclude`: Optional. URL patterns to exclude from the crawl.
-  - `generateImgAltText`: Optional. Generate alt text for images using LLMs (requires a paid plan).
-  - `returnOnlyUrls`: Optional. If true, returns only the URLs as a list in the crawl status. Note: the response will be a list of URLs inside the data, not a list of documents.
-  - `maxDepth`: Optional. Maximum depth to crawl. Depth 1 is the base URL, depth 2 includes the base URL and its direct children, and so on.
-  - `mode`: Optional. The crawling mode to use. Fast mode crawls 4x faster on websites without a sitemap but may not be as accurate and shouldn't be used on heavily JavaScript-rendered websites.
+  - `maxDepth`: Optional. Maximum depth to crawl. Depth 1 is the base URL, depth 2 includes the base URL and its direct children and so on.
   - `limit`: Optional. Maximum number of pages to crawl.
-  - `timeout`: Optional. Timeout in milliseconds for the crawling operation.
+  - `scrapeOptions`: Optional. Additional options for controlling the crawler.
+    - `formats`: Optional. Formats for the page's content to be returned (eg. markdown, html, screenshot, links).
+    - `timeout`: Optional. Timeout in milliseconds for the crawling operation.
 

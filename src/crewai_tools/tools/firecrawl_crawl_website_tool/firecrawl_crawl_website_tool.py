@@ -68,13 +68,22 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
         timeout: Optional[int] = 30000,
     ):
         if crawler_options is None:
-            crawler_options = {}
+            crawler_options = {
+                                "maxDepth": 2,
+                                "limit": 10,
+                                "scrapeOptions": {
+                                    # same options as in /scrape
+                                    "formats": ["markdown", "screenshot", "links"],
+                                    "timeout": timeout
+                                    }
+                                }
 
-        options = {
-            "crawlerOptions": crawler_options,
-            "timeout": timeout,
-        }
-        return self._firecrawl.crawl_url(url, options)
+        
+        else:
+            crawler_options["scrapeOptions"]["timeout"] = timeout
+
+        
+        return self._firecrawl.crawl_url(url, crawler_options)
 
 
 try:
