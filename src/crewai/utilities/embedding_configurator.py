@@ -1,12 +1,31 @@
+import logging
 import os
 from typing import Any, Dict, Optional, cast
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
-from chromadb.api.types import validate_embedding_function
+# Import chromadb conditionally to handle SQLite3 version errors
+try:
+    from chromadb import Documents, EmbeddingFunction, Embeddings
+    from chromadb.api.types import validate_embedding_function
+    CHROMADB_AVAILABLE = True
+except RuntimeError as e:
+    if "unsupported version of sqlite3" in str(e).lower():
+        logging.warning(f"ChromaDB requires SQLite3 >= 3.35.0. Current version is too old. Some features may be limited. Error: {e}")
+        CHROMADB_AVAILABLE = False
+        # Define placeholder types for type hints
+        Documents = Any
+        EmbeddingFunction = Any
+        Embeddings = Any
+        validate_embedding_function = lambda x: x  # noqa: E731
+    else:
+        raise
 
 
 class EmbeddingConfigurator:
     def __init__(self):
+        if not CHROMADB_AVAILABLE:
+            self.embedding_functions = {}
+            return
+            
         self.embedding_functions = {
             "openai": self._configure_openai,
             "azure": self._configure_azure,
@@ -21,13 +40,45 @@ class EmbeddingConfigurator:
             "custom": self._configure_custom,
         }
 
+    def _validate_config(self, config: Dict[str, Any]) -> bool:
+        """Validates that the configuration contains the required keys.
+        
+        Args:
+            config: The configuration dictionary to validate
+            
+        Returns:
+            bool: True if the configuration is valid, False otherwise
+        """
+        if not config:
+            return False
+            
+        required_keys = {'provider'}
+        return all(key in config for key in required_keys)
+        
     def configure_embedder(
         self,
         embedder_config: Optional[Dict[str, Any]] = None,
-    ) -> EmbeddingFunction:
-        """Configures and returns an embedding function based on the provided config."""
+    ) -> Optional[EmbeddingFunction]:
+        """Configures and returns an embedding function based on the provided config.
+        
+        Args:
+            embedder_config: Configuration dictionary for the embedder
+            
+        Returns:
+            Optional[EmbeddingFunction]: The configured embedding function or None if ChromaDB is not available
+            
+        Raises:
+            ValueError: If the configuration is invalid
+            Exception: If the provider is not supported
+        """
+        if not CHROMADB_AVAILABLE:
+            return None
+            
         if embedder_config is None:
             return self._create_default_embedding_function()
+            
+        if not self._validate_config(embedder_config):
+            raise ValueError("Invalid embedder configuration: missing required keys")
 
         provider = embedder_config.get("provider")
         config = embedder_config.get("config", {})
@@ -47,6 +98,9 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _create_default_embedding_function():
+        if not CHROMADB_AVAILABLE:
+            return None
+            
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )

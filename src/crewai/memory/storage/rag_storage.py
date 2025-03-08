@@ -4,14 +4,18 @@ import logging
 import os
 import shutil
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union, Collection as TypeCollection
 
 from chromadb.api import ClientAPI
+from chromadb.api.models.Collection import Collection as ChromaCollection
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
+
+# Constants
+SQLITE_VERSION_ERROR = "ChromaDB requires SQLite3 >= 3.35.0. Current version is too old. Some features may be limited. Error: {}"
 
 
 @contextlib.contextmanager
@@ -60,25 +64,40 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
-        import chromadb
-        from chromadb.config import Settings
-
-        self._set_embedder_config()
-        chroma_client = chromadb.PersistentClient(
-            path=self.path if self.path else self.storage_file_name,
-            settings=Settings(allow_reset=self.allow_reset),
-        )
-
-        self.app = chroma_client
-
         try:
-            self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
+            import chromadb
+            from chromadb.config import Settings
+            
+            self._set_embedder_config()
+            if self.embedder_config is None:
+                # ChromaDB is not available, skip initialization
+                self.app = None
+                self.collection = None
+                return
+                
+            chroma_client = chromadb.PersistentClient(
+                path=self.path if self.path else self.storage_file_name,
+                settings=Settings(allow_reset=self.allow_reset),
             )
-        except Exception:
-            self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
+
+            self.app = chroma_client
+
+            try:
+                self.collection = self.app.get_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+            except Exception:
+                self.collection = self.app.create_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+        except RuntimeError as e:
+            if "unsupported version of sqlite3" in str(e).lower():
+                # Log a warning but continue without ChromaDB
+                logging.warning(SQLITE_VERSION_ERROR.format(e))
+                self.app = None
+                self.collection = None
+            else:
+                raise
 
     def _sanitize_role(self, role: str) -> str:
         """

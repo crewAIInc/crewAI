@@ -83,28 +83,42 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        chroma_client = chromadb.PersistentClient(
-            path=base_path,
-            settings=Settings(allow_reset=True),
-        )
-
-        self.app = chroma_client
-
+        """Initialize the knowledge storage with ChromaDB.
+        
+        Handles SQLite3 version incompatibility gracefully by logging a warning
+        and continuing without ChromaDB functionality.
+        """
         try:
+            base_path = os.path.join(db_storage_path(), "knowledge")
+            chroma_client = chromadb.PersistentClient(
+                path=base_path,
+                settings=Settings(allow_reset=True),
+            )
+
+            self.app = chroma_client
+            
             collection_name = (
                 f"knowledge_{self.collection_name}"
                 if self.collection_name
                 else "knowledge"
             )
-            if self.app:
-                self.collection = self.app.get_or_create_collection(
-                    name=collection_name, embedding_function=self.embedder
-                )
-            else:
+            
+            if not self.app:
                 raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
+                
+            self.collection = self.app.get_or_create_collection(
+                name=collection_name, embedding_function=self.embedder
+            )
+        except RuntimeError as e:
+            if "unsupported version of sqlite3" in str(e).lower():
+                # Log a warning but continue without ChromaDB
+                logging.warning("ChromaDB requires SQLite3 >= 3.35.0. Current version is too old. Some features may be limited. Error: %s", e)
+                self.app = None
+                self.collection = None
+            else:
+                raise
+        except Exception as e:
+            raise Exception(f"Failed to create or get collection: {e}")
 
     def reset(self):
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
