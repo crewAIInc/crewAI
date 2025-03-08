@@ -29,7 +29,7 @@ def create_flow(name):
 
     # Create .env file
     with open(project_root / ".env", "w") as file:
-        file.write("OPENAI_API_KEY=YOUR_API_KEY")
+        file.write("OPENAI_API_KEY=YOUR_API_KEY\nGEMINI_API_KEY=GEMINI_KEY_HERE\nMODEL=gemini/gemini-2.0-flash")
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "flow"
