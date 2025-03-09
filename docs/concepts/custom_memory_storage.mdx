@@ -1,0 +1,151 @@
+# Custom Memory Storage
+
+CrewAI supports custom memory storage implementations for different memory types. You can provide your own storage implementation by extending the `Storage` interface and passing it to the memory instances or through the `memory_config` parameter.
+
+## Implementing a Custom Storage
+
+To create a custom storage implementation, you need to extend the `Storage` interface and implement the required methods:
+
+```python
+from typing import Any, Dict, List
+from crewai.memory.storage.interface import Storage
+
+class CustomStorage(Storage):
+    """Custom storage implementation."""
+
+    def __init__(self):
+        # Initialize your storage backend
+        self.data = []
+
+    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+        """Save a value with metadata to the storage."""
+        # Implement your save logic
+        self.data.append({"value": value, "metadata": metadata})
+
+    def search(
+        self, query: str, limit: int = 3, score_threshold: float = 0.35
+    ) -> List[Any]:
+        """Search for values in the storage."""
+        # Implement your search logic
+        return [{"context": item["value"], "metadata": item["metadata"]} for item in self.data]
+
+    def reset(self) -> None:
+        """Reset the storage."""
+        # Implement your reset logic
+        self.data = []
+```
+
+## Using Custom Storage
+
+There are two ways to provide custom storage implementations to CrewAI:
+
+### 1. Pass Custom Storage to Memory Instances
+
+You can create memory instances with custom storage and pass them to the Crew:
+
+```python
+from crewai import Crew, Agent
+from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.entity.entity_memory import EntityMemory
+from crewai.memory.user.user_memory import UserMemory
+
+# Create custom storage instances
+short_term_storage = CustomStorage()
+long_term_storage = CustomStorage()
+entity_storage = CustomStorage()
+user_storage = CustomStorage()
+
+# Create memory instances with custom storage
+short_term_memory = ShortTermMemory(storage=short_term_storage)
+long_term_memory = LongTermMemory(storage=long_term_storage)
+entity_memory = EntityMemory(storage=entity_storage)
+user_memory = UserMemory(storage=user_storage)
+
+# Create a crew with custom memory instances
+crew = Crew(
+    agents=[Agent(role="researcher", goal="research", backstory="I am a researcher")],
+    memory=True,
+    short_term_memory=short_term_memory,
+    long_term_memory=long_term_memory,
+    entity_memory=entity_memory,
+    memory_config={"user_memory": user_memory},
+)
+```
+
+### 2. Pass Custom Storage through Memory Config
+
+You can also provide custom storage implementations through the `memory_config` parameter:
+
+```python
+from crewai import Crew, Agent
+
+# Create a crew with custom storage in memory_config
+crew = Crew(
+    agents=[Agent(role="researcher", goal="research", backstory="I am a researcher")],
+    memory=True,
+    memory_config={
+        "storage": {
+            "short_term": CustomStorage(),
+            "long_term": CustomStorage(),
+            "entity": CustomStorage(),
+            "user": CustomStorage(),
+        }
+    },
+)
+```
+
+## Example: Redis Storage
+
+Here's an example of a custom storage implementation using Redis:
+
+```python
+import json
+import redis
+from typing import Any, Dict, List
+from crewai.memory.storage.interface import Storage
+
+class RedisStorage(Storage):
+    """Redis-based storage implementation."""
+
+    def __init__(self, redis_url="redis://localhost:6379/0", prefix="crewai"):
+        self.redis = redis.from_url(redis_url)
+        self.prefix = prefix
+
+    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+        """Save a value with metadata to Redis."""
+        key = f"{self.prefix}:{len(self.redis.keys(f'{self.prefix}:*'))}"
+        data = {"value": value, "metadata": metadata}
+        self.redis.set(key, json.dumps(data))
+
+    def search(
+        self, query: str, limit: int = 3, score_threshold: float = 0.35
+    ) -> List[Any]:
+        """Search for values in Redis."""
+        # This is a simple implementation that returns all values
+        # In a real implementation, you would use Redis search capabilities
+        results = []
+        for key in self.redis.keys(f"{self.prefix}:*"):
+            data = json.loads(self.redis.get(key))
+            results.append({"context": data["value"], "metadata": data["metadata"]})
+            if len(results) >= limit:
+                break
+        return results
+
+    def reset(self) -> None:
+        """Reset the Redis storage."""
+        for key in self.redis.keys(f"{self.prefix}:*"):
+            self.redis.delete(key)
+```
+
+## Benefits of Custom Storage
+
+Using custom storage implementations allows you to:
+
+1. Store memory data in external databases or services
+2. Implement custom search algorithms
+3. Share memory between different crews or applications
+4. Persist memory across application restarts
+5. Implement custom memory retention policies
+
+By extending the `Storage` interface, you can integrate CrewAI with any storage backend that suits your needs.

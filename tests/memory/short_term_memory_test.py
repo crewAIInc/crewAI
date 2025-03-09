@@ -12,6 +12,8 @@ from crewai.task import Task
 @pytest.fixture
 def short_term_memory():
     """Fixture to create a ShortTermMemory instance"""
+    from crewai.memory.storage.rag_storage import RAGStorage
+    
     agent = Agent(
         role="Researcher",
         goal="Search relevant data and provide results",
@@ -25,7 +27,10 @@ def short_term_memory():
         expected_output="A list of relevant URLs based on the search query.",
         agent=agent,
     )
-    return ShortTermMemory(crew=Crew(agents=[agent], tasks=[task]))
+    
+    storage = RAGStorage(type="short_term")
+    crew = Crew(agents=[agent], tasks=[task])
+    return ShortTermMemory(storage=storage, crew=crew)
 
 
 def test_save_and_search(short_term_memory):
