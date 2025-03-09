@@ -210,7 +210,13 @@ class Agent(BaseAgent):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         if self.knowledge:
-            agent_knowledge_snippets = self.knowledge.query([task.prompt()])
+            query_context = [
+                task.prompt(),
+                f"Role: {self.role}",
+                f"Goal: {self.goal}",
+                f"Backstory: {self.backstory}"
+            ]
+            agent_knowledge_snippets = self.knowledge.query(query_context)
             if agent_knowledge_snippets:
                 agent_knowledge_context = extract_knowledge_context(
                     agent_knowledge_snippets

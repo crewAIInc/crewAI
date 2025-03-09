@@ -59,7 +59,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         query: List[str],
         limit: int = 3,
         filter: Optional[dict] = None,
-        score_threshold: float = 0.35,
+        score_threshold: float = 0.25,
     ) -> List[Dict[str, Any]]:
         with suppress_logging():
             if self.collection:
