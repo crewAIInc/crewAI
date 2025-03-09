@@ -432,7 +432,13 @@ class ToolUsage:
         # Attempt 1: Parse as JSON
         try:
             arguments = json.loads(tool_input)
-            if isinstance(arguments, dict):
+            # Handle case where arguments is a list
+            if isinstance(arguments, list) and len(arguments) > 0 and isinstance(arguments[0], dict):
+                self._printer.print(
+                    content=f"Tool input is a list, extracting first element: {arguments[0]}", color="blue"
+                )
+                return arguments[0]
+            elif isinstance(arguments, dict):
                 return arguments
         except (JSONDecodeError, TypeError):
             pass  # Continue to the next parsing attempt
@@ -440,7 +446,13 @@ class ToolUsage:
         # Attempt 2: Parse as Python literal
         try:
             arguments = ast.literal_eval(tool_input)
-            if isinstance(arguments, dict):
+            # Handle case where arguments is a list
+            if isinstance(arguments, list) and len(arguments) > 0 and isinstance(arguments[0], dict):
+                self._printer.print(
+                    content=f"Tool input is a list, extracting first element: {arguments[0]}", color="blue"
+                )
+                return arguments[0]
+            elif isinstance(arguments, dict):
                 return arguments
         except (ValueError, SyntaxError):
             pass  # Continue to the next parsing attempt
@@ -448,7 +460,13 @@ class ToolUsage:
         # Attempt 3: Parse as JSON5
         try:
             arguments = json5.loads(tool_input)
-            if isinstance(arguments, dict):
+            # Handle case where arguments is a list
+            if isinstance(arguments, list) and len(arguments) > 0 and isinstance(arguments[0], dict):
+                self._printer.print(
+                    content=f"Tool input is a list, extracting first element: {arguments[0]}", color="blue"
+                )
+                return arguments[0]
+            elif isinstance(arguments, dict):
                 return arguments
         except (JSONDecodeError, ValueError, TypeError):
             pass  # Continue to the next parsing attempt
@@ -460,7 +478,13 @@ class ToolUsage:
                 content=f"Repaired JSON: {repaired_input}", color="blue"
             )
             arguments = json.loads(repaired_input)
-            if isinstance(arguments, dict):
+            # Handle case where arguments is a list
+            if isinstance(arguments, list) and len(arguments) > 0 and isinstance(arguments[0], dict):
+                self._printer.print(
+                    content=f"Tool input is a list, extracting first element: {arguments[0]}", color="blue"
+                )
+                return arguments[0]
+            elif isinstance(arguments, dict):
                 return arguments
         except Exception as e:
             error = f"Failed to repair JSON: {e}"
