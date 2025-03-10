@@ -4,7 +4,7 @@ from pydantic import PrivateAttr
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.memory import Memory
-from crewai.memory.storage.rag_storage import RAGStorage
+from crewai.memory.storage.chroma_rag_storage import ChromaRAGStorage
 
 
 class EntityMemory(Memory):
@@ -34,7 +34,7 @@ class EntityMemory(Memory):
             storage = (
                 storage
                 if storage
-                else RAGStorage(
+                else ChromaRAGStorage(
                     type="entities",
                     allow_reset=True,
                     embedder_config=embedder_config,
