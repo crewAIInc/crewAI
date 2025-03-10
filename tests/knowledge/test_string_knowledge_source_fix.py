@@ -61,3 +61,59 @@ def test_string_knowledge_source_integration():
         results = mock_storage.search(["What city does John live in?"])
         assert len(results) > 0
         assert "San Francisco" in results[0]["context"]
+
+def test_knowledge_storage_search_empty_results():
+    """Test that KnowledgeStorage.search() correctly handles empty results."""
+    # Create a mock collection to simulate ChromaDB with empty results
+    mock_collection = MagicMock()
+    mock_collection.query.return_value = {
+        "ids": [[]],
+        "metadatas": [[]],
+        "documents": [[]],
+        "distances": [[]]
+    }
+    
+    # Create a KnowledgeStorage instance with the mock collection
+    storage = KnowledgeStorage()
+    storage.collection = mock_collection
+    
+    # Search with the fixed implementation
+    results = storage.search(["test query"], score_threshold=0.35)
+    
+    # Assert that no results are returned
+    assert len(results) == 0
+
+def test_knowledge_storage_search_threshold_boundary():
+    """Test that KnowledgeStorage.search() correctly handles boundary threshold values."""
+    # Create a mock collection to simulate ChromaDB with a result at the exact threshold
+    mock_collection = MagicMock()
+    mock_collection.query.return_value = {
+        "ids": [["1"]],
+        "metadatas": [[{}]],
+        "documents": [["Doc1"]],
+        "distances": [[0.35]]  # Exact threshold value
+    }
+    
+    # Create a KnowledgeStorage instance with the mock collection
+    storage = KnowledgeStorage()
+    storage.collection = mock_collection
+    
+    # Search with the fixed implementation
+    results = storage.search(["test query"], score_threshold=0.35)
+    
+    # Assert that exact threshold matches are excluded
+    assert len(results) == 0
+
+def test_knowledge_storage_search_error_handling():
+    """Test that KnowledgeStorage.search() correctly handles errors."""
+    # Create a mock collection that raises an exception
+    mock_collection = MagicMock()
+    mock_collection.query.side_effect = Exception("ChromaDB error")
+    
+    # Create a KnowledgeStorage instance with the mock collection
+    storage = KnowledgeStorage()
+    storage.collection = mock_collection
+    
+    # Assert that the exception is propagated
+    with pytest.raises(Exception):
+        storage.search(["test query"], score_threshold=0.35)
