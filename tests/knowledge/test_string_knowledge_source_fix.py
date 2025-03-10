@@ -1,8 +1,11 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from crewai import Agent, Task, Crew, Process
+
+from crewai import Agent, Crew, Process, Task
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+
 
 def test_knowledge_storage_search_filtering():
     """Test that KnowledgeStorage.search() correctly filters results based on distance scores."""
