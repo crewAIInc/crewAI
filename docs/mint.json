@@ -79,7 +79,8 @@
         {
           "group": "Flows",
           "pages": [
-            "guides/flows/first-flow"
+            "guides/flows/first-flow",
+            "guides/flows/mastering-flow-state"
           ]
         }
       ]
