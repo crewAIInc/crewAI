@@ -76,7 +76,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                         "context": fetched["documents"][0][i],  # type: ignore
                         "score": fetched["distances"][0][i],  # type: ignore
                     }
-                    if result["score"] >= score_threshold:
+                    if result["score"] < score_threshold:  # Lower distance values indicate higher similarity in ChromaDB
                         results.append(result)
                 return results
             else:
