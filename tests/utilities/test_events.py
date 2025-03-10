@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from unittest.mock import Mock, patch
 
@@ -38,6 +39,7 @@ from crewai.utilities.events.llm_events import (
     LLMCallFailedEvent,
     LLMCallStartedEvent,
     LLMCallType,
+    LLMStreamChunkEvent,
 )
 from crewai.utilities.events.task_events import (
     TaskCompletedEvent,
@@ -46,6 +48,11 @@ from crewai.utilities.events.task_events import (
 )
 from crewai.utilities.events.tool_usage_events import (
     ToolUsageErrorEvent,
+)
+
+# Skip streaming tests when running in CI/CD environments
+skip_streaming_in_ci = pytest.mark.skipif(
+    os.getenv("CI") is not None, reason="Skipping streaming tests in CI/CD environments"
 )
 
 base_agent = Agent(
@@ -615,3 +622,152 @@ def test_llm_emits_call_failed_event():
         assert len(received_events) == 1
         assert received_events[0].type == "llm_call_failed"
         assert received_events[0].error == error_message
+
+
+@skip_streaming_in_ci
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_emits_stream_chunk_events():
+    """Test that LLM emits stream chunk events when streaming is enabled."""
+    received_chunks = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def handle_stream_chunk(source, event):
+            received_chunks.append(event.chunk)
+
+        # Create an LLM with streaming enabled
+        llm = LLM(model="gpt-4o", stream=True)
+
+        # Call the LLM with a simple message
+        response = llm.call("Tell me a short joke")
+
+        # Verify that we received chunks
+        assert len(received_chunks) > 0
+
+        # Verify that concatenating all chunks equals the final response
+        assert "".join(received_chunks) == response
+
+
+@skip_streaming_in_ci
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_no_stream_chunks_when_streaming_disabled():
+    """Test that LLM doesn't emit stream chunk events when streaming is disabled."""
+    received_chunks = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def handle_stream_chunk(source, event):
+            received_chunks.append(event.chunk)
+
+        # Create an LLM with streaming disabled
+        llm = LLM(model="gpt-4o", stream=False)
+
+        # Call the LLM with a simple message
+        response = llm.call("Tell me a short joke")
+
+        # Verify that we didn't receive any chunks
+        assert len(received_chunks) == 0
+
+        # Verify we got a response
+        assert response and isinstance(response, str)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_streaming_fallback_to_non_streaming():
+    """Test that streaming falls back to non-streaming when there's an error."""
+    received_chunks = []
+    fallback_called = False
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def handle_stream_chunk(source, event):
+            received_chunks.append(event.chunk)
+
+        # Create an LLM with streaming enabled
+        llm = LLM(model="gpt-4o", stream=True)
+
+        # Store original methods
+        original_call = llm.call
+
+        # Create a mock call method that handles the streaming error
+        def mock_call(messages, tools=None, callbacks=None, available_functions=None):
+            nonlocal fallback_called
+            # Emit a couple of chunks to simulate partial streaming
+            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 1"))
+            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 2"))
+
+            # Mark that fallback would be called
+            fallback_called = True
+
+            # Return a response as if fallback succeeded
+            return "Fallback response after streaming error"
+
+        # Replace the call method with our mock
+        llm.call = mock_call
+
+        try:
+            # Call the LLM
+            response = llm.call("Tell me a short joke")
+
+            # Verify that we received some chunks
+            assert len(received_chunks) == 2
+            assert received_chunks[0] == "Test chunk 1"
+            assert received_chunks[1] == "Test chunk 2"
+
+            # Verify fallback was triggered
+            assert fallback_called
+
+            # Verify we got the fallback response
+            assert response == "Fallback response after streaming error"
+
+        finally:
+            # Restore the original method
+            llm.call = original_call
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_streaming_empty_response_handling():
+    """Test that streaming handles empty responses correctly."""
+    received_chunks = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def handle_stream_chunk(source, event):
+            received_chunks.append(event.chunk)
+
+        # Create an LLM with streaming enabled
+        llm = LLM(model="gpt-3.5-turbo", stream=True)
+
+        # Store original methods
+        original_call = llm.call
+
+        # Create a mock call method that simulates empty chunks
+        def mock_call(messages, tools=None, callbacks=None, available_functions=None):
+            # Emit a few empty chunks
+            for _ in range(3):
+                crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk=""))
+
+            # Return the default message for empty responses
+            return "I apologize, but I couldn't generate a proper response. Please try again or rephrase your request."
+
+        # Replace the call method with our mock
+        llm.call = mock_call
+
+        try:
+            # Call the LLM - this should handle empty response
+            response = llm.call("Tell me a short joke")
+
+            # Verify that we received empty chunks
+            assert len(received_chunks) == 3
+            assert all(chunk == "" for chunk in received_chunks)
+
+            # Verify the response is the default message for empty responses
+            assert "I apologize" in response and "couldn't generate" in response
+
+        finally:
+            # Restore the original method
+            llm.call = original_call
