@@ -1,5 +1,6 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from crewai.utilities.embedding_configurator import EmbeddingConfigurator
 
