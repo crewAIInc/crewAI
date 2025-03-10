@@ -75,10 +75,36 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_azure(config, model_name):
+        """
+        Configure an Azure OpenAI embedding function.
+        
+        Args:
+            config: A dictionary containing Azure OpenAI configuration parameters.
+                Required parameters:
+                - api_key: Azure OpenAI API key
+                - api_base: Azure OpenAI API base URL
+                - api_version: Azure OpenAI API version
+                - deployment_id: Azure OpenAI deployment ID for the embedding model
+            model_name: The name of the embedding model
+            
+        Returns:
+            An OpenAIEmbeddingFunction configured for Azure OpenAI
+            
+        Raises:
+            ValueError: If required parameters are missing
+        """
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )
-
+        
+        # Check if deployment_id is provided for Azure OpenAI
+        deployment_id = config.get("deployment_id")
+        if not deployment_id:
+            raise ValueError(
+                "Missing required parameter 'deployment_id' for Azure OpenAI embeddings. "
+                "Please provide a deployment_id in your Azure embedder configuration."
+            )
+        
         return OpenAIEmbeddingFunction(
             api_key=config.get("api_key"),
             api_base=config.get("api_base"),
@@ -87,7 +113,7 @@ class EmbeddingConfigurator:
             model_name=model_name,
             default_headers=config.get("default_headers"),
             dimensions=config.get("dimensions"),
-            deployment_id=config.get("deployment_id"),
+            deployment_id=deployment_id,
             organization_id=config.get("organization_id"),
         )
 
