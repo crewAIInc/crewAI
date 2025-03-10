@@ -1,0 +1,528 @@
+---
+title: Build Your First Flow
+description: Learn how to create structured, event-driven workflows with precise control over execution.
+icon: diagram-project
+---
+
+# Build Your First Flow
+
+In this guide, we'll walk through creating a powerful CrewAI Flow that generates a comprehensive learning guide on any topic. This tutorial will demonstrate how Flows provide structured, event-driven control over your AI workflows by combining regular code, direct LLM calls, and crew-based processing.
+
+## Prerequisites
+
+Before starting, make sure you have:
+
+1. Installed CrewAI following the [installation guide](/installation)
+2. Set up your OpenAI API key in your environment variables
+3. Basic understanding of Python
+
+## Step 1: Create a New CrewAI Flow Project
+
+First, let's create a new CrewAI Flow project using the CLI:
+
+```bash
+crewai create flow guide_creator_flow
+cd guide_creator_flow
+```
+
+This will generate a project with the basic structure needed for your flow.
+
+<Frame caption="CrewAI Framework Overview">
+  <img src="../../flows.png" alt="CrewAI Framework Overview" />
+</Frame>
+
+## Step 2: Understanding the Project Structure
+
+The generated project has the following structure:
+
+```
+guide_creator_flow/
+├── .gitignore
+├── pyproject.toml
+├── README.md
+├── .env
+├── main.py
+├── crews/
+│   └── poem_crew/
+│       ├── config/
+│       │   ├── agents.yaml
+│       │   └── tasks.yaml
+│       └── poem_crew.py
+└── tools/
+    └── custom_tool.py
+```
+
+We'll modify this structure to create our guide creator flow.
+
+## Step 3: Add a Content Writer Crew
+
+Let's use the CrewAI CLI to add a content writer crew:
+
+```bash
+crewai flow add-crew content-crew
+```
+
+This command will automatically create the necessary directories and template files.
+
+## Step 4: Configure the Content Writer Crew
+
+Now, let's modify the generated files for the content writer crew:
+
+1. First, update the agents configuration file:
+
+```yaml
+# src/guide_creator_flow/crews/content_crew/config/agents.yaml
+content_writer:
+  role: >
+    Educational Content Writer
+  goal: >
+    Create engaging, informative content that thoroughly explains the assigned topic
+    and provides valuable insights to the reader
+  backstory: >
+    You are a talented educational writer with expertise in creating clear, engaging
+    content. You have a gift for explaining complex concepts in accessible language
+    and organizing information in a way that helps readers build their understanding.
+  llm: openai/gpt-4o-mini
+
+content_reviewer:
+  role: >
+    Educational Content Reviewer and Editor
+  goal: >
+    Ensure content is accurate, comprehensive, well-structured, and maintains
+    consistency with previously written sections
+  backstory: >
+    You are a meticulous editor with years of experience reviewing educational
+    content. You have an eye for detail, clarity, and coherence. You excel at
+    improving content while maintaining the original author's voice and ensuring
+    consistent quality across multiple sections.
+  llm: openai/gpt-4o-mini
+```
+
+2. Next, update the tasks configuration file:
+
+```yaml
+# src/guide_creator_flow/crews/content_crew/config/tasks.yaml
+write_section_task:
+  description: >
+    Write a comprehensive section on the topic: "{section_title}"
+
+    Section description: {section_description}
+    Target audience: {audience_level} level learners
+
+    Your content should:
+    1. Begin with a brief introduction to the section topic
+    2. Explain all key concepts clearly with examples
+    3. Include practical applications or exercises where appropriate
+    4. End with a summary of key points
+    5. Be approximately 500-800 words in length
+
+    Format your content in Markdown with appropriate headings, lists, and emphasis.
+
+    Previously written sections:
+    {previous_sections}
+
+    Make sure your content maintains consistency with previously written sections
+    and builds upon concepts that have already been explained.
+  expected_output: >
+    A well-structured, comprehensive section in Markdown format that thoroughly
+    explains the topic and is appropriate for the target audience.
+  agent: content_writer
+
+review_section_task:
+  description: >
+    Review and improve the following section on "{section_title}":
+
+    {draft_content}
+
+    Target audience: {audience_level} level learners
+
+    Previously written sections:
+    {previous_sections}
+
+    Your review should:
+    1. Fix any grammatical or spelling errors
+    2. Improve clarity and readability
+    3. Ensure content is comprehensive and accurate
+    4. Verify consistency with previously written sections
+    5. Enhance the structure and flow
+    6. Add any missing key information
+
+    Provide the improved version of the section in Markdown format.
+  expected_output: >
+    An improved, polished version of the section that maintains the original
+    structure but enhances clarity, accuracy, and consistency.
+  agent: content_reviewer
+  context:
+    - write_section_task
+```
+
+3. Now, update the crew implementation file:
+
+```python
+# src/guide_creator_flow/crews/content_crew/content_crew.py
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+
+@CrewBase
+class ContentCrew():
+    """Content writing crew"""
+
+    @agent
+    def content_writer(self) -> Agent:
+        return Agent(
+            config=self.agents_config['content_writer'],
+            verbose=True
+        )
+
+    @agent
+    def content_reviewer(self) -> Agent:
+        return Agent(
+            config=self.agents_config['content_reviewer'],
+            verbose=True
+        )
+
+    @task
+    def write_section_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['write_section_task']
+        )
+
+    @task
+    def review_section_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['review_section_task'],
+            context=[self.write_section_task]
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        """Creates the content writing crew"""
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+## Step 5: Create the Flow
+
+Now, let's create our flow in the `main.py` file. This flow will:
+1. Get user input for a topic
+2. Make a direct LLM call to create a structured guide outline
+3. Process each section in parallel using the content writer crew
+4. Combine everything into a final document
+
+```python
+#!/usr/bin/env python
+import json
+from typing import List, Dict
+from pydantic import BaseModel, Field
+from crewai import LLM
+from crewai.flow.flow import Flow, listen, start
+from guide_creator_flow.crews.content_crew.content_crew import ContentCrew
+
+# Define our models for structured data
+class Section(BaseModel):
+    title: str = Field(description="Title of the section")
+    description: str = Field(description="Brief description of what the section should cover")
+
+class GuideOutline(BaseModel):
+    title: str = Field(description="Title of the guide")
+    introduction: str = Field(description="Introduction to the topic")
+    target_audience: str = Field(description="Description of the target audience")
+    sections: List[Section] = Field(description="List of sections in the guide")
+    conclusion: str = Field(description="Conclusion or summary of the guide")
+
+# Define our flow state
+class GuideCreatorState(BaseModel):
+    topic: str = ""
+    audience_level: str = ""
+    guide_outline: GuideOutline = None
+    sections_content: Dict[str, str] = {}
+
+class GuideCreatorFlow(Flow[GuideCreatorState]):
+    """Flow for creating a comprehensive guide on any topic"""
+
+    @start()
+    def get_user_input(self):
+        """Get input from the user about the guide topic and audience"""
+        print("\n=== Create Your Comprehensive Guide ===\n")
+
+        # Get user input
+        self.state.topic = input("What topic would you like to create a guide for? ")
+
+        # Get audience level with validation
+        while True:
+            audience = input("Who is your target audience? (beginner/intermediate/advanced) ").lower()
+            if audience in ["beginner", "intermediate", "advanced"]:
+                self.state.audience_level = audience
+                break
+            print("Please enter 'beginner', 'intermediate', or 'advanced'")
+
+        print(f"\nCreating a guide on {self.state.topic} for {self.state.audience_level} audience...\n")
+        return self.state
+
+    @listen(get_user_input)
+    def create_guide_outline(self, state):
+        """Create a structured outline for the guide using a direct LLM call"""
+        print("Creating guide outline...")
+
+        # Initialize the LLM
+        llm = LLM(model="openai/gpt-4o-mini", response_format=GuideOutline)
+
+        # Create the messages for the outline
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant designed to output JSON."},
+            {"role": "user", "content": f"""
+            Create a detailed outline for a comprehensive guide on "{state.topic}" for {state.audience_level} level learners.
+
+            The outline should include:
+            1. A compelling title for the guide
+            2. An introduction to the topic
+            3. 4-6 main sections that cover the most important aspects of the topic
+            4. A conclusion or summary
+
+            For each section, provide a clear title and a brief description of what it should cover.
+            """}
+        ]
+
+        # Make the LLM call with JSON response format
+        response = llm.call(messages=messages)
+
+        # Parse the JSON response
+        outline_dict = json.loads(response)
+        self.state.guide_outline = GuideOutline(**outline_dict)
+
+        # Save the outline to a file
+        with open("output/guide_outline.json", "w") as f:
+            json.dump(outline_dict, f, indent=2)
+
+        print(f"Guide outline created with {len(self.state.guide_outline.sections)} sections")
+        return self.state.guide_outline
+
+    @listen(create_guide_outline)
+    def write_and_compile_guide(self, outline):
+        """Write all sections and compile the guide"""
+        print("Writing guide sections and compiling...")
+        completed_sections = []
+
+        # Process sections one by one to maintain context flow
+        for section in outline.sections:
+            print(f"Processing section: {section.title}")
+
+            # Build context from previous sections
+            previous_sections_text = ""
+            if completed_sections:
+                previous_sections_text = "# Previously Written Sections\n\n"
+                for title in completed_sections:
+                    previous_sections_text += f"## {title}\n\n"
+                    previous_sections_text += self.state.sections_content.get(title, "") + "\n\n"
+            else:
+                previous_sections_text = "No previous sections written yet."
+
+            # Run the content crew for this section
+            result = ContentCrew().crew().kickoff(inputs={
+                "section_title": section.title,
+                "section_description": section.description,
+                "audience_level": self.state.audience_level,
+                "previous_sections": previous_sections_text,
+                "draft_content": ""
+            })
+
+            # Store the content
+            self.state.sections_content[section.title] = result.raw
+            completed_sections.append(section.title)
+            print(f"Section completed: {section.title}")
+
+        # Compile the final guide
+        guide_content = f"# {outline.title}\n\n"
+        guide_content += f"## Introduction\n\n{outline.introduction}\n\n"
+
+        # Add each section in order
+        for section in outline.sections:
+            section_content = self.state.sections_content.get(section.title, "")
+            guide_content += f"\n\n{section_content}\n\n"
+
+        # Add conclusion
+        guide_content += f"## Conclusion\n\n{outline.conclusion}\n\n"
+
+        # Save the guide
+        with open("output/complete_guide.md", "w") as f:
+            f.write(guide_content)
+
+        print("\nComplete guide compiled and saved to output/complete_guide.md")
+        return "Guide creation completed successfully"
+
+def kickoff():
+    """Run the guide creator flow"""
+    GuideCreatorFlow().kickoff()
+    print("\n=== Flow Complete ===")
+    print("Your comprehensive guide is ready in the output directory.")
+    print("Open output/complete_guide.md to view it.")
+
+def plot():
+    """Generate a visualization of the flow"""
+    flow = GuideCreatorFlow()
+    flow.plot("guide_creator_flow")
+    print("Flow visualization saved to guide_creator_flow.html")
+
+if __name__ == "__main__":
+    kickoff()
+```
+
+## Step 6: Set Up Your Environment Variables
+
+Create a `.env` file in your project root with your API keys:
+
+```
+OPENAI_API_KEY=your_openai_api_key
+```
+
+## Step 7: Install Dependencies
+
+Install the required dependencies:
+
+```bash
+crewai install
+```
+
+## Step 8: Run Your Flow
+
+Now, run your flow using the CrewAI CLI:
+
+```bash
+crewai flow kickoff
+```
+
+Your flow will:
+
+1. Prompt you for a topic and target audience
+2. Make a direct LLM call to create a structured guide outline
+3. Process each section in parallel using the content writer crew
+4. Combine everything into a final comprehensive guide
+
+This demonstrates the power of flows to orchestrate different types of operations, including user input, direct LLM interactions, and crew-based processing.
+
+## Step 9: Visualize Your Flow
+
+You can also generate a visualization of your flow:
+
+```bash
+crewai flow plot
+```
+
+This will create an HTML file that shows the structure of your flow, which can be helpful for understanding and debugging.
+
+## Step 10: Review the Output
+
+Once the flow completes, you'll find two files in the `output` directory:
+
+1. `guide_outline.json`: Contains the structured outline of the guide
+2. `complete_guide.md`: The comprehensive guide with all sections
+
+## Key Features Demonstrated
+
+This guide creator flow demonstrates several powerful features of CrewAI:
+
+1. **User interaction**: The flow collects input directly from the user
+2. **Direct LLM calls**: Uses the LLM class for efficient, single-purpose AI interactions
+3. **Structured data with Pydantic**: Uses Pydantic models to ensure type safety
+4. **Sequential processing with context**: Writes sections in order, providing previous sections for context
+5. **Multi-agent crews**: Leverages specialized agents (writer and reviewer) for content creation
+6. **State management**: Maintains state across different steps of the process
+
+## Understanding the Flow Structure
+
+Let's break down the key components of this flow:
+
+### 1. Direct LLM Calls
+
+The flow uses CrewAI's `LLM` class to make direct calls to the language model:
+
+```python
+llm = LLM(model="openai/gpt-4o-mini")
+response = llm.call(prompt)
+```
+
+This is more efficient than using a crew when you need a simple, structured response.
+
+### 2. Asynchronous Processing
+
+The flow uses async/await to process multiple sections in parallel:
+
+```python
+@listen(create_guide_outline)
+async def write_sections(self, outline):
+    # ...
+    section_tasks = []
+    for section in outline.sections:
+        task = self.write_section(section, outline.target_audience)
+        section_tasks.append(task)
+
+    sections_content = await asyncio.gather(*section_tasks)
+    # ...
+```
+
+This significantly speeds up the guide creation process.
+
+### 3. Multi-Agent Crews
+
+The flow uses a crew with multiple specialized agents:
+
+```python
+# Content creation crew with writer and reviewer
+@agent
+def content_writer(self) -> Agent:
+    return Agent(
+        config=self.agents_config['content_writer'],
+        verbose=True
+    )
+
+@agent
+def content_reviewer(self) -> Agent:
+    return Agent(
+        config=self.agents_config['content_reviewer'],
+        verbose=True
+    )
+```
+
+This demonstrates how flows can orchestrate crews with multiple specialized agents that work together on complex tasks.
+
+### 4. Context-Aware Sequential Processing
+
+The flow processes sections in order, providing previous sections as context:
+
+```python
+# Getting previous sections for context
+previous_sections_text = ""
+if self.state.completed_sections:
+    previous_sections_text = "# Previously Written Sections\n\n"
+    for title in self.state.completed_sections:
+        previous_sections_text += f"## {title}\n\n"
+        previous_sections_text += self.state.sections_content.get(title, "") + "\n\n"
+```
+
+This ensures coherence and continuity throughout the guide.
+
+## Customizing Your Flow
+
+You can customize your flow in several ways:
+
+1. **Add more user inputs**: Collect additional information about the desired guide
+2. **Enhance the outline**: Modify the LLM prompt to create more detailed outlines
+3. **Add more crews**: Use different crews for different parts of the guide
+4. **Add review steps**: Include a review and refinement step for the final guide
+
+## Next Steps
+
+Now that you've built your first flow, you can:
+
+1. Experiment with more complex flow structures
+2. Try using `@router()` to create conditional branches
+3. Explore the `and_` and `or_` functions for more complex parallel execution
+4. Connect your flow to external APIs or services
+
+<Check>
+Congratulations! You've successfully built your first CrewAI Flow that combines regular code, direct LLM calls, and crew-based processing to create a comprehensive guide.
+</Check>
