@@ -74,7 +74,7 @@ class EmbeddingConfigurator:
         )
 
     @staticmethod
-    def _configure_azure(config, model_name):
+    def _configure_azure(config: Dict[str, Any], model_name: str) -> EmbeddingFunction:
         """
         Configure an Azure OpenAI embedding function.
         
@@ -91,18 +91,30 @@ class EmbeddingConfigurator:
             An OpenAIEmbeddingFunction configured for Azure OpenAI
             
         Raises:
-            ValueError: If required parameters are missing
+            ValueError: If required parameters are missing or invalid
         """
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )
         
-        # Check if deployment_id is provided for Azure OpenAI
-        deployment_id = config.get("deployment_id")
-        if not deployment_id:
+        # Check required parameters for Azure OpenAI
+        required_params = {
+            "api_key": "API key",
+            "api_base": "API base URL",
+            "api_version": "API version",
+            "deployment_id": "deployment ID"
+        }
+        
+        missing_params = []
+        for param, description in required_params.items():
+            if not config.get(param):
+                missing_params.append(f"{description} ({param})")
+        
+        if missing_params:
+            params_str = ", ".join(missing_params)
             raise ValueError(
-                "Missing required parameter 'deployment_id' for Azure OpenAI embeddings. "
-                "Please provide a deployment_id in your Azure embedder configuration."
+                f"Missing required parameters for Azure OpenAI embeddings: {params_str}. "
+                f"Ensure these parameters match your Azure OpenAI embedding model configuration."
             )
         
         return OpenAIEmbeddingFunction(
@@ -113,7 +125,7 @@ class EmbeddingConfigurator:
             model_name=model_name,
             default_headers=config.get("default_headers"),
             dimensions=config.get("dimensions"),
-            deployment_id=deployment_id,
+            deployment_id=config.get("deployment_id"),
             organization_id=config.get("organization_id"),
         )
 
