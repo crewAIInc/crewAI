@@ -62,6 +62,29 @@
       ]
     },
     {
+      "group": "Guides",
+      "pages": [
+        {
+          "group": "Agents",
+          "pages": [
+            "guides/agents/crafting-effective-agents"
+          ]
+        },
+        {
+          "group": "Crews",
+          "pages": [
+            "guides/crews/first-crew"
+          ]
+        },
+        {
+          "group": "Flows",
+          "pages": [
+            "guides/flows/first-flow"
+          ]
+        }
+      ]
+    },
+    {
       "group": "Core Concepts",
       "pages": [
         "concepts/agents",
