@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import platform
+import threading
 import warnings
 from contextlib import contextmanager
 from importlib.metadata import version
@@ -42,39 +43,75 @@ class Telemetry:
 
     Users can opt-in to sharing more complete data using the `share_crew`
     attribute in the Crew class.
+
+    This class implements a singleton pattern to ensure that only one instance
+    of the telemetry system exists, preventing multiple OtelBatchSpanProcessor
+    threads from being created. This is particularly important in environments
+    like FastAPI endpoints where agents are created dynamically, as it prevents
+    resource leaks and excessive thread creation.
+
+    The implementation uses thread-safe double-checked locking to ensure
+    thread safety when multiple threads attempt to create a Telemetry instance
+    simultaneously.
     """
+    _instance = None
+    _initialized = False
+    _instance_lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self):
-        self.ready = False
-        self.trace_set = False
+        if not self._initialized:
+            with self._instance_lock:
+                if not self._initialized:
+                    self.ready = False
+                    self.trace_set = False
 
-        if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
-            return
+                    if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
+                        self._initialized = True
+                        return
 
-        try:
-            telemetry_endpoint = "https://telemetry.crewai.com:4319"
-            self.resource = Resource(
-                attributes={SERVICE_NAME: "crewAI-telemetry"},
-            )
-            with suppress_warnings():
-                self.provider = TracerProvider(resource=self.resource)
+                    try:
+                        telemetry_endpoint = "https://telemetry.crewai.com:4319"
+                        self.resource = Resource(
+                            attributes={SERVICE_NAME: "crewAI-telemetry"},
+                        )
+                        with suppress_warnings():
+                            self.provider = TracerProvider(resource=self.resource)
 
-            processor = BatchSpanProcessor(
-                OTLPSpanExporter(
-                    endpoint=f"{telemetry_endpoint}/v1/traces",
-                    timeout=30,
-                )
-            )
+                        processor = BatchSpanProcessor(
+                            OTLPSpanExporter(
+                                endpoint=f"{telemetry_endpoint}/v1/traces",
+                                timeout=30,
+                            )
+                        )
 
-            self.provider.add_span_processor(processor)
-            self.ready = True
-        except Exception as e:
-            if isinstance(
-                e,
-                (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
-            ):
-                raise  # Re-raise the exception to not interfere with system signals
-            self.ready = False
+                        self.provider.add_span_processor(processor)
+                        self.ready = True
+                    except Exception as e:
+                        if isinstance(
+                            e,
+                            (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
+                        ):
+                            raise  # Re-raise the exception to not interfere with system signals
+                        self.ready = False
+                    
+                    self._initialized = True
+
+    def __del__(self):
+        """Clean up resources when the instance is destroyed."""
+        if hasattr(self, 'provider') and self.provider:
+            try:
+                self.provider.shutdown()
+            except Exception as e:
+                # Re-raise the exception to not interfere with system signals
+                if isinstance(e, (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError)):
+                    raise
 
     def set_tracer(self):
         if self.ready and not self.trace_set:
