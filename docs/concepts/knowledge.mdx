@@ -85,6 +85,12 @@ crew = Crew(
     verbose=True,
     process=Process.sequential,
     knowledge_sources=[string_source], # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 
 result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
@@ -137,6 +143,12 @@ crew = Crew(
     knowledge_sources=[
         content_source
     ],  # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 
 result = crew.kickoff(
@@ -167,7 +179,13 @@ agent = Agent(
 
 crew = Crew(
     ...
-    knowledge_sources=[text_source]
+    knowledge_sources=[text_source],
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -188,7 +206,13 @@ agent = Agent(
 
 crew = Crew(
     ...
-    knowledge_sources=[pdf_source]
+    knowledge_sources=[pdf_source],
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -209,7 +233,13 @@ agent = Agent(
 
 crew = Crew(
     ...
-    knowledge_sources=[csv_source]
+    knowledge_sources=[csv_source],
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -230,7 +260,13 @@ agent = Agent(
 
 crew = Crew(
     ...
-    knowledge_sources=[excel_source]
+    knowledge_sources=[excel_source],
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -251,7 +287,13 @@ agent = Agent(
 
 crew = Crew(
     ...
-    knowledge_sources=[json_source]
+    knowledge_sources=[json_source],
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -516,7 +558,7 @@ crew = Crew(
     agents=[space_analyst],
     tasks=[analysis_task],
     verbose=True,
-    process=Process.sequential
+    process=Process.sequential,
 )
 
 # Example usage
