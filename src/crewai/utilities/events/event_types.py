@@ -23,6 +23,12 @@ from .flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
+from .llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+    LLMStreamChunkEvent,
+)
 from .task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
@@ -58,4 +64,8 @@ EventTypes = Union[
     ToolUsageFinishedEvent,
     ToolUsageErrorEvent,
     ToolUsageStartedEvent,
+    LLMCallStartedEvent,
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMStreamChunkEvent,
 ]

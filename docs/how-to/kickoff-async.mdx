@@ -54,7 +54,8 @@ coding_agent = Agent(
 # Create a task that requires code execution
 data_analysis_task = Task(
     description="Analyze the given dataset and calculate the average age of participants. Ages: {ages}",
-    agent=coding_agent
+    agent=coding_agent,
+    expected_output="The average age of the participants."
 )
 
 # Create a crew and add the task

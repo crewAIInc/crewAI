@@ -203,7 +203,6 @@ def install(context):
 @crewai.command()
 def run():
     """Run the Crew."""
-    click.echo("Running the Crew")
     run_crew()
 
 

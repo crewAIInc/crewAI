@@ -48,7 +48,6 @@ Define a crew with a designated manager and establish a clear chain of command.
 </Tip>
 
 ```python Code
-from langchain_openai import ChatOpenAI
 from crewai import Crew, Process, Agent
 
 # Agents are defined with attributes for backstory, cache, and verbose mode
@@ -56,37 +55,50 @@ researcher = Agent(
     role='Researcher',
     goal='Conduct in-depth analysis',
     backstory='Experienced data analyst with a knack for uncovering hidden trends.',
-    cache=True,
-    verbose=False,
-    # tools=[]  # This can be optionally specified; defaults to an empty list
-    use_system_prompt=True,  # Enable or disable system prompts for this agent
-    max_rpm=30,  # Limit on the number of requests per minute
-    max_iter=5  # Maximum number of iterations for a final answer
 )
 writer = Agent(
     role='Writer',
     goal='Create engaging content',
     backstory='Creative writer passionate about storytelling in technical domains.',
-    cache=True,
-    verbose=False,
-    # tools=[]  # Optionally specify tools; defaults to an empty list
-    use_system_prompt=True,  # Enable or disable system prompts for this agent
-    max_rpm=30,  # Limit on the number of requests per minute
-    max_iter=5  # Maximum number of iterations for a final answer
 )
 
 # Establishing the crew with a hierarchical process and additional configurations
 project_crew = Crew(
     tasks=[...],  # Tasks to be delegated and executed under the manager's supervision
     agents=[researcher, writer],
-    manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),  # Mandatory if manager_agent is not set
-    process=Process.hierarchical,  # Specifies the hierarchical management approach
-    respect_context_window=True,  # Enable respect of the context window for tasks
-    memory=True,  # Enable memory usage for enhanced task execution
-    manager_agent=None,  # Optional: explicitly set a specific agent as manager instead of the manager_llm
-    planning=True,  # Enable planning feature for pre-execution strategy
+    manager_llm="gpt-4o",  # Specify which LLM the manager should use
+    process=Process.hierarchical,  
+    planning=True, 
 )
 ```
+
+### Using a Custom Manager Agent
+
+Alternatively, you can create a custom manager agent with specific attributes tailored to your project's management needs. This gives you more control over the manager's behavior and capabilities.
+
+```python
+# Define a custom manager agent
+manager = Agent(
+    role="Project Manager",
+    goal="Efficiently manage the crew and ensure high-quality task completion",
+    backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success.",
+    allow_delegation=True,
+)
+
+# Use the custom manager in your crew
+project_crew = Crew(
+    tasks=[...],
+    agents=[researcher, writer],
+    manager_agent=manager,  # Use your custom manager agent
+    process=Process.hierarchical,
+    planning=True,
+)
+```
+
+<Tip>
+    For more details on creating and customizing a manager agent, check out the [Custom Manager Agent documentation](https://docs.crewai.com/how-to/custom-manager-agent#custom-manager-agent).
+</Tip>
+
 
 ### Workflow in Action
 

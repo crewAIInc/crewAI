@@ -18,6 +18,7 @@ from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.llm_events import LLMStreamChunkEvent
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
@@ -259,9 +260,7 @@ def test_cache_hitting():
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    with (
-        patch.object(CacheHandler, "read") as read,
-    ):
+    with (patch.object(CacheHandler, "read") as read,):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -915,8 +914,6 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_usage_information_is_appended_to_agent():
-    from datetime import UTC, datetime
-
     from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
@@ -926,36 +923,30 @@ def test_tool_usage_information_is_appended_to_agent():
         def _run(self) -> str:
             return "Howdy!"
 
-    fixed_datetime = datetime(2025, 2, 10, 12, 0, 0, tzinfo=UTC)
-    with patch("datetime.datetime") as mock_datetime:
-        mock_datetime.now.return_value = fixed_datetime
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+    agent1 = Agent(
+        role="Friendly Neighbor",
+        goal="Make everyone feel welcome",
+        backstory="You are the friendly neighbor",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
 
-        agent1 = Agent(
-            role="Friendly Neighbor",
-            goal="Make everyone feel welcome",
-            backstory="You are the friendly neighbor",
-            tools=[MyCustomTool(result_as_answer=True)],
-        )
+    greeting = Task(
+        description="Say an appropriate greeting.",
+        expected_output="The greeting.",
+        agent=agent1,
+    )
+    tasks = [greeting]
+    crew = Crew(agents=[agent1], tasks=tasks)
 
-        greeting = Task(
-            description="Say an appropriate greeting.",
-            expected_output="The greeting.",
-            agent=agent1,
-        )
-        tasks = [greeting]
-        crew = Crew(agents=[agent1], tasks=tasks)
-
-        crew.kickoff()
-        assert agent1.tools_results == [
-            {
-                "result": "Howdy!",
-                "tool_name": "Decide Greetings",
-                "tool_args": {},
-                "result_as_answer": True,
-                "start_time": fixed_datetime,
-            }
-        ]
+    crew.kickoff()
+    assert agent1.tools_results == [
+        {
+            "result": "Howdy!",
+            "tool_name": "Decide Greetings",
+            "tool_args": {},
+            "result_as_answer": True,
+        }
+    ]
 
 
 def test_agent_definition_based_on_dict():

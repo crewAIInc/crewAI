@@ -1,0 +1,154 @@
+---
+title: RAG Tool
+description: The `RagTool` is a dynamic knowledge base tool for answering questions using Retrieval-Augmented Generation.
+icon: vector-square
+---
+
+# `RagTool`
+
+## Description
+
+The `RagTool` is designed to answer questions by leveraging the power of Retrieval-Augmented Generation (RAG) through EmbedChain. 
+It provides a dynamic knowledge base that can be queried to retrieve relevant information from various data sources. 
+This tool is particularly useful for applications that require access to a vast array of information and need to provide contextually relevant answers.
+
+## Example
+
+The following example demonstrates how to initialize the tool and use it with different data sources:
+
+```python Code
+from crewai_tools import RagTool
+
+# Create a RAG tool with default settings
+rag_tool = RagTool()
+
+# Add content from a file
+rag_tool.add(data_type="file", path="path/to/your/document.pdf")
+
+# Add content from a web page
+rag_tool.add(data_type="web_page", url="https://example.com")
+
+# Define an agent with the RagTool
+@agent
+def knowledge_expert(self) -> Agent:
+    '''
+    This agent uses the RagTool to answer questions about the knowledge base.
+    '''
+    return Agent(
+        config=self.agents_config["knowledge_expert"],
+        allow_delegation=False,
+        tools=[rag_tool]
+    )
+```
+
+## Supported Data Sources
+
+The `RagTool` can be used with a wide variety of data sources, including:
+
+- 📰 PDF files
+- 📊 CSV files
+- 📃 JSON files
+- 📝 Text
+- 📁 Directories/Folders
+- 🌐 HTML Web pages
+- 📽️ YouTube Channels
+- 📺 YouTube Videos
+- 📚 Documentation websites
+- 📝 MDX files
+- 📄 DOCX files
+- 🧾 XML files
+- 📬 Gmail
+- 📝 GitHub repositories
+- 🐘 PostgreSQL databases
+- 🐬 MySQL databases
+- 🤖 Slack conversations
+- 💬 Discord messages
+- 🗨️ Discourse forums
+- 📝 Substack newsletters
+- 🐝 Beehiiv content
+- 💾 Dropbox files
+- 🖼️ Images
+- ⚙️ Custom data sources
+
+## Parameters
+
+The `RagTool` accepts the following parameters:
+
+- **summarize**: Optional. Whether to summarize the retrieved content. Default is `False`.
+- **adapter**: Optional. A custom adapter for the knowledge base. If not provided, an EmbedchainAdapter will be used.
+- **config**: Optional. Configuration for the underlying EmbedChain App.
+
+## Adding Content
+
+You can add content to the knowledge base using the `add` method:
+
+```python Code
+# Add a PDF file
+rag_tool.add(data_type="file", path="path/to/your/document.pdf")
+
+# Add a web page
+rag_tool.add(data_type="web_page", url="https://example.com")
+
+# Add a YouTube video
+rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VIDEO_ID")
+
+# Add a directory of files
+rag_tool.add(data_type="directory", path="path/to/your/directory")
+```
+
+## Agent Integration Example
+
+Here's how to integrate the `RagTool` with a CrewAI agent:
+
+```python Code
+from crewai import Agent
+from crewai.project import agent
+from crewai_tools import RagTool
+
+# Initialize the tool and add content
+rag_tool = RagTool()
+rag_tool.add(data_type="web_page", url="https://docs.crewai.com")
+rag_tool.add(data_type="file", path="company_data.pdf")
+
+# Define an agent with the RagTool
+@agent
+def knowledge_expert(self) -> Agent:
+    return Agent(
+        config=self.agents_config["knowledge_expert"],
+        allow_delegation=False,
+        tools=[rag_tool]
+    )
+```
+
+## Advanced Configuration
+
+You can customize the behavior of the `RagTool` by providing a configuration dictionary:
+
+```python Code
+from crewai_tools import RagTool
+
+# Create a RAG tool with custom configuration
+config = {
+    "app": {
+        "name": "custom_app",
+    },
+    "llm": {
+        "provider": "openai",
+        "config": {
+            "model": "gpt-4",
+        }
+    },
+    "embedder": {
+        "provider": "openai",
+        "config": {
+            "model": "text-embedding-ada-002"
+        }
+    }
+}
+
+rag_tool = RagTool(config=config, summarize=True)
+```
+
+## Conclusion
+
+The `RagTool` provides a powerful way to create and query knowledge bases from various data sources. By leveraging Retrieval-Augmented Generation, it enables agents to access and retrieve relevant information efficiently, enhancing their ability to provide accurate and contextually appropriate responses. 

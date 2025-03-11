@@ -114,7 +114,6 @@ class Agent(BaseAgent):
 
     @model_validator(mode="after")
     def post_init_setup(self):
-        self._set_knowledge()
         self.agent_ops_agent_name = self.role
 
         self.llm = create_llm(self.llm)
@@ -134,8 +133,11 @@ class Agent(BaseAgent):
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def _set_knowledge(self):
+    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
         try:
+            if self.embedder is None and crew_embedder:
+                self.embedder = crew_embedder
+
             if self.knowledge_sources:
                 full_pattern = re.compile(r"[^a-zA-Z0-9\-_\r\n]|(\.\.)")
                 knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"

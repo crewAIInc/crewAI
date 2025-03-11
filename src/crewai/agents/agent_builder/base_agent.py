@@ -351,3 +351,6 @@ class BaseAgent(ABC, BaseModel):
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
+
+    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+        pass

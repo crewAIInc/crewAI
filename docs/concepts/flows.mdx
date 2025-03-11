@@ -150,12 +150,12 @@ final_output = flow.kickoff()
 
 print("---- Final Output ----")
 print(final_output)
-````
+```
 
 ```text Output
 ---- Final Output ----
 Second method received: Output from first_method
-````
+```
 
 </CodeGroup>
 
@@ -738,3 +738,34 @@ Also, check out our YouTube video on how to use flows in CrewAI below!
   referrerpolicy="strict-origin-when-cross-origin"
   allowfullscreen
 ></iframe>
+
+## Running Flows
+
+There are two ways to run a flow:
+
+### Using the Flow API
+
+You can run a flow programmatically by creating an instance of your flow class and calling the `kickoff()` method:
+
+```python
+flow = ExampleFlow()
+result = flow.kickoff()
+```
+
+### Using the CLI
+
+Starting from version 0.103.0, you can run flows using the `crewai run` command:
+
+```shell
+crewai run
+```
+
+This command automatically detects if your project is a flow (based on the `type = "flow"` setting in your pyproject.toml) and runs it accordingly. This is the recommended way to run flows from the command line.
+
+For backward compatibility, you can also use:
+
+```shell
+crewai flow kickoff
+```
+
+However, the `crewai run` command is now the preferred method as it works for both crews and flows.
