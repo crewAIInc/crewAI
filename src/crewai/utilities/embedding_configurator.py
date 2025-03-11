@@ -1,9 +1,7 @@
 import os
-
-import boto3
-
 from typing import Any, Dict, Optional, cast
 
+import boto3
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
 
