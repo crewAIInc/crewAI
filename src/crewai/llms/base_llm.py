@@ -21,8 +21,14 @@ class BaseLLM(ABC):
 
     model: str
     temperature: Optional[float] = None
+    stop: Optional[Union[str, List[str]]] = None
 
-    def __init__(self, model: str, temperature: Optional[float] = None):
+    def __init__(
+        self,
+        model: str,
+        temperature: Optional[float] = None,
+        stop: Optional[Union[str, List[str]]] = None,
+    ):
         """Initialize the BaseLLM with default attributes.
 
         This constructor sets default values for attributes that are expected
@@ -33,6 +39,7 @@ class BaseLLM(ABC):
         """
         self.model = model
         self.temperature = temperature
+        self.stop = stop
 
     @abstractmethod
     def call(

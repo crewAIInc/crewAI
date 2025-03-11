@@ -6,8 +6,8 @@ from crewai.llm import LLM, BaseLLM
 
 
 def create_llm(
-    llm_value: Union[str, BaseLLM, LLM, Any, None] = None,
-) -> Optional[BaseLLM | LLM]:
+    llm_value: Union[str, LLM, Any, None] = None,
+) -> Optional[LLM]:
     """
     Creates or returns an LLM instance based on the given llm_value.
 
@@ -23,7 +23,7 @@ def create_llm(
     """
 
     # 1) If llm_value is already a BaseLLM object, return it directly
-    if isinstance(llm_value, BaseLLM):
+    if isinstance(llm_value, LLM):
         return llm_value
 
     # 2) If llm_value is a string (model name)
