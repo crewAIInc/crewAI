@@ -742,4 +742,7 @@ class Task(BaseModel):
         Returns:
             Fingerprint: The fingerprint of the task
         """
+        # Ensure we always return a valid Fingerprint
+        if not self.security_config.fingerprint:
+            self.security_config.fingerprint = Fingerprint()
         return self.security_config.fingerprint
