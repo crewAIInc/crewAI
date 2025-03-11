@@ -1,4 +1,7 @@
 import os
+
+import boto3
+
 from typing import Any, Dict, Optional, cast
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
@@ -154,11 +157,32 @@ class EmbeddingConfigurator:
         from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
             AmazonBedrockEmbeddingFunction,
         )
-
+        # Check if session is provided in config
+        session = config.get("session")
+        
+        # If no session, try to create one from environment variables
+        if session is None:
+            required_env_vars = ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION_NAME"]
+            missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+            
+            if missing_vars:
+                raise ValueError(
+                    f"Missing required environment variables: {', '.join(missing_vars)}. "
+                    f"Either provide a boto3 session in embedding_config or set these environment variables."
+                )
+            
+            # Create session from environment variables
+            session = boto3.Session(
+                aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+                aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+                region_name=os.getenv("AWS_REGION_NAME")
+            )
+        
         # Allow custom model_name override with backwards compatibility
-        kwargs = {"session": config.get("session")}
+        kwargs = {"session": session}
         if model_name is not None:
             kwargs["model_name"] = model_name
+        
         return AmazonBedrockEmbeddingFunction(**kwargs)
 
     @staticmethod
