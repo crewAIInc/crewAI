@@ -79,9 +79,6 @@ class EventListener(BaseEventListener):
             self.console = Console(width=None)
             self.tool_usage_counts = {}
 
-    def _format_timestamp(self, timestamp: float) -> str:
-        return datetime.fromtimestamp(timestamp).strftime("%H:%M:%S")
-
     def _create_panel(self, content: Text, title: str, style: str = "blue") -> Panel:
         """Create a standardized panel with consistent styling."""
         return Panel(
@@ -396,10 +393,9 @@ class EventListener(BaseEventListener):
 
             self.current_flow_tree = Tree(flow_label)
 
-            # Add both creation steps to show progression
-            self.current_flow_tree.add(Text("✨ Created", style="blue"))
-            self.current_flow_tree.add(
-                Text("✅ Initialization Complete", style="green")
+            self._add_tree_node(self.current_flow_tree, "✨ Created", "blue")
+            self._add_tree_node(
+                self.current_flow_tree, "✅ Initialization Complete", "green"
             )
 
             self.console.print(self.current_flow_tree)
@@ -419,8 +415,7 @@ class EventListener(BaseEventListener):
                 "In Progress",
             )
 
-            # Add initial thinking state
-            self.current_flow_tree.add(Text("🧠 Initializing...", style="yellow"))
+            self._add_tree_node(self.current_flow_tree, "🧠 Initializing...", "yellow")
 
             self.console.print()
             self.console.print(self.current_flow_tree)
@@ -642,7 +637,9 @@ class EventListener(BaseEventListener):
                 test_label.append("In Progress", style="yellow")
 
                 self.current_flow_tree = Tree(test_label)
-                self.current_flow_tree.add(Text("🔄 Running tests...", style="yellow"))
+                self._add_tree_node(
+                    self.current_flow_tree, "🔄 Running tests...", "yellow"
+                )
 
                 self.console.print(self.current_flow_tree)
                 self.console.print()
