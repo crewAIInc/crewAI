@@ -1,8 +1,8 @@
 """Test for the Fingerprint class."""
 
+import json
 import uuid
 from datetime import datetime, timedelta
-import json
 
 import pytest
 from pydantic import ValidationError

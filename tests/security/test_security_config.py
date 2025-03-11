@@ -3,8 +3,6 @@
 import json
 from datetime import datetime
 
-import pytest
-
 from crewai.security import Fingerprint, SecurityConfig
 
 
