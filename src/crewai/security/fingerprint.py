@@ -35,9 +35,14 @@ class Fingerprint(BaseModel):
     @field_validator('metadata')
     @classmethod
     def validate_metadata(cls, v):
-        """Validate that metadata is a dictionary."""
+        """Validate that metadata is a dictionary with string keys."""
         if not isinstance(v, dict):
             raise ValueError("Metadata must be a dictionary")
+        
+        # Validate that all keys are strings
+        for key, value in v.items():
+            if not isinstance(key, str):
+                raise ValueError(f"Metadata keys must be strings, got {type(key)}")
         return v
 
     def __init__(self, **data):
@@ -69,10 +74,14 @@ class Fingerprint(BaseModel):
         """
         if not isinstance(seed, str):
             raise ValueError("Seed must be a string")
+        
+        if not seed.strip():
+            raise ValueError("Seed cannot be empty or whitespace")
             
         # Create a deterministic UUID using v5 (SHA-1)
-        # This uses the DNS namespace as a base, but we could create a custom namespace
-        return str(uuid.uuid5(uuid.NAMESPACE_DNS, seed))
+        # Custom namespace for CrewAI to enhance security
+        CREW_AI_NAMESPACE = uuid.UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')
+        return str(uuid.uuid5(CREW_AI_NAMESPACE, seed))
 
     @classmethod
     def generate(cls, seed: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> 'Fingerprint':

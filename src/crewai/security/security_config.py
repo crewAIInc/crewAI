@@ -31,9 +31,12 @@ class SecurityConfig(BaseModel):
         fingerprint (Fingerprint): The unique fingerprint automatically generated for the component
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True
+        # Note: Cannot use frozen=True as existing tests modify the fingerprint property
+    )
     
-    fingerprint: Optional[Fingerprint] = Field(
+    fingerprint: Fingerprint = Field(
         default_factory=Fingerprint, 
         description="Unique identifier for the component"
     )
@@ -48,6 +51,8 @@ class SecurityConfig(BaseModel):
                 values['fingerprint'] = Fingerprint()
             # Handle case where fingerprint is a string (seed)
             elif isinstance(values['fingerprint'], str):
+                if not values['fingerprint'].strip():
+                    raise ValueError("Fingerprint seed cannot be empty")
                 values['fingerprint'] = Fingerprint.generate(seed=values['fingerprint'])
         return values
 
@@ -59,7 +64,7 @@ class SecurityConfig(BaseModel):
             Dict[str, Any]: Dictionary representation of the security config
         """
         result = {
-            "fingerprint": self.fingerprint.to_dict() if self.fingerprint else None
+            "fingerprint": self.fingerprint.to_dict()
         }
         return result
 
