@@ -1263,19 +1263,22 @@ class Crew(BaseModel):
         Returns:
             Dict[str, Any]: Dictionary representation of the task
         """
-        task_info = {
+        task_info: Dict[str, Any] = {
             "id": str(task.id),
             "description": task.description,
             "expected_output": task.expected_output
         }
         
         # Safely add agent information if available
-        if getattr(task, 'agent', None):
-            task_info["agent"] = task.agent.role
+        agent = getattr(task, 'agent', None)
+        if agent is not None:
+            task_info["agent"] = agent.role
             
         # Safely add async_execution if available
         if hasattr(task, 'async_execution'):
-            task_info["async_execution"] = task.async_execution
+            async_execution = getattr(task, 'async_execution', None)
+            if async_execution is not None:
+                task_info["async_execution"] = async_execution
             
         return task_info
         
@@ -1291,7 +1294,7 @@ class Crew(BaseModel):
                   agents, tasks, and their relationships.
         """
         # Basic crew information
-        result = {
+        result: Dict[str, Any] = {
             "id": str(self.id),
             "name": self.name,
             "process": str(self.process),
@@ -1313,18 +1316,20 @@ class Crew(BaseModel):
                 result["tasks"].append(task_info)
                 
                 # Add task relationships if context exists
-                if getattr(task, 'context', None):
+                context = getattr(task, 'context', None)
+                if context is not None:
                     relationship = {
                         "task_id": str(task.id),
-                        "depends_on": [str(context_task.id) for context_task in task.context]
+                        "depends_on": [str(context_task.id) for context_task in context]
                     }
                     result["task_relationships"].append(relationship)
             except Exception as e:
                 self._logger.log("warning", f"Error processing task {getattr(task, 'id', 'unknown')}: {str(e)}")
         
         # Add manager agent if exists
-        if getattr(self, 'manager_agent', None):
-            result["manager_agent"] = self._agent_to_dict(self.manager_agent)
+        manager_agent = getattr(self, 'manager_agent', None)
+        if manager_agent is not None:
+            result["manager_agent"] = self._agent_to_dict(manager_agent)
         
         return result
 
