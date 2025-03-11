@@ -7,13 +7,13 @@ from unittest.mock import patch
 import pytest
 
 from crewai import Agent, Crew, Task
-from crewai.process import Process
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
+from crewai.process import Process
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
