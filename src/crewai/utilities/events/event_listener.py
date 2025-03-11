@@ -61,7 +61,7 @@ class EventListener(BaseEventListener):
     current_tool_branch = None
     current_flow_tree = None
     current_method_branch = None
-    tool_usage_counts = {}
+    tool_usage_counts: Dict[str, int] = {}
 
     def __new__(cls):
         if cls._instance is None:
@@ -553,7 +553,6 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(source, event: LLMCallStartedEvent):
             if self.verbose and self.current_agent_branch:
-                # Only show thinking state if no previous LLM calls are shown
                 if not any(
                     "Thinking" in str(child.label)
                     for child in self.current_agent_branch.children
@@ -570,7 +569,10 @@ class EventListener(BaseEventListener):
             if self.verbose and self.current_tool_branch:
                 # Remove the thinking status node when complete
                 if "Thinking" in str(self.current_tool_branch.label):
-                    self.current_agent_branch.children.remove(self.current_tool_branch)
+                    if self.current_agent_branch:
+                        self.current_agent_branch.children.remove(
+                            self.current_tool_branch
+                        )
                     self.console.print(self.current_crew_tree)
                     self.console.print()
 
