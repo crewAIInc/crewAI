@@ -1,12 +1,13 @@
-import unittest
-from unittest.mock import patch, MagicMock, PropertyMock
 import json
+import unittest
 import uuid
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from crewai.agent import Agent
 from crewai.crew import Crew
-from crewai.task import Task
 from crewai.process import Process
+from crewai.task import Task
+
 
 class TestCrewStructuredDict(unittest.TestCase):
     def setUp(self):

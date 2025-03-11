@@ -1236,14 +1236,58 @@ class Crew(BaseModel):
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
 
-    def to_structured_dict(self):
+    def _agent_to_dict(self, agent: BaseAgent) -> Dict[str, Any]:
+        """Convert an Agent object to a dictionary representation.
+        
+        Args:
+            agent: The Agent object to convert
+            
+        Returns:
+            Dict[str, Any]: Dictionary representation of the agent
+        """
+        return {
+            "id": str(agent.id),
+            "role": agent.role,
+            "goal": agent.goal,
+            "backstory": agent.backstory,
+            "allow_delegation": agent.allow_delegation,
+            "verbose": agent.verbose
+        }
+        
+    def _task_to_dict(self, task: Task) -> Dict[str, Any]:
+        """Convert a Task object to a dictionary representation.
+        
+        Args:
+            task: The Task object to convert
+            
+        Returns:
+            Dict[str, Any]: Dictionary representation of the task
+        """
+        task_info = {
+            "id": str(task.id),
+            "description": task.description,
+            "expected_output": task.expected_output
+        }
+        
+        # Safely add agent information if available
+        if getattr(task, 'agent', None):
+            task_info["agent"] = task.agent.role
+            
+        # Safely add async_execution if available
+        if hasattr(task, 'async_execution'):
+            task_info["async_execution"] = task.async_execution
+            
+        return task_info
+        
+
+    def to_structured_dict(self) -> Dict[str, Any]:
         """Return a structured dictionary representation of the Crew object.
         
         This method provides a frontend-friendly representation of the Crew's
         structure and relationships, suitable for visualization and rendering.
         
         Returns:
-            Dict: A structured dictionary containing the Crew's configuration,
+            Dict[str, Any]: A structured dictionary containing the Crew's configuration,
                   agents, tasks, and their relationships.
         """
         # Basic crew information
@@ -1260,59 +1304,27 @@ class Crew(BaseModel):
         
         # Add agent information
         for agent in self.agents:
-            agent_info = {
-                "id": str(agent.id),
-                "role": agent.role,
-                "goal": agent.goal,
-                "backstory": agent.backstory,
-                "allow_delegation": agent.allow_delegation,
-                "verbose": agent.verbose
-            }
-            result["agents"].append(agent_info)
+            result["agents"].append(self._agent_to_dict(agent))
         
         # Add task information - safely handle potential errors
         for task in self.tasks:
             try:
-                task_info = {
-                    "id": str(task.id),
-                    "description": task.description,
-                    "expected_output": task.expected_output
-                }
-                
-                # Safely add agent information if available
-                try:
-                    if hasattr(task, 'agent') and task.agent:
-                        task_info["agent"] = task.agent.role
-                except Exception:
-                    # Skip adding agent info if there's an error
-                    pass
-                
-                # Safely add async_execution if available
-                if hasattr(task, 'async_execution'):
-                    task_info["async_execution"] = task.async_execution
-                
+                task_info = self._task_to_dict(task)
                 result["tasks"].append(task_info)
                 
                 # Add task relationships if context exists
-                if hasattr(task, 'context') and task.context:
+                if getattr(task, 'context', None):
                     relationship = {
                         "task_id": str(task.id),
                         "depends_on": [str(context_task.id) for context_task in task.context]
                     }
                     result["task_relationships"].append(relationship)
             except Exception as e:
-                print(f"Error processing task: {e}")
+                self._logger.log("warning", f"Error processing task {getattr(task, 'id', 'unknown')}: {str(e)}")
         
         # Add manager agent if exists
-        if hasattr(self, 'manager_agent') and self.manager_agent:
-            result["manager_agent"] = {
-                "id": str(self.manager_agent.id),
-                "role": self.manager_agent.role,
-                "goal": self.manager_agent.goal,
-                "backstory": self.manager_agent.backstory,
-                "allow_delegation": self.manager_agent.allow_delegation,
-                "verbose": self.manager_agent.verbose
-            }
+        if getattr(self, 'manager_agent', None):
+            result["manager_agent"] = self._agent_to_dict(self.manager_agent)
         
         return result
 
