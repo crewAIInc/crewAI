@@ -755,6 +755,7 @@ class Crew(BaseModel):
                 tools=AgentTools(agents=self.agents).tools(),
                 allow_delegation=True,
                 llm=self.manager_llm,
+                knowledge_sources=self.knowledge_sources,
                 verbose=self.verbose,
             )
             self.manager_agent = manager

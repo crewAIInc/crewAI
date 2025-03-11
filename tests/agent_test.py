@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.process import Process
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
@@ -1797,3 +1798,52 @@ def test_litellm_anthropic_error_handling():
 
     # Verify the LLM call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_custom_llm_with_knowledge_sources():
+    """Test that knowledge sources work with custom LLMs in hierarchical crews."""
+    # Create a knowledge source with some content
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    # Create a custom LLM
+    custom_llm = LLM(model="gpt-3.5-turbo")
+
+    with patch(
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+    ) as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+
+        # Create an agent with the custom LLM
+        agent = Agent(
+            role="Information Agent",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=custom_llm,
+        )
+
+        # Create a task that requires the agent to use the knowledge
+        task = Task(
+            description="What is Brandon's favorite color?",
+            expected_output="Brandon's favorite color.",
+            agent=agent,
+        )
+
+        # Create a crew with hierarchical process and custom LLM as manager
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            process=Process.hierarchical,
+            manager_llm=custom_llm,
+            knowledge_sources=[string_source],
+        )
+        
+        with patch.object(crew, "_execute_tasks") as mock_execute_tasks:
+            mock_execute_tasks.return_value.raw = "Brandon's favorite color is red."
+            result = crew.kickoff()
+
+            # Assert that the agent provides the correct information
+            assert "red" in result.raw.lower()
