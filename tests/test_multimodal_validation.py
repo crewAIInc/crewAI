@@ -62,3 +62,27 @@ def test_llm_call_started_event_with_standard_messages():
     assert event.messages[0]['content'] == 'You are a helpful assistant'
     assert event.messages[1]['role'] == 'user'
     assert event.messages[1]['content'] == 'Hello, how are you?'
+
+
+def test_llm_call_started_event_with_mixed_content():
+    """Test that LLMCallStartedEvent handles mixed content types."""
+    mixed_messages = [
+        "Simple string message",
+        {
+            'role': 'user',
+            'content': [
+                {'type': 'text', 'text': 'With image'},
+                {'type': 'image_url', 'image_url': {'url': 'https://example.com/image.jpg'}},
+            ],
+        }
+    ]
+    
+    # This should not raise a ValidationError
+    event = LLMCallStartedEvent(messages=mixed_messages)
+    
+    # Verify the event was created correctly
+    assert isinstance(event.messages, list)
+    assert isinstance(event.messages[0], str)
+    assert isinstance(event.messages[1], dict)
+    assert event.messages[1]['role'] == 'user'
+    assert isinstance(event.messages[1]['content'], list)
