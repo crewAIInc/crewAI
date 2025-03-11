@@ -248,7 +248,10 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
+        from crewai.utilities.events.event_listener import EventListener
+
         self._cache_handler = CacheHandler()
+        EventListener().verbose = self.verbose
         self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
