@@ -22,4 +22,4 @@ crew_tasks_output.json
 .ruff_cache
 .venv
 agentops.log
-test_flow.html
+test_flow.htmltests/cassettes/test_custom_llm_with_knowledge_sources.yaml
