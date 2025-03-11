@@ -1236,6 +1236,86 @@ class Crew(BaseModel):
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
 
+    def to_structured_dict(self):
+        """Return a structured dictionary representation of the Crew object.
+        
+        This method provides a frontend-friendly representation of the Crew's
+        structure and relationships, suitable for visualization and rendering.
+        
+        Returns:
+            Dict: A structured dictionary containing the Crew's configuration,
+                  agents, tasks, and their relationships.
+        """
+        # Basic crew information
+        result = {
+            "id": str(self.id),
+            "name": self.name,
+            "process": str(self.process),
+            "verbose": self.verbose,
+            "memory": self.memory,
+            "agents": [],
+            "tasks": [],
+            "task_relationships": []
+        }
+        
+        # Add agent information
+        for agent in self.agents:
+            agent_info = {
+                "id": str(agent.id),
+                "role": agent.role,
+                "goal": agent.goal,
+                "backstory": agent.backstory,
+                "allow_delegation": agent.allow_delegation,
+                "verbose": agent.verbose
+            }
+            result["agents"].append(agent_info)
+        
+        # Add task information - safely handle potential errors
+        for task in self.tasks:
+            try:
+                task_info = {
+                    "id": str(task.id),
+                    "description": task.description,
+                    "expected_output": task.expected_output
+                }
+                
+                # Safely add agent information if available
+                try:
+                    if hasattr(task, 'agent') and task.agent:
+                        task_info["agent"] = task.agent.role
+                except Exception:
+                    # Skip adding agent info if there's an error
+                    pass
+                
+                # Safely add async_execution if available
+                if hasattr(task, 'async_execution'):
+                    task_info["async_execution"] = task.async_execution
+                
+                result["tasks"].append(task_info)
+                
+                # Add task relationships if context exists
+                if hasattr(task, 'context') and task.context:
+                    relationship = {
+                        "task_id": str(task.id),
+                        "depends_on": [str(context_task.id) for context_task in task.context]
+                    }
+                    result["task_relationships"].append(relationship)
+            except Exception as e:
+                print(f"Error processing task: {e}")
+        
+        # Add manager agent if exists
+        if hasattr(self, 'manager_agent') and self.manager_agent:
+            result["manager_agent"] = {
+                "id": str(self.manager_agent.id),
+                "role": self.manager_agent.role,
+                "goal": self.manager_agent.goal,
+                "backstory": self.manager_agent.backstory,
+                "allow_delegation": self.manager_agent.allow_delegation,
+                "verbose": self.manager_agent.verbose
+            }
+        
+        return result
+
     def reset_memories(self, command_type: str) -> None:
         """Reset specific or all memories for the crew.
 
