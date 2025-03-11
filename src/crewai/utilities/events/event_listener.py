@@ -55,12 +55,12 @@ class EventListener(BaseEventListener):
     execution_spans: Dict[Task, Any] = Field(default_factory=dict)
     next_chunk = 0
     text_stream = StringIO()
-    current_crew_tree = None
-    current_task_branch = None
-    current_agent_branch = None
-    current_tool_branch = None
-    current_flow_tree = None
-    current_method_branch = None
+    current_crew_tree: Optional[Tree] = None
+    current_task_branch: Optional[Tree] = None
+    current_agent_branch: Optional[Tree] = None
+    current_tool_branch: Optional[Tree] = None
+    current_flow_tree: Optional[Tree] = None
+    current_method_branch: Optional[Tree] = None
     tool_usage_counts: Dict[str, int] = {}
 
     def __new__(cls):
