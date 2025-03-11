@@ -19,7 +19,10 @@ class BaseLLM(ABC):
             This is used by the CrewAgentExecutor and other components.
     """
 
-    def __init__(self):
+    model: str
+    temperature: Optional[float] = None
+
+    def __init__(self, model: str, temperature: Optional[float] = None):
         """Initialize the BaseLLM with default attributes.
 
         This constructor sets default values for attributes that are expected
@@ -29,6 +32,8 @@ class BaseLLM(ABC):
         that these default attributes are properly initialized.
         """
         self.stop = []
+        self.model = model
+        self.temperature = temperature
 
     @abstractmethod
     def call(
@@ -100,5 +105,15 @@ class BaseLLM(ABC):
 
         Returns:
             The context window size as an integer.
+        """
+        pass
+
+    @abstractmethod
+    def set_callbacks(self, callbacks: List[Any]) -> None:
+        """Set callback functions for the LLM.
+
+        Args:
+            callbacks: List of callback functions to be executed during
+                     and after LLM calls.
         """
         pass
