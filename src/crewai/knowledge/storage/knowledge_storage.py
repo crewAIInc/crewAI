@@ -49,9 +49,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection = None  # Type will be chromadb.Collection when available
+    collection: Optional[Any] = None  # Will be chromadb.Collection when available
     collection_name: Optional[str] = "knowledge"
-    app = None  # Type will be ClientAPI when available
+    app: Optional[Any] = None  # Will be ClientAPI when available
+    embedder: Optional[Any] = None
 
     def __init__(
         self,
@@ -68,6 +69,13 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Dict[str, Any]]:
+        if not CHROMADB_AVAILABLE:
+            logging.warning(
+                "ChromaDB is not installed. Search functionality limited. "
+                "Install with 'pip install crewai[chromadb]' to enable full functionality."
+            )
+            return []
+            
         try:
             with suppress_logging():
                 if self.collection:
@@ -89,8 +97,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     return results
                 else:
                     return []
-        except (ImportError, NameError, AttributeError, Exception):
-            # Return empty results if chromadb is not available or collection is not initialized
+        except (ImportError, NameError, AttributeError, Exception) as e:
+            logging.error(f"Error during knowledge search operation: {str(e)}")
             return []
 
     def initialize_knowledge_storage(self):
@@ -216,8 +224,15 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 OpenAIEmbeddingFunction,
             )
 
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                logging.warning(
+                    "OPENAI_API_KEY not found. Vector operations will be limited."
+                )
+                return None
+                
             return OpenAIEmbeddingFunction(
-                api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+                api_key=api_key, model_name="text-embedding-3-small"
             )
         except ImportError:
             import logging

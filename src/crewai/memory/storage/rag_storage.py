@@ -66,6 +66,15 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
+        if not CHROMADB_AVAILABLE:
+            logging.warning(
+                "ChromaDB is not installed. RAG storage functionality will be limited. "
+                "Install with 'pip install crewai[chromadb]' to enable full functionality."
+            )
+            self.app = None
+            self.collection = None
+            return
+            
         try:
             import chromadb
             from chromadb.config import Settings
@@ -82,16 +91,13 @@ class RAGStorage(BaseRAGStorage):
                 self.collection = self.app.get_collection(
                     name=self.type, embedding_function=self.embedder_config
                 )
-            except Exception:
+            except Exception as e:
+                logging.info(f"Collection not found, creating new one: {str(e)}")
                 self.collection = self.app.create_collection(
                     name=self.type, embedding_function=self.embedder_config
                 )
-        except ImportError:
-            import logging
-            logging.warning(
-                "ChromaDB is not installed. RAG storage functionality will be limited. "
-                "Install with 'pip install crewai[chromadb]' to enable full functionality."
-            )
+        except Exception as e:
+            logging.error(f"Failed to initialize ChromaDB: {str(e)}")
             self.app = None
             self.collection = None
 
@@ -134,6 +140,13 @@ class RAGStorage(BaseRAGStorage):
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Any]:
+        if not CHROMADB_AVAILABLE:
+            logging.warning(
+                "ChromaDB is not installed. Search functionality limited. "
+                "Install with 'pip install crewai[chromadb]' to enable full functionality."
+            )
+            return []
+            
         if not hasattr(self, "app"):
             self._initialize_app()
             
@@ -198,8 +211,15 @@ class RAGStorage(BaseRAGStorage):
                 OpenAIEmbeddingFunction,
             )
 
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                logging.warning(
+                    "OPENAI_API_KEY not found. Vector operations will be limited."
+                )
+                return None
+                
             return OpenAIEmbeddingFunction(
-                api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+                api_key=api_key, model_name="text-embedding-3-small"
             )
         except ImportError:
             import logging
