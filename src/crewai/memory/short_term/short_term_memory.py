@@ -4,7 +4,7 @@ from pydantic import PrivateAttr
 
 from crewai.memory.memory import Memory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
-from crewai.memory.storage.rag_storage import RAGStorage
+from crewai.memory.storage.chroma_rag_storage import ChromaRAGStorage
 
 
 class ShortTermMemory(Memory):
@@ -36,7 +36,7 @@ class ShortTermMemory(Memory):
             storage = (
                 storage
                 if storage
-                else RAGStorage(
+                else ChromaRAGStorage(
                     type="short_term",
                     embedder_config=embedder_config,
                     crew=crew,
