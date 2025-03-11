@@ -1,6 +1,7 @@
-from typing import Dict, List, Union, Any
-from pydantic import ValidationError
+from typing import Any, Dict, List, Union
+
 import pytest
+from pydantic import ValidationError
 
 from crewai.utilities.events.llm_events import LLMCallStartedEvent
 
