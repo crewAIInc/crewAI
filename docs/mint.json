@@ -65,6 +65,12 @@
       "group": "Guides",
       "pages": [
         {
+          "group": "Concepts",
+          "pages": [
+            "guides/concepts/evaluating-use-cases"
+          ]
+        },
+        {
           "group": "Agents",
           "pages": [
             "guides/agents/crafting-effective-agents"
