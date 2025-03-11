@@ -209,10 +209,6 @@ class BaseAgent(ABC, BaseModel):
         if self.security_config is None:
             self.security_config = SecurityConfig()
 
-        # Generate fingerprint using role as seed if not already set
-        if self.security_config.fingerprint is None:
-            self.security_config.fingerprint = SecurityConfig().fingerprint
-
         return self
 
     @field_validator("id", mode="before")

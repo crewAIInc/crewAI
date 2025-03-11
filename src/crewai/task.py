@@ -441,9 +441,9 @@ class Task(BaseModel):
                 content = (
                     json_output
                     if json_output
-                    else pydantic_output.model_dump_json()
-                    if pydantic_output
-                    else result
+                    else (
+                        pydantic_output.model_dump_json() if pydantic_output else result
+                    )
                 )
                 self._save_file(content)
             crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output))
@@ -742,7 +742,4 @@ class Task(BaseModel):
         Returns:
             Fingerprint: The fingerprint of the task
         """
-        # Ensure we always return a valid Fingerprint
-        if not self.security_config.fingerprint:
-            self.security_config.fingerprint = Fingerprint()
         return self.security_config.fingerprint

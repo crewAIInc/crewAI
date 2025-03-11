@@ -482,8 +482,4 @@ class Agent(BaseAgent):
         Returns:
             Fingerprint: The agent's fingerprint
         """
-        # Ensure we always return a valid Fingerprint
-        if not self.security_config.fingerprint:
-            self.security_config.fingerprint = Fingerprint()
         return self.security_config.fingerprint
-
