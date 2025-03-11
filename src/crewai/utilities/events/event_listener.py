@@ -287,7 +287,9 @@ class EventListener(BaseEventListener):
                     for branch in self.current_crew_tree.children:
                         if str(source.id) in str(branch.label):
                             task_content = Text()
-                            task_content.append("📋 Task: ", style="green bold")
+                            task_content.append(
+                                f"📋 Task: {source.id}", style="green bold"
+                            )
                             task_content.append("\n   Assigned to: ", style="white")
                             task_content.append(source.agent.role, style="green")
                             task_content.append("\n   Status: ", style="white")
@@ -317,7 +319,7 @@ class EventListener(BaseEventListener):
             if self.verbose:
                 failure_content = Text()
                 failure_content.append("❌ Task Failed\n", style="red bold")
-                failure_content.append("Task: ", style="white")
+                failure_content.append(f"Task: {source.id}", style="white")
                 failure_content.append(source.description, style="red")
                 if source.agent:
                     failure_content.append("\nAgent: ", style="white")
