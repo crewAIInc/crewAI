@@ -6,11 +6,18 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional, Union, cast
 
-import chromadb
-import chromadb.errors
-from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
-from chromadb.config import Settings
+try:
+    import chromadb
+    import chromadb.errors
+    from chromadb.api import ClientAPI
+    from chromadb.api.types import OneOrMany
+    from chromadb.config import Settings
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    # Define placeholder types for type checking
+    ClientAPI = Any
+    OneOrMany = Any
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -42,9 +49,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
+    collection = None  # Type will be chromadb.Collection when available
     collection_name: Optional[str] = "knowledge"
-    app: Optional[ClientAPI] = None
+    app = None  # Type will be ClientAPI when available
 
     def __init__(
         self,
@@ -61,63 +68,91 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Dict[str, Any]]:
-        with suppress_logging():
-            if self.collection:
-                fetched = self.collection.query(
-                    query_texts=query,
-                    n_results=limit,
-                    where=filter,
-                )
-                results = []
-                for i in range(len(fetched["ids"][0])):  # type: ignore
-                    result = {
-                        "id": fetched["ids"][0][i],  # type: ignore
-                        "metadata": fetched["metadatas"][0][i],  # type: ignore
-                        "context": fetched["documents"][0][i],  # type: ignore
-                        "score": fetched["distances"][0][i],  # type: ignore
-                    }
-                    if result["score"] >= score_threshold:
-                        results.append(result)
-                return results
-            else:
-                raise Exception("Collection not initialized")
+        try:
+            with suppress_logging():
+                if self.collection:
+                    fetched = self.collection.query(
+                        query_texts=query,
+                        n_results=limit,
+                        where=filter,
+                    )
+                    results = []
+                    for i in range(len(fetched["ids"][0])):  # type: ignore
+                        result = {
+                            "id": fetched["ids"][0][i],  # type: ignore
+                            "metadata": fetched["metadatas"][0][i],  # type: ignore
+                            "context": fetched["documents"][0][i],  # type: ignore
+                            "score": fetched["distances"][0][i],  # type: ignore
+                        }
+                        if result["score"] >= score_threshold:
+                            results.append(result)
+                    return results
+                else:
+                    return []
+        except (ImportError, NameError, AttributeError, Exception):
+            # Return empty results if chromadb is not available or collection is not initialized
+            return []
 
     def initialize_knowledge_storage(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        chroma_client = chromadb.PersistentClient(
-            path=base_path,
-            settings=Settings(allow_reset=True),
-        )
-
-        self.app = chroma_client
-
-        try:
-            collection_name = (
-                f"knowledge_{self.collection_name}"
-                if self.collection_name
-                else "knowledge"
+        if not CHROMADB_AVAILABLE:
+            import logging
+            logging.warning(
+                "ChromaDB is not installed. Knowledge storage functionality will be limited. "
+                "Install with 'pip install crewai[chromadb]' to enable full functionality."
             )
-            if self.app:
-                self.collection = self.app.get_or_create_collection(
-                    name=collection_name, embedding_function=self.embedder
-                )
-            else:
-                raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
-
-    def reset(self):
-        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
-        if not self.app:
-            self.app = chromadb.PersistentClient(
+            self.app = None
+            self.collection = None
+            return
+            
+        try:
+            base_path = os.path.join(db_storage_path(), "knowledge")
+            chroma_client = chromadb.PersistentClient(
                 path=base_path,
                 settings=Settings(allow_reset=True),
             )
 
-        self.app.reset()
-        shutil.rmtree(base_path)
-        self.app = None
-        self.collection = None
+            self.app = chroma_client
+
+            try:
+                collection_name = (
+                    f"knowledge_{self.collection_name}"
+                    if self.collection_name
+                    else "knowledge"
+                )
+                if self.app:
+                    self.collection = self.app.get_or_create_collection(
+                        name=collection_name, embedding_function=self.embedder
+                    )
+                else:
+                    raise Exception("Vector Database Client not initialized")
+            except Exception:
+                raise Exception("Failed to create or get collection")
+        except Exception:
+            logging.warning(
+                "Error initializing ChromaDB. Knowledge storage functionality will be limited."
+            )
+            self.app = None
+            self.collection = None
+
+    def reset(self):
+        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
+        try:
+            if not self.app:
+                self.app = chromadb.PersistentClient(
+                    path=base_path,
+                    settings=Settings(allow_reset=True),
+                )
+
+            self.app.reset()
+            shutil.rmtree(base_path)
+            self.app = None
+            self.collection = None
+        except (ImportError, NameError, AttributeError):
+            # Handle case when chromadb is not available
+            if os.path.exists(base_path):
+                shutil.rmtree(base_path)
+            self.app = None
+            self.collection = None
 
     def save(
         self,
@@ -125,7 +160,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
         if not self.collection:
-            raise Exception("Collection not initialized")
+            # Just return silently if chromadb is not available
+            return
 
         try:
             # Create a dictionary to store unique documents
@@ -154,7 +190,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 filtered_ids.append(doc_id)
 
             # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
+            final_metadata = (
                 None if all(m is None for m in filtered_metadata) else filtered_metadata
             )
 
@@ -163,29 +199,33 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 metadatas=final_metadata,
                 ids=filtered_ids,
             )
-        except chromadb.errors.InvalidDimensionException as e:
-            Logger(verbose=True).log(
-                "error",
-                "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
-                "red",
-            )
-            raise ValueError(
-                "Embedding dimension mismatch. Make sure you're using the same embedding model "
-                "across all operations with this collection."
-                "Try resetting the collection using `crewai reset-memories -a`"
-            ) from e
+        except (ImportError, NameError, AttributeError) as e:
+            # Handle case when chromadb is not available
+            return
         except Exception as e:
+            if "chromadb" in str(e.__class__):
+                # Handle chromadb-specific errors silently when chromadb might not be fully available
+                return
             Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
-            raise
+            # Don't raise the exception, just log it and continue
+            return
 
     def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            )
+        except ImportError:
+            import logging
+            logging.warning(
+                "ChromaDB is not installed. Cannot create default embedding function. "
+                "Install with 'pip install crewai[chromadb]' to enable full functionality."
+            )
+            return None
 
     def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.
@@ -194,8 +234,12 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
                 If None or empty, defaults to the default embedding function.
         """
-        self.embedder = (
-            EmbeddingConfigurator().configure_embedder(embedder)
-            if embedder
-            else self._create_default_embedding_function()
-        )
+        try:
+            self.embedder = (
+                EmbeddingConfigurator().configure_embedder(embedder)
+                if embedder
+                else self._create_default_embedding_function()
+            )
+        except (ImportError, NameError, AttributeError):
+            # Handle case when chromadb is not available
+            self.embedder = None

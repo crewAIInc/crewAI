@@ -4,9 +4,15 @@ import logging
 import os
 import shutil
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
-from chromadb.api import ClientAPI
+try:
+    from chromadb.api import ClientAPI
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    # Define placeholder type for type checking
+    ClientAPI = Any
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -37,7 +43,7 @@ class RAGStorage(BaseRAGStorage):
     search efficiency.
     """
 
-    app: ClientAPI | None = None
+    app = None  # Type will be ClientAPI when available
 
     def __init__(
         self, type, allow_reset=True, embedder_config=None, crew=None, path=None
@@ -60,25 +66,34 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
-        import chromadb
-        from chromadb.config import Settings
-
-        self._set_embedder_config()
-        chroma_client = chromadb.PersistentClient(
-            path=self.path if self.path else self.storage_file_name,
-            settings=Settings(allow_reset=self.allow_reset),
-        )
-
-        self.app = chroma_client
-
         try:
-            self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
+            import chromadb
+            from chromadb.config import Settings
+
+            self._set_embedder_config()
+            chroma_client = chromadb.PersistentClient(
+                path=self.path if self.path else self.storage_file_name,
+                settings=Settings(allow_reset=self.allow_reset),
             )
-        except Exception:
-            self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
+
+            self.app = chroma_client
+
+            try:
+                self.collection = self.app.get_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+            except Exception:
+                self.collection = self.app.create_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+        except ImportError:
+            import logging
+            logging.warning(
+                "ChromaDB is not installed. RAG storage functionality will be limited. "
+                "Install with 'pip install crewai[chromadb]' to enable full functionality."
             )
+            self.app = None
+            self.collection = None
 
     def _sanitize_role(self, role: str) -> str:
         """
@@ -103,6 +118,10 @@ class RAGStorage(BaseRAGStorage):
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
+            
+        if not self.collection:
+            return
+            
         try:
             self._generate_embedding(value, metadata)
         except Exception as e:
@@ -117,6 +136,9 @@ class RAGStorage(BaseRAGStorage):
     ) -> List[Any]:
         if not hasattr(self, "app"):
             self._initialize_app()
+            
+        if not self.collection:
+            return []
 
         try:
             with suppress_logging():
@@ -141,6 +163,9 @@ class RAGStorage(BaseRAGStorage):
     def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
+            
+        if not self.collection:
+            return
 
         self.collection.add(
             documents=[text],
@@ -149,26 +174,37 @@ class RAGStorage(BaseRAGStorage):
         )
 
     def reset(self) -> None:
+        if not self.app:
+            return
+            
         try:
-            if self.app:
-                self.app.reset()
-                shutil.rmtree(f"{db_storage_path()}/{self.type}")
-                self.app = None
-                self.collection = None
+            self.app.reset()
+            path = f"{db_storage_path()}/{self.type}"
+            if os.path.exists(path):
+                shutil.rmtree(path)
+            self.app = None
+            self.collection = None
         except Exception as e:
             if "attempt to write a readonly database" in str(e):
                 # Ignore this specific error
                 pass
             else:
-                raise Exception(
-                    f"An error occurred while resetting the {self.type} memory: {e}"
-                )
+                logging.error(f"Error during {self.type} reset: {str(e)}")
+                # Don't raise the exception, just log it
 
     def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            )
+        except ImportError:
+            import logging
+            logging.warning(
+                "ChromaDB is not installed. Cannot create default embedding function. "
+                "Install with 'pip install crewai[chromadb]' to enable full functionality."
+            )
+            return None

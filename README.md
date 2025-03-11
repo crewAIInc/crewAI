@@ -136,6 +136,14 @@ pip install 'crewai[tools]'
 ```
 The command above installs the basic package and also adds extra components which require more dependencies to function.
 
+For vector storage and RAG capabilities, install with the chromadb extra:
+
+```shell
+pip install 'crewai[chromadb]'
+```
+
+Note: If you're using Alpine Linux or other environments where onnxruntime is not available, you can still use CrewAI without the chromadb dependency, but with limited vector storage functionality.
+
 ### Troubleshooting Dependencies
 
 If you encounter issues during installation or usage, here are some common solutions:
