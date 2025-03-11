@@ -31,7 +31,6 @@ class BaseLLM(ABC):
         All custom LLM implementations should call super().__init__() to ensure
         that these default attributes are properly initialized.
         """
-        self.stop = []
         self.model = model
         self.temperature = temperature
 

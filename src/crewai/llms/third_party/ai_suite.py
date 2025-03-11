@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import aisuite as ai
 
@@ -12,11 +12,11 @@ class AISuiteLLM(BaseLLM):
 
     def call(
         self,
-        messages: List[Dict[str, str]],
+        messages: Union[str, List[Dict[str, str]]],
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> Union[str, Any]:
         completion_params = self._prepare_completion_params(messages)
         # print(f"Completion params: {completion_params}")
         response = self.client.chat.completions.create(**completion_params)
@@ -26,7 +26,7 @@ class AISuiteLLM(BaseLLM):
         return response.choices[0].message.content
 
     def _prepare_completion_params(
-        self, messages: List[Dict[str, str]]
+        self, messages: Union[str, List[Dict[str, str]]]
     ) -> Dict[str, Any]:
         print(f"Preparing completion params for {self.model}")
         # print(f"Messages: {messages}")
