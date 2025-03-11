@@ -735,7 +735,20 @@ class Crew(BaseModel):
         self._create_manager_agent()
         return self._execute_tasks(self.tasks)
 
-    def _create_manager_agent(self):
+    def _create_manager_agent(self) -> Agent:
+        """Create a manager agent for hierarchical process.
+        
+        Creates or configures a manager agent that will be responsible for delegating tasks
+        to other agents in a hierarchical process. If knowledge sources are provided,
+        they will be passed to the manager agent to enhance its context awareness.
+        
+        Returns:
+            Agent: The configured manager agent
+        
+        Raises:
+            Exception: If the manager agent has tools, which is not allowed
+            ValueError: If knowledge sources are provided but not valid BaseKnowledgeSource instances
+        """
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
@@ -748,6 +761,13 @@ class Crew(BaseModel):
                 raise Exception("Manager agent should not have tools")
         else:
             self.manager_llm = create_llm(self.manager_llm)
+            
+            # Validate knowledge sources if provided
+            if self.knowledge_sources and not all(
+                isinstance(ks, BaseKnowledgeSource) for ks in self.knowledge_sources
+            ):
+                raise ValueError("All knowledge sources must be instances of BaseKnowledgeSource")
+                
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
@@ -760,6 +780,7 @@ class Crew(BaseModel):
             )
             self.manager_agent = manager
         manager.crew = self
+        return manager
 
     def _execute_tasks(
         self,

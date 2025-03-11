@@ -22,4 +22,6 @@ crew_tasks_output.json
 .ruff_cache
 .venv
 agentops.log
-test_flow.htmltests/cassettes/test_custom_llm_with_knowledge_sources.yaml
+test_flow.html# Test cassettes with sensitive data
+tests/cassettes/*_with_knowledge_sources.yaml
+tests/cassettes/*_sensitive_*.yaml
