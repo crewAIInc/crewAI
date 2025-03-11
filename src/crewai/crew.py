@@ -62,6 +62,7 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.security import Fingerprint, SecurityConfig
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -90,6 +91,7 @@ class Crew(BaseModel):
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
         planning: Plan the crew execution and add the plan to the crew.
         chat_llm: The language model used for orchestrating chat interactions with the crew.
+        security_config: Security configuration for the crew, including fingerprinting.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -219,6 +221,10 @@ class Crew(BaseModel):
     knowledge: Optional[Knowledge] = Field(
         default=None,
         description="Knowledge for the crew.",
+    )
+    security_config: SecurityConfig = Field(
+        default_factory=SecurityConfig,
+        description="Security configuration for the crew, including fingerprinting.",
     )
 
     @field_validator("id", mode="before")
@@ -478,6 +484,16 @@ class Crew(BaseModel):
             task.key for task in self.tasks
         ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
+
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """
+        Get the crew's fingerprint.
+
+        Returns:
+            Fingerprint: The crew's fingerprint
+        """
+        return self.security_config.fingerprint
 
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."

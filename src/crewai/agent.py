@@ -28,6 +28,7 @@ from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.security import Fingerprint
 
 
 class Agent(BaseAgent):
@@ -472,3 +473,14 @@ class Agent(BaseAgent):
 
     def __repr__(self):
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
+
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """
+        Get the agent's fingerprint.
+
+        Returns:
+            Fingerprint: The agent's fingerprint
+        """
+        return self.security_config.fingerprint
+
