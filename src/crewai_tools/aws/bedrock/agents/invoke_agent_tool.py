@@ -11,6 +11,9 @@ from pydantic import BaseModel, Field
 import boto3
 from botocore.exceptions import ClientError
 
+# Import custom exceptions
+from ..exceptions import BedrockAgentError, BedrockValidationError
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -62,6 +65,31 @@ class BedrockInvokeAgentTool(BaseTool):
         # Update the description if provided
         if description:
             self.description = description
+            
+        # Validate parameters
+        self._validate_parameters()
+
+    def _validate_parameters(self):
+        """Validate the parameters according to AWS API requirements."""
+        try:
+            # Validate agent_id
+            if not self.agent_id:
+                raise BedrockValidationError("agent_id cannot be empty")
+            if not isinstance(self.agent_id, str):
+                raise BedrockValidationError("agent_id must be a string")
+                
+            # Validate agent_alias_id
+            if not self.agent_alias_id:
+                raise BedrockValidationError("agent_alias_id cannot be empty")
+            if not isinstance(self.agent_alias_id, str):
+                raise BedrockValidationError("agent_alias_id must be a string")
+                
+            # Validate session_id if provided
+            if self.session_id and not isinstance(self.session_id, str):
+                raise BedrockValidationError("session_id must be a string")
+                
+        except BedrockValidationError as e:
+            raise BedrockValidationError(f"Parameter validation failed: {str(e)}")
 
     def _run(self, query: str) -> str:
         try:
@@ -123,7 +151,7 @@ Below is the users query or task. Complete it and answer it consicely and to the
                 if 'chunk' in response:
                     debug_info["chunk_keys"] = list(response['chunk'].keys())
                 
-                return json.dumps(debug_info, indent=2)
+                raise BedrockAgentError(f"Failed to extract completion: {json.dumps(debug_info, indent=2)}")
             
             return completion
 
@@ -132,9 +160,13 @@ Below is the users query or task. Complete it and answer it consicely and to the
             error_message = str(e)
             
             # Try to extract error code if available
-            if hasattr(e, 'response') and 'Error' in e.response and 'Code' in e.response['Error']:
-                error_code = e.response['Error']['Code']
+            if hasattr(e, 'response') and 'Error' in e.response:
+                error_code = e.response['Error'].get('Code', 'Unknown')
+                error_message = e.response['Error'].get('Message', str(e))
             
-            return f"Error invoking Bedrock Agent ({error_code}): {error_message}"
+            raise BedrockAgentError(f"Error ({error_code}): {error_message}")
+        except BedrockAgentError:
+            # Re-raise BedrockAgentError exceptions
+            raise
         except Exception as e:
-            return f"Error: {str(e)}"
+            raise BedrockAgentError(f"Unexpected error: {str(e)}")
