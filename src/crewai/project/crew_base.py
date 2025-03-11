@@ -172,11 +172,15 @@ def CrewBase(cls: T) -> T:
                 ]
 
             if function_calling_llm := agent_info.get("function_calling_llm"):
+                if not isinstance(function_calling_llm, str):
+                    raise ValueError(f"function_calling_llm must be a string, got {type(function_calling_llm)}")
+                
                 try:
                     self.agents_config[agent_name]["function_calling_llm"] = agents[
                         function_calling_llm
                     ]()
                 except KeyError:
+                    logging.debug(f"No agent found for function_calling_llm '{function_calling_llm}', using it as direct model name")
                     self.agents_config[agent_name]["function_calling_llm"] = function_calling_llm
 
             if step_callback := agent_info.get("step_callback"):
