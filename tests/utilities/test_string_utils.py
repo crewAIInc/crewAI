@@ -1,5 +1,7 @@
 import unittest
+
 from crewai.utilities import sanitize_collection_name
+
 
 class TestStringUtils(unittest.TestCase):
     def test_sanitize_collection_name_long_name(self):
