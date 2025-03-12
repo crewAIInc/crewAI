@@ -113,13 +113,3 @@ class BaseLLM(ABC):
             The context window size as an integer.
         """
         pass
-
-    @abstractmethod
-    def set_callbacks(self, callbacks: List[Any]) -> None:
-        """Set callback functions for the LLM.
-
-        Args:
-            callbacks: List of callback functions to be executed during
-                     and after LLM calls.
-        """
-        pass
