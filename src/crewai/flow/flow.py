@@ -17,6 +17,11 @@ from typing import (
 )
 from uuid import uuid4
 
+# Forward reference for type hints
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from crewai.agent import Agent
+
 from pydantic import BaseModel, Field, ValidationError
 
 from crewai.flow.flow_visualizer import plot_flow
@@ -788,27 +793,24 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         final_output = self._method_outputs[-1] if self._method_outputs else None
         
-        # Check if any agent in the flow has tools_results with result_as_answer=True
+        # Check for tool results with result_as_answer=True in method-associated agents
         for method_name, method in self._methods.items():
             if hasattr(method, "__agent"):
-                agent = getattr(method, "__agent")
-                if hasattr(agent, "tools_results") and agent.tools_results:
-                    for tool_result in agent.tools_results:
-                        if tool_result.get("result_as_answer", False):
-                            final_output = tool_result["result"]
-                            break
+                tool_result = self._check_tool_results(getattr(method, "__agent"))
+                if tool_result:
+                    final_output = tool_result
+                    break
         
-        # Also check for any agents that might be stored as instance variables
+        # Also check for agents stored as instance variables
         for attr_name in dir(self):
             if attr_name.startswith('_'):
                 continue
             try:
                 attr = getattr(self, attr_name)
-                if hasattr(attr, "tools_results") and attr.tools_results:
-                    for tool_result in attr.tools_results:
-                        if tool_result.get("result_as_answer", False):
-                            final_output = tool_result["result"]
-                            break
+                tool_result = self._check_tool_results(attr)
+                if tool_result:
+                    final_output = tool_result
+                    break
             except (AttributeError, TypeError):
                 continue
 
@@ -1094,8 +1096,28 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif level == "warning":
             logger.warning(message)
 
+    def _check_tool_results(self, obj) -> Optional[str]:
+        """
+        Check if an object has tool results with result_as_answer=True.
+        
+        Parameters
+        ----------
+        obj : Any
+            The object to check for tool results
+            
+        Returns
+        -------
+        Optional[str]
+            The tool result if found with result_as_answer=True, None otherwise
+        """
+        if hasattr(obj, "tools_results") and obj.tools_results:
+            for tool_result in obj.tools_results:
+                if tool_result.get("result_as_answer", False):
+                    return tool_result["result"]
+        return None
+        
     @classmethod
-    def with_agent(cls, agent):
+    def with_agent(cls, agent: 'Agent') -> Callable:
         """
         Decorator to associate an agent with a flow method.
         This allows tracking which agents are used in the flow.
