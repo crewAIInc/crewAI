@@ -142,8 +142,8 @@ class Agent(BaseAgent):
                 self.embedder = crew_embedder
 
             if self.knowledge_sources:
-                full_pattern = re.compile(r"[^a-zA-Z0-9\-_\r\n]|(\.\.)")
-                knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
+                from crewai.utilities import sanitize_collection_name
+                knowledge_agent_name = sanitize_collection_name(self.role)
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
