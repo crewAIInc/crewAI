@@ -574,6 +574,46 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 </AccordionGroup>
 
+## Streaming Responses
+
+CrewAI supports streaming responses from LLMs, allowing your application to receive and process outputs in real-time as they're generated.
+
+<Tabs>
+  <Tab title="Basic Setup">
+    Enable streaming by setting the `stream` parameter to `True` when initializing your LLM:
+
+    ```python
+    from crewai import LLM
+
+    # Create an LLM with streaming enabled
+    llm = LLM(
+        model="openai/gpt-4o",
+        stream=True  # Enable streaming
+    )
+    ```
+
+    When streaming is enabled, responses are delivered in chunks as they're generated, creating a more responsive user experience.
+  </Tab>
+  
+  <Tab title="Event Handling">
+    CrewAI emits events for each chunk received during streaming:
+    
+    ```python
+    from crewai import LLM
+    from crewai.utilities.events import EventHandler, LLMStreamChunkEvent
+    
+    class MyEventHandler(EventHandler):
+        def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
+            # Process each chunk as it arrives
+            print(f"Received chunk: {event.chunk}")
+    
+    # Register the event handler
+    from crewai.utilities.events import crewai_event_bus
+    crewai_event_bus.register_handler(MyEventHandler())
+    ```
+  </Tab>
+</Tabs>
+
 ## Structured LLM Calls
 
 CrewAI supports structured responses from LLM calls by allowing you to define a `response_format` using a Pydantic model. This enables the framework to automatically parse and validate the output, making it easier to integrate the response into your application without manual post-processing.
@@ -703,46 +743,4 @@ Learn how to get the most out of your LLM configuration:
       Use larger context models for extensive tasks
     </Tip>
     
-    ```python
-    # Large context model
-    llm = LLM(model="openai/gpt-4o")  # 128K tokens
     ```
-  </Tab>
-</Tabs>
-
-## Getting Help
-
-If you need assistance, these resources are available:
-
-<CardGroup cols={3}>
-  <Card
-    title="LiteLLM Documentation"
-    href="https://docs.litellm.ai/docs/"
-    icon="book"
-  >
-    Comprehensive documentation for LiteLLM integration and troubleshooting common issues.
-  </Card>
-  <Card
-    title="GitHub Issues"
-    href="https://github.com/joaomdmoura/crewAI/issues"
-    icon="bug"
-  >
-    Report bugs, request features, or browse existing issues for solutions.
-  </Card>
-  <Card
-    title="Community Forum"
-    href="https://community.crewai.com"
-    icon="comment-question"
-  >
-    Connect with other CrewAI users, share experiences, and get help from the community.
-  </Card>
-</CardGroup>
-
-<Note>
-  Best Practices for API Key Security:
-  - Use environment variables or secure vaults
-  - Never commit keys to version control
-  - Rotate keys regularly
-  - Use separate keys for development and production
-  - Monitor key usage for unusual patterns
-</Note>

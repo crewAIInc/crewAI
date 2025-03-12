@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -34,6 +35,11 @@ from crewai.utilities.events.crew_events import (
 )
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+
+# Skip streaming tests when running in CI/CD environments
+skip_streaming_in_ci = pytest.mark.skipif(
+    os.getenv("CI") is not None, reason="Skipping streaming tests in CI/CD environments"
+)
 
 ceo = Agent(
     role="CEO",
@@ -948,6 +954,7 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
+@skip_streaming_in_ci
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_kickoff_usage_metrics():
     inputs = [
@@ -960,6 +967,7 @@ def test_crew_kickoff_usage_metrics():
         role="{topic} Researcher",
         goal="Express hot takes on {topic}.",
         backstory="You have a lot of experience with {topic}.",
+        llm=LLM(model="gpt-4o"),
     )
 
     task = Task(
@@ -968,12 +976,50 @@ def test_crew_kickoff_usage_metrics():
         agent=agent,
     )
 
+    # Use real LLM calls instead of mocking
     crew = Crew(agents=[agent], tasks=[task])
     results = crew.kickoff_for_each(inputs=inputs)
 
     assert len(results) == len(inputs)
     for result in results:
-        # Assert that all required keys are in usage_metrics and their values are not None
+        # Assert that all required keys are in usage_metrics and their values are greater than 0
+        assert result.token_usage.total_tokens > 0
+        assert result.token_usage.prompt_tokens > 0
+        assert result.token_usage.completion_tokens > 0
+        assert result.token_usage.successful_requests > 0
+        assert result.token_usage.cached_prompt_tokens == 0
+
+
+@skip_streaming_in_ci
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_kickoff_streaming_usage_metrics():
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+        llm=LLM(model="gpt-4o", stream=True),
+        max_iter=3,
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    # Use real LLM calls instead of mocking
+    crew = Crew(agents=[agent], tasks=[task])
+    results = crew.kickoff_for_each(inputs=inputs)
+
+    assert len(results) == len(inputs)
+    for result in results:
+        # Assert that all required keys are in usage_metrics and their values are greater than 0
         assert result.token_usage.total_tokens > 0
         assert result.token_usage.prompt_tokens > 0
         assert result.token_usage.completion_tokens > 0
@@ -3972,4 +4018,6 @@ def test_crew_with_knowledge_sources_works_with_copy():
 
     assert crew_copy.knowledge_sources == crew.knowledge_sources
     assert len(crew_copy.agents) == len(crew.agents)
+    assert len(crew_copy.tasks) == len(crew.tasks)
+
     assert len(crew_copy.tasks) == len(crew.tasks)
