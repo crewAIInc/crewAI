@@ -787,6 +787,30 @@ class Flow(Generic[T], metaclass=FlowMeta):
         await asyncio.gather(*tasks)
 
         final_output = self._method_outputs[-1] if self._method_outputs else None
+        
+        # Check if any agent in the flow has tools_results with result_as_answer=True
+        for method_name, method in self._methods.items():
+            if hasattr(method, "__agent"):
+                agent = getattr(method, "__agent")
+                if hasattr(agent, "tools_results") and agent.tools_results:
+                    for tool_result in agent.tools_results:
+                        if tool_result.get("result_as_answer", False):
+                            final_output = tool_result["result"]
+                            break
+        
+        # Also check for any agents that might be stored as instance variables
+        for attr_name in dir(self):
+            if attr_name.startswith('_'):
+                continue
+            try:
+                attr = getattr(self, attr_name)
+                if hasattr(attr, "tools_results") and attr.tools_results:
+                    for tool_result in attr.tools_results:
+                        if tool_result.get("result_as_answer", False):
+                            final_output = tool_result["result"]
+                            break
+            except (AttributeError, TypeError):
+                continue
 
         crewai_event_bus.emit(
             self,
@@ -1070,6 +1094,26 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif level == "warning":
             logger.warning(message)
 
+    @classmethod
+    def with_agent(cls, agent):
+        """
+        Decorator to associate an agent with a flow method.
+        This allows tracking which agents are used in the flow.
+        
+        Parameters
+        ----------
+        agent : Agent
+            The agent to associate with the method
+            
+        Returns
+        -------
+        Callable
+            A decorator function that associates the agent with the method
+        """
+        def decorator(func):
+            func.__agent = agent
+            return func
+        return decorator
     def plot(self, filename: str = "crewai_flow") -> None:
         crewai_event_bus.emit(
             self,
