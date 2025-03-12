@@ -863,7 +863,9 @@ def test_crew_verbose_output(capsys):
     # Now test with verbose set to False
     crew.verbose = False
     crew._logger = Logger(verbose=False)
-    EventListener().verbose = False
+    event_listener = EventListener()
+    event_listener.verbose = False
+    event_listener.formatter.verbose = False
     crew.kickoff()
     captured = capsys.readouterr()
     filtered_output = "\n".join(
