@@ -142,7 +142,9 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
 
 ## Using Local Models with Ollama
 
-For local models like those provided by Ollama:
+CrewAI provides two ways to use local models with Ollama:
+
+### Method 1: Direct Connection (Standard)
 
 <Steps>
     <Step title="Download and install Ollama">
@@ -164,6 +166,49 @@ For local models like those provided by Ollama:
         </CodeGroup>
     </Step>
 </Steps>
+
+### Method 2: Using the Ollama Monkey Patch (Recommended)
+
+For a more robust integration with Ollama, CrewAI provides a monkey patch that enhances compatibility and performance:
+
+<Steps>
+    <Step title="Download and install Ollama">
+    [Click here to download and install Ollama](https://ollama.com/download)
+    </Step>
+    <Step title="Pull the desired model">
+    For example, run `ollama pull llama3` to download the model.
+    </Step>
+    <Step title="Apply the monkey patch">
+        <CodeGroup>
+        ```python Code
+            from crewai import Agent, Crew, Task, LLM
+            from crewai import apply_monkey_patch
+
+            # Apply the monkey patch at the beginning of your script
+            apply_monkey_patch()
+
+            # Create an LLM instance with an Ollama model
+            llm = LLM(model="ollama/llama3", base_url="http://localhost:11434")
+
+            # Use the LLM instance with CrewAI
+            agent = Agent(
+                role='Local AI Expert',
+                goal='Process information using a local model',
+                backstory="An AI assistant running on local hardware.",
+                llm=llm
+            )
+            ```
+        </CodeGroup>
+    </Step>
+</Steps>
+
+The monkey patch provides several advantages:
+- Improved handling of streaming responses
+- Better error handling and logging
+- More accurate token counting
+- Enhanced compatibility with CrewAI's features
+
+For more details, see the [Ollama integration README](https://github.com/crewAIinc/crewAI/blob/main/src/crewai/utilities/ollama/README.md).
 
 ## Changing the Base API URL
 

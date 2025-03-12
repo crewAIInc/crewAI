@@ -7,6 +7,7 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.process import Process
 from crewai.task import Task
+from crewai.utilities.ollama.monkey_patch import apply_monkey_patch
 
 warnings.filterwarnings(
     "ignore",
@@ -23,4 +24,5 @@ __all__ = [
     "LLM",
     "Flow",
     "Knowledge",
+    "apply_monkey_patch",
 ]
