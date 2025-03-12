@@ -142,8 +142,13 @@ class Agent(BaseAgent):
                 self.embedder = crew_embedder
 
             if self.knowledge_sources:
-                from crewai.utilities import sanitize_collection_name
-                knowledge_agent_name = sanitize_collection_name(self.role)
+                try:
+                    from crewai.utilities import sanitize_collection_name
+                    knowledge_agent_name = sanitize_collection_name(self.role)
+                except Exception as e:
+                    self._logger.warning(f"Error sanitizing collection name: {e}")
+                    knowledge_agent_name = "default_agent"
+                    
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
