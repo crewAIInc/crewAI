@@ -8,8 +8,8 @@ icon: vector-square
 
 ## Description
 
-The `RagTool` is designed to answer questions by leveraging the power of Retrieval-Augmented Generation (RAG) through EmbedChain. 
-It provides a dynamic knowledge base that can be queried to retrieve relevant information from various data sources. 
+The `RagTool` is designed to answer questions by leveraging the power of Retrieval-Augmented Generation (RAG) through EmbedChain.
+It provides a dynamic knowledge base that can be queried to retrieve relevant information from various data sources.
 This tool is particularly useful for applications that require access to a vast array of information and need to provide contextually relevant answers.
 
 ## Example
@@ -138,7 +138,7 @@ config = {
             "model": "gpt-4",
         }
     },
-    "embedder": {
+    "embedding_model": {
         "provider": "openai",
         "config": {
             "model": "text-embedding-ada-002"
@@ -151,4 +151,4 @@ rag_tool = RagTool(config=config, summarize=True)
 
 ## Conclusion
 
-The `RagTool` provides a powerful way to create and query knowledge bases from various data sources. By leveraging Retrieval-Augmented Generation, it enables agents to access and retrieve relevant information efficiently, enhancing their ability to provide accurate and contextually appropriate responses. 
+The `RagTool` provides a powerful way to create and query knowledge bases from various data sources. By leveraging Retrieval-Augmented Generation, it enables agents to access and retrieve relevant information efficiently, enhancing their ability to provide accurate and contextually appropriate responses.
