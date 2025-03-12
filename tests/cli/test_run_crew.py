@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from crewai.cli.run_crew import execute_command, CrewType
+from crewai.cli.run_crew import CrewType, execute_command
 
 
 def test_execute_command_adds_src_to_path():
