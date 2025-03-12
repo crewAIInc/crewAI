@@ -7,7 +7,7 @@ from crewai.llm import LLM, BaseLLM
 
 def create_llm(
     llm_value: Union[str, LLM, Any, None] = None,
-) -> Optional[LLM]:
+) -> Optional[LLM | BaseLLM]:
     """
     Creates or returns an LLM instance based on the given llm_value.
 
