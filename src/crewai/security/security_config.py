@@ -28,6 +28,7 @@ class SecurityConfig(BaseModel):
     - Impersonation/delegation tokens *TODO*
 
     Attributes:
+        version (str): Version of the security configuration
         fingerprint (Fingerprint): The unique fingerprint automatically generated for the component
     """
 
@@ -36,10 +37,37 @@ class SecurityConfig(BaseModel):
         # Note: Cannot use frozen=True as existing tests modify the fingerprint property
     )
     
+    version: str = Field(
+        default="1.0.0", 
+        description="Version of the security configuration"
+    )
+    
     fingerprint: Fingerprint = Field(
         default_factory=Fingerprint, 
         description="Unique identifier for the component"
     )
+    
+    def is_compatible(self, min_version: str) -> bool:
+        """
+        Check if this security configuration is compatible with the minimum required version.
+        
+        Args:
+            min_version (str): Minimum required version in semver format (e.g., "1.0.0")
+            
+        Returns:
+            bool: True if this configuration is compatible, False otherwise
+        """
+        # Simple version comparison (can be enhanced with packaging.version if needed)
+        current = [int(x) for x in self.version.split(".")]
+        minimum = [int(x) for x in min_version.split(".")]
+        
+        # Compare major, minor, patch versions
+        for c, m in zip(current, minimum):
+            if c > m:
+                return True
+            if c < m:
+                return False
+        return True
 
     @model_validator(mode='before')
     @classmethod

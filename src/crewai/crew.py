@@ -479,7 +479,7 @@ class Crew(BaseModel):
 
     @property
     def key(self) -> str:
-        source = [agent.key for agent in self.agents] + [
+        source: List[str] = [agent.key for agent in self.agents] + [
             task.key for task in self.tasks
         ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
