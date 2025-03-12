@@ -251,7 +251,9 @@ class Crew(BaseModel):
         """Set private attributes."""
 
         self._cache_handler = CacheHandler()
-        EventListener().verbose = self.verbose
+        event_listener = EventListener()
+        event_listener.verbose = self.verbose
+        event_listener.formatter.verbose = self.verbose
         self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
