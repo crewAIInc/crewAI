@@ -2,7 +2,10 @@ import asyncio
 import copy
 import inspect
 import logging
+
+# Forward reference for type hints
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -17,8 +20,6 @@ from typing import (
 )
 from uuid import uuid4
 
-# Forward reference for type hints
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from crewai.agent import Agent
 
