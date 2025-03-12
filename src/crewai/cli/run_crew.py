@@ -1,3 +1,4 @@
+import logging
 import subprocess
 import sys
 from enum import Enum
@@ -9,6 +10,8 @@ from packaging import version
 
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
+
+logger = logging.getLogger(__name__)
 
 
 class CrewType(Enum):
@@ -50,17 +53,30 @@ def run_crew() -> None:
 
 
 def execute_command(crew_type: CrewType) -> None:
-    """
-    Execute the appropriate command based on crew type.
+    """Execute the appropriate command based on crew type.
 
     Args:
         crew_type: The type of crew to run
+
+    Note:
+        Automatically adds the 'src' directory to sys.path if it exists 
+        to ensure proper module resolution.
     """
     # Add the 'src' directory to sys.path to ensure module imports work correctly
     cwd = Path.cwd()
     src_path = cwd / "src"
+    
+    logger.debug(f"Current working directory: {cwd}")
+    
     if src_path.exists() and str(src_path) not in sys.path:
+        logger.info(f"Adding {src_path} to sys.path")
         sys.path.insert(0, str(src_path))
+    elif not src_path.exists():
+        logger.warning(f"src directory not found: {src_path}")
+        click.secho(
+            f"Warning: 'src' directory not found at {src_path}. Module imports may fail.",
+            fg="yellow",
+        )
 
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
 
@@ -71,6 +87,7 @@ def execute_command(crew_type: CrewType) -> None:
         handle_error(e, crew_type)
 
     except Exception as e:
+        logger.error(f"Unexpected error: {e}")
         click.echo(f"An unexpected error occurred: {e}", err=True)
 
 
