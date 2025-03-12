@@ -68,8 +68,7 @@ class ConsoleFormatter:
 
     def print(self, *args, **kwargs) -> None:
         """Print to console with consistent formatting if verbose is enabled."""
-        if self.verbose:
-            self.console.print(*args, **kwargs)
+        self.console.print(*args, **kwargs)
 
     def print_panel(
         self, content: Text, title: str, style: str = "blue", is_flow: bool = False
@@ -239,14 +238,13 @@ class ConsoleFormatter:
         self.print(crew_tree)
         self.print()
 
-    def create_flow_tree(self, flow_name: str) -> Optional[Tree]:
+    def create_flow_tree(self, flow_name: str) -> Tree:
         """Create and initialize a flow tree."""
-        # if not self.verbose:
-        #     return None
 
         content = self.create_status_content(
             "Starting Flow Execution", flow_name, "blue"
         )
+
         self.print_panel(content, "Flow Execution", "blue", is_flow=True)
 
         # Create initial tree
@@ -264,9 +262,6 @@ class ConsoleFormatter:
 
     def start_flow(self, flow_name: str) -> Optional[Tree]:
         """Initialize a flow execution tree."""
-        # if not self.verbose:
-        #     return None
-
         flow_tree = Tree("")
         self.update_tree_label(flow_tree, "🌊 Flow:", flow_name, "blue", "In Progress")
         self.add_tree_node(flow_tree, "🧠 Initializing...", "yellow")
@@ -279,9 +274,6 @@ class ConsoleFormatter:
         self, flow_tree: Tree, flow_name: str, flow_id: str, status: str = "completed"
     ) -> None:
         """Update flow status in the tree."""
-        # if not self.verbose:
-        #     return
-
         self.update_tree_label(
             flow_tree,
             "✅ Flow Finished:" if status == "completed" else "❌ Flow Failed:",
@@ -311,9 +303,6 @@ class ConsoleFormatter:
         status: str = "running",
     ) -> Optional[Tree]:
         """Update method status in the flow tree."""
-        # if not flow_tree:
-        #     return None
-
         if status == "running":
             prefix, style = "🔄 Running:", "yellow"
         elif status == "completed":

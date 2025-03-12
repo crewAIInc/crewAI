@@ -72,25 +72,49 @@ class EventListener(BaseEventListener):
     def current_crew_tree(self) -> Optional[Tree]:
         return self.formatter.current_crew_tree
 
+    @current_crew_tree.setter
+    def current_crew_tree(self, value: Optional[Tree]):
+        self.formatter.current_crew_tree = value
+
     @property
     def current_task_branch(self) -> Optional[Tree]:
         return self.formatter.current_task_branch
+
+    @current_task_branch.setter
+    def current_task_branch(self, value: Optional[Tree]):
+        self.formatter.current_task_branch = value
 
     @property
     def current_agent_branch(self) -> Optional[Tree]:
         return self.formatter.current_agent_branch
 
+    @current_agent_branch.setter
+    def current_agent_branch(self, value: Optional[Tree]):
+        self.formatter.current_agent_branch = value
+
     @property
     def current_tool_branch(self) -> Optional[Tree]:
         return self.formatter.current_tool_branch
+
+    @current_tool_branch.setter
+    def current_tool_branch(self, value: Optional[Tree]):
+        self.formatter.current_tool_branch = value
 
     @property
     def current_flow_tree(self) -> Optional[Tree]:
         return self.formatter.current_flow_tree
 
+    @current_flow_tree.setter
+    def current_flow_tree(self, value: Optional[Tree]):
+        self.formatter.current_flow_tree = value
+
     @property
     def current_method_branch(self) -> Optional[Tree]:
         return self.formatter.current_method_branch
+
+    @current_method_branch.setter
+    def current_method_branch(self, value: Optional[Tree]):
+        self.formatter.current_method_branch = value
 
     # ----------- CREW EVENTS -----------
 
@@ -200,14 +224,14 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(FlowCreatedEvent)
         def on_flow_created(source, event: FlowCreatedEvent):
             self._telemetry.flow_creation_span(event.flow_name)
-            self.formatter.create_flow_tree(event.flow_name)
+            self.current_flow_tree = self.formatter.create_flow_tree(event.flow_name)
 
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source, event: FlowStartedEvent):
             self._telemetry.flow_execution_span(
                 event.flow_name, list(source._methods.keys())
             )
-            self.formatter.start_flow(event.flow_name)
+            self.current_flow_tree = self.formatter.start_flow(event.flow_name)
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event: FlowFinishedEvent):
@@ -218,12 +242,13 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(source, event: MethodExecutionStartedEvent):
-            self.formatter.update_method_status(
-                self.current_method_branch,
-                self.current_flow_tree,
-                event.method_name,
-                "running",
-            )
+            if self.current_flow_tree:
+                self.current_method_branch = self.formatter.update_method_status(
+                    self.current_method_branch,
+                    self.current_flow_tree,
+                    event.method_name,
+                    "running",
+                )
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
         def on_method_execution_finished(source, event: MethodExecutionFinishedEvent):
