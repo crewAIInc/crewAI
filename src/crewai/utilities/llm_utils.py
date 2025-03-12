@@ -22,8 +22,8 @@ def create_llm(
         A BaseLLM instance if successful, or None if something fails.
     """
 
-    # 1) If llm_value is already a BaseLLM object, return it directly
-    if isinstance(llm_value, LLM):
+    # 1) If llm_value is already a BaseLLM or LLM object, return it directly
+    if isinstance(llm_value, LLM) or isinstance(llm_value, BaseLLM):
         return llm_value
 
     # 2) If llm_value is a string (model name)
