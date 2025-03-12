@@ -1,10 +1,12 @@
 import pytest
-from unittest.mock import patch, MagicMock
-from crewai import Agent, Task, Crew, Flow
-from crewai.flow import start, listen
-from crewai.tools import BaseTool
 from typing import Type
+from unittest.mock import MagicMock, patch
+
 from pydantic import BaseModel, Field
+
+from crewai import Agent, Crew, Flow, Task
+from crewai.flow import listen, start
+from crewai.tools import BaseTool
 
 class TestToolInput(BaseModel):
     query: str = Field(..., description='Query to process')
