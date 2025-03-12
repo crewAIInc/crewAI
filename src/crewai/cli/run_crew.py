@@ -1,5 +1,7 @@
 import subprocess
+import sys
 from enum import Enum
+from pathlib import Path
 from typing import List, Optional
 
 import click
@@ -54,6 +56,12 @@ def execute_command(crew_type: CrewType) -> None:
     Args:
         crew_type: The type of crew to run
     """
+    # Add the 'src' directory to sys.path to ensure module imports work correctly
+    cwd = Path.cwd()
+    src_path = cwd / "src"
+    if src_path.exists() and str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
+
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
 
     try:
