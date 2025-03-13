@@ -4114,6 +4114,7 @@ def test_crew_with_specific_delegation():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent_with_tools_and_delegation():
     """Test that a manager agent can have tools and still delegate to all agents."""
+    from crewai.tools.base_tool import BaseTool
 
     # Create a simple tool for the manager
     class SimpleTestTool(BaseTool):
