@@ -829,10 +829,18 @@ class LLM:
         Derives the custom_llm_provider from the model string.
         - For example, if the model is "openrouter/deepseek/deepseek-chat", returns "openrouter".
         - If the model is "gemini/gemini-1.5-pro", returns "gemini".
-        - If there is no '/', defaults to "openai".
+        - If the model is "azure/gpt-4", returns "azure".
+        - If Azure-specific parameters are provided (api_key, api_base, api_version), returns "azure".
+        - If there is no '/' and no Azure parameters, returns None.
         """
+        # Check if model explicitly has a provider prefix
         if "/" in self.model:
             return self.model.split("/")[0]
+        
+        # Check if all Azure parameters are present
+        if self.api_key and self.api_base and self.api_version:
+            return "azure"
+            
         return None
 
     def _validate_call_params(self) -> None:
@@ -842,7 +850,9 @@ class LLM:
         The custom_llm_provider is dynamically determined from the model:
           - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
           - "gemini/gemini-1.5-pro" yields "gemini"
-          - If no slash is present, "openai" is assumed.
+          - "azure/gpt-4" yields "azure"
+          - If Azure parameters (api_key, api_base, api_version) are present, "azure" is used
+          - If no slash is present and no Azure parameters, None is returned
         """
         provider = self._get_custom_llm_provider()
         if self.response_format is not None and not supports_response_schema(

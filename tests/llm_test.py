@@ -221,6 +221,20 @@ def test_get_custom_llm_provider_openai():
     llm = LLM(model="gpt-4")
     assert llm._get_custom_llm_provider() == None
 
+def test_get_custom_llm_provider_azure_with_prefix():
+    llm = LLM(model="azure/gpt-4")
+    assert llm._get_custom_llm_provider() == "azure"
+
+
+def test_get_custom_llm_provider_azure_without_prefix():
+    llm = LLM(
+        model="gpt-4",
+        api_key="test_key",
+        api_base="test_base",
+        api_version="test_version"
+    )
+    assert llm._get_custom_llm_provider() == "azure"
+
 
 def test_validate_call_params_supported():
     class DummyResponse(BaseModel):
