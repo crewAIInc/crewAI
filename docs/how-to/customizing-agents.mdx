@@ -94,6 +94,17 @@ Controlling an agent's ability to delegate tasks or ask questions is vital for t
 the `allow_delegation` attribute is now set to `False`, disabling agents to seek assistance or delegate tasks as needed. This default behavior can be changed to promote collaborative problem-solving and 
 efficiency within the CrewAI ecosystem. If needed, delegation can be enabled to suit specific operational requirements.
 
+<Note>
+**LLM Model Considerations for Delegation**
+
+When enabling delegation, be aware that the performance of delegation depends on the LLM model used:
+
+- **Recommended**: More capable models like `GPT-4o` handle delegation effectively
+- **Not Recommended**: Smaller models like `GPT-4o-mini` and `smaller local models` struggle with delegation tasks
+
+For optimal delegation results, ensure your agents are using sufficiently powerful LLM models.
+</Note>
+
 ### Example: Disabling Delegation for an Agent
 
 ```python Code

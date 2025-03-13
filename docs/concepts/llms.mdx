@@ -74,36 +74,65 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
   <Tab title="3. Direct Code">
     For maximum flexibility, configure LLMs directly in your Python code:
 
-    ```python
-    from crewai import LLM
+    ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+    import os
 
     # Basic configuration
-    llm = LLM(model="gpt-4")
+    llm = LLM(
+        model="gpt-4o-mini",
+        api_key=os.getenv("OPENAI_API_KEY")
+    )
 
     # Advanced configuration with detailed parameters
     llm = LLM(
         model="gpt-4o-mini",
+        api_key=os.getenv("OPENAI_API_KEY"),
         temperature=0.7,        # Higher for more creative outputs
-        timeout=120,           # Seconds to wait for response
-        max_tokens=4000,       # Maximum length of response
-        top_p=0.9,            # Nucleus sampling parameter
-        frequency_penalty=0.1, # Reduce repetition
-        presence_penalty=0.1,  # Encourage topic diversity
-        response_format={"type": "json"},  # For structured outputs
-        seed=42               # For reproducible results
+        timeout=120,            # Seconds to wait for response
+        max_tokens=4000,        # Maximum length of response
+        top_p=0.9,              # Nucleus sampling parameter
+        n=1,                    # Number of completions to generate
+        stop=["STOP", "END"],   # Sequences where the API will stop generating
+        max_completion_tokens=None,  # Alternative to max_tokens
+        presence_penalty=0.1,   # Encourage topic diversity
+        frequency_penalty=0.1,  # Reduce repetition
+        logit_bias=None,        # Modify likelihood of specific tokens
+        response_format=None,   # For structured outputs (see Structured LLM Calls section)
+        seed=42,                # For reproducible results
+        logprobs=None,          # Get log probabilities of output tokens
+        top_logprobs=None,      # Number of most likely tokens to return
+        base_url=None,          # Custom API endpoint URL
+        api_base=None,          # Alternative to base_url
+        api_version=None,       # API version to use
+        reasoning_effort="medium", # Effort level for reasoning (none, low, medium, high)
+        stream=False            # Enable streaming responses
     )
     ```
 
     <Info>
       Parameter explanations:
+      - `model`: The LLM model to use
+      - `api_key`: API key for authentication (best to use environment variables)
       - `temperature`: Controls randomness (0.0-1.0)
-      - `timeout`: Maximum wait time for response
+      - `timeout`: Maximum wait time for response in seconds
       - `max_tokens`: Limits response length
       - `top_p`: Alternative to temperature for sampling
-      - `frequency_penalty`: Reduces word repetition
+      - `n`: Number of completions to generate
+      - `stop`: Sequences where the model will stop generating
+      - `max_completion_tokens`: Alternative to max_tokens
       - `presence_penalty`: Encourages new topics
-      - `response_format`: Specifies output structure
+      - `frequency_penalty`: Reduces word repetition
+      - `logit_bias`: Modify likelihood of specific tokens
+      - `response_format`: Specifies output structure (see Structured LLM Calls section)
       - `seed`: Ensures consistent outputs
+      - `logprobs`: Get log probabilities of output tokens
+      - `top_logprobs`: Number of most likely tokens to return
+      - `base_url`: Custom API endpoint URL
+      - `api_base`: Alternative to base_url
+      - `api_version`: API version to use
+      - `reasoning_effort`: Effort level for reasoning (none, low, medium, high)
+      - `stream`: Enable streaming responses
     </Info>
   </Tab>
 </Tabs>
@@ -129,7 +158,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
-    from crewai import LLM
+    from crewai import Agent, Crew, Process, Task, LLM
 
     llm = LLM(
         model="openai/gpt-4", # call model by provider/model_name
@@ -163,6 +192,8 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="anthropic/claude-3-sonnet-20240229-v1:0",
         temperature=0.7
@@ -198,7 +229,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
-    from crewai import LLM
+    from crewai import Agent, Crew, Process, Task, LLM
 
     llm = LLM(
         model="gemini/gemini-1.5-pro-latest",
@@ -246,8 +277,11 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
-        model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+        model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0",
+        api_key=os.getenv("BEDROCK_API_KEY")
     )
     ```
   </Accordion>
@@ -261,8 +295,11 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
-        model="sagemaker/<my-endpoint>"
+        model="sagemaker/<my-endpoint>",
+        api_key=os.getenv("SAGEMAKER_API_KEY")
     )
     ```
   </Accordion>
@@ -275,9 +312,12 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="mistral/mistral-large-latest",
-        temperature=0.7
+        temperature=0.7,
+        api_key=os.getenv("MISTRAL_API_KEY")
     )
     ```
   </Accordion>
@@ -290,9 +330,12 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="nvidia_nim/meta/llama3-70b-instruct",
-        temperature=0.7
+        temperature=0.7,
+        api_key=os.getenv("NVIDIA_API_KEY")
     )
     ```
 
@@ -377,6 +420,8 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="groq/llama-3.2-90b-text-preview",
         temperature=0.7
@@ -384,9 +429,9 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
     | Model             | Context Window   | Best For                                   |
     |-------------------|------------------|--------------------------------------------|
-    | Llama 3.1 70B/8B  | 131,072 tokens   | High-performance, large context tasks      |
-    | Llama 3.2 Series  | 8,192 tokens     | General-purpose tasks                      |
-    | Mixtral 8x7B      | 32,768 tokens    | Balanced performance and context           |
+    | Llama 3.1 70B/8B   | 131,072 tokens   | High-performance, large context tasks      |
+    | Llama 3.2 Series   | 8,192 tokens     | General-purpose tasks                      |
+    | Mixtral 8x7B       | 32,768 tokens    | Balanced performance and context           |
   </Accordion>
 
   <Accordion title="IBM watsonx.ai">
@@ -404,6 +449,8 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="watsonx/meta-llama/llama-3-1-70b-instruct",
         base_url="https://api.watsonx.ai/v1"
@@ -417,6 +464,8 @@ In this section, you'll find detailed examples that help you select, configure, 
     3. Configure:
 
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="ollama/llama3:70b",
         base_url="http://localhost:11434"
@@ -429,9 +478,11 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```toml Code
     FIREWORKS_API_KEY=<your-api-key>
     ```
-
+    
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",
         temperature=0.7
@@ -447,6 +498,8 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="llama-3.1-sonar-large-128k-online",
         base_url="https://api.perplexity.ai/"
@@ -462,6 +515,8 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
         base_url="your_api_endpoint"
@@ -478,9 +533,12 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="sambanova/Meta-Llama-3.1-8B-Instruct",
-        temperature=0.7
+        temperature=0.7,
+        api_key=os.getenv("SAMBANOVA_API_KEY")
     )
     ```
     | Model              | Context Window         | Best For                                     |
@@ -501,6 +559,8 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="cerebras/llama3.1-70b",
         temperature=0.7,
@@ -525,10 +585,12 @@ In this section, you'll find detailed examples that help you select, configure, 
     
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+
     llm = LLM(
         model="openrouter/deepseek/deepseek-r1",
         base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_API_KEY
+        api_key=os.getenv("OPENROUTER_API_KEY")
     )
     ```
 
@@ -548,12 +610,13 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
   <Tab title="Basic Setup">
     Enable streaming by setting the `stream` parameter to `True` when initializing your LLM:
 
-    ```python
-    from crewai import LLM
+    ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
 
     # Create an LLM with streaming enabled
     llm = LLM(
         model="openai/gpt-4o",
+        api_key=os.getenv("OPENAI_API_KEY"),
         stream=True  # Enable streaming
     )
     ```
@@ -564,8 +627,8 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
   <Tab title="Event Handling">
     CrewAI emits events for each chunk received during streaming:
     
-    ```python
-    from crewai import LLM
+    ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
     from crewai.utilities.events import EventHandler, LLMStreamChunkEvent
     
     class MyEventHandler(EventHandler):
@@ -582,30 +645,48 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
 ## Structured LLM Calls
 
-CrewAI supports structured responses from LLM calls by allowing you to define a `response_format` using a Pydantic model. This enables the framework to automatically parse and validate the output, making it easier to integrate the response into your application without manual post-processing.
+CrewAI supports structured responses from direct LLM calls by allowing you to define a `response_format` parameter when instantiating an LLM. This is distinct from Task outputs, which are handled separately through the Task's `expected_output` parameter.
 
-For example, you can define a Pydantic model to represent the expected response structure and pass it as the `response_format` when instantiating the LLM. The model will then be used to convert the LLM output into a structured Python object.
+The `response_format` parameter is useful for standalone LLM calls when you need structured data:
 
 ```python Code
-from crewai import LLM
+from crewai import Agent, Crew, Process, Task, LLM
+from pydantic import BaseModel
 
 class Dog(BaseModel):
     name: str
     age: int
     breed: str
 
+# Configure LLM with a Pydantic model as response format
+llm = LLM(
+    model="openai/gpt-4o",
+    api_key=os.getenv("OPENAI_API_KEY"),
+    response_format=Dog  # Pass the Pydantic model class, not an instance
+)
 
-llm = LLM(model="gpt-4o", response_format=Dog)
-
+# The LLM will attempt to structure the response according to the Pydantic model
 response = llm.call(
-    "Analyze the following messages and return the name, age, and breed. "
+    "Analyze the following message and extract the name, age, and breed. "
     "Meet Kona! She is 3 years old and is a black german shepherd."
 )
-print(response)
 
-# Output:
-# Dog(name='Kona', age=3, breed='black german shepherd')
+print(response)
+# Output: '{"name":"Kona","age":3,"breed":"Black German Shepherd"}'
 ```
+
+<Warning>
+Using `response_format` with a dictionary like `{"type": "json_object"}` requires including the word "json" in your prompt message, or you'll receive an error: 
+`"'messages' must contain the word 'json' in some form, to use 'response_format' of type 'json_object'"`
+
+Using a Pydantic model as shown above is the recommended approach for direct LLM calls.
+</Warning>
+
+<Note>
+**Important distinction**: The `response_format` parameter is for direct LLM calls only and is separate from the structured outputs you define for Tasks through the `expected_output` parameter. When working with CrewAI Tasks, use the Task's parameters to define output formats.
+
+The `response_format` parameter is only supported by certain LLM providers. If you use an unsupported provider, CrewAI will raise a ValueError.
+</Note>
 
 ## Advanced Features and Optimization
 
@@ -615,8 +696,8 @@ Learn how to get the most out of your LLM configuration:
   <Accordion title="Context Window Management">
     CrewAI includes smart context management features:
 
-    ```python
-    from crewai import LLM
+    ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
 
     # CrewAI automatically handles:
     # 1. Token counting and tracking
@@ -646,7 +727,9 @@ Learn how to get the most out of your LLM configuration:
         - Medium tasks (between 4K-32K): Enhanced models
         - Large tasks (over 32K): Large context models
         
-        ```python
+        ```python Code
+        from crewai import Agent, Crew, Process, Task, LLM
+        
         # Configure model with appropriate settings
         llm = LLM(
             model="openai/gpt-4-turbo-preview",
@@ -696,7 +779,9 @@ Learn how to get the most out of your LLM configuration:
       Always include the provider prefix in model names
     </Check>
     
-    ```python
+    ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
+    
     # Correct
     llm = LLM(model="openai/gpt-4")
     
@@ -708,5 +793,11 @@ Learn how to get the most out of your LLM configuration:
     <Tip>
       Use larger context models for extensive tasks
     </Tip>
+    ```python Code
+    from crewai import Agent, Crew, Process, Task, LLM
     
+    # Example of using a model with larger context window
+    llm = LLM(model="anthropic/claude-3-opus-20240229", temperature=0)
     ```
+  </Tab>
+</Tabs>
