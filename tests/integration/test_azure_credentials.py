@@ -1,5 +1,7 @@
 import pytest
+
 from src.crewai.llm import LLM
+
 
 def test_azure_detection_with_credentials():
     """Test that Azure is detected correctly when credentials are provided but model lacks azure/ prefix."""
