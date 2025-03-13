@@ -1,8 +1,9 @@
-import pytest
 from unittest.mock import patch
 
-from crewai.memory.user.user_memory import UserMemory
+import pytest
+
 from crewai.memory.storage.rag_storage import RAGStorage
+from crewai.memory.user.user_memory import UserMemory
 
 
 @patch('crewai.memory.storage.mem0_storage.Mem0Storage')
