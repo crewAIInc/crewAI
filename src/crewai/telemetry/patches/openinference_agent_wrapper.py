@@ -5,8 +5,8 @@ This patch addresses issue #2366 where OpenTelemetry logs only store
 input.value field for agent calls but no output.value.
 """
 import importlib
-import sys
 import logging
+import sys
 from typing import Any, Optional
 
 # Setup logging
@@ -30,9 +30,9 @@ def patch_crewai_instrumentor():
     try:
         # Try to import OpenInference
         from openinference.instrumentation.crewai import CrewAIInstrumentor
-        from wrapt import wrap_function_wrapper
-        from opentelemetry import trace as trace_api
         from opentelemetry import context as context_api
+        from opentelemetry import trace as trace_api
+        from wrapt import wrap_function_wrapper
         
         # Define the wrapper class
         class _AgentExecuteTaskWrapper:
@@ -55,7 +55,9 @@ def patch_crewai_instrumentor():
                 
                 # Get attributes module if available
                 try:
-                    from openinference.instrumentation import get_attributes_from_context
+                    from openinference.instrumentation import (
+                        get_attributes_from_context,
+                    )
                     from openinference.semconv.trace import OpenInferenceSpanKindValues
                     has_attributes = True
                 except ImportError:
@@ -104,7 +106,9 @@ def patch_crewai_instrumentor():
                     
                     # Add additional attributes if available
                     if has_attributes:
-                        from openinference.instrumentation import get_attributes_from_context
+                        from openinference.instrumentation import (
+                            get_attributes_from_context,
+                        )
                         span.set_attributes(dict(get_attributes_from_context()))
                     
                 return response

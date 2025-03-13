@@ -3,17 +3,21 @@ Test for the OpenInference Agent wrapper patch.
 
 This test verifies that our patch is properly applied.
 """
-import pytest
-import sys
 import importlib
-from unittest.mock import patch, MagicMock, call
+import sys
+from unittest.mock import MagicMock, call, patch
+
+import pytest
+
 from crewai import Agent, Task
 from crewai.utilities.events import AgentExecutionCompletedEvent
 
 
 def test_patch_function_exists():
     """Test that the patch function exists and is callable."""
-    from crewai.telemetry.patches.openinference_agent_wrapper import patch_crewai_instrumentor
+    from crewai.telemetry.patches.openinference_agent_wrapper import (
+        patch_crewai_instrumentor,
+    )
     
     # Verify the patch function exists
     assert callable(patch_crewai_instrumentor)
@@ -22,7 +26,9 @@ def test_patch_function_exists():
 def test_patch_handles_missing_openinference():
     """Test that the patch function handles missing OpenInference gracefully."""
     # Import the patch module
-    from crewai.telemetry.patches.openinference_agent_wrapper import patch_crewai_instrumentor
+    from crewai.telemetry.patches.openinference_agent_wrapper import (
+        patch_crewai_instrumentor,
+    )
     
     # Mock sys.modules to simulate OpenInference not being installed
     original_modules = sys.modules.copy()
@@ -57,7 +63,9 @@ def test_agent_execute_task_emits_event():
     # 4. Verify that the span has both input.value and output.value attributes
     
     # For now, we'll just verify that our patch exists and is callable
-    from crewai.telemetry.patches.openinference_agent_wrapper import patch_crewai_instrumentor
+    from crewai.telemetry.patches.openinference_agent_wrapper import (
+        patch_crewai_instrumentor,
+    )
     assert callable(patch_crewai_instrumentor)
     
     # And that the patch handles missing OpenInference gracefully
