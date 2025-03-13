@@ -739,21 +739,25 @@ class Crew(BaseModel):
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
+            # Set the delegate_to property to all agents in the crew
+            self.manager_agent.delegate_to = self.agents
             manager = self.manager_agent
-            if manager.tools is not None and len(manager.tools) > 0:
-                self._logger.log(
-                    "warning", "Manager agent should not have tools", color="orange"
-                )
-                manager.tools = []
-                raise Exception("Manager agent should not have tools")
+
+            # Instead, we ensure it has delegation tools
+            if not manager.allow_delegation:
+                manager.allow_delegation = True
         else:
             self.manager_llm = create_llm(self.manager_llm)
+            # Create delegation tools
+            delegation_tools = AgentTools(agents=self.agents).tools()
+
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
                 backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
-                tools=AgentTools(agents=self.agents).tools(),
+                tools=delegation_tools,
                 allow_delegation=True,
+                delegate_to=self.agents,
                 llm=self.manager_llm,
                 verbose=self.verbose,
             )
@@ -929,7 +933,15 @@ class Crew(BaseModel):
         return self._merge_tools(tools, code_tools)
 
     def _add_delegation_tools(self, task: Task, tools: List[Tool]):
-        agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
+        # If the agent has specific agents to delegate to, use those
+        if task.agent and task.agent.delegate_to is not None:
+            agents_for_delegation = task.agent.delegate_to
+        else:
+            # Otherwise use all agents except the current one
+            agents_for_delegation = [
+                agent for agent in self.agents if agent != task.agent
+            ]
+
         if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
             if not tools:
                 tools = []

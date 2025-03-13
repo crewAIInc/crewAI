@@ -4021,3 +4021,238 @@ def test_crew_with_knowledge_sources_works_with_copy():
     assert len(crew_copy.tasks) == len(crew.tasks)
 
     assert len(crew_copy.tasks) == len(crew.tasks)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_with_specific_delegation():
+    """Test that agents in a crew can delegate to specific agents using the delegate_to property."""
+    # Create editor agent first since it will be referenced in writer's delegate_to
+    editor = Agent(
+        role="Editor",
+        goal="Edit content",
+        backstory="You're an expert editor",
+        allow_delegation=True,
+    )
+
+    # Create writer with delegate_to set during initialization
+    writer = Agent(
+        role="Writer",
+        goal="Write content",
+        backstory="You're an expert writer",
+        allow_delegation=True,
+        delegate_to=[editor],  # Writer can only delegate to Editor
+    )
+
+    # Create researcher with delegate_to set during initialization
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="You're an expert researcher",
+        allow_delegation=True,
+        delegate_to=[writer],  # Researcher can only delegate to Writer
+    )
+
+    # Create tasks
+    task1 = Task(
+        description="Research a topic",
+        expected_output="Research results",
+        agent=researcher,
+    )
+
+    task2 = Task(
+        description="Write an article",
+        expected_output="Written article",
+        agent=writer,
+    )
+
+    # Create crew
+    crew = Crew(
+        agents=[researcher, writer, editor],
+        tasks=[task1, task2],
+    )
+
+    # Test that the _add_delegation_tools method respects the delegate_to property
+    tools = []
+    tools_with_delegation = crew._add_delegation_tools(task1, tools)
+
+    # Verify that delegation tools are added
+    assert len(tools_with_delegation) > 0
+
+    # Find the delegation tool
+    delegate_tool = None
+    for tool in tools_with_delegation:
+        if "Delegate" in tool.name:
+            delegate_tool = tool
+            break
+
+    assert delegate_tool is not None
+
+    # Verify that the delegation tool only includes the writer
+    assert "Writer" in delegate_tool.description
+    assert "Editor" not in delegate_tool.description
+    assert "Researcher" not in delegate_tool.description
+
+    # Test delegation for the writer
+    tools = []
+    tools_with_delegation = crew._add_delegation_tools(task2, tools)
+
+    # Find the delegation tool
+    delegate_tool = None
+    for tool in tools_with_delegation:
+        if "Delegate" in tool.name:
+            delegate_tool = tool
+            break
+
+    assert delegate_tool is not None
+
+    # Verify that the delegation tool only includes the editor
+    assert "Editor" in delegate_tool.description
+    assert "Writer" not in delegate_tool.description
+    assert "Researcher" not in delegate_tool.description
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_manager_agent_with_tools_and_delegation():
+    """Test that a manager agent can have tools and still delegate to all agents."""
+
+    # Create a simple tool for the manager
+    class SimpleTestTool(BaseTool):
+        name: str = "Simple Test Tool"
+        description: str = "A simple test tool"
+
+        def _run(self) -> str:
+            return "Tool executed"
+
+    # Create agents
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="You're an expert researcher",
+    )
+
+    writer = Agent(
+        role="Writer",
+        goal="Write content",
+        backstory="You're an expert writer",
+    )
+
+    # Create a manager agent with tools
+    manager = Agent(
+        role="Manager",
+        goal="Manage the team",
+        backstory="You're an expert manager",
+        tools=[SimpleTestTool()],
+        allow_delegation=True,
+    )
+
+    # Create a crew with the manager agent
+    crew = Crew(
+        agents=[researcher, writer],
+        manager_agent=manager,
+        process=Process.hierarchical,
+    )
+
+    # Verify that the manager agent has tools
+    assert len(manager.tools) == 1
+    assert manager.tools[0].name == "Simple Test Tool"
+
+    # Verify that the manager agent can delegate to all agents
+    assert manager.allow_delegation is True
+    assert manager.delegate_to == crew.agents
+
+    # Create a task
+    task = Task(
+        description="Complete a project",
+        expected_output="Project completed",
+    )
+
+    # Create a crew with the task
+    crew = Crew(
+        agents=[researcher, writer],
+        manager_agent=manager,
+        tasks=[task],
+        process=Process.hierarchical,
+    )
+
+    # Mock the execute_task method to avoid actual execution
+    with patch.object(Agent, "execute_task", return_value="Task executed"):
+        # Run the crew
+        result = crew.kickoff()
+
+        # Verify that the result is as expected
+        assert result.raw == "Task executed"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_with_default_delegation():
+    """Test that an agent with allow_delegation=True but without delegate_to specified can delegate to all agents in the crew."""
+    # Create agents
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="You're an expert researcher",
+        allow_delegation=True,  # Allow delegation but don't specify delegate_to
+    )
+
+    writer = Agent(
+        role="Writer",
+        goal="Write content",
+        backstory="You're an expert writer",
+        allow_delegation=True,  # Allow delegation but don't specify delegate_to
+    )
+
+    editor = Agent(
+        role="Editor",
+        goal="Edit content",
+        backstory="You're an expert editor",
+        allow_delegation=True,  # Allow delegation but don't specify delegate_to
+    )
+
+    # Create tasks
+    task1 = Task(
+        description="Research a topic",
+        expected_output="Research results",
+        agent=researcher,
+    )
+
+    task2 = Task(
+        description="Write content based on research",
+        expected_output="Written content",
+        agent=writer,
+    )
+
+    task3 = Task(
+        description="Edit the content",
+        expected_output="Edited content",
+        agent=editor,
+    )
+
+    # Create crew
+    crew = Crew(
+        agents=[researcher, writer, editor],
+        tasks=[task1, task2, task3],
+    )
+
+    # Verify that all agents have allow_delegation=True
+    for agent in crew.agents:
+        assert agent.allow_delegation is True
+        # Verify that delegate_to is None (default delegation to all)
+        assert agent.delegate_to is None
+
+    # Get delegation tools for researcher
+    delegation_tools = researcher.get_delegation_tools(crew.agents)
+
+    # Verify that tools for all agents are returned
+    assert len(delegation_tools) == 2  # Delegate and Ask tools
+
+    # Check that the tools can delegate to all agents
+    delegate_tool = delegation_tools[0]
+    ask_tool = delegation_tools[1]
+
+    # Verify the tools description includes all agents
+    assert "Researcher" in delegate_tool.description
+    assert "Writer" in delegate_tool.description
+    assert "Editor" in delegate_tool.description
+    assert "Researcher" in ask_tool.description
+    assert "Writer" in ask_tool.description
+    assert "Editor" in ask_tool.description

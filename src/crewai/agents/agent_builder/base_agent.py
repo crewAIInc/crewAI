@@ -2,7 +2,7 @@ import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Dict, List, Optional, Sequence, TypeVar
 
 from pydantic import (
     UUID4,
@@ -41,6 +41,7 @@ class BaseAgent(ABC, BaseModel):
         verbose (bool): Verbose mode for the Agent Execution.
         max_rpm (Optional[int]): Maximum number of requests per minute for the agent execution.
         allow_delegation (bool): Allow delegation of tasks to agents.
+        delegate_to (Optional[List["BaseAgent"]]): List of agents this agent can delegate to. If None and allow_delegation is True, can delegate to all agents.
         tools (Optional[List[Any]]): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task.
         agent_executor (InstanceOf): An instance of the CrewAgentExecutor class.
@@ -61,7 +62,7 @@ class BaseAgent(ABC, BaseModel):
             Abstract method to create an agent executor.
         _parse_tools(tools: List[BaseTool]) -> List[Any]:
             Abstract method to parse tools.
-        get_delegation_tools(agents: List["BaseAgent"]):
+        get_delegation_tools(agents: Sequence["BaseAgent"]) -> List[BaseTool]:
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
         get_output_converter(llm, model, instructions):
             Abstract method to get the converter class for the agent to create json/pydantic outputs.
@@ -110,6 +111,10 @@ class BaseAgent(ABC, BaseModel):
     allow_delegation: bool = Field(
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
+    )
+    delegate_to: Optional[List["BaseAgent"]] = Field(
+        default=None,
+        description="List of agents this agent can delegate to. If None and allow_delegation is True, can delegate to all agents.",
     )
     tools: Optional[List[BaseTool]] = Field(
         default_factory=list, description="Tools at agents' disposal"
@@ -248,7 +253,7 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence["BaseAgent"]) -> List[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
         pass
 
@@ -275,6 +280,7 @@ class BaseAgent(ABC, BaseModel):
             "knowledge_sources",
             "knowledge_storage",
             "knowledge",
+            "delegate_to",
         }
 
         # Copy llm
@@ -300,6 +306,11 @@ class BaseAgent(ABC, BaseModel):
                 copied_source.storage = shared_storage
                 existing_knowledge_sources.append(copied_source)
 
+        # Copy delegate_to if it exists
+        existing_delegate_to = None
+        if self.delegate_to:
+            existing_delegate_to = list(self.delegate_to)
+
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
         copied_agent = type(self)(
@@ -309,6 +320,7 @@ class BaseAgent(ABC, BaseModel):
             knowledge_sources=existing_knowledge_sources,
             knowledge=copied_knowledge,
             knowledge_storage=copied_knowledge_storage,
+            delegate_to=existing_delegate_to,
         )
 
         return copied_agent
