@@ -18,10 +18,7 @@ class AISuiteLLM(BaseLLM):
         available_functions: Optional[Dict[str, Any]] = None,
     ) -> Union[str, Any]:
         completion_params = self._prepare_completion_params(messages, tools)
-        # print(f"Completion params: {completion_params}")
         response = self.client.chat.completions.create(**completion_params)
-
-        tool_calls = getattr(response.choices[0].message, "tool_calls", [])
 
         return response.choices[0].message.content
 
