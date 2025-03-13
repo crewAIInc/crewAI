@@ -7,18 +7,16 @@ input.value field for agent calls but no output.value.
 import importlib
 import logging
 import sys
-from typing import Any, Optional
+from typing import Any, Callable, Dict, Optional, Tuple, cast
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
-# Constants for attribute names
-OUTPUT_VALUE = "output.value"
-INPUT_VALUE = "input.value"
-OPENINFERENCE_SPAN_KIND = "openinference.span.kind"
+# Import constants from span_attributes
+from .span_attributes import OpenInferenceSpanKindValues, SpanAttributes
 
 
-def patch_crewai_instrumentor():
+def patch_crewai_instrumentor() -> bool:
     """
     Patch the CrewAIInstrumentor._instrument method to add our wrapper.
     
@@ -26,6 +24,9 @@ def patch_crewai_instrumentor():
     instrumentation for Agent.execute_task.
     
     The patch is applied only if OpenInference is installed.
+    
+    Returns:
+        bool: True if the patch was applied successfully, False otherwise.
     """
     try:
         # Try to import OpenInference
@@ -34,45 +35,54 @@ def patch_crewai_instrumentor():
         from opentelemetry import trace as trace_api
         from wrapt import wrap_function_wrapper
         
+        # Check OpenInference version
+        try:
+            from importlib.metadata import version
+            openinference_version = version("openinference-instrumentation-crewai")
+            logger.info(f"OpenInference CrewAI instrumentation version: {openinference_version}")
+        except ImportError:
+            openinference_version = "unknown"
+            logger.warning("Could not determine OpenInference version")
+        
         # Define the wrapper class
         class _AgentExecuteTaskWrapper:
             """Wrapper for Agent.execute_task to capture both input and output values."""
             
             def __init__(self, tracer: trace_api.Tracer) -> None:
+                """
+                Initialize the wrapper with a tracer.
+                
+                Args:
+                    tracer: The OpenTelemetry tracer to use for creating spans.
+                """
                 self._tracer = tracer
 
             def __call__(
                 self,
-                wrapped: Any,
+                wrapped: Callable[..., Any],
                 instance: Any,
-                args: tuple,
-                kwargs: dict,
+                args: Tuple[Any, ...],
+                kwargs: Dict[str, Any],
             ) -> Any:
+                """
+                Wrap the Agent.execute_task method to capture telemetry data.
+                
+                Args:
+                    wrapped: The original method being wrapped.
+                    instance: The instance the method is bound to.
+                    args: Positional arguments to the method.
+                    kwargs: Keyword arguments to the method.
+                    
+                Returns:
+                    The result of the wrapped method.
+                """
                 if context_api.get_value(context_api._SUPPRESS_INSTRUMENTATION_KEY):
                     return wrapped(*args, **kwargs)
                 
                 span_name = f"{instance.__class__.__name__}.execute_task"
                 
-                # Get attributes module if available
-                try:
-                    from openinference.instrumentation import (
-                        get_attributes_from_context,
-                    )
-                    from openinference.semconv.trace import OpenInferenceSpanKindValues
-                    has_attributes = True
-                except ImportError:
-                    has_attributes = False
-                
-                # Create span attributes
-                span_attributes = {}
-                if has_attributes:
-                    span_attributes[OPENINFERENCE_SPAN_KIND] = OpenInferenceSpanKindValues.AGENT
-                else:
-                    span_attributes[OPENINFERENCE_SPAN_KIND] = "agent"
-                
-                # Add input value
-                task = kwargs.get("task", args[0] if args else None)
-                span_attributes[INPUT_VALUE] = str(task)
+                # Create span context
+                span_attributes = self._create_span_context(instance, args, kwargs)
                 
                 with self._tracer.start_as_current_span(
                     span_name,
@@ -80,19 +90,9 @@ def patch_crewai_instrumentor():
                     record_exception=False,
                     set_status_on_exception=False,
                 ) as span:
-                    agent = instance
-                    
-                    if agent.crew:
-                        span.set_attribute("crew_key", agent.crew.key)
-                        span.set_attribute("crew_id", str(agent.crew.id))
-                    
-                    span.set_attribute("agent_key", agent.key)
-                    span.set_attribute("agent_id", str(agent.id))
-                    span.set_attribute("agent_role", agent.role)
-                    
-                    if task:
-                        span.set_attribute("task_key", task.key)
-                        span.set_attribute("task_id", str(task.id))
+                    # Add agent and task attributes
+                    self._add_agent_attributes(span, instance)
+                    self._add_task_attributes(span, args, kwargs)
                     
                     try:
                         response = wrapped(*args, **kwargs)
@@ -102,16 +102,98 @@ def patch_crewai_instrumentor():
                         raise
                         
                     span.set_status(trace_api.StatusCode.OK)
-                    span.set_attribute(OUTPUT_VALUE, str(response))
+                    span.set_attribute(SpanAttributes.OUTPUT_VALUE, str(response))
                     
                     # Add additional attributes if available
-                    if has_attributes:
-                        from openinference.instrumentation import (
-                            get_attributes_from_context,
-                        )
-                        span.set_attributes(dict(get_attributes_from_context()))
+                    self._add_context_attributes(span)
                     
                 return response
+            
+            def _create_span_context(
+                self, 
+                instance: Any, 
+                args: Tuple[Any, ...],
+                kwargs: Dict[str, Any]
+            ) -> Dict[str, Any]:
+                """
+                Create the initial span context with attributes.
+                
+                Args:
+                    instance: The agent instance.
+                    args: Positional arguments to the method.
+                    kwargs: Keyword arguments to the method.
+                    
+                Returns:
+                    A dictionary of span attributes.
+                """
+                # Get attributes module if available
+                try:
+                    from openinference.semconv.trace import (
+                        OpenInferenceSpanKindValues as OISpanKindValues,
+                    )
+                    span_attributes = {
+                        SpanAttributes.OPENINFERENCE_SPAN_KIND: OISpanKindValues.AGENT
+                    }
+                except ImportError:
+                    span_attributes = {
+                        SpanAttributes.OPENINFERENCE_SPAN_KIND: "agent"
+                    }
+                
+                # Add input value
+                task = kwargs.get("task", args[0] if args else None)
+                span_attributes[SpanAttributes.INPUT_VALUE] = str(task)
+                
+                return span_attributes
+            
+            def _add_agent_attributes(self, span: trace_api.Span, agent: Any) -> None:
+                """
+                Add agent-specific attributes to the span.
+                
+                Args:
+                    span: The span to add attributes to.
+                    agent: The agent instance.
+                """
+                if agent.crew:
+                    span.set_attribute("crew_key", agent.crew.key)
+                    span.set_attribute("crew_id", str(agent.crew.id))
+                
+                span.set_attribute("agent_key", agent.key)
+                span.set_attribute("agent_id", str(agent.id))
+                span.set_attribute("agent_role", agent.role)
+            
+            def _add_task_attributes(
+                self, 
+                span: trace_api.Span, 
+                args: Tuple[Any, ...],
+                kwargs: Dict[str, Any]
+            ) -> None:
+                """
+                Add task-specific attributes to the span.
+                
+                Args:
+                    span: The span to add attributes to.
+                    args: Positional arguments to the method.
+                    kwargs: Keyword arguments to the method.
+                """
+                task = kwargs.get("task", args[0] if args else None)
+                if task:
+                    span.set_attribute("task_key", task.key)
+                    span.set_attribute("task_id", str(task.id))
+            
+            def _add_context_attributes(self, span: trace_api.Span) -> None:
+                """
+                Add additional context attributes to the span if available.
+                
+                Args:
+                    span: The span to add attributes to.
+                """
+                try:
+                    from openinference.instrumentation import (
+                        get_attributes_from_context,
+                    )
+                    span.set_attributes(dict(get_attributes_from_context()))
+                except ImportError:
+                    pass
         
         # Store original methods
         original_instrument = CrewAIInstrumentor._instrument
@@ -119,6 +201,12 @@ def patch_crewai_instrumentor():
         
         # Define patched instrument method
         def patched_instrument(self, **kwargs: Any) -> None:
+            """
+            Patched _instrument method that adds our wrapper.
+            
+            Args:
+                **kwargs: Keyword arguments to pass to the original method.
+            """
             # Call the original _instrument method
             original_instrument(self, **kwargs)
             
@@ -136,6 +224,12 @@ def patch_crewai_instrumentor():
         
         # Define patched uninstrument method
         def patched_uninstrument(self, **kwargs: Any) -> None:
+            """
+            Patched _uninstrument method that cleans up our wrapper.
+            
+            Args:
+                **kwargs: Keyword arguments to pass to the original method.
+            """
             # Call the original _uninstrument method
             original_uninstrument(self, **kwargs)
             
