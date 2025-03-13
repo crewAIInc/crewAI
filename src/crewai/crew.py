@@ -116,7 +116,7 @@ class Crew(BaseModel):
     name: Optional[str] = Field(default=None)
     cache: bool = Field(default=True)
     tasks: List[Task] = Field(default_factory=list)
-    agents: List[BaseAgent] = Field(default_factory=list)
+    agents: Sequence[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
     memory: bool = Field(
@@ -802,7 +802,10 @@ class Crew(BaseModel):
                 )
 
             # Determine which tools to use - task tools take precedence over agent tools
-            tools_for_task = task.tools or agent_to_use.tools or []
+            tools_for_task: Sequence[BaseTool] = task.tools or agent_to_use.tools or []
+            # Ensure tools_for_task is a Sequence[BaseTool]
+            if not isinstance(tools_for_task, Sequence):
+                tools_for_task = list(tools_for_task) if tools_for_task else []
             tools_for_task = self._prepare_tools(agent_to_use, task, tools_for_task)
 
             self._log_task_start(task, agent_to_use.role)
@@ -873,7 +876,7 @@ class Crew(BaseModel):
 
     def _prepare_tools(
         self, agent: BaseAgent, task: Task, tools: Sequence[BaseTool]
-    ) -> Sequence[BaseTool]:
+    ) -> list[BaseTool]:
         # Add delegation tools if agent allows delegation
         if agent.allow_delegation:
             if self.process == Process.hierarchical:
@@ -894,7 +897,7 @@ class Crew(BaseModel):
         if hasattr(agent, "multimodal") and agent.multimodal:
             tools = self._add_multimodal_tools(agent, tools)
 
-        return tools
+        return list(tools)  # Ensure we return a list, not just a Sequence
 
     def _get_agent_to_use(self, task: Task) -> Optional[BaseAgent]:
         if self.process == Process.hierarchical:

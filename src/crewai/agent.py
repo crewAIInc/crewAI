@@ -1,7 +1,7 @@
 import re
 import shutil
 import subprocess
-from typing import Any, Dict, List, Literal, Optional, Sequence, Union
+from typing import Any, Dict, List, Literal, Optional, Sequence, Union, cast
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -342,12 +342,12 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: Sequence[BaseAgent]):
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> Sequence[BaseTool]:
         # If delegate_to is specified, use those agents instead of all agents
         if self.delegate_to is not None:
-            agents_to_use = self.delegate_to
+            agents_to_use = cast(List[BaseAgent], list(self.delegate_to))
         else:
-            agents_to_use = agents
+            agents_to_use = list(agents)  # Convert to list to match expected type
 
         agent_tools = AgentTools(agents=agents_to_use)
         delegation_tools = agent_tools.tools()
