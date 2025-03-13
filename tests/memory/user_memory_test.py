@@ -1,6 +1,6 @@
-from unittest.mock import patch, PropertyMock
-
 import pytest
+
+from unittest.mock import patch, PropertyMock
 
 from crewai.memory.storage.rag_storage import RAGStorage
 from crewai.memory.user.user_memory import UserMemory
