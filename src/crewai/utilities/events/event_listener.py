@@ -176,14 +176,14 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(FlowCreatedEvent)
         def on_flow_created(source, event: FlowCreatedEvent):
             self._telemetry.flow_creation_span(event.flow_name)
-            self.formatter.create_flow_tree(event.flow_name)
+            self.formatter.create_flow_tree(event.flow_name, str(source.flow_id))
 
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source, event: FlowStartedEvent):
             self._telemetry.flow_execution_span(
                 event.flow_name, list(source._methods.keys())
             )
-            self.formatter.start_flow(event.flow_name)
+            self.formatter.start_flow(event.flow_name, str(source.flow_id))
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event: FlowFinishedEvent):

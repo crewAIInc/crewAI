@@ -121,8 +121,6 @@ class ConsoleFormatter:
             ID=source_id,
         )
 
-        self.print(tree)
-        self.print()
         self.print_panel(content, title, style)
 
     def create_crew_tree(self, crew_name: str, source_id: str) -> Optional[Tree]:
@@ -255,44 +253,42 @@ class ConsoleFormatter:
         self.print(crew_tree)
         self.print()
 
-    def create_flow_tree(self, flow_name: str) -> Tree:
+    def create_flow_tree(self, flow_name: str, flow_id: str) -> Optional[Tree]:
         """Create and initialize a flow tree."""
-
         content = self.create_status_content(
-            "Starting Flow Execution", flow_name, "blue"
+            "Starting Flow Execution", flow_name, "blue", ID=flow_id
         )
-
         self.print_panel(content, "Flow Execution", "blue", is_flow=True)
 
-        # Create initial tree
+        # Create initial tree with flow ID
         flow_label = Text()
         flow_label.append("🌊 Flow: ", style="blue bold")
         flow_label.append(flow_name, style="blue")
+        flow_label.append("\n    ID: ", style="white")
+        flow_label.append(flow_id, style="blue")
 
         flow_tree = Tree(flow_label)
         self.add_tree_node(flow_tree, "✨ Created", "blue")
         self.add_tree_node(flow_tree, "✅ Initialization Complete", "green")
 
-        self.print(flow_tree)
-        self.print()
-
-        # Set the current_flow_tree attribute directly
-        self.current_flow_tree = flow_tree
-
         return flow_tree
 
-    def start_flow(self, flow_name: str) -> Optional[Tree]:
+    def start_flow(self, flow_name: str, flow_id: str) -> Optional[Tree]:
         """Initialize a flow execution tree."""
         flow_tree = Tree("")
-        self.update_tree_label(flow_tree, "🌊 Flow:", flow_name, "blue", "In Progress")
-        self.add_tree_node(flow_tree, "🧠 Initializing...", "yellow")
+        flow_label = Text()
+        flow_label.append("🌊 Flow: ", style="blue bold")
+        flow_label.append(flow_name, style="blue")
+        flow_label.append("\n    ID: ", style="white")
+        flow_label.append(flow_id, style="blue")
+        flow_tree.label = flow_label
+
+        self.add_tree_node(flow_tree, "🧠 Starting Flow...", "yellow")
 
         self.print(flow_tree)
         self.print()
 
-        # Set the current_flow_tree attribute directly
         self.current_flow_tree = flow_tree
-
         return flow_tree
 
     def update_flow_status(
@@ -303,15 +299,29 @@ class ConsoleFormatter:
         status: str = "completed",
     ) -> None:
         """Update flow status in the tree."""
-        if not self.verbose or flow_tree is None:
+        if flow_tree is None:
             return
 
+        # Update main flow label
         self.update_tree_label(
             flow_tree,
             "✅ Flow Finished:" if status == "completed" else "❌ Flow Failed:",
             flow_name,
             "green" if status == "completed" else "red",
         )
+
+        # Update initialization node status
+        for child in flow_tree.children:
+            if "Starting Flow" in str(child.label):
+                child.label = Text(
+                    (
+                        "✅ Flow Completed"
+                        if status == "completed"
+                        else "❌ Flow Failed"
+                    ),
+                    style="green" if status == "completed" else "red",
+                )
+                break
 
         content = self.create_status_content(
             (
@@ -323,6 +333,7 @@ class ConsoleFormatter:
             "green" if status == "completed" else "red",
             ID=flow_id,
         )
+        self.print(flow_tree)
         self.print_panel(
             content, "Flow Completion", "green" if status == "completed" else "red"
         )
@@ -335,16 +346,25 @@ class ConsoleFormatter:
         status: str = "running",
     ) -> Optional[Tree]:
         """Update method status in the flow tree."""
-        # Early return if verbose is disabled or flow_tree is None
-        if not self.verbose or flow_tree is None:
+        if not flow_tree:
             return None
 
         if status == "running":
             prefix, style = "🔄 Running:", "yellow"
         elif status == "completed":
             prefix, style = "✅ Completed:", "green"
+            # Update initialization node when a method completes successfully
+            for child in flow_tree.children:
+                if "Starting Flow" in str(child.label):
+                    child.label = Text("Flow Method Step", style="white")
+                    break
         else:
             prefix, style = "❌ Failed:", "red"
+            # Update initialization node on failure
+            for child in flow_tree.children:
+                if "Starting Flow" in str(child.label):
+                    child.label = Text("❌ Flow Step Failed", style="red")
+                    break
 
         if not method_branch:
             # Find or create method branch
@@ -361,10 +381,6 @@ class ConsoleFormatter:
 
         self.print(flow_tree)
         self.print()
-
-        # Set the current_method_branch attribute directly
-        self.current_method_branch = method_branch
-
         return method_branch
 
     def handle_tool_usage_started(
