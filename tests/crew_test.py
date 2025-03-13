@@ -4153,6 +4153,9 @@ def test_manager_agent_with_tools_and_delegation():
         process=Process.hierarchical,
     )
 
+    # Explicitly call _create_manager_agent to set up delegation
+    crew._create_manager_agent()
+
     # Verify that the manager agent has tools
     assert len(manager.tools) == 1
     assert manager.tools[0].name == "Simple Test Tool"
