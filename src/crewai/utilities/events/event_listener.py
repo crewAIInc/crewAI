@@ -1,8 +1,7 @@
 from io import StringIO
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from pydantic import Field, PrivateAttr
-from rich.tree import Tree
 
 from crewai.task import Task
 from crewai.telemetry.telemetry import Telemetry
