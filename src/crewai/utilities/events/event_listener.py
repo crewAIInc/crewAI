@@ -15,7 +15,13 @@ from crewai.utilities.events.llm_events import (
     LLMStreamChunkEvent,
 )
 
-from .agent_events import AgentExecutionCompletedEvent, AgentExecutionStartedEvent
+from .agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionStartedEvent,
+    LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionErrorEvent,
+    LiteAgentExecutionStartedEvent,
+)
 from .crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
@@ -189,6 +195,33 @@ class EventListener(BaseEventListener):
         def on_agent_execution_completed(source, event: AgentExecutionCompletedEvent):
             self.logger.log(
                 f"✅ Agent '{event.agent.role}' completed task",
+                event.timestamp,
+            )
+
+        # ----------- LITE AGENT EVENTS -----------
+
+        @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
+        def on_lite_agent_execution_started(
+            source, event: LiteAgentExecutionStartedEvent
+        ):
+            self.logger.log(
+                f"🤖 LiteAgent '{event.agent_info['role']}' started execution",
+                event.timestamp,
+            )
+
+        @crewai_event_bus.on(LiteAgentExecutionCompletedEvent)
+        def on_lite_agent_execution_completed(
+            source, event: LiteAgentExecutionCompletedEvent
+        ):
+            self.logger.log(
+                f"✅ LiteAgent '{event.agent_info['role']}' completed execution",
+                event.timestamp,
+            )
+
+        @crewai_event_bus.on(LiteAgentExecutionErrorEvent)
+        def on_lite_agent_execution_error(source, event: LiteAgentExecutionErrorEvent):
+            self.logger.log(
+                f"❌ LiteAgent '{event.agent_info['role']}' execution error: {event.error}",
                 event.timestamp,
             )
 
