@@ -232,7 +232,7 @@ class ContentCrew():
     def review_section_task(self) -> Task:
         return Task(
             config=self.tasks_config['review_section_task'],
-            context=[self.write_section_task]
+            context=[self.write_section_task()]
         )
 
     @crew
