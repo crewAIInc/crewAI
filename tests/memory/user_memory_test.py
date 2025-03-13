@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 
 import pytest
 
@@ -34,11 +34,11 @@ def test_user_memory_provider_selection(mock_memory_client, mock_mem0_storage):
         mock_rag.assert_called_once()
 
 
-@patch('crewai.memory.user.user_memory.UserMemory._is_mem0_storage')
-def test_user_memory_save_formatting(mock_is_mem0):
+@patch('crewai.memory.user.user_memory.UserMemory._memory_provider', new_callable=PropertyMock)
+def test_user_memory_save_formatting(mock_memory_provider):
     """Test that UserMemory formats data correctly based on provider."""
     # Test with mem0 provider
-    mock_is_mem0.return_value = True
+    mock_memory_provider.return_value = "mem0"
     with patch('crewai.memory.memory.Memory.save') as mock_save:
         user_memory = UserMemory()
         user_memory.save("test data")
@@ -48,7 +48,7 @@ def test_user_memory_save_formatting(mock_is_mem0):
         assert "Remember the details about the user: test data" in args[0]
     
     # Test with RAG provider
-    mock_is_mem0.return_value = False
+    mock_memory_provider.return_value = None
     with patch('crewai.memory.memory.Memory.save') as mock_save:
         user_memory = UserMemory()
         user_memory.save("test data")

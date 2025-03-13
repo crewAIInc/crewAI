@@ -96,12 +96,9 @@ class ContextualMemory:
         user_memories = self.um.search(query)
         if not user_memories:
             return ""
-
-        # Check if the memory provider is mem0 by looking at the storage type
-        is_mem0 = hasattr(self.um.storage, "__class__") and self.um.storage.__class__.__name__ == "Mem0Storage"
         
         formatted_memories = "\n".join(
-            f"- {result['memory'] if is_mem0 else result['context']}"
+            f"- {result['memory'] if self.um._memory_provider == 'mem0' else result['context']}"
             for result in user_memories
         )
         return f"User memories/preferences:\n{formatted_memories}"
