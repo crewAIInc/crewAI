@@ -37,18 +37,22 @@ automatically created by CrewAI or explicitly set by the user.
 To utilize the hierarchical process, it's essential to explicitly set the process attribute to `Process.hierarchical`, as the default behavior is `Process.sequential`. 
 Define a crew with a designated manager and establish a clear chain of command.
 
-<Tip>
-    Assign tools at the agent level to facilitate task delegation and execution by the designated agents under the manager's guidance. 
-    Tools can also be specified at the task level for precise control over tool availability during task execution.
-</Tip>
+Configuring the `manager_llm` parameter is crucial for the hierarchical process. The system requires a manager LLM to be set up for proper function, ensuring tailored decision-making.
+
 
 <Tip>
-    Configuring the `manager_llm` parameter is crucial for the hierarchical process. 
-    The system requires a manager LLM to be set up for proper function, ensuring tailored decision-making.
+    **LLM Model Recommendations for Manager Agents**
+    
+    Not all LLM models perform equally well with delegation tasks:
+    
+    - **Recommended**: More capable models like `GPT-4o` work well for manager agents and delegation
+    - **Not Recommended**: Smaller models like `GPT-4o-mini` and `smaller local models` struggle with delegation
+    
+    For best results with hierarchical processes, use more powerful models for your `manager_llm`.
 </Tip>
 
 ```python Code
-from crewai import Crew, Process, Agent
+from crewai import Agent, Crew, Process, Task, LLM
 
 # Agents are defined with attributes for backstory, cache, and verbose mode
 researcher = Agent(
