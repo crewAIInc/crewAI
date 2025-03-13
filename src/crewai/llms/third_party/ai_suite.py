@@ -17,24 +17,24 @@ class AISuiteLLM(BaseLLM):
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
     ) -> Union[str, Any]:
-        completion_params = self._prepare_completion_params(messages)
+        completion_params = self._prepare_completion_params(messages, tools)
         # print(f"Completion params: {completion_params}")
         response = self.client.chat.completions.create(**completion_params)
-        print(f"Response: {response}")
+
         tool_calls = getattr(response.choices[0].message, "tool_calls", [])
-        print(f"Tool calls: {tool_calls}")
+
         return response.choices[0].message.content
 
     def _prepare_completion_params(
-        self, messages: Union[str, List[Dict[str, str]]]
+        self,
+        messages: Union[str, List[Dict[str, str]]],
+        tools: Optional[List[dict]] = None,
     ) -> Dict[str, Any]:
-        print(f"Preparing completion params for {self.model}")
-        # print(f"Messages: {messages}")
-        print(f"Temperature: {self.temperature}")
         return {
             "model": self.model,
             "messages": messages,
             "temperature": self.temperature,
+            "tools": tools,
         }
 
     def supports_function_calling(self) -> bool:
