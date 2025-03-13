@@ -15,7 +15,7 @@ class AgentTools:
         self.agents = agents
         self.i18n = i18n
 
-    def tools(self) -> list[BaseTool]:
+    def tools(self) -> Sequence[BaseTool]:
         """Get all available agent tools"""
         coworkers = ", ".join([f"{agent.role}" for agent in self.agents])
 

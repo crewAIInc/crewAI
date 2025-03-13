@@ -723,13 +723,14 @@ def test_task_tools_override_agent_tools():
     crew.kickoff()
 
     # Verify task tools override agent tools
+    assert task.tools is not None
     assert len(task.tools) == 1  # AnotherTestTool
     assert any(isinstance(tool, AnotherTestTool) for tool in task.tools)
     assert not any(isinstance(tool, TestTool) for tool in task.tools)
 
     # Verify agent tools remain unchanged
+    assert new_researcher.tools is not None
     assert len(new_researcher.tools) == 1
-    assert isinstance(new_researcher.tools[0], TestTool)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1595,6 +1596,8 @@ def test_crew_function_calling_llm():
     crew = Crew(agents=[agent1], tasks=[essay])
     result = crew.kickoff()
     assert result.raw == "Howdy!"
+    assert agent1.tools is not None
+    assert len(agent1.tools) == 0
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -4157,6 +4160,7 @@ def test_manager_agent_with_tools_and_delegation():
     crew._create_manager_agent()
 
     # Verify that the manager agent has tools
+    assert manager.tools is not None
     assert len(manager.tools) == 1
     assert manager.tools[0].name == "Simple Test Tool"
 

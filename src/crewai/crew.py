@@ -6,7 +6,7 @@ import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 from pydantic import (
     UUID4,
@@ -35,6 +35,7 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import Tool
 from crewai.types.usage_metrics import UsageMetrics
@@ -871,8 +872,8 @@ class Crew(BaseModel):
         return None
 
     def _prepare_tools(
-        self, agent: BaseAgent, task: Task, tools: List[Tool]
-    ) -> List[Tool]:
+        self, agent: BaseAgent, task: Task, tools: Sequence[BaseTool]
+    ) -> Sequence[BaseTool]:
         # Add delegation tools if agent allows delegation
         if agent.allow_delegation:
             if self.process == Process.hierarchical:
@@ -887,10 +888,10 @@ class Crew(BaseModel):
                 tools = self._add_delegation_tools(task, tools)
 
         # Add code execution tools if agent allows code execution
-        if agent.allow_code_execution:
+        if hasattr(agent, "allow_code_execution") and agent.allow_code_execution:
             tools = self._add_code_execution_tools(agent, tools)
 
-        if agent and agent.multimodal:
+        if hasattr(agent, "multimodal") and agent.multimodal:
             tools = self._add_multimodal_tools(agent, tools)
 
         return tools
@@ -901,8 +902,8 @@ class Crew(BaseModel):
         return task.agent
 
     def _merge_tools(
-        self, existing_tools: List[Tool], new_tools: List[Tool]
-    ) -> List[Tool]:
+        self, existing_tools: Sequence[BaseTool], new_tools: Sequence[BaseTool]
+    ) -> Sequence[BaseTool]:
         """Merge new tools into existing tools list, avoiding duplicates by tool name."""
         if not new_tools:
             return existing_tools
@@ -919,20 +920,29 @@ class Crew(BaseModel):
         return tools
 
     def _inject_delegation_tools(
-        self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]
+        self,
+        tools: Sequence[BaseTool],
+        task_agent: BaseAgent,
+        agents: Sequence[BaseAgent],
     ):
         delegation_tools = task_agent.get_delegation_tools(agents)
         return self._merge_tools(tools, delegation_tools)
 
-    def _add_multimodal_tools(self, agent: BaseAgent, tools: List[Tool]):
+    def _add_multimodal_tools(
+        self, agent: BaseAgent, tools: Sequence[BaseTool]
+    ) -> Sequence[BaseTool]:
         multimodal_tools = agent.get_multimodal_tools()
         return self._merge_tools(tools, multimodal_tools)
 
-    def _add_code_execution_tools(self, agent: BaseAgent, tools: List[Tool]):
+    def _add_code_execution_tools(
+        self, agent: BaseAgent, tools: Sequence[BaseTool]
+    ) -> Sequence[BaseTool]:
         code_tools = agent.get_code_execution_tools()
         return self._merge_tools(tools, code_tools)
 
-    def _add_delegation_tools(self, task: Task, tools: List[Tool]):
+    def _add_delegation_tools(
+        self, task: Task, tools: Sequence[BaseTool]
+    ) -> Sequence[BaseTool]:
         # If the agent has specific agents to delegate to, use those
         if task.agent and task.agent.delegate_to is not None:
             agents_for_delegation = task.agent.delegate_to
@@ -956,7 +966,7 @@ class Crew(BaseModel):
                 task_name=task.name, task=task.description, agent=role, status="started"
             )
 
-    def _update_manager_tools(self, task: Task, tools: List[Tool]):
+    def _update_manager_tools(self, task: Task, tools: Sequence[BaseTool]):
         if self.manager_agent:
             if task.agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])

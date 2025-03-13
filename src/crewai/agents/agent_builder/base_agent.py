@@ -62,7 +62,7 @@ class BaseAgent(ABC, BaseModel):
             Abstract method to create an agent executor.
         _parse_tools(tools: List[BaseTool]) -> List[Any]:
             Abstract method to parse tools.
-        get_delegation_tools(agents: Sequence["BaseAgent"]) -> List[BaseTool]:
+        get_delegation_tools(agents: Sequence["BaseAgent"]) -> Sequence[BaseTool]:
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
         get_output_converter(llm, model, instructions):
             Abstract method to get the converter class for the agent to create json/pydantic outputs.
@@ -253,7 +253,7 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: Sequence["BaseAgent"]) -> List[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence["BaseAgent"]) -> Sequence[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
         pass
 
