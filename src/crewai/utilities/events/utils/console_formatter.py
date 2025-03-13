@@ -85,13 +85,13 @@ class ConsoleFormatter:
 
     def update_crew_tree(
         self,
-        tree: Tree,
+        tree: Optional[Tree],
         crew_name: str,
         source_id: str,
         status: str = "completed",
     ) -> None:
         """Handle crew tree updates with consistent formatting."""
-        if not self.verbose:
+        if not self.verbose or tree is None:
             return
 
         if status == "completed":
@@ -142,6 +142,10 @@ class ConsoleFormatter:
         )
 
         self.print_panel(content, "Crew Execution Started", "cyan")
+
+        # Set the current_crew_tree attribute directly
+        self.current_crew_tree = tree
+
         return tree
 
     def create_task_branch(
@@ -156,6 +160,7 @@ class ConsoleFormatter:
         task_content.append("\n   Status: ", style="white")
         task_content.append("Executing Task...", style="yellow dim")
 
+        task_branch = None
         if crew_tree:
             task_branch = crew_tree.add(task_content)
             self.print(crew_tree)
@@ -163,13 +168,21 @@ class ConsoleFormatter:
             self.print_panel(task_content, "Task Started", "yellow")
 
         self.print()
-        return task_branch if crew_tree else None
+
+        # Set the current_task_branch attribute directly
+        self.current_task_branch = task_branch
+
+        return task_branch
 
     def update_task_status(
-        self, crew_tree: Tree, task_id: str, agent_role: str, status: str = "completed"
+        self,
+        crew_tree: Optional[Tree],
+        task_id: str,
+        agent_role: str,
+        status: str = "completed",
     ) -> None:
         """Update task status in the tree."""
-        if not self.verbose:
+        if not self.verbose or crew_tree is None:
             return
 
         if status == "completed":
@@ -214,17 +227,21 @@ class ConsoleFormatter:
 
         self.print(crew_tree)
         self.print()
+
+        # Set the current_agent_branch attribute directly
+        self.current_agent_branch = agent_branch
+
         return agent_branch
 
     def update_agent_status(
         self,
-        agent_branch: Tree,
+        agent_branch: Optional[Tree],
         agent_role: str,
-        crew_tree: Tree,
+        crew_tree: Optional[Tree],
         status: str = "completed",
     ) -> None:
         """Update agent status in the tree."""
-        if not self.verbose:
+        if not self.verbose or agent_branch is None or crew_tree is None:
             return
 
         self.update_tree_label(
@@ -258,6 +275,10 @@ class ConsoleFormatter:
 
         self.print(flow_tree)
         self.print()
+
+        # Set the current_flow_tree attribute directly
+        self.current_flow_tree = flow_tree
+
         return flow_tree
 
     def start_flow(self, flow_name: str) -> Optional[Tree]:
@@ -268,12 +289,23 @@ class ConsoleFormatter:
 
         self.print(flow_tree)
         self.print()
+
+        # Set the current_flow_tree attribute directly
+        self.current_flow_tree = flow_tree
+
         return flow_tree
 
     def update_flow_status(
-        self, flow_tree: Tree, flow_name: str, flow_id: str, status: str = "completed"
+        self,
+        flow_tree: Optional[Tree],
+        flow_name: str,
+        flow_id: str,
+        status: str = "completed",
     ) -> None:
         """Update flow status in the tree."""
+        if not self.verbose or flow_tree is None:
+            return
+
         self.update_tree_label(
             flow_tree,
             "✅ Flow Finished:" if status == "completed" else "❌ Flow Failed:",
@@ -298,11 +330,15 @@ class ConsoleFormatter:
     def update_method_status(
         self,
         method_branch: Optional[Tree],
-        flow_tree: Tree,
+        flow_tree: Optional[Tree],
         method_name: str,
         status: str = "running",
     ) -> Optional[Tree]:
         """Update method status in the flow tree."""
+        # Early return if verbose is disabled or flow_tree is None
+        if not self.verbose or flow_tree is None:
+            return None
+
         if status == "running":
             prefix, style = "🔄 Running:", "yellow"
         elif status == "completed":
@@ -325,13 +361,20 @@ class ConsoleFormatter:
 
         self.print(flow_tree)
         self.print()
+
+        # Set the current_method_branch attribute directly
+        self.current_method_branch = method_branch
+
         return method_branch
 
     def handle_tool_usage_started(
-        self, agent_branch: Tree, tool_name: str, crew_tree: Tree
+        self,
+        agent_branch: Optional[Tree],
+        tool_name: str,
+        crew_tree: Optional[Tree],
     ) -> Optional[Tree]:
         """Handle tool usage started event."""
-        if not self.verbose or not agent_branch:
+        if not self.verbose or agent_branch is None or crew_tree is None:
             return None
 
         # Update tool usage count
@@ -357,13 +400,20 @@ class ConsoleFormatter:
 
         self.print(crew_tree)
         self.print()
+
+        # Set the current_tool_branch attribute directly
+        self.current_tool_branch = tool_branch
+
         return tool_branch
 
     def handle_tool_usage_finished(
-        self, tool_branch: Tree, tool_name: str, crew_tree: Tree
+        self,
+        tool_branch: Optional[Tree],
+        tool_name: str,
+        crew_tree: Optional[Tree],
     ) -> None:
         """Handle tool usage finished event."""
-        if not self.verbose or not tool_branch:
+        if not self.verbose or tool_branch is None or crew_tree is None:
             return
 
         self.update_tree_label(
@@ -403,10 +453,12 @@ class ConsoleFormatter:
         self.print_panel(error_content, "Tool Error", "red")
 
     def handle_llm_call_started(
-        self, agent_branch: Tree, crew_tree: Tree
+        self,
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree],
     ) -> Optional[Tree]:
         """Handle LLM call started event."""
-        if not self.verbose or not agent_branch:
+        if not self.verbose or agent_branch is None or crew_tree is None:
             return None
 
         # Only add thinking status if it doesn't exist
@@ -415,18 +467,30 @@ class ConsoleFormatter:
             self.update_tree_label(tool_branch, "🧠", "Thinking...", "blue")
             self.print(crew_tree)
             self.print()
+
+            # Set the current_tool_branch attribute directly
+            self.current_tool_branch = tool_branch
+
             return tool_branch
         return None
 
     def handle_llm_call_completed(
-        self, tool_branch: Tree, agent_branch: Tree, crew_tree: Tree
+        self,
+        tool_branch: Optional[Tree],
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree],
     ) -> None:
         """Handle LLM call completed event."""
-        if not self.verbose or not tool_branch:
+        if (
+            not self.verbose
+            or tool_branch is None
+            or agent_branch is None
+            or crew_tree is None
+        ):
             return
 
         # Remove the thinking status node when complete
-        if "Thinking" in str(tool_branch.label) and agent_branch:
+        if "Thinking" in str(tool_branch.label):
             agent_branch.children.remove(tool_branch)
             self.print(crew_tree)
             self.print()

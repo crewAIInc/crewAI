@@ -68,62 +68,12 @@ class EventListener(BaseEventListener):
             self._initialized = True
             self.formatter = ConsoleFormatter()
 
-    @property
-    def current_crew_tree(self) -> Optional[Tree]:
-        return self.formatter.current_crew_tree
-
-    @current_crew_tree.setter
-    def current_crew_tree(self, value: Optional[Tree]):
-        self.formatter.current_crew_tree = value
-
-    @property
-    def current_task_branch(self) -> Optional[Tree]:
-        return self.formatter.current_task_branch
-
-    @current_task_branch.setter
-    def current_task_branch(self, value: Optional[Tree]):
-        self.formatter.current_task_branch = value
-
-    @property
-    def current_agent_branch(self) -> Optional[Tree]:
-        return self.formatter.current_agent_branch
-
-    @current_agent_branch.setter
-    def current_agent_branch(self, value: Optional[Tree]):
-        self.formatter.current_agent_branch = value
-
-    @property
-    def current_tool_branch(self) -> Optional[Tree]:
-        return self.formatter.current_tool_branch
-
-    @current_tool_branch.setter
-    def current_tool_branch(self, value: Optional[Tree]):
-        self.formatter.current_tool_branch = value
-
-    @property
-    def current_flow_tree(self) -> Optional[Tree]:
-        return self.formatter.current_flow_tree
-
-    @current_flow_tree.setter
-    def current_flow_tree(self, value: Optional[Tree]):
-        self.formatter.current_flow_tree = value
-
-    @property
-    def current_method_branch(self) -> Optional[Tree]:
-        return self.formatter.current_method_branch
-
-    @current_method_branch.setter
-    def current_method_branch(self, value: Optional[Tree]):
-        self.formatter.current_method_branch = value
-
     # ----------- CREW EVENTS -----------
 
     def setup_listeners(self, crewai_event_bus):
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source, event: CrewKickoffStartedEvent):
-            self.formatter.current_crew_tree = self.formatter.create_crew_tree(
-                event.crew_name or "Crew", source.id
-            )
+            self.formatter.create_crew_tree(event.crew_name or "Crew", source.id)
             self._telemetry.crew_execution_span(source, event.inputs)
 
         @crewai_event_bus.on(CrewKickoffCompletedEvent)
@@ -132,23 +82,21 @@ class EventListener(BaseEventListener):
             final_string_output = event.output.raw
             self._telemetry.end_crew(source, final_string_output)
 
-            if self.current_crew_tree:
-                self.formatter.update_crew_tree(
-                    self.current_crew_tree,
-                    event.crew_name or "Crew",
-                    source.id,
-                    "completed",
-                )
+            self.formatter.update_crew_tree(
+                self.formatter.current_crew_tree,
+                event.crew_name or "Crew",
+                source.id,
+                "completed",
+            )
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source, event: CrewKickoffFailedEvent):
-            if self.current_crew_tree:
-                self.formatter.update_crew_tree(
-                    self.current_crew_tree,
-                    event.crew_name or "Crew",
-                    source.id,
-                    "failed",
-                )
+            self.formatter.update_crew_tree(
+                self.formatter.current_crew_tree,
+                event.crew_name or "Crew",
+                source.id,
+                "failed",
+            )
 
         @crewai_event_bus.on(CrewTrainStartedEvent)
         def on_crew_train_started(source, event: CrewTrainStartedEvent):
@@ -172,7 +120,7 @@ class EventListener(BaseEventListener):
         def on_task_started(source, event: TaskStartedEvent):
             span = self._telemetry.task_started(crew=source.agent.crew, task=source)
             self.execution_spans[source] = span
-            self.formatter.current_task_branch = self.formatter.create_task_branch(
+            self.formatter.create_task_branch(
                 self.formatter.current_crew_tree, source.id
             )
 
@@ -184,10 +132,12 @@ class EventListener(BaseEventListener):
                 self._telemetry.task_ended(span, source, source.agent.crew)
             self.execution_spans[source] = None
 
-            if self.current_crew_tree:
-                self.formatter.update_task_status(
-                    self.current_crew_tree, source.id, source.agent.role, "completed"
-                )
+            self.formatter.update_task_status(
+                self.formatter.current_crew_tree,
+                source.id,
+                source.agent.role,
+                "completed",
+            )
 
         @crewai_event_bus.on(TaskFailedEvent)
         def on_task_failed(source, event: TaskFailedEvent):
@@ -197,16 +147,18 @@ class EventListener(BaseEventListener):
                     self._telemetry.task_ended(span, source, source.agent.crew)
                 self.execution_spans[source] = None
 
-            if self.current_crew_tree:
-                self.formatter.update_task_status(
-                    self.current_crew_tree, source.id, source.agent.role, "failed"
-                )
+            self.formatter.update_task_status(
+                self.formatter.current_crew_tree,
+                source.id,
+                source.agent.role,
+                "failed",
+            )
 
         # ----------- AGENT EVENTS -----------
 
         @crewai_event_bus.on(AgentExecutionStartedEvent)
         def on_agent_execution_started(source, event: AgentExecutionStartedEvent):
-            self.formatter.current_agent_branch = self.formatter.create_agent_branch(
+            self.formatter.create_agent_branch(
                 self.formatter.current_task_branch,
                 event.agent.role,
                 self.formatter.current_crew_tree,
@@ -214,82 +166,84 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(AgentExecutionCompletedEvent)
         def on_agent_execution_completed(source, event: AgentExecutionCompletedEvent):
-            if self.current_agent_branch and self.current_crew_tree:
-                self.formatter.update_agent_status(
-                    self.current_agent_branch, event.agent.role, self.current_crew_tree
-                )
+            self.formatter.update_agent_status(
+                self.formatter.current_agent_branch,
+                event.agent.role,
+                self.formatter.current_crew_tree,
+            )
 
         # ----------- FLOW EVENTS -----------
 
         @crewai_event_bus.on(FlowCreatedEvent)
         def on_flow_created(source, event: FlowCreatedEvent):
             self._telemetry.flow_creation_span(event.flow_name)
-            self.current_flow_tree = self.formatter.create_flow_tree(event.flow_name)
+            self.formatter.create_flow_tree(event.flow_name)
 
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source, event: FlowStartedEvent):
             self._telemetry.flow_execution_span(
                 event.flow_name, list(source._methods.keys())
             )
-            self.current_flow_tree = self.formatter.start_flow(event.flow_name)
+            self.formatter.start_flow(event.flow_name)
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event: FlowFinishedEvent):
-            if self.current_flow_tree:
-                self.formatter.update_flow_status(
-                    self.current_flow_tree, event.flow_name, source.flow_id
-                )
+            self.formatter.update_flow_status(
+                self.formatter.current_flow_tree, event.flow_name, source.flow_id
+            )
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(source, event: MethodExecutionStartedEvent):
-            if self.current_flow_tree:
-                self.current_method_branch = self.formatter.update_method_status(
-                    self.current_method_branch,
-                    self.current_flow_tree,
-                    event.method_name,
-                    "running",
-                )
+            self.formatter.update_method_status(
+                self.formatter.current_method_branch,
+                self.formatter.current_flow_tree,
+                event.method_name,
+                "running",
+            )
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
         def on_method_execution_finished(source, event: MethodExecutionFinishedEvent):
             self.formatter.update_method_status(
-                self.current_method_branch,
-                self.current_flow_tree,
+                self.formatter.current_method_branch,
+                self.formatter.current_flow_tree,
                 event.method_name,
                 "completed",
             )
 
         @crewai_event_bus.on(MethodExecutionFailedEvent)
         def on_method_execution_failed(source, event: MethodExecutionFailedEvent):
-            if self.current_method_branch and self.current_flow_tree:
-                self.formatter.update_method_status(
-                    self.current_method_branch,
-                    self.current_flow_tree,
-                    event.method_name,
-                    "failed",
-                )
+            self.formatter.update_method_status(
+                self.formatter.current_method_branch,
+                self.formatter.current_flow_tree,
+                event.method_name,
+                "failed",
+            )
 
         # ----------- TOOL USAGE EVENTS -----------
 
         @crewai_event_bus.on(ToolUsageStartedEvent)
         def on_tool_usage_started(source, event: ToolUsageStartedEvent):
             self.formatter.handle_tool_usage_started(
-                self.current_agent_branch, event.tool_name, self.current_crew_tree
+                self.formatter.current_agent_branch,
+                event.tool_name,
+                self.formatter.current_crew_tree,
             )
 
         @crewai_event_bus.on(ToolUsageFinishedEvent)
         def on_tool_usage_finished(source, event: ToolUsageFinishedEvent):
             self.formatter.handle_tool_usage_finished(
-                self.current_tool_branch, event.tool_name, self.current_crew_tree
+                self.formatter.current_tool_branch,
+                event.tool_name,
+                self.formatter.current_crew_tree,
             )
 
         @crewai_event_bus.on(ToolUsageErrorEvent)
         def on_tool_usage_error(source, event: ToolUsageErrorEvent):
             self.formatter.handle_tool_usage_error(
-                self.current_tool_branch,
+                self.formatter.current_tool_branch,
                 event.tool_name,
                 event.error,
-                self.current_crew_tree,
+                self.formatter.current_crew_tree,
             )
 
         # ----------- LLM EVENTS -----------
@@ -297,21 +251,24 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(source, event: LLMCallStartedEvent):
             self.formatter.handle_llm_call_started(
-                self.current_agent_branch, self.current_crew_tree
+                self.formatter.current_agent_branch,
+                self.formatter.current_crew_tree,
             )
 
         @crewai_event_bus.on(LLMCallCompletedEvent)
         def on_llm_call_completed(source, event: LLMCallCompletedEvent):
             self.formatter.handle_llm_call_completed(
-                self.current_tool_branch,
-                self.current_agent_branch,
-                self.current_crew_tree,
+                self.formatter.current_tool_branch,
+                self.formatter.current_agent_branch,
+                self.formatter.current_crew_tree,
             )
 
         @crewai_event_bus.on(LLMCallFailedEvent)
         def on_llm_call_failed(source, event: LLMCallFailedEvent):
             self.formatter.handle_llm_call_failed(
-                self.current_tool_branch, event.error, self.current_crew_tree
+                self.formatter.current_tool_branch,
+                event.error,
+                self.formatter.current_crew_tree,
             )
 
         @crewai_event_bus.on(LLMStreamChunkEvent)
@@ -342,7 +299,7 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(CrewTestCompletedEvent)
         def on_crew_test_completed(source, event: CrewTestCompletedEvent):
             self.formatter.handle_crew_test_completed(
-                self.current_flow_tree,
+                self.formatter.current_flow_tree,
                 event.crew_name or "Crew",
             )
 
