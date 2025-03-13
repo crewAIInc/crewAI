@@ -345,9 +345,11 @@ class Agent(BaseAgent):
     def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> Sequence[BaseTool]:
         # If delegate_to is specified, use those agents instead of all agents
         if self.delegate_to is not None:
-            agents_to_use = cast(List[BaseAgent], list(self.delegate_to))
+            agents_to_use: Sequence[BaseAgent] = cast(
+                List[BaseAgent], list(self.delegate_to)
+            )
         else:
-            agents_to_use = list(agents)  # Convert to list to match expected type
+            agents_to_use: Sequence[BaseAgent] = cast(List[BaseAgent], list(agents))
 
         agent_tools = AgentTools(agents=agents_to_use)
         delegation_tools = agent_tools.tools()
