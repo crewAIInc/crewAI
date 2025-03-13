@@ -267,6 +267,51 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
+def test_validate_azure_credentials_valid():
+    llm = LLM(
+        model="gpt-4",
+        api_key="test_key",
+        api_base="test_base",
+        api_version="test_version"
+    )
+    assert llm._validate_azure_credentials() == True
+
+
+def test_validate_azure_credentials_invalid():
+    # Missing api_version
+    llm = LLM(
+        model="gpt-4",
+        api_key="test_key",
+        api_base="test_base"
+    )
+    assert llm._validate_azure_credentials() == False
+    
+    # Non-string value
+    llm = LLM(
+        model="gpt-4",
+        api_key="test_key",
+        api_base="test_base",
+        api_version=123  # Not a string
+    )
+    assert llm._validate_azure_credentials() == False
+
+
+def test_validate_call_params_azure_invalid():
+    # Test with incomplete Azure credentials
+    llm = LLM(
+        model="azure/gpt-4",
+        api_key="test_key",
+        # Missing api_base and api_version
+    )
+    
+    # Should raise ValueError due to incomplete credentials
+    with pytest.raises(ValueError) as excinfo:
+        llm._validate_call_params()
+    
+    # Check error message
+    assert "Incomplete Azure credentials" in str(excinfo.value)
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_o3_mini_reasoning_effort_high():
     llm = LLM(

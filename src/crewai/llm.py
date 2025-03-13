@@ -842,19 +842,44 @@ class LLM:
             return "azure"
             
         return None
+        
+    def _validate_azure_credentials(self) -> bool:
+        """
+        Validates that all required Azure credentials are present and of the correct type.
+        
+        Returns:
+            bool: True if all Azure credentials are valid, False otherwise.
+        """
+        return bool(
+            self.api_key 
+            and self.api_base 
+            and self.api_version 
+            and all(isinstance(x, str) for x in [self.api_key, self.api_base, self.api_version])
+        )
 
     def _validate_call_params(self) -> None:
         """
-        Validate parameters before making a call. Currently this only checks if
-        a response_format is provided and whether the model supports it.
+        Validate parameters before making a call.
+        
         The custom_llm_provider is dynamically determined from the model:
           - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
           - "gemini/gemini-1.5-pro" yields "gemini"
           - "azure/gpt-4" yields "azure"
           - If Azure parameters (api_key, api_base, api_version) are present, "azure" is used
           - If no slash is present and no Azure parameters, None is returned
+          
+        Raises:
+            ValueError: If response_format is not supported by the model or if Azure credentials are incomplete.
         """
         provider = self._get_custom_llm_provider()
+        
+        # Validate Azure credentials if provider is Azure
+        if provider == "azure" and not self._validate_azure_credentials():
+            raise ValueError(
+                "Incomplete Azure credentials. Please provide api_key, api_base, and api_version as strings."
+            )
+            
+        # Validate response_format
         if self.response_format is not None and not supports_response_schema(
             model=self.model,
             custom_llm_provider=provider,
