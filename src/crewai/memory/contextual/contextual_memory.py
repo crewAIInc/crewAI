@@ -35,8 +35,7 @@ class ContextualMemory:
         context.append(self._fetch_ltm_context(task.description))
         context.append(self._fetch_stm_context(query))
         context.append(self._fetch_entity_context(query))
-        if self.memory_provider == "mem0":
-            context.append(self._fetch_user_context(query))
+        context.append(self._fetch_user_context(query))
         return "\n".join(filter(None, context))
 
     def _fetch_stm_context(self, query) -> str:
@@ -98,7 +97,11 @@ class ContextualMemory:
         if not user_memories:
             return ""
 
+        # Check if the memory provider is mem0 by looking at the storage type
+        is_mem0 = hasattr(self.um.storage, "__class__") and self.um.storage.__class__.__name__ == "Mem0Storage"
+        
         formatted_memories = "\n".join(
-            f"- {result['memory']}" for result in user_memories
+            f"- {result['memory'] if is_mem0 else result['context']}"
+            for result in user_memories
         )
         return f"User memories/preferences:\n{formatted_memories}"
