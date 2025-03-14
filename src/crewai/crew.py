@@ -500,19 +500,6 @@ class Crew(BaseModel):
         """
         return self.security_config.fingerprint
 
-    @property
-    def fingerprint(self) -> Fingerprint:
-        """
-        Get the crew's fingerprint.
-
-        Returns:
-            Fingerprint: The crew's fingerprint
-        """
-        # Ensure we always return a valid Fingerprint
-        if not self.security_config.fingerprint:
-            self.security_config.fingerprint = Fingerprint()
-        return self.security_config.fingerprint
-
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
 
