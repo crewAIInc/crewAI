@@ -1,5 +1,7 @@
-import pytest
 from importlib import import_module
+
+import pytest
+
 
 def test_opentelemetry_imports():
     """Test that all required OpenTelemetry modules can be imported."""
