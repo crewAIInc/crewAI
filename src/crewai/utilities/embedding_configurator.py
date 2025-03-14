@@ -1,8 +1,17 @@
 import os
 from typing import Any, Dict, Optional, cast
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
-from chromadb.api.types import validate_embedding_function
+try:
+    from chromadb import Documents, EmbeddingFunction, Embeddings
+    from chromadb.api.types import validate_embedding_function
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    # Define placeholder types for type checking
+    Documents = Any
+    EmbeddingFunction = Any
+    Embeddings = Any
+    def validate_embedding_function(func): return func
 
 
 class EmbeddingConfigurator:
@@ -47,6 +56,14 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _create_default_embedding_function():
+        if not CHROMADB_AVAILABLE:
+            import logging
+            logging.warning(
+                "ChromaDB is not installed. Cannot create default embedding function. "
+                "Install with 'pip install crewai[chromadb]' to enable full functionality."
+            )
+            return None
+            
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )
