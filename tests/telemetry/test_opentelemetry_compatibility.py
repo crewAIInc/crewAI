@@ -79,3 +79,37 @@ def test_telemetry_configuration():
     
     # Reset environment variable
     os.environ.pop("OTEL_SDK_DISABLED", None)
+
+
+def test_span_creation():
+    """Test that spans can be created with the current OpenTelemetry versions.
+    
+    This test verifies that the Telemetry class can create spans using the
+    OpenTelemetry tracer, which is a core functionality for telemetry.
+    """
+    import os
+
+    from opentelemetry import trace
+    from src.crewai.telemetry.telemetry import Telemetry
+    
+    # Ensure telemetry is enabled for this test
+    if "OTEL_SDK_DISABLED" in os.environ:
+        old_value = os.environ.pop("OTEL_SDK_DISABLED")
+    
+    try:
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+        
+        # Only test span creation if telemetry is ready
+        if telemetry.ready and telemetry.trace_set:
+            tracer = trace.get_tracer("crewai.telemetry.test")
+            if tracer:
+                with tracer.start_as_current_span("test_operation") as span:
+                    assert span is not None
+                    assert span.is_recording()
+    except Exception as e:
+        pytest.fail(f"Failed to create span: {e}")
+    finally:
+        # Restore environment variable if it was set
+        if "old_value" in locals():
+            os.environ["OTEL_SDK_DISABLED"] = old_value

@@ -17,6 +17,8 @@ dependencies = [
     "pdfplumber>=0.11.4",
     "regex>=2024.9.11",
     # Telemetry and Monitoring
+    # Version constraints ensure compatibility with various OpenTelemetry versions
+    # while preventing installation of incompatible versions (issue #2372)
     "opentelemetry-api>=1.22.0,<1.32.0",
     "opentelemetry-sdk>=1.22.0,<1.32.0",
     "opentelemetry-exporter-otlp-proto-http>=1.22.0,<1.32.0",
