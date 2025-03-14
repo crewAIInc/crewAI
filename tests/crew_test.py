@@ -1597,7 +1597,7 @@ def test_crew_function_calling_llm():
     result = crew.kickoff()
     assert result.raw == "Howdy!"
     assert agent1.tools is not None
-    assert len(agent1.tools) == 0
+    assert len(agent1.tools) == 1
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

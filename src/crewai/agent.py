@@ -227,6 +227,7 @@ class Agent(BaseAgent):
                     task_prompt += crew_knowledge_context
 
         tools = tools or self.tools or []
+        print(f"tools: {tools}")
         self.create_agent_executor(tools=tools, task=task)
 
         if self.crew and self.crew._train:
