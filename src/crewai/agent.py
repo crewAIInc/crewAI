@@ -1,7 +1,7 @@
 import re
 import shutil
 import subprocess
-from typing import Any, Dict, List, Literal, Optional, Sequence, Union
+from typing import Any, Dict, List, Literal, Optional, Sequence, Union, cast
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -50,6 +50,7 @@ class Agent(BaseAgent):
             max_rpm: Maximum number of requests per minute for the agent execution to be respected.
             verbose: Whether the agent execution should be in verbose mode.
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
+            delegate_to: List of agents this agent can delegate to. If None and allow_delegation is True, can delegate to all agents.
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             knowledge_sources: Knowledge sources for the agent.
@@ -342,10 +343,17 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: List[BaseAgent]):
-        agent_tools = AgentTools(agents=agents)
-        tools = agent_tools.tools()
-        return tools
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> Sequence[BaseTool]:
+        # If delegate_to is specified, use those agents instead of all agents
+        agents_to_use: List[BaseAgent]
+        if self.delegate_to is not None:
+            agents_to_use = cast(List[BaseAgent], list(self.delegate_to))
+        else:
+            agents_to_use = list(agents)  # Convert to list to match expected type
+
+        agent_tools = AgentTools(agents=agents_to_use)
+        delegation_tools = agent_tools.tools()
+        return delegation_tools
 
     def get_multimodal_tools(self) -> Sequence[BaseTool]:
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
