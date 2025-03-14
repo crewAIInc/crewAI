@@ -96,6 +96,10 @@ class CrewPlanner:
         tasks_summary = []
         for idx, task in enumerate(self.tasks):
             knowledge_list = self._get_agent_knowledge(task)
+            agent_tools = (
+                f"[{', '.join(str(tool) for tool in task.agent.tools)}]" if task.agent and task.agent.tools else '"agent has no tools"',
+                f',\n                "agent_knowledge": "[\\"{knowledge_list[0]}\\"]"' if knowledge_list and str(knowledge_list) != "None" else ""
+            )
             task_summary = f"""
                 Task Number {idx + 1} - {task.description}
                 "task_description": {task.description}
@@ -103,10 +107,7 @@ class CrewPlanner:
                 "agent": {task.agent.role if task.agent else "None"}
                 "agent_goal": {task.agent.goal if task.agent else "None"}
                 "task_tools": {task.tools}
-                "agent_tools": %s%s""" % (
-                    f"[{', '.join(str(tool) for tool in task.agent.tools)}]" if task.agent and task.agent.tools else '"agent has no tools"',
-                    f',\n                "agent_knowledge": "[\\"{knowledge_list[0]}\\"]"' if knowledge_list and str(knowledge_list) != "None" else ""
-                )
+                "agent_tools": {"".join(agent_tools)}"""
 
             tasks_summary.append(task_summary)
         return " ".join(tasks_summary)
