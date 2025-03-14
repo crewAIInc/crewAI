@@ -739,14 +739,15 @@ class Crew(BaseModel):
     def _create_manager_agent(self):
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
+            # Ensure delegation is enabled for the manager agent
             self.manager_agent.allow_delegation = True
-            # Set the delegate_to property to all agents in the crew
-            self.manager_agent.delegate_to = self.agents
-            manager = self.manager_agent
 
-            # Instead, we ensure it has delegation tools
-            if not manager.allow_delegation:
-                manager.allow_delegation = True
+            # Set the delegate_to property to all agents in the crew
+            # If delegate_to is already set, it will be used instead of all agents
+            if self.manager_agent.delegate_to is None:
+                self.manager_agent.delegate_to = self.agents
+
+            manager = self.manager_agent
         else:
             self.manager_llm = create_llm(self.manager_llm)
             # Create delegation tools
@@ -802,11 +803,8 @@ class Crew(BaseModel):
                 )
 
             # Determine which tools to use - task tools take precedence over agent tools
-            tools_for_task: Sequence[BaseTool] = task.tools or agent_to_use.tools or []
-            # Ensure tools_for_task is a Sequence[BaseTool]
-            if not isinstance(tools_for_task, Sequence):
-                tools_for_task = list(tools_for_task) if tools_for_task else []
-            tools_for_task = self._prepare_tools(agent_to_use, task, tools_for_task)
+            initial_tools = task.tools or agent_to_use.tools or []
+            prepared_tools = self._prepare_tools(agent_to_use, task, initial_tools)
 
             self._log_task_start(task, agent_to_use.role)
 
@@ -825,7 +823,7 @@ class Crew(BaseModel):
                 future = task.execute_async(
                     agent=agent_to_use,
                     context=context,
-                    tools=tools_for_task,
+                    tools=prepared_tools,
                 )
                 futures.append((task, future, task_index))
             else:
@@ -837,7 +835,7 @@ class Crew(BaseModel):
                 task_output = task.execute_sync(
                     agent=agent_to_use,
                     context=context,
-                    tools=tools_for_task,
+                    tools=prepared_tools,
                 )
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
@@ -891,13 +889,15 @@ class Crew(BaseModel):
                 tools = self._add_delegation_tools(task, tools)
 
         # Add code execution tools if agent allows code execution
-        if hasattr(agent, "allow_code_execution") and agent.allow_code_execution:
+        if hasattr(agent, "allow_code_execution") and getattr(
+            agent, "allow_code_execution", False
+        ):
             tools = self._add_code_execution_tools(agent, tools)
 
-        if hasattr(agent, "multimodal") and agent.multimodal:
+        if hasattr(agent, "multimodal") and getattr(agent, "multimodal", False):
             tools = self._add_multimodal_tools(agent, tools)
 
-        return list(tools)  # Ensure we return a list, not just a Sequence
+        return list(tools)
 
     def _get_agent_to_use(self, task: Task) -> Optional[BaseAgent]:
         if self.process == Process.hierarchical:
@@ -934,14 +934,18 @@ class Crew(BaseModel):
     def _add_multimodal_tools(
         self, agent: BaseAgent, tools: Sequence[BaseTool]
     ) -> Sequence[BaseTool]:
-        multimodal_tools = agent.get_multimodal_tools()
-        return self._merge_tools(tools, multimodal_tools)
+        if hasattr(agent, "get_multimodal_tools"):
+            multimodal_tools = getattr(agent, "get_multimodal_tools")()
+            return self._merge_tools(tools, multimodal_tools)
+        return tools
 
     def _add_code_execution_tools(
         self, agent: BaseAgent, tools: Sequence[BaseTool]
     ) -> Sequence[BaseTool]:
-        code_tools = agent.get_code_execution_tools()
-        return self._merge_tools(tools, code_tools)
+        if hasattr(agent, "get_code_execution_tools"):
+            code_tools = getattr(agent, "get_code_execution_tools")()
+            return self._merge_tools(tools, code_tools)
+        return tools
 
     def _add_delegation_tools(
         self, task: Task, tools: Sequence[BaseTool]

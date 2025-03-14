@@ -4270,3 +4270,202 @@ def test_crew_with_default_delegation():
     assert "Researcher" in ask_tool.description
     assert "Writer" in ask_tool.description
     assert "Editor" in ask_tool.description
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_update_manager_tools_functionality():
+    """Test that _update_manager_tools correctly adds delegation tools to the manager agent."""
+    # Create agents
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="You're an expert researcher",
+    )
+
+    writer = Agent(
+        role="Writer",
+        goal="Write content",
+        backstory="You're an expert writer",
+    )
+
+    # Create a manager agent
+    manager = Agent(
+        role="Manager",
+        goal="Manage the team",
+        backstory="You're an expert manager",
+        allow_delegation=True,
+    )
+
+    # Create a crew with the manager agent
+    crew = Crew(
+        agents=[researcher, writer],
+        manager_agent=manager,
+        process=Process.hierarchical,
+    )
+
+    # Ensure the manager agent is set up
+    crew._create_manager_agent()
+
+    # Case 1: Task with an assigned agent
+    task_with_agent = Task(
+        description="Research a topic",
+        expected_output="Research results",
+        agent=researcher,
+    )
+
+    # Create an initial set of tools
+    from crewai.tools.base_tool import BaseTool
+
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool"
+
+        def _run(self) -> str:
+            return "Tool executed"
+
+    initial_tools = [TestTool()]
+
+    # Test _update_manager_tools with a task that has an agent
+    updated_tools = crew._update_manager_tools(task_with_agent, initial_tools)
+
+    # Verify that delegation tools for the task's agent were added
+    assert len(updated_tools) > len(initial_tools)
+    assert any(
+        f"Delegate a specific task to one of the following coworkers: {researcher.role}"
+        in tool.description
+        for tool in updated_tools
+    )
+    assert any(
+        f"Ask a specific question to one of the following coworkers: {researcher.role}"
+        in tool.description
+        for tool in updated_tools
+    )
+
+    # Case 2: Task without an assigned agent
+    task_without_agent = Task(
+        description="General task",
+        expected_output="Task completed",
+    )
+
+    # Test _update_manager_tools with a task that doesn't have an agent
+    updated_tools = crew._update_manager_tools(task_without_agent, initial_tools)
+
+    # Verify that delegation tools for all agents were added
+    assert len(updated_tools) > len(initial_tools)
+    assert any(
+        f"Delegate a specific task to one of the following coworkers: {researcher.role}, {writer.role}"
+        in tool.description
+        for tool in updated_tools
+    )
+    assert any(
+        f"Ask a specific question to one of the following coworkers: {researcher.role}, {writer.role}"
+        in tool.description
+        for tool in updated_tools
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_manager_tools_during_task_execution():
+    """Test that manager tools are correctly added during task execution in a hierarchical process."""
+    # Create agents
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="You're an expert researcher",
+    )
+
+    writer = Agent(
+        role="Writer",
+        goal="Write content",
+        backstory="You're an expert writer",
+    )
+
+    # Create tasks
+    task_with_agent = Task(
+        description="Research a topic",
+        expected_output="Research results",
+        agent=researcher,
+    )
+
+    task_without_agent = Task(
+        description="General task",
+        expected_output="Task completed",
+    )
+
+    # Create a crew with hierarchical process
+    crew_with_agent_task = Crew(
+        agents=[researcher, writer],
+        tasks=[task_with_agent],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+    )
+
+    crew_without_agent_task = Crew(
+        agents=[researcher, writer],
+        tasks=[task_without_agent],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+    )
+
+    # Mock task execution to capture the tools
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent"
+    )
+
+    # Test case 1: Task with an assigned agent
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
+        # Set the output attribute to avoid None errors
+        task_with_agent.output = mock_task_output
+
+        # Execute the crew
+        crew_with_agent_task.kickoff()
+
+        # Verify execute_sync was called
+        mock_execute_sync.assert_called_once()
+
+        # Get the tools argument from the call
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs["tools"]
+
+        # Verify that delegation tools for the task's agent were added
+        assert any(
+            f"Delegate a specific task to one of the following coworkers: {researcher.role}"
+            in tool.description
+            for tool in tools
+        )
+        assert any(
+            f"Ask a specific question to one of the following coworkers: {researcher.role}"
+            in tool.description
+            for tool in tools
+        )
+
+    # Test case 2: Task without an assigned agent
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
+        # Set the output attribute to avoid None errors
+        task_without_agent.output = mock_task_output
+
+        # Execute the crew
+        crew_without_agent_task.kickoff()
+
+        # Verify execute_sync was called
+        mock_execute_sync.assert_called_once()
+
+        # Get the tools argument from the call
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs["tools"]
+
+        # Verify that delegation tools for all agents were added
+        assert any(
+            f"Delegate a specific task to one of the following coworkers: {researcher.role}, {writer.role}"
+            in tool.description
+            for tool in tools
+        )
+        assert any(
+            f"Ask a specific question to one of the following coworkers: {researcher.role}, {writer.role}"
+            in tool.description
+            for tool in tools
+        )

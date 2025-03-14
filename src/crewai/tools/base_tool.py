@@ -283,12 +283,10 @@ def tool(*args):
         return _make_tool
 
     if len(args) == 1 and callable(args[0]):
-        # Direct function decoration
         if isinstance(args[0], BaseTool):
-            return args[0]  # Already a BaseTool, return as-is
+            return args[0]
         return _make_with_name(args[0].__name__)(args[0])
     elif len(args) == 1 and isinstance(args[0], str):
-        # Name provided, return a decorator
         return _make_with_name(args[0])
     else:
         raise ValueError("Invalid arguments")
