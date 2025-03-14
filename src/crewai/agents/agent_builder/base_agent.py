@@ -20,6 +20,7 @@ from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
@@ -53,6 +54,7 @@ class BaseAgent(ABC, BaseModel):
         max_tokens: Maximum number of tokens for the agent to generate in a response.
         knowledge_sources: Knowledge sources for the agent.
         knowledge_storage: Custom knowledge storage for the agent.
+        security_config: Security configuration for the agent, including fingerprinting.
 
 
     Methods:
@@ -151,6 +153,10 @@ class BaseAgent(ABC, BaseModel):
         default=None,
         description="Custom knowledge storage for the agent.",
     )
+    security_config: SecurityConfig = Field(
+        default_factory=SecurityConfig,
+        description="Security configuration for the agent, including fingerprinting.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -203,6 +209,10 @@ class BaseAgent(ABC, BaseModel):
             )
         if not self._token_process:
             self._token_process = TokenProcess()
+
+        # Initialize security_config if not provided
+        if self.security_config is None:
+            self.security_config = SecurityConfig()
 
         return self
 

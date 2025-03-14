@@ -33,6 +33,7 @@ from crewai.utilities.events.crew_events import (
     CrewTestCompletedEvent,
     CrewTestStartedEvent,
 )
+from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
@@ -863,6 +864,9 @@ def test_crew_verbose_output(capsys):
     # Now test with verbose set to False
     crew.verbose = False
     crew._logger = Logger(verbose=False)
+    event_listener = EventListener()
+    event_listener.verbose = False
+    event_listener.formatter.verbose = False
     crew.kickoff()
     captured = capsys.readouterr()
 
