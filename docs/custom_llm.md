@@ -1,25 +1,44 @@
 # Custom LLM Implementations
 
-CrewAI now supports custom LLM implementations through the `BaseLLM` abstract base class. This allows you to create your own LLM implementations that don't rely on litellm's authentication mechanism.
+CrewAI supports custom LLM implementations through the `LLM` base class. This allows you to create your own LLM implementations that don't rely on litellm's authentication mechanism.
 
 ## Using Custom LLM Implementations
 
 To create a custom LLM implementation, you need to:
 
-1. Inherit from the `BaseLLM` abstract base class
+1. Inherit from the `LLM` base class
 2. Implement the required methods:
    - `call()`: The main method to call the LLM with messages
    - `supports_function_calling()`: Whether the LLM supports function calling
    - `supports_stop_words()`: Whether the LLM supports stop words
    - `get_context_window_size()`: The context window size of the LLM
 
+## Using the Default LLM Implementation
+
+If you don't need a custom LLM implementation, you can use the default implementation provided by CrewAI:
+
+```python
+from crewai import LLM
+
+# Create a default LLM instance
+llm = LLM.create(model="gpt-4")
+
+# Or with more parameters
+llm = LLM.create(
+    model="gpt-4",
+    temperature=0.7,
+    max_tokens=1000,
+    api_key="your-api-key"
+)
+```
+
 ## Example: Basic Custom LLM
 
 ```python
-from crewai import BaseLLM
+from crewai import LLM
 from typing import Any, Dict, List, Optional, Union
 
-class CustomLLM(BaseLLM):
+class CustomLLM(LLM):
     def __init__(self, api_key: str, endpoint: str):
         super().__init__()  # Initialize the base class to set default attributes
         if not api_key or not isinstance(api_key, str):
@@ -230,10 +249,10 @@ def call(
 For services that use JWT-based authentication instead of API keys, you can implement a custom LLM like this:
 
 ```python
-from crewai import BaseLLM, Agent, Task
+from crewai import LLM, Agent, Task
 from typing import Any, Dict, List, Optional, Union
 
-class JWTAuthLLM(BaseLLM):
+class JWTAuthLLM(LLM):
     def __init__(self, jwt_token: str, endpoint: str):
         super().__init__()  # Initialize the base class to set default attributes
         if not jwt_token or not isinstance(jwt_token, str):
@@ -631,7 +650,7 @@ print(result)
 
 ## Implementing Your Own Authentication Mechanism
 
-The `BaseLLM` class allows you to implement any authentication mechanism you need, not just JWT or API keys. You can use:
+The `LLM` class allows you to implement any authentication mechanism you need, not just JWT or API keys. You can use:
 
 - OAuth tokens
 - Client certificates
@@ -640,3 +659,23 @@ The `BaseLLM` class allows you to implement any authentication mechanism you nee
 - Any other authentication method required by your LLM provider
 
 Simply implement the appropriate authentication logic in your custom LLM class.
+
+## Migrating from BaseLLM to LLM
+
+If you were previously using `BaseLLM`, you can simply replace it with `LLM`:
+
+```python
+# Old code
+from crewai import BaseLLM
+
+class CustomLLM(BaseLLM):
+    # ...
+
+# New code
+from crewai import LLM
+
+class CustomLLM(LLM):
+    # ...
+```
+
+The `BaseLLM` class is still available for backward compatibility but will be removed in a future release. It now inherits from `LLM` and emits a deprecation warning when instantiated.

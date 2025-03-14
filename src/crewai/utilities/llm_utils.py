@@ -6,30 +6,30 @@ from crewai.llm import LLM, BaseLLM
 
 
 def create_llm(
-    llm_value: Union[str, BaseLLM, Any, None] = None,
-) -> Optional[BaseLLM]:
+    llm_value: Union[str, LLM, Any, None] = None,
+) -> Optional[LLM]:
     """
     Creates or returns an LLM instance based on the given llm_value.
 
     Args:
-        llm_value (str | BaseLLM | Any | None):
+        llm_value (str | LLM | Any | None):
             - str: The model name (e.g., "gpt-4").
-            - BaseLLM: Already instantiated BaseLLM (including LLM), returned as-is.
+            - LLM: Already instantiated LLM, returned as-is.
             - Any: Attempt to extract known attributes like model_name, temperature, etc.
             - None: Use environment-based or fallback default model.
 
     Returns:
-        A BaseLLM instance if successful, or None if something fails.
+        A LLM instance if successful, or None if something fails.
     """
 
-    # 1) If llm_value is already a BaseLLM object, return it directly
-    if isinstance(llm_value, BaseLLM):
+    # 1) If llm_value is already a LLM object, return it directly
+    if isinstance(llm_value, LLM):
         return llm_value
 
     # 2) If llm_value is a string (model name)
     if isinstance(llm_value, str):
         try:
-            created_llm = LLM(model=llm_value)
+            created_llm = LLM.create(model=llm_value)
             return created_llm
         except Exception as e:
             print(f"Failed to instantiate LLM with model='{llm_value}': {e}")
@@ -56,7 +56,7 @@ def create_llm(
         base_url: Optional[str] = getattr(llm_value, "base_url", None)
         api_base: Optional[str] = getattr(llm_value, "api_base", None)
 
-        created_llm = LLM(
+        created_llm = LLM.create(
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
@@ -175,7 +175,7 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
 
     # Try creating the LLM
     try:
-        new_llm = LLM(**llm_params)
+        new_llm = LLM.create(**llm_params)
         return new_llm
     except Exception as e:
         print(

@@ -2,14 +2,14 @@ from typing import Any, Dict, List, Optional, Union
 
 import pytest
 
-from crewai.llm import BaseLLM
+from crewai.llm import LLM
 from crewai.utilities.llm_utils import create_llm
 
 
-class CustomLLM(BaseLLM):
+class CustomLLM(LLM):
     """Custom LLM implementation for testing.
     
-    This is a simple implementation of the BaseLLM abstract base class
+    This is a simple implementation of the LLM abstract base class
     that returns a predefined response for testing purposes.
     """
     
@@ -93,7 +93,7 @@ def test_custom_llm_implementation():
     assert response == "The answer is 42"
 
 
-class JWTAuthLLM(BaseLLM):
+class JWTAuthLLM(LLM):
     """Custom LLM implementation with JWT authentication."""
     
     def __init__(self, jwt_token: str):
@@ -164,7 +164,7 @@ def test_jwt_auth_llm_validation():
         JWTAuthLLM(jwt_token=None)
 
 
-class TimeoutHandlingLLM(BaseLLM):
+class TimeoutHandlingLLM(LLM):
     """Custom LLM implementation with timeout handling and retry logic."""
     
     def __init__(self, max_retries: int = 3, timeout: int = 30):
