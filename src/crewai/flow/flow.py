@@ -2,7 +2,10 @@ import asyncio
 import copy
 import inspect
 import logging
+
+# Forward reference for type hints
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -16,6 +19,9 @@ from typing import (
     cast,
 )
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -787,6 +793,27 @@ class Flow(Generic[T], metaclass=FlowMeta):
         await asyncio.gather(*tasks)
 
         final_output = self._method_outputs[-1] if self._method_outputs else None
+        
+        # Check for tool results with result_as_answer=True in method-associated agents
+        for method_name, method in self._methods.items():
+            if hasattr(method, "__agent"):
+                tool_result = self._check_tool_results(getattr(method, "__agent"))
+                if tool_result:
+                    final_output = tool_result
+                    break
+        
+        # Also check for agents stored as instance variables
+        for attr_name in dir(self):
+            if attr_name.startswith('_'):
+                continue
+            try:
+                attr = getattr(self, attr_name)
+                tool_result = self._check_tool_results(attr)
+                if tool_result:
+                    final_output = tool_result
+                    break
+            except (AttributeError, TypeError):
+                continue
 
         crewai_event_bus.emit(
             self,
@@ -1070,6 +1097,46 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif level == "warning":
             logger.warning(message)
 
+    def _check_tool_results(self, obj) -> Optional[str]:
+        """
+        Check if an object has tool results with result_as_answer=True.
+        
+        Parameters
+        ----------
+        obj : Any
+            The object to check for tool results
+            
+        Returns
+        -------
+        Optional[str]
+            The tool result if found with result_as_answer=True, None otherwise
+        """
+        if hasattr(obj, "tools_results") and obj.tools_results:
+            for tool_result in obj.tools_results:
+                if tool_result.get("result_as_answer", False):
+                    return tool_result["result"]
+        return None
+        
+    @classmethod
+    def with_agent(cls, agent: 'Agent') -> Callable:
+        """
+        Decorator to associate an agent with a flow method.
+        This allows tracking which agents are used in the flow.
+        
+        Parameters
+        ----------
+        agent : Agent
+            The agent to associate with the method
+            
+        Returns
+        -------
+        Callable
+            A decorator function that associates the agent with the method
+        """
+        def decorator(func):
+            func.__agent = agent
+            return func
+        return decorator
     def plot(self, filename: str = "crewai_flow") -> None:
         crewai_event_bus.emit(
             self,
