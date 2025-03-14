@@ -7,6 +7,7 @@ from .tools import (
     ComposioTool,
     CSVSearchTool,
     DallETool,
+    DatabricksQueryTool,
     DirectoryReadTool,
     DirectorySearchTool,
     DOCXSearchTool,

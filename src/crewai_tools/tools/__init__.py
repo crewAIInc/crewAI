@@ -6,6 +6,7 @@ from .code_interpreter_tool.code_interpreter_tool import CodeInterpreterTool
 from .composio_tool.composio_tool import ComposioTool
 from .csv_search_tool.csv_search_tool import CSVSearchTool
 from .dalle_tool.dalle_tool import DallETool
+from .databricks_query_tool.databricks_query_tool import DatabricksQueryTool
 from .directory_read_tool.directory_read_tool import DirectoryReadTool
 from .directory_search_tool.directory_search_tool import DirectorySearchTool
 from .docx_search_tool.docx_search_tool import DOCXSearchTool
