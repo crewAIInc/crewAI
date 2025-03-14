@@ -485,10 +485,20 @@ class Crew(BaseModel):
 
     @property
     def key(self) -> str:
-        source = [agent.key for agent in self.agents] + [
+        source: List[str] = [agent.key for agent in self.agents] + [
             task.key for task in self.tasks
         ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
+        
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """
+        Get the crew's fingerprint.
+
+        Returns:
+            Fingerprint: The crew's fingerprint
+        """
+        return self.security_config.fingerprint
 
     @property
     def fingerprint(self) -> Fingerprint:
