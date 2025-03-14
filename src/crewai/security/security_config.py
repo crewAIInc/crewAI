@@ -36,12 +36,12 @@ class SecurityConfig(BaseModel):
         arbitrary_types_allowed=True
         # Note: Cannot use frozen=True as existing tests modify the fingerprint property
     )
-    
+
     version: str = Field(
         default="1.0.0", 
         description="Version of the security configuration"
     )
-    
+
     fingerprint: Fingerprint = Field(
         default_factory=Fingerprint, 
         description="Unique identifier for the component"

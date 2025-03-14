@@ -55,6 +55,7 @@ from crewai.utilities.events.crew_events import (
     CrewTrainStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -91,6 +92,7 @@ class Crew(BaseModel):
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
         planning: Plan the crew execution and add the plan to the crew.
         chat_llm: The language model used for orchestrating chat interactions with the crew.
+        security_config: Security configuration for the crew, including fingerprinting.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -253,7 +255,11 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
+
         self._cache_handler = CacheHandler()
+        event_listener = EventListener()
+        event_listener.verbose = self.verbose
+        event_listener.formatter.verbose = self.verbose
         self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
@@ -492,6 +498,19 @@ class Crew(BaseModel):
         Returns:
             Fingerprint: The crew's fingerprint
         """
+        return self.security_config.fingerprint
+
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """
+        Get the crew's fingerprint.
+
+        Returns:
+            Fingerprint: The crew's fingerprint
+        """
+        # Ensure we always return a valid Fingerprint
+        if not self.security_config.fingerprint:
+            self.security_config.fingerprint = Fingerprint()
         return self.security_config.fingerprint
 
     def _setup_from_config(self):

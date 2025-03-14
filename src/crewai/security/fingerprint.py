@@ -94,6 +94,7 @@ class Fingerprint(BaseModel):
             
         # Create a deterministic UUID using v5 (SHA-1)
         # Custom namespace for CrewAI to enhance security
+
         # Using a unique namespace specific to CrewAI to reduce collision risks
         CREW_AI_NAMESPACE = uuid.UUID('f47ac10b-58cc-4372-a567-0e02b2c3d479')
         return str(uuid.uuid5(CREW_AI_NAMESPACE, seed))
