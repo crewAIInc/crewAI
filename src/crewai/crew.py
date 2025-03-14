@@ -151,14 +151,14 @@ class Crew(BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
-    manager_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
+    manager_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
     manager_agent: Optional[BaseAgent] = Field(
         description="Custom agent that will be used as manager.", default=None
     )
     function_calling_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
-        description="Language model that will run the agent.", default=None
+        description="Language model that will be used for function calling.", default=None
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
@@ -197,7 +197,7 @@ class Crew(BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
-    planning_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
+    planning_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
         default=None,
         description="Language model that will run the AgentPlanner if planning is True.",
     )
@@ -213,7 +213,7 @@ class Crew(BaseModel):
         default=None,
         description="Knowledge sources for the crew. Add knowledge sources to the knowledge object.",
     )
-    chat_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
+    chat_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
     )

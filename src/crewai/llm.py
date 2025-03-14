@@ -66,7 +66,13 @@ class LLM(ABC):
             Either a new LLM instance or a DefaultLLM instance for backward compatibility.
         """
         if cls is LLM and (args or kwargs.get('model') is not None):
-            from crewai.llm import DefaultLLM
+            # Import locally to avoid circular imports
+            # This is safe because DefaultLLM is defined later in this file
+            DefaultLLM = globals().get('DefaultLLM')
+            if DefaultLLM is None:
+                # If DefaultLLM is not yet defined, return a placeholder
+                # that will be replaced with a real DefaultLLM instance later
+                return object.__new__(cls)
             return DefaultLLM(*args, **kwargs)
         return super().__new__(cls)
     

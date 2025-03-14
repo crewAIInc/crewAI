@@ -116,9 +116,16 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
 
-        self.llm = create_llm(self.llm)
+        try:
+            self.llm = create_llm(self.llm)
+        except Exception as e:
+            raise RuntimeError(f"Failed to initialize LLM for agent '{self.role}': {str(e)}")
+            
         if self.function_calling_llm and not isinstance(self.function_calling_llm, BaseLLM):
-            self.function_calling_llm = create_llm(self.function_calling_llm)
+            try:
+                self.function_calling_llm = create_llm(self.function_calling_llm)
+            except Exception as e:
+                raise RuntimeError(f"Failed to initialize function calling LLM for agent '{self.role}': {str(e)}")
 
         if not self.agent_executor:
             self._setup_agent_executor()
