@@ -345,7 +345,12 @@ class DatabricksQueryTool(BaseTool):
                     # Dump the raw structure of result data to help troubleshoot
                     if hasattr(result.result, 'data_array'):
                         print(f"data_array structure: {type(result.result.data_array)}")
-                        if result.result.data_array and len(result.result.data_array) > 0:
+                        # Add defensive check for None data_array
+                        if result.result.data_array is None:
+                            print("data_array is None - likely an empty result set or DDL query")
+                            # Return empty result handling rather than trying to process null data
+                            return "Query executed successfully (no data returned)"
+                        elif result.result.data_array and len(result.result.data_array) > 0:
                             print(f"First chunk type: {type(result.result.data_array[0])}")
                             if len(result.result.data_array[0]) > 0:
                                 print(f"First row type: {type(result.result.data_array[0][0])}")
@@ -354,43 +359,49 @@ class DatabricksQueryTool(BaseTool):
                     # IMPROVED DETECTION LOGIC: Check if we're possibly dealing with rows where each item
                     # contains a single value or character (which could indicate incorrect row structure)
                     is_likely_incorrect_row_structure = False
-                    sample_size = min(20, len(result.result.data_array[0]))
 
-                    if sample_size > 0:
-                        single_char_count = 0
-                        single_digit_count = 0
-                        total_items = 0
+                    # Only try to analyze sample if data_array exists and has content
+                    if hasattr(result.result, 'data_array') and result.result.data_array and len(result.result.data_array) > 0 and len(result.result.data_array[0]) > 0:
+                        sample_size = min(20, len(result.result.data_array[0]))
 
-                        for i in range(sample_size):
-                            val = result.result.data_array[0][i]
-                            total_items += 1
-                            if isinstance(val, str) and len(val) == 1 and not val.isdigit():
-                                single_char_count += 1
-                            elif isinstance(val, str) and len(val) == 1 and val.isdigit():
-                                single_digit_count += 1
+                        if sample_size > 0:
+                            single_char_count = 0
+                            single_digit_count = 0
+                            total_items = 0
 
-                        # If a significant portion of the first values are single characters or digits,
-                        # this likely indicates data is being incorrectly structured
-                        if total_items > 0 and (single_char_count + single_digit_count) / total_items > 0.5:
-                            print(f"Detected potential incorrect row structure: {single_char_count} single chars, {single_digit_count} digits out of {total_items} total items")
-                            is_likely_incorrect_row_structure = True
+                            for i in range(sample_size):
+                                val = result.result.data_array[0][i]
+                                total_items += 1
+                                if isinstance(val, str) and len(val) == 1 and not val.isdigit():
+                                    single_char_count += 1
+                                elif isinstance(val, str) and len(val) == 1 and val.isdigit():
+                                    single_digit_count += 1
+
+                            # If a significant portion of the first values are single characters or digits,
+                            # this likely indicates data is being incorrectly structured
+                            if total_items > 0 and (single_char_count + single_digit_count) / total_items > 0.5:
+                                print(f"Detected potential incorrect row structure: {single_char_count} single chars, {single_digit_count} digits out of {total_items} total items")
+                                is_likely_incorrect_row_structure = True
 
                     # Additional check: if many rows have just 1 item when we expect multiple columns
-                    rows_with_single_item = sum(1 for row in result.result.data_array[:sample_size] if isinstance(row, list) and len(row) == 1)
-                    if rows_with_single_item > sample_size * 0.5 and len(columns) > 1:
-                        print(f"Many rows ({rows_with_single_item}/{sample_size}) have only a single value when expecting {len(columns)} columns")
-                        is_likely_incorrect_row_structure = True
+                    rows_with_single_item = 0
+                    if hasattr(result.result, 'data_array') and result.result.data_array and len(result.result.data_array) > 0:
+                        sample_size_for_rows = min(sample_size, len(result.result.data_array[0])) if 'sample_size' in locals() else min(20, len(result.result.data_array[0]))
+                        rows_with_single_item = sum(1 for row in result.result.data_array[0][:sample_size_for_rows] if isinstance(row, list) and len(row) == 1)
+                        if rows_with_single_item > sample_size_for_rows * 0.5 and len(columns) > 1:
+                            print(f"Many rows ({rows_with_single_item}/{sample_size_for_rows}) have only a single value when expecting {len(columns)} columns")
+                            is_likely_incorrect_row_structure = True
 
                     # Check if we're getting primarily single characters or the data structure seems off,
                     # we should use special handling
-                    if is_likely_incorrect_row_structure:
+                    if 'is_likely_incorrect_row_structure' in locals() and is_likely_incorrect_row_structure:
                         print("Data appears to be malformed - will use special row reconstruction")
                         needs_special_string_handling = True
                     else:
                         needs_special_string_handling = False
 
                     # Process results differently based on detection
-                    if needs_special_string_handling:
+                    if 'needs_special_string_handling' in locals() and needs_special_string_handling:
                         # We're dealing with data where the rows may be incorrectly structured
                         print("Using row reconstruction processing mode")
 
