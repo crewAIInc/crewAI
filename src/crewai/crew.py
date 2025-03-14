@@ -33,6 +33,7 @@ from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
+from crewai.security import Fingerprint, SecurityConfig
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
@@ -92,6 +93,7 @@ class Crew(BaseModel):
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
         planning: Plan the crew execution and add the plan to the crew.
         chat_llm: The language model used for orchestrating chat interactions with the crew.
+        security_config: Security configuration for the crew, including fingerprinting.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -221,6 +223,10 @@ class Crew(BaseModel):
     knowledge: Optional[Knowledge] = Field(
         default=None,
         description="Knowledge for the crew.",
+    )
+    security_config: SecurityConfig = Field(
+        default_factory=SecurityConfig,
+        description="Security configuration for the crew, including fingerprinting.",
     )
 
     @field_validator("id", mode="before")
@@ -480,10 +486,20 @@ class Crew(BaseModel):
 
     @property
     def key(self) -> str:
-        source = [agent.key for agent in self.agents] + [
+        source: List[str] = [agent.key for agent in self.agents] + [
             task.key for task in self.tasks
         ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
+        
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """
+        Get the crew's fingerprint.
+
+        Returns:
+            Fingerprint: The crew's fingerprint
+        """
+        return self.security_config.fingerprint
 
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
