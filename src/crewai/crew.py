@@ -116,7 +116,7 @@ class Crew(BaseModel):
     name: Optional[str] = Field(default=None)
     cache: bool = Field(default=True)
     tasks: List[Task] = Field(default_factory=list)
-    agents: Sequence[BaseAgent] = Field(default_factory=list)
+    agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
     memory: bool = Field(

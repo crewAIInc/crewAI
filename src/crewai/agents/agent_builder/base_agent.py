@@ -306,7 +306,6 @@ class BaseAgent(ABC, BaseModel):
                 copied_source.storage = shared_storage
                 existing_knowledge_sources.append(copied_source)
 
-        # Copy delegate_to if it exists
         existing_delegate_to = None
         if self.delegate_to:
             existing_delegate_to = list(self.delegate_to)

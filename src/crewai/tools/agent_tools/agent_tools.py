@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import List
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools.base_tool import BaseTool
@@ -11,11 +11,11 @@ from .delegate_work_tool import DelegateWorkTool
 class AgentTools:
     """Manager class for agent-related tools"""
 
-    def __init__(self, agents: Sequence[BaseAgent], i18n: I18N = I18N()):
+    def __init__(self, agents: List[BaseAgent], i18n: I18N = I18N()):
         self.agents = agents
         self.i18n = i18n
 
-    def tools(self) -> Sequence[BaseTool]:
+    def tools(self) -> List[BaseTool]:
         """Get all available agent tools"""
         coworkers = ", ".join([f"{agent.role}" for agent in self.agents])
 

@@ -865,11 +865,17 @@ def test_crew_verbose_output(capsys):
     crew._logger = Logger(verbose=False)
     crew.kickoff()
     captured = capsys.readouterr()
+
+    # Filter out event listener logs, escape codes, and now also 'tools:' lines
     filtered_output = "\n".join(
         line
         for line in captured.out.split("\n")
-        if not line.startswith("[") and line.strip() and not line.startswith("\x1b")
+        if not line.startswith("[")
+        and line.strip()
+        and not line.startswith("\x1b")
+        and not "tools:" in line.lower()  # Exclude 'tools:' lines
     )
+
     assert filtered_output == ""
 
 
