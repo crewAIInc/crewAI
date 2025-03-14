@@ -13,7 +13,9 @@ def test_opentelemetry_imports():
     try:
         # Test basic imports
         from opentelemetry import trace
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+            OTLPSpanExporter,
+        )
         from opentelemetry.sdk.resources import SERVICE_NAME, Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -67,6 +69,7 @@ def test_telemetry_configuration():
     for disabling telemetry collection.
     """
     import os
+
     from src.crewai.telemetry.telemetry import Telemetry
     
     # Test with telemetry disabled via environment variable
