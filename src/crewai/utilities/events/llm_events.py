@@ -34,3 +34,10 @@ class LLMCallFailedEvent(CrewEvent):
 
     error: str
     type: str = "llm_call_failed"
+
+
+class LLMStreamChunkEvent(CrewEvent):
+    """Event emitted when a streaming chunk is received"""
+
+    type: str = "llm_stream_chunk"
+    chunk: str
