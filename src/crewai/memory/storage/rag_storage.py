@@ -130,7 +130,7 @@ class RAGStorage(BaseRAGStorage):
                     "context": response["documents"][0][i],
                     "score": response["distances"][0][i],
                 }
-                if result["score"] >= score_threshold:
+                if result["score"] < score_threshold:  # Lower distance values indicate higher similarity in ChromaDB
                     results.append(result)
 
             return results
