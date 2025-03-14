@@ -55,6 +55,7 @@ from crewai.utilities.events.crew_events import (
     CrewTrainStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -254,7 +255,11 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
+
         self._cache_handler = CacheHandler()
+        event_listener = EventListener()
+        event_listener.verbose = self.verbose
+        event_listener.formatter.verbose = self.verbose
         self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
