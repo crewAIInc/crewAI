@@ -88,6 +88,13 @@
             "guides/flows/first-flow",
             "guides/flows/mastering-flow-state"
           ]
+        },
+        {
+          "group": "Advanced",
+          "pages": [
+            "guides/advanced/customizing-prompts",
+            "guides/advanced/fingerprinting"
+          ]
         }
       ]
     },
