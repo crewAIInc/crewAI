@@ -1,8 +1,10 @@
-import pytest
 import time
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from crewai import Agent, Task
+
 
 def test_agent_max_execution_time():
     """Test that max_execution_time parameter is enforced."""
