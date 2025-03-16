@@ -1,3 +1,4 @@
+import concurrent.futures
 import re
 import shutil
 import subprocess
@@ -234,48 +235,118 @@ class Agent(BaseAgent):
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
 
-        try:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionStartedEvent(
-                    agent=self,
-                    tools=self.tools,
-                    task_prompt=task_prompt,
-                    task=task,
-                ),
-            )
-            result = self.agent_executor.invoke(
-                {
-                    "input": task_prompt,
-                    "tool_names": self.agent_executor.tools_names,
-                    "tools": self.agent_executor.tools_description,
-                    "ask_for_human_input": task.human_input,
-                }
-            )["output"]
-        except Exception as e:
-            if e.__class__.__module__.startswith("litellm"):
-                # Do not retry on litellm errors
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            self._times_executed += 1
-            if self._times_executed > self.max_retry_limit:
-                crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
-                raise e
-            result = self.execute_task(task, context, tools)
+        # Prepare the invoke parameters
+        invoke_params = {
+            "input": task_prompt,
+            "tool_names": self.agent_executor.tools_names,
+            "tools": self.agent_executor.tools_description,
+            "ask_for_human_input": task.human_input,
+        }
+
+        # Emit the execution started event
+        crewai_event_bus.emit(
+            self,
+            event=AgentExecutionStartedEvent(
+                agent=self,
+                tools=self.tools,
+                task_prompt=task_prompt,
+                task=task,
+            ),
+        )
+
+        # If max_execution_time is set, use ThreadPoolExecutor with timeout
+        if self.max_execution_time is not None:
+            try:
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(self.agent_executor.invoke, invoke_params)
+                    try:
+                        result = future.result(timeout=self.max_execution_time)["output"]
+                    except concurrent.futures.TimeoutError:
+                        # Cancel the future to stop the execution
+                        future.cancel()
+                        # Define the timeout error message
+                        error_message = f"Agent execution exceeded maximum time of {self.max_execution_time} seconds"
+                        # Emit the timeout error event
+                        crewai_event_bus.emit(
+                            self,
+                            event=AgentExecutionErrorEvent(
+                                agent=self,
+                                task=task,
+                                error=error_message,
+                            ),
+                        )
+                        # Raise a standard Exception with the timeout message
+                        # This avoids circular import issues while still providing the expected error message
+                        raise Exception(f"Timeout Error: {error_message}")
+            except Exception as e:
+                # Re-raise any exceptions
+                if "Timeout Error:" in str(e):
+                    raise
+                # For other exceptions, follow the normal retry logic
+                self._times_executed += 1
+                if self._times_executed > self.max_retry_limit:
+                    crewai_event_bus.emit(
+                        self,
+                        event=AgentExecutionErrorEvent(
+                            agent=self,
+                            task=task,
+                            error=str(e),
+                        ),
+                    )
+                    raise e
+                return self.execute_task(task, context, tools)
+            except Exception as e:
+                if e.__class__.__module__.startswith("litellm"):
+                    # Do not retry on litellm errors
+                    crewai_event_bus.emit(
+                        self,
+                        event=AgentExecutionErrorEvent(
+                            agent=self,
+                            task=task,
+                            error=str(e),
+                        ),
+                    )
+                    raise e
+                self._times_executed += 1
+                if self._times_executed > self.max_retry_limit:
+                    crewai_event_bus.emit(
+                        self,
+                        event=AgentExecutionErrorEvent(
+                            agent=self,
+                            task=task,
+                            error=str(e),
+                        ),
+                    )
+                    raise e
+                result = self.execute_task(task, context, tools)
+        else:
+            # No timeout, execute normally
+            try:
+                result = self.agent_executor.invoke(invoke_params)["output"]
+            except Exception as e:
+                if e.__class__.__module__.startswith("litellm"):
+                    # Do not retry on litellm errors
+                    crewai_event_bus.emit(
+                        self,
+                        event=AgentExecutionErrorEvent(
+                            agent=self,
+                            task=task,
+                            error=str(e),
+                        ),
+                    )
+                    raise e
+                self._times_executed += 1
+                if self._times_executed > self.max_retry_limit:
+                    crewai_event_bus.emit(
+                        self,
+                        event=AgentExecutionErrorEvent(
+                            agent=self,
+                            task=task,
+                            error=str(e),
+                        ),
+                    )
+                    raise e
+                result = self.execute_task(task, context, tools)
 
         if self.max_rpm and self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()

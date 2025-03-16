@@ -10,6 +10,7 @@ from .rpm_controller import RPMController
 from .exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
+from .exceptions.agent_execution_timeout_error import AgentExecutionTimeoutError
 from .embedding_configurator import EmbeddingConfigurator
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "RPMController",
     "YamlParser",
     "LLMContextLengthExceededException",
+    "AgentExecutionTimeoutError",
     "EmbeddingConfigurator",
 ]
