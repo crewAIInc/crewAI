@@ -1,6 +1,7 @@
-import time
 import pytest
-from unittest.mock import patch, MagicMock
+import time
+from unittest.mock import MagicMock, patch
+
 from crewai import Agent, Task
 
 def test_agent_max_execution_time():
