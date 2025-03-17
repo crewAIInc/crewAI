@@ -621,7 +621,7 @@ class Crew(BaseModel):
                 agent.i18n = i18n
                 # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
                 agent.crew = self  # type: ignore[attr-defined]
-                agent.set_knowledge(crew_embedder=self.embedder)
+                agent.set_knowledge(embedder_config=self.embedder)
                 # TODO: Create an AgentFunctionCalling protocol for future refactoring
                 if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
                     agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"

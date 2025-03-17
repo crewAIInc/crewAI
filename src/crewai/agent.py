@@ -134,23 +134,50 @@ class Agent(BaseAgent):
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+    def set_knowledge(
+        self, 
+        knowledge_sources: Optional[List[BaseKnowledgeSource]] = None, 
+        embedder_config: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Set knowledge sources for the agent with optional embedder configuration.
+        
+        This method allows agents to integrate external knowledge sources for enhanced
+        contextual understanding and information retrieval during task execution.
+        
+        Args:
+            knowledge_sources: List of knowledge sources to integrate. These can include
+                various data types such as text files, PDFs, CSV files, JSON files,
+                web pages, YouTube videos, and documentation websites.
+            embedder_config: Configuration for embedding generation. If not provided,
+                a default configuration will be used.
+        
+        Raises:
+            ValueError: If the provided knowledge sources are invalid.
+        """
         try:
-            if self.embedder is None and crew_embedder:
-                self.embedder = crew_embedder
+            # Handle backward compatibility with crew_embedder
+            if embedder_config and self.embedder is None:
+                self.embedder = embedder_config
+                
+            # Set knowledge sources if provided
+            if knowledge_sources:
+                if not isinstance(knowledge_sources, list):
+                    raise ValueError("Knowledge sources must be a list")
+                
+                if not all(isinstance(k, BaseKnowledgeSource) for k in knowledge_sources):
+                    raise ValueError("All knowledge sources must be instances of BaseKnowledgeSource")
+                
+                self.knowledge_sources = knowledge_sources
 
             if self.knowledge_sources:
                 full_pattern = re.compile(r"[^a-zA-Z0-9\-_\r\n]|(\.\.)")
                 knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
-                if isinstance(self.knowledge_sources, list) and all(
-                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
-                ):
-                    self.knowledge = Knowledge(
-                        sources=self.knowledge_sources,
-                        embedder=self.embedder,
-                        collection_name=knowledge_agent_name,
-                        storage=self.knowledge_storage or None,
-                    )
+                self.knowledge = Knowledge(
+                    sources=self.knowledge_sources,
+                    embedder=self.embedder,
+                    collection_name=knowledge_agent_name,
+                    storage=self.knowledge_storage or None,
+                )
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
