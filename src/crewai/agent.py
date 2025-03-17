@@ -158,7 +158,7 @@ class Agent(BaseAgent):
         self,
         task: Task,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[List[BaseTool]] = None
     ) -> str:
         """Execute a task with the agent.
 
@@ -169,6 +169,9 @@ class Agent(BaseAgent):
 
         Returns:
             Output of the agent
+
+        Raises:
+            TimeoutError: If execution exceeds the maximum execution time.
         """
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
@@ -244,15 +247,49 @@ class Agent(BaseAgent):
                     task=task,
                 ),
             )
-            result = self.agent_executor.invoke(
-                {
-                    "input": task_prompt,
-                    "tool_names": self.agent_executor.tools_names,
-                    "tools": self.agent_executor.tools_description,
-                    "ask_for_human_input": task.human_input,
-                }
-            )["output"]
+            
+            # Apply timeout if specified
+            if self.max_execution_time is not None:
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        self.agent_executor.invoke,
+                        {
+                            "input": task_prompt,
+                            "tool_names": self.agent_executor.tools_names,
+                            "tools": self.agent_executor.tools_description,
+                            "ask_for_human_input": task.human_input,
+                        }
+                    )
+                    
+                    try:
+                        result = future.result(timeout=self.max_execution_time)["output"]
+                    except concurrent.futures.TimeoutError:
+                        # Cancel the execution if possible
+                        future.cancel()
+                        crewai_event_bus.emit(
+                            self,
+                            event=AgentExecutionErrorEvent(
+                                agent=self,
+                                task=task,
+                                error=f"Execution exceeded maximum time limit of {self.max_execution_time} seconds",
+                            ),
+                        )
+                        raise TimeoutError(f"Execution exceeded maximum time limit of {self.max_execution_time} seconds")
+            else:
+                # Original execution without timeout
+                result = self.agent_executor.invoke(
+                    {
+                        "input": task_prompt,
+                        "tool_names": self.agent_executor.tools_names,
+                        "tools": self.agent_executor.tools_description,
+                        "ask_for_human_input": task.human_input,
+                    }
+                )["output"]
         except Exception as e:
+            if isinstance(e, TimeoutError):
+                # Propagate TimeoutError without retry
+                raise e
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
                 crewai_event_bus.emit(
