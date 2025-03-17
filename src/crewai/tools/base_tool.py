@@ -99,10 +99,19 @@ class BaseTool(BaseModel, ABC):
             
         Raises:
             ValueError: If input is neither a string nor a dictionary
+            ValueError: If input exceeds the maximum allowed size
+            ValueError: If input contains nested dictionaries beyond the maximum allowed depth
         """
+        # Input type validation
         if not isinstance(input, (str, dict)):
             raise ValueError(f"Input must be string or dict, got {type(input)}")
             
+        # Input size validation (limit to 100KB)
+        MAX_INPUT_SIZE = 100 * 1024  # 100KB
+        if isinstance(input, str) and len(input.encode('utf-8')) > MAX_INPUT_SIZE:
+            logger.warning(f"Input string exceeds maximum size of {MAX_INPUT_SIZE} bytes")
+            raise ValueError(f"Input string exceeds maximum size of {MAX_INPUT_SIZE} bytes")
+        
         if isinstance(input, str):
             # Try to parse as JSON if it's a string
             try:
@@ -117,6 +126,21 @@ class BaseTool(BaseModel, ABC):
             # If input is not a dict after parsing, pass it directly
             logger.debug(f"Using non-dict input directly: {input}")
             return self._run(input)
+            
+        # Validate nested dictionary depth
+        MAX_DEPTH = 5
+        def check_depth(obj, current_depth=1):
+            if current_depth > MAX_DEPTH:
+                return False
+            if isinstance(obj, dict):
+                return all(check_depth(v, current_depth + 1) for v in obj.values())
+            elif isinstance(obj, (list, tuple)):
+                return all(check_depth(item, current_depth + 1) for item in obj)
+            return True
+            
+        if not check_depth(input):
+            logger.warning(f"Input contains nested structures beyond maximum depth of {MAX_DEPTH}")
+            raise ValueError(f"Input contains nested structures beyond maximum depth of {MAX_DEPTH}")
             
         # Get the expected arguments from the schema
         if hasattr(self, 'args_schema') and self.args_schema is not None:
