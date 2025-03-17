@@ -1,5 +1,6 @@
+from importlib.metadata import PackageNotFoundError, version
+
 import pytest
-from importlib.metadata import version, PackageNotFoundError
 
 
 def test_databricks_sdk_import():
