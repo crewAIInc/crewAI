@@ -1,5 +1,6 @@
 import pytest
 
+
 def test_databricks_sdk_import():
     """Test that databricks-sdk can be imported without errors.
     
