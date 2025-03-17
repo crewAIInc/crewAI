@@ -153,33 +153,54 @@ class Agent(BaseAgent):
         
         Raises:
             ValueError: If the provided knowledge sources are invalid.
+            TypeError: If knowledge_sources is not a list or None.
+            ValueError: If embedder_config is missing required keys.
+        
+        Example:
+            ```python
+            from crewai.knowledge.source import StringKnowledgeSource
+            
+            content = "The capital of France is Paris."
+            source = StringKnowledgeSource(content=content)
+            
+            agent.set_knowledge(
+                knowledge_sources=[source],
+                embedder_config={"provider": "openai", "model": "text-embedding-3-small"}
+            )
+            ```
         """
         try:
             # Handle backward compatibility with crew_embedder
             if embedder_config and self.embedder is None:
                 self.embedder = embedder_config
                 
-            # Set knowledge sources if provided
-            if knowledge_sources:
+            # Validate knowledge sources
+            if knowledge_sources is not None:
                 if not isinstance(knowledge_sources, list):
-                    raise ValueError("Knowledge sources must be a list")
+                    raise TypeError("knowledge_sources must be a list or None")
                 
                 if not all(isinstance(k, BaseKnowledgeSource) for k in knowledge_sources):
                     raise ValueError("All knowledge sources must be instances of BaseKnowledgeSource")
                 
                 self.knowledge_sources = knowledge_sources
 
+            # Create knowledge object if knowledge sources are provided
             if self.knowledge_sources:
                 full_pattern = re.compile(r"[^a-zA-Z0-9\-_\r\n]|(\.\.)")
-                knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
+                # Create a unique collection name based on agent role and id
+                knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}_{id(self)}"
                 self.knowledge = Knowledge(
                     sources=self.knowledge_sources,
                     embedder=self.embedder,
                     collection_name=knowledge_agent_name,
                     storage=self.knowledge_storage or None,
                 )
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
+        except TypeError as e:
+            raise TypeError(f"Invalid Knowledge Configuration Type: {str(e)}")
+        except ValueError as e:
+            raise ValueError(f"Invalid Knowledge Configuration Value: {str(e)}")
+        except Exception as e:
+            raise ValueError(f"Error setting knowledge: {str(e)}")
 
     def execute_task(
         self,

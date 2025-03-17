@@ -1632,7 +1632,8 @@ def test_base_agent_set_knowledge():
         assert agent.knowledge_sources == [string_source]
         assert agent.knowledge is not None
         assert MockKnowledge.called
-        assert MockKnowledge.call_args[1]["collection_name"] == "Test_Agent"
+        # Check that collection name starts with the agent role (now includes unique ID)
+        assert MockKnowledge.call_args[1]["collection_name"].startswith("Test_Agent_")
         
         # Test with embedder config
         embedder_config = {

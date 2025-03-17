@@ -2,7 +2,7 @@ import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar, Union, cast
 
 from pydantic import (
     UUID4,
@@ -385,27 +385,55 @@ class BaseAgent(ABC, BaseModel):
         
         Raises:
             ValueError: If the provided knowledge sources are invalid.
+            TypeError: If knowledge_sources is not a list or None.
+            ValueError: If embedder_config is missing required keys.
+        
+        Example:
+            ```python
+            from crewai.knowledge.source import StringKnowledgeSource
+            
+            content = "The capital of France is Paris."
+            source = StringKnowledgeSource(content=content)
+            
+            agent.set_knowledge(
+                knowledge_sources=[source],
+                embedder_config={"provider": "openai", "model": "text-embedding-3-small"}
+            )
+            ```
         """
         try:
             # Validate knowledge sources first
-            if knowledge_sources:
+            if knowledge_sources is not None:
                 if not isinstance(knowledge_sources, list):
-                    raise ValueError("Knowledge sources must be a list")
+                    raise TypeError("knowledge_sources must be a list or None")
                 
                 if not all(isinstance(k, BaseKnowledgeSource) for k in knowledge_sources):
                     raise ValueError("All knowledge sources must be instances of BaseKnowledgeSource")
                 
                 self.knowledge_sources = knowledge_sources
+            
+            # Validate embedder configuration
+            if embedder_config is not None:
+                if not isinstance(embedder_config, dict):
+                    raise TypeError("embedder_config must be a dictionary or None")
                 
-            if embedder_config:
+                if "provider" not in embedder_config:
+                    raise ValueError("embedder_config must contain a 'provider' key")
+                
                 self.embedder_config = embedder_config
                 
+            # Create knowledge object if knowledge sources are provided
             if self.knowledge_sources:
-                knowledge_agent_name = f"{self.role.replace(' ', '_')}"
+                # Create a unique collection name based on agent role and id
+                knowledge_agent_name = f"{self.role.replace(' ', '_')}_{id(self)}"
                 self.knowledge = Knowledge(
                     sources=self.knowledge_sources,
                     embedder_config=self.embedder_config,
                     collection_name=knowledge_agent_name,
                 )
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
+        except TypeError as e:
+            raise TypeError(f"Invalid Knowledge Configuration Type: {str(e)}")
+        except ValueError as e:
+            raise ValueError(f"Invalid Knowledge Configuration Value: {str(e)}")
+        except Exception as e:
+            raise ValueError(f"Error setting knowledge: {str(e)}")
