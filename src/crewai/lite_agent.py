@@ -120,21 +120,21 @@ class LiteAgent(BaseModel):
         """Get the default system prompt for the agent."""
         prompt = f"""You are a helpful AI assistant acting as {self.role}.
 
-Your goal is: {self.goal}
+        Your goal is: {self.goal}
 
-Your backstory: {self.backstory}
+        Your backstory: {self.backstory}
 
-When using tools, follow this format:
-Thought: I need to use a tool to help with this task.
-Action: tool_name
-Action Input: {{
-    "parameter1": "value1",
-    "parameter2": "value2"
-}}
-Observation: [Result of the tool execution]
+        When using tools, follow this format:
+        Thought: I need to use a tool to help with this task.
+        Action: tool_name
+        Action Input: {{
+            "parameter1": "value1",
+            "parameter2": "value2"
+        }}
+        Observation: [Result of the tool execution]
 
-When you have the final answer, respond directly without the above format.
-"""
+        When you have the final answer, respond directly without the above format.
+        """
         return prompt
 
     def _format_tools_description(self) -> str:
