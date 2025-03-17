@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+from concurrent.futures import TimeoutError
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,7 +14,6 @@ from crewai import Agent, Crew, Process, Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
-from concurrent.futures import TimeoutError
 
 
 def test_task_tool_reflect_agent_tools():
