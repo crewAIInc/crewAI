@@ -45,7 +45,10 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools>=0.37.0", "databricks-sdk>=0.46.0"]
+tools = [
+    "crewai-tools>=0.37.0",
+    "databricks-sdk>=0.46.0,<1.0.0"  # Required for Databricks query tool functionality
+]
 embeddings = [
     "tiktoken~=0.7.0"
 ]
