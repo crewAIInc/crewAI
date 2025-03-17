@@ -1,7 +1,9 @@
 import pytest
+
 from crewai import Agent, Crew, Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
+
 
 def test_conditional_task_preserved_in_copy():
     """Test that ConditionalTask objects are preserved when copying a Crew."""
