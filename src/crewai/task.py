@@ -641,7 +641,9 @@ class Task(BaseModel):
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = copy(self.tools) if self.tools else []
 
-        copied_task = Task(
+        # Use the actual class of the instance being copied, not just Task
+        task_class = self.__class__
+        copied_task = task_class(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
