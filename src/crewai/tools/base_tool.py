@@ -1,7 +1,7 @@
 import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
-from typing import Any, Callable, Type, get_args, get_origin
+from typing import Any, Callable, Dict, Optional, Type, Union, get_args, get_origin
 
 from pydantic import (
     BaseModel,
@@ -75,6 +75,46 @@ class BaseTool(BaseModel, ABC):
         **kwargs: Any,
     ) -> Any:
         """Here goes the actual implementation of the tool."""
+        
+    def invoke(
+        self, input: Union[str, dict], config: Optional[dict] = None, **kwargs: Any
+    ) -> Any:
+        """Main method for tool execution.
+        
+        This method provides a fallback implementation for models that don't support
+        function calling natively (like QwQ-32B-Preview and deepseek-chat).
+        It parses the input and calls the _run method with the appropriate arguments.
+        """
+        if isinstance(input, str):
+            # Try to parse as JSON if it's a string
+            try:
+                import json
+                input = json.loads(input)
+            except json.JSONDecodeError:
+                # If not valid JSON, pass as a single argument
+                return self._run(input)
+                
+        if not isinstance(input, dict):
+            # If input is not a dict after parsing, pass it directly
+            return self._run(input)
+            
+        # Get the expected arguments from the schema
+        if hasattr(self, 'args_schema') and self.args_schema is not None:
+            try:
+                # Extract argument names from the schema
+                arg_names = list(self.args_schema.model_json_schema()["properties"].keys())
+                
+                # Filter the input to only include valid arguments
+                filtered_args = {k: v for k, v in input.items() if k in arg_names}
+                
+                # Call _run with the filtered arguments
+                return self._run(**filtered_args)
+            except Exception:
+                # Fallback to passing the entire input dict if schema parsing fails
+                pass
+                
+        # If we couldn't parse the schema or there was an error, just pass the input dict
+        return self._run(**input)
 
     def to_structured_tool(self) -> CrewStructuredTool:
         """Convert this tool to a CrewStructuredTool instance."""
