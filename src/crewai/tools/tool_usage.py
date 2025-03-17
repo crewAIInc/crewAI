@@ -1,28 +1,30 @@
 import ast
 import datetime
 import json
-import re
 import time
 from difflib import SequenceMatcher
+from json import JSONDecodeError
 from textwrap import dedent
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
+import json5
 from json_repair import repair_json
 
-import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
-from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
 from crewai.utilities import I18N, Converter, ConverterError, Printer
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.tool_usage_events import (
+    ToolSelectionErrorEvent,
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolValidateInputErrorEvent,
+)
 
-try:
-    import agentops  # type: ignore
-except ImportError:
-    agentops = None
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
     "gpt-4o",
@@ -135,7 +137,6 @@ class ToolUsage:
         tool: Any,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
-        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None  # type: ignore
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -211,10 +212,6 @@ class ToolUsage:
                     return error  # type: ignore # No return value expected
 
                 self.task.increment_tools_errors()
-                if agentops:
-                    agentops.record(
-                        agentops.ErrorEvent(exception=e, trigger_event=tool_event)
-                    )
                 return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
 
             if self.tools_handler:
@@ -230,9 +227,6 @@ class ToolUsage:
                 self.tools_handler.on_tool_use(
                     calling=calling, output=result, should_cache=should_cache
                 )
-
-        if agentops:
-            agentops.record(tool_event)
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
             tool_name=tool.name,
@@ -307,14 +301,33 @@ class ToolUsage:
             ):
                 return tool
         self.task.increment_tools_errors()
+        tool_selection_data = {
+            "agent_key": self.agent.key,
+            "agent_role": self.agent.role,
+            "tool_name": tool_name,
+            "tool_args": {},
+            "tool_class": self.tools_description,
+        }
         if tool_name and tool_name != "":
-            raise Exception(
-                f"Action '{tool_name}' don't exist, these are the only available Actions:\n{self.tools_description}"
+            error = f"Action '{tool_name}' don't exist, these are the only available Actions:\n{self.tools_description}"
+            crewai_event_bus.emit(
+                self,
+                ToolSelectionErrorEvent(
+                    **tool_selection_data,
+                    error=error,
+                ),
             )
+            raise Exception(error)
         else:
-            raise Exception(
-                f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+            error = f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+            crewai_event_bus.emit(
+                self,
+                ToolSelectionErrorEvent(
+                    **tool_selection_data,
+                    error=error,
+                ),
             )
+            raise Exception(error)
 
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
@@ -407,34 +420,76 @@ class ToolUsage:
                 )
             return self._tool_calling(tool_string)
 
-    def _validate_tool_input(self, tool_input: str) -> Dict[str, Any]:
+    def _validate_tool_input(self, tool_input: Optional[str]) -> Dict[str, Any]:
+        if tool_input is None:
+            return {}
+
+        if not isinstance(tool_input, str) or not tool_input.strip():
+            raise Exception(
+                "Tool input must be a valid dictionary in JSON or Python literal format"
+            )
+
+        # Attempt 1: Parse as JSON
         try:
-            # Replace Python literals with JSON equivalents
-            replacements = {
-                r"'": '"',
-                r"None": "null",
-                r"True": "true",
-                r"False": "false",
-            }
-            for pattern, replacement in replacements.items():
-                tool_input = re.sub(pattern, replacement, tool_input)
-
             arguments = json.loads(tool_input)
-        except json.JSONDecodeError:
-            # Attempt to repair JSON string
-            repaired_input = repair_json(tool_input)
-            try:
-                arguments = json.loads(repaired_input)
-            except json.JSONDecodeError as e:
-                raise Exception(f"Invalid tool input JSON: {e}")
+            if isinstance(arguments, dict):
+                return arguments
+        except (JSONDecodeError, TypeError):
+            pass  # Continue to the next parsing attempt
 
-        return arguments
+        # Attempt 2: Parse as Python literal
+        try:
+            arguments = ast.literal_eval(tool_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except (ValueError, SyntaxError):
+            pass  # Continue to the next parsing attempt
+
+        # Attempt 3: Parse as JSON5
+        try:
+            arguments = json5.loads(tool_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except (JSONDecodeError, ValueError, TypeError):
+            pass  # Continue to the next parsing attempt
+
+        # Attempt 4: Repair JSON
+        try:
+            repaired_input = repair_json(tool_input)
+            self._printer.print(
+                content=f"Repaired JSON: {repaired_input}", color="blue"
+            )
+            arguments = json.loads(repaired_input)
+            if isinstance(arguments, dict):
+                return arguments
+        except Exception as e:
+            error = f"Failed to repair JSON: {e}"
+            self._printer.print(content=error, color="red")
+
+        error_message = (
+            "Tool input must be a valid dictionary in JSON or Python literal format"
+        )
+        self._emit_validate_input_error(error_message)
+        # If all parsing attempts fail, raise an error
+        raise Exception(error_message)
+
+    def _emit_validate_input_error(self, final_error: str):
+        tool_selection_data = {
+            "agent_key": self.agent.key,
+            "agent_role": self.agent.role,
+            "tool_name": self.action.tool,
+            "tool_args": str(self.action.tool_input),
+            "tool_class": self.__class__.__name__,
+        }
+
+        crewai_event_bus.emit(
+            self,
+            ToolValidateInputErrorEvent(**tool_selection_data, error=final_error),
+        )
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
-        events.emit(
-            source=self, event=ToolUsageError(**{**event_data, "error": str(e)})
-        )
+        crewai_event_bus.emit(self, ToolUsageErrorEvent(**{**event_data, "error": e}))
 
     def on_tool_use_finished(
         self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float
@@ -448,7 +503,7 @@ class ToolUsage:
                 "from_cache": from_cache,
             }
         )
-        events.emit(source=self, event=ToolUsageFinished(**event_data))
+        crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
         return {

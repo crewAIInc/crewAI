@@ -8,10 +8,10 @@ icon: rocket
 
 Let's create a simple crew that will help us `research` and `report` on the `latest AI developments` for a given topic or subject.
 
-Before we proceed, make sure you have `crewai` and `crewai-tools` installed.
+Before we proceed, make sure you have finished installing CrewAI.
 If you haven't installed them yet, you can do so by following the [installation guide](/installation).
 
-Follow the steps below to get crewing! 🚣‍♂️
+Follow the steps below to get Crewing! 🚣‍♂️
 
 <Steps>
   <Step title="Create your crew">
@@ -20,6 +20,13 @@ Follow the steps below to get crewing! 🚣‍♂️
     <CodeGroup>
       ```shell Terminal
       crewai create crew latest-ai-development
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Navigate to your new crew project">
+    <CodeGroup>
+      ```shell Terminal
+      cd latest-ai-development
       ```
     </CodeGroup>
   </Step>
@@ -58,7 +65,7 @@ Follow the steps below to get crewing! 🚣‍♂️
       description: >
         Conduct a thorough research about {topic}
         Make sure you find any interesting and relevant information given
-        the current year is 2024.
+        the current year is 2025.
       expected_output: >
         A list with 10 bullet points of the most relevant information about {topic}
       agent: researcher
@@ -172,21 +179,26 @@ Follow the steps below to get crewing! 🚣‍♂️
     - A [Serper.dev](https://serper.dev/) API key: `SERPER_API_KEY=YOUR_KEY_HERE`
   </Step>
   <Step title="Lock and install the dependencies">
-    Lock the dependencies and install them by using the CLI command but first, navigate to your project directory:
-    <CodeGroup>
-      ```shell Terminal
-      cd latest-ai-development
-      crewai install
-      ```
-    </CodeGroup>
+    - Lock the dependencies and install them by using the CLI command:
+      <CodeGroup>
+        ```shell Terminal
+        crewai install
+        ```
+      </CodeGroup>
+    - If you have additional packages that you want to install, you can do so by running:
+      <CodeGroup>
+        ```shell Terminal
+        uv add <package-name>
+        ```
+      </CodeGroup>
   </Step>
   <Step title="Run your crew">
-  To run your crew, execute the following command in the root of your project:
-    <CodeGroup>
-      ```bash Terminal
-      crewai run
-      ```
-    </CodeGroup>
+    - To run your crew, execute the following command in the root of your project:
+      <CodeGroup>
+        ```bash Terminal
+        crewai run
+        ```
+      </CodeGroup>
   </Step>
   <Step title="View your final report">
   You should see the output in the console and the `report.md` file should be created in the root of your project with the final report.
@@ -195,10 +207,10 @@ Follow the steps below to get crewing! 🚣‍♂️
 
   <CodeGroup>
     ```markdown output/report.md
-    # Comprehensive Report on the Rise and Impact of AI Agents in 2024
+    # Comprehensive Report on the Rise and Impact of AI Agents in 2025
 
     ## 1. Introduction to AI Agents
-    In 2024, Artificial Intelligence (AI) agents are at the forefront of innovation across various industries. As intelligent systems that can perform tasks typically requiring human cognition, AI agents are paving the way for significant advancements in operational efficiency, decision-making, and overall productivity within sectors like Human Resources (HR) and Finance. This report aims to detail the rise of AI agents, their frameworks, applications, and potential implications on the workforce.
+    In 2025, Artificial Intelligence (AI) agents are at the forefront of innovation across various industries. As intelligent systems that can perform tasks typically requiring human cognition, AI agents are paving the way for significant advancements in operational efficiency, decision-making, and overall productivity within sectors like Human Resources (HR) and Finance. This report aims to detail the rise of AI agents, their frameworks, applications, and potential implications on the workforce.
 
     ## 2. Benefits of AI Agents
     AI agents bring numerous advantages that are transforming traditional work environments. Key benefits include:
@@ -252,11 +264,17 @@ Follow the steps below to get crewing! 🚣‍♂️
     To stay competitive and harness the full potential of AI agents, organizations must remain vigilant about latest developments in AI technology and consider continuous learning and adaptation in their strategic planning.
 
     ## 8. Conclusion
-    The emergence of AI agents is undeniably reshaping the workplace landscape in 2024. With their ability to automate tasks, enhance efficiency, and improve decision-making, AI agents are critical in driving operational success. Organizations must embrace and adapt to AI developments to thrive in an increasingly digital business environment.
+    The emergence of AI agents is undeniably reshaping the workplace landscape in 5. With their ability to automate tasks, enhance efficiency, and improve decision-making, AI agents are critical in driving operational success. Organizations must embrace and adapt to AI developments to thrive in an increasingly digital business environment.
     ```
   </CodeGroup>
   </Step>
 </Steps>
+
+<Check>
+Congratulations! 
+
+You have successfully set up your crew project and are ready to start building your own agentic workflows!
+</Check>
 
 ### Note on Consistency in Naming
 
@@ -278,7 +296,7 @@ email_summarizer:
       Summarize emails into a concise and clear summary
     backstory: >
       You will create a 5 bullet point summary of the report
-    llm: mixtal_llm
+    llm: openai/gpt-4o
 ```
 
 <Tip>
@@ -297,194 +315,9 @@ email_summarizer_task:
       - research_task
 ```
 
-Use the annotations to properly reference the agent and task in the `crew.py` file.
-
-### Annotations include:
-
-Here are examples of how to use each annotation in your CrewAI project, and when you should use them:
-
-#### @agent
-Used to define an agent in your crew. Use this when:
-- You need to create a specialized AI agent with a specific role
-- You want the agent to be automatically collected and managed by the crew
-- You need to reuse the same agent configuration across multiple tasks
-
-```python
-@agent
-def research_agent(self) -> Agent:
-    return Agent(
-        role="Research Analyst",
-        goal="Conduct thorough research on given topics",
-        backstory="Expert researcher with years of experience in data analysis",
-        tools=[SerperDevTool()],
-        verbose=True
-    )
-```
-
-#### @task
-Used to define a task that can be executed by agents. Use this when:
-- You need to define a specific piece of work for an agent
-- You want tasks to be automatically sequenced and managed
-- You need to establish dependencies between different tasks
-
-```python
-@task
-def research_task(self) -> Task:
-    return Task(
-        description="Research the latest developments in AI technology",
-        expected_output="A comprehensive report on AI advancements",
-        agent=self.research_agent(),
-        output_file="output/research.md"
-    )
-```
-
-#### @crew
-Used to define your crew configuration. Use this when:
-- You want to automatically collect all @agent and @task definitions
-- You need to specify how tasks should be processed (sequential or hierarchical)
-- You want to set up crew-wide configurations
-
-```python
-@crew
-def research_crew(self) -> Crew:
-    return Crew(
-        agents=self.agents,  # Automatically collected from @agent methods
-        tasks=self.tasks,    # Automatically collected from @task methods
-        process=Process.sequential,
-        verbose=True
-    )
-```
-
-#### @tool
-Used to create custom tools for your agents. Use this when:
-- You need to give agents specific capabilities (like web search, data analysis)
-- You want to encapsulate external API calls or complex operations
-- You need to share functionality across multiple agents
-
-```python
-@tool
-def web_search_tool(query: str, max_results: int = 5) -> list[str]:
-    """
-    Search the web for information.
-
-    Args:
-        query: The search query
-        max_results: Maximum number of results to return
-
-    Returns:
-        List of search results
-    """
-    # Implement your search logic here
-    return [f"Result {i} for: {query}" for i in range(max_results)]
-```
-
-#### @before_kickoff
-Used to execute logic before the crew starts. Use this when:
-- You need to validate or preprocess input data
-- You want to set up resources or configurations before execution
-- You need to perform any initialization logic
-
-```python
-@before_kickoff
-def validate_inputs(self, inputs: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """Validate and preprocess inputs before the crew starts."""
-    if inputs is None:
-        return None
-        
-    if 'topic' not in inputs:
-        raise ValueError("Topic is required")
-    
-    # Add additional context
-    inputs['timestamp'] = datetime.now().isoformat()
-    inputs['topic'] = inputs['topic'].strip().lower()
-    return inputs
-```
-
-#### @after_kickoff
-Used to process results after the crew completes. Use this when:
-- You need to format or transform the final output
-- You want to perform cleanup operations
-- You need to save or log the results in a specific way
-
-```python
-@after_kickoff
-def process_results(self, result: CrewOutput) -> CrewOutput:
-    """Process and format the results after the crew completes."""
-    result.raw = result.raw.strip()
-    result.raw = f"""
-    # Research Results
-    Generated on: {datetime.now().isoformat()}
-    
-    {result.raw}
-    """
-    return result
-```
-
-#### @callback
-Used to handle events during crew execution. Use this when:
-- You need to monitor task progress
-- You want to log intermediate results
-- You need to implement custom progress tracking or metrics
-
-```python
-@callback
-def log_task_completion(self, task: Task, output: str):
-    """Log task completion details for monitoring."""
-    print(f"Task '{task.description}' completed")
-    print(f"Output length: {len(output)} characters")
-    print(f"Agent used: {task.agent.role}")
-    print("-" * 50)
-```
-
-#### @cache_handler
-Used to implement custom caching for task results. Use this when:
-- You want to avoid redundant expensive operations
-- You need to implement custom cache storage or expiration logic
-- You want to persist results between runs
-
-```python
-@cache_handler
-def custom_cache(self, key: str) -> Optional[str]:
-    """Custom cache implementation for storing task results."""
-    cache_file = f"cache/{key}.json"
-    
-    if os.path.exists(cache_file):
-        with open(cache_file, 'r') as f:
-            data = json.load(f)
-            # Check if cache is still valid (e.g., not expired)
-            if datetime.fromisoformat(data['timestamp']) > datetime.now() - timedelta(days=1):
-                return data['result']
-    return None
-```
-
-<Note>
-These decorators are part of the CrewAI framework and help organize your crew's structure by automatically collecting agents, tasks, and handling various lifecycle events. 
-They should be used within a class decorated with `@CrewBase`.
-</Note>
-
-### Replay Tasks from Latest Crew Kickoff
-
-CrewAI now includes a replay feature that allows you to list the tasks from the last run and replay from a specific one. To use this feature, run.
-
-```shell
-crewai replay <task_id>
-```
-
-Replace `<task_id>` with the ID of the task you want to replay.
-
-### Reset Crew Memory
-
-If you need to reset the memory of your crew before running it again, you can do so by calling the reset memory feature:
-
-```shell
-crewai reset-memories --all
-```
-
-This will clear the crew's memory, allowing for a fresh start.
-
 ## Deploying Your Project
 
-The easiest way to deploy your crew is through CrewAI Enterprise, where you can deploy your crew in a few clicks.
+The easiest way to deploy your crew is through [CrewAI Enterprise](http://app.crewai.com), where you can deploy your crew in a few clicks.
 
 <CardGroup cols={2}>
   <Card
