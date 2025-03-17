@@ -9,6 +9,7 @@ from copy import copy
 from hashlib import md5
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     ClassVar,
@@ -33,7 +34,7 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.security import Fingerprint, SecurityConfig
-from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.guardrail_result import GuardrailResult
