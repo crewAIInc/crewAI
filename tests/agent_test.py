@@ -1587,6 +1587,75 @@ def test_agent_execute_task_with_ollama():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_base_agent_set_knowledge():
+    """Test that set_knowledge correctly sets knowledge sources and creates a Knowledge object."""
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.knowledge.knowledge import Knowledge
+    
+    # Create a test implementation of BaseAgent
+    class TestAgent(BaseAgent):
+        def execute_task(self, task, context=None, tools=None):
+            return "Test execution"
+            
+        def create_agent_executor(self, tools=None):
+            pass
+            
+        def _parse_tools(self, tools):
+            return tools
+            
+        def get_delegation_tools(self, agents):
+            return []
+            
+        def get_output_converter(self, llm, text, model, instructions):
+            return None
+    
+    # Create a knowledge source with some content
+    content = "The capital of France is Paris."
+    string_source = StringKnowledgeSource(content=content)
+    
+    # Create an agent
+    agent = TestAgent(
+        role="Test Agent",
+        goal="Test Goal",
+        backstory="Test Backstory",
+    )
+    
+    # Mock the Knowledge class to avoid API calls
+    with patch("crewai.agents.agent_builder.base_agent.Knowledge") as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        
+        # Test setting knowledge
+        agent.set_knowledge(knowledge_sources=[string_source])
+        
+        # Verify that knowledge was set correctly
+        assert agent.knowledge_sources == [string_source]
+        assert agent.knowledge is not None
+        assert MockKnowledge.called
+        assert MockKnowledge.call_args[1]["collection_name"] == "Test_Agent"
+        
+        # Test with embedder config
+        embedder_config = {
+            "provider": "openai",
+            "model": "text-embedding-3-small"
+        }
+        
+        agent.set_knowledge(
+            knowledge_sources=[string_source],
+            embedder_config=embedder_config
+        )
+        
+        assert agent.embedder_config == embedder_config
+        assert MockKnowledge.call_args[1]["embedder_config"] == embedder_config
+    
+    # Test with invalid knowledge source - we need to directly test the validation logic
+    # rather than relying on the Knowledge class to raise an error
+    with pytest.raises(ValueError):
+        # This will trigger the validation check in set_knowledge
+        agent.set_knowledge(knowledge_sources=["invalid source"])
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
     content = "Brandon's favorite color is red and he likes Mexican food."

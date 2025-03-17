@@ -148,6 +148,10 @@ class BaseAgent(ABC, BaseModel):
         default=None,
         description="Custom knowledge storage for the agent.",
     )
+    embedder_config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Configuration for embedding generation.",
+    )
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
@@ -362,5 +366,46 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
 
-    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
-        pass
+    def set_knowledge(
+        self, 
+        knowledge_sources: Optional[List[BaseKnowledgeSource]] = None, 
+        embedder_config: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Set knowledge sources for the agent with optional embedder configuration.
+        
+        This method allows agents to integrate external knowledge sources for enhanced
+        contextual understanding and information retrieval during task execution.
+        
+        Args:
+            knowledge_sources: List of knowledge sources to integrate. These can include
+                various data types such as text files, PDFs, CSV files, JSON files,
+                web pages, YouTube videos, and documentation websites.
+            embedder_config: Configuration for embedding generation. If not provided,
+                a default configuration will be used.
+        
+        Raises:
+            ValueError: If the provided knowledge sources are invalid.
+        """
+        try:
+            # Validate knowledge sources first
+            if knowledge_sources:
+                if not isinstance(knowledge_sources, list):
+                    raise ValueError("Knowledge sources must be a list")
+                
+                if not all(isinstance(k, BaseKnowledgeSource) for k in knowledge_sources):
+                    raise ValueError("All knowledge sources must be instances of BaseKnowledgeSource")
+                
+                self.knowledge_sources = knowledge_sources
+                
+            if embedder_config:
+                self.embedder_config = embedder_config
+                
+            if self.knowledge_sources:
+                knowledge_agent_name = f"{self.role.replace(' ', '_')}"
+                self.knowledge = Knowledge(
+                    sources=self.knowledge_sources,
+                    embedder_config=self.embedder_config,
+                    collection_name=knowledge_agent_name,
+                )
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
