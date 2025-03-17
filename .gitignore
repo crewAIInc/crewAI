@@ -23,3 +23,6 @@ crew_tasks_output.json
 .venv
 agentops.log
 test_flow.html
+crewairules.mdc
+plan.md
+conceptual_plan.md

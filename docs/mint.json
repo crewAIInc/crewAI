@@ -62,6 +62,43 @@
       ]
     },
     {
+      "group": "Guides",
+      "pages": [
+        {
+          "group": "Concepts",
+          "pages": [
+            "guides/concepts/evaluating-use-cases"
+          ]
+        },
+        {
+          "group": "Agents",
+          "pages": [
+            "guides/agents/crafting-effective-agents"
+          ]
+        },
+        {
+          "group": "Crews",
+          "pages": [
+            "guides/crews/first-crew"
+          ]
+        },
+        {
+          "group": "Flows",
+          "pages": [
+            "guides/flows/first-flow",
+            "guides/flows/mastering-flow-state"
+          ]
+        },
+        {
+          "group": "Advanced",
+          "pages": [
+            "guides/advanced/customizing-prompts",
+            "guides/advanced/fingerprinting"
+          ]
+        }
+      ]
+    },
+    {
       "group": "Core Concepts",
       "pages": [
         "concepts/agents",
@@ -117,6 +154,7 @@
       "group": "Tools",
       "pages": [
         "tools/aimindtool",
+        "tools/apifyactorstool",
         "tools/bravesearchtool",
         "tools/browserbaseloadtool",
         "tools/codedocssearchtool",
