@@ -1,8 +1,12 @@
-from typing import Any, Callable
+from typing import Any, Callable, TYPE_CHECKING
 
 from pydantic import Field
 
-from crewai.task import Task
+if TYPE_CHECKING:
+    from crewai.task import Task
+else:
+    # Import the base class at runtime
+    from crewai.task import Task
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 

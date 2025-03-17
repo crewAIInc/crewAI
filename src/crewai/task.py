@@ -33,6 +33,9 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.security import Fingerprint, SecurityConfig
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -617,8 +620,17 @@ class Task(BaseModel):
 
     def copy(
         self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
-    ) -> "Task":
-        """Create a deep copy of the Task."""
+    ) -> Union["Task", "ConditionalTask"]:
+        """
+        Creates a deep copy of the task while preserving its specific type (Task or ConditionalTask).
+        
+        Args:
+            agents: List of agents to search for the agent by role
+            task_mapping: Dictionary mapping task keys to tasks
+            
+        Returns:
+            Union[Task, ConditionalTask]: A copy of the task maintaining its original type.
+        """
         exclude = {
             "id",
             "agent",
