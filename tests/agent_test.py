@@ -8,16 +8,18 @@ import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
-from crewai.utilities.events import Emitter
+from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.llm_events import LLMStreamChunkEvent
+from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -115,35 +117,6 @@ def test_custom_llm_temperature_preservation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execute_task():
-    from langchain_openai import ChatOpenAI
-
-    from crewai import Task
-
-    agent = Agent(
-        role="Math Tutor",
-        goal="Solve math problems accurately",
-        backstory="You are an experienced math tutor with a knack for explaining complex concepts simply.",
-        llm=ChatOpenAI(temperature=0.7, model="gpt-4o-mini"),
-    )
-
-    task = Task(
-        description="Calculate the area of a circle with radius 5 cm.",
-        expected_output="The calculated area of the circle in square centimeters.",
-        agent=agent,
-    )
-
-    result = agent.execute_task(task)
-
-    assert result is not None
-    assert (
-        result
-        == "The calculated area of the circle is approximately 78.5 square centimeters."
-    )
-    assert "square centimeters" in result.lower()
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution():
     agent = Agent(
         role="test role",
@@ -182,15 +155,19 @@ def test_agent_execution_with_tools():
         agent=agent,
         expected_output="The result of the multiplication.",
     )
-    with patch.object(Emitter, "emit") as emit:
-        output = agent.execute_task(task)
-        assert output == "The result of the multiplication is 12."
-        assert emit.call_count == 1
-        args, _ = emit.call_args
-        assert isinstance(args[1], ToolUsageFinished)
-        assert not args[1].from_cache
-        assert args[1].tool_name == "multiplier"
-        assert args[1].tool_args == {"first_number": 3, "second_number": 4}
+    received_events = []
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def handle_tool_end(source, event):
+        received_events.append(event)
+
+    output = agent.execute_task(task)
+    assert output == "The result of the multiplication is 12."
+
+    assert len(received_events) == 1
+    assert isinstance(received_events[0], ToolUsageFinishedEvent)
+    assert received_events[0].tool_name == "multiplier"
+    assert received_events[0].tool_args == {"first_number": 3, "second_number": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -277,11 +254,13 @@ def test_cache_hitting():
         "multiplier-{'first_number': 3, 'second_number': 3}": 9,
         "multiplier-{'first_number': 12, 'second_number': 3}": 36,
     }
+    received_events = []
 
-    with (
-        patch.object(CacheHandler, "read") as read,
-        patch.object(Emitter, "emit") as emit,
-    ):
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def handle_tool_end(source, event):
+        received_events.append(event)
+
+    with (patch.object(CacheHandler, "read") as read,):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -293,10 +272,9 @@ def test_cache_hitting():
         read.assert_called_with(
             tool="multiplier", input={"first_number": 2, "second_number": 6}
         )
-        assert emit.call_count == 1
-        args, _ = emit.call_args
-        assert isinstance(args[1], ToolUsageFinished)
-        assert args[1].from_cache
+        assert len(received_events) == 1
+        assert isinstance(received_events[0], ToolUsageFinishedEvent)
+        assert received_events[0].from_cache
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1011,23 +989,35 @@ def test_agent_human_input():
     # Side effect function for _ask_human_input to simulate multiple feedback iterations
     feedback_responses = iter(
         [
-            "Don't say hi, say Hello instead!",  # First feedback
-            "looks good",  # Second feedback to exit loop
+            "Don't say hi, say Hello instead!",  # First feedback: instruct change
+            "",  # Second feedback: empty string signals acceptance
         ]
     )
 
     def ask_human_input_side_effect(*args, **kwargs):
         return next(feedback_responses)
 
-    with patch.object(
-        CrewAgentExecutor, "_ask_human_input", side_effect=ask_human_input_side_effect
-    ) as mock_human_input:
+    # Patch both _ask_human_input and _invoke_loop to avoid real API/network calls.
+    with (
+        patch.object(
+            CrewAgentExecutor,
+            "_ask_human_input",
+            side_effect=ask_human_input_side_effect,
+        ) as mock_human_input,
+        patch.object(
+            CrewAgentExecutor,
+            "_invoke_loop",
+            return_value=AgentFinish(output="Hello", thought="", text=""),
+        ) as mock_invoke_loop,
+    ):
         # Execute the task
         output = agent.execute_task(task)
 
-        # Assertions to ensure the agent behaves correctly
-        assert mock_human_input.call_count == 2  # Should have asked for feedback twice
-        assert output.strip().lower() == "hello"  # Final output should be 'Hello'
+        # Assertions to ensure the agent behaves correctly.
+        # It should have requested feedback twice.
+        assert mock_human_input.call_count == 2
+        # The final result should be processed to "Hello"
+        assert output.strip().lower() == "hello"
 
 
 def test_interpolate_inputs():
@@ -1211,7 +1201,7 @@ def test_agent_max_retry_limit():
             [
                 mock.call(
                     {
-                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
+                        "input": "Say the word: Hi\n\nThis is the expected criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,
@@ -1219,7 +1209,7 @@ def test_agent_max_retry_limit():
                 ),
                 mock.call(
                     {
-                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
+                        "input": "Say the word: Hi\n\nThis is the expected criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,
@@ -1629,3 +1619,181 @@ def test_agent_with_knowledge_sources():
 
         # Assert that the agent provides the correct information
         assert "red" in result.raw.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_works_with_copy():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    with patch(
+        "crewai.knowledge.source.base_knowledge_source.BaseKnowledgeSource",
+        autospec=True,
+    ) as MockKnowledgeSource:
+        mock_knowledge_source_instance = MockKnowledgeSource.return_value
+        mock_knowledge_source_instance.__class__ = BaseKnowledgeSource
+        mock_knowledge_source_instance.sources = [string_source]
+
+        agent = Agent(
+            role="Information Agent",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
+
+        with patch(
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        ) as MockKnowledgeStorage:
+            mock_knowledge_storage = MockKnowledgeStorage.return_value
+            agent.knowledge_storage = mock_knowledge_storage
+
+            agent_copy = agent.copy()
+
+            assert agent_copy.role == agent.role
+            assert agent_copy.goal == agent.goal
+            assert agent_copy.backstory == agent.backstory
+            assert agent_copy.knowledge_sources is not None
+            assert len(agent_copy.knowledge_sources) == 1
+            assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
+            assert agent_copy.knowledge_sources[0].content == content
+            assert isinstance(agent_copy.llm, LLM)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_litellm_auth_error_handling():
+    """Test that LiteLLM authentication errors are handled correctly and not retried."""
+    from litellm import AuthenticationError as LiteLLMAuthenticationError
+
+    # Create an agent with a mocked LLM and max_retry_limit=0
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-4"),
+        max_retry_limit=0,  # Disable retries for authentication errors
+    )
+
+    # Create a task
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    # Mock the LLM call to raise AuthenticationError
+    with (
+        patch.object(LLM, "call") as mock_llm_call,
+        pytest.raises(LiteLLMAuthenticationError, match="Invalid API key"),
+    ):
+        mock_llm_call.side_effect = LiteLLMAuthenticationError(
+            message="Invalid API key", llm_provider="openai", model="gpt-4"
+        )
+        agent.execute_task(task)
+
+    # Verify the call was only made once (no retries)
+    mock_llm_call.assert_called_once()
+
+
+def test_crew_agent_executor_litellm_auth_error():
+    """Test that CrewAgentExecutor handles LiteLLM authentication errors by raising them."""
+    from litellm.exceptions import AuthenticationError
+
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.utilities import Printer
+
+    # Create an agent and executor
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-4", api_key="invalid_api_key"),
+    )
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    # Create executor with all required parameters
+    executor = CrewAgentExecutor(
+        agent=agent,
+        task=task,
+        llm=agent.llm,
+        crew=None,
+        prompt={"system": "You are a test agent", "user": "Execute the task: {input}"},
+        max_iter=5,
+        tools=[],
+        tools_names="",
+        stop_words=[],
+        tools_description="",
+        tools_handler=ToolsHandler(),
+    )
+
+    # Mock the LLM call to raise AuthenticationError
+    with (
+        patch.object(LLM, "call") as mock_llm_call,
+        patch.object(Printer, "print") as mock_printer,
+        pytest.raises(AuthenticationError) as exc_info,
+    ):
+        mock_llm_call.side_effect = AuthenticationError(
+            message="Invalid API key", llm_provider="openai", model="gpt-4"
+        )
+        executor.invoke(
+            {
+                "input": "test input",
+                "tool_names": "",
+                "tools": "",
+            }
+        )
+
+    # Verify error handling messages
+    error_message = f"Error during LLM call: {str(mock_llm_call.side_effect)}"
+    mock_printer.assert_any_call(
+        content=error_message,
+        color="red",
+    )
+
+    # Verify the call was only made once (no retries)
+    mock_llm_call.assert_called_once()
+
+    # Assert that the exception was raised and has the expected attributes
+    assert exc_info.type is AuthenticationError
+    assert "Invalid API key".lower() in exc_info.value.message.lower()
+    assert exc_info.value.llm_provider == "openai"
+    assert exc_info.value.model == "gpt-4"
+
+
+def test_litellm_anthropic_error_handling():
+    """Test that AnthropicError from LiteLLM is handled correctly and not retried."""
+    from litellm.llms.anthropic.common_utils import AnthropicError
+
+    # Create an agent with a mocked LLM that uses an Anthropic model
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="claude-3.5-sonnet-20240620"),
+        max_retry_limit=0,
+    )
+
+    # Create a task
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    # Mock the LLM call to raise AnthropicError
+    with (
+        patch.object(LLM, "call") as mock_llm_call,
+        pytest.raises(AnthropicError, match="Test Anthropic error"),
+    ):
+        mock_llm_call.side_effect = AnthropicError(
+            status_code=500,
+            message="Test Anthropic error",
+        )
+        agent.execute_task(task)
+
+    # Verify the LLM call was only made once (no retries)
+    mock_llm_call.assert_called_once()

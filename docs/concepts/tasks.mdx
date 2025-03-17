@@ -33,11 +33,12 @@ crew = Crew(
 | :------------------------------- | :---------------- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------- |
 | **Description**                  | `description`     | `str`                         | A clear, concise statement of what the task entails.                                                                 |
 | **Expected Output**              | `expected_output` | `str`                         | A detailed description of what the task's completion looks like.                                                     |
-| **Name** _(optional)_           | `name`           | `Optional[str]`               | A name identifier for the task.                                                                                      |
-| **Agent** _(optional)_          | `agent`           | `Optional[BaseAgent]`         | The agent responsible for executing the task.                                                                        |
-| **Tools** _(optional)_          | `tools`           | `List[BaseTool]`             | The tools/resources the agent is limited to use for this task.                                                       |
+| **Name** _(optional)_            | `name`            | `Optional[str]`               | A name identifier for the task.                                                                                      |
+| **Agent** _(optional)_           | `agent`           | `Optional[BaseAgent]`         | The agent responsible for executing the task.                                                                        |
+| **Tools** _(optional)_           | `tools`           | `List[BaseTool]`              | The tools/resources the agent is limited to use for this task.                                                       |
 | **Context** _(optional)_         | `context`         | `Optional[List["Task"]]`      | Other tasks whose outputs will be used as context for this task.                                                     |
 | **Async Execution** _(optional)_ | `async_execution` | `Optional[bool]`              | Whether the task should be executed asynchronously. Defaults to False.                                               |
+| **Human Input** _(optional)_     | `human_input`     | `Optional[bool]`              | Whether the task should have a human review the final answer of the agent. Defaults to False.                        |
 | **Config** _(optional)_          | `config`          | `Optional[Dict[str, Any]]`    | Task-specific configuration parameters.                                                                              |
 | **Output File** _(optional)_     | `output_file`     | `Optional[str]`               | File path for storing the task output.                                                                               |
 | **Output JSON** _(optional)_     | `output_json`     | `Optional[Type[BaseModel]]`   | A Pydantic model to structure the JSON output.                                                                       |
@@ -68,7 +69,7 @@ research_task:
   description: >
     Conduct a thorough research about {topic}
     Make sure you find any interesting and relevant information given
-    the current year is 2024.
+    the current year is 2025.
   expected_output: >
     A list with 10 bullet points of the most relevant information about {topic}
   agent: researcher
@@ -154,7 +155,7 @@ research_task = Task(
     description="""
         Conduct a thorough research about AI Agents.
         Make sure you find any interesting and relevant information given
-        the current year is 2024.
+        the current year is 2025.
     """,
     expected_output="""
         A list with 10 bullet points of the most relevant information about AI Agents
@@ -267,7 +268,7 @@ analysis_task = Task(
 
 Task guardrails provide a way to validate and transform task outputs before they
 are passed to the next task. This feature helps ensure data quality and provides
-efeedback to agents when their output doesn't meet specific criteria.
+feedback to agents when their output doesn't meet specific criteria.
 
 ### Using Task Guardrails
 
@@ -874,6 +875,19 @@ save_output_task = Task(
 
 #...
 ```
+
+Check out the video below to see how to use structured outputs in CrewAI:
+
+<iframe
+  width="560"
+  height="315"
+  src="https://www.youtube.com/embed/dNpKQk5uxHw"
+  title="YouTube video player"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  referrerpolicy="strict-origin-when-cross-origin"
+  allowfullscreen
+></iframe>
 
 ## Conclusion
 

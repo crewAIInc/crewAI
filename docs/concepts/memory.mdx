@@ -58,38 +58,104 @@ my_crew = Crew(
 ### Example: Use Custom Memory Instances e.g FAISS as the VectorDB
 
 ```python Code
-from crewai import Crew, Agent, Task, Process
+from crewai import Crew, Process
+from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
+from crewai.memory.storage import LTMSQLiteStorage, RAGStorage
+from typing import List, Optional
 
 # Assemble your crew with memory capabilities
-my_crew = Crew(
-    agents=[...],
-    tasks=[...],
-    process="Process.sequential",
-    memory=True,
-    long_term_memory=EnhanceLongTermMemory(
+my_crew: Crew = Crew(
+    agents = [...],
+    tasks = [...],
+    process = Process.sequential,
+    memory = True,
+    # Long-term memory for persistent storage across sessions
+    long_term_memory = LongTermMemory(
         storage=LTMSQLiteStorage(
-            db_path="/my_data_dir/my_crew1/long_term_memory_storage.db"
+            db_path="/my_crew1/long_term_memory_storage.db"
         )
     ),
-    short_term_memory=EnhanceShortTermMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="short_term",
-            data_dir="//my_data_dir",
-            model=embedder["model"],
-            dimension=embedder["dimension"],
+    # Short-term memory for current context using RAG
+    short_term_memory = ShortTermMemory(
+        storage = RAGStorage(
+                embedder_config={
+                    "provider": "openai",
+                    "config": {
+                        "model": 'text-embedding-3-small'
+                    }
+                },
+                type="short_term",
+                path="/my_crew1/"
+            )
         ),
     ),
-    entity_memory=EnhanceEntityMemory(
-        storage=CustomRAGStorage(
-            crew_name="my_crew",
-            storage_type="entities",
-            data_dir="//my_data_dir",
-            model=embedder["model"],
-            dimension=embedder["dimension"],
-        ),
+    # Entity memory for tracking key information about entities
+    entity_memory = EntityMemory(
+        storage=RAGStorage(
+            embedder_config={
+                "provider": "openai",
+                "config": {
+                    "model": 'text-embedding-3-small'
+                }
+            },
+            type="short_term",
+            path="/my_crew1/"
+        )
     ),
     verbose=True,
+)
+```
+
+## Security Considerations
+
+When configuring memory storage:
+- Use environment variables for storage paths (e.g., `CREWAI_STORAGE_DIR`)
+- Never hardcode sensitive information like database credentials
+- Consider access permissions for storage directories
+- Use relative paths when possible to maintain portability
+
+Example using environment variables:
+```python
+import os
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage import LTMSQLiteStorage
+
+# Configure storage path using environment variable
+storage_path = os.getenv("CREWAI_STORAGE_DIR", "./storage")
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(
+            db_path="{storage_path}/memory.db".format(storage_path=storage_path)
+        )
+    )
+)
+```
+
+## Configuration Examples
+
+### Basic Memory Configuration
+```python
+from crewai import Crew
+from crewai.memory import LongTermMemory
+
+# Simple memory configuration
+crew = Crew(memory=True)  # Uses default storage locations
+```
+
+### Custom Storage Configuration
+```python
+from crewai import Crew
+from crewai.memory import LongTermMemory
+from crewai.memory.storage import LTMSQLiteStorage
+
+# Configure custom storage paths
+crew = Crew(
+    memory=True,
+    long_term_memory=LongTermMemory(
+        storage=LTMSQLiteStorage(db_path="./memory.db")
+    )
 )
 ```
 
@@ -185,7 +251,12 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=OpenAIEmbeddingFunction(api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"),
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -211,6 +282,19 @@ my_crew = Crew(
 
 ### Using Google AI embeddings
 
+#### Prerequisites
+Before using Google AI embeddings, ensure you have:
+- Access to the Gemini API
+- The necessary API keys and permissions
+
+You will need to update your *pyproject.toml* dependencies:
+```YAML
+dependencies = [
+    "google-generativeai>=0.8.4", #main version in January/2025 - crewai v.0.100.0 and crewai-tools 0.33.0
+    "crewai[tools]>=0.100.0,<1.0.0"
+]
+```
+
 ```python Code
 from crewai import Crew, Agent, Task, Process
 
@@ -224,7 +308,7 @@ my_crew = Crew(
         "provider": "google",
         "config": {
             "api_key": "<YOUR_API_KEY>",
-            "model_name": "<model_name>"
+            "model": "<model_name>"
         }
     }
 )
@@ -242,13 +326,15 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=OpenAIEmbeddingFunction(
-        api_key="YOUR_API_KEY",
-        api_base="YOUR_API_BASE_PATH",
-        api_type="azure",
-        api_version="YOUR_API_VERSION",
-        model_name="text-embedding-3-small"
-    )
+    embedder={
+        "provider": "openai",
+        "config": {
+            "api_key": "YOUR_API_KEY",
+            "api_base": "YOUR_API_BASE_PATH",
+            "api_version": "YOUR_API_VERSION",
+            "model_name": 'text-embedding-3-small'
+        }
+    }
 )
 ```
 
@@ -264,12 +350,15 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=GoogleVertexEmbeddingFunction(
-        project_id="YOUR_PROJECT_ID",
-        region="YOUR_REGION",
-        api_key="YOUR_API_KEY",
-        model_name="textembedding-gecko"
-    )
+    embedder={
+        "provider": "vertexai",
+        "config": {
+            "project_id"="YOUR_PROJECT_ID",
+            "region"="YOUR_REGION",
+            "api_key"="YOUR_API_KEY",
+            "model_name"="textembedding-gecko"
+        }
+    }
 )
 ```
 
@@ -288,7 +377,7 @@ my_crew = Crew(
         "provider": "cohere",
         "config": {
             "api_key": "YOUR_API_KEY",
-            "model_name": "<model_name>"
+            "model": "<model_name>"
         }
     }
 )
@@ -308,7 +397,7 @@ my_crew = Crew(
         "provider": "voyageai",
         "config": {
             "api_key": "YOUR_API_KEY",
-            "model_name": "<model_name>"
+            "model": "<model_name>"
         }
     }
 )
@@ -358,7 +447,66 @@ my_crew = Crew(
 )
 ```
 
-### Resetting Memory
+### Using Amazon Bedrock embeddings
+
+```python Code
+# Note: Ensure you have installed `boto3` for Bedrock embeddings to work.
+
+import os
+import boto3
+from crewai import Crew, Agent, Task, Process
+
+boto3_session = boto3.Session(
+    region_name=os.environ.get("AWS_REGION_NAME"),
+    aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY")
+)
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    embedder={
+    "provider": "bedrock",
+        "config":{
+            "session": boto3_session,
+            "model": "amazon.titan-embed-text-v2:0",
+            "vector_dimension": 1024
+        }
+    }
+    verbose=True
+)
+```
+
+### Adding Custom Embedding Function
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+from chromadb import Documents, EmbeddingFunction, Embeddings
+
+# Create a custom embedding function
+class CustomEmbedder(EmbeddingFunction):
+    def __call__(self, input: Documents) -> Embeddings:
+        # generate embeddings
+        return [1, 2, 3] # this is a dummy embedding
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "custom",
+        "config": {
+            "embedder": CustomEmbedder()
+        }
+    }
+)
+```
+
+### Resetting Memory via cli
 
 ```shell
 crewai reset-memories [OPTIONS]
@@ -372,7 +520,45 @@ crewai reset-memories [OPTIONS]
 | `-s`, `--short`    | Reset SHORT TERM memory.         | Flag (boolean) | False   |
 | `-e`, `--entities` | Reset ENTITIES memory.           | Flag (boolean) | False   |
 | `-k`, `--kickoff-outputs` | Reset LATEST KICKOFF TASK OUTPUTS. | Flag (boolean) | False   |
+| `-kn`, `--knowledge` | Reset KNOWLEDEGE storage | Flag (boolean) | False   |
 | `-a`, `--all`      | Reset ALL memories.              | Flag (boolean) | False   |
+
+Note: To use the cli command you need to have your crew in a file called crew.py in the same directory.
+
+
+
+
+### Resetting Memory via crew object
+
+```python
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "custom",
+        "config": {
+            "embedder": CustomEmbedder()
+        }
+    }
+)
+
+my_crew.reset_memories(command_type = 'all') # Resets all the memory
+```
+
+#### Resetting Memory Options
+
+| Command Type       | Description                      |
+| :----------------- | :------------------------------- |
+| `long`             | Reset LONG TERM memory.          | 
+| `short`            | Reset SHORT TERM memory.         | 
+| `entities`         | Reset ENTITIES memory.           | 
+| `kickoff_outputs`  | Reset LATEST KICKOFF TASK OUTPUTS. |
+| `knowledge`        | Reset KNOWLEDGE memory.          |
+| `all`              | Reset ALL memories.              |
 
 
 ## Benefits of Using CrewAI's Memory System

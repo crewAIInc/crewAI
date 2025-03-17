@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, cast
+from typing import Any, Dict, Optional, cast
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
@@ -18,11 +18,12 @@ class EmbeddingConfigurator:
             "bedrock": self._configure_bedrock,
             "huggingface": self._configure_huggingface,
             "watson": self._configure_watson,
+            "custom": self._configure_custom,
         }
 
     def configure_embedder(
         self,
-        embedder_config: Dict[str, Any] | None = None,
+        embedder_config: Optional[Dict[str, Any]] = None,
     ) -> EmbeddingFunction:
         """Configures and returns an embedding function based on the provided config."""
         if embedder_config is None:
@@ -30,21 +31,19 @@ class EmbeddingConfigurator:
 
         provider = embedder_config.get("provider")
         config = embedder_config.get("config", {})
-        model_name = config.get("model")
-
-        if isinstance(provider, EmbeddingFunction):
-            try:
-                validate_embedding_function(provider)
-                return provider
-            except Exception as e:
-                raise ValueError(f"Invalid custom embedding function: {str(e)}")
+        model_name = config.get("model") if provider != "custom" else None
 
         if provider not in self.embedding_functions:
             raise Exception(
                 f"Unsupported embedding provider: {provider}, supported providers: {list(self.embedding_functions.keys())}"
             )
 
-        return self.embedding_functions[provider](config, model_name)
+        embedding_function = self.embedding_functions[provider]
+        return (
+            embedding_function(config)
+            if provider == "custom"
+            else embedding_function(config, model_name)
+        )
 
     @staticmethod
     def _create_default_embedding_function():
@@ -65,6 +64,13 @@ class EmbeddingConfigurator:
         return OpenAIEmbeddingFunction(
             api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
             model_name=model_name,
+            api_base=config.get("api_base", None),
+            api_type=config.get("api_type", None),
+            api_version=config.get("api_version", None),
+            default_headers=config.get("default_headers", None),
+            dimensions=config.get("dimensions", None),
+            deployment_id=config.get("deployment_id", None),
+            organization_id=config.get("organization_id", None),
         )
 
     @staticmethod
@@ -79,6 +85,10 @@ class EmbeddingConfigurator:
             api_type=config.get("api_type", "azure"),
             api_version=config.get("api_version"),
             model_name=model_name,
+            default_headers=config.get("default_headers"),
+            dimensions=config.get("dimensions"),
+            deployment_id=config.get("deployment_id"),
+            organization_id=config.get("organization_id"),
         )
 
     @staticmethod
@@ -101,6 +111,8 @@ class EmbeddingConfigurator:
         return GoogleVertexEmbeddingFunction(
             model_name=model_name,
             api_key=config.get("api_key"),
+            project_id=config.get("project_id"),
+            region=config.get("region"),
         )
 
     @staticmethod
@@ -112,6 +124,7 @@ class EmbeddingConfigurator:
         return GoogleGenerativeAiEmbeddingFunction(
             model_name=model_name,
             api_key=config.get("api_key"),
+            task_type=config.get("task_type"),
         )
 
     @staticmethod
@@ -142,9 +155,11 @@ class EmbeddingConfigurator:
             AmazonBedrockEmbeddingFunction,
         )
 
-        return AmazonBedrockEmbeddingFunction(
-            session=config.get("session"),
-        )
+        # Allow custom model_name override with backwards compatibility
+        kwargs = {"session": config.get("session")}
+        if model_name is not None:
+            kwargs["model_name"] = model_name
+        return AmazonBedrockEmbeddingFunction(**kwargs)
 
     @staticmethod
     def _configure_huggingface(config, model_name):
@@ -194,3 +209,28 @@ class EmbeddingConfigurator:
                     raise e
 
         return WatsonEmbeddingFunction()
+
+    @staticmethod
+    def _configure_custom(config):
+        custom_embedder = config.get("embedder")
+        if isinstance(custom_embedder, EmbeddingFunction):
+            try:
+                validate_embedding_function(custom_embedder)
+                return custom_embedder
+            except Exception as e:
+                raise ValueError(f"Invalid custom embedding function: {str(e)}")
+        elif callable(custom_embedder):
+            try:
+                instance = custom_embedder()
+                if isinstance(instance, EmbeddingFunction):
+                    validate_embedding_function(instance)
+                    return instance
+                raise ValueError(
+                    "Custom embedder does not create an EmbeddingFunction instance"
+                )
+            except Exception as e:
+                raise ValueError(f"Error instantiating custom embedder: {str(e)}")
+        else:
+            raise ValueError(
+                "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"
+            )

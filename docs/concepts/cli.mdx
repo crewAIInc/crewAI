@@ -12,7 +12,7 @@ The CrewAI CLI provides a set of commands to interact with CrewAI, allowing you 
 
 To use the CrewAI CLI, make sure you have CrewAI installed:
 
-```shell
+```shell Terminal
 pip install crewai
 ```
 
@@ -20,7 +20,7 @@ pip install crewai
 
 The basic structure of a CrewAI CLI command is:
 
-```shell
+```shell Terminal
 crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 ```
 
@@ -30,7 +30,7 @@ crewai [COMMAND] [OPTIONS] [ARGUMENTS]
 
 Create a new crew or flow.
 
-```shell
+```shell Terminal
 crewai create [OPTIONS] TYPE NAME
 ```
 
@@ -38,7 +38,7 @@ crewai create [OPTIONS] TYPE NAME
 - `NAME`: Name of the crew or flow
 
 Example:
-```shell
+```shell Terminal
 crewai create crew my_new_crew
 crewai create flow my_new_flow
 ```
@@ -47,14 +47,14 @@ crewai create flow my_new_flow
 
 Show the installed version of CrewAI.
 
-```shell
+```shell Terminal
 crewai version [OPTIONS]
 ```
 
 - `--tools`: (Optional) Show the installed version of CrewAI tools
 
 Example:
-```shell
+```shell Terminal
 crewai version
 crewai version --tools
 ```
@@ -63,7 +63,7 @@ crewai version --tools
 
 Train the crew for a specified number of iterations.
 
-```shell
+```shell Terminal
 crewai train [OPTIONS]
 ```
 
@@ -71,7 +71,7 @@ crewai train [OPTIONS]
 - `-f, --filename TEXT`: Path to a custom file for training (default: "trained_agents_data.pkl")
 
 Example:
-```shell
+```shell Terminal
 crewai train -n 10 -f my_training_data.pkl
 ```
 
@@ -79,14 +79,14 @@ crewai train -n 10 -f my_training_data.pkl
 
 Replay the crew execution from a specific task.
 
-```shell
+```shell Terminal
 crewai replay [OPTIONS]
 ```
 
 - `-t, --task_id TEXT`: Replay the crew from this task ID, including all subsequent tasks
 
 Example:
-```shell    
+```shell Terminal    
 crewai replay -t task_123456
 ```
 
@@ -94,7 +94,7 @@ crewai replay -t task_123456
 
 Retrieve your latest crew.kickoff() task outputs.
 
-```shell
+```shell Terminal
 crewai log-tasks-outputs
 ```
 
@@ -102,7 +102,7 @@ crewai log-tasks-outputs
 
 Reset the crew memories (long, short, entity, latest_crew_kickoff_outputs).
 
-```shell
+```shell Terminal
 crewai reset-memories [OPTIONS]
 ```
 
@@ -113,7 +113,7 @@ crewai reset-memories [OPTIONS]
 - `-a, --all`: Reset ALL memories
 
 Example:
-```shell
+```shell Terminal
 crewai reset-memories --long --short
 crewai reset-memories --all
 ```
@@ -122,7 +122,7 @@ crewai reset-memories --all
 
 Test the crew and evaluate the results.
 
-```shell
+```shell Terminal
 crewai test [OPTIONS]
 ```
 
@@ -130,24 +130,56 @@ crewai test [OPTIONS]
 - `-m, --model TEXT`: LLM Model to run the tests on the Crew (default: "gpt-4o-mini")
 
 Example:
-```shell
+```shell Terminal    
 crewai test -n 5 -m gpt-3.5-turbo
 ```
 
 ### 8. Run
 
-Run the crew.
+Run the crew or flow.
 
-```shell
+```shell Terminal
 crewai run
 ```
+
+<Note>
+Starting from version 0.103.0, the `crewai run` command can be used to run both standard crews and flows. For flows, it automatically detects the type from pyproject.toml and runs the appropriate command. This is now the recommended way to run both crews and flows.
+</Note>
+
 <Note>
 Make sure to run these commands from the directory where your CrewAI project is set up. 
 Some commands may require additional configuration or setup within your project structure.
 </Note>
 
+### 9. Chat
 
-### 9. API Keys
+Starting in version `0.98.0`, when you run the `crewai chat` command, you start an interactive session with your crew. The AI assistant will guide you by asking for necessary inputs to execute the crew. Once all inputs are provided, the crew will execute its tasks.
+
+After receiving the results, you can continue interacting with the assistant for further instructions or questions.
+
+```shell Terminal
+crewai chat
+```
+<Note>
+Ensure you execute these commands from your CrewAI project's root directory.
+</Note>
+<Note>
+IMPORTANT: Set the `chat_llm` property in your `crew.py` file to enable this command.
+
+```python
+@crew
+def crew(self) -> Crew:
+    return Crew(
+        agents=self.agents,
+        tasks=self.tasks,
+        process=Process.sequential,
+        verbose=True,
+        chat_llm="gpt-4o",  # LLM for chat orchestration
+    )
+```
+</Note>
+
+### 10. API Keys
 
 When running ```crewai create crew``` command, the CLI will first show you the top 5 most common LLM providers and ask you to select one.
 

@@ -21,7 +21,6 @@ from typing import (
     Union,
 )
 
-from opentelemetry.trace import Span
 from pydantic import (
     UUID4,
     BaseModel,
@@ -33,13 +32,19 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
+from crewai.utilities.events import (
+    TaskCompletedEvent,
+    TaskFailedEvent,
+    TaskStartedEvent,
+)
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 
@@ -60,6 +65,7 @@ class Task(BaseModel):
         output_file: File path for storing task output.
         output_json: Pydantic model for structuring JSON output.
         output_pydantic: Pydantic model for task output.
+        security_config: Security configuration including fingerprinting.
         tools: List of tools/resources limited for task execution.
     """
 
@@ -111,6 +117,10 @@ class Task(BaseModel):
     tools: Optional[List[BaseTool]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
+    )
+    security_config: SecurityConfig = Field(
+        default_factory=SecurityConfig,
+        description="Security configuration for the task.",
     )
     id: UUID4 = Field(
         default_factory=uuid.uuid4,
@@ -183,8 +193,6 @@ class Task(BaseModel):
                     )
         return v
 
-    _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
-    _execution_span: Optional[Span] = PrivateAttr(default=None)
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _original_output_file: Optional[str] = PrivateAttr(default=None)
@@ -348,94 +356,102 @@ class Task(BaseModel):
         tools: Optional[List[Any]],
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
-        agent = agent or self.agent
-        self.agent = agent
-        if not agent:
-            raise Exception(
-                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+        try:
+            agent = agent or self.agent
+            self.agent = agent
+            if not agent:
+                raise Exception(
+                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                )
+
+            self.start_time = datetime.datetime.now()
+
+            self.prompt_context = context
+            tools = tools or self.tools or []
+
+            self.processed_by_agents.add(agent.role)
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context))
+            result = agent.execute_task(
+                task=self,
+                context=context,
+                tools=tools,
             )
 
-        self.start_time = datetime.datetime.now()
-        self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
+            pydantic_output, json_output = self._export_output(result)
+            task_output = TaskOutput(
+                name=self.name,
+                description=self.description,
+                expected_output=self.expected_output,
+                raw=result,
+                pydantic=pydantic_output,
+                json_dict=json_output,
+                agent=agent.role,
+                output_format=self._get_output_format(),
+            )
 
-        self.prompt_context = context
-        tools = tools or self.tools or []
+            if self.guardrail:
+                guardrail_result = GuardrailResult.from_tuple(
+                    self.guardrail(task_output)
+                )
+                if not guardrail_result.success:
+                    if self.retry_count >= self.max_retries:
+                        raise Exception(
+                            f"Task failed guardrail validation after {self.max_retries} retries. "
+                            f"Last error: {guardrail_result.error}"
+                        )
 
-        self.processed_by_agents.add(agent.role)
+                    self.retry_count += 1
+                    context = self.i18n.errors("validation_error").format(
+                        guardrail_result_error=guardrail_result.error,
+                        task_output=task_output.raw,
+                    )
+                    printer = Printer()
+                    printer.print(
+                        content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
+                        color="yellow",
+                    )
+                    return self._execute_core(agent, context, tools)
 
-        result = agent.execute_task(
-            task=self,
-            context=context,
-            tools=tools,
-        )
-
-        pydantic_output, json_output = self._export_output(result)
-        task_output = TaskOutput(
-            name=self.name,
-            description=self.description,
-            expected_output=self.expected_output,
-            raw=result,
-            pydantic=pydantic_output,
-            json_dict=json_output,
-            agent=agent.role,
-            output_format=self._get_output_format(),
-        )
-
-        if self.guardrail:
-            guardrail_result = GuardrailResult.from_tuple(self.guardrail(task_output))
-            if not guardrail_result.success:
-                if self.retry_count >= self.max_retries:
+                if guardrail_result.result is None:
                     raise Exception(
-                        f"Task failed guardrail validation after {self.max_retries} retries. "
-                        f"Last error: {guardrail_result.error}"
+                        "Task guardrail returned None as result. This is not allowed."
                     )
 
-                self.retry_count += 1
-                context = self.i18n.errors("validation_error").format(
-                    guardrail_result_error=guardrail_result.error,
-                    task_output=task_output.raw,
+                if isinstance(guardrail_result.result, str):
+                    task_output.raw = guardrail_result.result
+                    pydantic_output, json_output = self._export_output(
+                        guardrail_result.result
+                    )
+                    task_output.pydantic = pydantic_output
+                    task_output.json_dict = json_output
+                elif isinstance(guardrail_result.result, TaskOutput):
+                    task_output = guardrail_result.result
+
+            self.output = task_output
+            self.end_time = datetime.datetime.now()
+
+            if self.callback:
+                self.callback(self.output)
+
+            crew = self.agent.crew  # type: ignore[union-attr]
+            if crew and crew.task_callback and crew.task_callback != self.callback:
+                crew.task_callback(self.output)
+
+            if self.output_file:
+                content = (
+                    json_output
+                    if json_output
+                    else (
+                        pydantic_output.model_dump_json() if pydantic_output else result
+                    )
                 )
-                printer = Printer()
-                printer.print(
-                    content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
-                    color="yellow",
-                )
-                return self._execute_core(agent, context, tools)
-
-            if guardrail_result.result is None:
-                raise Exception(
-                    "Task guardrail returned None as result. This is not allowed."
-                )
-
-            if isinstance(guardrail_result.result, str):
-                task_output.raw = guardrail_result.result
-                pydantic_output, json_output = self._export_output(
-                    guardrail_result.result
-                )
-                task_output.pydantic = pydantic_output
-                task_output.json_dict = json_output
-            elif isinstance(guardrail_result.result, TaskOutput):
-                task_output = guardrail_result.result
-
-        self.output = task_output
-        self.end_time = datetime.datetime.now()
-
-        if self.callback:
-            self.callback(self.output)
-
-        if self._execution_span:
-            self._telemetry.task_ended(self._execution_span, self, agent.crew)
-            self._execution_span = None
-
-        if self.output_file:
-            content = (
-                json_output
-                if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
-            )
-            self._save_file(content)
-
-        return task_output
+                self._save_file(content)
+            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output))
+            return task_output
+        except Exception as e:
+            self.end_time = datetime.datetime.now()
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e)))
+            raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:
         """Prompt the task.
@@ -452,7 +468,7 @@ class Task(BaseModel):
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(
-        self, inputs: Dict[str, Union[str, int, float]]
+        self, inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]]
     ) -> None:
         """Interpolate inputs into the task description, expected output, and output file path.
            Add conversation history if present.
@@ -524,7 +540,9 @@ class Task(BaseModel):
             )
 
     def interpolate_only(
-        self, input_string: Optional[str], inputs: Dict[str, Union[str, int, float]]
+        self,
+        input_string: Optional[str],
+        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
     ) -> str:
         """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
 
@@ -532,17 +550,39 @@ class Task(BaseModel):
             input_string: The string containing template variables to interpolate.
                          Can be None or empty, in which case an empty string is returned.
             inputs: Dictionary mapping template variables to their values.
-                   Supported value types are strings, integers, and floats.
-                   If input_string is empty or has no placeholders, inputs can be empty.
+                   Supported value types are strings, integers, floats, and dicts/lists
+                   containing only these types and other nested dicts/lists.
 
         Returns:
             The interpolated string with all template variables replaced with their values.
             Empty string if input_string is None or empty.
 
         Raises:
-            ValueError: If a required template variable is missing from inputs.
-            KeyError: If a template variable is not found in the inputs dictionary.
+            ValueError: If a value contains unsupported types
         """
+
+        # Validation function for recursive type checking
+        def validate_type(value: Any) -> None:
+            if value is None:
+                return
+            if isinstance(value, (str, int, float, bool)):
+                return
+            if isinstance(value, (dict, list)):
+                for item in value.values() if isinstance(value, dict) else value:
+                    validate_type(item)
+                return
+            raise ValueError(
+                f"Unsupported type {type(value).__name__} in inputs. "
+                "Only str, int, float, bool, dict, and list are allowed."
+            )
+
+        # Validate all input values
+        for key, value in inputs.items():
+            try:
+                validate_type(value)
+            except ValueError as e:
+                raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
+
         if input_string is None or not input_string:
             return ""
         if "{" not in input_string and "}" not in input_string:
@@ -551,15 +591,7 @@ class Task(BaseModel):
             raise ValueError(
                 "Inputs dictionary cannot be empty when interpolating variables"
             )
-
         try:
-            # Validate input types
-            for key, value in inputs.items():
-                if not isinstance(value, (str, int, float)):
-                    raise ValueError(
-                        f"Value for key '{key}' must be a string, integer, or float, got {type(value).__name__}"
-                    )
-
             escaped_string = input_string.replace("{", "{{").replace("}", "}}")
 
             for key in inputs.keys():
@@ -652,18 +684,31 @@ class Task(BaseModel):
             return OutputFormat.PYDANTIC
         return OutputFormat.RAW
 
-    def _save_file(self, result: Any) -> None:
+    def _save_file(self, result: Union[Dict, str, Any]) -> None:
         """Save task output to a file.
+
+        Note:
+            For cross-platform file writing, especially on Windows, consider using FileWriterTool
+            from the crewai_tools package:
+                pip install 'crewai[tools]'
+                from crewai_tools import FileWriterTool
 
         Args:
             result: The result to save to the file. Can be a dict or any stringifiable object.
 
         Raises:
             ValueError: If output_file is not set
-            RuntimeError: If there is an error writing to the file
+            RuntimeError: If there is an error writing to the file. For cross-platform
+                compatibility, especially on Windows, use FileWriterTool from crewai_tools
+                package.
         """
         if self.output_file is None:
             raise ValueError("output_file is not set.")
+
+        FILEWRITER_RECOMMENDATION = (
+            "For cross-platform file writing, especially on Windows, "
+            "use FileWriterTool from crewai_tools package."
+        )
 
         try:
             resolved_path = Path(self.output_file).expanduser().resolve()
@@ -680,8 +725,21 @@ class Task(BaseModel):
                 else:
                     file.write(str(result))
         except (OSError, IOError) as e:
-            raise RuntimeError(f"Failed to save output file: {e}")
+            raise RuntimeError(
+                "\n".join(
+                    [f"Failed to save output file: {e}", FILEWRITER_RECOMMENDATION]
+                )
+            )
         return None
 
     def __repr__(self):
         return f"Task(description={self.description}, expected_output={self.expected_output})"
+
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """Get the fingerprint of the task.
+
+        Returns:
+            Fingerprint: The fingerprint of the task
+        """
+        return self.security_config.fingerprint

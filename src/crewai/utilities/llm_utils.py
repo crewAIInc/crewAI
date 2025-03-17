@@ -43,7 +43,8 @@ def create_llm(
     try:
         # Extract attributes with explicit types
         model = (
-            getattr(llm_value, "model_name", None)
+            getattr(llm_value, "model", None)
+            or getattr(llm_value, "model_name", None)
             or getattr(llm_value, "deployment_name", None)
             or str(llm_value)
         )
@@ -53,6 +54,7 @@ def create_llm(
         timeout: Optional[float] = getattr(llm_value, "timeout", None)
         api_key: Optional[str] = getattr(llm_value, "api_key", None)
         base_url: Optional[str] = getattr(llm_value, "base_url", None)
+        api_base: Optional[str] = getattr(llm_value, "api_base", None)
 
         created_llm = LLM(
             model=model,
@@ -62,6 +64,7 @@ def create_llm(
             timeout=timeout,
             api_key=api_key,
             base_url=base_url,
+            api_base=api_base,
         )
         return created_llm
     except Exception as e:
@@ -74,8 +77,9 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
     Helper function: if llm_value is None, we load environment variables or fallback default model.
     """
     model_name = (
-        os.environ.get("OPENAI_MODEL_NAME")
-        or os.environ.get("MODEL")
+        os.environ.get("MODEL")
+        or os.environ.get("MODEL_NAME")
+        or os.environ.get("OPENAI_MODEL_NAME")
         or DEFAULT_LLM_MODEL
     )
 
@@ -101,8 +105,18 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
     callbacks: List[Any] = []
 
     # Optional base URL from env
-    api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get("OPENAI_BASE_URL")
-    if api_base:
+    base_url = (
+        os.environ.get("BASE_URL")
+        or os.environ.get("OPENAI_API_BASE")
+        or os.environ.get("OPENAI_BASE_URL")
+    )
+
+    api_base = os.environ.get("API_BASE") or os.environ.get("AZURE_API_BASE")
+
+    # Synchronize base_url and api_base if one is populated and the other is not
+    if base_url and not api_base:
+        api_base = base_url
+    elif api_base and not base_url:
         base_url = api_base
 
     # Initialize llm_params dictionary
@@ -115,6 +129,7 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
         "timeout": timeout,
         "api_key": api_key,
         "base_url": base_url,
+        "api_base": api_base,
         "api_version": api_version,
         "presence_penalty": presence_penalty,
         "frequency_penalty": frequency_penalty,

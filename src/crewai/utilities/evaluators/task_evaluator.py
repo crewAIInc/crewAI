@@ -3,18 +3,8 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from crewai.utilities import Converter
+from crewai.utilities.events import TaskEvaluationEvent, crewai_event_bus
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
-
-agentops = None
-try:
-    from agentops import track_agent  # type: ignore
-except ImportError:
-
-    def track_agent(name):
-        def noop(f):
-            return f
-
-        return noop
 
 
 class Entity(BaseModel):
@@ -48,12 +38,15 @@ class TrainingTaskEvaluation(BaseModel):
     )
 
 
-@track_agent(name="Task Evaluator")
 class TaskEvaluator:
     def __init__(self, original_agent):
         self.llm = original_agent.llm
+        self.original_agent = original_agent
 
     def evaluate(self, task, output) -> TaskEvaluation:
+        crewai_event_bus.emit(
+            self, TaskEvaluationEvent(evaluation_type="task_evaluation")
+        )
         evaluation_query = (
             f"Assess the quality of the task completed based on the description, expected output, and actual results.\n\n"
             f"Task Description:\n{task.description}\n\n"
@@ -90,15 +83,39 @@ class TaskEvaluator:
             - training_data (dict): The training data to be evaluated.
             - agent_id (str): The ID of the agent.
         """
+        crewai_event_bus.emit(
+            self, TaskEvaluationEvent(evaluation_type="training_data_evaluation")
+        )
 
         output_training_data = training_data[agent_id]
-
         final_aggregated_data = ""
-        for _, data in output_training_data.items():
+
+        for iteration, data in output_training_data.items():
+            improved_output = data.get("improved_output")
+            initial_output = data.get("initial_output")
+            human_feedback = data.get("human_feedback")
+
+            if not all([improved_output, initial_output, human_feedback]):
+                missing_fields = [
+                    field
+                    for field in ["improved_output", "initial_output", "human_feedback"]
+                    if not data.get(field)
+                ]
+                error_msg = (
+                    f"Critical training data error: Missing fields ({', '.join(missing_fields)}) "
+                    f"for agent {agent_id} in iteration {iteration}.\n"
+                    "This indicates a broken training process. "
+                    "Cannot proceed with evaluation.\n"
+                    "Please check your training implementation."
+                )
+                raise ValueError(error_msg)
+
             final_aggregated_data += (
-                f"Initial Output:\n{data['initial_output']}\n\n"
-                f"Human Feedback:\n{data['human_feedback']}\n\n"
-                f"Improved Output:\n{data['improved_output']}\n\n"
+                f"Iteration: {iteration}\n"
+                f"Initial Output:\n{initial_output}\n\n"
+                f"Human Feedback:\n{human_feedback}\n\n"
+                f"Improved Output:\n{improved_output}\n\n"
+                "------------------------------------------------\n\n"
             )
 
         evaluation_query = (

@@ -20,11 +20,11 @@ class ConverterError(Exception):
 class Converter(OutputConverter):
     """Class that converts text into either pydantic or json."""
 
-    def to_pydantic(self, current_attempt=1):
+    def to_pydantic(self, current_attempt=1) -> BaseModel:
         """Convert text to pydantic."""
         try:
             if self.llm.supports_function_calling():
-                return self._create_instructor().to_pydantic()
+                result = self._create_instructor().to_pydantic()
             else:
                 response = self.llm.call(
                     [
@@ -32,18 +32,40 @@ class Converter(OutputConverter):
                         {"role": "user", "content": self.text},
                     ]
                 )
-                return self.model.model_validate_json(response)
+                try:
+                    # Try to directly validate the response JSON
+                    result = self.model.model_validate_json(response)
+                except ValidationError:
+                    # If direct validation fails, attempt to extract valid JSON
+                    result = handle_partial_json(response, self.model, False, None)
+                    # Ensure result is a BaseModel instance
+                    if not isinstance(result, BaseModel):
+                        if isinstance(result, dict):
+                            result = self.model.parse_obj(result)
+                        elif isinstance(result, str):
+                            try:
+                                parsed = json.loads(result)
+                                result = self.model.parse_obj(parsed)
+                            except Exception as parse_err:
+                                raise ConverterError(
+                                    f"Failed to convert partial JSON result into Pydantic: {parse_err}"
+                                )
+                        else:
+                            raise ConverterError(
+                                "handle_partial_json returned an unexpected type."
+                            )
+            return result
         except ValidationError as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
             raise ConverterError(
-                f"Failed to convert text into a Pydantic model due to the following validation error: {e}"
+                f"Failed to convert text into a Pydantic model due to validation error: {e}"
             )
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
             raise ConverterError(
-                f"Failed to convert text into a Pydantic model due to the following error: {e}"
+                f"Failed to convert text into a Pydantic model due to error: {e}"
             )
 
     def to_json(self, current_attempt=1):
@@ -197,11 +219,15 @@ def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
     if llm.supports_function_calling():
         model_schema = PydanticSchemaParser(model=model).get_schema()
         instructions += (
-            f"\n\nThe JSON should follow this schema:\n```json\n{model_schema}\n```"
+            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
+            f"The JSON must follow this schema exactly:\n```json\n{model_schema}\n```"
         )
     else:
         model_description = generate_model_description(model)
-        instructions += f"\n\nThe JSON should follow this format:\n{model_description}"
+        instructions += (
+            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
+            f"The JSON must follow this format exactly:\n{model_description}"
+        )
     return instructions
 
 
