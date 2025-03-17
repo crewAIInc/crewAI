@@ -1,7 +1,11 @@
+import json
+import logging
 import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
 from typing import Any, Callable, Dict, Optional, Type, Union, get_args, get_origin
+
+logger = logging.getLogger(__name__)
 
 from pydantic import (
     BaseModel,
@@ -84,18 +88,34 @@ class BaseTool(BaseModel, ABC):
         This method provides a fallback implementation for models that don't support
         function calling natively (like QwQ-32B-Preview and deepseek-chat).
         It parses the input and calls the _run method with the appropriate arguments.
+        
+        Args:
+            input: Either a string (raw or JSON) or a dictionary of arguments
+            config: Optional configuration dictionary
+            **kwargs: Additional keyword arguments to pass to _run
+            
+        Returns:
+            The result of calling the tool's _run method
+            
+        Raises:
+            ValueError: If input is neither a string nor a dictionary
         """
+        if not isinstance(input, (str, dict)):
+            raise ValueError(f"Input must be string or dict, got {type(input)}")
+            
         if isinstance(input, str):
             # Try to parse as JSON if it's a string
             try:
-                import json
                 input = json.loads(input)
-            except json.JSONDecodeError:
+                logger.debug(f"Successfully parsed JSON input: {input}")
+            except json.JSONDecodeError as e:
                 # If not valid JSON, pass as a single argument
+                logger.debug(f"Input string is not JSON format: {e}")
                 return self._run(input)
                 
         if not isinstance(input, dict):
             # If input is not a dict after parsing, pass it directly
+            logger.debug(f"Using non-dict input directly: {input}")
             return self._run(input)
             
         # Get the expected arguments from the schema
@@ -105,15 +125,22 @@ class BaseTool(BaseModel, ABC):
                 arg_names = list(self.args_schema.model_json_schema()["properties"].keys())
                 
                 # Filter the input to only include valid arguments
-                filtered_args = {k: v for k, v in input.items() if k in arg_names}
+                filtered_args = {}
+                for k in input.keys():
+                    if k in arg_names:
+                        filtered_args[k] = input[k]
+                    else:
+                        logger.warning(f"Ignoring unexpected argument: {k}")
                 
+                logger.debug(f"Calling _run with filtered arguments: {filtered_args}")
                 # Call _run with the filtered arguments
                 return self._run(**filtered_args)
-            except Exception:
+            except Exception as e:
                 # Fallback to passing the entire input dict if schema parsing fails
-                pass
+                logger.warning(f"Schema parsing failed, using raw input: {e}")
                 
         # If we couldn't parse the schema or there was an error, just pass the input dict
+        logger.debug(f"Calling _run with unfiltered arguments: {input}")
         return self._run(**input)
 
     def to_structured_tool(self) -> CrewStructuredTool:
