@@ -115,6 +115,7 @@
         "concepts/testing",
         "concepts/cli",
         "concepts/tools",
+        "concepts/event-listener",
         "concepts/langchain-tools",
         "concepts/llamaindex-tools"
       ]
