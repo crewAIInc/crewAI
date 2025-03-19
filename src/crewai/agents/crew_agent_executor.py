@@ -279,6 +279,112 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """Show logs for the agent's execution."""
         if self.agent is None:
             raise ValueError("Agent cannot be None")
+        if self.agent.verbose or (
+            hasattr(self, "crew") and getattr(self.crew, "verbose", False)
+        ):
+            agent_role = self.agent.role.split("\n")[0]
+            if isinstance(formatted_answer, AgentAction):
+                thought = re.sub(r"\n+", "\n", formatted_answer.thought)
+                formatted_json = json.dumps(
+                    formatted_answer.tool_input,
+                    indent=2,
+                    ensure_ascii=False,
+                )
+                self._printer.print(
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
+                )
+                if self.llm.model:
+                    self._printer.print(
+                        content=f"\033[1m\033[95m# LLM:\033[00m \033[1m\033[92m{self.llm.model}\033[00m"
+                    )
+                if thought and thought != "":
+                    self._printer.print(
+                        content=f"\033[95m## Thought:\033[00m \033[92m{thought}\033[00m"
+                    )
+                self._printer.print(
+                    content=f"\033[95m## Using tool:\033[00m \033[92m{formatted_answer.tool}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Tool Input:\033[00m \033[92m\n{formatted_json}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Tool Output:\033[00m \033[92m\n{formatted_answer.result}\033[00m"
+                )
+            elif isinstance(formatted_answer, AgentFinish):
+                self._printer.print(
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
+                )
+                if self.llm.model:
+                    self._printer.print(
+                        content=f"\033[1m\033[95m# LLM:\033[00m \033[1m\033[92m{self.llm.model}\033[00m"
+                    )
+                self._printer.print(
+                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
+                )
+
+    def _execute_tool_and_check_finality(self, agent_action: AgentAction) -> ToolResult:
+        try:
+            if self.agent:
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageStartedEvent(
+                        agent_key=self.agent.key,
+                        agent_role=self.agent.role,
+                        tool_name=agent_action.tool,
+                        tool_args=agent_action.tool_input,
+                        tool_class=agent_action.tool,
+                    ),
+                )
+            tool_usage = ToolUsage(
+                tools_handler=self.tools_handler,
+                tools=self.tools,
+                original_tools=self.original_tools,
+                tools_description=self.tools_description,
+                tools_names=self.tools_names,
+                function_calling_llm=self.function_calling_llm,
+                task=self.task,  # type: ignore[arg-type]
+                agent=self.agent,
+                action=agent_action,
+            )
+            tool_calling = tool_usage.parse_tool_calling(agent_action.text)
+
+            if isinstance(tool_calling, ToolUsageErrorException):
+                tool_result = tool_calling.message
+                return ToolResult(result=tool_result, result_as_answer=False)
+            else:
+                if tool_calling.tool_name.casefold().strip() in [
+                    name.casefold().strip() for name in self.tool_name_to_tool_map
+                ] or tool_calling.tool_name.casefold().replace("_", " ") in [
+                    name.casefold().strip() for name in self.tool_name_to_tool_map
+                ]:
+                    tool_result = tool_usage.use(tool_calling, agent_action.text)
+                    tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
+                    if tool:
+                        return ToolResult(
+                            result=tool_result, result_as_answer=tool.result_as_answer
+                        )
+                else:
+                    tool_result = self._i18n.errors("wrong_tool_name").format(
+                        tool=tool_calling.tool_name,
+                        tools=", ".join([tool.name.casefold() for tool in self.tools]),
+                    )
+                return ToolResult(result=tool_result, result_as_answer=False)
+
+        except Exception as e:
+            # TODO: drop
+            if self.agent:
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(  # validation error
+                        agent_key=self.agent.key,
+                        agent_role=self.agent.role,
+                        tool_name=agent_action.tool,
+                        tool_args=agent_action.tool_input,
+                        tool_class=agent_action.tool,
+                        error=str(e),
+                    ),
+                )
+            raise e
         show_agent_logs(
             printer=self._printer,
             agent_role=self.agent.role,
