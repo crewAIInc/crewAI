@@ -59,3 +59,10 @@ from .tools import (
     YoutubeChannelSearchTool,
     YoutubeVideoSearchTool,
 )
+
+from .aws import (
+    S3ReaderTool,
+    S3WriterTool,
+    BedrockKBRetrieverTool,
+    BedrockInvokeAgentTool,
+)
