@@ -68,9 +68,9 @@ def test_agent_llm_creation_with_env_vars():
 def test_agent_creation():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
-    assert agent.role == "Test Role"
-    assert agent.goal == "Test Goal"
-    assert agent.backstory == "Test Backstory"
+    assert agent.role == "test role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
 
 def test_agent_with_only_system_template():
     """Test that an agent with only system_template works without errors."""
@@ -102,7 +102,7 @@ def test_agent_with_only_prompt_template():
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
 
-    
+
 def test_agent_with_missing_response_template():
     """Test that an agent with system_template and prompt_template but no response_template works without errors."""
     agent = Agent(
@@ -115,9 +115,9 @@ def test_agent_with_missing_response_template():
         # response_template is intentionally missing
     )
 
-    assert agent.role == "test role"
-    assert agent.goal == "test goal"
-    assert agent.backstory == "test backstory"
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
     
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
