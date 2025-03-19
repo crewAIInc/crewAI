@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import json
 import re
 import uuid
@@ -706,6 +707,62 @@ class Crew(BaseModel):
 
         self.usage_metrics = total_usage_metrics
         self._task_output_handler.reset()
+        return results
+        
+    def kickoff_for_each_parallel(self, inputs: List[Dict[str, Any]], max_workers: Optional[int] = None) -> List[CrewOutput]:
+        """Executes the Crew's workflow for each input in the list in parallel using ThreadPoolExecutor.
+        
+        Args:
+            inputs: List of input dictionaries to be passed to each crew execution.
+            max_workers: Maximum number of worker threads to use. If None, uses the default
+                        ThreadPoolExecutor behavior (typically min(32, os.cpu_count() + 4)).
+        
+        Returns:
+            List of CrewOutput objects, one for each input.
+        """
+        import concurrent.futures
+        from concurrent.futures import ThreadPoolExecutor
+        
+        if not isinstance(inputs, list):
+            raise TypeError("Inputs must be a list of dictionaries.")
+        
+        if not inputs:
+            return []
+        
+        results: List[CrewOutput] = []
+        
+        # Initialize the parent crew's usage metrics
+        total_usage_metrics = UsageMetrics()
+        
+        # Create a copy of the crew for each input to avoid state conflicts
+        crew_copies = [self.copy() for _ in inputs]
+        
+        # Execute each crew in parallel
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks to the executor
+            future_to_crew = {
+                executor.submit(crew_copies[i].kickoff, inputs[i]): i 
+                for i in range(len(inputs))
+            }
+            
+            # Process results as they complete
+            for future in concurrent.futures.as_completed(future_to_crew):
+                crew_index = future_to_crew[future]
+                try:
+                    output = future.result()
+                    results.append(output)
+                    
+                    # Aggregate usage metrics
+                    if crew_copies[crew_index].usage_metrics:
+                        total_usage_metrics.add_usage_metrics(crew_copies[crew_index].usage_metrics)
+                except Exception as exc:
+                    # Re-raise the exception to maintain consistent behavior with kickoff_for_each
+                    raise exc
+        
+        # Set the aggregated metrics on the parent crew
+        self.usage_metrics = total_usage_metrics
+        self._task_output_handler.reset()
+        
         return results
 
     def _handle_crew_planning(self):
