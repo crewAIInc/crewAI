@@ -1,8 +1,9 @@
 """Test for the kickoff_for_each_parallel method in Crew class."""
 
 import concurrent.futures
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from crewai.agent import Agent
 from crewai.crew import Crew
