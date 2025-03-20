@@ -1,8 +1,8 @@
 import asyncio
 import json
 import re
-import uuid  # Add import for generating unique keys
-from typing import Any, Dict, List, Optional, Type, Union, cast
+import uuid
+from typing import Any, Callable, Dict, List, Optional, Type, Union, cast
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
@@ -18,9 +18,18 @@ from crewai.agents.parser import (
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
-from crewai.tools.structured_tool import CrewStructuredTool
-from crewai.tools.tool_calling import ToolCalling
 from crewai.types.usage_metrics import UsageMetrics
+from crewai.utilities import I18N
+from crewai.utilities.agent_utils import (
+    enforce_rpm_limit,
+    get_llm_response,
+    get_tool_names,
+    handle_max_iterations_exceeded,
+    has_reached_max_iterations,
+    parse_tools,
+    process_llm_response,
+    render_text_description_and_args,
+)
 from crewai.utilities.events.agent_events import (
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
@@ -29,6 +38,7 @@ from crewai.utilities.events.agent_events import (
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
 from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 
@@ -85,7 +95,6 @@ class LiteAgent(BaseModel):
         max_iterations: Maximum number of iterations for tool usage.
         max_execution_time: Maximum execution time in seconds.
         response_format: Optional Pydantic model for structured output.
-        system_prompt: Custom system prompt to override the default.
     """
 
     model_config = {"arbitrary_types_allowed": True}
@@ -93,9 +102,7 @@ class LiteAgent(BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Goal of the agent")
     backstory: str = Field(description="Backstory of the agent")
-    llm: Union[str, LLM, Any] = Field(
-        description="Language model that will run the agent", default=None
-    )
+    llm: LLM = Field(description="Language model that will run the agent")
     tools: List[BaseTool] = Field(
         default_factory=list, description="Tools at agent's disposal"
     )
@@ -111,9 +118,7 @@ class LiteAgent(BaseModel):
     response_format: Optional[Type[BaseModel]] = Field(
         default=None, description="Pydantic model for structured output"
     )
-    system_prompt: Optional[str] = Field(
-        default=None, description="Custom system prompt to override default"
-    )
+
     step_callback: Optional[Any] = Field(
         default=None,
         description="Callback to be executed after each step of the agent execution.",
@@ -134,6 +139,17 @@ class LiteAgent(BaseModel):
     _formatting_errors: int = PrivateAttr(default=0)
     _tools_errors: int = PrivateAttr(default=0)
     _delegations: Dict[str, int] = PrivateAttr(default_factory=dict)
+    # Internationalization
+    _i18n: I18N = PrivateAttr(default_factory=I18N)
+    _printer: Printer = PrivateAttr(default_factory=Printer)
+    request_within_rpm_limit: Optional[Callable[[], bool]] = Field(
+        default=None,
+        description="Callback to check if the request is within the RPM limit",
+    )
+    use_stop_words: bool = Field(
+        default=True,
+        description="Whether to use stop words to prevent the LLM from using tools",
+    )
 
     @model_validator(mode="after")
     def setup_llm(self):
@@ -143,6 +159,7 @@ class LiteAgent(BaseModel):
 
         if not isinstance(self.llm, LLM):
             self.llm = create_llm(self.llm)
+            self.use_stop_words = self.llm.supports_stop_words()
 
         return self
 
@@ -158,149 +175,22 @@ class LiteAgent(BaseModel):
 
     def _get_default_system_prompt(self) -> str:
         """Get the default system prompt for the agent."""
-        prompt = f"""You are a helpful AI assistant acting as {self.role}.
-
-Your goal is: {self.goal}
-
-Your backstory: {self.backstory}
-
-When using tools, you MUST follow this EXACT format with the precise spacing and newlines as shown:
-
-Thought: <your reasoning about what needs to be done>
-
-Action: <tool_name>
-
-Action Input: {{
-    "parameter1": "value1",
-    "parameter2": "value2"
-}}
-
-Observation: [Result of the tool execution will appear here]
-
-You can then continue with another tool:
-
-Thought: <your reasoning about what to do next>
-
-Action: <another_tool_name>
-
-Action Input: {{
-    "parameter1": "value1"
-}}
-
-Observation: [Result of the tool execution will appear here]
-
-When you have a final answer and don't need to use any more tools, respond with:
-
-Thought: <your reasoning about the final answer>
-
-Final Answer: <your final answer to the user>
-
-Here's a concrete example of proper tool usage:
-
-Thought: I need to find out the weather in New York City.
-
-Action: get_weather
-
-Action Input: {{
-    "city": "New York City"
-}}
-
-Observation: [The weather result would appear here]
-
-Thought: Now I need to save this weather data.
-
-Action: save_weather_data
-
-Action Input: {{
-    "filename": "weather_history.txt"
-}}
-
-Observation: [The result of saving would appear here]
-
-Thought: I now have all the information I need to answer the user's question.
-
-Final Answer: The weather in New York City today is [weather details] and I've saved this information to the weather_history.txt file.
-
-Always maintain the exact format shown above, with blank lines between sections and properly formatted inputs for tools.
-"""
-        return prompt
-
-    def _format_tools_description(self) -> str:
-        """Format tools into a string for the prompt."""
-        if not self.tools:
-            return "You don't have any tools available."
-
-        tools_str = "You have access to the following tools:\n\n"
-        for tool in self.tools:
-            tools_str += f"Tool: {tool.name}\n"
-            tools_str += f"Description: {tool.description}\n"
-            if hasattr(tool, "args_schema"):
-                schema_info = ""
-                try:
-                    if hasattr(tool.args_schema, "model_json_schema"):
-                        schema = tool.args_schema.model_json_schema()
-                        if "properties" in schema:
-                            schema_info = ", ".join(
-                                [
-                                    f"{k}: {v.get('type', 'any')}"
-                                    for k, v in schema["properties"].items()
-                                ]
-                            )
-                        else:
-                            schema_info = str(schema)
-                except Exception:
-                    schema_info = "Unable to parse schema"
-
-                tools_str += f"Parameters: {schema_info}\n"
-            tools_str += "\n"
-
-        return tools_str
-
-    def _get_tools_names(self) -> str:
-        """Get a comma-separated list of tool names."""
-        return ", ".join([tool.name for tool in self.tools])
-
-    def _parse_tools(self) -> List[Dict[str, Any]]:
-        """Parse tools to be used by the agent."""
-        tools_list = []
-        for tool in self.tools:
-            try:
-                # First try to use the to_structured_tool method if available
-                if hasattr(tool, "to_structured_tool"):
-                    structured_tool = tool.to_structured_tool()
-                    if structured_tool and isinstance(structured_tool, dict):
-                        tools_list.append(structured_tool)
-                        continue
-
-                # Fall back to manual conversion if to_structured_tool is not available or fails
-                tool_dict = {
-                    "type": "function",
-                    "function": {
-                        "name": tool.name,
-                        "description": tool.description,
-                    },
-                }
-
-                # Add args schema if available
-                if hasattr(tool, "args_schema") and tool.args_schema:
-                    try:
-                        if hasattr(tool.args_schema, "model_json_schema"):
-                            tool_dict["function"][
-                                "parameters"
-                            ] = tool.args_schema.model_json_schema()
-                    except Exception as e:
-                        if self.verbose:
-                            print(
-                                f"Warning: Could not get schema for tool {tool.name}: {e}"
-                            )
-
-                tools_list.append(tool_dict)
-
-            except Exception as e:
-                if self.verbose:
-                    print(f"Error converting tool {tool.name}: {e}")
-
-        return tools_list
+        if self.tools:
+            # Use the prompt template for agents with tools
+            return self._i18n.slice("lite_agent_system_prompt_with_tools").format(
+                role=self.role,
+                backstory=self.backstory,
+                goal=self.goal,
+                tools=format_tools_description(),
+                tool_names=self._get_tools_names(),
+            )
+        else:
+            # Use the prompt template for agents without tools
+            return self._i18n.slice("lite_agent_system_prompt_without_tools").format(
+                role=self.role,
+                backstory=self.backstory,
+                goal=self.goal,
+            )
 
     def _format_messages(
         self, messages: Union[str, List[Dict[str, str]]]
@@ -309,13 +199,10 @@ Always maintain the exact format shown above, with blank lines between sections 
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
-        system_prompt = self.system_prompt or self._get_default_system_prompt()
-        tools_description = self._format_tools_description()
+        system_prompt = self._get_default_system_prompt()
 
         # Add system message at the beginning
-        formatted_messages = [
-            {"role": "system", "content": f"{system_prompt}\n\n{tools_description}"}
-        ]
+        formatted_messages = [{"role": "system", "content": system_prompt}]
 
         # Add the rest of the messages
         formatted_messages.extend(messages)
@@ -453,9 +340,6 @@ Always maintain the exact format shown above, with blank lines between sections 
         # Format messages for the LLM
         self._messages = self._format_messages(messages)
 
-        # Get the original query for event emission
-        query = messages if isinstance(messages, str) else messages[-1]["content"]
-
         # Create agent info for event emission
         agent_info = {
             "role": self.role,
@@ -471,7 +355,7 @@ Always maintain the exact format shown above, with blank lines between sections 
             event=LiteAgentExecutionStartedEvent(
                 agent_info=agent_info,
                 tools=self.tools,
-                task_prompt=query,
+                messages=messages,
             ),
         )
 
@@ -548,15 +432,35 @@ Always maintain the exact format shown above, with blank lines between sections 
         callbacks = [token_callback]
 
         # Prepare tool configurations
-        parsed_tools = self._parse_tools()
-        tools_description = self._format_tools_description()
-        tools_names = self._get_tools_names()
-
-        # Create a mapping of tool names to tools for easier lookup
-        tool_map = {tool.name: tool for tool in self.tools}
+        parsed_tools = parse_tools(self.tools)
+        tools_description = render_text_description_and_args(parsed_tools)
+        tools_names = get_tool_names(parsed_tools)
 
         # Execute the agent loop
         formatted_answer = None
+        while not isinstance(formatted_answer, AgentFinish):
+            try :
+                if has_reached_max_iterations(self._iterations, self.max_iterations):
+                    formatted_answer = handle_max_iterations_exceeded(
+                        formatted_answer,
+                        printer=self._printer,
+                        i18n=self._i18n,
+                        messages=self._messages,
+                        llm=self.llm,
+                        callbacks=callbacks,
+                    )
+
+                enforce_rpm_limit(self.request_within_rpm_limit)
+
+                answer = get_llm_response(
+                    llm=self.llm,
+                    messages=self._messages,
+                    callbacks=callbacks,
+                    printer=self._printer,
+                )
+                formatted_answer = process_llm_response(answer, self.use_stop_words)
+
+
         while self._iterations < self.max_iterations:
             try:
                 # Execute the LLM

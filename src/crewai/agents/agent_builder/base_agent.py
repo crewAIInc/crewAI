@@ -71,8 +71,6 @@ class BaseAgent(ABC, BaseModel):
             Interpolate inputs into the agent description and backstory.
         set_cache_handler(cache_handler: CacheHandler) -> None:
             Set the cache handler for the agent.
-        increment_formatting_errors() -> None:
-            Increment formatting errors.
         copy() -> "BaseAgent":
             Create a copy of the agent.
         set_rpm_controller(rpm_controller: RPMController) -> None:
@@ -90,9 +88,6 @@ class BaseAgent(ABC, BaseModel):
     _original_backstory: Optional[str] = PrivateAttr(default=None)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
-    formatting_errors: int = Field(
-        default=0, description="Number of formatting errors."
-    )
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
@@ -348,9 +343,6 @@ class BaseAgent(ABC, BaseModel):
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
         self.create_agent_executor()
-
-    def increment_formatting_errors(self) -> None:
-        self.formatting_errors += 1
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.

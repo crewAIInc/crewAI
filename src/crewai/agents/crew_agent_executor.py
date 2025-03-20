@@ -17,6 +17,15 @@ from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
+from crewai.utilities.agent_utils import (
+    enforce_rpm_limit,
+    format_answer,
+    format_message_for_llm,
+    get_llm_response,
+    handle_max_iterations_exceeded,
+    has_reached_max_iterations,
+    process_llm_response,
+)
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
 from crewai.utilities.events import (
     ToolUsageErrorEvent,
@@ -94,11 +103,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
-            self.messages.append(self._format_msg(system_prompt, role="system"))
-            self.messages.append(self._format_msg(user_prompt))
+            self.messages.append(format_message_for_llm(system_prompt, role="system"))
+            self.messages.append(format_message_for_llm(user_prompt))
         else:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
-            self.messages.append(self._format_msg(user_prompt))
+            self.messages.append(format_message_for_llm(user_prompt))
 
         self._show_start_logs()
 
@@ -135,16 +144,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         formatted_answer = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
-                if self._has_reached_max_iterations():
-                    formatted_answer = self._handle_max_iterations_exceeded(
-                        formatted_answer
+                if has_reached_max_iterations(self.iterations, self.max_iter):
+                    formatted_answer = handle_max_iterations_exceeded(
+                        formatted_answer,
+                        printer=self._printer,
+                        i18n=self._i18n,
+                        messages=self.messages,
+                        llm=self.llm,
+                        callbacks=self.callbacks,
                     )
-                    break
 
-                self._enforce_rpm_limit()
+                enforce_rpm_limit(self.request_within_rpm_limit)
 
-                answer = self._get_llm_response()
-                formatted_answer = self._process_llm_response(answer)
+                answer = get_llm_response(
+                    llm=self.llm,
+                    messages=self.messages,
+                    callbacks=self.callbacks,
+                    printer=self._printer,
+                )
+                formatted_answer = process_llm_response(answer, self.use_stop_words)
 
                 if isinstance(formatted_answer, AgentAction):
                     tool_result = self._execute_tool_and_check_finality(
@@ -192,50 +210,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             color="red",
         )
 
-    def _has_reached_max_iterations(self) -> bool:
-        """Check if the maximum number of iterations has been reached."""
-        return self.iterations >= self.max_iter
-
-    def _enforce_rpm_limit(self) -> None:
-        """Enforce the requests per minute (RPM) limit if applicable."""
-        if self.request_within_rpm_limit:
-            self.request_within_rpm_limit()
-
-    def _get_llm_response(self) -> str:
-        """Call the LLM and return the response, handling any invalid responses."""
-        try:
-            answer = self.llm.call(
-                self.messages,
-                callbacks=self.callbacks,
-            )
-        except Exception as e:
-            self._printer.print(
-                content=f"Error during LLM call: {e}",
-                color="red",
-            )
-            raise e
-
-        if not answer:
-            self._printer.print(
-                content="Received None or empty response from LLM call.",
-                color="red",
-            )
-            raise ValueError("Invalid response from LLM call - None or empty.")
-
-        return answer
-
-    def _process_llm_response(self, answer: str) -> Union[AgentAction, AgentFinish]:
-        """Process the LLM response and format it into an AgentAction or AgentFinish."""
-        if not self.use_stop_words:
-            try:
-                # Preliminary parsing to check for errors.
-                self._format_answer(answer)
-            except OutputParserException as e:
-                if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
-                    answer = answer.split("Observation:")[0].strip()
-
-        return self._format_answer(answer)
-
     def _handle_agent_action(
         self, formatted_answer: AgentAction, tool_result: ToolResult
     ) -> Union[AgentAction, AgentFinish]:
@@ -272,7 +246,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _append_message(self, text: str, role: str = "assistant") -> None:
         """Append a message to the message list with the given role."""
-        self.messages.append(self._format_msg(text, role=role))
+        self.messages.append(format_message_for_llm(text, role=role))
 
     def _handle_output_parser_exception(self, e: OutputParserException) -> AgentAction:
         """Handle OutputParserException by updating messages and formatted_answer."""
@@ -430,10 +404,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         for group in messages_groups:
             summary = self.llm.call(
                 [
-                    self._format_msg(
+                    format_message_for_llm(
                         self._i18n.slice("summarizer_system_message"), role="system"
                     ),
-                    self._format_msg(
+                    format_message_for_llm(
                         self._i18n.slice("summarize_instruction").format(group=group),
                     ),
                 ],
@@ -444,7 +418,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         merged_summary = " ".join(str(content) for content in summarized_contents)
 
         self.messages = [
-            self._format_msg(
+            format_message_for_llm(
                 self._i18n.slice("summary").format(merged_summary=merged_summary)
             )
         ]
@@ -517,13 +491,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         prompt = prompt.replace("{tools}", inputs["tools"])
         return prompt
 
-    def _format_answer(self, answer: str) -> Union[AgentAction, AgentFinish]:
-        return CrewAgentParser(agent=self.agent).parse(answer)
-
-    def _format_msg(self, prompt: str, role: str = "user") -> Dict[str, str]:
-        prompt = prompt.rstrip()
-        return {"role": role, "content": prompt}
-
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
         """Handle human feedback with different flows for training vs regular use.
 
@@ -550,7 +517,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """Process feedback for training scenarios with single iteration."""
         self._handle_crew_training_output(initial_answer, feedback)
         self.messages.append(
-            self._format_msg(
+            format_message_for_llm(
                 self._i18n.slice("feedback_instructions").format(feedback=feedback)
             )
         )
@@ -579,7 +546,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
         """Process a single feedback iteration."""
         self.messages.append(
-            self._format_msg(
+            format_message_for_llm(
                 self._i18n.slice("feedback_instructions").format(feedback=feedback)
             )
         )
@@ -604,45 +571,3 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ),
             color="red",
         )
-
-    def _handle_max_iterations_exceeded(self, formatted_answer):
-        """
-        Handles the case when the maximum number of iterations is exceeded.
-        Performs one more LLM call to get the final answer.
-
-        Parameters:
-            formatted_answer: The last formatted answer from the agent.
-
-        Returns:
-            The final formatted answer after exceeding max iterations.
-        """
-        self._printer.print(
-            content="Maximum iterations reached. Requesting final answer.",
-            color="yellow",
-        )
-
-        if formatted_answer and hasattr(formatted_answer, "text"):
-            assistant_message = (
-                formatted_answer.text + f'\n{self._i18n.errors("force_final_answer")}'
-            )
-        else:
-            assistant_message = self._i18n.errors("force_final_answer")
-
-        self.messages.append(self._format_msg(assistant_message, role="assistant"))
-
-        # Perform one more LLM call to get the final answer
-        answer = self.llm.call(
-            self.messages,
-            callbacks=self.callbacks,
-        )
-
-        if answer is None or answer == "":
-            self._printer.print(
-                content="Received None or empty response from LLM call.",
-                color="red",
-            )
-            raise ValueError("Invalid response from LLM call - None or empty.")
-
-        formatted_answer = self._format_answer(answer)
-        # Return the formatted answer, regardless of its type
-        return formatted_answer

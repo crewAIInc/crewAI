@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools.base_tool import BaseTool
@@ -46,7 +46,7 @@ class LiteAgentExecutionStartedEvent(CrewEvent):
 
     agent_info: Dict[str, Any]
     tools: Optional[Sequence[Union[BaseTool, CrewStructuredTool]]]
-    task_prompt: str
+    messages: Union[str, List[Dict[str, str]]]
     type: str = "lite_agent_execution_started"
 
     model_config = {"arbitrary_types_allowed": True}
