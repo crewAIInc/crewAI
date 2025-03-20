@@ -9,6 +9,29 @@ from crewai.memory.storage.interface import Storage
 class Mem0Storage(Storage):
     """
     Extends Storage to handle embedding and searching across entities using Mem0.
+    
+    Supports configuring Redis as a vector store through the memory_config:
+    
+    ```python
+    crew = Crew(
+        memory=True,
+        memory_config={
+            "provider": "mem0",
+            "config": {
+                "user_id": "test-user",
+                "api_key": "mem0-api-key",
+                "vector_store": {
+                    "provider": "redis",
+                    "config": {
+                        "collection_name": "collection_name",
+                        "embedding_model_dims": 1536,
+                        "redis_url": "redis://redis-host:6379/0"
+                    }
+                }
+            }
+        }
+    )
+    ```
     """
 
     def __init__(self, type, crew=None):
@@ -26,19 +49,49 @@ class Mem0Storage(Storage):
         if type == "user" and not user_id:
             raise ValueError("User ID is required for user memory type")
 
-        # API key in memory config overrides the environment variable
+        # Get configuration from memory_config
         config = self.memory_config.get("config", {})
         mem0_api_key = config.get("api_key") or os.getenv("MEM0_API_KEY")
         mem0_org_id = config.get("org_id")
         mem0_project_id = config.get("project_id")
+        vector_store_config = config.get("vector_store")
 
-        # Initialize MemoryClient with available parameters
-        if mem0_org_id and mem0_project_id:
-            self.memory = MemoryClient(
-                api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
-            )
+        # If vector store configuration is provided, use Memory.from_config
+        if vector_store_config:
+            try:
+                from mem0.memory.main import Memory
+                
+                # Prepare memory config with vector store configuration
+                memory_config = {
+                    "vector_store": vector_store_config
+                }
+                
+                # Add API key if provided
+                if mem0_api_key:
+                    memory_config["api_key"] = mem0_api_key
+                
+                # Add org_id and project_id if provided
+                if mem0_org_id:
+                    memory_config["org_id"] = mem0_org_id
+                if mem0_project_id:
+                    memory_config["project_id"] = mem0_project_id
+                    
+                # Initialize Memory with configuration
+                self.memory = Memory.from_config(memory_config)
+            except ImportError:
+                raise ImportError(
+                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
+                )
+            except Exception as e:
+                raise ValueError(f"Failed to initialize Memory with vector store configuration: {e}")
         else:
-            self.memory = MemoryClient(api_key=mem0_api_key)
+            # Fall back to default MemoryClient initialization
+            if mem0_org_id and mem0_project_id:
+                self.memory = MemoryClient(
+                    api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
+                )
+            else:
+                self.memory = MemoryClient(api_key=mem0_api_key)
 
     def _sanitize_role(self, role: str) -> str:
         """
