@@ -28,7 +28,7 @@ dependencies = [
     "auth0-python>=4.7.1",
     "python-dotenv>=1.0.0",
     # Configuration and Utils
-    "click>=8.0.1",
+    "click>=8.0.1,<8.2.0",
     "appdirs>=1.4.4",
     "jsonref>=1.1.0",
     "json-repair>=0.25.2",
