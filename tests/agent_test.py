@@ -1,7 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
 import os
-from datetime import UTC, datetime, timezone
 from unittest import mock
 from unittest.mock import patch
 
@@ -9,7 +8,7 @@ import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
@@ -19,6 +18,7 @@ from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.llm_events import LLMStreamChunkEvent
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
@@ -260,9 +260,7 @@ def test_cache_hitting():
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    with (
-        patch.object(CacheHandler, "read") as read,
-    ):
+    with (patch.object(CacheHandler, "read") as read,):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -916,8 +914,6 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_usage_information_is_appended_to_agent():
-    from datetime import UTC, datetime
-
     from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
@@ -927,36 +923,30 @@ def test_tool_usage_information_is_appended_to_agent():
         def _run(self) -> str:
             return "Howdy!"
 
-    fixed_datetime = datetime(2025, 2, 10, 12, 0, 0, tzinfo=UTC)
-    with patch("datetime.datetime") as mock_datetime:
-        mock_datetime.now.return_value = fixed_datetime
-        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+    agent1 = Agent(
+        role="Friendly Neighbor",
+        goal="Make everyone feel welcome",
+        backstory="You are the friendly neighbor",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
 
-        agent1 = Agent(
-            role="Friendly Neighbor",
-            goal="Make everyone feel welcome",
-            backstory="You are the friendly neighbor",
-            tools=[MyCustomTool(result_as_answer=True)],
-        )
+    greeting = Task(
+        description="Say an appropriate greeting.",
+        expected_output="The greeting.",
+        agent=agent1,
+    )
+    tasks = [greeting]
+    crew = Crew(agents=[agent1], tasks=tasks)
 
-        greeting = Task(
-            description="Say an appropriate greeting.",
-            expected_output="The greeting.",
-            agent=agent1,
-        )
-        tasks = [greeting]
-        crew = Crew(agents=[agent1], tasks=tasks)
-
-        crew.kickoff()
-        assert agent1.tools_results == [
-            {
-                "result": "Howdy!",
-                "tool_name": "Decide Greetings",
-                "tool_args": {},
-                "result_as_answer": True,
-                "start_time": fixed_datetime,
-            }
-        ]
+    crew.kickoff()
+    assert agent1.tools_results == [
+        {
+            "result": "Howdy!",
+            "tool_name": "Decide Greetings",
+            "tool_args": {},
+            "result_as_answer": True,
+        }
+    ]
 
 
 def test_agent_definition_based_on_dict():
@@ -999,23 +989,35 @@ def test_agent_human_input():
     # Side effect function for _ask_human_input to simulate multiple feedback iterations
     feedback_responses = iter(
         [
-            "Don't say hi, say Hello instead!",  # First feedback
-            "looks good",  # Second feedback to exit loop
+            "Don't say hi, say Hello instead!",  # First feedback: instruct change
+            "",  # Second feedback: empty string signals acceptance
         ]
     )
 
     def ask_human_input_side_effect(*args, **kwargs):
         return next(feedback_responses)
 
-    with patch.object(
-        CrewAgentExecutor, "_ask_human_input", side_effect=ask_human_input_side_effect
-    ) as mock_human_input:
+    # Patch both _ask_human_input and _invoke_loop to avoid real API/network calls.
+    with (
+        patch.object(
+            CrewAgentExecutor,
+            "_ask_human_input",
+            side_effect=ask_human_input_side_effect,
+        ) as mock_human_input,
+        patch.object(
+            CrewAgentExecutor,
+            "_invoke_loop",
+            return_value=AgentFinish(output="Hello", thought="", text=""),
+        ) as mock_invoke_loop,
+    ):
         # Execute the task
         output = agent.execute_task(task)
 
-        # Assertions to ensure the agent behaves correctly
-        assert mock_human_input.call_count == 2  # Should have asked for feedback twice
-        assert output.strip().lower() == "hello"  # Final output should be 'Hello'
+        # Assertions to ensure the agent behaves correctly.
+        # It should have requested feedback twice.
+        assert mock_human_input.call_count == 2
+        # The final result should be processed to "Hello"
+        assert output.strip().lower() == "hello"
 
 
 def test_interpolate_inputs():

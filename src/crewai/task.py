@@ -34,6 +34,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -66,6 +67,7 @@ class Task(BaseModel):
         output_file: File path for storing task output.
         output_json: Pydantic model for structuring JSON output.
         output_pydantic: Pydantic model for task output.
+        security_config: Security configuration including fingerprinting.
         tools: List of tools/resources limited for task execution.
     """
 
@@ -117,6 +119,10 @@ class Task(BaseModel):
     tools: Optional[List[BaseTool]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
+    )
+    security_config: SecurityConfig = Field(
+        default_factory=SecurityConfig,
+        description="Security configuration for the task.",
     )
     id: UUID4 = Field(
         default_factory=uuid.uuid4,
@@ -744,3 +750,12 @@ class Task(BaseModel):
 
     def __repr__(self):
         return f"Task(description={self.description}, expected_output={self.expected_output})"
+
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """Get the fingerprint of the task.
+
+        Returns:
+            Fingerprint: The fingerprint of the task
+        """
+        return self.security_config.fingerprint

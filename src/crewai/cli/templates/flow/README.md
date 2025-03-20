@@ -30,13 +30,13 @@ crewai install
 
 ## Running the Project
 
-To kickstart your crew of AI agents and begin task execution, run this from the root folder of your project:
+To kickstart your flow and begin execution, run this from the root folder of your project:
 
 ```bash
 crewai run
 ```
 
-This command initializes the {{name}} Crew, assembling the agents and assigning them tasks as defined in your configuration.
+This command initializes the {{name}} Flow as defined in your configuration.
 
 This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
 
