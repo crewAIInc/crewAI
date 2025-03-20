@@ -2,6 +2,7 @@ import datetime
 import inspect
 import json
 import logging
+import re
 import threading
 import uuid
 from concurrent.futures import Future
@@ -47,6 +48,7 @@ from crewai.utilities.events import (
     TaskStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.formatter import interpolate_only
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 
@@ -507,7 +509,9 @@ class Task(BaseModel):
             return
 
         try:
-            self.description = self._original_description.format(**inputs)
+            self.description = interpolate_only(
+                input_string=self._original_description, inputs=inputs
+            )
         except KeyError as e:
             raise ValueError(
                 f"Missing required template variable '{e.args[0]}' in description"
@@ -516,7 +520,7 @@ class Task(BaseModel):
             raise ValueError(f"Error interpolating description: {str(e)}") from e
 
         try:
-            self.expected_output = self.interpolate_only(
+            self.expected_output = interpolate_only(
                 input_string=self._original_expected_output, inputs=inputs
             )
         except (KeyError, ValueError) as e:
@@ -524,7 +528,7 @@ class Task(BaseModel):
 
         if self.output_file is not None:
             try:
-                self.output_file = self.interpolate_only(
+                self.output_file = interpolate_only(
                     input_string=self._original_output_file, inputs=inputs
                 )
             except (KeyError, ValueError) as e:
@@ -554,72 +558,6 @@ class Task(BaseModel):
             self.description += (
                 f"\n\n{conversation_instruction}\n\n{conversation_history}"
             )
-
-    def interpolate_only(
-        self,
-        input_string: Optional[str],
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
-    ) -> str:
-        """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
-
-        Args:
-            input_string: The string containing template variables to interpolate.
-                         Can be None or empty, in which case an empty string is returned.
-            inputs: Dictionary mapping template variables to their values.
-                   Supported value types are strings, integers, floats, and dicts/lists
-                   containing only these types and other nested dicts/lists.
-
-        Returns:
-            The interpolated string with all template variables replaced with their values.
-            Empty string if input_string is None or empty.
-
-        Raises:
-            ValueError: If a value contains unsupported types
-        """
-
-        # Validation function for recursive type checking
-        def validate_type(value: Any) -> None:
-            if value is None:
-                return
-            if isinstance(value, (str, int, float, bool)):
-                return
-            if isinstance(value, (dict, list)):
-                for item in value.values() if isinstance(value, dict) else value:
-                    validate_type(item)
-                return
-            raise ValueError(
-                f"Unsupported type {type(value).__name__} in inputs. "
-                "Only str, int, float, bool, dict, and list are allowed."
-            )
-
-        # Validate all input values
-        for key, value in inputs.items():
-            try:
-                validate_type(value)
-            except ValueError as e:
-                raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
-
-        if input_string is None or not input_string:
-            return ""
-        if "{" not in input_string and "}" not in input_string:
-            return input_string
-        if not inputs:
-            raise ValueError(
-                "Inputs dictionary cannot be empty when interpolating variables"
-            )
-        try:
-            escaped_string = input_string.replace("{", "{{").replace("}", "}}")
-
-            for key in inputs.keys():
-                escaped_string = escaped_string.replace(f"{{{{{key}}}}}", f"{{{key}}}")
-
-            return escaped_string.format(**inputs)
-        except KeyError as e:
-            raise KeyError(
-                f"Template variable '{e.args[0]}' not found in inputs dictionary"
-            ) from e
-        except ValueError as e:
-            raise ValueError(f"Error during string interpolation: {str(e)}") from e
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""

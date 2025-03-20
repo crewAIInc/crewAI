@@ -25,6 +25,7 @@ from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter
+from crewai.utilities.formatter import interpolate_only
 
 T = TypeVar("T", bound="BaseAgent")
 
@@ -333,9 +334,15 @@ class BaseAgent(ABC, BaseModel):
             self._original_backstory = self.backstory
 
         if inputs:
-            self.role = self._original_role.format(**inputs)
-            self.goal = self._original_goal.format(**inputs)
-            self.backstory = self._original_backstory.format(**inputs)
+            self.role = interpolate_only(
+                input_string=self._original_role, inputs=inputs
+            )
+            self.goal = interpolate_only(
+                input_string=self._original_goal, inputs=inputs
+            )
+            self.backstory = interpolate_only(
+                input_string=self._original_backstory, inputs=inputs
+            )
 
     def set_cache_handler(self, cache_handler: CacheHandler) -> None:
         """Set the cache handler for the agent.
