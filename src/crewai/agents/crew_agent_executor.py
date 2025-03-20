@@ -104,7 +104,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
-        self.ask_human_input_function = inputs.get("ask_human_input_function", None)
+        
+        # Type checking for ask_human_input_function to ensure it's callable or None
+        ask_human_input = inputs.get("ask_human_input_function", None)
+        if ask_human_input is not None and not callable(ask_human_input):
+            print(f"Warning: ask_human_input_function is not callable, ignoring: {ask_human_input}")
+            self.ask_human_input_function = None
+        else:
+            self.ask_human_input_function = ask_human_input
 
         try:
             formatted_answer = self._invoke_loop()
