@@ -19,6 +19,8 @@ from typing import (
     Tuple,
     Type,
     Union,
+    get_args,
+    get_origin,
 )
 
 from pydantic import (
@@ -32,6 +34,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -64,6 +67,7 @@ class Task(BaseModel):
         output_file: File path for storing task output.
         output_json: Pydantic model for structuring JSON output.
         output_pydantic: Pydantic model for task output.
+        security_config: Security configuration including fingerprinting.
         tools: List of tools/resources limited for task execution.
     """
 
@@ -115,6 +119,10 @@ class Task(BaseModel):
     tools: Optional[List[BaseTool]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
+    )
+    security_config: SecurityConfig = Field(
+        default_factory=SecurityConfig,
+        description="Security configuration for the task.",
     )
     id: UUID4 = Field(
         default_factory=uuid.uuid4,
@@ -172,15 +180,29 @@ class Task(BaseModel):
         """
         if v is not None:
             sig = inspect.signature(v)
-            if len(sig.parameters) != 1:
+            positional_args = [
+                param
+                for param in sig.parameters.values()
+                if param.default is inspect.Parameter.empty
+            ]
+            if len(positional_args) != 1:
                 raise ValueError("Guardrail function must accept exactly one parameter")
 
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
+
+                return_annotation_args = get_args(return_annotation)
                 if not (
-                    return_annotation == Tuple[bool, Any]
-                    or str(return_annotation) == "Tuple[bool, Any]"
+                    get_origin(return_annotation) is tuple
+                    and len(return_annotation_args) == 2
+                    and return_annotation_args[0] is bool
+                    and (
+                        return_annotation_args[1] is Any
+                        or return_annotation_args[1] is str
+                        or return_annotation_args[1] is TaskOutput
+                        or return_annotation_args[1] == Union[str, TaskOutput]
+                    )
                 ):
                     raise ValueError(
                         "If return type is annotated, it must be Tuple[bool, Any]"
@@ -435,9 +457,9 @@ class Task(BaseModel):
                 content = (
                     json_output
                     if json_output
-                    else pydantic_output.model_dump_json()
-                    if pydantic_output
-                    else result
+                    else (
+                        pydantic_output.model_dump_json() if pydantic_output else result
+                    )
                 )
                 self._save_file(content)
             crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output))
@@ -728,3 +750,12 @@ class Task(BaseModel):
 
     def __repr__(self):
         return f"Task(description={self.description}, expected_output={self.expected_output})"
+
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """Get the fingerprint of the task.
+
+        Returns:
+            Fingerprint: The fingerprint of the task
+        """
+        return self.security_config.fingerprint

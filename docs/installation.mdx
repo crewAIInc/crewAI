@@ -58,12 +58,16 @@ If you haven't installed `uv` yet, follow **step 1** to quickly get it set up on
 
       - To verify that `crewai` is installed, run:
         ```shell
-        uv tools list
+        uv tool list
         ```
       - You should see something like:
-        ```markdown
+        ```shell
         crewai v0.102.0
         - crewai
+        ```
+      - If you need to update `crewai`, run:
+        ```shell
+        uv tool install crewai --upgrade
         ```
       <Check>Installation successful! You're ready to create your first crew! 🎉</Check>
     </Step>
