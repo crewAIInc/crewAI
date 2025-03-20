@@ -10,7 +10,7 @@ from crewai.llm import LLM
 def test_gemini_empty_response_handling():
     """Test that empty responses from Gemini models are handled correctly."""
     # Create a mock LLM instance
-    llm = LLM(model="gemini/gemini-pro", api_key="fake-key")
+    llm = LLM(model="gemini/gemini-pro")
     
     # Create a mock response with empty content
     mock_response = MagicMock()
@@ -33,7 +33,6 @@ def test_openrouter_gemini_empty_response_handling():
     # Create a mock LLM instance with OpenRouter base URL
     llm = LLM(
         model="openrouter/google/gemini-pro", 
-        api_key="fake-key",
         base_url="https://openrouter.ai/api/v1"
     )
     
