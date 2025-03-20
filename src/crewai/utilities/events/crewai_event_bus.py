@@ -9,6 +9,7 @@ from crewai.utilities.events.event_types import EventTypes
 
 EventT = TypeVar("EventT", bound=CrewEvent)
 
+
 class CrewAIEventsBus:
     """
     A singleton event bus that uses blinker signals for event handling.
@@ -73,10 +74,6 @@ class CrewAIEventsBus:
                     handler(source, event)
 
         self._signal.send(source, event=event)
-
-    def clear_handlers(self) -> None:
-        """Clear all registered event handlers - useful for testing"""
-        self._handlers.clear()
 
     def register_handler(
         self, event_type: Type[EventTypes], handler: Callable[[Any, EventTypes], None]
