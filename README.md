@@ -153,9 +153,10 @@ If you encounter issues during installation or usage, here are some common solut
    - If issues persist, use a pre-built wheel: `pip install tiktoken --prefer-binary`
 
 3. **ModuleNotFoundError: No module named 'packaging.licenses'**
-   - This error occurs when installing with `uv` due to newer setuptools versions
+   - This error occurs when installing with `uv` (v0.1.0 and above) due to newer `setuptools` versions
    - Fix by downgrading setuptools: `pip install setuptools<=65.5.0`
    - Then install CrewAI: `uv pip install crewai`
+   - Note: This is a temporary workaround until compatibility with `setuptools` is resolved
 
 ### 2. Setting Up Your Crew with the YAML Configuration
 

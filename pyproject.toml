@@ -96,5 +96,6 @@ exclude = ["cli/templates"]
 exclude_dirs = ["src/crewai/cli/templates"]
 
 [build-system]
-requires = ["hatchling", "setuptools<=65.5.0"]
+# Pin setuptools version to avoid packaging.licenses dependency issues with UV package manager
+requires = ["hatchling", "setuptools>=64.0.0,<=65.5.0"]  # Explicit version range for compatibility
 build-backend = "hatchling.build"
