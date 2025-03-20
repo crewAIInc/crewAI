@@ -1,4 +1,3 @@
-import inspect
 import json
 import logging
 import os
@@ -12,8 +11,8 @@ from typing import (
     List,
     Literal,
     Optional,
-    Tuple,
     Type,
+    TypedDict,
     Union,
     cast,
 )
@@ -21,22 +20,30 @@ from typing import (
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from crewai.utilities.events.llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+    LLMCallType,
+    LLMStreamChunkEvent,
+)
 from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
-    from litellm import Choices, get_supported_openai_params
+    from litellm import Choices
+    from litellm.litellm_core_utils.get_supported_openai_params import (
+        get_supported_openai_params,
+    )
     from litellm.types.utils import ModelResponse
     from litellm.utils import supports_response_schema
 
 
-from crewai.traces.unified_trace_controller import trace_llm_call
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
-from crewai.utilities.protocols import AgentExecutorProtocol
 
 load_dotenv()
 
@@ -71,6 +78,7 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4-turbo": 128000,
     "o1-preview": 128000,
     "o1-mini": 128000,
+    "o3-mini": 200000,  # Based on official o3-mini specifications
     # gemini
     "gemini-2.0-flash": 1048576,
     "gemini-1.5-pro": 2097152,
@@ -106,6 +114,19 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "Llama-3.2-11B-Vision-Instruct": 16384,
     "Meta-Llama-3.2-3B-Instruct": 4096,
     "Meta-Llama-3.2-1B-Instruct": 16384,
+    # mistral
+    "mistral-tiny": 32768,
+    "mistral-small-latest": 32768,
+    "mistral-medium-latest": 32768,
+    "mistral-large-latest": 32768,
+    "mistral-large-2407": 32768,
+    "mistral-large-2402": 32768,
+    "mistral/mistral-tiny": 32768,
+    "mistral/mistral-small-latest": 32768,
+    "mistral/mistral-medium-latest": 32768,
+    "mistral/mistral-large-latest": 32768,
+    "mistral/mistral-large-2407": 32768,
+    "mistral/mistral-large-2402": 32768,
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
@@ -132,6 +153,17 @@ def suppress_warnings():
             sys.stderr = old_stderr
 
 
+class Delta(TypedDict):
+    content: Optional[str]
+    role: Optional[str]
+
+
+class StreamingChoices(TypedDict):
+    delta: Delta
+    index: int
+    finish_reason: Optional[str]
+
+
 class LLM:
     def __init__(
         self,
@@ -156,6 +188,7 @@ class LLM:
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
+        stream: bool = False,
         **kwargs,
     ):
         self.model = model
@@ -180,8 +213,8 @@ class LLM:
         self.context_window_size = 0
         self.reasoning_effort = reasoning_effort
         self.additional_params = kwargs
-        self._message_history: List[Dict[str, str]] = []
         self.is_anthropic = self._is_anthropic_model(model)
+        self.stream = stream
 
         litellm.drop_params = True
 
@@ -196,12 +229,6 @@ class LLM:
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
 
-    @trace_llm_call
-    def _call_llm(self, params: Dict[str, Any]) -> Any:
-        with suppress_warnings():
-            response = litellm.completion(**params)
-            return response
-
     def _is_anthropic_model(self, model: str) -> bool:
         """Determine if the model is from Anthropic provider.
 
@@ -213,6 +240,432 @@ class LLM:
         """
         ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
         return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
+
+    def _prepare_completion_params(
+        self,
+        messages: Union[str, List[Dict[str, str]]],
+        tools: Optional[List[dict]] = None,
+    ) -> Dict[str, Any]:
+        """Prepare parameters for the completion call.
+
+        Args:
+            messages: Input messages for the LLM
+            tools: Optional list of tool schemas
+            callbacks: Optional list of callback functions
+            available_functions: Optional dict of available functions
+
+        Returns:
+            Dict[str, Any]: Parameters for the completion call
+        """
+        # --- 1) Format messages according to provider requirements
+        if isinstance(messages, str):
+            messages = [{"role": "user", "content": messages}]
+        formatted_messages = self._format_messages_for_provider(messages)
+
+        # --- 2) Prepare the parameters for the completion call
+        params = {
+            "model": self.model,
+            "messages": formatted_messages,
+            "timeout": self.timeout,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "n": self.n,
+            "stop": self.stop,
+            "max_tokens": self.max_tokens or self.max_completion_tokens,
+            "presence_penalty": self.presence_penalty,
+            "frequency_penalty": self.frequency_penalty,
+            "logit_bias": self.logit_bias,
+            "response_format": self.response_format,
+            "seed": self.seed,
+            "logprobs": self.logprobs,
+            "top_logprobs": self.top_logprobs,
+            "api_base": self.api_base,
+            "base_url": self.base_url,
+            "api_version": self.api_version,
+            "api_key": self.api_key,
+            "stream": self.stream,
+            "tools": tools,
+            "reasoning_effort": self.reasoning_effort,
+            **self.additional_params,
+        }
+
+        # Remove None values from params
+        return {k: v for k, v in params.items() if v is not None}
+
+    def _handle_streaming_response(
+        self,
+        params: Dict[str, Any],
+        callbacks: Optional[List[Any]] = None,
+        available_functions: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """Handle a streaming response from the LLM.
+
+        Args:
+            params: Parameters for the completion call
+            callbacks: Optional list of callback functions
+            available_functions: Dict of available functions
+
+        Returns:
+            str: The complete response text
+
+        Raises:
+            Exception: If no content is received from the streaming response
+        """
+        # --- 1) Initialize response tracking
+        full_response = ""
+        last_chunk = None
+        chunk_count = 0
+        usage_info = None
+
+        # --- 2) Make sure stream is set to True and include usage metrics
+        params["stream"] = True
+        params["stream_options"] = {"include_usage": True}
+
+        try:
+            # --- 3) Process each chunk in the stream
+            for chunk in litellm.completion(**params):
+                chunk_count += 1
+                last_chunk = chunk
+
+                # Extract content from the chunk
+                chunk_content = None
+
+                # Safely extract content from various chunk formats
+                try:
+                    # Try to access choices safely
+                    choices = None
+                    if isinstance(chunk, dict) and "choices" in chunk:
+                        choices = chunk["choices"]
+                    elif hasattr(chunk, "choices"):
+                        # Check if choices is not a type but an actual attribute with value
+                        if not isinstance(getattr(chunk, "choices"), type):
+                            choices = getattr(chunk, "choices")
+
+                    # Try to extract usage information if available
+                    if isinstance(chunk, dict) and "usage" in chunk:
+                        usage_info = chunk["usage"]
+                    elif hasattr(chunk, "usage"):
+                        # Check if usage is not a type but an actual attribute with value
+                        if not isinstance(getattr(chunk, "usage"), type):
+                            usage_info = getattr(chunk, "usage")
+
+                    if choices and len(choices) > 0:
+                        choice = choices[0]
+
+                        # Handle different delta formats
+                        delta = None
+                        if isinstance(choice, dict) and "delta" in choice:
+                            delta = choice["delta"]
+                        elif hasattr(choice, "delta"):
+                            delta = getattr(choice, "delta")
+
+                        # Extract content from delta
+                        if delta:
+                            # Handle dict format
+                            if isinstance(delta, dict):
+                                if "content" in delta and delta["content"] is not None:
+                                    chunk_content = delta["content"]
+                            # Handle object format
+                            elif hasattr(delta, "content"):
+                                chunk_content = getattr(delta, "content")
+
+                            # Handle case where content might be None or empty
+                            if chunk_content is None and isinstance(delta, dict):
+                                # Some models might send empty content chunks
+                                chunk_content = ""
+                except Exception as e:
+                    logging.debug(f"Error extracting content from chunk: {e}")
+                    logging.debug(f"Chunk format: {type(chunk)}, content: {chunk}")
+
+                # Only add non-None content to the response
+                if chunk_content is not None:
+                    # Add the chunk content to the full response
+                    full_response += chunk_content
+
+                    # Emit the chunk event
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMStreamChunkEvent(chunk=chunk_content),
+                    )
+
+            # --- 4) Fallback to non-streaming if no content received
+            if not full_response.strip() and chunk_count == 0:
+                logging.warning(
+                    "No chunks received in streaming response, falling back to non-streaming"
+                )
+                non_streaming_params = params.copy()
+                non_streaming_params["stream"] = False
+                non_streaming_params.pop(
+                    "stream_options", None
+                )  # Remove stream_options for non-streaming call
+                return self._handle_non_streaming_response(
+                    non_streaming_params, callbacks, available_functions
+                )
+
+            # --- 5) Handle empty response with chunks
+            if not full_response.strip() and chunk_count > 0:
+                logging.warning(
+                    f"Received {chunk_count} chunks but no content was extracted"
+                )
+                if last_chunk is not None:
+                    try:
+                        # Try to extract content from the last chunk's message
+                        choices = None
+                        if isinstance(last_chunk, dict) and "choices" in last_chunk:
+                            choices = last_chunk["choices"]
+                        elif hasattr(last_chunk, "choices"):
+                            if not isinstance(getattr(last_chunk, "choices"), type):
+                                choices = getattr(last_chunk, "choices")
+
+                        if choices and len(choices) > 0:
+                            choice = choices[0]
+
+                            # Try to get content from message
+                            message = None
+                            if isinstance(choice, dict) and "message" in choice:
+                                message = choice["message"]
+                            elif hasattr(choice, "message"):
+                                message = getattr(choice, "message")
+
+                            if message:
+                                content = None
+                                if isinstance(message, dict) and "content" in message:
+                                    content = message["content"]
+                                elif hasattr(message, "content"):
+                                    content = getattr(message, "content")
+
+                                if content:
+                                    full_response = content
+                                    logging.info(
+                                        f"Extracted content from last chunk message: {full_response}"
+                                    )
+                    except Exception as e:
+                        logging.debug(f"Error extracting content from last chunk: {e}")
+                        logging.debug(
+                            f"Last chunk format: {type(last_chunk)}, content: {last_chunk}"
+                        )
+
+            # --- 6) If still empty, raise an error instead of using a default response
+            if not full_response.strip():
+                raise Exception(
+                    "No content received from streaming response. Received empty chunks or failed to extract content."
+                )
+
+            # --- 7) Check for tool calls in the final response
+            tool_calls = None
+            try:
+                if last_chunk:
+                    choices = None
+                    if isinstance(last_chunk, dict) and "choices" in last_chunk:
+                        choices = last_chunk["choices"]
+                    elif hasattr(last_chunk, "choices"):
+                        if not isinstance(getattr(last_chunk, "choices"), type):
+                            choices = getattr(last_chunk, "choices")
+
+                    if choices and len(choices) > 0:
+                        choice = choices[0]
+
+                        message = None
+                        if isinstance(choice, dict) and "message" in choice:
+                            message = choice["message"]
+                        elif hasattr(choice, "message"):
+                            message = getattr(choice, "message")
+
+                        if message:
+                            if isinstance(message, dict) and "tool_calls" in message:
+                                tool_calls = message["tool_calls"]
+                            elif hasattr(message, "tool_calls"):
+                                tool_calls = getattr(message, "tool_calls")
+            except Exception as e:
+                logging.debug(f"Error checking for tool calls: {e}")
+
+            # --- 8) If no tool calls or no available functions, return the text response directly
+            if not tool_calls or not available_functions:
+                # Log token usage if available in streaming mode
+                self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
+                # Emit completion event and return response
+                self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
+                return full_response
+
+            # --- 9) Handle tool calls if present
+            tool_result = self._handle_tool_call(tool_calls, available_functions)
+            if tool_result is not None:
+                return tool_result
+
+            # --- 10) Log token usage if available in streaming mode
+            self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
+
+            # --- 11) Emit completion event and return response
+            self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
+            return full_response
+
+        except Exception as e:
+            logging.error(f"Error in streaming response: {str(e)}")
+            if full_response.strip():
+                logging.warning(f"Returning partial response despite error: {str(e)}")
+                self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
+                return full_response
+
+            # Emit failed event and re-raise the exception
+            crewai_event_bus.emit(
+                self,
+                event=LLMCallFailedEvent(error=str(e)),
+            )
+            raise Exception(f"Failed to get streaming response: {str(e)}")
+
+    def _handle_streaming_callbacks(
+        self,
+        callbacks: Optional[List[Any]],
+        usage_info: Optional[Dict[str, Any]],
+        last_chunk: Optional[Any],
+    ) -> None:
+        """Handle callbacks with usage info for streaming responses.
+
+        Args:
+            callbacks: Optional list of callback functions
+            usage_info: Usage information collected during streaming
+            last_chunk: The last chunk received from the streaming response
+        """
+        if callbacks and len(callbacks) > 0:
+            for callback in callbacks:
+                if hasattr(callback, "log_success_event"):
+                    # Use the usage_info we've been tracking
+                    if not usage_info:
+                        # Try to get usage from the last chunk if we haven't already
+                        try:
+                            if last_chunk:
+                                if (
+                                    isinstance(last_chunk, dict)
+                                    and "usage" in last_chunk
+                                ):
+                                    usage_info = last_chunk["usage"]
+                                elif hasattr(last_chunk, "usage"):
+                                    if not isinstance(
+                                        getattr(last_chunk, "usage"), type
+                                    ):
+                                        usage_info = getattr(last_chunk, "usage")
+                        except Exception as e:
+                            logging.debug(f"Error extracting usage info: {e}")
+
+                    if usage_info:
+                        callback.log_success_event(
+                            kwargs={},  # We don't have the original params here
+                            response_obj={"usage": usage_info},
+                            start_time=0,
+                            end_time=0,
+                        )
+
+    def _handle_non_streaming_response(
+        self,
+        params: Dict[str, Any],
+        callbacks: Optional[List[Any]] = None,
+        available_functions: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """Handle a non-streaming response from the LLM.
+
+        Args:
+            params: Parameters for the completion call
+            callbacks: Optional list of callback functions
+            available_functions: Dict of available functions
+
+        Returns:
+            str: The response text
+        """
+        # --- 1) Make the completion call
+        response = litellm.completion(**params)
+
+        # --- 2) Extract response message and content
+        response_message = cast(Choices, cast(ModelResponse, response).choices)[
+            0
+        ].message
+        text_response = response_message.content or ""
+
+        # --- 3) Handle callbacks with usage info
+        if callbacks and len(callbacks) > 0:
+            for callback in callbacks:
+                if hasattr(callback, "log_success_event"):
+                    usage_info = getattr(response, "usage", None)
+                    if usage_info:
+                        callback.log_success_event(
+                            kwargs=params,
+                            response_obj={"usage": usage_info},
+                            start_time=0,
+                            end_time=0,
+                        )
+
+        # --- 4) Check for tool calls
+        tool_calls = getattr(response_message, "tool_calls", [])
+
+        # --- 5) If no tool calls or no available functions, return the text response directly
+        if not tool_calls or not available_functions:
+            self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL)
+            return text_response
+
+        # --- 6) Handle tool calls if present
+        tool_result = self._handle_tool_call(tool_calls, available_functions)
+        if tool_result is not None:
+            return tool_result
+
+        # --- 7) If tool call handling didn't return a result, emit completion event and return text response
+        self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL)
+        return text_response
+
+    def _handle_tool_call(
+        self,
+        tool_calls: List[Any],
+        available_functions: Optional[Dict[str, Any]] = None,
+    ) -> Optional[str]:
+        """Handle a tool call from the LLM.
+
+        Args:
+            tool_calls: List of tool calls from the LLM
+            available_functions: Dict of available functions
+
+        Returns:
+            Optional[str]: The result of the tool call, or None if no tool call was made
+        """
+        # --- 1) Validate tool calls and available functions
+        if not tool_calls or not available_functions:
+            return None
+
+        # --- 2) Extract function name from first tool call
+        tool_call = tool_calls[0]
+        function_name = tool_call.function.name
+        function_args = {}  # Initialize to empty dict to avoid unbound variable
+
+        # --- 3) Check if function is available
+        if function_name in available_functions:
+            try:
+                # --- 3.1) Parse function arguments
+                function_args = json.loads(tool_call.function.arguments)
+                fn = available_functions[function_name]
+
+                # --- 3.2) Execute function
+                result = fn(**function_args)
+
+                # --- 3.3) Emit success event
+                self._handle_emit_call_events(result, LLMCallType.TOOL_CALL)
+                return result
+            except Exception as e:
+                # --- 3.4) Handle execution errors
+                fn = available_functions.get(
+                    function_name, lambda: None
+                )  # Ensure fn is always a callable
+                logging.error(f"Error executing function '{function_name}': {e}")
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolExecutionErrorEvent(
+                        tool_name=function_name,
+                        tool_args=function_args,
+                        tool_class=fn,
+                        error=str(e),
+                    ),
+                )
+                crewai_event_bus.emit(
+                    self,
+                    event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),
+                )
+        return None
 
     def call(
         self,
@@ -243,142 +696,72 @@ class LLM:
             TypeError: If messages format is invalid
             ValueError: If response format is not supported
             LLMContextLengthExceededException: If input exceeds model's context limit
-
-        Examples:
-            # Example 1: Simple string input
-            >>> response = llm.call("Return the name of a random city.")
-            >>> print(response)
-            "Paris"
-
-            # Example 2: Message list with system and user messages
-            >>> messages = [
-            ...     {"role": "system", "content": "You are a geography expert"},
-            ...     {"role": "user", "content": "What is France's capital?"}
-            ... ]
-            >>> response = llm.call(messages)
-            >>> print(response)
-            "The capital of France is Paris."
         """
-        # Validate parameters before proceeding with the call.
+        # --- 1) Emit call started event
+        crewai_event_bus.emit(
+            self,
+            event=LLMCallStartedEvent(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+            ),
+        )
+
+        # --- 2) Validate parameters before proceeding with the call
         self._validate_call_params()
 
+        # --- 3) Convert string messages to proper format if needed
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
-        # For O1 models, system messages are not supported.
-        # Convert any system messages into assistant messages.
+        # --- 4) Handle O1 model special case (system messages not supported)
         if "o1" in self.model.lower():
             for message in messages:
                 if message.get("role") == "system":
                     message["role"] = "assistant"
 
+        # --- 5) Set up callbacks if provided
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
 
             try:
-                # --- 1) Format messages according to provider requirements
-                formatted_messages = self._format_messages_for_provider(messages)
+                # --- 6) Prepare parameters for the completion call
+                params = self._prepare_completion_params(messages, tools)
 
-                # --- 2) Prepare the parameters for the completion call
-                params = {
-                    "model": self.model,
-                    "messages": formatted_messages,
-                    "timeout": self.timeout,
-                    "temperature": self.temperature,
-                    "top_p": self.top_p,
-                    "n": self.n,
-                    "stop": self.stop,
-                    "max_tokens": self.max_tokens or self.max_completion_tokens,
-                    "presence_penalty": self.presence_penalty,
-                    "frequency_penalty": self.frequency_penalty,
-                    "logit_bias": self.logit_bias,
-                    "response_format": self.response_format,
-                    "seed": self.seed,
-                    "logprobs": self.logprobs,
-                    "top_logprobs": self.top_logprobs,
-                    "api_base": self.api_base,
-                    "base_url": self.base_url,
-                    "api_version": self.api_version,
-                    "api_key": self.api_key,
-                    "stream": False,
-                    "tools": tools,
-                    "reasoning_effort": self.reasoning_effort,
-                    **self.additional_params,
-                }
-
-                # Remove None values from params
-                params = {k: v for k, v in params.items() if v is not None}
-
-                # --- 2) Make the completion call
-                response = self._call_llm(params)
-                response_message = cast(Choices, cast(ModelResponse, response).choices)[
-                    0
-                ].message
-                text_response = response_message.content or ""
-                tool_calls = getattr(response_message, "tool_calls", [])
-
-                # --- 3) Handle callbacks with usage info
-                if callbacks and len(callbacks) > 0:
-                    for callback in callbacks:
-                        if hasattr(callback, "log_success_event"):
-                            usage_info = getattr(response, "usage", None)
-                            if usage_info:
-                                callback.log_success_event(
-                                    kwargs=params,
-                                    response_obj={"usage": usage_info},
-                                    start_time=0,
-                                    end_time=0,
-                                )
-
-                # --- 4) If no tool calls, return the text response
-                if not tool_calls or not available_functions:
-                    return text_response
-
-                # --- 5) Handle the tool call
-                tool_call = tool_calls[0]
-                function_name = tool_call.function.name
-                print("function_name", function_name)
-                if function_name in available_functions:
-                    try:
-                        function_args = json.loads(tool_call.function.arguments)
-                    except json.JSONDecodeError as e:
-                        logging.warning(f"Failed to parse function arguments: {e}")
-                        return text_response
-
-                    fn = available_functions[function_name]
-                    try:
-                        # Call the actual tool function
-                        result = fn(**function_args)
-                        return result
-
-                    except Exception as e:
-                        logging.error(
-                            f"Error executing function '{function_name}': {e}"
-                        )
-                        crewai_event_bus.emit(
-                            self,
-                            event=ToolExecutionErrorEvent(
-                                tool_name=function_name,
-                                tool_args=function_args,
-                                tool_class=fn,
-                                error=str(e),
-                            ),
-                        )
-                        return text_response
-
-                else:
-                    logging.warning(
-                        f"Tool call requested unknown function '{function_name}'"
+                # --- 7) Make the completion call and handle response
+                if self.stream:
+                    return self._handle_streaming_response(
+                        params, callbacks, available_functions
                     )
-                    return text_response
+                else:
+                    return self._handle_non_streaming_response(
+                        params, callbacks, available_functions
+                    )
 
             except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=LLMCallFailedEvent(error=str(e)),
+                )
                 if not LLMContextLengthExceededException(
                     str(e)
                 )._is_context_limit_error(str(e)):
                     logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
+
+    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):
+        """Handle the events for the LLM call.
+
+        Args:
+            response (str): The response from the LLM call.
+            call_type (str): The type of call, either "tool_call" or "llm_call".
+        """
+        crewai_event_bus.emit(
+            self,
+            event=LLMCallCompletedEvent(response=response, call_type=call_type),
+        )
 
     def _format_messages_for_provider(
         self, messages: List[Dict[str, str]]
@@ -406,6 +789,31 @@ class LLM:
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
 
+        # Handle O1 models specially
+        if "o1" in self.model.lower():
+            formatted_messages = []
+            for msg in messages:
+                # Convert system messages to assistant messages
+                if msg["role"] == "system":
+                    formatted_messages.append(
+                        {"role": "assistant", "content": msg["content"]}
+                    )
+                else:
+                    formatted_messages.append(msg)
+            return formatted_messages
+
+        # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
+        if "mistral" in self.model.lower():
+            # Check if the last message has a role of 'assistant'
+            if messages and messages[-1]["role"] == "assistant":
+                # Add a dummy user message to ensure the last message has a role of 'user'
+                messages = (
+                    messages.copy()
+                )  # Create a copy to avoid modifying the original
+                messages.append({"role": "user", "content": "Please continue."})
+            return messages
+
+        # Handle Anthropic models
         if not self.is_anthropic:
             return messages
 
@@ -416,7 +824,7 @@ class LLM:
 
         return messages
 
-    def _get_custom_llm_provider(self) -> str:
+    def _get_custom_llm_provider(self) -> Optional[str]:
         """
         Derives the custom_llm_provider from the model string.
         - For example, if the model is "openrouter/deepseek/deepseek-chat", returns "openrouter".
@@ -425,7 +833,7 @@ class LLM:
         """
         if "/" in self.model:
             return self.model.split("/")[0]
-        return "openai"
+        return None
 
     def _validate_call_params(self) -> None:
         """
@@ -448,16 +856,18 @@ class LLM:
 
     def supports_function_calling(self) -> bool:
         try:
-            params = get_supported_openai_params(model=self.model)
-            return "response_format" in params
+            provider = self._get_custom_llm_provider()
+            return litellm.utils.supports_function_calling(
+                self.model, custom_llm_provider=provider
+            )
         except Exception as e:
-            logging.error(f"Failed to get supported params: {str(e)}")
+            logging.error(f"Failed to check function calling support: {str(e)}")
             return False
 
     def supports_stop_words(self) -> bool:
         try:
             params = get_supported_openai_params(model=self.model)
-            return "stop" in params
+            return params is not None and "stop" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {str(e)}")
             return False
@@ -466,9 +876,22 @@ class LLM:
         """
         Returns the context window size, using 75% of the maximum to avoid
         cutting off messages mid-thread.
+
+        Raises:
+            ValueError: If a model's context window size is outside valid bounds (1024-2097152)
         """
         if self.context_window_size != 0:
             return self.context_window_size
+
+        MIN_CONTEXT = 1024
+        MAX_CONTEXT = 2097152  # Current max from gemini-1.5-pro
+
+        # Validate all context window sizes
+        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
+            if value < MIN_CONTEXT or value > MAX_CONTEXT:
+                raise ValueError(
+                    f"Context window for {key} must be between {MIN_CONTEXT} and {MAX_CONTEXT}"
+                )
 
         self.context_window_size = int(
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
@@ -531,95 +954,3 @@ class LLM:
 
                 litellm.success_callback = success_callbacks
                 litellm.failure_callback = failure_callbacks
-
-    def _get_execution_context(self) -> Tuple[Optional[Any], Optional[Any]]:
-        """Get the agent and task from the execution context.
-
-        Returns:
-            tuple: (agent, task) from any AgentExecutor context, or (None, None) if not found
-        """
-        frame = inspect.currentframe()
-        caller_frame = frame.f_back if frame else None
-        agent = None
-        task = None
-
-        # Add a maximum depth to prevent infinite loops
-        max_depth = 100  # Reasonable limit for call stack depth
-        current_depth = 0
-
-        while caller_frame and current_depth < max_depth:
-            if "self" in caller_frame.f_locals:
-                caller_self = caller_frame.f_locals["self"]
-                if isinstance(caller_self, AgentExecutorProtocol):
-                    agent = caller_self.agent
-                    task = caller_self.task
-                    break
-            caller_frame = caller_frame.f_back
-            current_depth += 1
-
-        return agent, task
-
-    def _get_new_messages(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """Get only the new messages that haven't been processed before."""
-        if not hasattr(self, "_message_history"):
-            self._message_history = []
-
-        new_messages = []
-        for message in messages:
-            message_key = (message["role"], message["content"])
-            if message_key not in [
-                (m["role"], m["content"]) for m in self._message_history
-            ]:
-                new_messages.append(message)
-                self._message_history.append(message)
-        return new_messages
-
-    def _get_new_tool_results(self, agent) -> List[Dict]:
-        """Get only the new tool results that haven't been processed before."""
-        if not agent or not agent.tools_results:
-            return []
-
-        if not hasattr(self, "_tool_results_history"):
-            self._tool_results_history: List[Dict] = []
-
-        new_tool_results = []
-
-        for result in agent.tools_results:
-            # Process tool arguments to extract actual values
-            processed_args = {}
-            if isinstance(result["tool_args"], dict):
-                for key, value in result["tool_args"].items():
-                    if isinstance(value, dict) and "type" in value:
-                        # Skip metadata and just store the actual value
-                        continue
-                    processed_args[key] = value
-
-            # Create a clean result with processed arguments
-            clean_result = {
-                "tool_name": result["tool_name"],
-                "tool_args": processed_args,
-                "result": result["result"],
-                "content": result.get("content", ""),
-                "start_time": result.get("start_time", ""),
-            }
-
-            # Check if this exact tool execution exists in history
-            is_duplicate = False
-            for history_result in self._tool_results_history:
-                if (
-                    clean_result["tool_name"] == history_result["tool_name"]
-                    and str(clean_result["tool_args"])
-                    == str(history_result["tool_args"])
-                    and str(clean_result["result"]) == str(history_result["result"])
-                    and clean_result["content"] == history_result.get("content", "")
-                    and clean_result["start_time"]
-                    == history_result.get("start_time", "")
-                ):
-                    is_duplicate = True
-                    break
-
-            if not is_duplicate:
-                new_tool_results.append(clean_result)
-                self._tool_results_history.append(clean_result)
-
-        return new_tool_results
