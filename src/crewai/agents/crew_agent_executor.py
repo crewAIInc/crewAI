@@ -81,7 +81,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
         self.ask_for_human_input = False
-        self.ask_human_input_function = None
+        self.ask_human_input_function: Optional[Callable[[str], str]] = None
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
@@ -535,17 +535,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             AgentFinish: The final answer after processing feedback
         """
-        # Get output from either return_values dict or output attribute
-        output = ""
-        if hasattr(formatted_answer, "return_values") and formatted_answer.return_values:
-            output = formatted_answer.return_values.get("output", "")
-        elif hasattr(formatted_answer, "output"):
-            output = formatted_answer.output
+        output = self._extract_output_from_agent_finish(formatted_answer)
             
         # Use custom function if provided, otherwise use default
-        if self.ask_human_input_function and callable(self.ask_human_input_function):
-            human_feedback = self.ask_human_input_function(output)
-        else:
+        try:
+            if self.ask_human_input_function and callable(self.ask_human_input_function):
+                human_feedback = self.ask_human_input_function(output)
+            else:
+                human_feedback = self._ask_human_input(output)
+        except Exception as e:
+            # Fallback to default method if custom method fails
+            print(f"Error using custom input function: {str(e)}. Falling back to default.")
             human_feedback = self._ask_human_input(output)
 
         if self._is_training_mode():
@@ -585,20 +585,29 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self.ask_for_human_input = False
             else:
                 answer = self._process_feedback_iteration(feedback)
-                # Get output from either return_values dict or output attribute
-                output = ""
-                if hasattr(answer, "return_values") and answer.return_values:
-                    output = answer.return_values.get("output", "")
-                elif hasattr(answer, "output"):
-                    output = answer.output
-                    
+                output = self._extract_output_from_agent_finish(answer)
+                
                 # Use custom function if provided, otherwise use default
-                if self.ask_human_input_function and callable(self.ask_human_input_function):
-                    feedback = self.ask_human_input_function(output)
-                else:
+                try:
+                    if self.ask_human_input_function and callable(self.ask_human_input_function):
+                        feedback = self.ask_human_input_function(output)
+                    else:
+                        feedback = self._ask_human_input(output)
+                except Exception as e:
+                    # Fallback to default method if custom method fails
+                    print(f"Error using custom input function: {str(e)}. Falling back to default.")
                     feedback = self._ask_human_input(output)
 
         return answer
+
+    def _extract_output_from_agent_finish(self, agent_finish: AgentFinish) -> str:
+        """Extract output from an AgentFinish object."""
+        output = ""
+        if hasattr(agent_finish, "return_values") and agent_finish.return_values:
+            output = agent_finish.return_values.get("output", "")
+        elif hasattr(agent_finish, "output"):
+            output = agent_finish.output
+        return output
 
     def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
         """Process a single feedback iteration."""

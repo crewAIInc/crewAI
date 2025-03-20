@@ -20,10 +20,20 @@ By default, human input is collected via the command line using the `input()` fu
 
 ```python
 def get_input_from_api(final_answer: str) -> str:
-    """Get human feedback from an API instead of CLI."""
-    # Make an API call to get feedback
-    response = requests.post("https://your-api.com/feedback", json={"answer": final_answer})
-    return response.json()["feedback"]
+    """Get human feedback from an API instead of CLI with error handling."""
+    try:
+        # Make an API call to get feedback
+        response = requests.post(
+            "https://your-api.com/feedback", 
+            json={"answer": final_answer},
+            timeout=10  # Set timeout to avoid long waits
+        )
+        response.raise_for_status()  # Raise exception for HTTP errors
+        return response.json().get("feedback", "")
+    except (requests.RequestException, json.JSONDecodeError, KeyError) as e:
+        print(f"Error getting feedback from API: {str(e)}")
+        # Fallback to CLI input if API fails
+        return input(f"API failed, please provide feedback manually:\n\n{final_answer}\n\nYour feedback: ")
 
 task = Task(
     description="Analyze the latest market trends",
@@ -33,6 +43,8 @@ task = Task(
     ask_human_input=get_input_from_api  # Use the custom function
 )
 ```
+
+Note: CrewAI will automatically fallback to the default input method if your custom function raises an exception, but implementing your own fallback gives you more control over the user experience.
 
 The custom function should:
 - Accept a string parameter (the agent's final answer)

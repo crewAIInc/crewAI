@@ -196,6 +196,14 @@ class Task(BaseModel):
                         "If return type is annotated, it must be Tuple[bool, Any]"
                     )
         return v
+        
+    @field_validator("ask_human_input")
+    @classmethod
+    def validate_ask_human_input(cls, v: Optional[Callable]) -> Optional[Callable]:
+        """Validate that the ask_human_input function is callable."""
+        if v is not None and not callable(v):
+            raise ValueError("ask_human_input must be a callable function")
+        return v
 
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
