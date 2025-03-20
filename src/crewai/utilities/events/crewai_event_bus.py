@@ -67,7 +67,6 @@ class CrewAIEventsBus:
             source: The object emitting the event
             event: The event instance to emit
         """
-        event_type = type(event)
         for event_type, handlers in self._handlers.items():
             if isinstance(event, event_type):
                 for handler in handlers:
