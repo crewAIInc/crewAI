@@ -10,6 +10,7 @@ dependencies = [
 
 [project.scripts]
 kickoff = "{{folder_name}}.main:kickoff"
+run_crew = "{{folder_name}}.main:kickoff"
 plot = "{{folder_name}}.main:plot"
 
 [build-system]

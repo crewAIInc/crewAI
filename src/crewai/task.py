@@ -19,6 +19,8 @@ from typing import (
     Tuple,
     Type,
     Union,
+    get_args,
+    get_origin,
 )
 
 from pydantic import (
@@ -178,15 +180,29 @@ class Task(BaseModel):
         """
         if v is not None:
             sig = inspect.signature(v)
-            if len(sig.parameters) != 1:
+            positional_args = [
+                param
+                for param in sig.parameters.values()
+                if param.default is inspect.Parameter.empty
+            ]
+            if len(positional_args) != 1:
                 raise ValueError("Guardrail function must accept exactly one parameter")
 
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
+
+                return_annotation_args = get_args(return_annotation)
                 if not (
-                    return_annotation == Tuple[bool, Any]
-                    or str(return_annotation) == "Tuple[bool, Any]"
+                    get_origin(return_annotation) is tuple
+                    and len(return_annotation_args) == 2
+                    and return_annotation_args[0] is bool
+                    and (
+                        return_annotation_args[1] is Any
+                        or return_annotation_args[1] is str
+                        or return_annotation_args[1] is TaskOutput
+                        or return_annotation_args[1] == Union[str, TaskOutput]
+                    )
                 ):
                     raise ValueError(
                         "If return type is annotated, it must be Tuple[bool, Any]"
