@@ -20,6 +20,7 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
+from crewai.utilities.embedding_configurator import EmbeddingConfig
 from crewai.utilities.events.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -108,7 +109,7 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    embedder: Optional[Dict[str, Any]] = Field(
+    embedder: Optional[EmbeddingConfig] = Field(
         default=None,
         description="Embedder configuration for the agent.",
     )
@@ -134,7 +135,7 @@ class Agent(BaseAgent):
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+    def set_knowledge(self, crew_embedder: Optional[EmbeddingConfig] = None):
         try:
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
