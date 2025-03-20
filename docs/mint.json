@@ -88,6 +88,13 @@
             "guides/flows/first-flow",
             "guides/flows/mastering-flow-state"
           ]
+        },
+        {
+          "group": "Advanced",
+          "pages": [
+            "guides/advanced/customizing-prompts",
+            "guides/advanced/fingerprinting"
+          ]
         }
       ]
     },
@@ -108,6 +115,7 @@
         "concepts/testing",
         "concepts/cli",
         "concepts/tools",
+        "concepts/event-listener",
         "concepts/langchain-tools",
         "concepts/llamaindex-tools"
       ]
@@ -147,6 +155,7 @@
       "group": "Tools",
       "pages": [
         "tools/aimindtool",
+        "tools/apifyactorstool",
         "tools/bravesearchtool",
         "tools/browserbaseloadtool",
         "tools/codedocssearchtool",
