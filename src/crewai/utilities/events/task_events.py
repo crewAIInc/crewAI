@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Optional
 
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.events.base_events import CrewEvent

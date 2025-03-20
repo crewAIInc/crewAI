@@ -62,6 +62,43 @@
       ]
     },
     {
+      "group": "Guides",
+      "pages": [
+        {
+          "group": "Concepts",
+          "pages": [
+            "guides/concepts/evaluating-use-cases"
+          ]
+        },
+        {
+          "group": "Agents",
+          "pages": [
+            "guides/agents/crafting-effective-agents"
+          ]
+        },
+        {
+          "group": "Crews",
+          "pages": [
+            "guides/crews/first-crew"
+          ]
+        },
+        {
+          "group": "Flows",
+          "pages": [
+            "guides/flows/first-flow",
+            "guides/flows/mastering-flow-state"
+          ]
+        },
+        {
+          "group": "Advanced",
+          "pages": [
+            "guides/advanced/customizing-prompts",
+            "guides/advanced/fingerprinting"
+          ]
+        }
+      ]
+    },
+    {
       "group": "Core Concepts",
       "pages": [
         "concepts/agents",
@@ -78,6 +115,7 @@
         "concepts/testing",
         "concepts/cli",
         "concepts/tools",
+        "concepts/event-listener",
         "concepts/langchain-tools",
         "concepts/llamaindex-tools"
       ]
@@ -116,6 +154,9 @@
     {
       "group": "Tools",
       "pages": [
+        "tools/aimindtool",
+        "tools/apifyactorstool",
+        "tools/bravesearchtool",
         "tools/browserbaseloadtool",
         "tools/codedocssearchtool",
         "tools/codeinterpretertool",
@@ -132,18 +173,32 @@
         "tools/firecrawlscrapewebsitetool",
         "tools/firecrawlsearchtool",
         "tools/githubsearchtool",
+        "tools/hyperbrowserloadtool",
+        "tools/linkupsearchtool",
+        "tools/llamaindextool",
         "tools/serperdevtool",
+        "tools/s3readertool",
+        "tools/s3writertool",
+        "tools/scrapegraphscrapetool",
+        "tools/scrapeelementfromwebsitetool",
         "tools/jsonsearchtool",
         "tools/mdxsearchtool",
         "tools/mysqltool",
+        "tools/multiontool",
         "tools/nl2sqltool",
+        "tools/patronustools",
         "tools/pdfsearchtool",
         "tools/pgsearchtool",
+        "tools/qdrantvectorsearchtool",
+        "tools/ragtool",
         "tools/scrapewebsitetool",
+        "tools/scrapflyscrapetool",
         "tools/seleniumscrapingtool",
+        "tools/snowflakesearchtool",
         "tools/spidertool",
         "tools/txtsearchtool",
         "tools/visiontool",
+        "tools/weaviatevectorsearchtool",
         "tools/websitesearchtool",
         "tools/xmlsearchtool",
         "tools/youtubechannelsearchtool",
