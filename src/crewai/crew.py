@@ -1122,11 +1122,7 @@ class Crew(BaseModel):
     def copy(self):
         """
         Creates a deep copy of the Crew instance.
-
-        Handles copying of:
-        - Basic attributes
-        - Manager agent and LLM configurations
-
+        
         Returns:
             Crew: A new instance with copied components
         """
