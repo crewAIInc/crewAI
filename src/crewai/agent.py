@@ -13,6 +13,7 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.security import Fingerprint
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -472,3 +473,13 @@ class Agent(BaseAgent):
 
     def __repr__(self):
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
+
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """
+        Get the agent's fingerprint.
+
+        Returns:
+            Fingerprint: The agent's fingerprint
+        """
+        return self.security_config.fingerprint

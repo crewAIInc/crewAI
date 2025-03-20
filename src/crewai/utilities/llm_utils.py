@@ -43,8 +43,8 @@ def create_llm(
     try:
         # Extract attributes with explicit types
         model = (
-            getattr(llm_value, "model_name", None)
-            or getattr(llm_value, "model", None)
+            getattr(llm_value, "model", None)
+            or getattr(llm_value, "model_name", None)
             or getattr(llm_value, "deployment_name", None)
             or str(llm_value)
         )
@@ -77,8 +77,9 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
     Helper function: if llm_value is None, we load environment variables or fallback default model.
     """
     model_name = (
-        os.environ.get("OPENAI_MODEL_NAME")
-        or os.environ.get("MODEL")
+        os.environ.get("MODEL")
+        or os.environ.get("MODEL_NAME")
+        or os.environ.get("OPENAI_MODEL_NAME")
         or DEFAULT_LLM_MODEL
     )
 

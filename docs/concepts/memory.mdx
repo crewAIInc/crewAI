@@ -60,7 +60,8 @@ my_crew = Crew(
 ```python Code
 from crewai import Crew, Process
 from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
-from crewai.memory.storage import LTMSQLiteStorage, RAGStorage
+from crewai.memory.storage.rag_storage import RAGStorage
+from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
 from typing import List, Optional
 
 # Assemble your crew with memory capabilities
@@ -119,7 +120,7 @@ Example using environment variables:
 import os
 from crewai import Crew
 from crewai.memory import LongTermMemory
-from crewai.memory.storage import LTMSQLiteStorage
+from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
 
 # Configure storage path using environment variable
 storage_path = os.getenv("CREWAI_STORAGE_DIR", "./storage")
@@ -148,7 +149,7 @@ crew = Crew(memory=True)  # Uses default storage locations
 ```python
 from crewai import Crew
 from crewai.memory import LongTermMemory
-from crewai.memory.storage import LTMSQLiteStorage
+from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
 
 # Configure custom storage paths
 crew = Crew(

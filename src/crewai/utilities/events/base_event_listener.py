@@ -5,6 +5,8 @@ from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus, crewai_eve
 
 
 class BaseEventListener(ABC):
+    verbose: bool = False
+
     def __init__(self):
         super().__init__()
         self.setup_listeners(crewai_event_bus)

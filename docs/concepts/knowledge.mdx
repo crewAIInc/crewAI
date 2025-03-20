@@ -150,6 +150,8 @@ result = crew.kickoff(
 
 Here are examples of how to use different types of knowledge sources:
 
+Note: Please ensure that you create the ./knowldge folder. All source files (e.g., .txt, .pdf, .xlsx, .json) should be placed in this folder for centralized management.
+
 ### Text File Knowledge Source
 ```python
 from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
@@ -460,12 +462,12 @@ class SpaceNewsKnowledgeSource(BaseKnowledgeSource):
             data = response.json()
             articles = data.get('results', [])
 
-            formatted_data = self._format_articles(articles)
+            formatted_data = self.validate_content(articles)
             return {self.api_endpoint: formatted_data}
         except Exception as e:
             raise ValueError(f"Failed to fetch space news: {str(e)}")
 
-    def _format_articles(self, articles: list) -> str:
+    def validate_content(self, articles: list) -> str:
         """Format articles into readable text."""
         formatted = "Space News Articles:\n\n"
         for article in articles:
