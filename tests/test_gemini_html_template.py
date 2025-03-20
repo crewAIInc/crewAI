@@ -1,7 +1,7 @@
 """Test Gemini models with HTML templates."""
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from crewai import Agent, Task
 from crewai.llm import LLM
