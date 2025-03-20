@@ -13,6 +13,7 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.security import Fingerprint
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -114,7 +115,6 @@ class Agent(BaseAgent):
 
     @model_validator(mode="after")
     def post_init_setup(self):
-        self._set_knowledge()
         self.agent_ops_agent_name = self.role
 
         self.llm = create_llm(self.llm)
@@ -134,8 +134,11 @@ class Agent(BaseAgent):
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
-    def _set_knowledge(self):
+    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
         try:
+            if self.embedder is None and crew_embedder:
+                self.embedder = crew_embedder
+
             if self.knowledge_sources:
                 full_pattern = re.compile(r"[^a-zA-Z0-9\-_\r\n]|(\.\.)")
                 knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
@@ -470,3 +473,13 @@ class Agent(BaseAgent):
 
     def __repr__(self):
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
+
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """
+        Get the agent's fingerprint.
+
+        Returns:
+            Fingerprint: The agent's fingerprint
+        """
+        return self.security_config.fingerprint
