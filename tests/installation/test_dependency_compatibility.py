@@ -1,8 +1,8 @@
-import subprocess
-import sys
 import os
 import pytest
 import shutil
+import subprocess
+import sys
 
 
 def test_pypika_installation():
