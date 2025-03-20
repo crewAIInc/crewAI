@@ -1205,6 +1205,7 @@ def test_agent_max_retry_limit():
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,
+                        "ask_human_input_function": None,
                     }
                 ),
                 mock.call(
@@ -1213,6 +1214,7 @@ def test_agent_max_retry_limit():
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,
+                        "ask_human_input_function": None,
                     }
                 ),
             ]

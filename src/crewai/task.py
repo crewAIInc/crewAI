@@ -131,6 +131,10 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    ask_human_input: Optional[Callable[[str], str]] = Field(
+        description="Function to override the default human input method. Should accept a string (final_answer) and return a string (human feedback)",
+        default=None,
+    )
     converter_cls: Optional[Type[Converter]] = Field(
         description="A converter class used to export structured output",
         default=None,

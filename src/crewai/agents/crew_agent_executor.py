@@ -81,6 +81,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
         self.ask_for_human_input = False
+        self.ask_human_input_function = None
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
@@ -103,6 +104,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
+        self.ask_human_input_function = inputs.get("ask_human_input_function", None)
 
         try:
             formatted_answer = self._invoke_loop()
@@ -533,7 +535,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             AgentFinish: The final answer after processing feedback
         """
-        human_feedback = self._ask_human_input(formatted_answer.output)
+        # Get output from either return_values dict or output attribute
+        output = ""
+        if hasattr(formatted_answer, "return_values") and formatted_answer.return_values:
+            output = formatted_answer.return_values.get("output", "")
+        elif hasattr(formatted_answer, "output"):
+            output = formatted_answer.output
+            
+        # Use custom function if provided, otherwise use default
+        if self.ask_human_input_function and callable(self.ask_human_input_function):
+            human_feedback = self.ask_human_input_function(output)
+        else:
+            human_feedback = self._ask_human_input(output)
 
         if self._is_training_mode():
             return self._handle_training_feedback(formatted_answer, human_feedback)
@@ -572,7 +585,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self.ask_for_human_input = False
             else:
                 answer = self._process_feedback_iteration(feedback)
-                feedback = self._ask_human_input(answer.output)
+                # Get output from either return_values dict or output attribute
+                output = ""
+                if hasattr(answer, "return_values") and answer.return_values:
+                    output = answer.return_values.get("output", "")
+                elif hasattr(answer, "output"):
+                    output = answer.output
+                    
+                # Use custom function if provided, otherwise use default
+                if self.ask_human_input_function and callable(self.ask_human_input_function):
+                    feedback = self.ask_human_input_function(output)
+                else:
+                    feedback = self._ask_human_input(output)
 
         return answer
 
