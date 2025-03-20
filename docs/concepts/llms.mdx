@@ -250,6 +250,40 @@ In this section, you'll find detailed examples that help you select, configure, 
         model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
     )
     ```
+
+    Before using Amazon Bedrock, make sure you have boto3 installed in your environment
+
+    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) is a managed service that provides access to multiple foundation models from top AI companies through a unified API, enabling secure and responsible AI application development.
+
+    | Model                   | Context Window       | Best For                                                          |
+    |-------------------------|----------------------|-------------------------------------------------------------------|
+    | Amazon Nova Pro         | Up to 300k tokens    | High-performance, model balancing accuracy, speed, and cost-effectiveness across diverse tasks. |
+    | Amazon Nova Micro       | Up to 128k tokens    | High-performance, cost-effective text-only model optimized for lowest latency responses. |
+    | Amazon Nova Lite        | Up to 300k tokens    | High-performance, affordable multimodal processing for images, video, and text with real-time capabilities. |
+    | Claude 3.7 Sonnet       | Up to 128k tokens    | High-performance, best for complex reasoning, coding & AI agents |
+    | Claude 3.5 Sonnet v2    | Up to 200k tokens    | State-of-the-art model specialized in software engineering, agentic capabilities, and computer interaction at optimized cost. |
+    | Claude 3.5 Sonnet       | Up to 200k tokens    | High-performance model delivering superior intelligence and reasoning across diverse tasks with optimal speed-cost balance. |
+    | Claude 3.5 Haiku        | Up to 200k tokens    | Fast, compact multimodal model optimized for quick responses and seamless human-like interactions |
+    | Claude 3 Sonnet         | Up to 200k tokens    | Multimodal model balancing intelligence and speed for high-volume deployments. |
+    | Claude 3 Haiku          | Up to 200k tokens    | Compact, high-speed multimodal model optimized for quick responses and natural conversational interactions |
+    | Claude 3 Opus           | Up to 200k tokens    | Most advanced multimodal model excelling at complex tasks with human-like reasoning and superior contextual understanding. |
+    | Claude 2.1              | Up to 200k tokens    | Enhanced version with expanded context window, improved reliability, and reduced hallucinations for long-form and RAG applications |
+    | Claude                  | Up to 100k tokens    | Versatile model excelling in sophisticated dialogue, creative content, and precise instruction following. |
+    | Claude Instant          | Up to 100k tokens    | Fast, cost-effective model for everyday tasks like dialogue, analysis, summarization, and document Q&A |
+    | Llama 3.1 405B Instruct | Up to 128k tokens    | Advanced LLM for synthetic data generation, distillation, and inference for chatbots, coding, and domain-specific tasks. |
+    | Llama 3.1 70B Instruct  | Up to 128k tokens    | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
+    | Llama 3.1 8B Instruct   | Up to 128k tokens    | Advanced state-of-the-art model with language understanding, superior reasoning, and text generation. |
+    | Llama 3 70B Instruct    | Up to 8k tokens      | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
+    | Llama 3 8B Instruct     | Up to 8k tokens      | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
+    | Titan Text G1 - Lite    | Up to 4k tokens      | Lightweight, cost-effective model optimized for English tasks and fine-tuning with focus on summarization and content generation. |
+    | Titan Text G1 - Express | Up to 8k tokens      | Versatile model for general language tasks, chat, and RAG applications with support for English and 100+ languages. |
+    | Cohere Command          | Up to 4k tokens      | Model specialized in following user commands and delivering practical enterprise solutions. |
+    | Jurassic-2 Mid          | Up to 8,191 tokens   | Cost-effective model balancing quality and affordability for diverse language tasks like Q&A, summarization, and content generation. |
+    | Jurassic-2 Ultra        | Up to 8,191 tokens   | Model for advanced text generation and comprehension, excelling in complex tasks like analysis and content creation. |
+    | Jamba-Instruct          | Up to 256k tokens    | Model with extended context window optimized for cost-effective text generation, summarization, and Q&A. |
+    | Mistral 7B Instruct     | Up to 32k tokens     | This LLM follows instructions, completes requests, and generates creative text. |
+    | Mistral 8x7B Instruct   | Up to 32k tokens     | An MOE LLM that follows instructions, completes requests, and generates creative text. |
+
   </Accordion>
   
   <Accordion title="Amazon SageMaker">
