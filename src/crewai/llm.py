@@ -215,6 +215,7 @@ class LLM:
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+        self.logger = logging.getLogger(__name__)
 
         litellm.drop_params = True
 
@@ -240,6 +241,15 @@ class LLM:
         """
         ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
         return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
+        
+    def _is_gemini_model(self) -> bool:
+        """Helper to check if current model is based on Gemini.
+        
+        Returns:
+            bool: True if the model is Gemini or using OpenRouter, False otherwise.
+        """
+        model_name = str(self.model or "").lower()
+        return "gemini" in model_name or "openrouter" in str(self.base_url or self.api_base or "").lower()
 
     def _prepare_completion_params(
         self,
@@ -583,9 +593,10 @@ class LLM:
         # --- 2.1) Special handling for Gemini models that might return empty content
         # For OpenRouter with Gemini models, sometimes valid responses have empty content
         # when HTML templates are used, but the response object is still valid
-        if text_response == "" and self.model and ("gemini" in self.model.lower() or "openrouter" in str(self.base_url or self.api_base or "").lower()):
+        if text_response == "" and self._is_gemini_model():
             # Instead of rejecting empty responses for Gemini, return a placeholder
-            text_response = "Response processed successfully. Please check your HTML template if you expected different content."
+            self.logger.warning("Empty content received from Gemini model with HTML template")
+            text_response = "Response processed successfully. Empty content received - this is expected behavior when using HTML templates with Gemini models."
 
         # --- 3) Handle callbacks with usage info
         if callbacks and len(callbacks) > 0:
