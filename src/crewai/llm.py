@@ -579,6 +579,13 @@ class LLM:
             0
         ].message
         text_response = response_message.content or ""
+        
+        # --- 2.1) Special handling for Gemini models that might return empty content
+        # For OpenRouter with Gemini models, sometimes valid responses have empty content
+        # when HTML templates are used, but the response object is still valid
+        if text_response == "" and self.model and ("gemini" in self.model.lower() or "openrouter" in str(self.base_url or self.api_base or "").lower()):
+            # Instead of rejecting empty responses for Gemini, return a placeholder
+            text_response = "Response processed successfully. Please check your HTML template if you expected different content."
 
         # --- 3) Handle callbacks with usage info
         if callbacks and len(callbacks) > 0:

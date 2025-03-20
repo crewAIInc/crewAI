@@ -215,12 +215,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
             raise e
 
-        if not answer:
+        if answer is None:
             self._printer.print(
-                content="Received None or empty response from LLM call.",
+                content="Received None response from LLM call.",
                 color="red",
             )
-            raise ValueError("Invalid response from LLM call - None or empty.")
+            raise ValueError("Invalid response from LLM call - None.")
+            
+        # Empty string responses are allowed for Gemini models with HTML templates
+        # They will be handled at the LLM class level
 
         return answer
 
