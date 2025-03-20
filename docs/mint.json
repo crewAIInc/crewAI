@@ -115,6 +115,7 @@
         "concepts/testing",
         "concepts/cli",
         "concepts/tools",
+        "concepts/event-listener",
         "concepts/langchain-tools",
         "concepts/llamaindex-tools"
       ]
@@ -154,6 +155,7 @@
       "group": "Tools",
       "pages": [
         "tools/aimindtool",
+        "tools/apifyactorstool",
         "tools/bravesearchtool",
         "tools/browserbaseloadtool",
         "tools/codedocssearchtool",

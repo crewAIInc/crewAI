@@ -67,15 +67,12 @@ class CrewAIEventsBus:
             source: The object emitting the event
             event: The event instance to emit
         """
-        event_type = type(event)
-        if event_type in self._handlers:
-            for handler in self._handlers[event_type]:
-                handler(source, event)
-        self._signal.send(source, event=event)
+        for event_type, handlers in self._handlers.items():
+            if isinstance(event, event_type):
+                for handler in handlers:
+                    handler(source, event)
 
-    def clear_handlers(self) -> None:
-        """Clear all registered event handlers - useful for testing"""
-        self._handlers.clear()
+        self._signal.send(source, event=event)
 
     def register_handler(
         self, event_type: Type[EventTypes], handler: Callable[[Any, EventTypes], None]
