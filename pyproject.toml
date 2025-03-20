@@ -96,5 +96,5 @@ exclude = ["cli/templates"]
 exclude_dirs = ["src/crewai/cli/templates"]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "setuptools<=65.5.0"]
 build-backend = "hatchling.build"
