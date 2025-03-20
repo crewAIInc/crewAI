@@ -14,7 +14,12 @@ from .agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
 )
-from .task_events import TaskStartedEvent, TaskCompletedEvent, TaskFailedEvent, TaskEvaluationEvent
+from .task_events import (
+    TaskStartedEvent,
+    TaskCompletedEvent,
+    TaskFailedEvent,
+    TaskEvaluationEvent,
+)
 from .flow_events import (
     FlowCreatedEvent,
     FlowStartedEvent,
@@ -34,7 +39,13 @@ from .tool_usage_events import (
     ToolUsageEvent,
     ToolValidateInputErrorEvent,
 )
-from .llm_events import LLMCallCompletedEvent, LLMCallFailedEvent, LLMCallStartedEvent
+from .llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+    LLMCallType,
+    LLMStreamChunkEvent,
+)
 
 # events
 from .event_listener import EventListener

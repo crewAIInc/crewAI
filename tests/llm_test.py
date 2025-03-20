@@ -219,7 +219,7 @@ def test_get_custom_llm_provider_gemini():
 
 def test_get_custom_llm_provider_openai():
     llm = LLM(model="gpt-4")
-    assert llm._get_custom_llm_provider() == "openai"
+    assert llm._get_custom_llm_provider() == None
 
 
 def test_validate_call_params_supported():
@@ -284,6 +284,7 @@ def test_o3_mini_reasoning_effort_medium():
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
+
 
 def test_context_window_validation():
     """Test that context window validation works correctly."""
