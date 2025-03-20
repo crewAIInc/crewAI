@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, Optional
 
 from crewai.memory.memory import Memory
@@ -18,8 +19,8 @@ class UserMemory(Memory):
         memory_config={
             "provider": "mem0",
             "config": {
-                "user_id": "test-user",
-                "api_key": "mem0-api-key",
+                "user_id": "your-user-id",
+                "api_key": os.getenv("MEM0_API_KEY"),  # Use environment variable
                 "vector_store": {
                     "provider": "redis",
                     "config": {
