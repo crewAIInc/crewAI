@@ -1,10 +1,10 @@
+import logging
 import os
 from typing import Any, Dict, List
 
 from mem0 import Memory, MemoryClient
 
 from crewai.memory.storage.interface import Storage
-import logging
 
 
 class Mem0Storage(Storage):
@@ -45,7 +45,7 @@ class Mem0Storage(Storage):
         else:
             # Fallback to Memory if no Mem0 API key is provided
             logging.warning("No MEM0_API_KEY found. Falling back to local Mem0 configuration.")
-            self.validate_local_mem0_config(self,local_mem0_config)
+            self._validate_local_mem0_config(self,local_mem0_config)
             self.memory = Memory.from_config(local_mem0_config) if local_mem0_config else Memory()
 
     def _sanitize_role(self, role: str) -> str:
@@ -132,7 +132,7 @@ class Mem0Storage(Storage):
             )
         
 
-    def validate_local_mem0_config(config: Dict[str, Any]) -> bool:
+    def _validate_local_mem0_config(config: Dict[str, Any]) -> bool:
         """
         Validates that all keys in the config are allowed keys from the default configuration.
         Raises an exception if an invalid key is found.
