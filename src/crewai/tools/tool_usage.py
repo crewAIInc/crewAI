@@ -337,11 +337,23 @@ class ToolUsage:
         return "\n--\n".join(descriptions)
 
     def _function_calling(self, tool_string: str):
-        model = (
-            InstructorToolCalling
-            if self.function_calling_llm.supports_function_calling()
-            else ToolCalling
+        supports_function_calling = (
+            self.function_calling_llm.supports_function_calling()
         )
+
+        if not supports_function_calling:
+            import warnings
+
+            warnings.warn(
+                "The model you're using doesn't natively support function calling. "
+                "CrewAI will attempt to use a workaround, but this may be less reliable. "
+                "Consider using a model with native function calling support for better results.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        model = InstructorToolCalling if supports_function_calling else ToolCalling
+
         converter = Converter(
             text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n### TEXT \n{tool_string}",
             llm=self.function_calling_llm,
