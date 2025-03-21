@@ -60,25 +60,31 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
-        import chromadb
-        from chromadb.config import Settings
-
-        self._set_embedder_config()
-        chroma_client = chromadb.PersistentClient(
-            path=self.path if self.path else self.storage_file_name,
-            settings=Settings(allow_reset=self.allow_reset),
-        )
-
-        self.app = chroma_client
-
         try:
-            self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
+            import chromadb
+            from chromadb.config import Settings
+
+            self._set_embedder_config()
+            chroma_client = chromadb.PersistentClient(
+                path=self.path if self.path else self.storage_file_name,
+                settings=Settings(allow_reset=self.allow_reset),
             )
-        except Exception:
-            self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
+
+            self.app = chroma_client
+
+            try:
+                self.collection = self.app.get_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+            except Exception:
+                self.collection = self.app.create_collection(
+                    name=self.type, embedding_function=self.embedder_config
+                )
+        except (ImportError, AttributeError) as e:
+            import logging
+            logging.warning(f"Failed to initialize chromadb: {str(e)}. Memory functionality will be limited.")
+            self.app = None
+            self.collection = None
 
     def _sanitize_role(self, role: str) -> str:
         """
@@ -103,6 +109,9 @@ class RAGStorage(BaseRAGStorage):
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
+        if self.app is None or self.collection is None:
+            logging.warning("Cannot save to memory as chromadb is not available.")
+            return
         try:
             self._generate_embedding(value, metadata)
         except Exception as e:
@@ -115,8 +124,12 @@ class RAGStorage(BaseRAGStorage):
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Any]:
-        if not hasattr(self, "app"):
+        if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
+            
+        if self.app is None or self.collection is None:
+            logging.warning("Cannot search memory as chromadb is not available.")
+            return []
 
         try:
             with suppress_logging():
@@ -141,6 +154,10 @@ class RAGStorage(BaseRAGStorage):
     def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
+            
+        if self.app is None or self.collection is None:
+            logging.warning("Cannot generate embeddings as chromadb is not available.")
+            return
 
         self.collection.add(
             documents=[text],
@@ -160,15 +177,7 @@ class RAGStorage(BaseRAGStorage):
                 # Ignore this specific error
                 pass
             else:
-                raise Exception(
-                    f"An error occurred while resetting the {self.type} memory: {e}"
-                )
-
-    def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
-
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+                logging.error(f"An error occurred while resetting the {self.type} memory: {e}")
+                # Don't raise exception to prevent crashes
+                self.app = None
+                self.collection = None

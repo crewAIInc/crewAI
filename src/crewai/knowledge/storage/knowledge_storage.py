@@ -4,13 +4,26 @@ import io
 import logging
 import os
 import shutil
+import warnings
 from typing import Any, Dict, List, Optional, Union, cast
 
-import chromadb
-import chromadb.errors
-from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
-from chromadb.config import Settings
+# Initialize with None to indicate module import status
+chromadb = None
+ClientAPI = None
+OneOrMany = None
+Settings = None
+CHROMADB_AVAILABLE = False
+
+# Try to import chromadb-related modules with proper error handling
+try:
+    import chromadb
+    import chromadb.errors
+    from chromadb.api import ClientAPI
+    from chromadb.api.types import OneOrMany
+    from chromadb.config import Settings
+    CHROMADB_AVAILABLE = True
+except (ImportError, AttributeError) as e:
+    warnings.warn(f"Failed to import chromadb: {str(e)}. Knowledge functionality will be limited.")
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -42,9 +55,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
+    collection = None  # Type annotation removed to handle case when chromadb is not available
     collection_name: Optional[str] = "knowledge"
-    app: Optional[ClientAPI] = None
+    app = None  # Type annotation removed to handle case when chromadb is not available
 
     def __init__(
         self,
@@ -61,37 +74,52 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Dict[str, Any]]:
+        if not CHROMADB_AVAILABLE:
+            logging.warning("Cannot search knowledge as chromadb is not available.")
+            return []
+            
         with suppress_logging():
             if self.collection:
-                fetched = self.collection.query(
-                    query_texts=query,
-                    n_results=limit,
-                    where=filter,
-                )
-                results = []
-                for i in range(len(fetched["ids"][0])):  # type: ignore
-                    result = {
-                        "id": fetched["ids"][0][i],  # type: ignore
-                        "metadata": fetched["metadatas"][0][i],  # type: ignore
-                        "context": fetched["documents"][0][i],  # type: ignore
-                        "score": fetched["distances"][0][i],  # type: ignore
-                    }
-                    if result["score"] >= score_threshold:
-                        results.append(result)
-                return results
+                try:
+                    fetched = self.collection.query(
+                        query_texts=query,
+                        n_results=limit,
+                        where=filter,
+                    )
+                    results = []
+                    for i in range(len(fetched["ids"][0])):  # type: ignore
+                        result = {
+                            "id": fetched["ids"][0][i],  # type: ignore
+                            "metadata": fetched["metadatas"][0][i],  # type: ignore
+                            "context": fetched["documents"][0][i],  # type: ignore
+                            "score": fetched["distances"][0][i],  # type: ignore
+                        }
+                        if result["score"] >= score_threshold:
+                            results.append(result)
+                    return results
+                except Exception as e:
+                    logging.error(f"Error during knowledge search: {str(e)}")
+                    return []
             else:
-                raise Exception("Collection not initialized")
+                logging.warning("Collection not initialized")
+                return []
 
     def initialize_knowledge_storage(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        chroma_client = chromadb.PersistentClient(
-            path=base_path,
-            settings=Settings(allow_reset=True),
-        )
-
-        self.app = chroma_client
-
+        if not CHROMADB_AVAILABLE:
+            logging.warning("Cannot initialize knowledge storage as chromadb is not available.")
+            self.app = None
+            self.collection = None
+            return
+            
         try:
+            base_path = os.path.join(db_storage_path(), "knowledge")
+            chroma_client = chromadb.PersistentClient(
+                path=base_path,
+                settings=Settings(allow_reset=True),
+            )
+
+            self.app = chroma_client
+
             collection_name = (
                 f"knowledge_{self.collection_name}"
                 if self.collection_name
@@ -102,30 +130,46 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     name=collection_name, embedding_function=self.embedder
                 )
             else:
-                raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
+                logging.warning("Vector Database Client not initialized")
+                self.collection = None
+        except Exception as e:
+            logging.error(f"Failed to create or get collection: {str(e)}")
+            self.app = None
+            self.collection = None
 
     def reset(self):
-        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
-        if not self.app:
-            self.app = chromadb.PersistentClient(
-                path=base_path,
-                settings=Settings(allow_reset=True),
-            )
+        if not CHROMADB_AVAILABLE:
+            logging.warning("Cannot reset knowledge storage as chromadb is not available.")
+            return
+            
+        try:
+            base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
+            if not self.app:
+                self.app = chromadb.PersistentClient(
+                    path=base_path,
+                    settings=Settings(allow_reset=True),
+                )
 
-        self.app.reset()
-        shutil.rmtree(base_path)
-        self.app = None
-        self.collection = None
+            self.app.reset()
+            shutil.rmtree(base_path)
+        except Exception as e:
+            logging.error(f"Error during knowledge reset: {str(e)}")
+        finally:
+            self.app = None
+            self.collection = None
 
     def save(
         self,
         documents: List[str],
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
+        if not CHROMADB_AVAILABLE:
+            logging.warning("Cannot save to knowledge storage as chromadb is not available.")
+            return
+            
         if not self.collection:
-            raise Exception("Collection not initialized")
+            logging.warning("Collection not initialized")
+            return
 
         try:
             # Create a dictionary to store unique documents
@@ -154,38 +198,46 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 filtered_ids.append(doc_id)
 
             # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
-                None if all(m is None for m in filtered_metadata) else filtered_metadata
-            )
+            final_metadata = None
+            if not all(m is None for m in filtered_metadata):
+                final_metadata = filtered_metadata
 
             self.collection.upsert(
                 documents=filtered_docs,
                 metadatas=final_metadata,
                 ids=filtered_ids,
             )
-        except chromadb.errors.InvalidDimensionException as e:
-            Logger(verbose=True).log(
-                "error",
-                "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
-                "red",
-            )
-            raise ValueError(
-                "Embedding dimension mismatch. Make sure you're using the same embedding model "
-                "across all operations with this collection."
-                "Try resetting the collection using `crewai reset-memories -a`"
-            ) from e
         except Exception as e:
-            Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
-            raise
+            if hasattr(chromadb, 'errors') and isinstance(e, chromadb.errors.InvalidDimensionException):
+                Logger(verbose=True).log(
+                    "error",
+                    "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
+                    "red",
+                )
+                logging.error(
+                    "Embedding dimension mismatch. Make sure you're using the same embedding model "
+                    "across all operations with this collection."
+                    "Try resetting the collection using `crewai reset-memories -a`"
+                )
+            else:
+                Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
+                logging.error(f"Failed to upsert documents: {e}")
 
     def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return None
+            
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            )
+        except (ImportError, AttributeError) as e:
+            logging.warning(f"Failed to create default embedding function: {str(e)}")
+            return None
 
     def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.
@@ -194,8 +246,12 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
                 If None or empty, defaults to the default embedding function.
         """
-        self.embedder = (
-            EmbeddingConfigurator().configure_embedder(embedder)
-            if embedder
-            else self._create_default_embedding_function()
-        )
+        try:
+            self.embedder = (
+                EmbeddingConfigurator().configure_embedder(embedder)
+                if embedder
+                else self._create_default_embedding_function()
+            )
+        except Exception as e:
+            logging.warning(f"Failed to configure embedder: {str(e)}")
+            self.embedder = None

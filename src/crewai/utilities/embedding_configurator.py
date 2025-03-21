@@ -1,8 +1,29 @@
 import os
+import warnings
 from typing import Any, Dict, Optional, cast
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
-from chromadb.api.types import validate_embedding_function
+# Initialize with None to indicate module import status
+Documents = None
+EmbeddingFunction = None
+Embeddings = None
+validate_embedding_function = None
+
+# Try to import chromadb-related modules with proper error handling
+try:
+    from chromadb import Documents, EmbeddingFunction, Embeddings
+    from chromadb.api.types import validate_embedding_function
+    CHROMADB_AVAILABLE = True
+except (ImportError, AttributeError) as e:
+    # This captures both ImportError and AttributeError (which can happen with NumPy 2.x)
+    warnings.warn(f"Failed to import chromadb: {str(e)}. Embedding functionality will be limited.")
+    # Define a simple embedding function interface for typehinting
+    class EmbeddingFunction:
+        def __call__(self, texts):
+            raise NotImplementedError("Chromadb is not available")
+    CHROMADB_AVAILABLE = False
+
+    def validate_embedding_function(func):
+        return func
 
 
 class EmbeddingConfigurator:
@@ -26,6 +47,9 @@ class EmbeddingConfigurator:
         embedder_config: Optional[Dict[str, Any]] = None,
     ) -> EmbeddingFunction:
         """Configures and returns an embedding function based on the provided config."""
+        if not CHROMADB_AVAILABLE:
+            return self._create_unavailable_embedding_function()
+            
         if embedder_config is None:
             return self._create_default_embedding_function()
 
@@ -44,143 +68,230 @@ class EmbeddingConfigurator:
             if provider == "custom"
             else embedding_function(config, model_name)
         )
+        
+    @staticmethod
+    def _create_unavailable_embedding_function():
+        """Creates a fallback embedding function when chromadb is not available."""
+        class UnavailableEmbeddingFunction(EmbeddingFunction):
+            def __call__(self, input):
+                raise ImportError(
+                    "Chromadb is not available due to NumPy compatibility issues. "
+                    "Either downgrade to NumPy<2 or upgrade chromadb and related dependencies."
+                )
+        
+        return UnavailableEmbeddingFunction()
 
     @staticmethod
     def _create_default_embedding_function():
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            )
+        except (ImportError, AttributeError) as e:
+            import warnings
+            warnings.warn(f"Failed to import OpenAIEmbeddingFunction: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_openai(config, model_name):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
-            model_name=model_name,
-            api_base=config.get("api_base", None),
-            api_type=config.get("api_type", None),
-            api_version=config.get("api_version", None),
-            default_headers=config.get("default_headers", None),
-            dimensions=config.get("dimensions", None),
-            deployment_id=config.get("deployment_id", None),
-            organization_id=config.get("organization_id", None),
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
+                model_name=model_name,
+                api_base=config.get("api_base", None),
+                api_type=config.get("api_type", None),
+                api_version=config.get("api_version", None),
+                default_headers=config.get("default_headers", None),
+                dimensions=config.get("dimensions", None),
+                deployment_id=config.get("deployment_id", None),
+                organization_id=config.get("organization_id", None),
+            )
+        except (ImportError, AttributeError) as e:
+            warnings.warn(f"Failed to import OpenAIEmbeddingFunction: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_azure(config, model_name):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=config.get("api_key"),
-            api_base=config.get("api_base"),
-            api_type=config.get("api_type", "azure"),
-            api_version=config.get("api_version"),
-            model_name=model_name,
-            default_headers=config.get("default_headers"),
-            dimensions=config.get("dimensions"),
-            deployment_id=config.get("deployment_id"),
-            organization_id=config.get("organization_id"),
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=config.get("api_key"),
+                api_base=config.get("api_base"),
+                api_type=config.get("api_type", "azure"),
+                api_version=config.get("api_version"),
+                model_name=model_name,
+                default_headers=config.get("default_headers"),
+                dimensions=config.get("dimensions"),
+                deployment_id=config.get("deployment_id"),
+                organization_id=config.get("organization_id"),
+            )
+        except (ImportError, AttributeError) as e:
+            warnings.warn(f"Failed to import OpenAIEmbeddingFunction: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_ollama(config, model_name):
-        from chromadb.utils.embedding_functions.ollama_embedding_function import (
-            OllamaEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.ollama_embedding_function import (
+                OllamaEmbeddingFunction,
+            )
 
-        return OllamaEmbeddingFunction(
-            url=config.get("url", "http://localhost:11434/api/embeddings"),
-            model_name=model_name,
-        )
+            return OllamaEmbeddingFunction(
+                url=config.get("url", "http://localhost:11434/api/embeddings"),
+                model_name=model_name,
+            )
+        except (ImportError, AttributeError) as e:
+            warnings.warn(f"Failed to import OllamaEmbeddingFunction: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_vertexai(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleVertexEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.google_embedding_function import (
+                GoogleVertexEmbeddingFunction,
+            )
 
-        return GoogleVertexEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            project_id=config.get("project_id"),
-            region=config.get("region"),
-        )
+            return GoogleVertexEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+                project_id=config.get("project_id"),
+                region=config.get("region"),
+            )
+        except (ImportError, AttributeError) as e:
+            warnings.warn(f"Failed to import GoogleVertexEmbeddingFunction: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_google(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleGenerativeAiEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.google_embedding_function import (
+                GoogleGenerativeAiEmbeddingFunction,
+            )
 
-        return GoogleGenerativeAiEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            task_type=config.get("task_type"),
-        )
+            return GoogleGenerativeAiEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+                task_type=config.get("task_type"),
+            )
+        except (ImportError, AttributeError) as e:
+            warnings.warn(f"Failed to import GoogleGenerativeAiEmbeddingFunction: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_cohere(config, model_name):
-        from chromadb.utils.embedding_functions.cohere_embedding_function import (
-            CohereEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.cohere_embedding_function import (
+                CohereEmbeddingFunction,
+            )
 
-        return CohereEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-        )
+            return CohereEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+            )
+        except (ImportError, AttributeError) as e:
+            warnings.warn(f"Failed to import CohereEmbeddingFunction: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_voyageai(config, model_name):
-        from chromadb.utils.embedding_functions.voyageai_embedding_function import (
-            VoyageAIEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.voyageai_embedding_function import (
+                VoyageAIEmbeddingFunction,
+            )
 
-        return VoyageAIEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-        )
+            return VoyageAIEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+            )
+        except (ImportError, AttributeError) as e:
+            warnings.warn(f"Failed to import VoyageAIEmbeddingFunction: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_bedrock(config, model_name):
-        from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
-            AmazonBedrockEmbeddingFunction,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
+                AmazonBedrockEmbeddingFunction,
+            )
 
-        # Allow custom model_name override with backwards compatibility
-        kwargs = {"session": config.get("session")}
-        if model_name is not None:
-            kwargs["model_name"] = model_name
-        return AmazonBedrockEmbeddingFunction(**kwargs)
+            # Allow custom model_name override with backwards compatibility
+            kwargs = {"session": config.get("session")}
+            if model_name is not None:
+                kwargs["model_name"] = model_name
+            return AmazonBedrockEmbeddingFunction(**kwargs)
+        except (ImportError, AttributeError) as e:
+            warnings.warn(f"Failed to import AmazonBedrockEmbeddingFunction: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_huggingface(config, model_name):
-        from chromadb.utils.embedding_functions.huggingface_embedding_function import (
-            HuggingFaceEmbeddingServer,
-        )
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
+        try:
+            from chromadb.utils.embedding_functions.huggingface_embedding_function import (
+                HuggingFaceEmbeddingServer,
+            )
 
-        return HuggingFaceEmbeddingServer(
-            url=config.get("api_url"),
-        )
+            return HuggingFaceEmbeddingServer(
+                url=config.get("api_url"),
+            )
+        except (ImportError, AttributeError) as e:
+            warnings.warn(f"Failed to import HuggingFaceEmbeddingServer: {str(e)}")
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
     @staticmethod
     def _configure_watson(config, model_name):
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
         try:
             import ibm_watsonx_ai.foundation_models as watson_models
             from ibm_watsonx_ai import Credentials
             from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames as EmbedParams
         except ImportError as e:
-            raise ImportError(
+            warnings.warn(
                 "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
-            ) from e
+            )
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
 
         class WatsonEmbeddingFunction(EmbeddingFunction):
             def __call__(self, input: Documents) -> Embeddings:
@@ -212,25 +323,30 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_custom(config):
+        if not CHROMADB_AVAILABLE:
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
+            
         custom_embedder = config.get("embedder")
         if isinstance(custom_embedder, EmbeddingFunction):
             try:
                 validate_embedding_function(custom_embedder)
                 return custom_embedder
             except Exception as e:
-                raise ValueError(f"Invalid custom embedding function: {str(e)}")
+                warnings.warn(f"Invalid custom embedding function: {str(e)}")
+                return EmbeddingConfigurator._create_unavailable_embedding_function()
         elif callable(custom_embedder):
             try:
                 instance = custom_embedder()
                 if isinstance(instance, EmbeddingFunction):
                     validate_embedding_function(instance)
                     return instance
-                raise ValueError(
-                    "Custom embedder does not create an EmbeddingFunction instance"
-                )
+                warnings.warn("Custom embedder does not create an EmbeddingFunction instance")
+                return EmbeddingConfigurator._create_unavailable_embedding_function()
             except Exception as e:
-                raise ValueError(f"Error instantiating custom embedder: {str(e)}")
+                warnings.warn(f"Error instantiating custom embedder: {str(e)}")
+                return EmbeddingConfigurator._create_unavailable_embedding_function()
         else:
-            raise ValueError(
+            warnings.warn(
                 "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"
             )
+            return EmbeddingConfigurator._create_unavailable_embedding_function()
