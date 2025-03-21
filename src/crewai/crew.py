@@ -41,6 +41,7 @@ from crewai.tools.base_tool import Tool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.embedding_configurator import EmbeddingConfig
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.events.crew_events import (
@@ -145,7 +146,7 @@ class Crew(BaseModel):
         default=None,
         description="An instance of the UserMemory to be used by the Crew to store/fetch memories of a specific user.",
     )
-    embedder: Optional[dict] = Field(
+    embedder: Optional[EmbeddingConfig] = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
