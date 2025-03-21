@@ -1797,3 +1797,136 @@ def test_litellm_anthropic_error_handling():
 
     # Verify the LLM call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_delegation_to_specific_agents():
+    """Test that an agent can delegate to specific agents using the delegate_to property."""
+    # Create agents in order so we can reference them in delegate_to
+    agent2 = Agent(
+        role="Agent 2",
+        goal="Goal for Agent 2",
+        backstory="Backstory for Agent 2",
+        allow_delegation=True,
+    )
+
+    agent3 = Agent(
+        role="Agent 3",
+        goal="Goal for Agent 3",
+        backstory="Backstory for Agent 3",
+        allow_delegation=True,
+    )
+
+    # Create agent1 without specific delegation first to test default behavior
+    agent1 = Agent(
+        role="Agent 1",
+        goal="Goal for Agent 1",
+        backstory="Backstory for Agent 1",
+        allow_delegation=True,
+    )
+
+    # Test default behavior (delegate to all agents)
+    all_agents = [agent1, agent2, agent3]
+    delegation_tools = agent1.get_delegation_tools(all_agents)
+
+    # Verify that tools for all agents are returned
+    assert len(delegation_tools) == 2  # Delegate and Ask tools
+
+    # Check that the tools can delegate to all agents
+    delegate_tool = delegation_tools[0]
+    ask_tool = delegation_tools[1]
+
+    # Verify the tools description includes all agents
+    assert "Agent 1" in delegate_tool.description
+    assert "Agent 2" in delegate_tool.description
+    assert "Agent 3" in delegate_tool.description
+    assert "Agent 1" in ask_tool.description
+    assert "Agent 2" in ask_tool.description
+    assert "Agent 3" in ask_tool.description
+
+    # Test delegation to specific agents by creating a new agent with delegate_to
+    agent1_with_specific_delegation = Agent(
+        role="Agent 1",
+        goal="Goal for Agent 1",
+        backstory="Backstory for Agent 1",
+        allow_delegation=True,
+        delegate_to=[agent2],  # Only delegate to agent2
+    )
+
+    specific_delegation_tools = agent1_with_specific_delegation.get_delegation_tools(
+        all_agents
+    )
+
+    # Verify that tools for only the specified agent are returned
+    assert len(specific_delegation_tools) == 2  # Delegate and Ask tools
+
+    # Check that the tools can only delegate to agent2
+    specific_delegate_tool = specific_delegation_tools[0]
+    specific_ask_tool = specific_delegation_tools[1]
+
+    # Verify the tools description includes only agent2
+    assert "Agent 2" in specific_delegate_tool.description
+    assert "Agent 1" not in specific_delegate_tool.description
+    assert "Agent 3" not in specific_delegate_tool.description
+    assert "Agent 2" in specific_ask_tool.description
+    assert "Agent 1" not in specific_ask_tool.description
+    assert "Agent 3" not in specific_ask_tool.description
+
+
+def test_agent_copy_with_delegate_to():
+    """Test that the delegate_to attribute is properly copied when copying an agent."""
+    # Create a few agents for delegation
+    agent1 = Agent(
+        role="Researcher",
+        goal="Research topics",
+        backstory="Experienced researcher",
+    )
+
+    agent2 = Agent(
+        role="Writer",
+        goal="Write content",
+        backstory="Professional writer",
+    )
+
+    agent3 = Agent(
+        role="Manager",
+        goal="Manage the team",
+        backstory="Expert manager",
+        allow_delegation=True,
+        delegate_to=[agent1, agent2],  # This manager can delegate to agent1 and agent2
+    )
+
+    # Make a copy of the manager agent
+    copied_agent3 = agent3.copy()
+
+    # Verify the copied agent has the same delegation settings
+    assert copied_agent3.allow_delegation == agent3.allow_delegation
+    assert (
+        copied_agent3.delegate_to is not agent3.delegate_to
+    )  # Should be different objects
+    assert copied_agent3.delegate_to is not None
+    assert agent3.delegate_to is not None
+    assert len(copied_agent3.delegate_to) == len(agent3.delegate_to)
+    assert all(a in copied_agent3.delegate_to for a in agent3.delegate_to)
+
+    # Modify the original agent's delegate_to list
+    assert agent3.delegate_to is not None
+    agent3.delegate_to.pop()
+
+    # Verify the copied agent's delegate_to list is not affected
+    assert copied_agent3.delegate_to is not None
+    assert agent3.delegate_to is not None
+    assert len(copied_agent3.delegate_to) == 2
+    assert len(agent3.delegate_to) == 1
+
+    # Test copying an agent with delegate_to=None
+    agent4 = Agent(
+        role="Solo Worker",
+        goal="Work independently",
+        backstory="Independent worker",
+        allow_delegation=False,
+        delegate_to=None,
+    )
+
+    copied_agent4 = agent4.copy()
+    assert copied_agent4.delegate_to == agent4.delegate_to
