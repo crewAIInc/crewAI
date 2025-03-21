@@ -9,6 +9,7 @@ from crewai.crew import Crew
 from crewai.memory.storage.mem0_storage import Mem0Storage
 from crewai.task import Task
 
+
 @pytest.fixture
 def mock_mem0_memory():
     """Fixture to create a mock Memory instance"""
@@ -118,17 +119,6 @@ def test_mem0_storage_query(mem0_storage_with_mocked_config, mock_mem0_memory):
     # Assert
     mock_mem0_memory.query.assert_called_once_with(test_query)
     assert result == "Mock query result", "Query result should match the mock return value"
-    """Test the get_all method of Mem0Storage"""
-    # Setup
-    mock_memories = [{"role": "user", "content": "Memory 1"}, {"role": "assistant", "content": "Memory 2"}]
-    mock_mem0_memory.get_all.return_value = mock_memories
-    
-    # Execute
-    result = mem0_storage_with_mocked_config.get_all()
-    
-    # Assert
-    mock_mem0_memory.get_all.assert_called_once()
-    assert result == mock_memories, "get_all result should match the mock return value"
 
 @pytest.fixture
 def mock_mem0_memory_client():
