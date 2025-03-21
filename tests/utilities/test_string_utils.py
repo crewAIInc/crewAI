@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Union
 
 import pytest
 
-from crewai.utilities.formatter import interpolate_only
+from crewai.utilities.string_utils import interpolate_only
 
 
 class TestInterpolateOnly:

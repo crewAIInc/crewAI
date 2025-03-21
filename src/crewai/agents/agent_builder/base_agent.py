@@ -25,7 +25,7 @@ from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter
-from crewai.utilities.formatter import interpolate_only
+from crewai.utilities.string_utils import interpolate_only
 
 T = TypeVar("T", bound="BaseAgent")
 

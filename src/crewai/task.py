@@ -48,9 +48,9 @@ from crewai.utilities.events import (
     TaskStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
-from crewai.utilities.formatter import interpolate_only
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
+from crewai.utilities.string_utils import interpolate_only
 
 
 class Task(BaseModel):
