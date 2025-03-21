@@ -1,7 +1,7 @@
 import os
 import yaml
 from pathlib import Path
-from typing import Dict, List, Optional, Union, Any
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field, validator
 
 
@@ -75,7 +75,7 @@ class Config:
     @property
     def host(self) -> str:
         """Get host configuration."""
-        return self.config.host
+        return self.config.host or "127.0.0.1"
         
     @property
     def crews(self) -> List[CrewConfig]:

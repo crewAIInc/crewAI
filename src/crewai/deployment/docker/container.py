@@ -3,7 +3,8 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
-from crewai.deployment.docker.exceptions import DockerBuildError, DockerRunError, DockerComposeError
+
+from crewai.deployment.docker.exceptions import DockerBuildError, DockerComposeError, DockerRunError
 
 
 class DockerContainer:
