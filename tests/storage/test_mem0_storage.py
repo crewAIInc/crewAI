@@ -151,7 +151,7 @@ def mem0_storage_with_memory_client(mock_mem0_memory_client):
         memory=True,
         memory_config={
             "provider": "mem0",
-            "config": {"user_id": "test_user"},
+            "config": {"user_id": "test_user", 'api_key' : "asdajksdajksfk"},
         },
     )
     
