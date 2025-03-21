@@ -1,6 +1,6 @@
 import os
 import warnings
-from typing import Any, Dict, Optional, cast, List, Union, Callable
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 # Initialize with None to indicate module import status
 CHROMADB_AVAILABLE = False
@@ -21,7 +21,9 @@ try:
     from chromadb.api.types import Documents as ChromaDocuments
     from chromadb.api.types import EmbeddingFunction as ChromaEmbeddingFunction
     from chromadb.api.types import Embeddings as ChromaEmbeddings
-    from chromadb.utils import validate_embedding_function as chroma_validate_embedding_function
+    from chromadb.utils import (
+        validate_embedding_function as chroma_validate_embedding_function,
+    )
     
     # Override our placeholder types with the real ones
     Documents = ChromaDocuments
