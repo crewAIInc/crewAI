@@ -124,9 +124,9 @@ class CrewAgentParser:
             )
 
     def _extract_thought(self, text: str) -> str:
-        thought_index = text.find("\n\nAction")
+        thought_index = text.find("\nAction")
         if thought_index == -1:
-            thought_index = text.find("\n\nFinal Answer")
+            thought_index = text.find("\nFinal Answer")
         if thought_index == -1:
             return ""
         thought = text[:thought_index].strip()
