@@ -1,0 +1,89 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are dog Researcher. You
+      have a lot of experience with dog.\nYour personal goal is: Express hot takes
+      on dog.\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Give me an analysis around dog.\n\nThis
+      is the expected criteria for your final answer: 1 bullet point about dog that''s
+      under 15 words.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '914'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n    \"error\": {\n        \"message\": \"Incorrect API key provided:
+      sk-proj-********************************************************************************************************************************************************sLcA.
+      You can find your API key at https://platform.openai.com/account/api-keys.\",\n
+      \       \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\":
+      \"invalid_api_key\"\n    }\n}\n"
+    headers:
+      CF-RAY:
+      - 922e88a1b9ef2805-SEA
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '414'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 19 Mar 2025 17:01:47 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=xOCSjxqrC.2f2I2kISNioXWWErqIIGNKPkTsoEzcVRY-1742403707-1.0.1.1-bG9XNEXc7EBBNdNl9ff975bzPeeXgfmzAyYN1AesFIuQ2gEcmP67jHmnN6ABv.JJVDhw9oF5SREuZ3PUkYA8Xu6UQeWnIQxKi10X_40KN38;
+        path=/; expires=Wed, 19-Mar-25 17:31:47 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=RypiiyRYeZ0ZoVTLFkoT3v1Yzk.qiNfGEnh9gk4.bYg-1742403707485-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Origin
+      x-request-id:
+      - req_5980db57b01be333b0f977bb03a15bca
+    http_version: HTTP/1.1
+    status_code: 401
+version: 1

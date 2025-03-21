@@ -1,0 +1,254 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are dog Researcher. You
+      have a lot of experience with dog.\nYour personal goal is: Express hot takes
+      on dog.\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Give me an analysis around dog.\n\nThis
+      is the expected criteria for your final answer: 1 bullet point about dog that''s
+      under 15 words.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '914'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=xOCSjxqrC.2f2I2kISNioXWWErqIIGNKPkTsoEzcVRY-1742403707-1.0.1.1-bG9XNEXc7EBBNdNl9ff975bzPeeXgfmzAyYN1AesFIuQ2gEcmP67jHmnN6ABv.JJVDhw9oF5SREuZ3PUkYA8Xu6UQeWnIQxKi10X_40KN38;
+        _cfuvid=RypiiyRYeZ0ZoVTLFkoT3v1Yzk.qiNfGEnh9gk4.bYg-1742403707485-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n    \"error\": {\n        \"message\": \"Incorrect API key provided:
+      sk-proj-********************************************************************************************************************************************************sLcA.
+      You can find your API key at https://platform.openai.com/account/api-keys.\",\n
+      \       \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\":
+      \"invalid_api_key\"\n    }\n}\n"
+    headers:
+      CF-RAY:
+      - 922e88a8e9432805-SEA
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '414'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 19 Mar 2025 17:01:48 GMT
+      Server:
+      - cloudflare
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Origin
+      x-request-id:
+      - req_d00f966d049ee99fde6e9e7bf652afa2
+    http_version: HTTP/1.1
+    status_code: 401
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are apple Researcher.
+      You have a lot of experience with apple.\nYour personal goal is: Express hot
+      takes on apple.\nTo give my best complete final answer to the task respond using
+      the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Give me an analysis around
+      apple.\n\nThis is the expected criteria for your final answer: 1 bullet point
+      about apple that''s under 15 words.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '924'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=xOCSjxqrC.2f2I2kISNioXWWErqIIGNKPkTsoEzcVRY-1742403707-1.0.1.1-bG9XNEXc7EBBNdNl9ff975bzPeeXgfmzAyYN1AesFIuQ2gEcmP67jHmnN6ABv.JJVDhw9oF5SREuZ3PUkYA8Xu6UQeWnIQxKi10X_40KN38;
+        _cfuvid=RypiiyRYeZ0ZoVTLFkoT3v1Yzk.qiNfGEnh9gk4.bYg-1742403707485-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n    \"error\": {\n        \"message\": \"Incorrect API key provided:
+      sk-proj-********************************************************************************************************************************************************sLcA.
+      You can find your API key at https://platform.openai.com/account/api-keys.\",\n
+      \       \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\":
+      \"invalid_api_key\"\n    }\n}\n"
+    headers:
+      CF-RAY:
+      - 922e88a91a59c4c8-SEA
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '414'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 19 Mar 2025 17:01:48 GMT
+      Server:
+      - cloudflare
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Origin
+      x-request-id:
+      - req_6e9a5fd1d83c6eac8070b4e9b9b94f10
+    http_version: HTTP/1.1
+    status_code: 401
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are cat Researcher. You
+      have a lot of experience with cat.\nYour personal goal is: Express hot takes
+      on cat.\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Give me an analysis around cat.\n\nThis
+      is the expected criteria for your final answer: 1 bullet point about cat that''s
+      under 15 words.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '914'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=xOCSjxqrC.2f2I2kISNioXWWErqIIGNKPkTsoEzcVRY-1742403707-1.0.1.1-bG9XNEXc7EBBNdNl9ff975bzPeeXgfmzAyYN1AesFIuQ2gEcmP67jHmnN6ABv.JJVDhw9oF5SREuZ3PUkYA8Xu6UQeWnIQxKi10X_40KN38;
+        _cfuvid=RypiiyRYeZ0ZoVTLFkoT3v1Yzk.qiNfGEnh9gk4.bYg-1742403707485-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n    \"error\": {\n        \"message\": \"Incorrect API key provided:
+      sk-proj-********************************************************************************************************************************************************sLcA.
+      You can find your API key at https://platform.openai.com/account/api-keys.\",\n
+      \       \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\":
+      \"invalid_api_key\"\n    }\n}\n"
+    headers:
+      CF-RAY:
+      - 922e88a91f2ef8d9-SEA
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '414'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Wed, 19 Mar 2025 17:01:48 GMT
+      Server:
+      - cloudflare
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Origin
+      x-request-id:
+      - req_d0ddaee2449c771a230de2b6362c8d99
+    http_version: HTTP/1.1
+    status_code: 401
+version: 1
