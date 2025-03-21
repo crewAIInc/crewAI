@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, Optional
 
 from crewai.memory.memory import Memory
@@ -9,6 +10,29 @@ class UserMemory(Memory):
     Inherits from the Memory class and utilizes an instance of a class that
     adheres to the Storage for data storage, specifically working with
     MemoryItem instances.
+    
+    To configure with Redis as a vector store, provide a memory_config to the Crew:
+    
+    ```python
+    crew = Crew(
+        memory=True,
+        memory_config={
+            "provider": "mem0",
+            "config": {
+                "user_id": "your-user-id",
+                "api_key": os.getenv("MEM0_API_KEY"),  # Use environment variable
+                "vector_store": {
+                    "provider": "redis",
+                    "config": {
+                        "collection_name": "collection_name",
+                        "embedding_model_dims": 1536,
+                        "redis_url": "redis://redis-host:6379/0"
+                    }
+                }
+            }
+        }
+    )
+    ```
     """
 
     def __init__(self, crew=None):
