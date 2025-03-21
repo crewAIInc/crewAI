@@ -95,21 +95,22 @@ def mock_mem0_memory_client():
 def mem0_storage_with_memory_client(mock_mem0_memory_client):
     """Fixture to create a Mem0Storage instance with mocked dependencies"""
 
-    # Patch the Memory class to return our mock
+    # We need to patch the MemoryClient before it's instantiated
     with patch('mem0.client.main.MemoryClient', return_value=mock_mem0_memory_client):
-        # Instantiate the class with memory_config
-        crew = MockCrew(
-            memory_config={
-                "provider": "mem0",
-                "config": {"user_id": "test_user", "api_key": "ABCDEFGH"},
-            }
-        )
+        # ALSO need to patch the specific validation method to prevent the API call
+        with patch.object(MemoryClient, '_validate_api_key', return_value=None):
+            crew = MockCrew(
+                memory_config={
+                    "provider": "mem0",
+                    "config": {"user_id": "test_user", "api_key": "ABCDEFGH"},
+                }
+            )
 
-        mem0_storage = Mem0Storage(type="short_term", crew=crew)
-        return mem0_storage
+            mem0_storage = Mem0Storage(type="short_term", crew=crew)
+            return mem0_storage
 
 
-def test_mem0_storage_ith_memory_client_initialization(mem0_storage_with_memory_client, mock_mem0_memory_client):
+def test_mem0_storage_with_memory_client_initialization(mem0_storage_with_memory_client, mock_mem0_memory_client):
     """Test Mem0Storage initialization with MemoryClient"""
     assert mem0_storage_with_memory_client.memory_type == "short_term"
     assert mem0_storage_with_memory_client.memory is mock_mem0_memory_client
