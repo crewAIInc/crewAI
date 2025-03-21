@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, List
 
-from mem0 import MemoryClient
+from mem0 import Memory, MemoryClient
 
 from crewai.memory.storage.interface import Storage
 
@@ -32,13 +32,16 @@ class Mem0Storage(Storage):
         mem0_org_id = config.get("org_id")
         mem0_project_id = config.get("project_id")
 
-        # Initialize MemoryClient with available parameters
-        if mem0_org_id and mem0_project_id:
-            self.memory = MemoryClient(
-                api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
-            )
+        # Initialize MemoryClient or Memory based on the presence of the mem0_api_key
+        if mem0_api_key:
+            if mem0_org_id and mem0_project_id:
+                self.memory = MemoryClient(
+                    api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
+                )
+            else:
+                self.memory = MemoryClient(api_key=mem0_api_key)
         else:
-            self.memory = MemoryClient(api_key=mem0_api_key)
+            self.memory = Memory()  # Fallback to Memory if no Mem0 API key is provided
 
     def _sanitize_role(self, role: str) -> str:
         """
