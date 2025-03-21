@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import MagicMock
 
 from crewai.tools import BaseTool
-from crewai.tools.tool_usage import ToolUsage
 from crewai.tools.tool_calling import ToolCalling
+from crewai.tools.tool_usage import ToolUsage
 
 
 def test_tool_repeated_usage_allowed():
