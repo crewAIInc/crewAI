@@ -44,8 +44,6 @@ class Mem0Storage(Storage):
                 self.memory = MemoryClient(api_key=mem0_api_key)
         else:
             # Fallback to Memory if no Mem0 API key is provided
-            logging.warning("No MEM0_API_KEY found. Falling back to local Mem0 configuration.")
-
             if local_mem0_config is None:
                 self.memory = Memory()
             else:
