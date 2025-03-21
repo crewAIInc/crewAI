@@ -7,12 +7,15 @@ import shutil
 import warnings
 from typing import Any, Dict, List, Optional, Union, cast
 
-# Initialize with None to indicate module import status
-chromadb = None
-ClientAPI = None
-OneOrMany = None
-Settings = None
+# Initialize module import status
 CHROMADB_AVAILABLE = False
+
+# Define placeholder types
+class DummyClientAPI:
+    pass
+    
+class DummySettings:
+    pass
 
 # Try to import chromadb-related modules with proper error handling
 try:
@@ -24,6 +27,11 @@ try:
     CHROMADB_AVAILABLE = True
 except (ImportError, AttributeError) as e:
     warnings.warn(f"Failed to import chromadb: {str(e)}. Knowledge functionality will be limited.")
+    # Use dummy classes when imports fail
+    chromadb = None
+    ClientAPI = DummyClientAPI
+    OneOrMany = Any
+    Settings = DummySettings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator

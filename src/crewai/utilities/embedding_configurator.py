@@ -1,29 +1,38 @@
 import os
 import warnings
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional, cast, List, Union, Callable
 
 # Initialize with None to indicate module import status
-Documents = None
-EmbeddingFunction = None
-Embeddings = None
-validate_embedding_function = None
+CHROMADB_AVAILABLE = False
+
+# Define placeholder types for when chromadb is not available
+class EmbeddingFunction:
+    def __call__(self, texts):
+        raise NotImplementedError("Chromadb is not available")
+
+Documents = List[str]
+Embeddings = List[List[float]]
+
+def validate_embedding_function(func):
+    return func
 
 # Try to import chromadb-related modules with proper error handling
 try:
-    from chromadb import Documents, EmbeddingFunction, Embeddings
-    from chromadb.api.types import validate_embedding_function
+    from chromadb.api.types import Documents as ChromaDocuments
+    from chromadb.api.types import EmbeddingFunction as ChromaEmbeddingFunction
+    from chromadb.api.types import Embeddings as ChromaEmbeddings
+    from chromadb.utils import validate_embedding_function as chroma_validate_embedding_function
+    
+    # Override our placeholder types with the real ones
+    Documents = ChromaDocuments
+    EmbeddingFunction = ChromaEmbeddingFunction
+    Embeddings = ChromaEmbeddings
+    validate_embedding_function = chroma_validate_embedding_function
+    
     CHROMADB_AVAILABLE = True
 except (ImportError, AttributeError) as e:
     # This captures both ImportError and AttributeError (which can happen with NumPy 2.x)
     warnings.warn(f"Failed to import chromadb: {str(e)}. Embedding functionality will be limited.")
-    # Define a simple embedding function interface for typehinting
-    class EmbeddingFunction:
-        def __call__(self, texts):
-            raise NotImplementedError("Chromadb is not available")
-    CHROMADB_AVAILABLE = False
-
-    def validate_embedding_function(func):
-        return func
 
 
 class EmbeddingConfigurator:
