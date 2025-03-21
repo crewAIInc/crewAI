@@ -1,6 +1,7 @@
 # CrewAI Deployment Configuration
 name: my-crewai-app
 port: 8000
+host: 127.0.0.1  # Default to localhost for security
 
 # Crews configuration
 crews:

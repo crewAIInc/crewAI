@@ -3,6 +3,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
+from crewai.deployment.docker.exceptions import DockerBuildError, DockerRunError, DockerComposeError
 
 
 class DockerContainer:
@@ -15,7 +16,7 @@ class DockerContainer:
         self.dockerfile_path = self.deployment_dir / "Dockerfile"
         self.compose_path = self.deployment_dir / "docker-compose.yml"
         
-    def generate_dockerfile(self, requirements: List[str] = None):
+    def generate_dockerfile(self, requirements: Optional[List[str]] = None):
         """Generate a Dockerfile for the deployment."""
         template_dir = Path(__file__).parent / "templates"
         dockerfile_template = template_dir / "Dockerfile"
@@ -46,20 +47,32 @@ class DockerContainer:
             
     def build(self):
         """Build the Docker image."""
-        cmd = ["docker", "build", "-t", f"crewai-{self.name}", "."]
-        subprocess.run(cmd, check=True, cwd=self.deployment_dir)
+        try:
+            cmd = ["docker", "build", "-t", f"crewai-{self.name}", "."]
+            subprocess.run(cmd, check=True, cwd=self.deployment_dir)
+        except subprocess.CalledProcessError as e:
+            raise DockerBuildError(f"Failed to build Docker image: {e}")
         
     def start(self):
         """Start the Docker containers using docker-compose."""
-        cmd = ["docker-compose", "up", "-d"]
-        subprocess.run(cmd, check=True, cwd=self.deployment_dir)
+        try:
+            cmd = ["docker-compose", "up", "-d"]
+            subprocess.run(cmd, check=True, cwd=self.deployment_dir)
+        except subprocess.CalledProcessError as e:
+            raise DockerRunError(f"Failed to start Docker containers: {e}")
         
     def stop(self):
         """Stop the Docker containers."""
-        cmd = ["docker-compose", "down"]
-        subprocess.run(cmd, check=True, cwd=self.deployment_dir)
+        try:
+            cmd = ["docker-compose", "down"]
+            subprocess.run(cmd, check=True, cwd=self.deployment_dir)
+        except subprocess.CalledProcessError as e:
+            raise DockerComposeError(f"Failed to stop Docker containers: {e}")
         
     def logs(self):
         """Get container logs."""
-        cmd = ["docker-compose", "logs"]
-        subprocess.run(cmd, check=True, cwd=self.deployment_dir)
+        try:
+            cmd = ["docker-compose", "logs"]
+            subprocess.run(cmd, check=True, cwd=self.deployment_dir)
+        except subprocess.CalledProcessError as e:
+            raise DockerComposeError(f"Failed to get Docker logs: {e}")

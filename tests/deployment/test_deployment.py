@@ -18,6 +18,7 @@ class TestDeployment(unittest.TestCase):
             f.write("""
             name: test-deployment
             port: 8000
+            host: 127.0.0.1
             
             crews:
               - name: test_crew
@@ -42,8 +43,9 @@ class TestDeployment(unittest.TestCase):
         config = Config(self.config_path)
         self.assertEqual(config.name, "test-deployment")
         self.assertEqual(config.port, 8000)
+        self.assertEqual(config.host, "127.0.0.1")
         self.assertEqual(len(config.crews), 1)
-        self.assertEqual(config.crews[0]["name"], "test_crew")
+        self.assertEqual(config.crews[0].name, "test_crew")
         
     @mock.patch("crewai.deployment.docker.container.DockerContainer.generate_dockerfile")
     @mock.patch("crewai.deployment.docker.container.DockerContainer.generate_compose_file")

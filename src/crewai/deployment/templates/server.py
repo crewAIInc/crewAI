@@ -58,10 +58,13 @@ for flow_config in config.get("flows", []):
 def read_root():
     return {"status": "running", "crews": list(crews.keys()), "flows": list(flows.keys())}
 
-@app.post("/run/crew/{crew_name}")
+@app.post("/run/crew/{crew_name}", response_model=RunResponse)
 def run_crew(crew_name: str, request: RunRequest):
     if crew_name not in crews:
-        raise HTTPException(status_code=404, detail=f"Crew '{crew_name}' not found")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Crew '{crew_name}' not found. Available crews: {list(crews.keys())}"
+        )
         
     try:
         crew_instance = crews[crew_name].crew()
@@ -70,18 +73,22 @@ def run_crew(crew_name: str, request: RunRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/run/flow/{flow_name}")
+@app.post("/run/flow/{flow_name}", response_model=RunResponse)
 def run_flow(flow_name: str, request: RunRequest):
     if flow_name not in flows:
-        raise HTTPException(status_code=404, detail=f"Flow '{flow_name}' not found")
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Flow '{flow_name}' not found. Available flows: {list(flows.keys())}"
+        )
         
     try:
         flow_instance = flows[flow_name]
         result = flow_instance.kickoff(inputs=request.inputs)
         return {"result": {"value": str(result)}}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error running flow: {str(e)}")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    host = os.environ.get("HOST", "127.0.0.1")  # Default to localhost instead of 0.0.0.0
+    uvicorn.run(app, host=host, port=port)

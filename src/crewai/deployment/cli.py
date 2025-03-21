@@ -21,6 +21,12 @@ def create_deployment(config_path):
         deployment = Deployment(config_path)
         deployment.prepare()
         console.print(f"Deployment prepared at {deployment.deployment_dir}", style="bold green")
+        console.print(f"Configuration:", style="bold blue")
+        console.print(f"  Name: {deployment.config.name}")
+        console.print(f"  Port: {deployment.config.port}")
+        console.print(f"  Host: {deployment.config.host}")
+        console.print(f"  Crews: {[c.name for c in deployment.config.crews]}")
+        console.print(f"  Flows: {[f.name for f in deployment.config.flows]}")
     except Exception as e:
         console.print(f"Error creating deployment: {e}", style="bold red")
         
@@ -57,7 +63,7 @@ def start_deployment(deployment_name):
         deployment = Deployment(config_path)
         deployment.start()
         console.print(f"Deployment {deployment_name} started", style="bold green")
-        console.print(f"API server running at http://localhost:{deployment.config.port}")
+        console.print(f"API server running at http://{deployment.config.host}:{deployment.config.port}")
     except Exception as e:
         console.print(f"Error starting deployment: {e}", style="bold red")
         
