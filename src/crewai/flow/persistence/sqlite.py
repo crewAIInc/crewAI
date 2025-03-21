@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional, Union
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.state_utils import to_serializable
 
 
 class SQLiteFlowPersistence(FlowPersistence):
@@ -86,7 +87,7 @@ class SQLiteFlowPersistence(FlowPersistence):
         """
         try:
             # Convert state_data to a JSON-serializable dict using the helper method
-            state_dict = self._convert_to_dict(state_data)
+            state_dict = to_serializable(state_data)
 
             # Try to serialize to JSON to catch any serialization issues early
             try:
