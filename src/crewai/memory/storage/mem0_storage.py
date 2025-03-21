@@ -135,7 +135,6 @@ class Mem0Storage(Storage):
                 f"An error occurred while resetting the {self.memory_type} : {e}"
             )
         
-
     def _validate_local_mem0_config(self, config: Dict[str, Any]) -> bool:
         """
         Validates that all keys in the config are allowed keys from the default configuration.
