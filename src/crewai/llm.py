@@ -114,6 +114,73 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "Llama-3.2-11B-Vision-Instruct": 16384,
     "Meta-Llama-3.2-3B-Instruct": 4096,
     "Meta-Llama-3.2-1B-Instruct": 16384,
+    # bedrock
+    "us.amazon.nova-pro-v1:0": 300000,
+    "us.amazon.nova-micro-v1:0": 128000,
+    "us.amazon.nova-lite-v1:0": 300000,
+    "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
+    "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "us.anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
+    "us.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "us.anthropic.claude-3-opus-20240229-v1:0": 200000,
+    "us.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "us.meta.llama3-2-11b-instruct-v1:0": 128000,
+    "us.meta.llama3-2-3b-instruct-v1:0": 131000,
+    "us.meta.llama3-2-90b-instruct-v1:0": 128000,
+    "us.meta.llama3-2-1b-instruct-v1:0": 131000,
+    "us.meta.llama3-1-8b-instruct-v1:0": 128000,
+    "us.meta.llama3-1-70b-instruct-v1:0": 128000,
+    "us.meta.llama3-3-70b-instruct-v1:0": 128000,
+    "us.meta.llama3-1-405b-instruct-v1:0": 128000,
+    "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
+    "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
+    "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "amazon.nova-pro-v1:0": 300000,
+    "amazon.nova-micro-v1:0": 128000,
+    "amazon.nova-lite-v1:0": 300000,
+    "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
+    "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
+    "anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "anthropic.claude-3-opus-20240229-v1:0": 200000,
+    "anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "anthropic.claude-v2:1": 200000,
+    "anthropic.claude-v2": 100000,
+    "anthropic.claude-instant-v1": 100000,
+    "meta.llama3-1-405b-instruct-v1:0": 128000,
+    "meta.llama3-1-70b-instruct-v1:0": 128000,
+    "meta.llama3-1-8b-instruct-v1:0": 128000,
+    "meta.llama3-70b-instruct-v1:0": 8000,
+    "meta.llama3-8b-instruct-v1:0": 8000,
+    "amazon.titan-text-lite-v1": 4000,
+    "amazon.titan-text-express-v1": 8000,
+    "cohere.command-text-v14": 4000,
+    "ai21.j2-mid-v1": 8191,
+    "ai21.j2-ultra-v1": 8191,
+    "ai21.jamba-instruct-v1:0": 256000,
+    "mistral.mistral-7b-instruct-v0:2": 32000,
+    "mistral.mixtral-8x7b-instruct-v0:1": 32000,
+    # mistral
+    "mistral-tiny": 32768,
+    "mistral-small-latest": 32768,
+    "mistral-medium-latest": 32768,
+    "mistral-large-latest": 32768,
+    "mistral-large-2407": 32768,
+    "mistral-large-2402": 32768,
+    "mistral/mistral-tiny": 32768,
+    "mistral/mistral-small-latest": 32768,
+    "mistral/mistral-medium-latest": 32768,
+    "mistral/mistral-large-latest": 32768,
+    "mistral/mistral-large-2407": 32768,
+    "mistral/mistral-large-2402": 32768,
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
@@ -788,6 +855,17 @@ class LLM:
                 else:
                     formatted_messages.append(msg)
             return formatted_messages
+
+        # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
+        if "mistral" in self.model.lower():
+            # Check if the last message has a role of 'assistant'
+            if messages and messages[-1]["role"] == "assistant":
+                # Add a dummy user message to ensure the last message has a role of 'user'
+                messages = (
+                    messages.copy()
+                )  # Create a copy to avoid modifying the original
+                messages.append({"role": "user", "content": "Please continue."})
+            return messages
 
         # Handle Anthropic models
         if not self.is_anthropic:

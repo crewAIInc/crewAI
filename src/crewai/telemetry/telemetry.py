@@ -281,8 +281,16 @@ class Telemetry:
         return self._safe_telemetry_operation(operation)
 
     def task_ended(self, span: Span, task: Task, crew: Crew):
-        """Records task execution in a crew."""
+        """Records the completion of a task execution in a crew.
 
+        Args:
+            span (Span): The OpenTelemetry span tracking the task execution
+            task (Task): The task that was completed
+            crew (Crew): The crew context in which the task was executed
+
+        Note:
+            If share_crew is enabled, this will also record the task output
+        """
         def operation():
             if crew.share_crew:
                 self._add_attribute(
@@ -297,8 +305,13 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def tool_repeated_usage(self, llm: Any, tool_name: str, attempts: int):
-        """Records the repeated usage 'error' of a tool by an agent."""
+        """Records when a tool is used repeatedly, which might indicate an issue.
 
+        Args:
+            llm (Any): The language model being used
+            tool_name (str): Name of the tool being repeatedly used
+            attempts (int): Number of attempts made with this tool
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Tool Repeated Usage")
@@ -317,8 +330,13 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def tool_usage(self, llm: Any, tool_name: str, attempts: int):
-        """Records the usage of a tool by an agent."""
+        """Records the usage of a tool by an agent.
 
+        Args:
+            llm (Any): The language model being used
+            tool_name (str): Name of the tool being used
+            attempts (int): Number of attempts made with this tool
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Tool Usage")
@@ -337,8 +355,11 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def tool_usage_error(self, llm: Any):
-        """Records the usage of a tool by an agent."""
+        """Records when a tool usage results in an error.
 
+        Args:
+            llm (Any): The language model being used when the error occurred
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Tool Usage Error")
@@ -357,6 +378,14 @@ class Telemetry:
     def individual_test_result_span(
         self, crew: Crew, quality: float, exec_time: int, model_name: str
     ):
+        """Records individual test results for a crew execution.
+
+        Args:
+            crew (Crew): The crew being tested
+            quality (float): Quality score of the execution
+            exec_time (int): Execution time in seconds
+            model_name (str): Name of the model used
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Crew Individual Test Result")
@@ -383,6 +412,14 @@ class Telemetry:
         inputs: dict[str, Any] | None,
         model_name: str,
     ):
+        """Records the execution of a test suite for a crew.
+
+        Args:
+            crew (Crew): The crew being tested
+            iterations (int): Number of test iterations
+            inputs (dict[str, Any] | None): Input parameters for the test
+            model_name (str): Name of the model used in testing
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Crew Test Execution")
@@ -408,6 +445,7 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def deploy_signup_error_span(self):
+        """Records when an error occurs during the deployment signup process."""
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Deploy Signup Error")
@@ -417,6 +455,11 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def start_deployment_span(self, uuid: Optional[str] = None):
+        """Records the start of a deployment process.
+
+        Args:
+            uuid (Optional[str]): Unique identifier for the deployment
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Start Deployment")
@@ -428,6 +471,7 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def create_crew_deployment_span(self):
+        """Records the creation of a new crew deployment."""
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Create Crew Deployment")
@@ -437,6 +481,12 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def get_crew_logs_span(self, uuid: Optional[str], log_type: str = "deployment"):
+        """Records the retrieval of crew logs.
+
+        Args:
+            uuid (Optional[str]): Unique identifier for the crew
+            log_type (str, optional): Type of logs being retrieved. Defaults to "deployment".
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Get Crew Logs")
@@ -449,6 +499,11 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def remove_crew_span(self, uuid: Optional[str] = None):
+        """Records the removal of a crew.
+
+        Args:
+            uuid (Optional[str]): Unique identifier for the crew being removed
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Remove Crew")
@@ -574,6 +629,11 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def flow_creation_span(self, flow_name: str):
+        """Records the creation of a new flow.
+
+        Args:
+            flow_name (str): Name of the flow being created
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Flow Creation")
@@ -584,6 +644,12 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def flow_plotting_span(self, flow_name: str, node_names: list[str]):
+        """Records flow visualization/plotting activity.
+
+        Args:
+            flow_name (str): Name of the flow being plotted
+            node_names (list[str]): List of node names in the flow
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Flow Plotting")
@@ -595,6 +661,12 @@ class Telemetry:
         self._safe_telemetry_operation(operation)
 
     def flow_execution_span(self, flow_name: str, node_names: list[str]):
+        """Records the execution of a flow.
+
+        Args:
+            flow_name (str): Name of the flow being executed
+            node_names (list[str]): List of nodes being executed in the flow
+        """
         def operation():
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Flow Execution")
