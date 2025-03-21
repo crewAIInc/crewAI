@@ -49,7 +49,7 @@ class Mem0Storage(Storage):
             if local_mem0_config is None:
                 self.memory = Memory()
             else:
-                self._validate_local_mem0_config(self,local_mem0_config)
+                self._validate_local_mem0_config(local_mem0_config)
                 self.memory = Memory.from_config(local_mem0_config)
 
     def _sanitize_role(self, role: str) -> str:
