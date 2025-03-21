@@ -112,7 +112,7 @@ def mem0_storage_with_custom_mem0_configuration():
     return Mem0Storage(type="short_term", crew=crew)
 
 
-def test_mem0_storage(mem0_storage_with_custom_mem0_configuration):
+def test_mem0_storage_with_custom_mem0_configuration(mem0_storage_with_custom_mem0_configuration):
     assert mem0_storage.memory_type == "short_term", "Memory type mismatch."
     assert isinstance(mem0_storage.memory, Memory), "Memory instance mismatch."
 

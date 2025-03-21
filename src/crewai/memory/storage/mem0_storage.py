@@ -45,8 +45,12 @@ class Mem0Storage(Storage):
         else:
             # Fallback to Memory if no Mem0 API key is provided
             logging.warning("No MEM0_API_KEY found. Falling back to local Mem0 configuration.")
-            self._validate_local_mem0_config(self,local_mem0_config)
-            self.memory = Memory.from_config(local_mem0_config) if local_mem0_config else Memory()
+
+            if local_mem0_config is None:
+                self.memory = Memory()
+            else:
+                self._validate_local_mem0_config(self,local_mem0_config)
+                self.memory = Memory.from_config(local_mem0_config)
 
     def _sanitize_role(self, role: str) -> str:
         """
