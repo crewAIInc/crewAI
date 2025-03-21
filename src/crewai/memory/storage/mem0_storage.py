@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 from mem0 import Memory, MemoryClient
 
 from crewai.memory.storage.interface import Storage
+import logging
 
 
 class Mem0Storage(Storage):
@@ -43,6 +44,8 @@ class Mem0Storage(Storage):
                 self.memory = MemoryClient(api_key=mem0_api_key)
         else:
             # Fallback to Memory if no Mem0 API key is provided
+            logging.warning("No MEM0_API_KEY found. Falling back to local Mem0 configuration.")
+            self.validate_local_mem0_config(self,local_mem0_config)
             self.memory = Memory.from_config(local_mem0_config) if local_mem0_config else Memory()
 
     def _sanitize_role(self, role: str) -> str:
@@ -127,3 +130,48 @@ class Mem0Storage(Storage):
             raise Exception(
                 f"An error occurred while resetting the {self.memory_type} : {e}"
             )
+        
+
+    def validate_local_mem0_config(config: Dict[str, Any]) -> bool:
+        """
+        Validates that all keys in the config are allowed keys from the default configuration.
+        Raises an exception if an invalid key is found.
+        
+        Args:
+            config: The configuration dictionary to validate
+            
+        Returns:
+            bool: True if all keys in the configuration are valid
+            
+        Raises:
+            ValueError: If any invalid keys are found in the configuration
+        """
+        # Define allowed keys at each level
+        allowed_keys = {
+            "root": ["vector_store", "llm", "embedder", "graph_store", "history_db_path", 
+                    "version", "custom_fact_extraction_prompt", "custom_update_memory_prompt"],
+            "vector_store": ["provider", "config"],
+            "vector_store.config": ["host", "port"],
+            "llm": ["provider", "config"],
+            "llm.config": ["api_key", "model"],
+            "embedder": ["provider", "config"],
+            "embedder.config": ["api_key", "model"],
+            "graph_store": ["provider", "config"],
+            "graph_store.config": ["url", "username", "password"]
+        }
+        
+        def check_keys(d, path="root"):
+            # Check if all keys at this level are allowed
+            for key in d:
+                if key not in allowed_keys.get(path, []):
+                    invalid_key = f"{path}.{key}" if path != "root" else key
+                    raise ValueError(f"Invalid configuration key: '{invalid_key}'. Please refer to the Mem0 documentation for valid configuration parameters: https://docs.mem0.ai/open-source/python-quickstart#configuration-parameters")
+                
+                # If value is a dict, check its keys recursively
+                if isinstance(d[key], dict):
+                    new_path = f"{path}.{key}" if path != "root" else key
+                    check_keys(d[key], new_path)
+                        
+            return True
+            
+        return check_keys(config)
