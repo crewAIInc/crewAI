@@ -132,7 +132,7 @@ class Mem0Storage(Storage):
             )
         
 
-    def _validate_local_mem0_config(config: Dict[str, Any]) -> bool:
+    def _validate_local_mem0_config(self, config: Dict[str, Any]) -> bool:
         """
         Validates that all keys in the config are allowed keys from the default configuration.
         Raises an exception if an invalid key is found.
