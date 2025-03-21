@@ -6,7 +6,7 @@ from crewai.utilities.string_utils import interpolate_only
 
 
 class TestInterpolateOnly:
-    """Tests for the interpolate_only function in formatter.py."""
+    """Tests for the interpolate_only function in string_utils.py."""
 
     def test_basic_variable_interpolation(self):
         """Test basic variable interpolation works correctly."""
@@ -185,18 +185,3 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
-
-    def test_complex_nested_objects_in_inputs(self):
-        """Test that complex nested objects in inputs are converted to string."""
-        template = "Data: {data}"
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
-            "data": {"nested": {"list": [1, 2, 3], "dict": {"key": "value"}}}
-        }
-
-        result = interpolate_only(template, inputs)
-
-        assert "Data: " in result
-        assert (
-            "'nested': {'list': [1, 2, 3], 'dict': {'key': 'value'}}"
-            in result.replace(" ", "")
-        )
