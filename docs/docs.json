@@ -111,6 +111,8 @@
             "pages": [
               "tools/aimindtool",
               "tools/apifyactorstool",
+              "tools/bedrockinvokeagenttool",
+              "tools/bedrockkbretriever",
               "tools/bravesearchtool",
               "tools/browserbaseloadtool",
               "tools/codedocssearchtool",
