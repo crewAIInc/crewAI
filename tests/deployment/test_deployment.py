@@ -1,11 +1,12 @@
 import os
 import tempfile
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 from crewai.deployment.config import Config
 from crewai.deployment.main import Deployment
+
 
 class TestDeployment(unittest.TestCase):
     def setUp(self):

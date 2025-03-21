@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 
 from crewai import Agent, Crew, Task
-from crewai.flow import Flow, start, listen
+from crewai.flow import Flow, listen, start
+
 
 class AnalysisState(BaseModel):
     topic: str = ""
