@@ -250,6 +250,7 @@ class Agent(BaseAgent):
                     "tool_names": self.agent_executor.tools_names,
                     "tools": self.agent_executor.tools_description,
                     "ask_for_human_input": task.human_input,
+                    "ask_human_input_function": task.ask_human_input,
                 }
             )["output"]
         except Exception as e:

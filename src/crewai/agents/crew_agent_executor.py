@@ -81,6 +81,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
         self.ask_for_human_input = False
+        self.ask_human_input_function: Optional[Callable[[str], str]] = None
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
@@ -103,6 +104,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
+        
+        # Type checking for ask_human_input_function to ensure it's callable or None
+        ask_human_input = inputs.get("ask_human_input_function", None)
+        if ask_human_input is not None and not callable(ask_human_input):
+            print(f"Warning: ask_human_input_function is not callable, ignoring: {ask_human_input}")
+            self.ask_human_input_function = None
+        else:
+            self.ask_human_input_function = ask_human_input
 
         try:
             formatted_answer = self._invoke_loop()
@@ -533,7 +542,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             AgentFinish: The final answer after processing feedback
         """
-        human_feedback = self._ask_human_input(formatted_answer.output)
+        output = self._extract_output_from_agent_finish(formatted_answer)
+            
+        # Use custom function if provided, otherwise use default
+        try:
+            if self.ask_human_input_function and callable(self.ask_human_input_function):
+                human_feedback = self.ask_human_input_function(output)
+            else:
+                human_feedback = self._ask_human_input(output)
+        except Exception as e:
+            # Fallback to default method if custom method fails
+            print(f"Error using custom input function: {str(e)}. Falling back to default.")
+            human_feedback = self._ask_human_input(output)
 
         if self._is_training_mode():
             return self._handle_training_feedback(formatted_answer, human_feedback)
@@ -572,9 +592,29 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self.ask_for_human_input = False
             else:
                 answer = self._process_feedback_iteration(feedback)
-                feedback = self._ask_human_input(answer.output)
+                output = self._extract_output_from_agent_finish(answer)
+                
+                # Use custom function if provided, otherwise use default
+                try:
+                    if self.ask_human_input_function and callable(self.ask_human_input_function):
+                        feedback = self.ask_human_input_function(output)
+                    else:
+                        feedback = self._ask_human_input(output)
+                except Exception as e:
+                    # Fallback to default method if custom method fails
+                    print(f"Error using custom input function: {str(e)}. Falling back to default.")
+                    feedback = self._ask_human_input(output)
 
         return answer
+
+    def _extract_output_from_agent_finish(self, agent_finish: AgentFinish) -> str:
+        """Extract output from an AgentFinish object."""
+        output = ""
+        if hasattr(agent_finish, "return_values") and agent_finish.return_values:
+            output = agent_finish.return_values.get("output", "")
+        elif hasattr(agent_finish, "output"):
+            output = agent_finish.output
+        return output
 
     def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
         """Process a single feedback iteration."""

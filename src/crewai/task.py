@@ -133,6 +133,10 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    ask_human_input: Optional[Callable[[str], str]] = Field(
+        description="Function to override the default human input method. Should accept a string (final_answer) and return a string (human feedback)",
+        default=None,
+    )
     converter_cls: Optional[Type[Converter]] = Field(
         description="A converter class used to export structured output",
         default=None,
@@ -207,6 +211,14 @@ class Task(BaseModel):
                     raise ValueError(
                         "If return type is annotated, it must be Tuple[bool, Any]"
                     )
+        return v
+        
+    @field_validator("ask_human_input")
+    @classmethod
+    def validate_ask_human_input(cls, v: Optional[Callable]) -> Optional[Callable]:
+        """Validate that the ask_human_input function is callable."""
+        if v is not None and not callable(v):
+            raise ValueError("ask_human_input must be a callable function")
         return v
 
     _original_description: Optional[str] = PrivateAttr(default=None)

@@ -14,6 +14,43 @@ This feature is especially useful in complex decision-making processes or when a
 To integrate human input into agent execution, set the `human_input` flag in the task definition. When enabled, the agent prompts the user for input before delivering its final answer. 
 This input can provide extra context, clarify ambiguities, or validate the agent's output.
 
+## Customizing human input sources
+
+By default, human input is collected via the command line using the `input()` function. However, you can override this behavior by providing a custom function to handle human input from different sources:
+
+```python
+def get_input_from_api(final_answer: str) -> str:
+    """Get human feedback from an API instead of CLI with error handling."""
+    try:
+        # Make an API call to get feedback
+        response = requests.post(
+            "https://your-api.com/feedback", 
+            json={"answer": final_answer},
+            timeout=10  # Set timeout to avoid long waits
+        )
+        response.raise_for_status()  # Raise exception for HTTP errors
+        return response.json().get("feedback", "")
+    except (requests.RequestException, json.JSONDecodeError, KeyError) as e:
+        print(f"Error getting feedback from API: {str(e)}")
+        # Fallback to CLI input if API fails
+        return input(f"API failed, please provide feedback manually:\n\n{final_answer}\n\nYour feedback: ")
+
+task = Task(
+    description="Analyze the latest market trends",
+    expected_output="A detailed analysis of market trends",
+    agent=analyst,
+    human_input=True,
+    ask_human_input=get_input_from_api  # Use the custom function
+)
+```
+
+Note: CrewAI will automatically fallback to the default input method if your custom function raises an exception, but implementing your own fallback gives you more control over the user experience.
+
+The custom function should:
+- Accept a string parameter (the agent's final answer)
+- Return a string (the human feedback)
+- Return an empty string if the answer is acceptable and no further iterations are needed
+
 ### Example:
 
 ```shell
