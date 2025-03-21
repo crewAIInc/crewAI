@@ -45,19 +45,6 @@ def test_mem0_storage(mem0_storage):
     assert mem0_storage.memory_type == "short_term", "Memory type mismatch."
     assert isinstance(mem0_storage.memory, MemoryClient), "Memory instance mismatch."
 
-
-    with patch.object(Mem0Storage, "save") as mock_save:    
-        mem0_storage.save("value", {"metadata": "metadata"})
-        mock_save.assert_called_once_with("value", {"metadata": "metadata"})
-
-    with patch.object(Mem0Storage, "search") as mock_search:
-        mem0_storage.search("query")
-        mock_search.assert_called_once_with("query")
-
-    with patch.object(Mem0Storage, "reset") as mock_reset:
-        mem0_storage.reset()
-        mock_reset.assert_called_once()
-
 @pytest.fixture
 def mem0_storage_with_custom_mem0_configuration():
     """Fixture to create a Mem0Storage instance"""
@@ -128,21 +115,6 @@ def mem0_storage_with_custom_mem0_configuration():
 def test_mem0_storage(mem0_storage_with_custom_mem0_configuration):
     assert mem0_storage.memory_type == "short_term", "Memory type mismatch."
     assert isinstance(mem0_storage.memory, Memory), "Memory instance mismatch."
-
-
-    with patch.object(Mem0Storage, "save") as mock_save:    
-        mem0_storage.save("value", {"metadata": "metadata"})
-        mock_save.assert_called_once_with("value", {"metadata": "metadata"})
-
-    with patch.object(Mem0Storage, "search") as mock_search:
-        mem0_storage.search("query")
-        mock_search.assert_called_once_with("query")
-
-    with patch.object(Mem0Storage, "reset") as mock_reset:
-        mem0_storage.reset()
-        mock_reset.assert_called_once()
-
-
 
 
 
