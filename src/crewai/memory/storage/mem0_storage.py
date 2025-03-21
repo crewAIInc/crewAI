@@ -31,6 +31,7 @@ class Mem0Storage(Storage):
         mem0_api_key = config.get("api_key") or os.getenv("MEM0_API_KEY")
         mem0_org_id = config.get("org_id")
         mem0_project_id = config.get("project_id")
+        local_mem0_config = config.get("local_mem0_config")
 
         # Initialize MemoryClient or Memory based on the presence of the mem0_api_key
         if mem0_api_key:
@@ -41,13 +42,28 @@ class Mem0Storage(Storage):
             else:
                 self.memory = MemoryClient(api_key=mem0_api_key)
         else:
-            self.memory = Memory()  # Fallback to Memory if no Mem0 API key is provided
+            # Fallback to Memory if no Mem0 API key is provided
+            self.memory = Memory.from_config(local_mem0_config) if local_mem0_config else Memory()
 
     def _sanitize_role(self, role: str) -> str:
         """
         Sanitizes agent roles to ensure valid directory names.
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+
+    def _get_user_id(self):
+        if self.memory_type == "user":
+            if hasattr(self, "memory_config") and self.memory_config is not None:
+                return self.memory_config.get("config", {}).get("user_id")
+            else:
+                return None
+        return None
+
+    def _get_agent_name(self):
+        agents = self.crew.agents if self.crew else []
+        agents = [self._sanitize_role(agent.role) for agent in agents]
+        agents = "_".join(agents)
+        return agents
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self._get_user_id()
@@ -101,16 +117,13 @@ class Mem0Storage(Storage):
         results = self.memory.search(**params)
         return [r for r in results if r["score"] >= score_threshold]
 
-    def _get_user_id(self):
-        if self.memory_type == "user":
-            if hasattr(self, "memory_config") and self.memory_config is not None:
-                return self.memory_config.get("config", {}).get("user_id")
-            else:
-                return None
-        return None
-
-    def _get_agent_name(self):
-        agents = self.crew.agents if self.crew else []
-        agents = [self._sanitize_role(agent.role) for agent in agents]
-        agents = "_".join(agents)
-        return agents
+    def reset(self) -> None:
+        """
+        Resets the memory by clearing all stored data.
+        """
+        try:
+            self.memory.reset()
+        except Exception as e:
+            raise Exception(
+                f"An error occurred while resetting the {self.memory_type} : {e}"
+            )
