@@ -26,7 +26,10 @@ from crewai_tools import SerperDevTool
 tool = SerperDevTool(
     n_results=10,  # Optional: Number of results to return (default: 10)
     save_file=False,  # Optional: Save results to file (default: False)
-    search_type="search"  # Optional: Type of search - "search" or "news" (default: "search")
+    search_type="search",  # Optional: Type of search - "search" or "news" (default: "search")
+    country="us",  # Optional: Country for search (default: "")
+    location="New York",  # Optional: Location for search (default: "")
+    locale="en-US"  # Optional: Locale for search (default: "")
 )
 
 # Execute a search
