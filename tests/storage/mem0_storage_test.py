@@ -2,13 +2,13 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-from crewai.memory.storage.mem0_storage import Mem0Storage
 from mem0 import Memory, MemoryClient
 
 from crewai.agent import Agent
 from crewai.crew import Crew
+from crewai.memory.storage.mem0_storage import Mem0Storage
 from crewai.task import Task
+
 
 @pytest.fixture
 def mem0_storage():
