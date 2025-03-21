@@ -174,5 +174,4 @@ class Mem0Storage(Storage):
                     check_keys(d[key], new_path)
                         
             return True
-            
         return check_keys(config)
