@@ -1,7 +1,11 @@
+import json
+import logging
 import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
-from typing import Any, Callable, Type, get_args, get_origin
+from typing import Any, Callable, Dict, Optional, Type, Union, get_args, get_origin
+
+logger = logging.getLogger(__name__)
 
 from pydantic import (
     BaseModel,
@@ -75,6 +79,93 @@ class BaseTool(BaseModel, ABC):
         **kwargs: Any,
     ) -> Any:
         """Here goes the actual implementation of the tool."""
+        
+    def invoke(
+        self, input: Union[str, dict], config: Optional[dict] = None, **kwargs: Any
+    ) -> Any:
+        """Main method for tool execution.
+        
+        This method provides a fallback implementation for models that don't support
+        function calling natively (like QwQ-32B-Preview and deepseek-chat).
+        It parses the input and calls the _run method with the appropriate arguments.
+        
+        Args:
+            input: Either a string (raw or JSON) or a dictionary of arguments
+            config: Optional configuration dictionary
+            **kwargs: Additional keyword arguments to pass to _run
+            
+        Returns:
+            The result of calling the tool's _run method
+            
+        Raises:
+            ValueError: If input is neither a string nor a dictionary
+            ValueError: If input exceeds the maximum allowed size
+            ValueError: If input contains nested dictionaries beyond the maximum allowed depth
+        """
+        # Input type validation
+        if not isinstance(input, (str, dict)):
+            raise ValueError(f"Input must be string or dict, got {type(input)}")
+            
+        # Input size validation (limit to 100KB)
+        MAX_INPUT_SIZE = 100 * 1024  # 100KB
+        if isinstance(input, str) and len(input.encode('utf-8')) > MAX_INPUT_SIZE:
+            logger.warning(f"Input string exceeds maximum size of {MAX_INPUT_SIZE} bytes")
+            raise ValueError(f"Input string exceeds maximum size of {MAX_INPUT_SIZE} bytes")
+        
+        if isinstance(input, str):
+            # Try to parse as JSON if it's a string
+            try:
+                input = json.loads(input)
+                logger.debug(f"Successfully parsed JSON input: {input}")
+            except json.JSONDecodeError as e:
+                # If not valid JSON, pass as a single argument
+                logger.debug(f"Input string is not JSON format: {e}")
+                return self._run(input)
+                
+        if not isinstance(input, dict):
+            # If input is not a dict after parsing, pass it directly
+            logger.debug(f"Using non-dict input directly: {input}")
+            return self._run(input)
+            
+        # Validate nested dictionary depth
+        MAX_DEPTH = 5
+        def check_depth(obj, current_depth=1):
+            if current_depth > MAX_DEPTH:
+                return False
+            if isinstance(obj, dict):
+                return all(check_depth(v, current_depth + 1) for v in obj.values())
+            elif isinstance(obj, (list, tuple)):
+                return all(check_depth(item, current_depth + 1) for item in obj)
+            return True
+            
+        if not check_depth(input):
+            logger.warning(f"Input contains nested structures beyond maximum depth of {MAX_DEPTH}")
+            raise ValueError(f"Input contains nested structures beyond maximum depth of {MAX_DEPTH}")
+            
+        # Get the expected arguments from the schema
+        if hasattr(self, 'args_schema') and self.args_schema is not None:
+            try:
+                # Extract argument names from the schema
+                arg_names = list(self.args_schema.model_json_schema()["properties"].keys())
+                
+                # Filter the input to only include valid arguments
+                filtered_args = {}
+                for k in input.keys():
+                    if k in arg_names:
+                        filtered_args[k] = input[k]
+                    else:
+                        logger.warning(f"Ignoring unexpected argument: {k}")
+                
+                logger.debug(f"Calling _run with filtered arguments: {filtered_args}")
+                # Call _run with the filtered arguments
+                return self._run(**filtered_args)
+            except Exception as e:
+                # Fallback to passing the entire input dict if schema parsing fails
+                logger.warning(f"Schema parsing failed, using raw input: {e}")
+                
+        # If we couldn't parse the schema or there was an error, just pass the input dict
+        logger.debug(f"Calling _run with unfiltered arguments: {input}")
+        return self._run(**input)
 
     def to_structured_tool(self) -> CrewStructuredTool:
         """Convert this tool to a CrewStructuredTool instance."""
