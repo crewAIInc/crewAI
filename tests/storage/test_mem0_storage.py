@@ -2,7 +2,8 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from mem0 import Memory, MemoryClient
+from mem0.memory.main import Memory
+from mem0.client.main import MemoryClient
 
 from crewai.agent import Agent
 from crewai.crew import Crew
@@ -83,46 +84,37 @@ def mem0_storage_with_mocked_config(mock_mem0_memory):
     )
     
     # Patch the Memory class to return our mock
-    with patch('mem0.Memory', return_value=mock_mem0_memory):
-        # Patch the validate_local_mem0_config function to return True without actually checking
+    with patch('mem0.memory.Memory', return_value=mock_mem0_memory):
         with patch('crewai.memory.mem0_storage.validate_local_mem0_config', return_value=True):
             mem0_storage = Mem0Storage(type="short_term", crew=crew)
             return mem0_storage
 
 def test_mem0_storage_initialization(mem0_storage_with_mocked_config, mock_mem0_memory):
     """Test that Mem0Storage initializes correctly with the mocked config"""
-    # Check if the memory_type is set correctly
-    assert mem0_storage_with_mocked_config.memory_type == "short_term", "Memory type should be 'short_term'"
-    
-    # Check if the memory attribute is our mocked Memory instance
-    assert mem0_storage_with_mocked_config.memory is mock_mem0_memory, "Memory instance should be our mock"
+    assert mem0_storage_with_mocked_config.memory_type == "short_term"
+    assert mem0_storage_with_mocked_config.memory is mock_mem0_memory
 
 def test_mem0_storage_save(mem0_storage_with_mocked_config, mock_mem0_memory):
     """Test the save method of Mem0Storage"""
-    # Execute
-    mem0_storage_with_mocked_config.save(value="""test value test value test value test value test value test value
-        test value test value test value test value test value test value
-        test value test value test value test value test value test value""", metadata={"task": "test_task"})
-    
-    # Assert
+    mem0_storage_with_mocked_config.save(
+        value="test value " * 12, 
+        metadata={"task": "test_task"}
+    )
     mock_mem0_memory.save.assert_called_once()
 
 def test_mem0_storage_query(mem0_storage_with_mocked_config, mock_mem0_memory):
     """Test the query method of Mem0Storage"""
-    # Setup
     test_query = "Test query"
     mock_mem0_memory.query.return_value = "Mock query result"
     
-    # Execute
     result = mem0_storage_with_mocked_config.query(test_query)
     
-    # Assert
     mock_mem0_memory.query.assert_called_once_with(test_query)
-    assert result == "Mock query result", "Query result should match the mock return value"
+    assert result == "Mock query result"
 
 @pytest.fixture
 def mock_mem0_memory_client():
-    """Fixture to create a mock Memory instance"""
+    """Fixture to create a mock MemoryClient instance"""
     mock_memory = MagicMock(spec=MemoryClient)
     return mock_memory
 
@@ -151,43 +143,33 @@ def mem0_storage_with_memory_client(mock_mem0_memory_client):
         memory=True,
         memory_config={
             "provider": "mem0",
-            "config": {"user_id": "test_user", 'api_key' : "asdajksdajksfk"},
+            "config": {"user_id": "test_user", 'api_key': "mock-api-key"},
         },
     )
     
-    # Patch the Memory class to return our mock
-    with patch('mem0.MemoryClient', return_value=mock_mem0_memory_client):
-        # Patch the validate_local_mem0_config function to return True without actually checking
+    with patch('mem0.client.main.MemoryClient', return_value=mock_mem0_memory_client):
         mem0_storage = Mem0Storage(type="short_term", crew=crew)
         return mem0_storage
 
-def test_mem0_storage_initialization(mem0_storage_with_memory_client, mock_mem0_memory_client):
-    """Test that Mem0Storage initializes correctly with the mocked config"""
-    # Check if the memory_type is set correctly
-    assert mem0_storage_with_memory_client.memory_type == "short_term", "Memory type should be 'short_term'"
-    
-    # Check if the memory attribute is our mocked Memory instance
-    assert mem0_storage_with_memory_client.memory is mock_mem0_memory_client, "Memory instance should be our mock"
+def test_mem0_storage_initialization_client(mem0_storage_with_memory_client, mock_mem0_memory_client):
+    """Test Mem0Storage initialization with MemoryClient"""
+    assert mem0_storage_with_memory_client.memory_type == "short_term"
+    assert mem0_storage_with_memory_client.memory is mock_mem0_memory_client
 
-def test_mem0_storage_save(mem0_storage_with_memory_client, mock_mem0_memory_client):
-    """Test the save method of Mem0Storage"""
-    # Execute
-    mem0_storage_with_memory_client.save(value="""test value test value test value test value test value test value
-        test value test value test value test value test value test value
-        test value test value test value test value test value test value""", metadata={"task": "test_task"})
-    
-    # Assert
+def test_mem0_storage_save_client(mem0_storage_with_memory_client, mock_mem0_memory_client):
+    """Test the save method with MemoryClient"""
+    mem0_storage_with_memory_client.save(
+        value="test value " * 12, 
+        metadata={"task": "test_task"}
+    )
     mock_mem0_memory_client.save.assert_called_once()
 
-def test_mem0_storage_query(mem0_storage_with_memory_client, mock_mem0_memory_client):
-    """Test the query method of Mem0Storage"""
-    # Setup
+def test_mem0_storage_query_client(mem0_storage_with_memory_client, mock_mem0_memory_client):
+    """Test the query method with MemoryClient"""
     test_query = "Test query"
     mock_mem0_memory_client.query.return_value = "Mock query result"
     
-    # Execute
     result = mem0_storage_with_memory_client.query(test_query)
     
-    # Assert
     mock_mem0_memory_client.query.assert_called_once_with(test_query)
-    assert result == "Mock query result", "Query result should match the mock return value"
+    assert result == "Mock query result"
