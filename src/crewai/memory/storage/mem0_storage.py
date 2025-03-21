@@ -43,16 +43,12 @@ class Mem0Storage(Storage):
             else:
                 self.memory = MemoryClient(api_key=mem0_api_key)
         else:
-<<<<<<< HEAD
             # Fallback to Memory if no Mem0 API key is provided
             if local_mem0_config is None:
                 self.memory = Memory()
             else:
                 self._validate_local_mem0_config(local_mem0_config)
                 self.memory = Memory.from_config(local_mem0_config)
-=======
-            self.memory = Memory()  # Fallback to Memory if no Mem0 API key is provided
->>>>>>> main
 
     def _sanitize_role(self, role: str) -> str:
         """
