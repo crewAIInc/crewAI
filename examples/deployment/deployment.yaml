@@ -1,0 +1,9 @@
+# CrewAI Deployment Configuration
+name: analysis-app
+port: 8000
+
+# Flows configuration
+flows:
+  - name: analysis_flow
+    module_path: ./analysis_flow.py
+    class_name: AnalysisFlow

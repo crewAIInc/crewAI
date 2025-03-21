@@ -1,0 +1,28 @@
+# CrewAI Deployment Configuration
+name: my-crewai-app
+port: 8000
+
+# Crews configuration
+crews:
+  - name: research_crew
+    module_path: ./crews/research_crew.py
+    class_name: ResearchCrew
+  
+  - name: analysis_crew
+    module_path: ./crews/analysis_crew.py
+    class_name: AnalysisCrew
+
+# Flows configuration
+flows:
+  - name: data_processing_flow
+    module_path: ./flows/data_processing_flow.py
+    class_name: DataProcessingFlow
+  
+  - name: reporting_flow
+    module_path: ./flows/reporting_flow.py
+    class_name: ReportingFlow
+
+# Additional configuration
+environment:
+  - OPENAI_API_KEY=${OPENAI_API_KEY}
+  - CREWAI_LOG_LEVEL=INFO

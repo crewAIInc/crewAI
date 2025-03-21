@@ -87,6 +87,9 @@ dev-dependencies = [
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
 
+[project.entry-points."crewai.cli"]
+deploy = "crewai.deployment.cli:deploy"
+
 [tool.mypy]
 ignore_missing_imports = true
 disable_error_code = 'import-untyped'

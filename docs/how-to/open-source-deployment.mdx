@@ -1,0 +1,178 @@
+# CrewAI Open-Source Deployment
+
+CrewAI Open-Source Deployment provides a simple way to containerize and deploy CrewAI workflows without requiring a CrewAI+ account.
+
+## Installation
+
+```bash
+pip install crewai
+```
+
+## Quick Start
+
+### 1. Create a deployment configuration file
+
+Create a file named `deployment.yaml`:
+
+```yaml
+# CrewAI Deployment Configuration
+name: my-crewai-app
+port: 8000
+
+# Crews configuration
+crews:
+  - name: research_crew
+    module_path: ./crews/research_crew.py
+    class_name: ResearchCrew
+  
+  - name: analysis_crew
+    module_path: ./crews/analysis_crew.py
+    class_name: AnalysisCrew
+
+# Flows configuration
+flows:
+  - name: data_processing_flow
+    module_path: ./flows/data_processing_flow.py
+    class_name: DataProcessingFlow
+  
+  - name: reporting_flow
+    module_path: ./flows/reporting_flow.py
+    class_name: ReportingFlow
+
+# Additional configuration
+environment:
+  - OPENAI_API_KEY=${OPENAI_API_KEY}
+  - CREWAI_LOG_LEVEL=INFO
+```
+
+### 2. Create a deployment
+
+```bash
+crewai os-deploy create deployment.yaml
+```
+
+This command will:
+- Create a deployment directory at `./deployments/{name}`
+- Copy your crew and flow modules to the deployment directory
+- Generate Docker configuration files
+
+### 3. Build the Docker image
+
+```bash
+crewai os-deploy build my-crewai-app
+```
+
+### 4. Start the deployment
+
+```bash
+crewai os-deploy start my-crewai-app
+```
+
+### 5. Use the API
+
+The API will be available at http://localhost:8000 with the following endpoints:
+
+- `GET /`: Get status and list of available crews and flows
+- `POST /run/crew/{crew_name}`: Run a crew with specified inputs
+- `POST /run/flow/{flow_name}`: Run a flow with specified inputs
+
+Example request:
+
+```bash
+curl -X POST http://localhost:8000/run/crew/research_crew \
+  -H "Content-Type: application/json" \
+  -d '{"inputs": {"topic": "AI research"}}'
+```
+
+### 6. View logs
+
+```bash
+crewai os-deploy logs my-crewai-app
+```
+
+### 7. Stop the deployment
+
+```bash
+crewai os-deploy stop my-crewai-app
+```
+
+## API Reference
+
+### GET /
+
+Returns the status of the deployment and lists available crews and flows.
+
+**Response:**
+```json
+{
+  "status": "running",
+  "crews": ["research_crew", "analysis_crew"],
+  "flows": ["data_processing_flow", "reporting_flow"]
+}
+```
+
+### POST /run/crew/{crew_name}
+
+Runs a crew with the specified inputs.
+
+**Request Body:**
+```json
+{
+  "inputs": {
+    "key1": "value1",
+    "key2": "value2"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "result": {
+    "raw": "Crew execution result"
+  }
+}
+```
+
+### POST /run/flow/{flow_name}
+
+Runs a flow with the specified inputs.
+
+**Request Body:**
+```json
+{
+  "inputs": {
+    "key1": "value1",
+    "key2": "value2"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "result": {
+    "value": "Flow execution result"
+  }
+}
+```
+
+## CLI Reference
+
+| Command | Description |
+|---------|-------------|
+| `crewai os-deploy create <config_path>` | Create a new deployment from a configuration file |
+| `crewai os-deploy build <deployment_name>` | Build Docker image for deployment |
+| `crewai os-deploy start <deployment_name>` | Start a deployment |
+| `crewai os-deploy stop <deployment_name>` | Stop a deployment |
+| `crewai os-deploy logs <deployment_name>` | Show logs for a deployment |
+
+## Comparison with CrewAI+
+
+| Feature | Open-Source Deployment | CrewAI+ |
+|---------|------------------------|---------|
+| Requires CrewAI+ account | No | Yes |
+| Self-hosted | Yes | No |
+| Managed infrastructure | No | Yes |
+| Scaling | Manual | Automatic |
+| Monitoring | Basic logs | Advanced monitoring |
