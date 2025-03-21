@@ -1,6 +1,6 @@
+import importlib
 import pytest
 import sys
-import importlib
 import warnings
 
 def test_crew_import_with_numpy():
