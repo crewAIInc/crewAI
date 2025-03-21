@@ -455,7 +455,7 @@ class ToolUsage:
 
         # Attempt 4: Repair JSON
         try:
-            repaired_input = repair_json(tool_input)
+            repaired_input = repair_json(tool_input, skip_json_loads=True)
             self._printer.print(
                 content=f"Repaired JSON: {repaired_input}", color="blue"
             )
