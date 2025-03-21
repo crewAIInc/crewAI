@@ -25,6 +25,7 @@ from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter
+from crewai.utilities.embedding_configurator import EmbeddingConfig
 
 T = TypeVar("T", bound="BaseAgent")
 
@@ -362,5 +363,5 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
 
-    def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
+    def set_knowledge(self, crew_embedder: Optional[EmbeddingConfig] = None):
         pass
