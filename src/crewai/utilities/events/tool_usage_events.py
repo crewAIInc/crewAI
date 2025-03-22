@@ -34,7 +34,7 @@ class ToolUsageFinishedEvent(ToolUsageEvent):
     started_at: datetime
     finished_at: datetime
     from_cache: bool = False
-    result: Union[str, dict, None] = None  # Tool execution result
+    result: Any = None  # Tool execution result
     type: str = "tool_usage_finished"
 
 

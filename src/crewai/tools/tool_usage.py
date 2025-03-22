@@ -494,7 +494,7 @@ class ToolUsage:
 
     def on_tool_use_finished(
         self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float, 
-        result: Union[str, dict, None] = None
+        result: Any = None
     ) -> None:
         """Handle tool usage completion event.
         
