@@ -333,6 +333,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._printer.print(
                     content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
                 )
+                if self.llm.model:
+                    self._printer.print(
+                        content=f"\033[1m\033[95m# LLM:\033[00m \033[1m\033[92m{self.llm.model}\033[00m"
+                    )
                 if thought and thought != "":
                     self._printer.print(
                         content=f"\033[95m## Thought:\033[00m \033[92m{thought}\033[00m"
@@ -350,6 +354,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._printer.print(
                     content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
                 )
+                if self.llm.model:
+                    self._printer.print(
+                        content=f"\033[1m\033[95m# LLM:\033[00m \033[1m\033[92m{self.llm.model}\033[00m"
+                    )
                 self._printer.print(
                     content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
                 )
