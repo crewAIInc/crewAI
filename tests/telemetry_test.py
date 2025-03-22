@@ -1,8 +1,10 @@
 import os
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import patch, Mock
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from crewai.telemetry.telemetry import Telemetry, SafeBatchSpanProcessor
+
+from crewai.telemetry.telemetry import SafeBatchSpanProcessor, Telemetry
 
 
 class TestTelemetry:
