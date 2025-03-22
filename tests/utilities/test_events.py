@@ -12,6 +12,7 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_calling import ToolCalling
 from crewai.utilities.events.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -329,35 +330,137 @@ class SayHiTool(BaseTool):
         return "hi"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_tools_emits_finished_events():
+class DictResultTool(BaseTool):
+    name: str = Field(default="dict_result", description="The name of the tool")
+    description: str = Field(
+        default="Return a dictionary result", 
+        description="The description of the tool"
+    )
+
+    def _run(self) -> dict:
+        return {"message": "success", "data": {"value": 42}}
+
+
+class NoneResultTool(BaseTool):
+    name: str = Field(default="none_result", description="The name of the tool")
+    description: str = Field(
+        default="Return None as result", 
+        description="The description of the tool"
+    )
+
+    def _run(self) -> None:
+        return None
+
+
+def test_tools_emits_finished_events_with_string_result():
     received_events = []
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    agent = Agent(
-        role="base_agent",
-        goal="Just say hi",
-        backstory="You are a helpful assistant that just says hi",
-        tools=[SayHiTool()],
-    )
-
-    task = Task(
-        description="Just say hi",
-        expected_output="hi",
-        agent=agent,
-    )
-    crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
-    crew.kickoff()
+    # Create a mock event with string result
+    tool = SayHiTool()
+    tool_calling = ToolCalling(tool_name=tool.name, arguments={}, log="")
+    event_data = {
+        "agent_key": "test_agent_key",
+        "agent_role": "test_agent_role",
+        "tool_name": tool.name,
+        "tool_args": {},
+        "tool_class": tool.__class__.__name__,
+        "started_at": datetime.now(),
+        "finished_at": datetime.now(),
+        "from_cache": False,
+        "result": "hi"
+    }
+    
+    # Emit the event
+    crewai_event_bus.emit(None, ToolUsageFinishedEvent(**event_data))
+    
+    # Verify the event was received with the correct result
     assert len(received_events) == 1
-    assert received_events[0].agent_key == agent.key
-    assert received_events[0].agent_role == agent.role
-    assert received_events[0].tool_name == SayHiTool().name
+    assert received_events[0].agent_key == "test_agent_key"
+    assert received_events[0].agent_role == "test_agent_role"
+    assert received_events[0].tool_name == tool.name
     assert received_events[0].tool_args == {}
     assert received_events[0].type == "tool_usage_finished"
     assert isinstance(received_events[0].timestamp, datetime)
+    assert received_events[0].result == "hi"
+
+
+def test_tools_emits_finished_events_with_dict_result():
+    received_events = []
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def handle_tool_end(source, event):
+        received_events.append(event)
+
+    # Create a mock event with dictionary result
+    tool = DictResultTool()
+    tool_calling = ToolCalling(tool_name=tool.name, arguments={}, log="")
+    dict_result = {"message": "success", "data": {"value": 42}}
+    event_data = {
+        "agent_key": "test_agent_key",
+        "agent_role": "test_agent_role",
+        "tool_name": tool.name,
+        "tool_args": {},
+        "tool_class": tool.__class__.__name__,
+        "started_at": datetime.now(),
+        "finished_at": datetime.now(),
+        "from_cache": False,
+        "result": dict_result
+    }
+    
+    # Emit the event
+    crewai_event_bus.emit(None, ToolUsageFinishedEvent(**event_data))
+    
+    # Verify the event was received with the correct result
+    assert len(received_events) == 1
+    assert received_events[0].agent_key == "test_agent_key"
+    assert received_events[0].agent_role == "test_agent_role"
+    assert received_events[0].tool_name == tool.name
+    assert received_events[0].tool_args == {}
+    assert received_events[0].type == "tool_usage_finished"
+    assert isinstance(received_events[0].timestamp, datetime)
+    assert isinstance(received_events[0].result, dict)
+    assert received_events[0].result["message"] == "success"
+    assert received_events[0].result["data"]["value"] == 42
+
+
+def test_tools_emits_finished_events_with_none_result():
+    received_events = []
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def handle_tool_end(source, event):
+        received_events.append(event)
+
+    # Create a mock event with None result
+    tool = NoneResultTool()
+    tool_calling = ToolCalling(tool_name=tool.name, arguments={}, log="")
+    event_data = {
+        "agent_key": "test_agent_key",
+        "agent_role": "test_agent_role",
+        "tool_name": tool.name,
+        "tool_args": {},
+        "tool_class": tool.__class__.__name__,
+        "started_at": datetime.now(),
+        "finished_at": datetime.now(),
+        "from_cache": False,
+        "result": None
+    }
+    
+    # Emit the event
+    crewai_event_bus.emit(None, ToolUsageFinishedEvent(**event_data))
+    
+    # Verify the event was received with the correct result
+    assert len(received_events) == 1
+    assert received_events[0].agent_key == "test_agent_key"
+    assert received_events[0].agent_role == "test_agent_role"
+    assert received_events[0].tool_name == tool.name
+    assert received_events[0].tool_args == {}
+    assert received_events[0].type == "tool_usage_finished"
+    assert isinstance(received_events[0].timestamp, datetime)
+    assert received_events[0].result is None
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

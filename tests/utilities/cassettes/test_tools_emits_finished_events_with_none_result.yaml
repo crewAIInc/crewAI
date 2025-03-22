@@ -1,0 +1,91 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that returns None\nYour personal goal is: Return None as
+      result\nYou ONLY have access to the following tools, and should NEVER make up
+      tools that are not listed here:\n\nTool Name: none_result\nTool Arguments: {}\nTool
+      Description: Return None as result\n\nIMPORTANT: Use the following format in
+      your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [none_result], just the name, exactly as
+      it''s written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Return None as result\n\nThis is the expected criteria for
+      your final answer: None\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1324'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=KV5GuGyEdKrxlT_rqmqKhQ9TUxeMz_ccZ5K3Xu.mfLc-1742605207-1.0.1.1-1aSRm5P8hBtB3zVmHWH3LcYPoXvhsezGomR1uazQeGCEWL_uUIGP1x3dMkviSWrjf88WKm1snQNn.Eyy8_qewmd7NT7lqUt0MgRWVgfCOAY;
+        _cfuvid=1KExsJlCZ0R2Kp3gV2Y71_SiQ0R2D9rAbONnmJq7tjk-1742605207873-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n    \"error\": {\n        \"message\": \"Incorrect API key provided:
+      sk-proj-********************************************************************************************************************************************************sLcA.
+      You can find your API key at https://platform.openai.com/account/api-keys.\",\n
+      \       \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\":
+      \"invalid_api_key\"\n    }\n}\n"
+    headers:
+      CF-RAY:
+      - 9241c01eea3db9d9-SEA
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '414'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sat, 22 Mar 2025 01:00:09 GMT
+      Server:
+      - cloudflare
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Origin
+      x-request-id:
+      - req_00b89378d512de492b7c90876d0e3c8a
+    http_version: HTTP/1.1
+    status_code: 401
+version: 1
