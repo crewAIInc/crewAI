@@ -15,6 +15,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
+from crewai.utilities.string_utils import interpolate_only
 
 
 def test_task_tool_reflect_agent_tools():
@@ -822,7 +823,7 @@ def test_interpolate_only():
 
     # Test JSON structure preservation
     json_string = '{"info": "Look at {placeholder}", "nested": {"val": "{nestedVal}"}}'
-    result = task.interpolate_only(
+    result = interpolate_only(
         input_string=json_string,
         inputs={"placeholder": "the data", "nestedVal": "something else"},
     )
@@ -833,20 +834,18 @@ def test_interpolate_only():
 
     # Test normal string interpolation
     normal_string = "Hello {name}, welcome to {place}!"
-    result = task.interpolate_only(
+    result = interpolate_only(
         input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
     )
     assert result == "Hello John, welcome to CrewAI!"
 
     # Test empty string
-    result = task.interpolate_only(input_string="", inputs={"unused": "value"})
+    result = interpolate_only(input_string="", inputs={"unused": "value"})
     assert result == ""
 
     # Test string with no placeholders
     no_placeholders = "Hello, this is a test"
-    result = task.interpolate_only(
-        input_string=no_placeholders, inputs={"unused": "value"}
-    )
+    result = interpolate_only(input_string=no_placeholders, inputs={"unused": "value"})
     assert result == no_placeholders
 
 
@@ -858,7 +857,7 @@ def test_interpolate_only_with_dict_inside_expected_output():
     )
 
     json_string = '{"questions": {"main_question": "What is the user\'s name?", "secondary_question": "What is the user\'s age?"}}'
-    result = task.interpolate_only(
+    result = interpolate_only(
         input_string=json_string,
         inputs={
             "questions": {
@@ -872,18 +871,16 @@ def test_interpolate_only_with_dict_inside_expected_output():
     assert result == json_string
 
     normal_string = "Hello {name}, welcome to {place}!"
-    result = task.interpolate_only(
+    result = interpolate_only(
         input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
     )
     assert result == "Hello John, welcome to CrewAI!"
 
-    result = task.interpolate_only(input_string="", inputs={"unused": "value"})
+    result = interpolate_only(input_string="", inputs={"unused": "value"})
     assert result == ""
 
     no_placeholders = "Hello, this is a test"
-    result = task.interpolate_only(
-        input_string=no_placeholders, inputs={"unused": "value"}
-    )
+    result = interpolate_only(input_string=no_placeholders, inputs={"unused": "value"})
     assert result == no_placeholders
 
 
@@ -1085,12 +1082,12 @@ def test_interpolate_with_list_of_strings():
     # Test simple list of strings
     input_str = "Available items: {items}"
     inputs = {"items": ["apple", "banana", "cherry"]}
-    result = task.interpolate_only(input_str, inputs)
+    result = interpolate_only(input_str, inputs)
     assert result == f"Available items: {inputs['items']}"
 
     # Test empty list
     empty_list_input = {"items": []}
-    result = task.interpolate_only(input_str, empty_list_input)
+    result = interpolate_only(input_str, empty_list_input)
     assert result == "Available items: []"
 
 
@@ -1106,7 +1103,7 @@ def test_interpolate_with_list_of_dicts():
             {"name": "Bob", "age": 25, "skills": ["Java", "Cloud"]},
         ]
     }
-    result = task.interpolate_only("{people}", input_data)
+    result = interpolate_only("{people}", input_data)
 
     parsed_result = eval(result)
     assert isinstance(parsed_result, list)
@@ -1138,7 +1135,7 @@ def test_interpolate_with_nested_structures():
             ],
         }
     }
-    result = task.interpolate_only("{company}", input_data)
+    result = interpolate_only("{company}", input_data)
     parsed = eval(result)
 
     assert parsed["name"] == "TechCorp"
@@ -1161,7 +1158,7 @@ def test_interpolate_with_special_characters():
             "empty": "",
         }
     }
-    result = task.interpolate_only("{special_data}", input_data)
+    result = interpolate_only("{special_data}", input_data)
     parsed = eval(result)
 
     assert parsed["quotes"] == """This has "double" and 'single' quotes"""
@@ -1188,7 +1185,7 @@ def test_interpolate_mixed_types():
             },
         }
     }
-    result = task.interpolate_only("{data}", input_data)
+    result = interpolate_only("{data}", input_data)
     parsed = eval(result)
 
     assert parsed["name"] == "Test Dataset"
@@ -1216,7 +1213,7 @@ def test_interpolate_complex_combination():
             },
         ]
     }
-    result = task.interpolate_only("{report}", input_data)
+    result = interpolate_only("{report}", input_data)
     parsed = eval(result)
 
     assert len(parsed) == 2
@@ -1233,7 +1230,7 @@ def test_interpolate_invalid_type_validation():
 
     # Test with invalid top-level type
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only("{data}", {"data": set()})  # type: ignore we are purposely testing this failure
+        interpolate_only("{data}", {"data": set()})  # type: ignore we are purposely testing this failure
 
     assert "Unsupported type set" in str(excinfo.value)
 
@@ -1246,7 +1243,7 @@ def test_interpolate_invalid_type_validation():
         }
     }
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only("{data}", {"data": invalid_nested})
+        interpolate_only("{data}", {"data": invalid_nested})
     assert "Unsupported type set" in str(excinfo.value)
 
 
@@ -1265,24 +1262,22 @@ def test_interpolate_custom_object_validation():
 
     # Test with custom object at top level
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only("{obj}", {"obj": CustomObject(5)})  # type: ignore we are purposely testing this failure
+        interpolate_only("{obj}", {"obj": CustomObject(5)})  # type: ignore we are purposely testing this failure
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
     # Test with nested custom object in dictionary
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only(
-            "{data}", {"data": {"valid": 1, "invalid": CustomObject(5)}}
-        )
+        interpolate_only("{data}", {"data": {"valid": 1, "invalid": CustomObject(5)}})
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
     # Test with nested custom object in list
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only("{data}", {"data": [1, "valid", CustomObject(5)]})
+        interpolate_only("{data}", {"data": [1, "valid", CustomObject(5)]})
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
     # Test with deeply nested custom object
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only(
+        interpolate_only(
             "{data}", {"data": {"level1": {"level2": [{"level3": CustomObject(5)}]}}}
         )
     assert "Unsupported type CustomObject" in str(excinfo.value)
@@ -1306,7 +1301,7 @@ def test_interpolate_valid_complex_types():
     }
 
     # Should not raise any errors
-    result = task.interpolate_only("{data}", {"data": valid_data})
+    result = interpolate_only("{data}", {"data": valid_data})
     parsed = eval(result)
     assert parsed["name"] == "Valid Dataset"
     assert parsed["stats"]["nested"]["deeper"]["b"] == 2.5
@@ -1319,16 +1314,16 @@ def test_interpolate_edge_cases():
     )
 
     # Test empty dict and list
-    assert task.interpolate_only("{}", {"data": {}}) == "{}"
-    assert task.interpolate_only("[]", {"data": []}) == "[]"
+    assert interpolate_only("{}", {"data": {}}) == "{}"
+    assert interpolate_only("[]", {"data": []}) == "[]"
 
     # Test numeric types
-    assert task.interpolate_only("{num}", {"num": 42}) == "42"
-    assert task.interpolate_only("{num}", {"num": 3.14}) == "3.14"
+    assert interpolate_only("{num}", {"num": 42}) == "42"
+    assert interpolate_only("{num}", {"num": 3.14}) == "3.14"
 
     # Test boolean values (valid JSON types)
-    assert task.interpolate_only("{flag}", {"flag": True}) == "True"
-    assert task.interpolate_only("{flag}", {"flag": False}) == "False"
+    assert interpolate_only("{flag}", {"flag": True}) == "True"
+    assert interpolate_only("{flag}", {"flag": False}) == "False"
 
 
 def test_interpolate_valid_types():
@@ -1346,7 +1341,7 @@ def test_interpolate_valid_types():
         "nested": {"flag": True, "empty": None},
     }
 
-    result = task.interpolate_only("{data}", {"data": valid_data})
+    result = interpolate_only("{data}", {"data": valid_data})
     parsed = eval(result)
 
     assert parsed["active"] is True
