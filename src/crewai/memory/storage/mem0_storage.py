@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Any, Dict, List
 
@@ -31,6 +32,7 @@ class Mem0Storage(Storage):
         mem0_api_key = config.get("api_key") or os.getenv("MEM0_API_KEY")
         mem0_org_id = config.get("org_id")
         mem0_project_id = config.get("project_id")
+        local_mem0_config = config.get("local_mem0_config")
 
         # Initialize MemoryClient or Memory based on the presence of the mem0_api_key
         if mem0_api_key:
@@ -41,13 +43,32 @@ class Mem0Storage(Storage):
             else:
                 self.memory = MemoryClient(api_key=mem0_api_key)
         else:
-            self.memory = Memory()  # Fallback to Memory if no Mem0 API key is provided
+            # Fallback to Memory if no Mem0 API key is provided
+            if local_mem0_config is None:
+                self.memory = Memory()
+            else:
+                self._validate_local_mem0_config(local_mem0_config)
+                self.memory = Memory.from_config(local_mem0_config)
 
     def _sanitize_role(self, role: str) -> str:
         """
         Sanitizes agent roles to ensure valid directory names.
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+
+    def _get_user_id(self):
+        if self.memory_type == "user":
+            if hasattr(self, "memory_config") and self.memory_config is not None:
+                return self.memory_config.get("config", {}).get("user_id")
+            else:
+                return None
+        return None
+
+    def _get_agent_name(self):
+        agents = self.crew.agents if self.crew else []
+        agents = [self._sanitize_role(agent.role) for agent in agents]
+        agents = "_".join(agents)
+        return agents
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self._get_user_id()
@@ -101,16 +122,56 @@ class Mem0Storage(Storage):
         results = self.memory.search(**params)
         return [r for r in results if r["score"] >= score_threshold]
 
-    def _get_user_id(self):
-        if self.memory_type == "user":
-            if hasattr(self, "memory_config") and self.memory_config is not None:
-                return self.memory_config.get("config", {}).get("user_id")
-            else:
-                return None
-        return None
-
-    def _get_agent_name(self):
-        agents = self.crew.agents if self.crew else []
-        agents = [self._sanitize_role(agent.role) for agent in agents]
-        agents = "_".join(agents)
-        return agents
+    def reset(self) -> None:
+        """
+        Resets the memory by clearing all stored data.
+        """
+        try:
+            self.memory.reset()
+        except Exception as e:
+            raise Exception(
+                f"An error occurred while resetting the {self.memory_type} : {e}"
+            )
+        
+    def _validate_local_mem0_config(self, config: Dict[str, Any]) -> bool:
+        """
+        Validates that all keys in the config are allowed keys from the default configuration.
+        Raises an exception if an invalid key is found.
+        
+        Args:
+            config: The configuration dictionary to validate
+            
+        Returns:
+            bool: True if all keys in the configuration are valid
+            
+        Raises:
+            ValueError: If any invalid keys are found in the configuration
+        """
+        # Define allowed keys at each level
+        allowed_keys = {
+            "root": ["vector_store", "llm", "embedder", "graph_store", "history_db_path", 
+                    "version", "custom_fact_extraction_prompt", "custom_update_memory_prompt"],
+            "vector_store": ["provider", "config"],
+            "vector_store.config": ["host", "port"],
+            "llm": ["provider", "config"],
+            "llm.config": ["api_key", "model"],
+            "embedder": ["provider", "config"],
+            "embedder.config": ["api_key", "model"],
+            "graph_store": ["provider", "config"],
+            "graph_store.config": ["url", "username", "password"]
+        }
+        
+        def check_keys(d, path="root"):
+            # Check if all keys at this level are allowed
+            for key in d:
+                if key not in allowed_keys.get(path, []):
+                    invalid_key = f"{path}.{key}" if path != "root" else key
+                    raise ValueError(f"Invalid configuration key: '{invalid_key}'. Please refer to the Mem0 documentation for valid configuration parameters: https://docs.mem0.ai/open-source/python-quickstart#configuration-parameters")
+                
+                # If value is a dict, check its keys recursively
+                if isinstance(d[key], dict):
+                    new_path = f"{path}.{key}" if path != "root" else key
+                    check_keys(d[key], new_path)
+                        
+            return True
+        return check_keys(config)

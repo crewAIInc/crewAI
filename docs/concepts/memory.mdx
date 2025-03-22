@@ -164,6 +164,9 @@ crew = Crew(
 
 [Mem0](https://mem0.ai/) is a self-improving memory layer for LLM applications, enabling personalized AI experiences. 
 
+
+#### Using Mem0 API platform
+
 To include user-specific memory you can get your API key [here](https://app.mem0.ai/dashboard/api-keys) and refer the [docs](https://docs.mem0.ai/platform/quickstart#4-1-create-memories) for adding user preferences.
 
 
@@ -218,6 +221,66 @@ crew = Crew(
     },
 )
 ```
+
+#### Using Local Mem0 memory
+If you want to use local mem0 memory, with a custom configuration, you can set a parameter `local_mem0_config` in the config itself.
+The API platform takes higher priority over the local configuration.
+Check [this](https://docs.mem0.ai/open-source/python-quickstart#run-mem0-locally) mem0 local configuration docs for more understanding.
+
+```python Code
+from crewai import Crew
+
+
+#local mem0 config
+config = {
+    "vector_store": {
+        "provider": "qdrant",
+        "config": {
+            "host": "localhost",
+            "port": 6333
+        }
+    },
+    "llm": {
+        "provider": "openai",
+        "config": {
+            "api_key": "your-api-key",
+            "model": "gpt-4"
+        }
+    },
+    "embedder": {
+        "provider": "openai",
+        "config": {
+            "api_key": "your-api-key",
+            "model": "text-embedding-3-small"
+        }
+    },
+    "graph_store": {
+        "provider": "neo4j",
+        "config": {
+            "url": "neo4j+s://your-instance",
+            "username": "neo4j",
+            "password": "password"
+        }
+    },
+    "history_db_path": "/path/to/history.db",
+    "version": "v1.1",
+    "custom_fact_extraction_prompt": "Optional custom prompt for fact extraction for memory",
+    "custom_update_memory_prompt": "Optional custom prompt for update memory"
+}
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    verbose=True,
+    memory=True,
+    memory_config={
+        "provider": "mem0",
+        "config": {"user_id": "john", 'local_mem0_config': config},
+    },
+)
+```
+
+
 
 ## Additional Embedding Providers
 
