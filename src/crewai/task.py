@@ -2,6 +2,7 @@ import datetime
 import inspect
 import json
 import logging
+import re
 import threading
 import uuid
 from concurrent.futures import Future
@@ -19,6 +20,8 @@ from typing import (
     Tuple,
     Type,
     Union,
+    get_args,
+    get_origin,
 )
 
 from pydantic import (
@@ -32,6 +35,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -46,6 +50,7 @@ from crewai.utilities.events import (
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
+from crewai.utilities.string_utils import interpolate_only
 
 
 class Task(BaseModel):
@@ -64,6 +69,7 @@ class Task(BaseModel):
         output_file: File path for storing task output.
         output_json: Pydantic model for structuring JSON output.
         output_pydantic: Pydantic model for task output.
+        security_config: Security configuration including fingerprinting.
         tools: List of tools/resources limited for task execution.
     """
 
@@ -115,6 +121,10 @@ class Task(BaseModel):
     tools: Optional[List[BaseTool]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
+    )
+    security_config: SecurityConfig = Field(
+        default_factory=SecurityConfig,
+        description="Security configuration for the task.",
     )
     id: UUID4 = Field(
         default_factory=uuid.uuid4,
@@ -172,15 +182,29 @@ class Task(BaseModel):
         """
         if v is not None:
             sig = inspect.signature(v)
-            if len(sig.parameters) != 1:
+            positional_args = [
+                param
+                for param in sig.parameters.values()
+                if param.default is inspect.Parameter.empty
+            ]
+            if len(positional_args) != 1:
                 raise ValueError("Guardrail function must accept exactly one parameter")
 
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
+
+                return_annotation_args = get_args(return_annotation)
                 if not (
-                    return_annotation == Tuple[bool, Any]
-                    or str(return_annotation) == "Tuple[bool, Any]"
+                    get_origin(return_annotation) is tuple
+                    and len(return_annotation_args) == 2
+                    and return_annotation_args[0] is bool
+                    and (
+                        return_annotation_args[1] is Any
+                        or return_annotation_args[1] is str
+                        or return_annotation_args[1] is TaskOutput
+                        or return_annotation_args[1] == Union[str, TaskOutput]
+                    )
                 ):
                     raise ValueError(
                         "If return type is annotated, it must be Tuple[bool, Any]"
@@ -435,9 +459,9 @@ class Task(BaseModel):
                 content = (
                     json_output
                     if json_output
-                    else pydantic_output.model_dump_json()
-                    if pydantic_output
-                    else result
+                    else (
+                        pydantic_output.model_dump_json() if pydantic_output else result
+                    )
                 )
                 self._save_file(content)
             crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output))
@@ -485,7 +509,9 @@ class Task(BaseModel):
             return
 
         try:
-            self.description = self._original_description.format(**inputs)
+            self.description = interpolate_only(
+                input_string=self._original_description, inputs=inputs
+            )
         except KeyError as e:
             raise ValueError(
                 f"Missing required template variable '{e.args[0]}' in description"
@@ -494,7 +520,7 @@ class Task(BaseModel):
             raise ValueError(f"Error interpolating description: {str(e)}") from e
 
         try:
-            self.expected_output = self.interpolate_only(
+            self.expected_output = interpolate_only(
                 input_string=self._original_expected_output, inputs=inputs
             )
         except (KeyError, ValueError) as e:
@@ -502,7 +528,7 @@ class Task(BaseModel):
 
         if self.output_file is not None:
             try:
-                self.output_file = self.interpolate_only(
+                self.output_file = interpolate_only(
                     input_string=self._original_output_file, inputs=inputs
                 )
             except (KeyError, ValueError) as e:
@@ -532,72 +558,6 @@ class Task(BaseModel):
             self.description += (
                 f"\n\n{conversation_instruction}\n\n{conversation_history}"
             )
-
-    def interpolate_only(
-        self,
-        input_string: Optional[str],
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
-    ) -> str:
-        """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
-
-        Args:
-            input_string: The string containing template variables to interpolate.
-                         Can be None or empty, in which case an empty string is returned.
-            inputs: Dictionary mapping template variables to their values.
-                   Supported value types are strings, integers, floats, and dicts/lists
-                   containing only these types and other nested dicts/lists.
-
-        Returns:
-            The interpolated string with all template variables replaced with their values.
-            Empty string if input_string is None or empty.
-
-        Raises:
-            ValueError: If a value contains unsupported types
-        """
-
-        # Validation function for recursive type checking
-        def validate_type(value: Any) -> None:
-            if value is None:
-                return
-            if isinstance(value, (str, int, float, bool)):
-                return
-            if isinstance(value, (dict, list)):
-                for item in value.values() if isinstance(value, dict) else value:
-                    validate_type(item)
-                return
-            raise ValueError(
-                f"Unsupported type {type(value).__name__} in inputs. "
-                "Only str, int, float, bool, dict, and list are allowed."
-            )
-
-        # Validate all input values
-        for key, value in inputs.items():
-            try:
-                validate_type(value)
-            except ValueError as e:
-                raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
-
-        if input_string is None or not input_string:
-            return ""
-        if "{" not in input_string and "}" not in input_string:
-            return input_string
-        if not inputs:
-            raise ValueError(
-                "Inputs dictionary cannot be empty when interpolating variables"
-            )
-        try:
-            escaped_string = input_string.replace("{", "{{").replace("}", "}}")
-
-            for key in inputs.keys():
-                escaped_string = escaped_string.replace(f"{{{{{key}}}}}", f"{{{key}}}")
-
-            return escaped_string.format(**inputs)
-        except KeyError as e:
-            raise KeyError(
-                f"Template variable '{e.args[0]}' not found in inputs dictionary"
-            ) from e
-        except ValueError as e:
-            raise ValueError(f"Error during string interpolation: {str(e)}") from e
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
@@ -728,3 +688,12 @@ class Task(BaseModel):
 
     def __repr__(self):
         return f"Task(description={self.description}, expected_output={self.expected_output})"
+
+    @property
+    def fingerprint(self) -> Fingerprint:
+        """Get the fingerprint of the task.
+
+        Returns:
+            Fingerprint: The fingerprint of the task
+        """
+        return self.security_config.fingerprint
