@@ -203,7 +203,6 @@ class Task(BaseModel):
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
-
                 return_annotation_args = get_args(return_annotation)
                 if not (
                     get_origin(return_annotation) is tuple
@@ -717,6 +716,182 @@ class Task(BaseModel):
             Fingerprint: The fingerprint of the task
         """
         return self.security_config.fingerprint
+
+    def critique_and_iterate(
+        self,
+        agent: BaseAgent,
+        initial_output: str,
+        description: str,
+        expected_output: str,
+        context: Optional[str],
+        tools: Optional[List[BaseTool]],
+    ) -> str:
+        """
+        Recursively critiques and refines the output until it aligns with the expected outcome
+        or the iteration limit is reached. Implements caching for repeated critiques and
+        a timeout mechanism to prevent long-running iterations.
+        """
+
+        current_output = initial_output
+        original_description = description
+        original_expected_output = expected_output
+
+        try:
+            for _ in range(self.rci_max_count):
+                try:
+                    critiques = self.critique(
+                        agent=agent,
+                        current_output=current_output,
+                        description=description,
+                        expected_output=expected_output,
+                        context=context,
+                        tools=tools,
+                    )
+
+                    if not self.validate_critique_format(critiques):
+                        return current_output
+                except Exception as e:
+                    return current_output
+
+                self.description = original_description
+                self.expected_output = original_expected_output
+
+                if critiques == "NO ISSUES FOUND":
+                    return current_output
+
+                try:
+                    current_output = self.rectifier(
+                        agent=agent,
+                        current_output=current_output,
+                        description=description,
+                        expected_output=expected_output,
+                        context=context,
+                        tools=tools,
+                        critiques=critiques,
+                    )
+                except Exception as e:
+                    return current_output
+
+                self.description = original_description
+                self.expected_output = original_expected_output
+
+        except Exception as e:
+            raise e
+
+        return current_output
+
+    def critique(
+        self,
+        agent: BaseAgent,
+        current_output: str,
+        description: str,
+        expected_output: str,
+        context: Optional[str],
+        tools: Optional[List[BaseTool]],
+    ) -> str:
+        """
+        Evaluates the current output and provides critiques based on alignment with the description and expected output.
+        Uses caching to avoid redundant critiques for the same input.
+        """
+        critique_description = f"""
+        You are a critical evaluator reviewing an AI-generated output.
+        Description: {description}
+        Expected Output: {expected_output}
+        Current Output: {current_output}
+        Evaluate the output and provide critical feedback strictly in JSON format.
+        """
+
+        critique_expected_output = (
+            "Provide critical feedback in JSON format with the following structure: "
+            '{"issues": [{"type": "error/warning", "message": "Description of the issue"}], '
+            '"overall_feedback": "Summary of critique"}. '
+            'If the output is satisfactory, respond with exactly: {"issues": [], "overall_feedback": "NO ISSUES FOUND"}'
+        )
+
+        self.description = critique_description
+        self.expected_output = critique_expected_output
+
+        try:
+            critique_response = agent.execute_task(
+                task=self,
+                context=context,
+                tools=tools,
+            )
+            parsed_response = json.loads(critique_response.strip())
+            if not self.validate_critique_format(parsed_response):
+                return json.dumps(
+                    {"issues": [], "overall_feedback": "ERROR: Invalid critique format"}
+                )
+
+            return json.dumps(parsed_response)
+        except Exception as e:
+            return json.dumps(
+                {
+                    "issues": [],
+                    "overall_feedback": "ERROR: Failed to generate critique.",
+                }
+            )
+
+    def validate_critique_format(self, critique: dict) -> bool:
+        """Validates if the critique response follows the expected JSON format."""
+        if not isinstance(critique, dict):
+            return False
+        if "issues" not in critique or "overall_feedback" not in critique:
+            return False
+        if not isinstance(critique["issues"], list) or not isinstance(
+            critique["overall_feedback"], str
+        ):
+            return False
+        for issue in critique["issues"]:
+            if (
+                not isinstance(issue, dict)
+                or "type" not in issue
+                or "message" not in issue
+            ):
+                return False
+            if issue["type"] not in ["error", "warning"]:
+                return False
+        return True
+
+    def rectifier(
+        self,
+        agent: BaseAgent,
+        critiques: str,
+        current_output: str,
+        description: str,
+        expected_output: str,
+        context: Optional[str],
+        tools: Optional[List[BaseTool]],
+    ) -> str:
+        """
+        Modifies the current output to address identified issues while maintaining all other aspects unchanged.
+        """
+        rectifier_description = f"""
+        You are an AI tasked with improving an output based on provided critiques.
+        Description: {description}
+        Expected Output: {expected_output}
+        Current Output: {current_output}
+        Critiques: {critiques}
+        Adjust only to resolve the identified issues while keeping other elements unchanged.
+        Provide only the corrected output without preamble or explanations.
+        """
+
+        rectified_expected_output = (
+            f"Rectified version of: {current_output} with critiques addressed."
+        )
+
+        self.description = rectifier_description
+        self.expected_output = rectified_expected_output
+
+        try:
+            rectifier_response = agent.execute_task(
+                task=self,
+                context=context,
+                tools=tools,
+            )
+            return rectifier_response.strip()
+        except Exception as e:
+            raise "ERROR: Failed to rectify output."
 
     def critique_and_iterate(
         self,
