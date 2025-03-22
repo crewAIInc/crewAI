@@ -30,6 +30,7 @@ class ToolUsageFinishedEvent(ToolUsageEvent):
     started_at: datetime
     finished_at: datetime
     from_cache: bool = False
+    result: Any = None
     type: str = "tool_usage_finished"
 
 
