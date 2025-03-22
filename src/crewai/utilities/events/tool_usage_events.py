@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional, Union
 
 from .base_events import CrewEvent
 
@@ -25,12 +25,16 @@ class ToolUsageStartedEvent(ToolUsageEvent):
 
 
 class ToolUsageFinishedEvent(ToolUsageEvent):
-    """Event emitted when a tool execution is completed"""
+    """Event emitted when a tool execution is completed
+    
+    This event contains the result of the tool execution, allowing listeners
+    to access the output directly without implementing workarounds.
+    """
 
     started_at: datetime
     finished_at: datetime
     from_cache: bool = False
-    result: Any = None  # Add this field
+    result: Union[str, dict, None] = None  # Tool execution result
     type: str = "tool_usage_finished"
 
 
