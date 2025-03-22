@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import platform
 import warnings
 from contextlib import contextmanager
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Sequence
 
 
 @contextmanager
@@ -22,7 +23,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter,  # noqa: E402
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
-from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
+from opentelemetry.sdk.trace import ReadableSpan, TracerProvider  # noqa: E402
 from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
 from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
 
@@ -32,22 +33,59 @@ if TYPE_CHECKING:
 
 
 # A custom BatchSpanProcessor that catches and suppresses all exceptions
+logger = logging.getLogger(__name__)
+
 class SafeBatchSpanProcessor(BatchSpanProcessor):
-    """A wrapper around BatchSpanProcessor that suppresses all exceptions."""
+    """A wrapper around BatchSpanProcessor that suppresses all exceptions.
     
-    def force_flush(self, timeout_millis=None):
-        """Override force_flush to catch and suppress all exceptions."""
-        try:
-            super().force_flush(timeout_millis)
-        except Exception:
-            pass
+    This processor ensures that telemetry operations do not disrupt user code 
+    by catching and suppressing connection and timeout errors that might occur
+    during span export operations.
+    
+    It logs suppressed errors at the debug level for diagnostic purposes without
+    propagating them to calling code.
+    """
+    
+    def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
+        """Override force_flush to catch and suppress all exceptions.
+        
+        Args:
+            timeout_millis: The maximum amount of time to wait for spans to be exported.
             
-    def export(self, spans):
-        """Override export to catch and suppress all exceptions."""
+        Returns:
+            bool: True if the flush was successful, False otherwise.
+        """
         try:
-            return super().export(spans)
-        except Exception:
-            pass
+            return super().force_flush(timeout_millis)
+        except ConnectionError as e:
+            logger.debug(f"Suppressed telemetry force_flush connection error: {str(e)}")
+            return False
+        except TimeoutError as e:
+            logger.debug(f"Suppressed telemetry force_flush timeout: {str(e)}")
+            return False
+        except Exception as e:
+            logger.debug(f"Unexpected telemetry force_flush error: {str(e)}")
+            return False
+            
+    def export(self, spans: Sequence[ReadableSpan]) -> None:
+        """Override export to catch and suppress all exceptions.
+        
+        Args:
+            spans: The spans to export.
+        """
+        try:
+            if hasattr(super(), 'export'):
+                super().export(spans)
+            else:
+                # Call the exporter directly if super().export doesn't exist
+                self._span_exporter.export(spans)
+        except ConnectionError as e:
+            logger.debug(f"Suppressed telemetry export connection error: {str(e)}")
+        except TimeoutError as e:
+            logger.debug(f"Suppressed telemetry export timeout: {str(e)}")
+        except Exception as e:
+            logger.debug(f"Unexpected telemetry export error: {str(e)}")
+
 
 
 class Telemetry:
