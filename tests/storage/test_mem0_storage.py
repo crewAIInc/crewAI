@@ -96,9 +96,7 @@ def mem0_storage_with_memory_client(mock_mem0_memory_client):
     """Fixture to create a Mem0Storage instance with mocked dependencies"""
 
     # We need to patch the MemoryClient before it's instantiated
-    with patch('mem0.client.main.MemoryClient', return_value=mock_mem0_memory_client):
-        # ALSO need to patch the specific validation method to prevent the API call
-        with patch.object(MemoryClient, '_validate_api_key', return_value=None):
+    with patch.object(MemoryClient, '__new__', return_value=mock_mem0_memory_client):
             crew = MockCrew(
                 memory_config={
                     "provider": "mem0",
