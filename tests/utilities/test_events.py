@@ -12,6 +12,7 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_calling import ToolCalling
 from crewai.utilities.events.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -27,7 +28,6 @@ from crewai.utilities.events.crew_events import (
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.events.event_types import ToolUsageFinishedEvent
-from crewai.tools.tool_calling import ToolCalling
 from crewai.utilities.events.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
