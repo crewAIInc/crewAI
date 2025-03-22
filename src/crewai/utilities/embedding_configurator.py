@@ -104,28 +104,40 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_vertexai(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleVertexEmbeddingFunction,
-        )
-
-        return GoogleVertexEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            project_id=config.get("project_id"),
-            region=config.get("region"),
-        )
+        try:
+            from chromadb.utils.embedding_functions.google_embedding_function import (
+                GoogleVertexEmbeddingFunction,
+            )
+            
+            return GoogleVertexEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+                project_id=config.get("project_id"),
+                region=config.get("region"),
+            )
+        except ImportError:
+            raise ImportError(
+                "Google Vertex AI dependencies are not installed. "
+                "Please install them using 'pip install google-cloud-aiplatform'."
+            )
 
     @staticmethod
     def _configure_google(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleGenerativeAiEmbeddingFunction,
-        )
-
-        return GoogleGenerativeAiEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            task_type=config.get("task_type"),
-        )
+        try:
+            from chromadb.utils.embedding_functions.google_embedding_function import (
+                GoogleGenerativeAiEmbeddingFunction,
+            )
+            
+            return GoogleGenerativeAiEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+                task_type=config.get("task_type"),
+            )
+        except ImportError:
+            raise ImportError(
+                "Google Generative AI dependencies are not installed. "
+                "Please install them using 'pip install google-generativeai'."
+            )
 
     @staticmethod
     def _configure_cohere(config, model_name):
