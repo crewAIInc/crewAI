@@ -357,6 +357,7 @@ def test_tools_emits_finished_events():
     assert received_events[0].tool_name == SayHiTool().name
     assert received_events[0].tool_args == {}
     assert received_events[0].type == "tool_usage_finished"
+    assert received_events[0].result == "hi" 
     assert isinstance(received_events[0].timestamp, datetime)
 
 
