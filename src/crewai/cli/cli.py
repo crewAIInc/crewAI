@@ -8,6 +8,7 @@ from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
 from crewai.cli.crew_chat import run_chat
+from crewai.deployment.cli import deploy as deploy_command
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
@@ -355,6 +356,9 @@ def chat():
 
     run_chat()
 
+
+# Add the open-source deployment command
+crewai.add_command(deploy_command, name="os-deploy")
 
 if __name__ == "__main__":
     crewai()
