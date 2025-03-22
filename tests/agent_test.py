@@ -547,6 +547,47 @@ def test_agent_moved_on_after_max_iterations():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_repeated_tool_usage_respects_allow_repeated_usage(capsys):
+    @tool
+    def repeatable_tool(anything: str) -> float:
+        """A tool that allows being used repeatedly with the same input."""
+        return 42
+    
+    # Patch the tool to set allow_repeated_usage to True
+    repeatable_tool.allow_repeated_usage = True
+    
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=4,
+        llm="gpt-4",
+        allow_delegation=False,
+        verbose=True,
+    )
+    
+    task = Task(
+        description="Use the repeatable tool with the same input multiple times.",
+        expected_output="The result of using the repeatable tool",
+    )
+    
+    # force cleaning cache
+    agent.tools_handler.cache = CacheHandler()
+    agent.execute_task(
+        task=task,
+        tools=[repeatable_tool],
+    )
+    
+    captured = capsys.readouterr()
+    
+    # Should NOT show the repeated usage error 
+    assert (
+        "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
+        not in captured.out
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_respect_the_max_rpm_set(capsys):
     @tool
     def get_final_answer() -> float:

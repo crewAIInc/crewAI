@@ -37,6 +37,8 @@ class BaseTool(BaseModel, ABC):
     """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
     result_as_answer: bool = False
     """Flag to check if the tool should be the final agent answer."""
+    allow_repeated_usage: bool = False
+    """Whether the tool permits repeated usage with same arguments."""
 
     @validator("args_schema", always=True, pre=True)
     def _default_args_schema(

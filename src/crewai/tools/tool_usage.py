@@ -279,6 +279,10 @@ class ToolUsage:
         if not self.tools_handler:
             return False  # type: ignore # No return value expected
         if last_tool_usage := self.tools_handler.last_used_tool:
+            tool = self._select_tool(calling.tool_name)
+            # If the tool allows repeated usage, don't check arguments
+            if getattr(tool, "allow_repeated_usage", False):
+                return False  # type: ignore # No return value expected
             return (calling.tool_name == last_tool_usage.tool_name) and (  # type: ignore # No return value expected
                 calling.arguments == last_tool_usage.arguments
             )
