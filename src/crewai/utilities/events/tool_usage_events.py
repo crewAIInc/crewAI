@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 from .base_events import CrewEvent
 
@@ -30,7 +30,7 @@ class ToolUsageFinishedEvent(ToolUsageEvent):
     started_at: datetime
     finished_at: datetime
     from_cache: bool = False
-    result: Any = None
+    result: Optional[Any] = None
     type: str = "tool_usage_finished"
 
 

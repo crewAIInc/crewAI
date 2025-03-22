@@ -493,10 +493,14 @@ class ToolUsage:
         crewai_event_bus.emit(self, ToolUsageErrorEvent(**{**event_data, "error": e}))
 
     def on_tool_use_finished(
-        self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float, result: Any = None
+        self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float, result: Optional[Any] = None
     ) -> None:
         finished_at = time.time()
         event_data = self._prepare_event_data(tool, tool_calling)
+        
+        if result is not None and not isinstance(result, (str, int, float, bool, dict, list)):
+            self._logger.warning(f"Unexpected result type for tool {tool.name}: {type(result)}")
+        
         event_data.update(
             {
                 "started_at": datetime.datetime.fromtimestamp(started_at),
