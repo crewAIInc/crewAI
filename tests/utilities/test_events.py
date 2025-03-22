@@ -358,6 +358,7 @@ def test_tools_emits_finished_events():
     assert received_events[0].tool_args == {}
     assert received_events[0].type == "tool_usage_finished"
     assert isinstance(received_events[0].timestamp, datetime)
+    assert received_events[0].result == "hi"  # The SayHiTool returns "hi"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

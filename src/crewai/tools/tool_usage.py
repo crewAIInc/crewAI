@@ -244,6 +244,7 @@ class ToolUsage:
             tool_calling=calling,
             from_cache=from_cache,
             started_at=started_at,
+            result=result,  # Pass the result
         )
 
         if (
@@ -492,7 +493,7 @@ class ToolUsage:
         crewai_event_bus.emit(self, ToolUsageErrorEvent(**{**event_data, "error": e}))
 
     def on_tool_use_finished(
-        self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float
+        self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float, result: Any = None
     ) -> None:
         finished_at = time.time()
         event_data = self._prepare_event_data(tool, tool_calling)
@@ -501,6 +502,7 @@ class ToolUsage:
                 "started_at": datetime.datetime.fromtimestamp(started_at),
                 "finished_at": datetime.datetime.fromtimestamp(finished_at),
                 "from_cache": from_cache,
+                "result": result,  # Add the result to the event data
             }
         )
         crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
