@@ -31,6 +31,25 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 
+# A custom BatchSpanProcessor that catches and suppresses all exceptions
+class SafeBatchSpanProcessor(BatchSpanProcessor):
+    """A wrapper around BatchSpanProcessor that suppresses all exceptions."""
+    
+    def force_flush(self, timeout_millis=None):
+        """Override force_flush to catch and suppress all exceptions."""
+        try:
+            super().force_flush(timeout_millis)
+        except Exception:
+            pass
+            
+    def export(self, spans):
+        """Override export to catch and suppress all exceptions."""
+        try:
+            return super().export(spans)
+        except Exception:
+            pass
+
+
 class Telemetry:
     """A class to handle anonymous telemetry for the crewai package.
 
@@ -59,7 +78,7 @@ class Telemetry:
             with suppress_warnings():
                 self.provider = TracerProvider(resource=self.resource)
 
-            processor = BatchSpanProcessor(
+            processor = SafeBatchSpanProcessor(
                 OTLPSpanExporter(
                     endpoint=f"{telemetry_endpoint}/v1/traces",
                     timeout=30,
