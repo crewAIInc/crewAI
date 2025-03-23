@@ -1,15 +1,15 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from crewai.crew import Crew
 from crewai.agent import Agent
-from crewai.task import Task
-from crewai.memory.user.user_memory import UserMemory
+from crewai.crew import Crew
 from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.memory.short_term.short_term_memory import ShortTermMemory
-from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.entity.entity_memory import EntityMemory
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
+from crewai.task import Task
 
 
 class MockMemoryClient:
