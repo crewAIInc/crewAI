@@ -2,8 +2,8 @@ import os
 from time import sleep
 from unittest.mock import MagicMock, patch
 
-import pytest
 import litellm
+import pytest
 from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
