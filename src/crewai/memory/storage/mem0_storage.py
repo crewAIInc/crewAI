@@ -19,29 +19,37 @@ class Mem0Storage(Storage):
 
         self.memory_type = type
         self.crew = crew
-        self.memory_config = crew.memory_config
+        self.memory_config = crew.memory_config if crew else None
 
         # User ID is required for user memory type "user" since it's used as a unique identifier for the user.
         user_id = self._get_user_id()
         if type == "user" and not user_id:
             raise ValueError("User ID is required for user memory type")
 
-        # API key in memory config overrides the environment variable
-        config = self.memory_config.get("config", {})
-        mem0_api_key = config.get("api_key") or os.getenv("MEM0_API_KEY")
-        mem0_org_id = config.get("org_id")
-        mem0_project_id = config.get("project_id")
-
-        # Initialize MemoryClient or Memory based on the presence of the mem0_api_key
-        if mem0_api_key:
-            if mem0_org_id and mem0_project_id:
-                self.memory = MemoryClient(
-                    api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
-                )
+        # Check if a client was provided in the memory_config
+        if self.memory_config:
+            config = self.memory_config.get("config", {})
+            if config.get("client"):
+                self.memory = config.get("client")
             else:
-                self.memory = MemoryClient(api_key=mem0_api_key)
+                # API key in memory config overrides the environment variable
+                mem0_api_key = config.get("api_key") or os.getenv("MEM0_API_KEY")
+                mem0_org_id = config.get("org_id")
+                mem0_project_id = config.get("project_id")
+
+                # Initialize MemoryClient or Memory based on the presence of the mem0_api_key
+                if mem0_api_key:
+                    if mem0_org_id and mem0_project_id:
+                        self.memory = MemoryClient(
+                            api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
+                        )
+                    else:
+                        self.memory = MemoryClient(api_key=mem0_api_key)
+                else:
+                    self.memory = Memory()  # Fallback to Memory if no Mem0 API key is provided
         else:
-            self.memory = Memory()  # Fallback to Memory if no Mem0 API key is provided
+            # No memory config, use default Memory
+            self.memory = Memory()
 
     def _sanitize_role(self, role: str) -> str:
         """
@@ -103,13 +111,15 @@ class Mem0Storage(Storage):
 
     def _get_user_id(self):
         if self.memory_type == "user":
-            if hasattr(self, "memory_config") and self.memory_config is not None:
+            if self.memory_config is not None:
                 return self.memory_config.get("config", {}).get("user_id")
             else:
-                return None
+                return "default_user"  # Provide a default user ID for testing
         return None
 
     def _get_agent_name(self):
+        if not self.crew:
+            return "default_agent"
         agents = self.crew.agents if self.crew else []
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)

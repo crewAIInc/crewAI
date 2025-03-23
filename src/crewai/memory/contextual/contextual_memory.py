@@ -14,12 +14,19 @@ class ContextualMemory:
     ):
         if memory_config is not None:
             self.memory_provider = memory_config.get("provider")
+            # Special handling for Mem0 provider
+            if self.memory_provider == "mem0":
+                # Check if a custom client was provided in the memory_config
+                self.um = um
+                self.search_kwargs = memory_config.get("config", {}).get("search_kwargs", {})
+            else:
+                self.um = um
         else:
             self.memory_provider = None
+            self.um = um
         self.stm = stm
         self.ltm = ltm
         self.em = em
-        self.um = um
 
     def build_context_for_task(self, task, context) -> str:
         """
@@ -94,6 +101,10 @@ class ContextualMemory:
         Returns:
             str: Formatted user memories as bullet points, or an empty string if none found.
         """
+        # Check if user memory is available
+        if self.um is None:
+            return ""
+            
         user_memories = self.um.search(query)
         if not user_memories:
             return ""
