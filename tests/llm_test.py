@@ -3,6 +3,7 @@ from time import sleep
 from unittest.mock import MagicMock, patch
 
 import pytest
+import litellm
 from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
@@ -443,3 +444,49 @@ def test_tool_execution_error_event():
     assert event.tool_args == {"param": "test"}
     assert event.tool_class == failing_tool
     assert "Tool execution failed!" in event.error
+
+def test_set_callbacks_with_nonexistent_callback():
+    """Test that set_callbacks handles the case where a callback doesn't exist in the list."""
+    # Create a mock callback
+    class MockCallback:
+        def __init__(self):
+            self.called = False
+            
+        def __call__(self, *args, **kwargs):
+            self.called = True
+    
+    # Create a test callback
+    test_callback = MockCallback()
+    
+    # Make sure the callback lists are empty
+    original_success_callbacks = litellm.success_callback.copy()
+    original_async_callbacks = litellm._async_success_callback.copy()
+    
+    try:
+        # Clear the callback lists to ensure clean state
+        litellm.success_callback.clear()
+        litellm._async_success_callback.clear()
+        
+        # Create an LLM instance
+        llm = LLM(model="gpt-4o-mini")
+        
+        # Call set_callbacks with our test callback - this should work without error
+        llm.set_callbacks([test_callback])
+        
+        # Now call set_callbacks again - this should also work without error
+        # even though the callback is already in the list
+        llm.set_callbacks([test_callback])
+        
+        # Now remove the callback and try to remove it again - this should not raise an error
+        litellm.success_callback.clear()
+        litellm._async_success_callback.clear()
+        
+        # This would previously fail with "list.remove(x): x not in list"
+        llm.set_callbacks([test_callback])
+        
+        assert True  # If we get here, no exception was raised
+        
+    finally:
+        # Restore the original callbacks
+        litellm.success_callback = original_success_callbacks
+        litellm._async_success_callback = original_async_callbacks

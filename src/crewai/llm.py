@@ -964,11 +964,19 @@ class LLM:
             callback_types = [type(callback) for callback in callbacks]
             for callback in litellm.success_callback[:]:
                 if type(callback) in callback_types:
-                    litellm.success_callback.remove(callback)
+                    try:
+                        litellm.success_callback.remove(callback)
+                    except ValueError:
+                        # Skip if callback is not in the list
+                        pass
 
             for callback in litellm._async_success_callback[:]:
                 if type(callback) in callback_types:
-                    litellm._async_success_callback.remove(callback)
+                    try:
+                        litellm._async_success_callback.remove(callback)
+                    except ValueError:
+                        # Skip if callback is not in the list
+                        pass
 
             litellm.callbacks = callbacks
 
