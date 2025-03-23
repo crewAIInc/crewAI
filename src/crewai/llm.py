@@ -955,28 +955,37 @@ class LLM:
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
-    def set_callbacks(self, callbacks: List[Any]):
+    def _safe_remove_callback(self, callback_list: List[Any], callback: Any) -> None:
+        """
+        Safely remove a callback from a list, handling the case where it doesn't exist.
+        
+        Args:
+            callback_list: The list of callbacks to remove from
+            callback: The callback to remove
+        """
+        try:
+            callback_list.remove(callback)
+        except ValueError as e:
+            logging.debug(f"Callback {callback} not found in callback list: {e}")
+            pass
+
+    def set_callbacks(self, callbacks: List[Any]) -> None:
         """
         Attempt to keep a single set of callbacks in litellm by removing old
         duplicates and adding new ones.
+        
+        Args:
+            callbacks: List of callback functions to set
         """
         with suppress_warnings():
             callback_types = [type(callback) for callback in callbacks]
             for callback in litellm.success_callback[:]:
                 if type(callback) in callback_types:
-                    try:
-                        litellm.success_callback.remove(callback)
-                    except ValueError:
-                        # Skip if callback is not in the list
-                        pass
+                    self._safe_remove_callback(litellm.success_callback, callback)
 
             for callback in litellm._async_success_callback[:]:
                 if type(callback) in callback_types:
-                    try:
-                        litellm._async_success_callback.remove(callback)
-                    except ValueError:
-                        # Skip if callback is not in the list
-                        pass
+                    self._safe_remove_callback(litellm._async_success_callback, callback)
 
             litellm.callbacks = callbacks
 
