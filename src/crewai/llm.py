@@ -346,7 +346,7 @@ class LLM:
 
         # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}
-        
+    
     def _clean_gemini_tool_parameters(
         self, tools: Optional[List[dict]]
     ) -> None:
@@ -362,36 +362,6 @@ class LLM:
             if isinstance(tool, dict) and "function" in tool:
                 params = tool["function"].get("parameters", {})
                 params.pop("additionalProperties", None)
-
-        # --- 3) Prepare the parameters for the completion call
-        params = {
-            "model": self.model,
-            "messages": formatted_messages,
-            "timeout": self.timeout,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "n": self.n,
-            "stop": self.stop,
-            "max_tokens": self.max_tokens or self.max_completion_tokens,
-            "presence_penalty": self.presence_penalty,
-            "frequency_penalty": self.frequency_penalty,
-            "logit_bias": self.logit_bias,
-            "response_format": self.response_format,
-            "seed": self.seed,
-            "logprobs": self.logprobs,
-            "top_logprobs": self.top_logprobs,
-            "api_base": self.api_base,
-            "base_url": self.base_url,
-            "api_version": self.api_version,
-            "api_key": self.api_key,
-            "stream": self.stream,
-            "tools": tools,
-            "reasoning_effort": self.reasoning_effort,
-            **self.additional_params,
-        }
-
-        # Remove None values from params
-        return {k: v for k, v in params.items() if v is not None}
 
     def _handle_streaming_response(
         self,
