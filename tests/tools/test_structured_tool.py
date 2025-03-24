@@ -171,3 +171,28 @@ class TestInternalCrewStructuredTool:
         assert function_dict["function"]["description"] == "A test tool"
         assert "properties" in function_dict["function"]["parameters"]
         assert "test_field" in function_dict["function"]["parameters"]["properties"]
+        
+    def test_to_openai_function_edge_cases(self):
+        """Test edge cases for to_openai_function conversion."""
+        class EmptySchema(BaseModel):
+            pass
+            
+        def empty_func() -> None:
+            pass
+            
+        tool = CrewStructuredTool(
+            name="empty_tool",
+            description="A tool with empty schema",
+            args_schema=EmptySchema,
+            func=empty_func
+        )
+        
+        function_dict = tool.to_openai_function()
+        assert function_dict["type"] == "function"
+        assert function_dict["function"]["name"] == "empty_tool"
+        
+        # Check that parameters contains the expected fields
+        params = function_dict["function"]["parameters"]
+        assert params["title"] == "EmptySchema"
+        assert params["type"] == "object"
+        assert "properties" in params  # Empty schema still has a properties field

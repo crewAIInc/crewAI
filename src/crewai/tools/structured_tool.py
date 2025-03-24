@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import textwrap
-from typing import Any, Callable, Optional, Union, get_type_hints
+from typing import Any, Callable, Dict, List, Optional, Type, Union, get_type_hints
 
 from pydantic import BaseModel, Field, create_model
 
@@ -240,25 +240,36 @@ class CrewStructuredTool:
         """Get the tool's input arguments schema."""
         return self.args_schema.model_json_schema()["properties"]
         
-    def to_openai_function(self) -> dict:
+    def to_openai_function(self) -> Dict[str, Any]:
         """Convert the tool to an OpenAI function format.
         
         Returns:
-            dict: A dictionary in the OpenAI function format.
+            Dict[str, Any]: A dictionary in the OpenAI function format.
+            
+        Example:
+            ```python
+            tool = CrewStructuredTool(...)
+            function_dict = tool.to_openai_function()
+            # Use with OpenAI or compatible APIs
+            ```
+            
+        Raises:
+            ValueError: If the schema conversion fails
         """
-        schema = self.args_schema.model_json_schema()
-        # Remove additionalProperties field to prevent Gemini API errors
-        if "additionalProperties" in schema:
-            del schema["additionalProperties"]
-        
-        return {
-            "type": "function",
-            "function": {
-                "name": self.name,
-                "description": self.description,
-                "parameters": schema
+        try:
+            schema = self.args_schema.model_json_schema()
+            schema.pop("additionalProperties", None)
+            
+            return {
+                "type": "function",
+                "function": {
+                    "name": self.name,
+                    "description": self.description,
+                    "parameters": schema
+                }
             }
-        }
+        except Exception as e:
+            raise ValueError(f"Failed to convert tool to OpenAI function format: {str(e)}")
 
     def __repr__(self) -> str:
         return (
