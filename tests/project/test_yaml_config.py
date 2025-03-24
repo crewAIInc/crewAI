@@ -1,9 +1,10 @@
-import pytest
-import yaml
+import os
+import sys
 import tempfile
 from pathlib import Path
-import sys
-import os
+
+import pytest
+import yaml
 
 # Add a simple test to verify the fix works
 def test_list_format_in_yaml():
