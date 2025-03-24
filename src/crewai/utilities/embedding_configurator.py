@@ -19,6 +19,7 @@ class EmbeddingConfigurator:
             "huggingface": self._configure_huggingface,
             "watson": self._configure_watson,
             "custom": self._configure_custom,
+            "openrouter": self._configure_openrouter,
         }
 
     def configure_embedder(
@@ -209,6 +210,18 @@ class EmbeddingConfigurator:
                     raise e
 
         return WatsonEmbeddingFunction()
+
+    @staticmethod
+    def _configure_openrouter(config, model_name):
+        from chromadb.utils.embedding_functions.openai_embedding_function import (
+            OpenAIEmbeddingFunction,
+        )
+
+        return OpenAIEmbeddingFunction(
+            api_key=config.get("api_key") or os.getenv("OPENROUTER_API_KEY"),
+            api_base=config.get("api_base", "https://openrouter.ai/api/v1"),
+            model_name=model_name,
+        )
 
     @staticmethod
     def _configure_custom(config):
