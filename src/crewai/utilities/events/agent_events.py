@@ -21,6 +21,15 @@ class AgentExecutionStartedEvent(CrewEvent):
 
     model_config = {"arbitrary_types_allowed": True}
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Set fingerprint data from the agent
+        if hasattr(self.agent, 'fingerprint') and self.agent.fingerprint:
+            self.source_fingerprint = self.agent.fingerprint.uuid_str
+            self.source_type = "agent"
+            if hasattr(self.agent.fingerprint, 'metadata') and self.agent.fingerprint.metadata:
+                self.fingerprint_metadata = self.agent.fingerprint.metadata
+
 
 class AgentExecutionCompletedEvent(CrewEvent):
     """Event emitted when an agent completes executing a task"""
@@ -30,6 +39,15 @@ class AgentExecutionCompletedEvent(CrewEvent):
     output: str
     type: str = "agent_execution_completed"
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Set fingerprint data from the agent
+        if hasattr(self.agent, 'fingerprint') and self.agent.fingerprint:
+            self.source_fingerprint = self.agent.fingerprint.uuid_str
+            self.source_type = "agent"
+            if hasattr(self.agent.fingerprint, 'metadata') and self.agent.fingerprint.metadata:
+                self.fingerprint_metadata = self.agent.fingerprint.metadata
+
 
 class AgentExecutionErrorEvent(CrewEvent):
     """Event emitted when an agent encounters an error during execution"""
@@ -38,3 +56,12 @@ class AgentExecutionErrorEvent(CrewEvent):
     task: Any
     error: str
     type: str = "agent_execution_error"
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Set fingerprint data from the agent
+        if hasattr(self.agent, 'fingerprint') and self.agent.fingerprint:
+            self.source_fingerprint = self.agent.fingerprint.uuid_str
+            self.source_type = "agent"
+            if hasattr(self.agent.fingerprint, 'metadata') and self.agent.fingerprint.metadata:
+                self.fingerprint_metadata = self.agent.fingerprint.metadata
