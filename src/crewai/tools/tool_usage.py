@@ -22,6 +22,7 @@ from crewai.utilities.events.tool_usage_events import (
     ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
     ToolValidateInputErrorEvent,
 )
 
@@ -69,6 +70,7 @@ class ToolUsage:
         function_calling_llm: Any,
         agent: Any,
         action: Any,
+        fingerprint_context: Optional[Dict[str, str]] = None,
     ) -> None:
         self._i18n: I18N = agent.i18n
         self._printer: Printer = Printer()
@@ -85,6 +87,7 @@ class ToolUsage:
         self.task = task
         self.action = action
         self.function_calling_llm = function_calling_llm
+        self.fingerprint_context = fingerprint_context or {}
 
         # Set the maximum parsing attempts for bigger models
         if (
@@ -187,12 +190,18 @@ class ToolUsage:
                             for k, v in calling.arguments.items()
                             if k in acceptable_args
                         }
+                        # Add fingerprint metadata if available
+                        arguments = self._add_fingerprint_metadata(arguments)
                         result = tool.invoke(input=arguments)
                     except Exception:
                         arguments = calling.arguments
+                        # Add fingerprint metadata if available
+                        arguments = self._add_fingerprint_metadata(arguments)
                         result = tool.invoke(input=arguments)
                 else:
-                    result = tool.invoke(input={})
+                    # Add fingerprint metadata even to empty arguments
+                    arguments = self._add_fingerprint_metadata({})
+                    result = tool.invoke(input=arguments)
             except Exception as e:
                 self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                 self._run_attempts += 1
@@ -480,7 +489,12 @@ class ToolUsage:
             "tool_name": self.action.tool,
             "tool_args": str(self.action.tool_input),
             "tool_class": self.__class__.__name__,
+            "agent": self.agent,  # Adding agent for fingerprint extraction
         }
+
+        # Include fingerprint context if available
+        if self.fingerprint_context:
+            tool_selection_data.update(self.fingerprint_context)
 
         crewai_event_bus.emit(
             self,
@@ -506,7 +520,7 @@ class ToolUsage:
         crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
 
     def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
-        return {
+        event_data = {
             "agent_key": self.agent.key,
             "agent_role": (self.agent._original_role or self.agent.role),
             "run_attempts": self._run_attempts,
@@ -514,4 +528,43 @@ class ToolUsage:
             "tool_name": tool.name,
             "tool_args": tool_calling.arguments,
             "tool_class": tool.__class__.__name__,
+            "agent": self.agent,  # Adding agent for fingerprint extraction
         }
+
+        # Include fingerprint context if available
+        if self.fingerprint_context:
+            event_data.update(self.fingerprint_context)
+
+        return event_data
+
+    def _add_fingerprint_metadata(self, arguments: dict) -> dict:
+        """Add fingerprint metadata to tool arguments if available.
+
+        Args:
+            arguments: The original tool arguments
+
+        Returns:
+            Updated arguments dictionary with fingerprint metadata
+        """
+        # Create a shallow copy to avoid modifying the original
+        arguments = arguments.copy()
+
+        # Add security metadata under a designated key
+        if not "security_context" in arguments:
+            arguments["security_context"] = {}
+
+        security_context = arguments["security_context"]
+
+        # Add agent fingerprint if available
+        if hasattr(self, "agent") and hasattr(self.agent, "security_config"):
+            security_context["agent_fingerprint"] = self.agent.security_config.fingerprint.to_dict()
+
+        # Add task fingerprint if available
+        if hasattr(self, "task") and hasattr(self.task, "security_config"):
+            security_context["task_fingerprint"] = self.task.security_config.fingerprint.to_dict()
+
+        # Add crew fingerprint if available
+        if hasattr(self, "crew") and hasattr(self.crew, "security_config"):
+            security_context["crew_fingerprint"] = self.crew.security_config.fingerprint.to_dict()
+
+        return arguments
