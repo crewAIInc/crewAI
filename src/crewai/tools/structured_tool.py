@@ -239,6 +239,26 @@ class CrewStructuredTool:
     def args(self) -> dict:
         """Get the tool's input arguments schema."""
         return self.args_schema.model_json_schema()["properties"]
+        
+    def to_openai_function(self) -> dict:
+        """Convert the tool to an OpenAI function format.
+        
+        Returns:
+            dict: A dictionary in the OpenAI function format.
+        """
+        schema = self.args_schema.model_json_schema()
+        # Remove additionalProperties field to prevent Gemini API errors
+        if "additionalProperties" in schema:
+            del schema["additionalProperties"]
+        
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": schema
+            }
+        }
 
     def __repr__(self) -> str:
         return (

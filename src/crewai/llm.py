@@ -316,7 +316,19 @@ class LLM:
             messages = [{"role": "user", "content": messages}]
         formatted_messages = self._format_messages_for_provider(messages)
 
-        # --- 2) Prepare the parameters for the completion call
+        # --- 2) If using Gemini, ensure additionalProperties is not in tool schemas
+        if tools and "gemini" in self.model.lower():
+            for i, tool in enumerate(tools):
+                if (
+                    isinstance(tool, dict) 
+                    and "function" in tool 
+                    and "parameters" in tool["function"]
+                ):
+                    params = tool["function"]["parameters"]
+                    if "additionalProperties" in params:
+                        del params["additionalProperties"]
+
+        # --- 3) Prepare the parameters for the completion call
         params = {
             "model": self.model,
             "messages": formatted_messages,
