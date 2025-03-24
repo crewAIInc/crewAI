@@ -212,13 +212,30 @@ class EmbeddingConfigurator:
         return WatsonEmbeddingFunction()
 
     @staticmethod
-    def _configure_openrouter(config, model_name):
+    def _configure_openrouter(config: Dict[str, Any], model_name: str) -> EmbeddingFunction:
+        """
+        Configure OpenRouter embedding provider.
+        
+        Args:
+            config (Dict[str, Any]): Configuration dictionary containing the API key and optional settings.
+            model_name (str): Name of the embedding model to use.
+            
+        Returns:
+            OpenAIEmbeddingFunction: Configured OpenRouter embedding function.
+            
+        Raises:
+            ValueError: If the API key is not provided in the config or environment.
+        """
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )
-
+        
+        api_key = config.get("api_key") or os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            raise ValueError("OpenRouter API key must be provided either in config or OPENROUTER_API_KEY environment variable")
+            
         return OpenAIEmbeddingFunction(
-            api_key=config.get("api_key") or os.getenv("OPENROUTER_API_KEY"),
+            api_key=api_key,
             api_base=config.get("api_base", "https://openrouter.ai/api/v1"),
             model_name=model_name,
         )
