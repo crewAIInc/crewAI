@@ -140,7 +140,10 @@ class Agent(BaseAgent):
                 self.embedder = crew_embedder
 
             if self.knowledge_sources:
-                full_pattern = re.compile(r"[^a-zA-Z0-9\u4e00-\u9fa5\-_\r\n]|(\.\.)")
+                # Unicode ranges for CJK characters:
+                # \u4e00-\u9fff: Common Chinese characters
+                # \u3400-\u4dbf: Extended CJK characters
+                full_pattern = re.compile(r"[^\w\u4e00-\u9fff\u3400-\u4dbf\-_\r\n]|(\.\.)")
                 knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
