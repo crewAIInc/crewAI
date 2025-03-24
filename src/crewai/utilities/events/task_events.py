@@ -9,7 +9,7 @@ class TaskStartedEvent(CrewEvent):
 
     type: str = "task_started"
     context: Optional[str]
-    task: Any
+    task: Optional[Any] = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -26,7 +26,7 @@ class TaskCompletedEvent(CrewEvent):
 
     output: TaskOutput
     type: str = "task_completed"
-    task: Any
+    task: Optional[Any] = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -43,7 +43,7 @@ class TaskFailedEvent(CrewEvent):
 
     error: str
     type: str = "task_failed"
-    task: Any
+    task: Optional[Any] = None
 
     def __init__(self, **data):
         super().__init__(**data)
@@ -60,7 +60,7 @@ class TaskEvaluationEvent(CrewEvent):
 
     type: str = "task_evaluation"
     evaluation_type: str
-    task: Any
+    task: Optional[Any] = None
 
     def __init__(self, **data):
         super().__init__(**data)
