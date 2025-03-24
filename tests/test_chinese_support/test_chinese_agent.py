@@ -1,6 +1,7 @@
-import re
 import pytest
-from unittest.mock import patch, MagicMock
+import re
+from unittest.mock import MagicMock, patch
+
 from crewai.agent import Agent
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 

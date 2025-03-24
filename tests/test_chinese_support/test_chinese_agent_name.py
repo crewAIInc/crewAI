@@ -1,5 +1,6 @@
 import pytest
 import re
+
 from crewai.agent import Agent
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 
