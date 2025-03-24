@@ -123,6 +123,10 @@ def CrewBase(cls: T) -> T:
             cache_handler_functions: Dict[str, Callable],
             callbacks: Dict[str, Callable],
         ) -> None:
+            # If agent_info is a list, use the first item as the configuration
+            if isinstance(agent_info, list) and len(agent_info) > 0:
+                agent_info = agent_info[0]
+                
             if llm := agent_info.get("llm"):
                 try:
                     self.agents_config[agent_name]["llm"] = llms[llm]()
