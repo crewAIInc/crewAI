@@ -89,37 +89,3 @@ class BaseLLM(ABC):
         """
         # Default implementation - subclasses should override with model-specific values
         return 4096
-
-    def stream(
-        self,
-        messages: Union[str, List[Dict[str, str]]],
-        stream_callback: Optional[Callable[[str], None]] = None,
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        """Stream responses from the LLM with optional callbacks for each chunk.
-
-        Args:
-            messages: Input messages for the LLM.
-                     Can be a string or list of message dictionaries.
-            stream_callback: Optional callback function that receives each
-                           text chunk as it arrives.
-            tools: Optional list of tool schemas for function calling.
-            callbacks: Optional list of callback functions.
-            available_functions: Optional dict mapping function names to callables.
-
-        Returns:
-            The complete response as a string (after streaming is complete).
-
-        Raises:
-            ValueError: If the messages format is invalid.
-            TimeoutError: If the LLM request times out.
-            RuntimeError: If the LLM request fails for other reasons.
-        """
-        # Default implementation that doesn't actually stream but calls the callback
-        # Subclasses should override this with proper streaming implementations
-        response = self.call(messages, tools, callbacks, available_functions)
-        if stream_callback:
-            stream_callback(response)
-        return response
