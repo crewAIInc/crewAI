@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, Callable, Dict, List, TypeVar, Union, cast
 
 import yaml
 from dotenv import load_dotenv
@@ -116,15 +116,31 @@ def CrewBase(cls: T) -> T:
         def _map_agent_variables(
             self,
             agent_name: str,
-            agent_info: Dict[str, Any],
+            agent_info: Union[Dict[str, Any], List[Dict[str, Any]]],
             agents: Dict[str, Callable],
             llms: Dict[str, Callable],
             tool_functions: Dict[str, Callable],
             cache_handler_functions: Dict[str, Callable],
             callbacks: Dict[str, Callable],
         ) -> None:
+            """Maps agent variables from configuration to internal state.
+            
+            Args:
+                agent_name: Name of the agent.
+                agent_info: Configuration as a dictionary or list of configurations.
+                agents: Dictionary of agent functions.
+                llms: Dictionary of LLM functions.
+                tool_functions: Dictionary of tool functions.
+                cache_handler_functions: Dictionary of cache handler functions.
+                callbacks: Dictionary of callback functions.
+            
+            Raises:
+                ValueError: When an empty list is provided as agent_info.
+            """
             # If agent_info is a list, use the first item as the configuration
-            if isinstance(agent_info, list) and len(agent_info) > 0:
+            if isinstance(agent_info, list):
+                if not agent_info:
+                    raise ValueError(f"Empty agent configuration list for agent {agent_name}")
                 agent_info = agent_info[0]
                 
             if llm := agent_info.get("llm"):
