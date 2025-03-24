@@ -805,7 +805,11 @@ class Crew(BaseModel):
             # Determine which tools to use - task tools take precedence over agent tools
             tools_for_task = task.tools or agent_to_use.tools or []
             # Prepare tools and ensure they're compatible with task execution
-            tools_for_task = self._prepare_tools(agent_to_use, task, cast(Union[List[Tool], List[BaseTool]], tools_for_task))
+            tools_for_task = self._prepare_tools(
+                agent_to_use,
+                task,
+                cast(Union[List[Tool], List[BaseTool]], tools_for_task),
+            )
 
             self._log_task_start(task, agent_to_use.role)
 
@@ -877,7 +881,9 @@ class Crew(BaseModel):
         self, agent: BaseAgent, task: Task, tools: Union[List[Tool], List[BaseTool]]
     ) -> List[BaseTool]:
         # Add delegation tools if agent allows delegation
-        if hasattr(agent, "allow_delegation") and getattr(agent, "allow_delegation", False):
+        if hasattr(agent, "allow_delegation") and getattr(
+            agent, "allow_delegation", False
+        ):
             if self.process == Process.hierarchical:
                 if self.manager_agent:
                     tools = self._update_manager_tools(task, tools)
@@ -890,10 +896,16 @@ class Crew(BaseModel):
                 tools = self._add_delegation_tools(task, tools)
 
         # Add code execution tools if agent allows code execution
-        if hasattr(agent, "allow_code_execution") and getattr(agent, "allow_code_execution", False):
+        if hasattr(agent, "allow_code_execution") and getattr(
+            agent, "allow_code_execution", False
+        ):
             tools = self._add_code_execution_tools(agent, tools)
 
-        if agent and hasattr(agent, "multimodal") and getattr(agent, "multimodal", False):
+        if (
+            agent
+            and hasattr(agent, "multimodal")
+            and getattr(agent, "multimodal", False)
+        ):
             tools = self._add_multimodal_tools(agent, tools)
 
         # Return a List[BaseTool] which is compatible with both Task.execute_sync and Task.execute_async
@@ -905,7 +917,9 @@ class Crew(BaseModel):
         return task.agent
 
     def _merge_tools(
-        self, existing_tools: Union[List[Tool], List[BaseTool]], new_tools: Union[List[Tool], List[BaseTool]]
+        self,
+        existing_tools: Union[List[Tool], List[BaseTool]],
+        new_tools: Union[List[Tool], List[BaseTool]],
     ) -> List[BaseTool]:
         """Merge new tools into existing tools list, avoiding duplicates by tool name."""
         if not new_tools:
@@ -923,7 +937,10 @@ class Crew(BaseModel):
         return cast(List[BaseTool], tools)
 
     def _inject_delegation_tools(
-        self, tools: Union[List[Tool], List[BaseTool]], task_agent: BaseAgent, agents: List[BaseAgent]
+        self,
+        tools: Union[List[Tool], List[BaseTool]],
+        task_agent: BaseAgent,
+        agents: List[BaseAgent],
     ) -> List[BaseTool]:
         if hasattr(task_agent, "get_delegation_tools"):
             delegation_tools = task_agent.get_delegation_tools(agents)
@@ -931,21 +948,27 @@ class Crew(BaseModel):
             return self._merge_tools(tools, cast(List[BaseTool], delegation_tools))
         return cast(List[BaseTool], tools)
 
-    def _add_multimodal_tools(self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]) -> List[BaseTool]:
+    def _add_multimodal_tools(
+        self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]
+    ) -> List[BaseTool]:
         if hasattr(agent, "get_multimodal_tools"):
             multimodal_tools = agent.get_multimodal_tools()
             # Cast multimodal_tools to the expected type for _merge_tools
             return self._merge_tools(tools, cast(List[BaseTool], multimodal_tools))
         return cast(List[BaseTool], tools)
 
-    def _add_code_execution_tools(self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]) -> List[BaseTool]:
+    def _add_code_execution_tools(
+        self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]
+    ) -> List[BaseTool]:
         if hasattr(agent, "get_code_execution_tools"):
             code_tools = agent.get_code_execution_tools()
             # Cast code_tools to the expected type for _merge_tools
             return self._merge_tools(tools, cast(List[BaseTool], code_tools))
         return cast(List[BaseTool], tools)
 
-    def _add_delegation_tools(self, task: Task, tools: Union[List[Tool], List[BaseTool]]) -> List[BaseTool]:
+    def _add_delegation_tools(
+        self, task: Task, tools: Union[List[Tool], List[BaseTool]]
+    ) -> List[BaseTool]:
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
         if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
             if not tools:
@@ -961,7 +984,9 @@ class Crew(BaseModel):
                 task_name=task.name, task=task.description, agent=role, status="started"
             )
 
-    def _update_manager_tools(self, task: Task, tools: Union[List[Tool], List[BaseTool]]) -> List[BaseTool]:
+    def _update_manager_tools(
+        self, task: Task, tools: Union[List[Tool], List[BaseTool]]
+    ) -> List[BaseTool]:
         if self.manager_agent:
             if task.agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
@@ -1210,7 +1235,7 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        eval_llm: Union[str, InstanceOf[LLM]],
+        eval_llm: Union[str, InstanceOf[BaseLLM]],
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
@@ -1219,11 +1244,6 @@ class Crew(BaseModel):
             llm_instance = create_llm(eval_llm)
             if not llm_instance:
                 raise ValueError("Failed to create LLM instance.")
-                
-            # Ensure we have an LLM instance (not just BaseLLM) for CrewEvaluator
-            from crewai.llm import LLM
-            if not isinstance(llm_instance, LLM):
-                raise TypeError("CrewEvaluator requires an LLM instance, not a BaseLLM instance.")
 
             crewai_event_bus.emit(
                 self,

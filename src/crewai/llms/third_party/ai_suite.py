@@ -36,12 +36,3 @@ class AISuiteLLM(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         return False
-
-    def supports_stop_words(self) -> bool:
-        return False
-
-    def get_context_window_size(self):
-        pass
-
-    def set_callbacks(self, callbacks: List[Any]) -> None:
-        pass

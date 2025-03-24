@@ -165,7 +165,7 @@ class StreamingChoices(TypedDict):
     finish_reason: Optional[str]
 
 
-class LLM:
+class LLM(BaseLLM):
     def __init__(
         self,
         model: str,
