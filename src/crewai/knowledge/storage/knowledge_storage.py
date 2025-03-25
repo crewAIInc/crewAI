@@ -14,6 +14,7 @@ from chromadb.config import Settings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.chromadb import sanitize_collection_name
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
@@ -98,8 +99,6 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 else "knowledge"
             )
             if self.app:
-                from crewai.utilities.chromadb import sanitize_collection_name
-
                 self.collection = self.app.get_or_create_collection(
                     name=sanitize_collection_name(collection_name),
                     embedding_function=self.embedder,
