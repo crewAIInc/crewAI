@@ -4,7 +4,7 @@ description: Learn how to use Weights & Biases (W&B) Weave to track, experiment 
 icon: insights
 ---
 
-# Weave Integration
+# Weave Overview
 
 [Weights & Biases (W&B) Weave](https://weave-docs.wandb.ai/) is a framework for tracking, experimenting with, evaluating, deploying, and improving LLM-based applications. 
 
@@ -106,3 +106,19 @@ Weave automatically captures traces for your CrewAI applications, enabling you t
       </Frame>
     </Step>
 </Steps>
+
+## Features
+
+- Weave automatically captures all CrewAI operations: agent interactions and task executions; LLM calls with metadata and token usage; tool usage and results.
+- The integration supports all CrewAI execution methods: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, and `kickoff_for_each_async()`.
+- Automatic tracing of all [crewAI-tools](https://github.com/crewAIInc/crewAI-tools).
+- Flow feature support with decorator patching (`@start`, `@listen`, `@router`, `@or_`, `@and_`).
+- Track custom guardrails passed to CrewAI `Task` with `@weave.op()`.
+
+For detailed information on what's supported, visit the [Weave CrewAI documentation](https://weave-docs.wandb.ai/guides/integrations/crewai/#getting-started-with-flow).
+
+## Resources
+
+- [📘 Weave Documentation](https://weave-docs.wandb.ai)
+- [📊 Example Weave x CrewAI dashboard](https://wandb.ai/ayut/crewai_demo/weave/traces?cols=%7B%22wb_run_id%22%3Afalse%2C%22attributes.weave.client_version%22%3Afalse%2C%22attributes.weave.os_name%22%3Afalse%2C%22attributes.weave.os_release%22%3Afalse%2C%22attributes.weave.os_version%22%3Afalse%2C%22attributes.weave.source%22%3Afalse%2C%22attributes.weave.sys_version%22%3Afalse%7D&peekPath=%2Fayut%2Fcrewai_demo%2Fcalls%2F0195c838-38cb-71a2-8a15-651ecddf9d89)
+- [🐦 X](https://x.com/weave_wb)
