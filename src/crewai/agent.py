@@ -91,7 +91,7 @@ class Agent(BaseAgent):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
-    tools_results: Optional[List[Any]] = Field(
+    tools_results: Optional[List[Dict[str, Any]]] = Field(
         default=[], description="Results of the tools used by the agent."
     )
     allow_code_execution: Optional[bool] = Field(
@@ -305,12 +305,12 @@ class Agent(BaseAgent):
         Returns:
             An instance of the CrewAgentExecutor class.
         """
-        tools = tools or self.tools or []
-        parsed_tools = parse_tools(tools)
+        raw_tools: List[BaseTool] = tools or self.tools or []
+        parsed_tools = parse_tools(raw_tools)
 
         prompt = Prompts(
             agent=self,
-            tools=tools,
+            has_tools=len(raw_tools) > 0,
             i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
@@ -332,7 +332,7 @@ class Agent(BaseAgent):
             crew=self.crew,
             tools=parsed_tools,
             prompt=prompt,
-            original_tools=tools,
+            original_tools=raw_tools,
             stop_words=stop_words,
             max_iter=self.max_iter,
             tools_handler=self.tools_handler,

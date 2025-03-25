@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 
 
 class CrewAgentExecutorMixin:
-    crew: Optional["Crew"]
-    agent: Optional["BaseAgent"]
-    task: Optional["Task"]
+    crew: "Crew"
+    agent: "BaseAgent"
+    task: "Task"
     iterations: int
     max_iter: int
     _i18n: I18N

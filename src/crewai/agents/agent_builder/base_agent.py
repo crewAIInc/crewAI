@@ -249,10 +249,6 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
-        pass
-
-    @abstractmethod
     def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
         pass

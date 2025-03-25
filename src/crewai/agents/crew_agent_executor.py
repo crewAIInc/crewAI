@@ -13,8 +13,10 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.lite_agent import LiteAgent
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.agent_utils import (
@@ -57,7 +59,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
-        tools: List[BaseTool],
+        tools: List[Union[CrewStructuredTool, BaseTool]],
         tools_names: str,
         stop_words: List[str],
         tools_description: str,
@@ -93,7 +95,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
-        self.tool_name_to_tool_map: Dict[str, BaseTool] = {
+        self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
             tool.name: tool for tool in self.tools
         }
         self.stop = stop_words
@@ -344,11 +346,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             tool_usage = ToolUsage(
                 tools_handler=self.tools_handler,
                 tools=self.tools,
-                original_tools=self.original_tools,
-                tools_description=self.tools_description,
-                tools_names=self.tools_names,
                 function_calling_llm=self.function_calling_llm,
-                task=self.task,  # type: ignore[arg-type]
+                task=self.task,
                 agent=self.agent,
                 action=agent_action,
             )
@@ -377,7 +376,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 return ToolResult(result=tool_result, result_as_answer=False)
 
         except Exception as e:
-            # TODO: drop
             if self.agent:
                 crewai_event_bus.emit(
                     self,

@@ -18,6 +18,7 @@ from crewai.agents.parser import (
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N
 from crewai.utilities.agent_utils import (
@@ -123,14 +124,15 @@ class LiteAgent(BaseModel):
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
+    tools_results: Optional[List[Dict[str, Any]]] = Field(
+        default=[], description="Results of the tools used by the agent."
+    )
 
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
     _times_executed: int = PrivateAttr(default=0)
     _max_retry_limit: int = PrivateAttr(default=2)
     _key: str = PrivateAttr(default_factory=lambda: str(uuid.uuid4()))
-    # Store tool results for tracking
-    _tools_results: List[Dict[str, Any]] = PrivateAttr(default_factory=list)
     # Store messages for conversation
     _messages: List[Dict[str, str]] = PrivateAttr(default_factory=list)
     # Iteration counter
@@ -140,8 +142,8 @@ class LiteAgent(BaseModel):
     _tools_errors: int = PrivateAttr(default=0)
     _delegations: Dict[str, int] = PrivateAttr(default_factory=dict)
     # Internationalization
-    _i18n: I18N = PrivateAttr(default_factory=I18N)
     _printer: Printer = PrivateAttr(default_factory=Printer)
+    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
     request_within_rpm_limit: Optional[Callable[[], bool]] = Field(
         default=None,
         description="Callback to check if the request is within the RPM limit",
@@ -177,16 +179,16 @@ class LiteAgent(BaseModel):
         """Get the default system prompt for the agent."""
         if self.tools:
             # Use the prompt template for agents with tools
-            return self._i18n.slice("lite_agent_system_prompt_with_tools").format(
+            return self.i18n.slice("lite_agent_system_prompt_with_tools").format(
                 role=self.role,
                 backstory=self.backstory,
                 goal=self.goal,
-                tools=format_tools_description(),
-                tool_names=self._get_tools_names(),
+                tools=render_text_description_and_args(self.tools),
+                tool_names=get_tool_names(self.tools),
             )
         else:
             # Use the prompt template for agents without tools
-            return self._i18n.slice("lite_agent_system_prompt_without_tools").format(
+            return self.i18n.slice("lite_agent_system_prompt_without_tools").format(
                 role=self.role,
                 backstory=self.backstory,
                 goal=self.goal,
@@ -335,7 +337,7 @@ class LiteAgent(BaseModel):
         """
         # Reset state for this run
         self._iterations = 0
-        self._tools_results = []
+        self.tools_results = []
 
         # Format messages for the LLM
         self._messages = self._format_messages(messages)
@@ -424,27 +426,28 @@ class LiteAgent(BaseModel):
         Returns:
             str: The final result of the agent execution.
         """
-        # Set up tools handler for tool execution
-        tools_handler = ToolsHandler(cache=self._cache_handler)
+        # # Set up tools handler for tool execution
+        # tools_handler = ToolsHandler(cache=self._cache_handler)
 
+        # TODO: MOVE TO INIT
         # Set up callbacks for token tracking
         token_callback = TokenCalcHandler(token_cost_process=self._token_process)
         callbacks = [token_callback]
 
-        # Prepare tool configurations
-        parsed_tools = parse_tools(self.tools)
-        tools_description = render_text_description_and_args(parsed_tools)
-        tools_names = get_tool_names(parsed_tools)
+        # # Prepare tool configurations
+        # parsed_tools = parse_tools(self.tools)
+        # tools_description = render_text_description_and_args(parsed_tools)
+        # tools_names = get_tool_names(parsed_tools)
 
         # Execute the agent loop
         formatted_answer = None
         while not isinstance(formatted_answer, AgentFinish):
-            try :
+            try:
                 if has_reached_max_iterations(self._iterations, self.max_iterations):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
                         printer=self._printer,
-                        i18n=self._i18n,
+                        i18n=self.i18n,
                         messages=self._messages,
                         llm=self.llm,
                         callbacks=callbacks,
@@ -460,254 +463,75 @@ class LiteAgent(BaseModel):
                 )
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
-
-        while self._iterations < self.max_iterations:
-            try:
-                # Execute the LLM
-                llm_instance = self.llm
-                if not isinstance(llm_instance, LLM):
-                    llm_instance = create_llm(llm_instance)
-
-                if llm_instance is None:
-                    raise ValueError(
-                        "LLM instance is None. Please provide a valid LLM."
-                    )
-
-                # Set response_format if supported
-                try:
-                    if (
-                        self.response_format
-                        and hasattr(llm_instance, "response_format")
-                        and not llm_instance.response_format
-                    ):
-                        provider = getattr(
-                            llm_instance, "_get_custom_llm_provider", lambda: None
-                        )()
-                        from litellm.utils import supports_response_schema
-
-                        if hasattr(llm_instance, "model") and supports_response_schema(
-                            model=llm_instance.model, custom_llm_provider=provider
-                        ):
-                            llm_instance.response_format = self.response_format
-                except Exception as e:
-                    if self.verbose:
-                        print(f"Warning: Could not set response_format: {e}")
-
-                # Get the LLM's response
-                answer = llm_instance.call(
-                    messages=self._messages,
-                    tools=parsed_tools,
-                    callbacks=callbacks,
-                )
-
-                # Keep a copy of the original answer in case we need to fall back to it
-                original_answer = answer
-
-                # Pre-process the answer to correct formatting issues
-                answer = self._preprocess_model_output(answer)
-
-                # Parse the response into an action or final answer
-                parser = CrewAgentParser(agent=cast(BaseAgent, self))
-                try:
-                    formatted_answer = parser.parse(answer)
-                except OutputParserException as e:
-                    if self.verbose:
-                        print(f"Parser error: {str(e)}")
-
-                    # If we have a Final Answer format error and the original answer is substantive,
-                    # return it directly if it looks like a final answer
-                    if (
-                        "Final Answer" in str(e)
-                        and len(original_answer.strip()) > 20
-                        and "Action:" not in original_answer
-                    ):
-                        if self.verbose:
-                            print(
-                                "Returning original answer directly as final response"
-                            )
-                        return original_answer
-
-                    # Try to reformat and parse again
-                    reformatted = self._preprocess_model_output(
-                        "Thought: I need to provide an answer.\n\nFinal Answer: "
-                        + original_answer
-                    )
-
-                    # Try parsing again
-                    try:
-                        formatted_answer = parser.parse(reformatted)
-                    except Exception:
-                        # If we still can't parse, just use the original answer
-                        return original_answer
-
-                # If the agent wants to use a tool
                 if isinstance(formatted_answer, AgentAction):
-                    # Find the appropriate tool
-                    tool_name = formatted_answer.tool
-                    tool_input = formatted_answer.tool_input
-
-                    # Emit tool usage event
-                    crewai_event_bus.emit(
-                        self,
-                        event=ToolUsageStartedEvent(
-                            agent_key=self.key,
-                            agent_role=self.role,
-                            tool_name=tool_name,
-                            tool_args=tool_input,
-                            tool_class=tool_name,
-                        ),
+                    tool_result = self._execute_tool_and_check_finality(
+                        formatted_answer
+                    )
+                    formatted_answer = self._handle_agent_action(
+                        formatted_answer, tool_result
                     )
 
-                    # Use the tool
-                    if tool_name in tool_map:
-                        tool = tool_map[tool_name]
-                        try:
-                            if hasattr(tool, "_run"):
-                                # BaseTool interface
-                                # Ensure tool_input is a proper dict with string keys
-                                if isinstance(tool_input, dict):
-                                    result = tool._run(
-                                        **{str(k): v for k, v in tool_input.items()}
-                                    )
-                                else:
-                                    result = tool._run(tool_input)
-                            elif hasattr(tool, "run"):
-                                # Another common interface
-                                if isinstance(tool_input, dict):
-                                    result = tool.run(
-                                        **{str(k): v for k, v in tool_input.items()}
-                                    )
-                                else:
-                                    result = tool.run(tool_input)
-                            else:
-                                result = f"Error: Tool '{tool_name}' does not have a supported execution method."
-
-                            # Check if tool result should be the final answer
-                            result_as_answer = getattr(tool, "result_as_answer", False)
-
-                            # Add to tools_results for tracking
-                            self._tools_results.append(
-                                {
-                                    "result": result,
-                                    "tool_name": tool_name,
-                                    "tool_args": tool_input,
-                                    "result_as_answer": result_as_answer,
-                                }
-                            )
-
-                            # Create tool result
-                            tool_result = ToolResult(
-                                result=result, result_as_answer=result_as_answer
-                            )
-
-                            # If the tool result should be the final answer, return it
-                            if tool_result.result_as_answer:
-                                return tool_result.result
-
-                            # Add the result to the formatted answer and messaging
-                            formatted_answer.result = tool_result.result
-                            formatted_answer.text += (
-                                f"\nObservation: {tool_result.result}"
-                            )
-
-                            # Execute the step callback if provided
-                            if self.step_callback:
-                                self.step_callback(formatted_answer)
-
-                            # Add the assistant message to the conversation
-                            self._messages.append(
-                                {"role": "assistant", "content": formatted_answer.text}
-                            )
-
-                        except Exception as e:
-                            error_message = f"Error using tool '{tool_name}': {str(e)}"
-                            if self.verbose:
-                                print(error_message)
-                            # Add error message to conversation
-                            self._messages.append(
-                                {"role": "user", "content": error_message}
-                            )
-                    else:
-                        # Tool not found
-                        error_message = f"Tool '{tool_name}' not found. Available tools: {tools_names}"
-                        if self.verbose:
-                            print(error_message)
-                        # Add error message to conversation
-                        self._messages.append(
-                            {"role": "user", "content": error_message}
-                        )
-
-                # If the agent provided a final answer
-                elif isinstance(formatted_answer, AgentFinish):
-                    # Execute the step callback if provided
-                    if self.step_callback:
-                        self.step_callback(formatted_answer)
-
-                    # Return the output
-                    return formatted_answer.output
-                else:
-                    # If formatted_answer is None, return the original answer
-                    if not formatted_answer and original_answer:
-                        return original_answer
-
-                # Increment the iteration counter
-                self._iterations += 1
+                self._invoke_step_callback(formatted_answer)
+                self._append_message(formatted_answer.text, role="assistant")
 
             except Exception as e:
-                if self.verbose:
-                    print(f"Error during agent execution: {e}")
-                # Add error message to conversation
-                self._messages.append({"role": "user", "content": f"Error: {str(e)}"})
-                self._iterations += 1
+                print(f"Error: {e}")
 
-        # If we've reached max iterations without a final answer, force one
-        if self.verbose:
-            print("Maximum iterations reached. Requesting final answer.")
+    def _execute_tool_and_check_finality(self, agent_action: AgentAction) -> ToolResult:
+        try:
+            crewai_event_bus.emit(
+                self,
+                event=ToolUsageStartedEvent(
+                    agent_key=self.key,
+                    agent_role=self.role,
+                    tool_name=agent_action.tool,
+                    tool_args=agent_action.tool_input,
+                    tool_class=agent_action.tool,
+                ),
+            )
+            tool_usage = ToolUsage(
+                tools=self.tools,
+                original_tools=self.tools,  # TODO: INVESTIGATE DIFF BETWEEN THIS AND ABOVE
+                tools_description=render_text_description_and_args(self.tools),
+                tools_names=get_tool_names(self.tools),
+                agent=self,
+                action=agent_action,
+            )
+            tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
-        # Add a message requesting a final answer
-        self._messages.append(
-            {
-                "role": "user",
-                "content": "You've been thinking for a while. Please provide your final answer now.",
-            }
-        )
+            if isinstance(tool_calling, ToolUsageErrorException):
+                tool_result = tool_calling.message
+                return ToolResult(result=tool_result, result_as_answer=False)
+            else:
+                if tool_calling.tool_name.casefold().strip() in [
+                    name.casefold().strip() for name in self.tool_name_to_tool_map
+                ] or tool_calling.tool_name.casefold().replace("_", " ") in [
+                    name.casefold().strip() for name in self.tool_name_to_tool_map
+                ]:
+                    tool_result = tool_usage.use(tool_calling, agent_action.text)
+                    tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
+                    if tool:
+                        return ToolResult(
+                            result=tool_result, result_as_answer=tool.result_as_answer
+                        )
+                else:
+                    tool_result = self._i18n.errors("wrong_tool_name").format(
+                        tool=tool_calling.tool_name,
+                        tools=", ".join([tool.name.casefold() for tool in self.tools]),
+                    )
+                return ToolResult(result=tool_result, result_as_answer=False)
 
-        # Get the final answer from the LLM
-        llm_instance = self.llm
-        if not isinstance(llm_instance, LLM):
-            llm_instance = create_llm(llm_instance)
-
-        if llm_instance is None:
-            raise ValueError("LLM instance is None. Please provide a valid LLM.")
-
-        final_answer = llm_instance.call(
-            messages=self._messages,
-            callbacks=callbacks,
-        )
-
-        return final_answer
-
-    @property
-    def tools_results(self) -> List[Dict[str, Any]]:
-        """Get the tools results for this agent."""
-        return self._tools_results
-
-    def increment_formatting_errors(self) -> None:
-        """Increment the formatting errors counter."""
-        self._formatting_errors += 1
-
-    def increment_tools_errors(self) -> None:
-        """Increment the tools errors counter."""
-        self._tools_errors += 1
-
-    def increment_delegations(self, agent_name: Optional[str] = None) -> None:
-        """
-        Increment the delegations counter for a specific agent.
-
-        Args:
-            agent_name: The name of the agent being delegated to.
-        """
-        if agent_name:
-            if agent_name not in self._delegations:
-                self._delegations[agent_name] = 0
-            self._delegations[agent_name] += 1
+        except Exception as e:
+            if self.agent:
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(  # validation error
+                        agent_key=self.agent.key,
+                        agent_role=self.agent.role,
+                        tool_name=agent_action.tool,
+                        tool_args=agent_action.tool_input,
+                        tool_class=agent_action.tool,
+                        error=str(e),
+                    ),
+                )
+            raise e

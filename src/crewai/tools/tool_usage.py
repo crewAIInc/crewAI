@@ -11,12 +11,17 @@ import json5
 from json_repair import repair_json
 
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.lite_agent import LiteAgent
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
+from crewai.utilities.agent_utils import (
+    get_tool_names,
+    render_text_description_and_args,
+)
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import (
     ToolSelectionErrorEvent,
@@ -60,14 +65,11 @@ class ToolUsage:
 
     def __init__(
         self,
-        tools_handler: ToolsHandler,
-        tools: List[BaseTool],
-        original_tools: List[Any],
-        tools_description: str,
-        tools_names: str,
+        tools_handler: Optional[ToolsHandler],
+        tools: List[Union[CrewStructuredTool, BaseTool]],
         task: Task,
         function_calling_llm: Any,
-        agent: Any,
+        agent: Union[BaseAgent, LiteAgent],
         action: Any,
     ) -> None:
         self._i18n: I18N = agent.i18n
@@ -77,10 +79,9 @@ class ToolUsage:
         self._max_parsing_attempts: int = 3
         self._remember_format_after_usages: int = 3
         self.agent = agent
-        self.tools_description = tools_description
-        self.tools_names = tools_names
+        self.tools_description = render_text_description_and_args(tools)
+        self.tools_names = get_tool_names(tools)
         self.tools_handler = tools_handler
-        self.original_tools = original_tools
         self.tools = tools
         self.task = task
         self.action = action
@@ -134,9 +135,9 @@ class ToolUsage:
     def _use(
         self,
         tool_string: str,
-        tool: Any,
+        tool: CrewStructuredTool,
         calling: Union[ToolCalling, InstructorToolCalling],
-    ) -> str:  # TODO: Fix this return type
+    ) -> str:
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -156,19 +157,24 @@ class ToolUsage:
         started_at = time.time()
         from_cache = False
 
-        result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
+        result = None
         # check if cache is available
-        if self.tools_handler.cache:
-            result = self.tools_handler.cache.read(  # type: ignore # Incompatible types in assignment (expression has type "str | None", variable has type "str")
+        if self.tools_handler and self.tools_handler.cache:
+            result = self.tools_handler.cache.read(
                 tool=calling.tool_name, input=calling.arguments
             )
             from_cache = result is not None
 
-        original_tool = next(
-            (ot for ot in self.original_tools if ot.name == tool.name), None
+        available_tool = next(
+            (
+                available_tool
+                for available_tool in self.tools
+                if available_tool.name == tool.name
+            ),
+            None,
         )
 
-        if result is None:  #! finecwg: if not result --> if result is None
+        if result is None:
             try:
                 if calling.tool_name in [
                     "Delegate work to coworker",
@@ -217,10 +223,10 @@ class ToolUsage:
             if self.tools_handler:
                 should_cache = True
                 if (
-                    hasattr(original_tool, "cache_function")
-                    and original_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+                    hasattr(available_tool, "cache_function")
+                    and available_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
                 ):
-                    should_cache = original_tool.cache_function(  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+                    should_cache = available_tool.cache_function(  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
                         calling.arguments, result
                     )
 
@@ -247,10 +253,10 @@ class ToolUsage:
         )
 
         if (
-            hasattr(original_tool, "result_as_answer")
-            and original_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+            hasattr(available_tool, "result_as_answer")
+            and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
         ):
-            result_as_answer = original_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
+            result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
             data["result_as_answer"] = result_as_answer
 
         self.agent.tools_results.append(data)
