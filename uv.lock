@@ -140,6 +140,18 @@ wheels = [
 ]
 
 [[package]]
+name = "aisuite"
+version = "0.1.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6a/9d/c7a8a76abb9011dd2bc9a5cb8ffa8231640e20bbdae177ce9ab6cb67c66c/aisuite-0.1.10.tar.gz", hash = "sha256:170e62d4c91fecb22e82a04e058154a111cef473681171e5df7346272e77f414", size = 29052 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/58/c2/9a34a01516de107e5f9406dbfd319b6004340708101d67fa107373da4058/aisuite-0.1.10-py3-none-any.whl", hash = "sha256:c8510ebe38d6546b6a06819171e201fcaf0bf9ae020ffcfe19b6bd90430781ad", size = 43984 },
+]
+
+[[package]]
 name = "alembic"
 version = "1.13.3"
 source = { registry = "https://pypi.org/simple" }
@@ -651,6 +663,9 @@ dependencies = [
 agentops = [
     { name = "agentops" },
 ]
+aisuite = [
+    { name = "aisuite" },
+]
 docling = [
     { name = "docling" },
 ]
@@ -698,6 +713,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agentops", marker = "extra == 'agentops'", specifier = ">=0.3.0" },
+    { name = "aisuite", marker = "extra == 'aisuite'", specifier = ">=0.1.10" },
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "auth0-python", specifier = ">=4.7.1" },
     { name = "blinker", specifier = ">=1.9.0" },
