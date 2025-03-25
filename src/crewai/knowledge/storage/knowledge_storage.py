@@ -98,8 +98,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 else "knowledge"
             )
             if self.app:
+                from crewai.utilities.chromadb import sanitize_collection_name
+
                 self.collection = self.app.get_or_create_collection(
-                    name=collection_name, embedding_function=self.embedder
+                    name=sanitize_collection_name(collection_name),
+                    embedding_function=self.embedder,
                 )
             else:
                 raise Exception("Vector Database Client not initialized")

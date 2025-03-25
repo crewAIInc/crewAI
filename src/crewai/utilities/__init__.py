@@ -7,7 +7,6 @@ from .parser import YamlParser
 from .printer import Printer
 from .prompts import Prompts
 from .rpm_controller import RPMController
-from .string_utils import sanitize_collection_name, is_ipv4_pattern
 from .exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -26,6 +25,4 @@ __all__ = [
     "YamlParser",
     "LLMContextLengthExceededException",
     "EmbeddingConfigurator",
-    "sanitize_collection_name",
-    "is_ipv4_pattern",
 ]

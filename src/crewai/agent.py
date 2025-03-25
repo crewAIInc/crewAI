@@ -142,20 +142,13 @@ class Agent(BaseAgent):
                 self.embedder = crew_embedder
 
             if self.knowledge_sources:
-                try:
-                    from crewai.utilities import sanitize_collection_name
-                    knowledge_agent_name = sanitize_collection_name(self.role)
-                except Exception as e:
-                    self._logger.warning(f"Error sanitizing collection name: {e}")
-                    knowledge_agent_name = "default_agent"
-                    
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
                         embedder=self.embedder,
-                        collection_name=knowledge_agent_name,
+                        collection_name=self.role,
                         storage=self.knowledge_storage or None,
                     )
         except (TypeError, ValueError) as e:
