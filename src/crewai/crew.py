@@ -388,27 +388,6 @@ class Crew(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_end_with_at_most_one_async_task(self):
-        """Validates that the crew ends with at most one asynchronous task."""
-        final_async_task_count = 0
-
-        # Traverse tasks backward
-        for task in reversed(self.tasks):
-            if task.async_execution:
-                final_async_task_count += 1
-            else:
-                break  # Stop traversing as soon as a non-async task is encountered
-
-        if final_async_task_count > 1:
-            raise PydanticCustomError(
-                "async_task_count",
-                "The crew must end with at most one asynchronous task.",
-                {},
-            )
-
-        return self
-
-    @model_validator(mode="after")
     def validate_must_have_non_conditional_task(self) -> "Crew":
         """Ensure that a crew has at least one non-conditional task."""
         if not self.tasks:
