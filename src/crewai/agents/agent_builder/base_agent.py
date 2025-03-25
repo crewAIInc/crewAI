@@ -2,7 +2,7 @@ import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
 from pydantic import (
     UUID4,
@@ -149,6 +149,9 @@ class BaseAgent(ABC, BaseModel):
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
+    )
+    callbacks: List[Callable] = Field(
+        default=[], description="Callbacks to be used for the agent"
     )
 
     @model_validator(mode="before")

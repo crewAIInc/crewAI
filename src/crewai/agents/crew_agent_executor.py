@@ -6,14 +6,11 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import (
-    FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
     AgentAction,
     AgentFinish,
-    CrewAgentParser,
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.lite_agent import LiteAgent
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -21,7 +18,6 @@ from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
-    format_answer,
     format_message_for_llm,
     get_llm_response,
     handle_max_iterations_exceeded,
@@ -59,7 +55,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
-        tools: List[Union[CrewStructuredTool, BaseTool]],
+        tools: List[CrewStructuredTool],
         tools_names: str,
         stop_words: List[str],
         tools_description: str,

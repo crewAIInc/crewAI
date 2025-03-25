@@ -1,6 +1,5 @@
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
-from crewai.agent import Agent
 from crewai.agents.parser import (
     FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
     AgentAction,
@@ -8,45 +7,34 @@ from crewai.agents.parser import (
     CrewAgentParser,
     OutputParserException,
 )
-from crewai.lite_agent import ToolResult
 from crewai.llm import LLM
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
-from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.tool_usage_events import (
-    ToolUsageErrorEvent,
-    ToolUsageStartedEvent,
-)
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 
 
-def parse_tools(tools: List[BaseTool]) -> List[Union[CrewStructuredTool, BaseTool]]:
+def parse_tools(tools: List[BaseTool]) -> List[CrewStructuredTool]:
     """Parse tools to be used for the task."""
     tools_list = []
-    try:
-        for tool in tools:
-            if isinstance(tool, CrewAITool):
-                tools_list.append(tool.to_structured_tool())
-            else:
-                tools_list.append(tool)
-    except ModuleNotFoundError:
-        tools_list = []
-        for tool in tools:
-            tools_list.append(tool)
+
+    for tool in tools:
+        if isinstance(tool, CrewAITool):
+            tools_list.append(tool.to_structured_tool())
+        else:
+            raise ValueError("Tool is not a CrewStructuredTool or BaseTool")
 
     return tools_list
 
 
-def get_tool_names(tools: List[Union[CrewStructuredTool, BaseTool]]) -> str:
+def get_tool_names(tools: Sequence[Union[CrewStructuredTool, BaseTool]]) -> str:
     """Get the names of the tools."""
     return ", ".join([t.name for t in tools])
 
 
 def render_text_description_and_args(
-    tools: List[Union[CrewStructuredTool, BaseTool]]
+    tools: Sequence[Union[CrewStructuredTool, BaseTool]]
 ) -> str:
     """Render the tool name, description, and args in plain text.
     

@@ -5,14 +5,12 @@ import time
 from difflib import SequenceMatcher
 from json import JSONDecodeError
 from textwrap import dedent
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import json5
 from json_repair import repair_json
 
-from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.lite_agent import LiteAgent
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools import BaseTool
@@ -30,6 +28,10 @@ from crewai.utilities.events.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolValidateInputErrorEvent,
 )
+
+if TYPE_CHECKING:
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.lite_agent import LiteAgent
 
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
@@ -67,10 +69,10 @@ class ToolUsage:
     def __init__(
         self,
         tools_handler: Optional[ToolsHandler],
-        tools: List[Union[CrewStructuredTool, BaseTool]],
-        task: Task,
+        tools: List[CrewStructuredTool],
+        task: Optional[Task],
         function_calling_llm: Any,
-        agent: Union[BaseAgent, LiteAgent],
+        agent: Union["BaseAgent", "LiteAgent"],
         action: Any,
     ) -> None:
         self._i18n: I18N = agent.i18n
@@ -103,18 +105,21 @@ class ToolUsage:
     def use(
         self, calling: Union[ToolCalling, InstructorToolCalling], tool_string: str
     ) -> str:
+        print("USING A TOOL", calling, tool_string)
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
             if self.agent.verbose:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
-            self.task.increment_tools_errors()
+            if self.task:
+                self.task.increment_tools_errors()
             return error
 
         try:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
             error = getattr(e, "message", str(e))
-            self.task.increment_tools_errors()
+            if self.task:
+                self.task.increment_tools_errors()
             if self.agent.verbose:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
@@ -126,7 +131,8 @@ class ToolUsage:
 
             except Exception as e:
                 error = getattr(e, "message", str(e))
-                self.task.increment_tools_errors()
+                if self.task:
+                    self.task.increment_tools_errors()
                 if self.agent.verbose:
                     self._printer.print(content=f"\n\n{error}\n", color="red")
                 return error
@@ -139,6 +145,8 @@ class ToolUsage:
         tool: CrewStructuredTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:
+        print("USING A TOOL: ", tool)
+        print("Type of tool: ", type(tool))
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -153,7 +161,8 @@ class ToolUsage:
                 return result  # type: ignore # Fix the return type of this function
 
             except Exception:
-                self.task.increment_tools_errors()
+                if self.task:
+                    self.task.increment_tools_errors()
 
         started_at = time.time()
         from_cache = False
@@ -184,7 +193,8 @@ class ToolUsage:
                     coworker = (
                         calling.arguments.get("coworker") if calling.arguments else None
                     )
-                    self.task.increment_delegations(coworker)
+                    if self.task:
+                        self.task.increment_delegations(coworker)
 
                 if calling.arguments:
                     try:
@@ -211,14 +221,16 @@ class ToolUsage:
                     error = ToolUsageErrorException(
                         f'\n{error_message}.\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                     ).message
-                    self.task.increment_tools_errors()
+                    if self.task:
+                        self.task.increment_tools_errors()
                     if self.agent.verbose:
                         self._printer.print(
                             content=f"\n\n{error_message}\n", color="red"
                         )
                     return error  # type: ignore # No return value expected
 
-                self.task.increment_tools_errors()
+                if self.task:
+                    self.task.increment_tools_errors()
                 return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
 
             if self.tools_handler:
@@ -266,13 +278,16 @@ class ToolUsage:
         return result  # type: ignore # No return value expected
 
     def _format_result(self, result: Any) -> None:
-        self.task.used_tools += 1
+        if self.task:
+            self.task.used_tools += 1
         if self._should_remember_format():  # type: ignore # "_should_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
             result = self._remember_format(result=result)  # type: ignore # "_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
         return result
 
     def _should_remember_format(self) -> bool:
-        return self.task.used_tools % self._remember_format_after_usages == 0
+        if self.task:
+            return self.task.used_tools % self._remember_format_after_usages == 0
+        return False
 
     def _remember_format(self, result: str) -> None:
         result = str(result)
@@ -308,7 +323,8 @@ class ToolUsage:
                 > 0.85
             ):
                 return tool
-        self.task.increment_tools_errors()
+        if self.task:
+            self.task.increment_tools_errors()
         tool_selection_data = {
             "agent_key": self.agent.key,
             "agent_role": self.agent.role,
@@ -421,7 +437,8 @@ class ToolUsage:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                self.task.increment_tools_errors()
+                if self.task:
+                    self.task.increment_tools_errors()
                 if self.agent.verbose:
                     self._printer.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
@@ -452,6 +469,7 @@ class ToolUsage:
             if isinstance(arguments, dict):
                 return arguments
         except (ValueError, SyntaxError):
+            repaired_input = repair_json(tool_input)
             pass  # Continue to the next parsing attempt
 
         # Attempt 3: Parse as JSON5
@@ -530,7 +548,7 @@ class ToolUsage:
             "agent_key": self.agent.key,
             "agent_role": (self.agent._original_role or self.agent.role),
             "run_attempts": self._run_attempts,
-            "delegations": self.task.delegations,
+            "delegations": self.task.delegations if self.task else 0,
             "tool_name": tool.name,
             "tool_args": tool_calling.arguments,
             "tool_class": tool.__class__.__name__,
