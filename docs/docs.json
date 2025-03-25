@@ -97,14 +97,19 @@
               "how-to/kickoff-async",
               "how-to/kickoff-for-each",
               "how-to/replay-tasks-from-latest-crew-kickoff",
-              "how-to/conditional-tasks",
+              "how-to/conditional-tasks"
+            ]
+          },
+          {
+            "group": "Agent Monitoring & Observability",
+            "pages": [
               "how-to/weave-integration",
               "how-to/agentops-observability",
+              "how-to/langfuse-observability",
               "how-to/langtrace-observability",
               "how-to/mlflow-observability",
               "how-to/openlit-observability",
-              "how-to/portkey-observability",
-              "how-to/langfuse-observability"
+              "how-to/portkey-observability"
             ]
           },
           {
