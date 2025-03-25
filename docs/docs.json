@@ -98,6 +98,7 @@
               "how-to/kickoff-for-each",
               "how-to/replay-tasks-from-latest-crew-kickoff",
               "how-to/conditional-tasks",
+              "how-to/weave-integration",
               "how-to/agentops-observability",
               "how-to/langtrace-observability",
               "how-to/mlflow-observability",
