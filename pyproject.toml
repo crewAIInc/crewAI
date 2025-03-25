@@ -37,6 +37,8 @@ dependencies = [
     "tomli>=2.0.2",
     "blinker>=1.9.0",
     "json5>=0.10.0",
+    # CrewAI Tools
+    "crewai-tools>=0.37.0"
 ]
 
 [project.urls]
@@ -45,7 +47,6 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools>=0.37.0"]
 embeddings = [
     "tiktoken~=0.7.0"
 ]
