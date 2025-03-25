@@ -149,6 +149,7 @@ nav:
     - Kickoff a Crew for a List: 'how-to/Kickoff-for-each.md'
     - Replay from a specific task from a kickoff: 'how-to/Replay-tasks-from-latest-Crew-Kickoff.md'
     - Conditional Tasks: 'how-to/Conditional-Tasks.md'
+    - Agent Monitoring with Weave: 'how-to/weave-integration.md'
     - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
     - Agent Monitoring with LangTrace: 'how-to/Langtrace-Observability.md'
     - Agent Monitoring with OpenLIT: 'how-to/openlit-Observability.md'
