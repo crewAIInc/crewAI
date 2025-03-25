@@ -74,43 +74,43 @@ async def main():
         response_format=ResearchResult,  # Optional: Use a structured output format
     )
 
-    # Example 1: Simple query with raw text response
-    print("\n=== Example 1: Simple Query ===")
-    result = await agent.kickoff_async("What is the population of Tokyo in 2023?")
-    print(f"Raw response: {result.raw}")
+    # # Example 1: Simple query with raw text response
+    # print("\n=== Example 1: Simple Query ===")
+    # result = await agent.kickoff_async("What is the population of Tokyo in 2023?")
+    # print(f"Raw response: {result.raw}")
 
-    # # Example 2: Query with structured output
-    # print("\n=== Example 2: Structured Output ===")
-    # structured_query = """
-    # Research the impact of climate change on coral reefs.
+    # Example 2: Query with structured output
+    print("\n=== Example 2: Structured Output ===")
+    structured_query = """
+    Research the impact of climate change on coral reefs.
 
-    # YOU MUST format your response as a valid JSON object with the following structure:
-    # {
-    #   "main_findings": "A summary of the main findings",
-    #   "key_points": ["Point 1", "Point 2", "Point 3"],
-    #   "sources": ["Source 1", "Source 2"]
-    # }
+    YOU MUST format your response as a valid JSON object with the following structure:
+    {
+      "main_findings": "A summary of the main findings",
+      "key_points": ["Point 1", "Point 2", "Point 3"],
+      "sources": ["Source 1", "Source 2"]
+    }
 
-    # Include at least 3 key points and 2 sources. Wrap your JSON in ```json and ``` tags.
-    # """
+    Include at least 3 key points and 2 sources. Wrap your JSON in ```json and ``` tags.
+    """
 
-    # result = await agent.kickoff_async(structured_query)
+    result = await agent.kickoff_async(structured_query)
 
-    # if result.pydantic:
-    #     # Cast to the specific type for better IDE support
-    #     research_result = cast(ResearchResult, result.pydantic)
-    #     print(f"Main findings: {research_result.main_findings}")
-    #     print("\nKey points:")
-    #     for i, point in enumerate(research_result.key_points, 1):
-    #         print(f"{i}. {point}")
-    #     print("\nSources:")
-    #     for i, source in enumerate(research_result.sources, 1):
-    #         print(f"{i}. {source}")
-    # else:
-    #     print(f"Raw response: {result.raw}")
-    #     print(
-    #         "\nNote: Structured output was not generated. The LLM may need more explicit instructions to format the response as JSON."
-    #     )
+    if result.pydantic:
+        # Cast to the specific type for better IDE support
+        research_result = cast(ResearchResult, result.pydantic)
+        print(f"Main findings: {research_result.main_findings}")
+        print("\nKey points:")
+        for i, point in enumerate(research_result.key_points, 1):
+            print(f"{i}. {point}")
+        print("\nSources:")
+        for i, source in enumerate(research_result.sources, 1):
+            print(f"{i}. {source}")
+    else:
+        print(f"Raw response: {result.raw}")
+        print(
+            "\nNote: Structured output was not generated. The LLM may need more explicit instructions to format the response as JSON."
+        )
 
     # # Example 3: Multi-turn conversation
     # print("\n=== Example 3: Multi-turn Conversation ===")

@@ -32,6 +32,7 @@ from crewai.utilities.agent_utils import (
     process_llm_response,
     render_text_description_and_args,
 )
+from crewai.utilities.converter import convert_to_model, generate_model_description
 from crewai.utilities.events.agent_events import (
     LiteAgentExecutionStartedEvent,
 )
@@ -202,9 +203,10 @@ class LiteAgent(BaseModel):
 
     def _get_default_system_prompt(self) -> str:
         """Get the default system prompt for the agent."""
+        base_prompt = ""
         if self._parsed_tools:
             # Use the prompt template for agents with tools
-            return self.i18n.slice("lite_agent_system_prompt_with_tools").format(
+            base_prompt = self.i18n.slice("lite_agent_system_prompt_with_tools").format(
                 role=self.role,
                 backstory=self.backstory,
                 goal=self.goal,
@@ -213,11 +215,24 @@ class LiteAgent(BaseModel):
             )
         else:
             # Use the prompt template for agents without tools
-            return self.i18n.slice("lite_agent_system_prompt_without_tools").format(
+            base_prompt = self.i18n.slice(
+                "lite_agent_system_prompt_without_tools"
+            ).format(
                 role=self.role,
                 backstory=self.backstory,
                 goal=self.goal,
             )
+
+        # Add response format instructions if specified
+        if self.response_format:
+            schema = generate_model_description(self.response_format)
+            base_prompt += self.i18n.slice("lite_agent_response_format").format(
+                response_format=schema
+            )
+
+        print("BASE PROMPT:", base_prompt)
+
+        return base_prompt
 
     def _format_messages(
         self, messages: Union[str, List[Dict[str, str]]]
@@ -307,10 +322,13 @@ class LiteAgent(BaseModel):
             else:
                 raise e
 
-        # TODO: CREATE AND RETURN LiteAgentOutput
+        formatted_result: Optional[BaseModel] = None
+        if self.response_format:
+            formatted_result = self.response_format.model_validate_json(result.output)
+
         return LiteAgentOutput(
-            raw=result.text,
-            pydantic=None,  # TODO: Add pydantic output
+            raw=result.output,
+            pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=None,  # TODO: Add usage metrics
         )
