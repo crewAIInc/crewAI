@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 import json5
 from json_repair import repair_json
 
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.lite_agent import LiteAgent
 from crewai.task import Task
@@ -259,7 +260,8 @@ class ToolUsage:
             result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
             data["result_as_answer"] = result_as_answer
 
-        self.agent.tools_results.append(data)
+        if hasattr(self.agent, "tools_results"):
+            self.agent.tools_results.append(data)
 
         return result  # type: ignore # No return value expected
 
@@ -375,7 +377,9 @@ class ToolUsage:
 
         return calling
 
-    def _original_tool_calling(self, tool_string: str, raise_error: bool = False):
+    def _original_tool_calling(
+        self, tool_string: str, raise_error: bool = False
+    ) -> Union[ToolCalling, InstructorToolCalling, ToolUsageErrorException]:
         tool_name = self.action.tool
         tool = self._select_tool(tool_name)
         try:
@@ -400,12 +404,11 @@ class ToolUsage:
         return ToolCalling(
             tool_name=tool.name,
             arguments=arguments,
-            log=tool_string,
         )
 
     def _tool_calling(
         self, tool_string: str
-    ) -> Union[ToolCalling, InstructorToolCalling]:
+    ) -> Union[ToolCalling, InstructorToolCalling, ToolUsageErrorException]:
         try:
             try:
                 return self._original_tool_calling(tool_string, raise_error=True)
@@ -461,7 +464,7 @@ class ToolUsage:
 
         # Attempt 4: Repair JSON
         try:
-            repaired_input = repair_json(tool_input)
+            repaired_input = str(repair_json(tool_input))
             self._printer.print(
                 content=f"Repaired JSON: {repaired_input}", color="blue"
             )
@@ -493,12 +496,21 @@ class ToolUsage:
             ToolValidateInputErrorEvent(**tool_selection_data, error=final_error),
         )
 
-    def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
+    def on_tool_error(
+        self,
+        tool: Any,
+        tool_calling: Union[ToolCalling, InstructorToolCalling],
+        e: Exception,
+    ) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
         crewai_event_bus.emit(self, ToolUsageErrorEvent(**{**event_data, "error": e}))
 
     def on_tool_use_finished(
-        self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float
+        self,
+        tool: Any,
+        tool_calling: Union[ToolCalling, InstructorToolCalling],
+        from_cache: bool,
+        started_at: float,
     ) -> None:
         finished_at = time.time()
         event_data = self._prepare_event_data(tool, tool_calling)
@@ -511,7 +523,9 @@ class ToolUsage:
         )
         crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
 
-    def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
+    def _prepare_event_data(
+        self, tool: Any, tool_calling: Union[ToolCalling, InstructorToolCalling]
+    ) -> dict:
         return {
             "agent_key": self.agent.key,
             "agent_role": (self.agent._original_role or self.agent.role),

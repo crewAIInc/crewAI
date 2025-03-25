@@ -129,6 +129,9 @@ class BaseAgent(ABC, BaseModel):
         default_factory=ToolsHandler,
         description="An instance of the ToolsHandler class.",
     )
+    tools_results: List[Dict[str, Any]] = Field(
+        default=[], description="Results of the tools used by the agent."
+    )
     max_tokens: Optional[int] = Field(
         default=None, description="Maximum number of tokens for the agent's execution."
     )

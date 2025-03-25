@@ -91,9 +91,6 @@ class Agent(BaseAgent):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
-    tools_results: Optional[List[Dict[str, Any]]] = Field(
-        default=[], description="Results of the tools used by the agent."
-    )
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )

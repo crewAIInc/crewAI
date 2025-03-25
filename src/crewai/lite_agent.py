@@ -124,7 +124,7 @@ class LiteAgent(BaseModel):
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
-    tools_results: Optional[List[Dict[str, Any]]] = Field(
+    tools_results: List[Dict[str, Any]] = Field(
         default=[], description="Results of the tools used by the agent."
     )
 
