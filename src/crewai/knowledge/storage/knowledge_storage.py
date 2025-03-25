@@ -114,8 +114,20 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 settings=Settings(allow_reset=True),
             )
 
-        self.app.reset()
-        shutil.rmtree(base_path)
+        # If a specific collection name is provided, try to delete just that collection
+        if self.collection_name:
+            try:
+                collection_name = f"knowledge_{self.collection_name}"
+                self.app.delete_collection(name=collection_name)
+                Logger(verbose=True).log("info", f"Collection '{collection_name}' has been reset.")
+            except Exception:
+                # If deletion of specific collection fails, fall back to resetting all
+                self.app.reset()
+                shutil.rmtree(base_path)
+        else:
+            self.app.reset()
+            shutil.rmtree(base_path)
+            
         self.app = None
         self.collection = None
 
@@ -164,15 +176,19 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 ids=filtered_ids,
             )
         except chromadb.errors.InvalidDimensionException as e:
+            collection_reset_cmd = "`crewai reset-memories -a`"
+            if self.collection_name:
+                collection_reset_cmd = f"`crewai reset-memories --knowledge` (for collection: {self.collection_name})"
+            
             Logger(verbose=True).log(
                 "error",
-                "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
+                f"Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting using {collection_reset_cmd}",
                 "red",
             )
             raise ValueError(
-                "Embedding dimension mismatch. Make sure you're using the same embedding model "
-                "across all operations with this collection."
-                "Try resetting the collection using `crewai reset-memories -a`"
+                f"Embedding dimension mismatch. Make sure you're using the same embedding model "
+                f"across all operations with this collection. "
+                f"Try resetting using {collection_reset_cmd}"
             ) from e
         except Exception as e:
             Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
