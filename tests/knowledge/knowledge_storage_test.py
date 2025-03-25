@@ -1,7 +1,7 @@
 import os
+from unittest.mock import MagicMock, patch
 
 import pytest
-from unittest.mock import MagicMock, patch
 
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
