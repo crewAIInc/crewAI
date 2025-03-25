@@ -278,36 +278,65 @@ class LiteAgent(BaseModel):
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
+
+        Raises:
+            Exception: If agent execution fails
         """
-        # Reset state for this run
-        self._iterations = 0
-        self.tools_results = []
-
-        # Format messages for the LLM
-        self._messages = self._format_messages(messages)
-
-        # Create agent info for event emission
-        agent_info = {
-            "role": self.role,
-            "goal": self.goal,
-            "backstory": self.backstory,
-            "tools": self._parsed_tools,
-            "verbose": self.verbose,
-        }
-
-        # Emit event for agent execution start
-        crewai_event_bus.emit(
-            self,
-            event=LiteAgentExecutionStartedEvent(
-                agent_info=agent_info,
-                tools=self._parsed_tools,
-                messages=messages,
-            ),
-        )
-
         try:
+            # Reset state for this run
+            self._iterations = 0
+            self.tools_results = []
+
+            # Format messages for the LLM
+            self._messages = self._format_messages(messages)
+
+            # Create agent info for event emission
+            agent_info = {
+                "role": self.role,
+                "goal": self.goal,
+                "backstory": self.backstory,
+                "tools": self._parsed_tools,
+                "verbose": self.verbose,
+            }
+
+            # Emit event for agent execution start
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionStartedEvent(
+                    agent_info=agent_info,
+                    tools=self._parsed_tools,
+                    messages=messages,
+                ),
+            )
+
             # Execute the agent using invoke loop
-            result = await self._invoke()
+            agent_finish = await self._invoke()
+
+            formatted_result: Optional[BaseModel] = None
+            if self.response_format:
+                try:
+                    # Cast to BaseModel to ensure type safety
+                    result = self.response_format.model_validate_json(
+                        agent_finish.output
+                    )
+                    if isinstance(result, BaseModel):
+                        formatted_result = result
+                except Exception as e:
+                    self._printer.print(
+                        content=f"Failed to parse output into response format: {str(e)}",
+                        color="yellow",
+                    )
+
+            # Calculate token usage metrics
+            usage_metrics = self._token_process.get_summary()
+
+            return LiteAgentOutput(
+                raw=agent_finish.output,
+                pydantic=formatted_result,
+                agent_role=self.role,
+                usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            )
+
         except AssertionError:
             self._printer.print(
                 content="Agent failed to reach a final answer. This is likely a bug - please report it.",
@@ -319,19 +348,7 @@ class LiteAgent(BaseModel):
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
                 raise e
-            else:
-                raise e
-
-        formatted_result: Optional[BaseModel] = None
-        if self.response_format:
-            formatted_result = self.response_format.model_validate_json(result.output)
-
-        return LiteAgentOutput(
-            raw=result.output,
-            pydantic=formatted_result,
-            agent_role=self.role,
-            usage_metrics=None,  # TODO: Add usage metrics
-        )
+            raise e
 
     async def _invoke(self) -> AgentFinish:
         """

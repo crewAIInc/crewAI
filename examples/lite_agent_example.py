@@ -111,6 +111,8 @@ async def main():
         print(
             "\nNote: Structured output was not generated. The LLM may need more explicit instructions to format the response as JSON."
         )
+    print("Usage metrics:")
+    print(result.usage_metrics)
 
     # # Example 3: Multi-turn conversation
     # print("\n=== Example 3: Multi-turn Conversation ===")
