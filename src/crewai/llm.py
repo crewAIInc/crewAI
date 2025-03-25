@@ -40,6 +40,7 @@ with warnings.catch_warnings():
     from litellm.utils import supports_response_schema
 
 
+from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -218,7 +219,7 @@ class StreamingChoices(TypedDict):
     finish_reason: Optional[str]
 
 
-class LLM:
+class LLM(BaseLLM):
     def __init__(
         self,
         model: str,
