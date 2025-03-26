@@ -14,12 +14,10 @@ from crewai.agents.parser import (
     AgentFinish,
     OutputParserException,
 )
-from crewai.agents.tools_handler import ToolsHandler
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
-from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
@@ -230,8 +228,6 @@ class LiteAgent(BaseModel):
                 response_format=schema
             )
 
-        print("BASE PROMPT:", base_prompt)
-
         return base_prompt
 
     def _format_messages(
@@ -310,7 +306,7 @@ class LiteAgent(BaseModel):
             )
 
             # Execute the agent using invoke loop
-            agent_finish = await self._invoke()
+            agent_finish = await self._invoke_loop()
 
             formatted_result: Optional[BaseModel] = None
             if self.response_format:
@@ -350,16 +346,13 @@ class LiteAgent(BaseModel):
                 raise e
             raise e
 
-    async def _invoke(self) -> AgentFinish:
+    async def _invoke_loop(self) -> AgentFinish:
         """
         Run the agent's thought process until it reaches a conclusion or max iterations.
-        Similar to _invoke_loop in CrewAgentExecutor.
 
         Returns:
             str: The final result of the agent execution.
         """
-        # Use the stored callbacks
-        callbacks = self._callbacks
 
         # Execute the agent loop
         formatted_answer = None
@@ -372,7 +365,7 @@ class LiteAgent(BaseModel):
                         i18n=self.i18n,
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
-                        callbacks=callbacks,
+                        callbacks=self._callbacks,
                     )
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
@@ -380,7 +373,7 @@ class LiteAgent(BaseModel):
                 answer = get_llm_response(
                     llm=cast(LLM, self.llm),
                     messages=self._messages,
-                    callbacks=callbacks,
+                    callbacks=self._callbacks,
                     printer=self._printer,
                 )
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
