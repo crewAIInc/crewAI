@@ -507,9 +507,10 @@ class ConsoleFormatter:
 
         # Remove the thinking status node when complete
         if "Thinking" in str(tool_branch.label):
-            agent_branch.children.remove(tool_branch)
-            self.print(crew_tree)
-            self.print()
+            if tool_branch in agent_branch.children:
+                agent_branch.children.remove(tool_branch)
+                self.print(crew_tree)
+                self.print()
 
     def handle_llm_call_failed(
         self, tool_branch: Optional[Tree], error: str, crew_tree: Optional[Tree]
@@ -587,6 +588,7 @@ class ConsoleFormatter:
             for child in flow_tree.children:
                 if "Running tests" in str(child.label):
                     child.label = Text("✅ Tests completed successfully", style="green")
+                    break
 
             self.print(flow_tree)
             self.print()
