@@ -1224,8 +1224,6 @@ class Crew(BaseModel):
 
         return copied_crew
 
-
-
     def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
         for task in self.tasks:
