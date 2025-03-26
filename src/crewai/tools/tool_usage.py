@@ -105,7 +105,6 @@ class ToolUsage:
     def use(
         self, calling: Union[ToolCalling, InstructorToolCalling], tool_string: str
     ) -> str:
-        print("USING A TOOL", calling, tool_string)
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
             if self.agent.verbose:
@@ -145,8 +144,6 @@ class ToolUsage:
         tool: CrewStructuredTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:
-        print("USING A TOOL: ", tool)
-        print("Type of tool: ", type(tool))
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
