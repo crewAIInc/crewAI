@@ -109,6 +109,7 @@
               "how-to/langtrace-observability",
               "how-to/mlflow-observability",
               "how-to/openlit-observability",
+              "how-to/opik-observability",
               "how-to/portkey-observability"
             ]
           },
