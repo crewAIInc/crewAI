@@ -45,7 +45,7 @@ class TaskEvaluator:
 
     def evaluate(self, task, output) -> TaskEvaluation:
         crewai_event_bus.emit(
-            self, TaskEvaluationEvent(evaluation_type="task_evaluation")
+            self, TaskEvaluationEvent(evaluation_type="task_evaluation", task=task)
         )
         evaluation_query = (
             f"Assess the quality of the task completed based on the description, expected output, and actual results.\n\n"
