@@ -340,6 +340,7 @@ class Agent(BaseAgent):
                 self._rpm_controller.check_or_wait if self._rpm_controller else None
             ),
             callbacks=[TokenCalcHandler(self._token_process)],
+            i18n=self.i18n,
         )
 
     def get_delegation_tools(self, agents: List[BaseAgent]):

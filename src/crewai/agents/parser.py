@@ -64,11 +64,12 @@ class CrewAgentParser:
     Final Answer: The temperature is 100 degrees
     """
 
-    _i18n: I18N = I18N()
+    _i18n: I18N = None
     agent: Any = None
 
-    def __init__(self, agent: Any):
+    def __init__(self, agent: Any, i18n: I18N = I18N()):
         self.agent = agent
+        self._i18n = i18n
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
         thought = self._extract_thought(text)
