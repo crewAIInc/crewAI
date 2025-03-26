@@ -1,34 +1,14 @@
 import json
 from datetime import date, datetime
+from enum import Enum
 from typing import Any, Dict, List, Union
 
 from pydantic import BaseModel
-
-from crewai.flow import Flow
 
 SerializablePrimitive = Union[str, int, float, bool, None]
 Serializable = Union[
     SerializablePrimitive, List["Serializable"], Dict[str, "Serializable"]
 ]
-
-
-def export_state(flow: Flow) -> dict[str, Serializable]:
-    """Exports the Flow's internal state as JSON-compatible data structures.
-
-    Performs a one-way transformation of a Flow's state into basic Python types
-    that can be safely serialized to JSON. To prevent infinite recursion with
-    circular references, the conversion is limited to a depth of 5 levels.
-
-    Args:
-        flow: The Flow object whose state needs to be exported
-
-    Returns:
-        dict[str, Any]: The transformed state using JSON-compatible Python
-            types.
-    """
-    result = to_serializable(flow._state)
-    assert isinstance(result, dict)
-    return result
 
 
 def to_serializable(
@@ -52,6 +32,8 @@ def to_serializable(
 
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
+    elif isinstance(obj, Enum):
+        return obj.value
     elif isinstance(obj, (date, datetime)):
         return obj.isoformat()
     elif isinstance(obj, (list, tuple, set)):
