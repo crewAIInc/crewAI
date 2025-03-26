@@ -3732,6 +3732,44 @@ def test_multimodal_agent_image_tool_handling():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_multimodal_agent_describing_image_successfully():
+    """
+    Test that a multimodal agent can process images without validation errors.
+    This test reproduces the scenario from issue #2475.
+    """
+    llm = LLM(model="openai/gpt-4o", temperature=0.7)  # model with vision capabilities
+
+    expert_analyst = Agent(
+        role="Visual Quality Inspector",
+        goal="Perform detailed quality analysis of product images",
+        backstory="Senior quality control expert with expertise in visual inspection",
+        llm=llm,
+        verbose=True,
+        allow_delegation=False,
+        multimodal=True,
+    )
+
+    inspection_task = Task(
+        description="""
+        Analyze the product image at https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244 with focus on:
+        1. Quality of materials
+        2. Manufacturing defects
+        3. Compliance with standards
+        Provide a detailed report highlighting any issues found.
+        """,
+        expected_output="A detailed report highlighting any issues found",
+        agent=expert_analyst,
+    )
+
+    crew = Crew(agents=[expert_analyst], tasks=[inspection_task])
+    result = crew.kickoff()
+
+    task_output = result.tasks_output[0]
+    assert isinstance(task_output, TaskOutput)
+    assert task_output.raw == result.raw
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_multimodal_agent_live_image_analysis():
     """
     Test that multimodal agents can analyze images through a real API call
