@@ -6,9 +6,8 @@ import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
-from langchain_core.tools import BaseTool as LangchainBaseTool
 from pydantic import (
     UUID4,
     BaseModel,
@@ -490,7 +489,7 @@ class Crew(BaseModel):
             task.key for task in self.tasks
         ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
-        
+
     @property
     def fingerprint(self) -> Fingerprint:
         """
