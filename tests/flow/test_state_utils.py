@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 from crewai.flow import Flow
-from crewai.flow.state_utils import export_state, to_string
+from crewai.flow.state_utils import export_state, to_serializable, to_string
 
 
 class Address(BaseModel):
@@ -147,4 +147,24 @@ def test_depth_limit(mock_flow):
                 }
             }
         }
+    }
+
+
+def test_exclude_keys():
+    result = to_serializable({"key1": "value1", "key2": "value2"}, exclude={"key1"})
+    assert result == {"key2": "value2"}
+
+    model = Person(
+        name="John Doe",
+        age=30,
+        address=Address(street="123 Main St", city="Tech City", country="Pythonia"),
+        birthday=date(1994, 1, 1),
+        skills=["Python", "Testing"],
+    )
+    result = to_serializable(model, exclude={"address"})
+    assert result == {
+        "name": "John Doe",
+        "age": 30,
+        "birthday": "1994-01-01",
+        "skills": ["Python", "Testing"],
     }

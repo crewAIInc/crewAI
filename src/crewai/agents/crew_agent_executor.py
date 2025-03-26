@@ -13,7 +13,7 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.llm import LLM
+from crewai.llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
@@ -60,7 +60,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         callbacks: List[Any] = [],
     ):
         self._i18n: I18N = I18N()
-        self.llm: LLM = llm
+        self.llm: BaseLLM = llm
         self.task = task
         self.agent = agent
         self.crew = crew
@@ -86,8 +86,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tool_name_to_tool_map: Dict[str, BaseTool] = {
             tool.name: tool for tool in self.tools
         }
-        self.stop = stop_words
-        self.llm.stop = list(set(self.llm.stop + self.stop))
+        existing_stop = self.llm.stop or []
+        self.llm.stop = list(
+            set(
+                existing_stop + self.stop
+                if isinstance(existing_stop, list)
+                else self.stop
+            )
+        )
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
