@@ -154,12 +154,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
                     fingerprint_context = {}
-                    if self.agent and hasattr(self.agent, "fingerprint"):
-                        fingerprint_context = {"agent_fingerprint": self.agent.fingerprint}
+                    if (
+                        self.agent
+                        and hasattr(self.agent, "security_config")
+                        and hasattr(self.agent.security_config, "fingerprint")
+                    ):
+                        fingerprint_context = {
+                            "agent_fingerprint": str(
+                                self.agent.security_config.fingerprint
+                            )
+                        }
 
                     tool_result = self._execute_tool_and_check_finality(
-                        formatted_answer,
-                        fingerprint_context=fingerprint_context
+                        formatted_answer, fingerprint_context=fingerprint_context
                     )
                     formatted_answer = self._handle_agent_action(
                         formatted_answer, tool_result
@@ -365,7 +372,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
                 )
 
-    def _execute_tool_and_check_finality(self, agent_action: AgentAction, fingerprint_context: Dict[str, str] = None) -> ToolResult:
+    def _execute_tool_and_check_finality(
+        self,
+        agent_action: AgentAction,
+        fingerprint_context: Optional[Dict[str, str]] = None,
+    ) -> ToolResult:
         try:
             fingerprint_context = fingerprint_context or {}
 
@@ -377,7 +388,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     "tool_name": agent_action.tool,
                     "tool_args": agent_action.tool_input,
                     "tool_class": agent_action.tool,
-                    "agent": self.agent  # Pass the agent object for fingerprint extraction
+                    "agent": self.agent,  # Pass the agent object for fingerprint extraction
                 }
 
                 # Include fingerprint context
@@ -400,7 +411,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 task=self.task,  # type: ignore[arg-type]
                 agent=self.agent,
                 action=agent_action,
-                fingerprint_context=fingerprint_context  # Pass fingerprint context
+                fingerprint_context=fingerprint_context,  # Pass fingerprint context
             )
             tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
@@ -436,7 +447,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     "tool_args": agent_action.tool_input,
                     "tool_class": agent_action.tool,
                     "error": str(e),
-                    "agent": self.agent  # Pass the agent object for fingerprint extraction
+                    "agent": self.agent,  # Pass the agent object for fingerprint extraction
                 }
 
                 # Include fingerprint context
