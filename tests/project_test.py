@@ -2,6 +2,7 @@ import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
+from crewai.llm import LLM
 from crewai.project import CrewBase, after_kickoff, agent, before_kickoff, crew, task, llm
 from crewai.task import Task
 
