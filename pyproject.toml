@@ -17,9 +17,9 @@ dependencies = [
     "pdfplumber>=0.11.4",
     "regex>=2024.9.11",
     # Telemetry and Monitoring
-    "opentelemetry-api>=1.22.0",
-    "opentelemetry-sdk>=1.22.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.22.0",
+    "opentelemetry-api>=1.30.0",
+    "opentelemetry-sdk>=1.30.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.30.0",
     # Data Handling
     "chromadb>=0.5.23",
     "openpyxl>=3.1.5",
@@ -63,6 +63,9 @@ openpyxl = [
 mem0 = ["mem0ai>=0.1.29"]
 docling = [
     "docling>=2.12.0",
+]
+aisuite = [
+    "aisuite>=0.1.10",
 ]
 
 [tool.uv]
