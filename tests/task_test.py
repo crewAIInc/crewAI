@@ -788,6 +788,25 @@ def test_conditional_task_definition_based_on_dict():
     assert task.agent is None
 
 
+def test_conditional_task_copy_preserves_type():
+    task_config = {
+        "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
+        "expected_output": "The score of the title.",
+    }
+    original_task = Task(**task_config)
+    copied_task = original_task.copy(agents=[], task_mapping={})
+    assert isinstance(copied_task, Task)
+
+    original_conditional_config = {
+        "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'. Check examples to base your evaluation on.",
+        "expected_output": "The score of the title.",
+        "condition": lambda x: True,
+    }
+    original_conditional_task = ConditionalTask(**original_conditional_config)
+    copied_conditional_task = original_conditional_task.copy(agents=[], task_mapping={})
+    assert isinstance(copied_conditional_task, ConditionalTask)
+
+
 def test_interpolate_inputs():
     task = Task(
         description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",

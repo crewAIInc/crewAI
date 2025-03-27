@@ -12,10 +12,15 @@ class LLMCallType(Enum):
 
 
 class LLMCallStartedEvent(CrewEvent):
-    """Event emitted when a LLM call starts"""
+    """Event emitted when a LLM call starts
+    
+    Attributes:
+        messages: Content can be either a string or a list of dictionaries that support
+            multimodal content (text, images, etc.)
+    """
 
     type: str = "llm_call_started"
-    messages: Union[str, List[Dict[str, str]]]
+    messages: Union[str, List[Dict[str, Any]]]
     tools: Optional[List[dict]] = None
     callbacks: Optional[List[Any]] = None
     available_functions: Optional[Dict[str, Any]] = None
