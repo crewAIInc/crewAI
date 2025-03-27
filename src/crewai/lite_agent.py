@@ -54,9 +54,6 @@ from crewai.utilities.events.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.utilities.exceptions.context_window_exceeding_exception import (
-    LLMContextLengthExceededException,
-)
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -116,8 +113,8 @@ class LiteAgent(BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Goal of the agent")
     backstory: str = Field(description="Backstory of the agent")
-    llm: Union[str, InstanceOf[LLM], Any] = Field(
-        description="Language model that will run the agent"
+    llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
+        default=None, description="Language model that will run the agent"
     )
     tools: List[BaseTool] = Field(
         default_factory=list, description="Tools at agent's disposal"
@@ -199,6 +196,117 @@ class LiteAgent(BaseModel):
         """Return the original role for compatibility with tool interfaces."""
         return self.role
 
+    def kickoff(self, messages: Union[str, List[Dict[str, str]]]) -> LiteAgentOutput:
+        """
+        Execute the agent with the given messages.
+
+        Args:
+            messages: Either a string query or a list of message dictionaries.
+                     If a string is provided, it will be converted to a user message.
+                     If a list is provided, each dict should have 'role' and 'content' keys.
+
+        Returns:
+            LiteAgentOutput: The result of the agent execution.
+        """
+        # Create agent info for event emission
+        agent_info = {
+            "role": self.role,
+            "goal": self.goal,
+            "backstory": self.backstory,
+            "tools": self._parsed_tools,
+            "verbose": self.verbose,
+        }
+
+        try:
+            # Reset state for this run
+            self._iterations = 0
+            self.tools_results = []
+
+            # Format messages for the LLM
+            self._messages = self._format_messages(messages)
+
+            # Emit event for agent execution start
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionStartedEvent(
+                    agent_info=agent_info,
+                    tools=self._parsed_tools,
+                    messages=messages,
+                ),
+            )
+
+            # Execute the agent using invoke loop
+            agent_finish = self._invoke_loop()
+
+            formatted_result: Optional[BaseModel] = None
+            if self.response_format:
+                try:
+                    # Cast to BaseModel to ensure type safety
+                    result = self.response_format.model_validate_json(
+                        agent_finish.output
+                    )
+                    if isinstance(result, BaseModel):
+                        formatted_result = result
+                except Exception as e:
+                    self._printer.print(
+                        content=f"Failed to parse output into response format: {str(e)}",
+                        color="yellow",
+                    )
+
+            # Calculate token usage metrics
+            usage_metrics = self._token_process.get_summary()
+
+            # Create output
+            output = LiteAgentOutput(
+                raw=agent_finish.output,
+                pydantic=formatted_result,
+                agent_role=self.role,
+                usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            )
+
+            # Emit completion event
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionCompletedEvent(
+                    agent_info=agent_info,
+                    output=agent_finish.output,
+                ),
+            )
+
+            return output
+
+        except Exception as e:
+            self._printer.print(
+                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                color="red",
+            )
+            handle_unknown_error(self._printer, e)
+            # Emit error event
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionErrorEvent(
+                    agent_info=agent_info,
+                    error=str(e),
+                ),
+            )
+            raise e
+
+    async def kickoff_async(
+        self, messages: Union[str, List[Dict[str, str]]]
+    ) -> LiteAgentOutput:
+        """
+        Execute the agent asynchronously with the given messages.
+
+        Args:
+            messages: Either a string query or a list of message dictionaries.
+                     If a string is provided, it will be converted to a user message.
+                     If a list is provided, each dict should have 'role' and 'content' keys.
+
+        Returns:
+            LiteAgentOutput: The result of the agent execution.
+        """
+        return await asyncio.to_thread(self.kickoff, messages)
+
     def _get_default_system_prompt(self) -> str:
         """Get the default system prompt for the agent."""
         base_prompt = ""
@@ -247,140 +355,13 @@ class LiteAgent(BaseModel):
 
         return formatted_messages
 
-    def kickoff(self, messages: Union[str, List[Dict[str, str]]]) -> LiteAgentOutput:
-        """
-        Execute the agent with the given messages.
-
-        Args:
-            messages: Either a string query or a list of message dictionaries.
-                     If a string is provided, it will be converted to a user message.
-                     If a list is provided, each dict should have 'role' and 'content' keys.
-
-        Returns:
-            LiteAgentOutput: The result of the agent execution.
-        """
-        return asyncio.run(self.kickoff_async(messages))
-
-    async def kickoff_async(
-        self, messages: Union[str, List[Dict[str, str]]]
-    ) -> LiteAgentOutput:
-        """
-        Execute the agent asynchronously with the given messages.
-
-        Args:
-            messages: Either a string query or a list of message dictionaries.
-                     If a string is provided, it will be converted to a user message.
-                     If a list is provided, each dict should have 'role' and 'content' keys.
-
-        Returns:
-            LiteAgentOutput: The result of the agent execution.
-
-        Raises:
-            Exception: If agent execution fails
-        """
-        # Create agent info for event emission
-        agent_info = {
-            "role": self.role,
-            "goal": self.goal,
-            "backstory": self.backstory,
-            "tools": self._parsed_tools,
-            "verbose": self.verbose,
-        }
-
-        try:
-            # Reset state for this run
-            self._iterations = 0
-            self.tools_results = []
-
-            # Format messages for the LLM
-            self._messages = self._format_messages(messages)
-
-            # Emit event for agent execution start
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionStartedEvent(
-                    agent_info=agent_info,
-                    tools=self._parsed_tools,
-                    messages=messages,
-                ),
-            )
-
-            # Execute the agent using invoke loop
-            try:
-                agent_finish = await self._invoke_loop()
-            except Exception as e:
-                self._printer.print(
-                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                    color="red",
-                )
-                handle_unknown_error(self._printer, e)
-                # Emit error event
-                crewai_event_bus.emit(
-                    self,
-                    event=LiteAgentExecutionErrorEvent(
-                        agent_info=agent_info,
-                        error=str(e),
-                    ),
-                )
-                raise e
-
-            formatted_result: Optional[BaseModel] = None
-            if self.response_format:
-                try:
-                    # Cast to BaseModel to ensure type safety
-                    result = self.response_format.model_validate_json(
-                        agent_finish.output
-                    )
-                    if isinstance(result, BaseModel):
-                        formatted_result = result
-                except Exception as e:
-                    self._printer.print(
-                        content=f"Failed to parse output into response format: {str(e)}",
-                        color="yellow",
-                    )
-
-            # Calculate token usage metrics
-            usage_metrics = self._token_process.get_summary()
-
-            # Create output
-            output = LiteAgentOutput(
-                raw=agent_finish.output,
-                pydantic=formatted_result,
-                agent_role=self.role,
-                usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            )
-
-            # Emit completion event
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionCompletedEvent(
-                    agent_info=agent_info,
-                    output=agent_finish.output,
-                ),
-            )
-
-            return output
-
-        except Exception as e:
-            handle_unknown_error(self._printer, e)
-            # Emit error event
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionErrorEvent(
-                    agent_info=agent_info,
-                    error=str(e),
-                ),
-            )
-            raise e
-
-    async def _invoke_loop(self) -> AgentFinish:
+    def _invoke_loop(self) -> AgentFinish:
         """
         Run the agent's thought process until it reaches a conclusion or max iterations.
 
         Returns:
-            str: The final result of the agent execution.
+            AgentFinish: The final result of the agent execution.
         """
-
         # Execute the agent loop
         formatted_answer = None
         while not isinstance(formatted_answer, AgentFinish):
@@ -518,10 +499,6 @@ class LiteAgent(BaseModel):
             finally:
                 self._iterations += 1
 
-        # During the invoke loop, formatted_answer alternates between AgentAction
-        # (when the agent is using tools) and eventually becomes AgentFinish
-        # (when the agent reaches a final answer). This assertion confirms we've
-        # reached a final answer and helps type checking understand this transition.
         assert isinstance(formatted_answer, AgentFinish)
         self._show_logs(formatted_answer)
         return formatted_answer
