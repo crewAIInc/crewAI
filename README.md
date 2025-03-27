@@ -405,7 +405,7 @@ CrewAI's power truly shines when combining Crews with Flows to create sophistica
 
 ```python
 from crewai.flow.flow import Flow, listen, start, router
-from crewai import Crew, Agent, Task
+from crewai import Crew, Agent, Task, Process
 from pydantic import BaseModel
 
 # Define structured state for precise control
@@ -479,7 +479,7 @@ class AdvancedAnalysisFlow(Flow[MarketState]):
         )
         return strategy_crew.kickoff()
 
-    @listen("medium_confidence", "low_confidence")
+    @listen(or_("medium_confidence", "low_confidence"))
     def request_additional_analysis(self):
         self.state.recommendations.append("Gather more data")
         return "Additional analysis required"
