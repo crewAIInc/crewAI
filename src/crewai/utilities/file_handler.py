@@ -32,6 +32,8 @@ class FileHandler:
         try:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log_entry = {"timestamp": now, **kwargs}
+            log_folder = os.path.dirname(self._path)
+            os.makedirs(folder, exist_ok=True)
 
             if self._path.endswith(".json"):
                 # Append log in JSON format
