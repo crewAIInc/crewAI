@@ -71,7 +71,7 @@ class EventListener(BaseEventListener):
             self._telemetry.set_tracer()
             self.execution_spans = {}
             self._initialized = True
-            self.formatter = ConsoleFormatter()
+            self.formatter = ConsoleFormatter(verbose=True)
 
     # ----------- CREW EVENTS -----------
 
@@ -183,25 +183,28 @@ class EventListener(BaseEventListener):
         def on_lite_agent_execution_started(
             source, event: LiteAgentExecutionStartedEvent
         ):
-            self.logger.log(
-                f"🤖 LiteAgent '{event.agent_info['role']}' started execution",
-                event.timestamp,
+            """Handle LiteAgent execution started event."""
+            self.formatter.handle_lite_agent_execution(
+                event.agent_info["role"], status="started", **event.agent_info
             )
 
         @crewai_event_bus.on(LiteAgentExecutionCompletedEvent)
         def on_lite_agent_execution_completed(
             source, event: LiteAgentExecutionCompletedEvent
         ):
-            self.logger.log(
-                f"✅ LiteAgent '{event.agent_info['role']}' completed execution",
-                event.timestamp,
+            """Handle LiteAgent execution completed event."""
+            self.formatter.handle_lite_agent_execution(
+                event.agent_info["role"], status="completed", **event.agent_info
             )
 
         @crewai_event_bus.on(LiteAgentExecutionErrorEvent)
         def on_lite_agent_execution_error(source, event: LiteAgentExecutionErrorEvent):
-            self.logger.log(
-                f"❌ LiteAgent '{event.agent_info['role']}' execution error: {event.error}",
-                event.timestamp,
+            """Handle LiteAgent execution error event."""
+            self.formatter.handle_lite_agent_execution(
+                event.agent_info["role"],
+                status="failed",
+                error=event.error,
+                **event.agent_info,
             )
 
         # ----------- FLOW EVENTS -----------

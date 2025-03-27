@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import uuid
+from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Type, Union, cast
 
 from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
@@ -37,11 +38,20 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.converter import convert_to_model, generate_model_description
 from crewai.utilities.events.agent_events import (
+    LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.llm_events import (
+    LLMCallCompletedEvent,
+    LLMCallFailedEvent,
+    LLMCallStartedEvent,
+    LLMCallType,
+)
 from crewai.utilities.events.tool_usage_events import (
     ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -268,6 +278,15 @@ class LiteAgent(BaseModel):
         Raises:
             Exception: If agent execution fails
         """
+        # Create agent info for event emission
+        agent_info = {
+            "role": self.role,
+            "goal": self.goal,
+            "backstory": self.backstory,
+            "tools": self._parsed_tools,
+            "verbose": self.verbose,
+        }
+
         try:
             # Reset state for this run
             self._iterations = 0
@@ -275,15 +294,6 @@ class LiteAgent(BaseModel):
 
             # Format messages for the LLM
             self._messages = self._format_messages(messages)
-
-            # Create agent info for event emission
-            agent_info = {
-                "role": self.role,
-                "goal": self.goal,
-                "backstory": self.backstory,
-                "tools": self._parsed_tools,
-                "verbose": self.verbose,
-            }
 
             # Emit event for agent execution start
             crewai_event_bus.emit(
@@ -304,6 +314,14 @@ class LiteAgent(BaseModel):
                     color="red",
                 )
                 handle_unknown_error(self._printer, e)
+                # Emit error event
+                crewai_event_bus.emit(
+                    self,
+                    event=LiteAgentExecutionErrorEvent(
+                        agent_info=agent_info,
+                        error=str(e),
+                    ),
+                )
                 raise e
 
             formatted_result: Optional[BaseModel] = None
@@ -324,15 +342,35 @@ class LiteAgent(BaseModel):
             # Calculate token usage metrics
             usage_metrics = self._token_process.get_summary()
 
-            return LiteAgentOutput(
+            # Create output
+            output = LiteAgentOutput(
                 raw=agent_finish.output,
                 pydantic=formatted_result,
                 agent_role=self.role,
                 usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
             )
 
+            # Emit completion event
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionCompletedEvent(
+                    agent_info=agent_info,
+                    output=agent_finish.output,
+                ),
+            )
+
+            return output
+
         except Exception as e:
             handle_unknown_error(self._printer, e)
+            # Emit error event
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionErrorEvent(
+                    agent_info=agent_info,
+                    error=str(e),
+                ),
+            )
             raise e
 
     async def _invoke_loop(self) -> AgentFinish:
@@ -359,22 +397,90 @@ class LiteAgent(BaseModel):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
-                answer = get_llm_response(
-                    llm=cast(LLM, self.llm),
-                    messages=self._messages,
-                    callbacks=self._callbacks,
-                    printer=self._printer,
+                # Emit LLM call started event
+                crewai_event_bus.emit(
+                    self,
+                    event=LLMCallStartedEvent(
+                        messages=self._messages,
+                        tools=None,
+                        callbacks=self._callbacks,
+                    ),
                 )
+
+                try:
+                    answer = get_llm_response(
+                        llm=cast(LLM, self.llm),
+                        messages=self._messages,
+                        callbacks=self._callbacks,
+                        printer=self._printer,
+                    )
+                    # Emit LLM call completed event
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMCallCompletedEvent(
+                            response=answer,
+                            call_type=LLMCallType.LLM_CALL,
+                        ),
+                    )
+                except Exception as e:
+                    # Emit LLM call failed event
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMCallFailedEvent(error=str(e)),
+                    )
+                    raise e
+
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
                 if isinstance(formatted_answer, AgentAction):
-                    tool_result = execute_tool_and_check_finality(
-                        agent_action=formatted_answer,
-                        tools=self._parsed_tools,
-                        i18n=self.i18n,
-                        agent_key=self.key,
-                        agent_role=self.role,
+                    # Emit tool usage started event
+                    crewai_event_bus.emit(
+                        self,
+                        event=ToolUsageStartedEvent(
+                            agent_key=self.key,
+                            agent_role=self.role,
+                            tool_name=formatted_answer.tool,
+                            tool_args=formatted_answer.tool_input,
+                            tool_class=formatted_answer.tool,
+                        ),
                     )
+
+                    try:
+                        tool_result = execute_tool_and_check_finality(
+                            agent_action=formatted_answer,
+                            tools=self._parsed_tools,
+                            i18n=self.i18n,
+                            agent_key=self.key,
+                            agent_role=self.role,
+                        )
+                        # Emit tool usage finished event
+                        crewai_event_bus.emit(
+                            self,
+                            event=ToolUsageFinishedEvent(
+                                agent_key=self.key,
+                                agent_role=self.role,
+                                tool_name=formatted_answer.tool,
+                                tool_args=formatted_answer.tool_input,
+                                tool_class=formatted_answer.tool,
+                                started_at=datetime.now(),
+                                finished_at=datetime.now(),
+                            ),
+                        )
+                    except Exception as e:
+                        # Emit tool usage error event
+                        crewai_event_bus.emit(
+                            self,
+                            event=ToolUsageErrorEvent(
+                                agent_key=self.key,
+                                agent_role=self.role,
+                                tool_name=formatted_answer.tool,
+                                tool_args=formatted_answer.tool_input,
+                                tool_class=formatted_answer.tool,
+                                error=str(e),
+                            ),
+                        )
+                        raise e
+
                     formatted_answer = handle_agent_action_core(
                         formatted_answer=formatted_answer,
                         tool_result=tool_result,
