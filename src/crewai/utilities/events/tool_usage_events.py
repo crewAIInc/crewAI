@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import Any, Callable, Dict, Optional
 
-from .base_events import CrewEvent
+from .base_events import BaseEvent
 
 
-class ToolUsageEvent(CrewEvent):
+class ToolUsageEvent(BaseEvent):
     """Base event for tool usage tracking"""
 
     agent_key: str
@@ -21,10 +21,13 @@ class ToolUsageEvent(CrewEvent):
     def __init__(self, **data):
         super().__init__(**data)
         # Set fingerprint data from the agent
-        if self.agent and hasattr(self.agent, 'fingerprint') and self.agent.fingerprint:
+        if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"
-            if hasattr(self.agent.fingerprint, 'metadata') and self.agent.fingerprint.metadata:
+            if (
+                hasattr(self.agent.fingerprint, "metadata")
+                and self.agent.fingerprint.metadata
+            ):
                 self.fingerprint_metadata = self.agent.fingerprint.metadata
 
 
@@ -65,7 +68,7 @@ class ToolSelectionErrorEvent(ToolUsageEvent):
     type: str = "tool_selection_error"
 
 
-class ToolExecutionErrorEvent(CrewEvent):
+class ToolExecutionErrorEvent(BaseEvent):
     """Event emitted when a tool execution encounters an error"""
 
     error: Any
@@ -78,8 +81,11 @@ class ToolExecutionErrorEvent(CrewEvent):
     def __init__(self, **data):
         super().__init__(**data)
         # Set fingerprint data from the agent
-        if self.agent and hasattr(self.agent, 'fingerprint') and self.agent.fingerprint:
+        if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"
-            if hasattr(self.agent.fingerprint, 'metadata') and self.agent.fingerprint.metadata:
+            if (
+                hasattr(self.agent.fingerprint, "metadata")
+                and self.agent.fingerprint.metadata
+            ):
                 self.fingerprint_metadata = self.agent.fingerprint.metadata
