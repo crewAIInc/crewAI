@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import re
 import uuid
 import warnings
@@ -38,6 +39,7 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool, Tool
+from crewai.utilities.exceptions.llm_error import LLMError
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -683,11 +685,23 @@ class Crew(BaseModel):
         return results
 
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
-        """Asynchronous kickoff method to start the crew execution."""
+        """Asynchronous kickoff method to start the crew execution.
+        
+        Args:
+            inputs (Optional[Dict[str, Any]]): Input parameters for the crew execution
+            
+        Returns:
+            CrewOutput: The result of the crew execution
+            
+        Raises:
+            LLMError: When LLM-specific errors occur
+            Exception: For other unexpected errors
+        """
         try:
             return await asyncio.to_thread(self.kickoff, inputs)
         except Exception as e:
-            raise
+            logging.error(f"Error during async crew execution: {str(e)}")
+            raise LLMError(f"Crew execution failed: {str(e)}", original_error=e)
 
     async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[CrewOutput]:
         crew_copies = [self.copy() for _ in inputs]

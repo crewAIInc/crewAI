@@ -1503,6 +1503,7 @@ async def test_async_kickoff_for_each_async_empty_input():
 async def test_kickoff_async_error_handling():
     """Tests error handling in kickoff_async when kickoff raises an error."""
     from unittest.mock import patch
+    from crewai.utilities.exceptions.llm_error import LLMError
     
     inputs = {"topic": "dog"}
     
@@ -1525,10 +1526,48 @@ async def test_kickoff_async_error_handling():
     )
     
     with patch.object(Crew, "kickoff", side_effect=Exception("Simulated LLM error")) as mock_kickoff:
-        with pytest.raises(Exception, match="Simulated LLM error"):
+        with pytest.raises(LLMError) as excinfo:
             await crew.kickoff_async(inputs)
-            
+        
+        assert "Crew execution failed: Simulated LLM error" in str(excinfo.value)
+        assert excinfo.value.original_error is not None
+        assert "Simulated LLM error" in str(excinfo.value.original_error)
         mock_kickoff.assert_called_once_with(inputs)
+@pytest.mark.asyncio
+async def test_kickoff_async_context_length_error_handling():
+    """Tests error handling in kickoff_async when kickoff raises a context length error."""
+    from unittest.mock import patch
+    from crewai.utilities.exceptions.context_window_exceeding_exception import LLMContextLengthExceededException
+    from crewai.utilities.exceptions.llm_error import LLMError
+    
+    inputs = {"topic": "dog"}
+    
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+    
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+    
+    # Create the crew
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+    )
+    
+    with patch.object(Crew, "kickoff", side_effect=LLMContextLengthExceededException("maximum context length exceeded")) as mock_kickoff:
+        with pytest.raises(LLMError) as excinfo:
+            await crew.kickoff_async(inputs)
+        
+        assert "Crew execution failed" in str(excinfo.value)
+        assert "maximum context length exceeded" in str(excinfo.value.original_error)
+        mock_kickoff.assert_called_once_with(inputs)
+
 
 
 
