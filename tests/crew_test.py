@@ -1503,6 +1503,7 @@ async def test_async_kickoff_for_each_async_empty_input():
 async def test_kickoff_async_error_handling():
     """Tests error handling in kickoff_async when kickoff raises an error."""
     from unittest.mock import patch
+
     from crewai.utilities.exceptions.llm_error import LLMError
     
     inputs = {"topic": "dog"}
@@ -1537,7 +1538,10 @@ async def test_kickoff_async_error_handling():
 async def test_kickoff_async_context_length_error_handling():
     """Tests error handling in kickoff_async when kickoff raises a context length error."""
     from unittest.mock import patch
-    from crewai.utilities.exceptions.context_window_exceeding_exception import LLMContextLengthExceededException
+
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMContextLengthExceededException,
+    )
     from crewai.utilities.exceptions.llm_error import LLMError
     
     inputs = {"topic": "dog"}
