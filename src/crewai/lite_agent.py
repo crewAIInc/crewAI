@@ -17,18 +17,23 @@ from crewai.agents.parser import (
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
-from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
     get_llm_response,
     get_tool_names,
+    handle_agent_action_core,
+    handle_context_length,
     handle_max_iterations_exceeded,
+    handle_output_parser_exception,
+    handle_unknown_error,
     has_reached_max_iterations,
+    is_context_length_exceeded,
     parse_tools,
     process_llm_response,
     render_text_description_and_args,
+    show_agent_logs,
 )
 from crewai.utilities.converter import convert_to_model, generate_model_description
 from crewai.utilities.events.agent_events import (
@@ -45,14 +50,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
-
-
-class ToolResult:
-    """Result of tool execution."""
-
-    def __init__(self, result: str, result_as_answer: bool = False):
-        self.result = result
-        self.result_as_answer = result_as_answer
+from crewai.utilities.tool_utils import execute_tool_and_check_finality
 
 
 class LiteAgentOutput(BaseModel):
@@ -104,6 +102,7 @@ class LiteAgent(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
+    # Core Agent Properties
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Goal of the agent")
     backstory: str = Field(description="Backstory of the agent")
@@ -113,58 +112,52 @@ class LiteAgent(BaseModel):
     tools: List[BaseTool] = Field(
         default_factory=list, description="Tools at agent's disposal"
     )
-    verbose: bool = Field(
-        default=False, description="Whether to print execution details"
-    )
+
+    # Execution Control Properties
     max_iterations: int = Field(
         default=15, description="Maximum number of iterations for tool usage"
     )
     max_execution_time: Optional[int] = Field(
         default=None, description="Maximum execution time in seconds"
     )
-    response_format: Optional[Type[BaseModel]] = Field(
-        default=None, description="Pydantic model for structured output"
-    )
-    tools_results: List[Dict[str, Any]] = Field(
-        default=[], description="Results of the tools used by the agent."
-    )
     respect_context_window: bool = Field(
         default=True,
         description="Whether to respect the context window of the LLM",
-    )
-    callbacks: List[Callable] = Field(
-        default=[], description="Callbacks to be used for the agent"
-    )
-    _parsed_tools: List[CrewStructuredTool] = PrivateAttr(default_factory=list)
-    _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
-    _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
-    _times_executed: int = PrivateAttr(default=0)
-    _max_retry_limit: int = PrivateAttr(default=2)
-    _key: str = PrivateAttr(default_factory=lambda: str(uuid.uuid4()))
-    # Store messages for conversation
-    _messages: List[Dict[str, str]] = PrivateAttr(default_factory=list)
-    # Iteration counter
-    _iterations: int = PrivateAttr(default=0)
-    # Tracking metrics
-    _formatting_errors: int = PrivateAttr(default=0)
-    _tools_errors: int = PrivateAttr(default=0)
-    _delegations: Dict[str, int] = PrivateAttr(default_factory=dict)
-    # Internationalization
-    _printer: Printer = PrivateAttr(default_factory=Printer)
-
-    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
-    request_within_rpm_limit: Optional[Callable[[], bool]] = Field(
-        default=None,
-        description="Callback to check if the request is within the RPM limit",
     )
     use_stop_words: bool = Field(
         default=True,
         description="Whether to use stop words to prevent the LLM from using tools",
     )
-    tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = Field(
-        default_factory=dict,
-        description="Mapping of tool names to tool instances",
+    request_within_rpm_limit: Optional[Callable[[], bool]] = Field(
+        default=None,
+        description="Callback to check if the request is within the RPM limit",
     )
+    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
+
+    # Output and Formatting Properties
+    response_format: Optional[Type[BaseModel]] = Field(
+        default=None, description="Pydantic model for structured output"
+    )
+    verbose: bool = Field(
+        default=False, description="Whether to print execution details"
+    )
+    callbacks: List[Callable] = Field(
+        default=[], description="Callbacks to be used for the agent"
+    )
+
+    # State and Results
+    tools_results: List[Dict[str, Any]] = Field(
+        default=[], description="Results of the tools used by the agent."
+    )
+
+    # Private Attributes
+    _parsed_tools: List[CrewStructuredTool] = PrivateAttr(default_factory=list)
+    _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
+    _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
+    _key: str = PrivateAttr(default_factory=lambda: str(uuid.uuid4()))
+    _messages: List[Dict[str, str]] = PrivateAttr(default_factory=list)
+    _iterations: int = PrivateAttr(default=0)
+    _printer: Printer = PrivateAttr(default_factory=Printer)
 
     @model_validator(mode="after")
     def setup_llm(self):
@@ -183,9 +176,6 @@ class LiteAgent(BaseModel):
     def parse_tools(self):
         """Parse the tools and convert them to CrewStructuredTool instances."""
         self._parsed_tools = parse_tools(self.tools)
-
-        # Initialize tool name to tool mapping
-        self.tool_name_to_tool_map = {tool.name: tool for tool in self._parsed_tools}
 
         return self
 
@@ -306,7 +296,15 @@ class LiteAgent(BaseModel):
             )
 
             # Execute the agent using invoke loop
-            agent_finish = await self._invoke_loop()
+            try:
+                agent_finish = await self._invoke_loop()
+            except Exception as e:
+                self._printer.print(
+                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                    color="red",
+                )
+                handle_unknown_error(self._printer, e)
+                raise e
 
             formatted_result: Optional[BaseModel] = None
             if self.response_format:
@@ -333,17 +331,8 @@ class LiteAgent(BaseModel):
                 usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
             )
 
-        except AssertionError:
-            self._printer.print(
-                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                color="red",
-            )
-            raise
         except Exception as e:
-            self._handle_unknown_error(e)
-            if e.__class__.__module__.startswith("litellm"):
-                # Do not retry on litellm errors
-                raise e
+            handle_unknown_error(self._printer, e)
             raise e
 
     async def _invoke_loop(self) -> AgentFinish:
@@ -379,26 +368,45 @@ class LiteAgent(BaseModel):
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
                 if isinstance(formatted_answer, AgentAction):
-                    tool_result = self._execute_tool_and_check_finality(
-                        formatted_answer
+                    tool_result = execute_tool_and_check_finality(
+                        agent_action=formatted_answer,
+                        tools=self._parsed_tools,
+                        i18n=self.i18n,
+                        agent_key=self.key,
+                        agent_role=self.role,
                     )
-                    formatted_answer = self._handle_agent_action(
-                        formatted_answer, tool_result
+                    formatted_answer = handle_agent_action_core(
+                        formatted_answer=formatted_answer,
+                        tool_result=tool_result,
+                        show_logs=self._show_logs,
                     )
 
                 self._append_message(formatted_answer.text, role="assistant")
             except OutputParserException as e:
-                formatted_answer = self._handle_output_parser_exception(e)
+                formatted_answer = handle_output_parser_exception(
+                    e=e,
+                    messages=self._messages,
+                    iterations=self._iterations,
+                    log_error_after=3,
+                    printer=self._printer,
+                )
 
             except Exception as e:
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
                     raise e
-                if self._is_context_length_exceeded(e):
-                    self._handle_context_length()
+                if is_context_length_exceeded(e):
+                    handle_context_length(
+                        respect_context_window=self.respect_context_window,
+                        printer=self._printer,
+                        messages=self._messages,
+                        llm=cast(LLM, self.llm),
+                        callbacks=self._callbacks,
+                        i18n=self.i18n,
+                    )
                     continue
                 else:
-                    self._handle_unknown_error(e)
+                    handle_unknown_error(self._printer, e)
                     raise e
 
             finally:
@@ -412,202 +420,15 @@ class LiteAgent(BaseModel):
         self._show_logs(formatted_answer)
         return formatted_answer
 
-    def _execute_tool_and_check_finality(self, agent_action: AgentAction) -> ToolResult:
-        try:
-            crewai_event_bus.emit(
-                self,
-                event=ToolUsageStartedEvent(
-                    agent_key=self.key,
-                    agent_role=self.role,
-                    tool_name=agent_action.tool,
-                    tool_args=agent_action.tool_input,
-                    tool_class=agent_action.tool,
-                ),
-            )
-            tool_usage = ToolUsage(
-                agent=self,
-                tools=self._parsed_tools,
-                action=agent_action,
-                tools_handler=None,
-                task=None,
-                function_calling_llm=None,
-            )
-            tool_calling = tool_usage.parse_tool_calling(agent_action.text)
-
-            if isinstance(tool_calling, ToolUsageErrorException):
-                tool_result = tool_calling.message
-                return ToolResult(result=tool_result, result_as_answer=False)
-            else:
-                if tool_calling.tool_name.casefold().strip() in [
-                    tool.name.casefold().strip() for tool in self._parsed_tools
-                ] or tool_calling.tool_name.casefold().replace("_", " ") in [
-                    tool.name.casefold().strip() for tool in self._parsed_tools
-                ]:
-                    tool_result = tool_usage.use(tool_calling, agent_action.text)
-                    tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
-                    if tool:
-                        return ToolResult(
-                            result=tool_result, result_as_answer=tool.result_as_answer
-                        )
-                else:
-                    tool_result = self.i18n.errors("wrong_tool_name").format(
-                        tool=tool_calling.tool_name,
-                        tools=", ".join(
-                            [tool.name.casefold() for tool in self._parsed_tools]
-                        ),
-                    )
-                return ToolResult(result=tool_result, result_as_answer=False)
-
-        except Exception as e:
-            crewai_event_bus.emit(
-                self,
-                event=ToolUsageErrorEvent(
-                    agent_key=self.key,
-                    agent_role=self.role,
-                    tool_name=agent_action.tool,
-                    tool_args=agent_action.tool_input,
-                    tool_class=agent_action.tool,
-                    error=str(e),
-                ),
-            )
-            raise e
-
-    def _handle_agent_action(
-        self, formatted_answer: AgentAction, tool_result: ToolResult
-    ) -> Union[AgentAction, AgentFinish]:
-        """Handle the AgentAction, execute tools, and process the results."""
-
-        formatted_answer.text += f"\nObservation: {tool_result.result}"
-        formatted_answer.result = tool_result.result
-
-        if tool_result.result_as_answer:
-            return AgentFinish(
-                thought="",
-                output=tool_result.result,
-                text=formatted_answer.text,
-            )
-
-        self._show_logs(formatted_answer)
-        return formatted_answer
-
     def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
-        if self.verbose:
-            agent_role = self.role.split("\n")[0]
-            if isinstance(formatted_answer, AgentAction):
-                thought = re.sub(r"\n+", "\n", formatted_answer.thought)
-                formatted_json = json.dumps(
-                    formatted_answer.tool_input,
-                    indent=2,
-                    ensure_ascii=False,
-                )
-                self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
-                )
-                if thought and thought != "":
-                    self._printer.print(
-                        content=f"\033[95m## Thought:\033[00m \033[92m{thought}\033[00m"
-                    )
-                self._printer.print(
-                    content=f"\033[95m## Using tool:\033[00m \033[92m{formatted_answer.tool}\033[00m"
-                )
-                self._printer.print(
-                    content=f"\033[95m## Tool Input:\033[00m \033[92m\n{formatted_json}\033[00m"
-                )
-                self._printer.print(
-                    content=f"\033[95m## Tool Output:\033[00m \033[92m\n{formatted_answer.result}\033[00m"
-                )
-            elif isinstance(formatted_answer, AgentFinish):
-                self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
-                )
-                self._printer.print(
-                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
-                )
+        """Show logs for the agent's execution."""
+        show_agent_logs(
+            printer=self._printer,
+            agent_role=self.role,
+            formatted_answer=formatted_answer,
+            verbose=self.verbose,
+        )
 
     def _append_message(self, text: str, role: str = "assistant") -> None:
         """Append a message to the message list with the given role."""
         self._messages.append(format_message_for_llm(text, role=role))
-
-    def _handle_output_parser_exception(self, e: OutputParserException) -> AgentAction:
-        """Handle OutputParserException by updating messages and formatted_answer."""
-        self._messages.append({"role": "user", "content": e.error})
-
-        formatted_answer = AgentAction(
-            text=e.error,
-            tool="",
-            tool_input="",
-            thought="",
-        )
-
-        MAX_ITERATIONS = 3
-        if self._iterations > MAX_ITERATIONS:
-            self._printer.print(
-                content=f"Error parsing LLM output, agent will retry: {e.error}",
-                color="red",
-            )
-
-        return formatted_answer
-
-    def _is_context_length_exceeded(self, exception: Exception) -> bool:
-        """Check if the exception is due to context length exceeding."""
-        return LLMContextLengthExceededException(
-            str(exception)
-        )._is_context_limit_error(str(exception))
-
-    def _handle_context_length(self) -> None:
-        if self.respect_context_window:
-            self._printer.print(
-                content="Context length exceeded. Summarizing content to fit the model context window.",
-                color="yellow",
-            )
-            self._summarize_messages()
-        else:
-            self._printer.print(
-                content="Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
-                color="red",
-            )
-            raise SystemExit(
-                "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
-            )
-
-    def _summarize_messages(self) -> None:
-        messages_groups = []
-        for message in self.messages:
-            content = message["content"]
-            cut_size = cast(LLM, self.llm).get_context_window_size()
-            for i in range(0, len(content), cut_size):
-                messages_groups.append(content[i : i + cut_size])
-
-        summarized_contents = []
-        for group in messages_groups:
-            summary = cast(LLM, self.llm).call(
-                [
-                    format_message_for_llm(
-                        self.i18n.slice("summarizer_system_message"), role="system"
-                    ),
-                    format_message_for_llm(
-                        self.i18n.slice("summarize_instruction").format(group=group),
-                    ),
-                ],
-                callbacks=self.callbacks,
-            )
-            summarized_contents.append(summary)
-
-        merged_summary = " ".join(str(content) for content in summarized_contents)
-
-        self.messages = [
-            format_message_for_llm(
-                self.i18n.slice("summary").format(merged_summary=merged_summary)
-            )
-        ]
-
-    def _handle_unknown_error(self, exception: Exception) -> None:
-        """Handle unknown errors by informing the user."""
-        self._printer.print(
-            content="An unknown error occurred. Please check the details below.",
-            color="red",
-        )
-        self._printer.print(
-            content=f"Error details: {exception}",
-            color="red",
-        )

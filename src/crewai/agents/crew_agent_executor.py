@@ -1,6 +1,5 @@
 import json
 import re
-from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -14,34 +13,26 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
-from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
+from crewai.tools.tool_types import ToolResult
 from crewai.utilities import I18N, Printer
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
     get_llm_response,
+    handle_agent_action_core,
+    handle_context_length,
     handle_max_iterations_exceeded,
+    handle_output_parser_exception,
+    handle_unknown_error,
     has_reached_max_iterations,
+    is_context_length_exceeded,
     process_llm_response,
+    show_agent_logs,
 )
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
-from crewai.utilities.events import (
-    ToolUsageErrorEvent,
-    ToolUsageStartedEvent,
-    crewai_event_bus,
-)
-from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
-from crewai.utilities.exceptions.context_window_exceeding_exception import (
-    LLMContextLengthExceededException,
-)
 from crewai.utilities.logger import Logger
+from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
-
-
-@dataclass
-class ToolResult:
-    result: Any
-    result_as_answer: bool
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -120,7 +111,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
             raise
         except Exception as e:
-            self._handle_unknown_error(e)
+            handle_unknown_error(self._printer, e)
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
                 raise e
@@ -163,8 +154,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
                 if isinstance(formatted_answer, AgentAction):
-                    tool_result = self._execute_tool_and_check_finality(
-                        formatted_answer
+                    tool_result = execute_tool_and_check_finality(
+                        agent_action=formatted_answer,
+                        tools=self.tools,
+                        i18n=self._i18n,
+                        agent_key=self.agent.key if self.agent else None,
+                        agent_role=self.agent.role if self.agent else None,
+                        tools_handler=self.tools_handler,
+                        task=self.task,
+                        agent=self.agent,
+                        function_calling_llm=self.function_calling_llm,
                     )
                     formatted_answer = self._handle_agent_action(
                         formatted_answer, tool_result
@@ -174,17 +173,30 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._append_message(formatted_answer.text, role="assistant")
 
             except OutputParserException as e:
-                formatted_answer = self._handle_output_parser_exception(e)
+                formatted_answer = handle_output_parser_exception(
+                    e=e,
+                    messages=self.messages,
+                    iterations=self.iterations,
+                    log_error_after=self.log_error_after,
+                    printer=self._printer,
+                )
 
             except Exception as e:
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
                     raise e
-                if self._is_context_length_exceeded(e):
-                    self._handle_context_length()
+                if is_context_length_exceeded(e):
+                    handle_context_length(
+                        respect_context_window=self.respect_context_window,
+                        printer=self._printer,
+                        messages=self.messages,
+                        llm=self.llm,
+                        callbacks=self.callbacks,
+                        i18n=self._i18n,
+                    )
                     continue
                 else:
-                    self._handle_unknown_error(e)
+                    handle_unknown_error(self._printer, e)
                     raise e
             finally:
                 self.iterations += 1
@@ -197,45 +209,27 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_logs(formatted_answer)
         return formatted_answer
 
-    def _handle_unknown_error(self, exception: Exception) -> None:
-        """Handle unknown errors by informing the user."""
-        self._printer.print(
-            content="An unknown error occurred. Please check the details below.",
-            color="red",
-        )
-        self._printer.print(
-            content=f"Error details: {exception}",
-            color="red",
-        )
-
     def _handle_agent_action(
         self, formatted_answer: AgentAction, tool_result: ToolResult
     ) -> Union[AgentAction, AgentFinish]:
         """Handle the AgentAction, execute tools, and process the results."""
+        # Special case for add_image_tool
         add_image_tool = self._i18n.tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()
             == add_image_tool.get("name", "").casefold().strip()
         ):
-            self.messages.append(tool_result.result)
-            return formatted_answer  # Continue the loop
+            self.messages.append({"role": "assistant", "content": tool_result.result})
+            return formatted_answer
 
-        if self.step_callback:
-            self.step_callback(tool_result)
-
-        formatted_answer.text += f"\nObservation: {tool_result.result}"
-        formatted_answer.result = tool_result.result
-
-        if tool_result.result_as_answer:
-            return AgentFinish(
-                thought="",
-                output=tool_result.result,
-                text=formatted_answer.text,
-            )
-
-        self._show_logs(formatted_answer)
-        return formatted_answer
+        return handle_agent_action_core(
+            formatted_answer=formatted_answer,
+            tool_result=tool_result,
+            messages=self.messages,
+            step_callback=self.step_callback,
+            show_logs=self._show_logs,
+        )
 
     def _invoke_step_callback(self, formatted_answer) -> None:
         """Invoke the step callback if it exists."""
@@ -246,145 +240,31 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """Append a message to the message list with the given role."""
         self.messages.append(format_message_for_llm(text, role=role))
 
-    def _handle_output_parser_exception(self, e: OutputParserException) -> AgentAction:
-        """Handle OutputParserException by updating messages and formatted_answer."""
-        self.messages.append({"role": "user", "content": e.error})
-
-        formatted_answer = AgentAction(
-            text=e.error,
-            tool="",
-            tool_input="",
-            thought="",
+    def _show_start_logs(self):
+        """Show logs for the start of agent execution."""
+        if self.agent is None:
+            raise ValueError("Agent cannot be None")
+        show_agent_logs(
+            printer=self._printer,
+            agent_role=self.agent.role,
+            task_description=(
+                getattr(self.task, "description") if self.task else "Not Found"
+            ),
+            verbose=self.agent.verbose
+            or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
         )
 
-        if self.iterations > self.log_error_after:
-            self._printer.print(
-                content=f"Error parsing LLM output, agent will retry: {e.error}",
-                color="red",
-            )
-
-        return formatted_answer
-
-    def _is_context_length_exceeded(self, exception: Exception) -> bool:
-        """Check if the exception is due to context length exceeding."""
-        return LLMContextLengthExceededException(
-            str(exception)
-        )._is_context_limit_error(str(exception))
-
-    def _show_start_logs(self):
-        if self.agent is None:
-            raise ValueError("Agent cannot be None")
-        if self.agent.verbose or (
-            hasattr(self, "crew") and getattr(self.crew, "verbose", False)
-        ):
-            agent_role = self.agent.role.split("\n")[0]
-            self._printer.print(
-                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
-            )
-            description = (
-                getattr(self.task, "description") if self.task else "Not Found"
-            )
-            self._printer.print(
-                content=f"\033[95m## Task:\033[00m \033[92m{description}\033[00m"
-            )
-
     def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
+        """Show logs for the agent's execution."""
         if self.agent is None:
             raise ValueError("Agent cannot be None")
-        if self.agent.verbose or (
-            hasattr(self, "crew") and getattr(self.crew, "verbose", False)
-        ):
-            agent_role = self.agent.role.split("\n")[0]
-            if isinstance(formatted_answer, AgentAction):
-                thought = re.sub(r"\n+", "\n", formatted_answer.thought)
-                formatted_json = json.dumps(
-                    formatted_answer.tool_input,
-                    indent=2,
-                    ensure_ascii=False,
-                )
-                self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
-                )
-                if thought and thought != "":
-                    self._printer.print(
-                        content=f"\033[95m## Thought:\033[00m \033[92m{thought}\033[00m"
-                    )
-                self._printer.print(
-                    content=f"\033[95m## Using tool:\033[00m \033[92m{formatted_answer.tool}\033[00m"
-                )
-                self._printer.print(
-                    content=f"\033[95m## Tool Input:\033[00m \033[92m\n{formatted_json}\033[00m"
-                )
-                self._printer.print(
-                    content=f"\033[95m## Tool Output:\033[00m \033[92m\n{formatted_answer.result}\033[00m"
-                )
-            elif isinstance(formatted_answer, AgentFinish):
-                self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
-                )
-                self._printer.print(
-                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
-                )
-
-    def _execute_tool_and_check_finality(self, agent_action: AgentAction) -> ToolResult:
-        try:
-            if self.agent:
-                crewai_event_bus.emit(
-                    self,
-                    event=ToolUsageStartedEvent(
-                        agent_key=self.agent.key,
-                        agent_role=self.agent.role,
-                        tool_name=agent_action.tool,
-                        tool_args=agent_action.tool_input,
-                        tool_class=agent_action.tool,
-                    ),
-                )
-            tool_usage = ToolUsage(
-                tools_handler=self.tools_handler,
-                tools=self.tools,
-                function_calling_llm=self.function_calling_llm,
-                task=self.task,
-                agent=self.agent,
-                action=agent_action,
-            )
-            tool_calling = tool_usage.parse_tool_calling(agent_action.text)
-
-            if isinstance(tool_calling, ToolUsageErrorException):
-                tool_result = tool_calling.message
-                return ToolResult(result=tool_result, result_as_answer=False)
-            else:
-                if tool_calling.tool_name.casefold().strip() in [
-                    name.casefold().strip() for name in self.tool_name_to_tool_map
-                ] or tool_calling.tool_name.casefold().replace("_", " ") in [
-                    name.casefold().strip() for name in self.tool_name_to_tool_map
-                ]:
-                    tool_result = tool_usage.use(tool_calling, agent_action.text)
-                    tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
-                    if tool:
-                        return ToolResult(
-                            result=tool_result, result_as_answer=tool.result_as_answer
-                        )
-                else:
-                    tool_result = self._i18n.errors("wrong_tool_name").format(
-                        tool=tool_calling.tool_name,
-                        tools=", ".join([tool.name.casefold() for tool in self.tools]),
-                    )
-                return ToolResult(result=tool_result, result_as_answer=False)
-
-        except Exception as e:
-            if self.agent:
-                crewai_event_bus.emit(
-                    self,
-                    event=ToolUsageErrorEvent(  # validation error
-                        agent_key=self.agent.key,
-                        agent_role=self.agent.role,
-                        tool_name=agent_action.tool,
-                        tool_args=agent_action.tool_input,
-                        tool_class=agent_action.tool,
-                        error=str(e),
-                    ),
-                )
-            raise e
+        show_agent_logs(
+            printer=self._printer,
+            agent_role=self.agent.role,
+            formatted_answer=formatted_answer,
+            verbose=self.agent.verbose
+            or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
+        )
 
     def _summarize_messages(self) -> None:
         messages_groups = []
@@ -392,7 +272,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             content = message["content"]
             cut_size = self.llm.get_context_window_size()
             for i in range(0, len(content), cut_size):
-                messages_groups.append(content[i : i + cut_size])
+                messages_groups.append({"content": content[i : i + cut_size]})
 
         summarized_contents = []
         for group in messages_groups:
@@ -402,36 +282,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         self._i18n.slice("summarizer_system_message"), role="system"
                     ),
                     format_message_for_llm(
-                        self._i18n.slice("summarize_instruction").format(group=group),
+                        self._i18n.slice("summarize_instruction").format(
+                            group=group["content"]
+                        ),
                     ),
                 ],
                 callbacks=self.callbacks,
             )
-            summarized_contents.append(summary)
+            summarized_contents.append({"content": str(summary)})
 
-        merged_summary = " ".join(str(content) for content in summarized_contents)
+        merged_summary = " ".join(content["content"] for content in summarized_contents)
 
         self.messages = [
             format_message_for_llm(
                 self._i18n.slice("summary").format(merged_summary=merged_summary)
             )
         ]
-
-    def _handle_context_length(self) -> None:
-        if self.respect_context_window:
-            self._printer.print(
-                content="Context length exceeded. Summarizing content to fit the model context window.",
-                color="yellow",
-            )
-            self._summarize_messages()
-        else:
-            self._printer.print(
-                content="Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
-                color="red",
-            )
-            raise SystemExit(
-                "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
-            )
 
     def _handle_crew_training_output(
         self, result: AgentFinish, human_feedback: Optional[str] = None
