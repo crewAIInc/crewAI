@@ -1499,6 +1499,37 @@ async def test_async_kickoff_for_each_async_empty_input():
 
     # Assertion
     assert results == [], "Result should be an empty list when input is empty"
+@pytest.mark.asyncio
+async def test_kickoff_async_error_handling():
+    """Tests error handling in kickoff_async when kickoff raises an error."""
+    from unittest.mock import patch
+    
+    inputs = {"topic": "dog"}
+    
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+    
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+    
+    # Create the crew
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+    )
+    
+    with patch.object(Crew, "kickoff", side_effect=Exception("Simulated LLM error")) as mock_kickoff:
+        with pytest.raises(Exception, match="Simulated LLM error"):
+            await crew.kickoff_async(inputs)
+            
+        mock_kickoff.assert_called_once_with(inputs)
+
 
 
 def test_set_agents_step_callback():

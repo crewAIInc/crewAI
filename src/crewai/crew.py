@@ -684,7 +684,10 @@ class Crew(BaseModel):
 
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
         """Asynchronous kickoff method to start the crew execution."""
-        return await asyncio.to_thread(self.kickoff, inputs)
+        try:
+            return await asyncio.to_thread(self.kickoff, inputs)
+        except Exception as e:
+            raise
 
     async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[CrewOutput]:
         crew_copies = [self.copy() for _ in inputs]
