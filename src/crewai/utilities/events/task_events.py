@@ -1,10 +1,10 @@
 from typing import Any, Optional
 
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities.events.base_events import CrewEvent
+from crewai.utilities.events.base_events import BaseEvent
 
 
-class TaskStartedEvent(CrewEvent):
+class TaskStartedEvent(BaseEvent):
     """Event emitted when a task starts"""
 
     type: str = "task_started"
@@ -14,14 +14,17 @@ class TaskStartedEvent(CrewEvent):
     def __init__(self, **data):
         super().__init__(**data)
         # Set fingerprint data from the task
-        if hasattr(self.task, 'fingerprint') and self.task.fingerprint:
+        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
             self.source_fingerprint = self.task.fingerprint.uuid_str
             self.source_type = "task"
-            if hasattr(self.task.fingerprint, 'metadata') and self.task.fingerprint.metadata:
+            if (
+                hasattr(self.task.fingerprint, "metadata")
+                and self.task.fingerprint.metadata
+            ):
                 self.fingerprint_metadata = self.task.fingerprint.metadata
 
 
-class TaskCompletedEvent(CrewEvent):
+class TaskCompletedEvent(BaseEvent):
     """Event emitted when a task completes"""
 
     output: TaskOutput
@@ -31,14 +34,17 @@ class TaskCompletedEvent(CrewEvent):
     def __init__(self, **data):
         super().__init__(**data)
         # Set fingerprint data from the task
-        if hasattr(self.task, 'fingerprint') and self.task.fingerprint:
+        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
             self.source_fingerprint = self.task.fingerprint.uuid_str
             self.source_type = "task"
-            if hasattr(self.task.fingerprint, 'metadata') and self.task.fingerprint.metadata:
+            if (
+                hasattr(self.task.fingerprint, "metadata")
+                and self.task.fingerprint.metadata
+            ):
                 self.fingerprint_metadata = self.task.fingerprint.metadata
 
 
-class TaskFailedEvent(CrewEvent):
+class TaskFailedEvent(BaseEvent):
     """Event emitted when a task fails"""
 
     error: str
@@ -48,14 +54,17 @@ class TaskFailedEvent(CrewEvent):
     def __init__(self, **data):
         super().__init__(**data)
         # Set fingerprint data from the task
-        if hasattr(self.task, 'fingerprint') and self.task.fingerprint:
+        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
             self.source_fingerprint = self.task.fingerprint.uuid_str
             self.source_type = "task"
-            if hasattr(self.task.fingerprint, 'metadata') and self.task.fingerprint.metadata:
+            if (
+                hasattr(self.task.fingerprint, "metadata")
+                and self.task.fingerprint.metadata
+            ):
                 self.fingerprint_metadata = self.task.fingerprint.metadata
 
 
-class TaskEvaluationEvent(CrewEvent):
+class TaskEvaluationEvent(BaseEvent):
     """Event emitted when a task evaluation is completed"""
 
     type: str = "task_evaluation"
@@ -65,8 +74,11 @@ class TaskEvaluationEvent(CrewEvent):
     def __init__(self, **data):
         super().__init__(**data)
         # Set fingerprint data from the task
-        if hasattr(self.task, 'fingerprint') and self.task.fingerprint:
+        if hasattr(self.task, "fingerprint") and self.task.fingerprint:
             self.source_fingerprint = self.task.fingerprint.uuid_str
             self.source_type = "task"
-            if hasattr(self.task.fingerprint, 'metadata') and self.task.fingerprint.metadata:
+            if (
+                hasattr(self.task.fingerprint, "metadata")
+                and self.task.fingerprint.metadata
+            ):
                 self.fingerprint_metadata = self.task.fingerprint.metadata
