@@ -404,7 +404,7 @@ You can test different real life examples of AI crews in the [CrewAI-examples re
 CrewAI's power truly shines when combining Crews with Flows to create sophisticated automation pipelines. Here's how you can orchestrate multiple Crews within a Flow:
 
 ```python
-from crewai.flow.flow import Flow, listen, start, router
+from crewai.flow.flow import Flow, listen, start, router, or_
 from crewai import Crew, Agent, Task, Process
 from pydantic import BaseModel
 
