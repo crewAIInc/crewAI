@@ -446,6 +446,7 @@ class LiteAgent(BaseModel):
                                 tool_class=formatted_answer.tool,
                                 started_at=datetime.now(),
                                 finished_at=datetime.now(),
+                                output=tool_result.result,
                             ),
                         )
                     except Exception as e:

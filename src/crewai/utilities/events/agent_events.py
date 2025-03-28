@@ -77,7 +77,7 @@ class AgentExecutionErrorEvent(BaseEvent):
 
 
 # New event classes for LiteAgent
-class LiteAgentExecutionStartedEvent(CrewEvent):
+class LiteAgentExecutionStartedEvent(BaseEvent):
     """Event emitted when a LiteAgent starts executing"""
 
     agent_info: Dict[str, Any]
@@ -88,7 +88,7 @@ class LiteAgentExecutionStartedEvent(CrewEvent):
     model_config = {"arbitrary_types_allowed": True}
 
 
-class LiteAgentExecutionCompletedEvent(CrewEvent):
+class LiteAgentExecutionCompletedEvent(BaseEvent):
     """Event emitted when a LiteAgent completes execution"""
 
     agent_info: Dict[str, Any]
@@ -96,7 +96,7 @@ class LiteAgentExecutionCompletedEvent(CrewEvent):
     type: str = "lite_agent_execution_completed"
 
 
-class LiteAgentExecutionErrorEvent(CrewEvent):
+class LiteAgentExecutionErrorEvent(BaseEvent):
     """Event emitted when a LiteAgent encounters an error during execution"""
 
     agent_info: Dict[str, Any]
