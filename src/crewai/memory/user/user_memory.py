@@ -43,3 +43,11 @@ class UserMemory(Memory):
             score_threshold=score_threshold,
         )
         return results
+
+    def reset(self) -> None:
+        try:
+            self.storage.reset()
+        except Exception as e:
+            raise Exception(
+                f"An error occurred while resetting the user memory: {e}"
+            )
