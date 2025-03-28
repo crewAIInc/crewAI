@@ -289,34 +289,35 @@ class ToolUsage:
 
         return result  # type: ignore # No return value expected
 
-    def _format_result(self, result: Any) -> None:
+    def _format_result(self, result: Any) -> str:
         if self.task:
             self.task.used_tools += 1
-        if self._should_remember_format():  # type: ignore # "_should_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
-            result = self._remember_format(result=result)  # type: ignore # "_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
-        return result
+        if self._should_remember_format():
+            result = self._remember_format(result=result)
+        return str(result)
 
     def _should_remember_format(self) -> bool:
         if self.task:
             return self.task.used_tools % self._remember_format_after_usages == 0
         return False
 
-    def _remember_format(self, result: str) -> None:
+    def _remember_format(self, result: str) -> str:
         result = str(result)
         result += "\n\n" + self._i18n.slice("tools").format(
             tools=self.tools_description, tool_names=self.tools_names
         )
-        return result  # type: ignore # No return value expected
+        return result
 
     def _check_tool_repeated_usage(
         self, calling: Union[ToolCalling, InstructorToolCalling]
-    ) -> None:
+    ) -> bool:
         if not self.tools_handler:
-            return False  # type: ignore # No return value expected
+            return False
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (  # type: ignore # No return value expected
+            return (calling.tool_name == last_tool_usage.tool_name) and (
                 calling.arguments == last_tool_usage.arguments
             )
+        return False
 
     def _select_tool(self, tool_name: str) -> Any:
         order_tools = sorted(
@@ -337,7 +338,7 @@ class ToolUsage:
                 return tool
         if self.task:
             self.task.increment_tools_errors()
-        tool_selection_data = {
+        tool_selection_data: Dict[str, Any] = {
             "agent_key": getattr(self.agent, "key", None) if self.agent else None,
             "agent_role": getattr(self.agent, "role", None) if self.agent else None,
             "tool_name": tool_name,
@@ -595,27 +596,31 @@ class ToolUsage:
         arguments = arguments.copy()
 
         # Add security metadata under a designated key
-        if not "security_context" in arguments:
+        if "security_context" not in arguments:
             arguments["security_context"] = {}
 
         security_context = arguments["security_context"]
 
         # Add agent fingerprint if available
-        if hasattr(self, "agent") and hasattr(self.agent, "security_config"):
-            security_context["agent_fingerprint"] = (
-                self.agent.security_config.fingerprint.to_dict()
-            )
+        if self.agent and hasattr(self.agent, "security_config"):
+            security_config = getattr(self.agent, "security_config", None)
+            if security_config and hasattr(security_config, "fingerprint"):
+                try:
+                    security_context["agent_fingerprint"] = (
+                        security_config.fingerprint.to_dict()
+                    )
+                except AttributeError:
+                    pass
 
         # Add task fingerprint if available
-        if hasattr(self, "task") and hasattr(self.task, "security_config"):
-            security_context["task_fingerprint"] = (
-                self.task.security_config.fingerprint.to_dict()
-            )
-
-        # Add crew fingerprint if available
-        if hasattr(self, "crew") and hasattr(self.crew, "security_config"):
-            security_context["crew_fingerprint"] = (
-                self.crew.security_config.fingerprint.to_dict()
-            )
+        if self.task and hasattr(self.task, "security_config"):
+            security_config = getattr(self.task, "security_config", None)
+            if security_config and hasattr(security_config, "fingerprint"):
+                try:
+                    security_context["task_fingerprint"] = (
+                        security_config.fingerprint.to_dict()
+                    )
+                except AttributeError:
+                    pass
 
         return arguments
