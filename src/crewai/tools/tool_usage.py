@@ -170,7 +170,7 @@ class ToolUsage:
         started_at = time.time()
         from_cache = False
 
-        result = None
+        result: str | None = None
         # check if cache is available
         if self.tools_handler and self.tools_handler.cache:
             result = self.tools_handler.cache.read(
@@ -287,7 +287,7 @@ class ToolUsage:
         if self.agent and hasattr(self.agent, "tools_results"):
             self.agent.tools_results.append(data)
 
-        return result  # type: ignore # No return value expected
+        return result
 
     def _format_result(self, result: Any) -> str:
         if self.task:
