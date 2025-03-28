@@ -748,7 +748,6 @@ class LLM:
                 if not LLMContextLengthExceededException(
                     str(e)
                 )._is_context_limit_error(str(e)):
-                    print("HERE IS WHERE THE ERROR IS")
                     logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 

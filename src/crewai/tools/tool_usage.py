@@ -52,14 +52,6 @@ class ToolUsageErrorException(Exception):
         super().__init__(self.message)
 
 
-@dataclass
-class ToolResult:
-    """Result of tool execution."""
-
-    result: str
-    result_as_answer: bool = False
-
-
 class ToolUsage:
     """
     Class that represents the usage of a tool by an agent.
