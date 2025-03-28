@@ -401,7 +401,12 @@ You can test different real life examples of AI crews in the [CrewAI-examples re
 
 ### Using Crews and Flows Together
 
-CrewAI's power truly shines when combining Crews with Flows to create sophisticated automation pipelines. Here's how you can orchestrate multiple Crews within a Flow:
+CrewAI's power truly shines when combining Crews with Flows to create sophisticated automation pipelines.
+CrewAI flows support logical operators like `or_` and `and_` to combine multiple conditions. This is used with @start, @listen, or @router decorators to create complex triggering conditions.
+- `or_`: Triggers when any of the specified conditions are met. 
+- `and_`Triggers when all of the specified conditions are met.
+
+Here's how you can orchestrate multiple Crews within a Flow:
 
 ```python
 from crewai.flow.flow import Flow, listen, start, router, or_
