@@ -94,6 +94,10 @@ class ContextualMemory:
         Returns:
             str: Formatted user memories as bullet points, or an empty string if none found.
         """
+
+        if self.um is None:
+            return ""
+
         user_memories = self.um.search(query)
         if not user_memories:
             return ""
