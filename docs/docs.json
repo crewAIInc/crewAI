@@ -66,6 +66,7 @@
               "concepts/tasks",
               "concepts/crews",
               "concepts/flows",
+              "concepts/lite-agent",
               "concepts/knowledge",
               "concepts/llms",
               "concepts/processes",

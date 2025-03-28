@@ -1,5 +1,5 @@
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 
 
 class CrewAgentExecutorMixin:
-    crew: Optional["Crew"]
-    agent: Optional["BaseAgent"]
-    task: Optional["Task"]
+    crew: "Crew"
+    agent: "BaseAgent"
+    task: "Task"
     iterations: int
     max_iter: int
     _i18n: I18N

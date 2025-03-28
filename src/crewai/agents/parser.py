@@ -65,10 +65,20 @@ class CrewAgentParser:
     """
 
     _i18n: I18N = I18N()
-    agent: Any = None
 
-    def __init__(self, agent: Any):
-        self.agent = agent
+    @staticmethod
+    def parse_text(text: str) -> Union[AgentAction, AgentFinish]:
+        """
+        Static method to parse text into an AgentAction or AgentFinish without needing to instantiate the class.
+
+        Args:
+            text: The text to parse.
+
+        Returns:
+            Either an AgentAction or AgentFinish based on the parsed content.
+        """
+        parser = CrewAgentParser()
+        return parser.parse(text)
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
         thought = self._extract_thought(text)
@@ -77,7 +87,18 @@ class CrewAgentParser:
             r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         )
         action_match = re.search(regex, text, re.DOTALL)
-        if action_match:
+        if includes_answer:
+            final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
+            # Check whether the final answer ends with triple backticks.
+            if final_answer.endswith("```"):
+                # Count occurrences of triple backticks in the final answer.
+                count = final_answer.count("```")
+                # If count is odd then it's an unmatched trailing set; remove it.
+                if count % 2 != 0:
+                    final_answer = final_answer[:-3].rstrip()
+            return AgentFinish(thought, final_answer, text)
+
+        elif action_match:
             if includes_answer:
                 raise OutputParserException(
                     f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}"
@@ -92,33 +113,19 @@ class CrewAgentParser:
 
             return AgentAction(thought, clean_action, safe_tool_input, text)
 
-        elif includes_answer:
-            final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
-            # Check whether the final answer ends with triple backticks.
-            if final_answer.endswith("```"):
-                # Count occurrences of triple backticks in the final answer.
-                count = final_answer.count("```")
-                # If count is odd then it's an unmatched trailing set; remove it.
-                if count % 2 != 0:
-                    final_answer = final_answer[:-3].rstrip()
-            return AgentFinish(thought, final_answer, text)
-
         if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
-            self.agent.increment_formatting_errors()
             raise OutputParserException(
                 f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{self._i18n.slice('final_answer_format')}",
             )
         elif not re.search(
             r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL
         ):
-            self.agent.increment_formatting_errors()
             raise OutputParserException(
                 MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
             )
         else:
             format = self._i18n.slice("format_without_tools")
             error = f"{format}"
-            self.agent.increment_formatting_errors()
             raise OutputParserException(
                 error,
             )

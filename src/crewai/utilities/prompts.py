@@ -9,7 +9,7 @@ class Prompts(BaseModel):
     """Manages and generates prompts for a generic agent."""
 
     i18n: I18N = Field(default=I18N())
-    tools: list[Any] = Field(default=[])
+    has_tools: bool = False
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
     response_template: Optional[str] = None
@@ -19,7 +19,7 @@ class Prompts(BaseModel):
     def task_execution(self) -> dict[str, str]:
         """Generate a standard prompt for task execution."""
         slices = ["role_playing"]
-        if len(self.tools) > 0:
+        if self.has_tools:
             slices.append("tools")
         else:
             slices.append("no_tools")

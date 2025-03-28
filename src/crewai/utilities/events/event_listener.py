@@ -16,7 +16,13 @@ from crewai.utilities.events.llm_events import (
 )
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 
-from .agent_events import AgentExecutionCompletedEvent, AgentExecutionStartedEvent
+from .agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionStartedEvent,
+    LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionErrorEvent,
+    LiteAgentExecutionStartedEvent,
+)
 from .crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
@@ -65,7 +71,7 @@ class EventListener(BaseEventListener):
             self._telemetry.set_tracer()
             self.execution_spans = {}
             self._initialized = True
-            self.formatter = ConsoleFormatter()
+            self.formatter = ConsoleFormatter(verbose=True)
 
     # ----------- CREW EVENTS -----------
 
@@ -169,6 +175,36 @@ class EventListener(BaseEventListener):
                 self.formatter.current_agent_branch,
                 event.agent.role,
                 self.formatter.current_crew_tree,
+            )
+
+        # ----------- LITE AGENT EVENTS -----------
+
+        @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
+        def on_lite_agent_execution_started(
+            source, event: LiteAgentExecutionStartedEvent
+        ):
+            """Handle LiteAgent execution started event."""
+            self.formatter.handle_lite_agent_execution(
+                event.agent_info["role"], status="started", **event.agent_info
+            )
+
+        @crewai_event_bus.on(LiteAgentExecutionCompletedEvent)
+        def on_lite_agent_execution_completed(
+            source, event: LiteAgentExecutionCompletedEvent
+        ):
+            """Handle LiteAgent execution completed event."""
+            self.formatter.handle_lite_agent_execution(
+                event.agent_info["role"], status="completed", **event.agent_info
+            )
+
+        @crewai_event_bus.on(LiteAgentExecutionErrorEvent)
+        def on_lite_agent_execution_error(source, event: LiteAgentExecutionErrorEvent):
+            """Handle LiteAgent execution error event."""
+            self.formatter.handle_lite_agent_execution(
+                event.agent_info["role"],
+                status="failed",
+                error=event.error,
+                **event.agent_info,
             )
 
         # ----------- FLOW EVENTS -----------
