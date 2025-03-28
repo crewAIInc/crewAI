@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from crewai.agents.parser import AgentAction
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -22,6 +22,7 @@ def execute_tool_and_check_finality(
     task: Optional[Any] = None,
     agent: Optional[Any] = None,
     function_calling_llm: Optional[Any] = None,
+    fingerprint_context: Optional[Dict[str, str]] = None,
 ) -> ToolResult:
     """Execute a tool and check if the result should be treated as a final answer.
 
@@ -45,14 +46,23 @@ def execute_tool_and_check_finality(
 
         # Emit tool usage event if agent info is available
         if agent_key and agent_role and agent:
+            fingerprint_context = fingerprint_context or {}
+            if agent:
+                agent.fingerprint = fingerprint_context
+
+            event_data = {
+                "agent_key": agent_key,
+                "agent_role": agent_role,
+                "tool_name": agent_action.tool,
+                "tool_args": agent_action.tool_input,
+                "tool_class": agent_action.tool,
+                "agent": agent,
+            }
+            event_data.update(fingerprint_context)
             crewai_event_bus.emit(
                 agent,
                 event=ToolUsageStartedEvent(
-                    agent_key=agent_key,
-                    agent_role=agent_role,
-                    tool_name=agent_action.tool,
-                    tool_args=agent_action.tool_input,
-                    tool_class=agent_action.tool,
+                    **event_data,
                 ),
             )
 

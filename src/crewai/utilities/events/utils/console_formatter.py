@@ -622,6 +622,7 @@ class ConsoleFormatter:
             for child in flow_tree.children:
                 if "Running tests" in str(child.label):
                     child.label = Text("✅ Tests completed successfully", style="green")
+                    break
 
             self.print(flow_tree)
             self.print()

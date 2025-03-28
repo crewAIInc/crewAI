@@ -10,7 +10,7 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.llm import LLM
+from crewai.llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
@@ -59,7 +59,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         callbacks: List[Any] = [],
     ):
         self._i18n: I18N = I18N()
-        self.llm: LLM = llm
+        self.llm: BaseLLM = llm
         self.task = task
         self.agent = agent
         self.crew = crew
@@ -85,8 +85,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
             tool.name: tool for tool in self.tools
         }
-        self.stop = stop_words
-        self.llm.stop = list(set(self.llm.stop + self.stop))
+        existing_stop = self.llm.stop or []
+        self.llm.stop = list(
+            set(
+                existing_stop + self.stop
+                if isinstance(existing_stop, list)
+                else self.stop
+            )
+        )
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
@@ -154,8 +160,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
                 if isinstance(formatted_answer, AgentAction):
+                    # Extract agent fingerprint if available
+                    fingerprint_context = {}
+                    if (
+                        self.agent
+                        and hasattr(self.agent, "security_config")
+                        and hasattr(self.agent.security_config, "fingerprint")
+                    ):
+                        fingerprint_context = {
+                            "agent_fingerprint": str(
+                                self.agent.security_config.fingerprint
+                            )
+                        }
+
                     tool_result = execute_tool_and_check_finality(
                         agent_action=formatted_answer,
+                        fingerprint_context=fingerprint_context,
                         tools=self.tools,
                         i18n=self._i18n,
                         agent_key=self.agent.key if self.agent else None,

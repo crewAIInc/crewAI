@@ -10,6 +10,7 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -70,7 +71,7 @@ def handle_max_iterations_exceeded(
     printer: Printer,
     i18n: I18N,
     messages: List[Dict[str, str]],
-    llm: LLM,
+    llm: Union[LLM, BaseLLM],
     callbacks: List[Any],
 ) -> Union[AgentAction, AgentFinish]:
     """
@@ -142,7 +143,10 @@ def enforce_rpm_limit(
 
 
 def get_llm_response(
-    llm: LLM, messages: List[Dict[str, str]], callbacks: List[Any], printer: Printer
+    llm: Union[LLM, BaseLLM],
+    messages: List[Dict[str, str]],
+    callbacks: List[Any],
+    printer: Printer,
 ) -> str:
     """Call the LLM and return the response, handling any invalid responses."""
     try:

@@ -11,7 +11,7 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
-from crewai.llm import LLM
+from crewai.llm import BaseLLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.security import Fingerprint
 from crewai.task import Task
@@ -76,10 +76,10 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: Union[str, InstanceOf[LLM], Any] = Field(
+    llm: Union[str, InstanceOf[BaseLLM], Any] = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
+    function_calling_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: Optional[str] = Field(
@@ -120,7 +120,9 @@ class Agent(BaseAgent):
         self.agent_ops_agent_name = self.role
 
         self.llm = create_llm(self.llm)
-        if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
+        if self.function_calling_llm and not isinstance(
+            self.function_calling_llm, BaseLLM
+        ):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
         if not self.agent_executor:
@@ -142,15 +144,13 @@ class Agent(BaseAgent):
                 self.embedder = crew_embedder
 
             if self.knowledge_sources:
-                full_pattern = re.compile(r"[^a-zA-Z0-9\-_\r\n]|(\.\.)")
-                knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
                         embedder=self.embedder,
-                        collection_name=knowledge_agent_name,
+                        collection_name=self.role,
                         storage=self.knowledge_storage or None,
                     )
         except (TypeError, ValueError) as e:

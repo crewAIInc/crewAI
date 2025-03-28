@@ -1,11 +1,11 @@
 from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-from .base_events import CrewEvent
+from .base_events import BaseEvent
 
 
-class FlowEvent(CrewEvent):
+class FlowEvent(BaseEvent):
     """Base class for all flow events"""
 
     type: str
@@ -52,8 +52,10 @@ class MethodExecutionFailedEvent(FlowEvent):
 
     flow_name: str
     method_name: str
-    error: Any
+    error: Exception
     type: str = "method_execution_failed"
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class FlowFinishedEvent(FlowEvent):
