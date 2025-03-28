@@ -20,7 +20,6 @@ class MarketResearchState(BaseModel):
     analysis: MarketAnalysis | None = None
 
 
-# Create a flow class
 class MarketResearchFlow(Flow[MarketResearchState]):
     @start()
     def initialize_research(self):

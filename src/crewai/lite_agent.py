@@ -395,6 +395,7 @@ class LiteAgent(BaseModel):
                         callbacks=self._callbacks,
                         printer=self._printer,
                     )
+
                     # Emit LLM call completed event
                     crewai_event_bus.emit(
                         self,
