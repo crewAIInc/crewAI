@@ -1,5 +1,6 @@
 import warnings
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from inspect import signature
 from typing import Any, Callable, Type, get_args, get_origin
 
@@ -237,6 +238,82 @@ class Tool(BaseTool):
             func=tool.func,
             args_schema=args_schema,
         )
+
+
+class ToolCollection:
+    """A collection of tools.
+
+    This class enable CrewAI to load multiple tools from various sources. For example,
+    it can load all tools from an mcp server via `ToolCollection.from_mcp_server()`.
+    """
+
+    def __init__(self, tools: list[BaseTool]):
+        self.tools = tools
+
+    @classmethod
+    @contextmanager
+    def from_mcp(cls, server_parameters) -> "ToolCollection":
+        """Automatically load a tool collection from an MCP server.
+
+        This method supports both SSE and Stdio MCP servers. Look at the `sever_parameters`
+        argument for more details on how to connect to an SSE or Stdio MCP server.
+
+        Note: a separate thread will be spawned to run an asyncio event loop handling
+        the MCP server.
+
+        Args:
+            server_parameters (mcp.StdioServerParameters | dict):
+                The server parameters to use to connect to the MCP server. If a dict is
+                provided, it is assumed to be the parameters of `mcp.client.sse.sse_client`.
+
+        Returns:
+            ToolCollection: A tool collection instance.
+
+        Example with a Stdio MCP server:
+        ```py
+        >>> from crewai import Agent, Task, Crew
+        >>> from crewai.tools import ToolCollection
+        >>> from mcp import StdioServerParameters
+
+        >>> server_parameters = StdioServerParameters(
+        >>>     command="uv",
+        >>>     args=["--quiet", "pubmedmcp@0.1.3"],
+        >>>     env={"UV_PYTHON": "3.12", **os.environ},
+        >>> )
+
+        >>> with ToolCollection.from_mcp(server_parameters) as tool_collection:
+        >>>     agent = Agent(
+        >>>         role="Research Agent",
+        >>>         goal="Find studies about hangover",
+        >>>         backstory="You help find studies about hangover",
+        >>>         verbose=True,
+        >>>         tools=[tool_collection.tools[0]],
+        >>>     )
+        >>>     task = Task(
+        >>>         description="Find studies about hangover",
+        >>>         agent=agent,
+        >>>         expected_output="A list of studies about hangover",
+        >>>     )
+        >>>     crew = Crew(agents=[agent], tasks=[task], verbose=True)
+        >>>     result = crew.kickoff()
+        ```
+
+        Example with an SSE MCP server:
+        ```py
+        >>> with ToolCollection.from_mcp({"url": "http://127.0.0.1:8000/sse"}) as tool_collection:
+        >>>     ...
+        ```
+        """
+        try:
+            from mcpadapt.core import MCPAdapt
+            from mcpadapt.crewai_adapter import CrewAIAdapter
+        except ImportError:
+            raise ImportError(
+                """Please install 'mcp' extra to use ToolCollection.from_mcp: `pip install "crewai[mcp]"`."""
+            )
+
+        with MCPAdapt(server_parameters, CrewAIAdapter()) as tools:
+            yield cls(tools)
 
 
 def to_langchain(
