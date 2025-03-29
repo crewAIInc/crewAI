@@ -25,7 +25,7 @@ def schema_class():
     return TestSchema
 
 
-class InternalCrewStructuredTool:
+class TestInternalCrewStructuredTool:
     def test_initialization(self, basic_function, schema_class):
         """Test basic initialization of CrewStructuredTool"""
         tool = CrewStructuredTool(
@@ -144,3 +144,55 @@ class InternalCrewStructuredTool:
             {"required_param": "test", "optional_param": "custom", "nullable_param": 42}
         )
         assert result == "test custom 42"
+        
+    def test_to_openai_function_no_additional_properties(self):
+        """Test that the to_openai_function method doesn't include additionalProperties."""
+        
+        class TestSchema(BaseModel):
+            test_field: str = Field(..., description="A test field")
+        
+        def test_func(test_field: str) -> str:
+            """Test function that returns the input."""
+            return f"Test function received: {test_field}"
+        
+        tool = CrewStructuredTool(
+            name="test_tool",
+            description="A test tool",
+            args_schema=TestSchema,
+            func=test_func
+        )
+        
+        function_dict = tool.to_openai_function()
+        assert "additionalProperties" not in function_dict["function"]["parameters"]
+        
+        # Verify other properties are correct
+        assert function_dict["type"] == "function"
+        assert function_dict["function"]["name"] == "test_tool"
+        assert function_dict["function"]["description"] == "A test tool"
+        assert "properties" in function_dict["function"]["parameters"]
+        assert "test_field" in function_dict["function"]["parameters"]["properties"]
+        
+    def test_to_openai_function_edge_cases(self):
+        """Test edge cases for to_openai_function conversion."""
+        class EmptySchema(BaseModel):
+            pass
+            
+        def empty_func() -> None:
+            pass
+            
+        tool = CrewStructuredTool(
+            name="empty_tool",
+            description="A tool with empty schema",
+            args_schema=EmptySchema,
+            func=empty_func
+        )
+        
+        function_dict = tool.to_openai_function()
+        assert function_dict["type"] == "function"
+        assert function_dict["function"]["name"] == "empty_tool"
+        
+        # Check that parameters contains the expected fields
+        params = function_dict["function"]["parameters"]
+        assert params["title"] == "EmptySchema"
+        assert params["type"] == "object"
+        assert "properties" in params  # Empty schema still has a properties field

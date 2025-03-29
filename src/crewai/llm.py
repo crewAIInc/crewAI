@@ -306,8 +306,6 @@ class LLM(BaseLLM):
         Args:
             messages: Input messages for the LLM
             tools: Optional list of tool schemas
-            callbacks: Optional list of callback functions
-            available_functions: Optional dict of available functions
 
         Returns:
             Dict[str, Any]: Parameters for the completion call
@@ -317,7 +315,10 @@ class LLM(BaseLLM):
             messages = [{"role": "user", "content": messages}]
         formatted_messages = self._format_messages_for_provider(messages)
 
-        # --- 2) Prepare the parameters for the completion call
+        # --- 2) If using Gemini, ensure additionalProperties is not in tool schemas
+        self._clean_gemini_tool_parameters(tools)
+        
+        # --- 3) Prepare the parameters for the completion call
         params = {
             "model": self.model,
             "messages": formatted_messages,
@@ -346,6 +347,22 @@ class LLM(BaseLLM):
 
         # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}
+    
+    def _clean_gemini_tool_parameters(
+        self, tools: Optional[List[dict]]
+    ) -> None:
+        """Remove additionalProperties from tool parameters for Gemini compatibility.
+        
+        Args:
+            tools: List of tool dictionaries that may contain function schemas
+        """
+        if not tools or "gemini" not in self.model.lower():
+            return
+            
+        for tool in tools:
+            if isinstance(tool, dict) and "function" in tool:
+                params = tool["function"].get("parameters", {})
+                params.pop("additionalProperties", None)
 
     def _handle_streaming_response(
         self,
