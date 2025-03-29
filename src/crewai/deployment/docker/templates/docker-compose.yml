@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  crewai:
+    build: .
+    image: crewai-{{name}}
+    container_name: crewai-{{name}}
+    ports:
+      - "{{port}}:{{port}}"
+    volumes:
+      - .:/app
+    environment:
+      - PORT={{port}}
+    restart: unless-stopped
