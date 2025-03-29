@@ -253,6 +253,68 @@ writer1 = Agent(
     #...
 ```
 
+## Tool Collection
+
+Tool Collection allow users to load a collection of CrewAI tools from various sources.
+For example CrewAI Tool Collection can leverage tools from a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) server.
+
+### MCP Tools
+
+### what is MCP?
+
+MCP is an open source protocol which allow anyone to create servers to define tools among other things.
+Since its release in november 2024 a large amount of MCP server have been created by the community covering a large panel of tools that can be leveraged by your agents.
+Some websites index available MCP server (600+) like [glama.ai](https://glama.ai/mcp/servers) or [smithery.ai](https://smithery.ai/).
+
+Today MCP servers leverage 2 possible transport protocol to communicate with a client: stdio with a local subprocess or SSE with a remote server.
+Both transport protocol are supported with CrewAI Tool Collection capabilities.
+
+<Warning>
+  When using MCP servers over stdio transport protocol, be extremely cautious and verify the authenticity and trustworthiness of the server.
+  The stdio protocol allows the MCP server to execute programs on your machine with your permissions.
+  Only use MCP servers from trusted sources and carefully review their code before running them.
+</Warning>
+
+### How to leverage MCP server tools with CrewAI?
+
+MCP servers usually provides several tools to load several tools from an MCP server you can leverage `ToolCollection.from_mcp`.
+
+Here is an example where we leverage the pubmedmcp MCP server to load a tool that allow our agent to search abstract of medical papers from pubmed:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai.tools import ToolCollection
+from mcp import StdioServerParameters
+
+server_parameters = StdioServerParameters(
+    command="uv",
+    args=["--quiet", "pubmedmcp@0.1.3"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+with ToolCollection.from_mcp(server_parameters) as tool_collection:
+    agent = Agent(
+        role="Research Agent",
+        goal="Find studies about hangover",
+        backstory="You help find studies about hangover",
+        verbose=True,
+        tools=[tool_collection.tools[0]],
+    )
+    task = Task(
+        description="Find studies about hangover",
+        agent=agent,
+        expected_output="A list of studies about hangover",
+    )
+    crew = Crew(agents=[agent], tasks=[task], verbose=True)
+    result = crew.kickoff()
+
+Similarly `ToolCollection.from_mcp` can be used with a remote SSE MCP server as follow:
+
+```python Code
+with ToolCollection.from_mcp({"url": "http://127.0.0.1:8000/sse"}) as tool_collection:
+   ...
+```
+
 ## Conclusion
 
 Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively.
