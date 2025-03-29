@@ -279,6 +279,20 @@ Both transport protocol are supported with CrewAI Tool Collection capabilities.
 
 MCP servers usually provides several tools to load several tools from an MCP server you can leverage `ToolCollection.from_mcp`.
 
+Before being able to use `ToolCollection.from_mcp` you need to install the extra `mcp` depedencies either via uv:
+
+```bash
+uv sync --extra mcp
+```
+
+or via pip
+
+```bash
+pip install crewai[mcp]
+# or
+uv pip install crewai[mcp]
+```
+
 Here is an example where we leverage the pubmedmcp MCP server to load a tool that allow our agent to search abstract of medical papers from pubmed:
 
 ```python Code
