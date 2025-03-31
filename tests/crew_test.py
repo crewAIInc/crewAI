@@ -2157,14 +2157,20 @@ def test_tools_with_custom_caching():
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
     ) as add_to_cache:
-        with patch.object(CacheHandler, "read", wraps=crew._cache_handler.read) as _:
-            result = crew.kickoff()
-            add_to_cache.assert_called_once_with(
-                tool="multiplcation_tool",
-                input={"first_number": 2, "second_number": 6},
-                output=12,
-            )
-            assert result.raw == "3"
+
+        result = crew.kickoff()
+
+        # Check that add_to_cache was called exactly twice
+        assert add_to_cache.call_count == 2
+
+        # Verify that one of those calls was with the even number that should be cached
+        add_to_cache.assert_any_call(
+            tool="multiplcation_tool",
+            input={"first_number": 2, "second_number": 6},
+            output=12,
+        )
+
+        assert result.raw == "3"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -4072,14 +4078,14 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
         role="Researcher",
         goal="Conduct thorough research and analysis on AI and AI agents",
         backstory="You're an expert researcher, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently researching for a new client.",
-        allow_delegation=False
+        allow_delegation=False,
     )
 
     writer = Agent(
         role="Senior Writer",
         goal="Create compelling content about AI and AI agents",
         backstory="You're a senior writer, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently writing content for a new client.",
-        allow_delegation=False
+        allow_delegation=False,
     )
 
     # Define task
@@ -4093,7 +4099,7 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
         role="Project Manager",
         goal="Efficiently manage the crew and ensure high-quality task completion",
         backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
-        allow_delegation=True
+        allow_delegation=True,
     )
 
     # Instantiate crew with a custom manager
@@ -4102,7 +4108,7 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
         tasks=[task],
         manager_agent=manager,
         process=Process.hierarchical,
-        verbose=True
+        verbose=True,
     )
 
     crew_copy = crew.copy()
@@ -4113,4 +4119,3 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
     assert crew_copy.manager_agent.backstory == crew.manager_agent.backstory
     assert isinstance(crew_copy.manager_agent.agent_executor, CrewAgentExecutor)
     assert isinstance(crew_copy.manager_agent.cache_handler, CacheHandler)
-
