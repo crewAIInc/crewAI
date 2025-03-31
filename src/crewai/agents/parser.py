@@ -112,7 +112,6 @@ class CrewAgentParser:
 
         # Handle action case
         elif action_match:
-            print("made it here action_match", action_match)
             action = action_match.group(1)
             clean_action = self._clean_action(action)
 
