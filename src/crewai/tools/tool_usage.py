@@ -26,7 +26,6 @@ from crewai.utilities.events.tool_usage_events import (
     ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
-    ToolUsageStartedEvent,
     ToolValidateInputErrorEvent,
 )
 
@@ -169,6 +168,7 @@ class ToolUsage:
 
         started_at = time.time()
         from_cache = False
+        result = None
 
         if self.tools_handler and self.tools_handler.cache:
             result = self.tools_handler.cache.read(

@@ -241,12 +241,21 @@ class LiteAgent(BaseModel):
             formatted_result: Optional[BaseModel] = None
             if self.response_format:
                 try:
-                    # Cast to BaseModel to ensure type safety
-                    result = self.response_format.model_validate_json(
-                        agent_finish.output
+                    final_answer_match = re.search(
+                        r"Final Answer:\s*(.*?)(?:\n\n|$)",
+                        agent_finish.output,
+                        re.DOTALL,
                     )
-                    if isinstance(result, BaseModel):
-                        formatted_result = result
+                    if final_answer_match:
+                        json_content = final_answer_match.group(1).strip()
+                        result = self.response_format.model_validate_json(json_content)
+                        if isinstance(result, BaseModel):
+                            formatted_result = result
+                    else:
+                        self._printer.print(
+                            content="Could not find Final Answer section in the output",
+                            color="yellow",
+                        )
                 except Exception as e:
                     self._printer.print(
                         content=f"Failed to parse output into response format: {str(e)}",
