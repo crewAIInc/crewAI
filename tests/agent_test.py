@@ -1,8 +1,9 @@
 """Test Agent creation and execution basic functionality."""
 
+import concurrent.futures
 import os
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -544,6 +545,98 @@ def test_agent_moved_on_after_max_iterations():
         tools=[get_final_answer],
     )
     assert output == "42"
+
+
+def test_agent_timeout_with_max_execution_time():
+    """Test that an agent with max_execution_time raises a TimeoutError when execution takes too long."""
+    
+    @tool
+    def slow_tool() -> str:
+        """A tool that takes a long time to execute."""
+        import time
+        time.sleep(2)  # Sleep for 2 seconds
+        return "This is a slow response"
+
+    with patch.object(Agent, "_execute_task_without_timeout") as mock_execute:
+        mock_execute.side_effect = concurrent.futures.TimeoutError()
+        
+        agent = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            max_execution_time=1,  # Set timeout to 1 second
+            allow_delegation=False,
+        )
+
+        task = Task(
+            description="Use the slow_tool and wait for its response.",
+            expected_output="The response from the slow tool.",
+        )
+        
+        with pytest.raises(TimeoutError):
+            agent.execute_task(
+                task=task,
+                tools=[slow_tool],
+            )
+
+
+def test_agent_partial_result_with_timeout():
+    """Test that an agent with max_execution_time can return a partial result before timeout."""
+    
+    @tool
+    def slow_tool() -> str:
+        """A tool that takes a long time to execute."""
+        import time
+        time.sleep(0.1)  # Just a small delay
+        return "This is a slow response"
+
+    with patch("concurrent.futures.ThreadPoolExecutor.submit") as mock_submit:
+        mock_future = MagicMock()
+        mock_future.result.side_effect = concurrent.futures.TimeoutError()
+        mock_submit.return_value = mock_future
+        
+        with patch.object(LLM, "call") as mock_llm_call:
+            mock_llm_call.return_value = "Partial result due to timeout"
+            
+            with patch.object(CrewAgentExecutor, "_format_answer") as mock_format_answer:
+                mock_format_answer.return_value = AgentFinish(
+                    thought="",
+                    output="Partial result due to timeout",
+                    text="Partial result due to timeout",
+                )
+                
+                agent = Agent(
+                    role="test role",
+                    goal="test goal",
+                    backstory="test backstory",
+                    max_execution_time=1,  # Set timeout to 1 second
+                    allow_delegation=False,
+                )
+                
+                agent.agent_executor = MagicMock()
+                agent.agent_executor.messages = []
+                agent.agent_executor.llm = MagicMock()
+                agent.agent_executor.llm.call.return_value = "Partial result due to timeout"
+                agent.agent_executor._format_answer.return_value = AgentFinish(
+                    thought="",
+                    output="Partial result due to timeout",
+                    text="Partial result due to timeout",
+                )
+                agent.agent_executor.callbacks = []
+
+                task = Task(
+                    description="Use the slow_tool and wait for its response.",
+                    expected_output="The response from the slow tool.",
+                )
+                
+                try:
+                    result = agent.execute_task(
+                        task=task,
+                        tools=[slow_tool],
+                    )
+                    assert "Partial result" in result
+                except Exception as e:
+                    assert isinstance(e, TimeoutError)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
