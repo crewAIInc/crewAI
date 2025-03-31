@@ -443,7 +443,7 @@ def test_agent_custom_max_iterations():
             task=task,
             tools=[get_final_answer],
         )
-        assert private_mock.call_count == 2
+        assert private_mock.call_count == 3
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
