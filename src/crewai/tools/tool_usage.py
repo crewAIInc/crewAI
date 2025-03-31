@@ -169,12 +169,11 @@ class ToolUsage:
 
         started_at = time.time()
         from_cache = False
-        result = None
 
         if self.tools_handler and self.tools_handler.cache:
             result = self.tools_handler.cache.read(
                 tool=calling.tool_name, input=calling.arguments
-            )
+            )  # type: ignore
             from_cache = result is not None
 
         available_tool = next(
