@@ -1,12 +1,13 @@
 import asyncio
 import json
 import re
+import sys
 import uuid
 import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeAlias, Union, cast
 
 from pydantic import (
     UUID4,
@@ -1386,4 +1387,16 @@ class Crew(BaseModel):
             raise RuntimeError(f"Failed to reset {name} memory") from e
 
 
-Crewai = Crew
+def _get_crewai():
+    warnings.warn(
+        "Crewai is deprecated, use Crew instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    return Crew
+
+class _CrewaiDescriptor:
+    def __get__(self, obj, objtype=None):
+        return _get_crewai()
+
+sys.modules[__name__].__dict__['Crewai'] = _get_crewai()
