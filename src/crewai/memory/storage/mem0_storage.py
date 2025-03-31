@@ -13,9 +13,12 @@ class Mem0Storage(Storage):
 
     def __init__(self, type, crew=None):
         super().__init__()
-
-        if type not in ["user", "short_term", "long_term", "entities"]:
-            raise ValueError("Invalid type for Mem0Storage. Must be 'user' or 'agent'.")
+        supported_types = ["user", "short_term", "long_term", "entities"]
+        if type not in supported_types:
+            raise ValueError(
+                "Invalid type for Mem0Storage. Must be one of: "
+                + ", ".join(supported_types)
+            )
 
         self.memory_type = type
         self.crew = crew
