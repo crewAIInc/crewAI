@@ -9,7 +9,7 @@ import pytest
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
-from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
+from crewai.agents.parser import CrewAgentParser, OutputParserException
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
@@ -18,7 +18,6 @@ from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.llm_events import LLMStreamChunkEvent
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
@@ -375,7 +374,7 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm="o1-preview",
+        llm=LLM(model="o3-mini"),
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
@@ -401,7 +400,7 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm="o1-preview",
+        llm="o3-mini",
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
@@ -1305,46 +1304,55 @@ def test_llm_call_with_error():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_handle_context_length_exceeds_limit():
+    # Import necessary modules
+    from crewai.utilities.agent_utils import handle_context_length
+    from crewai.utilities.i18n import I18N
+    from crewai.utilities.printer import Printer
+
+    # Create mocks for dependencies
+    printer = Printer()
+    i18n = I18N()
+
+    # Create an agent just for its LLM
     agent = Agent(
         role="test role",
         goal="test goal",
         backstory="test backstory",
-    )
-    original_action = AgentAction(
-        tool="test_tool",
-        tool_input="test_input",
-        text="test_log",
-        thought="test_thought",
+        respect_context_window=True,
     )
 
-    with patch.object(
-        CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke
-    ) as private_mock:
-        task = Task(
-            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
-            expected_output="The final answer",
-        )
-        agent.execute_task(
-            task=task,
-        )
-        private_mock.assert_called_once()
-        with patch.object(
-            CrewAgentExecutor, "_handle_context_length"
-        ) as mock_handle_context:
-            mock_handle_context.side_effect = ValueError(
-                "Context length limit exceeded"
+    llm = agent.llm
+
+    # Create test messages
+    messages = [
+        {
+            "role": "user",
+            "content": "This is a test message that would exceed context length",
+        }
+    ]
+
+    # Set up test parameters
+    respect_context_window = True
+    callbacks = []
+
+    # Apply our patch to summarize_messages to force an error
+    with patch("crewai.utilities.agent_utils.summarize_messages") as mock_summarize:
+        mock_summarize.side_effect = ValueError("Context length limit exceeded")
+
+        # Directly call handle_context_length with our parameters
+        with pytest.raises(ValueError) as excinfo:
+            handle_context_length(
+                respect_context_window=respect_context_window,
+                printer=printer,
+                messages=messages,
+                llm=llm,
+                callbacks=callbacks,
+                i18n=i18n,
             )
 
-            long_input = "This is a very long input. " * 10000
-
-            # Attempt to handle context length, expecting the mocked error
-            with pytest.raises(ValueError) as excinfo:
-                agent.agent_executor._handle_context_length(
-                    [(original_action, long_input)]
-                )
-
-            assert "Context length limit exceeded" in str(excinfo.value)
-            mock_handle_context.assert_called_once()
+        # Verify our patch was called and raised the correct error
+        assert "Context length limit exceeded" in str(excinfo.value)
+        mock_summarize.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1353,7 +1361,7 @@ def test_handle_context_length_exceeds_limit_cli_no():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        sliding_context_window=False,
+        respect_context_window=False,
     )
     task = Task(description="test task", agent=agent, expected_output="test output")
 
@@ -1369,8 +1377,8 @@ def test_handle_context_length_exceeds_limit_cli_no():
         )
         private_mock.assert_called_once()
         pytest.raises(SystemExit)
-        with patch.object(
-            CrewAgentExecutor, "_handle_context_length"
+        with patch(
+            "crewai.utilities.agent_utils.handle_context_length"
         ) as mock_handle_context:
             mock_handle_context.assert_not_called()
 
