@@ -1398,16 +1398,17 @@ class Crew(BaseModel):
             raise RuntimeError(f"Failed to reset {name} memory") from e
 
 
-def _get_crewai():
-    warnings.warn(
-        "Crewai is deprecated, use Crew instead.",
-        DeprecationWarning,
-        stacklevel=2
-    )
-    return Crew
-
-class _CrewaiDescriptor:
-    def __get__(self, obj, objtype=None):
-        return _get_crewai()
-
-sys.modules[__name__].__dict__['Crewai'] = _get_crewai()
+class Crewai(Crew):
+    """Alias for Crew class to provide backward compatibility.
+    
+    This class inherits from Crew and provides the same functionality,
+    but emits a deprecation warning when used.
+    """
+    
+    def __new__(cls, *args, **kwargs):
+        warnings.warn(
+            "Crewai is deprecated, use Crew instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return super().__new__(cls)
