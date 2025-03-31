@@ -16,11 +16,6 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities import I18N, Printer
-from crewai.utilities.events import (
-    ToolUsageErrorEvent,
-    ToolUsageStartedEvent,
-    crewai_event_bus,
-)
 from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -46,7 +41,7 @@ def get_tool_names(tools: Sequence[Union[CrewStructuredTool, BaseTool]]) -> str:
 
 
 def render_text_description_and_args(
-    tools: Sequence[Union[CrewStructuredTool, BaseTool]]
+    tools: Sequence[Union[CrewStructuredTool, BaseTool]],
 ) -> str:
     """Render the tool name, description, and args in plain text.
     
@@ -135,7 +130,7 @@ def format_answer(answer: str) -> Union[AgentAction, AgentFinish]:
 
 
 def enforce_rpm_limit(
-    request_within_rpm_limit: Optional[Callable[[], bool]] = None
+    request_within_rpm_limit: Optional[Callable[[], bool]] = None,
 ) -> None:
     """Enforce the requests per minute (RPM) limit if applicable."""
     if request_within_rpm_limit:
@@ -160,7 +155,6 @@ def get_llm_response(
             color="red",
         )
         raise e
-
     if not answer:
         printer.print(
             content="Received None or empty response from LLM call.",
