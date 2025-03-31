@@ -562,7 +562,7 @@ class ToolUsage:
             "run_attempts": self._run_attempts,
             "delegations": self.task.delegations if self.task else 0,
             "tool_name": tool.name,
-            "tool_args": str(tool_calling.arguments),
+            "tool_args": tool_calling.arguments,
             "tool_class": tool.__class__.__name__,
             "agent_key": (
                 getattr(self.agent, "key", "unknown") if self.agent else "unknown"
