@@ -290,25 +290,18 @@ class Crew(BaseModel):
                 else EntityMemory(crew=self, embedder_config=self.embedder)
             )
             if (
-                self.memory_config and "user_memory" in self.memory_config and self.memory_config.get('provider') == 'mem0'
+                self.memory_config
+                and "user_memory" in self.memory_config
+                and self.memory_config.get("provider") == "mem0"
             ):  # Check for user_memory in config
                 user_memory_config = self.memory_config["user_memory"]
                 if isinstance(
                     user_memory_config, dict
                 ):  # Check if it's a configuration dict
-                    self._user_memory = UserMemory(
-                        crew=self
-                    )
+                    self._user_memory = UserMemory(crew=self)
                 else:
-                    raise TypeError(
-                        "user_memory must be a configuration dictionary"
-                    )
+                    raise TypeError("user_memory must be a configuration dictionary")
             else:
-                self._logger.log(
-                    "warning", 
-                    "User memory initialization failed. For setup instructions, please refer to the memory documentation: https://docs.crewai.com/concepts/memory#integrating-mem0-for-enhanced-user-memory", 
-                    color="yellow"
-                )
                 self._user_memory = None  # No user memory if not in config
         return self
 
@@ -1159,7 +1152,7 @@ class Crew(BaseModel):
     def copy(self):
         """
         Creates a deep copy of the Crew instance.
-        
+
         Returns:
             Crew: A new instance with copied components
         """
@@ -1181,7 +1174,6 @@ class Crew(BaseModel):
             "knowledge",
             "manager_agent",
             "manager_llm",
-
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
