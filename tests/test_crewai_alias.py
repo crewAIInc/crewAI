@@ -20,8 +20,8 @@ class TestCrewaiAlias(unittest.TestCase):
     
     def test_crewai_instance_creation(self):
         """Ensure Crewai can be instantiated just like Crew."""
-        from crewai.crew import Crew, Crewai
         from crewai.agent import Agent
+        from crewai.crew import Crew, Crewai
         
         test_agent = Agent(
             role="Test Agent",
@@ -37,9 +37,9 @@ class TestCrewaiAlias(unittest.TestCase):
     
     def test_crewai_deprecation_warning(self):
         """Test that using Crewai emits a deprecation warning."""
-        import warnings
         import importlib
         import crewai.crew
+        import warnings
         
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
