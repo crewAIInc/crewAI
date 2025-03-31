@@ -38,8 +38,9 @@ class TestCrewaiAlias(unittest.TestCase):
     def test_crewai_deprecation_warning(self):
         """Test that using Crewai emits a deprecation warning."""
         import importlib
-        import crewai.crew
         import warnings
+
+        import crewai.crew
         
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
