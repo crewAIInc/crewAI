@@ -169,6 +169,7 @@ class ToolUsage:
 
         started_at = time.time()
         from_cache = False
+        result = None
 
         if self.tools_handler and self.tools_handler.cache:
             result = self.tools_handler.cache.read(
@@ -280,7 +281,7 @@ class ToolUsage:
             and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
         ):
             result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
-            data["result_as_answer"] = result_as_answer
+            data["result_as_answer"] = result_as_answer  # type: ignore
 
         if self.agent and hasattr(self.agent, "tools_results"):
             self.agent.tools_results.append(data)
