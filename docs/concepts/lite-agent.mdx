@@ -9,20 +9,22 @@ icon: feather
 A `LiteAgent` is a streamlined version of CrewAI's Agent, designed for simpler, standalone tasks that don't require the full complexity of a crew-based workflow. It's perfect for quick automations, single-purpose tasks, or when you need a lightweight solution.
 
 <Tip>
-Think of a LiteAgent as a specialized worker that excels at individual tasks. While regular Agents are team players in a crew, LiteAgents are solo performers optimized for specific operations.
+  Think of a LiteAgent as a specialized worker that excels at individual tasks.
+  While regular Agents are team players in a crew, LiteAgents are solo
+  performers optimized for specific operations.
 </Tip>
 
 ## LiteAgent Attributes
 
-| Attribute                             | Parameter           | Type                    | Description                                                                                    |
-| :------------------------------------ | :----------------- | :---------------------- | :--------------------------------------------------------------------------------------------- |
-| **Role**                              | `role`             | `str`                   | Defines the agent's function and expertise.                                                     |
-| **Goal**                              | `goal`             | `str`                   | The specific objective that guides the agent's actions.                                         |
-| **Backstory**                         | `backstory`        | `str`                   | Provides context and personality to the agent.                                                  |
-| **LLM** _(optional)_                  | `llm`              | `Union[str, LLM, Any]`  | Language model powering the agent. Defaults to "gpt-4".                                        |
-| **Tools** _(optional)_                | `tools`            | `List[BaseTool]`        | Capabilities available to the agent. Defaults to an empty list.                                |
-| **Verbose** _(optional)_              | `verbose`          | `bool`                  | Enable detailed execution logs. Default is False.                                               |
-| **Response Format** _(optional)_      | `response_format`  | `Type[BaseModel]`       | Pydantic model for structured output. Optional.                                                |
+| Attribute                        | Parameter         | Type                   | Description                                                     |
+| :------------------------------- | :---------------- | :--------------------- | :-------------------------------------------------------------- |
+| **Role**                         | `role`            | `str`                  | Defines the agent's function and expertise.                     |
+| **Goal**                         | `goal`            | `str`                  | The specific objective that guides the agent's actions.         |
+| **Backstory**                    | `backstory`       | `str`                  | Provides context and personality to the agent.                  |
+| **LLM** _(optional)_             | `llm`             | `Union[str, LLM, Any]` | Language model powering the agent. Defaults to "gpt-4".         |
+| **Tools** _(optional)_           | `tools`           | `List[BaseTool]`       | Capabilities available to the agent. Defaults to an empty list. |
+| **Verbose** _(optional)_         | `verbose`         | `bool`                 | Enable detailed execution logs. Default is False.               |
+| **Response Format** _(optional)_ | `response_format` | `Type[BaseModel]`      | Pydantic model for structured output. Optional.                 |
 
 ## Creating a LiteAgent
 
@@ -31,7 +33,7 @@ Here's a simple example of creating and using a standalone LiteAgent:
 ```python
 from typing import List, cast
 
-from crewai_tools.tools.website_search.website_search_tool import WebsiteSearchTool
+from crewai_tools import SerperDevTool
 from pydantic import BaseModel, Field
 
 from crewai.lite_agent import LiteAgent
@@ -50,7 +52,7 @@ critic = LiteAgent(
     role="Movie Critic",
     goal="Provide insightful movie reviews",
     backstory="You are an experienced film critic known for balanced, thoughtful reviews.",
-    tools=[WebsiteSearchTool()],
+    tools=[SerperDevTool()],
     verbose=True,
     response_format=MovieReview,
 )
@@ -64,6 +66,7 @@ Review the movie 'Inception'. Include:
 """
 
 result = critic.kickoff(query)
+
 
 # Access the structured output
 review = cast(MovieReview, result.pydantic)
@@ -79,6 +82,7 @@ for con in review.cons:
 ```
 
 This example demonstrates the core features of a LiteAgent:
+
 - Structured output using Pydantic models
 - Tool integration with WebSearchTool
 - Simple execution with `kickoff()`
@@ -88,7 +92,7 @@ This example demonstrates the core features of a LiteAgent:
 
 For more complex scenarios, you can integrate LiteAgents into a Flow. Here's an example of a market research flow:
 
-```python
+````python
 from typing import List
 from pydantic import BaseModel, Field
 from crewai.flow.flow import Flow, start, listen
@@ -125,17 +129,17 @@ class MarketResearchFlow(Flow[MarketResearchState]):
             verbose=True,
             response_format=MarketAnalysis
         )
-        
+
         # Define the research query
         query = f"""
         Research the market for {self.state.product}. Include:
         1. Key market trends
         2. Market size
         3. Major competitors
-        
+
         Format your response according to the specified structure.
         """
-        
+
         # Execute the analysis
         result = await analyst.kickoff_async(query)
         self.state.analysis = result.pydantic
@@ -146,7 +150,7 @@ class MarketResearchFlow(Flow[MarketResearchState]):
         analysis = self.state.analysis
         print("\nMarket Analysis Results")
         print("=====================")
-        
+
         print("\nKey Market Trends:")
         for trend in analysis.key_trends:
             print(f"- {trend}")
@@ -188,9 +192,10 @@ agent = LiteAgent(
     tools=[SerperDevTool(), CalculatorTool()],
     verbose=True
 )
-```
+````
 
 ### 4. Async Support
+
 LiteAgents support asynchronous execution through the `kickoff_async` method, making them suitable for non-blocking operations in your application.
 
 ## Response Formatting
@@ -224,6 +229,7 @@ print(f"Relevance: {result.pydantic.relevance_score}")
 When using `response_format`, the agent's response will be available in two forms:
 
 1. **Raw Response**: Access the unstructured string response
+
    ```python
    result = await agent.kickoff_async("Analyze the market")
    print(result.raw)  # Original LLM response
@@ -234,4 +240,3 @@ When using `response_format`, the agent's response will be available in two form
    print(result.pydantic)  # Parsed response as Pydantic model
    print(result.pydantic.dict())  # Convert to dictionary
    ```
-   
