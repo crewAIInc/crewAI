@@ -27,7 +27,7 @@ from crewai.utilities.events.agent_events import (
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.llm_utils import create_llm
-from crewai.utilities.token_counter_callback import TokenCalcHandler
+# from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
@@ -339,7 +339,7 @@ class Agent(BaseAgent):
             request_within_rpm_limit=(
                 self._rpm_controller.check_or_wait if self._rpm_controller else None
             ),
-            callbacks=[TokenCalcHandler(self._token_process)],
+            callbacks=[],
         )
 
     def get_delegation_tools(self, agents: List[BaseAgent]):

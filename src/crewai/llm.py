@@ -10,12 +10,10 @@ from crewai.utilities.events.llm_events import (
 )
 
 from langchain.chat_models import AzureChatOpenAI
+from langchain.schema import HumanMessage, SystemMessage, AIMessage
 
 class LLM(BaseLLM):
-    def __init__(
-        self,
-        model: AzureChatOpenAI,
-    ):
+    def __init__(self, model: AzureChatOpenAI):
         self.model = model
 
     def call(
@@ -36,12 +34,28 @@ class LLM(BaseLLM):
             ),
         )
 
+        # --- Convert messages
         if isinstance(messages, str):
-            messages = [{"role": "user", "content": messages}]
+            messages = [HumanMessage(content=messages)]
+        elif isinstance(messages, list) and isinstance(messages[0], dict):
+            converted_messages = []
+            for msg in messages:
+                role = msg.get("role")
+                content = msg.get("content")
+                if role == "user":
+                    converted_messages.append(HumanMessage(content=content))
+                elif role == "system":
+                    converted_messages.append(SystemMessage(content=content))
+                elif role == "assistant":
+                    converted_messages.append(AIMessage(content=content))
+                else:
+                    raise ValueError(f"Unknown message role: {role}")
+            messages = converted_messages
 
+        # --- Make the model call
         try:
             response = self.model(messages)
-            content = response.content if hasattr(response, 'content') else response
+            content = response.content if hasattr(response, "content") else response
 
             crewai_event_bus.emit(
                 self,
