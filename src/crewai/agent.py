@@ -445,3 +445,6 @@ class Agent(BaseAgent):
             Fingerprint: The agent's fingerprint
         """
         return self.security_config.fingerprint
+
+    def set_fingerprint(self, fingerprint: Fingerprint):
+        self.security_config.fingerprint = fingerprint

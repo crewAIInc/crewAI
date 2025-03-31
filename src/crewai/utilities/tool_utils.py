@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 from crewai.agents.parser import AgentAction
+from crewai.security import Fingerprint
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
@@ -48,7 +49,15 @@ def execute_tool_and_check_finality(
         if agent_key and agent_role and agent:
             fingerprint_context = fingerprint_context or {}
             if agent:
-                agent.fingerprint = fingerprint_context
+                if hasattr(agent, "set_fingerprint") and callable(
+                    agent.set_fingerprint
+                ):
+                    if isinstance(fingerprint_context, dict):
+                        try:
+                            fingerprint_obj = Fingerprint.from_dict(fingerprint_context)
+                            agent.set_fingerprint(fingerprint_obj)
+                        except Exception as e:
+                            raise ValueError(f"Failed to set fingerprint: {e}")
 
             event_data = {
                 "agent_key": agent_key,
