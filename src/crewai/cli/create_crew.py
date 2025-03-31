@@ -93,50 +93,66 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
     if not skip_provider:
-        if not provider:
-            provider_models = get_provider_data()
-            if not provider_models:
-                return
-
-        existing_provider = None
-        for provider, env_keys in ENV_VARS.items():
-            if any(
-                "key_name" in details and details["key_name"] in env_vars
-                for details in env_keys
-            ):
-                existing_provider = provider
-                break
-
-        if existing_provider:
-            if not click.confirm(
-                f"Found existing environment variable configuration for {existing_provider.capitalize()}. Do you want to override it?"
-            ):
-                click.secho("Keeping existing provider configuration.", fg="yellow")
-                return
-
         provider_models = get_provider_data()
         if not provider_models:
+            click.secho("Could not retrieve provider data.", fg="red")
             return
 
-        while True:
-            selected_provider = select_provider(provider_models)
-            if selected_provider is None:  # User typed 'q'
-                click.secho("Exiting...", fg="yellow")
-                sys.exit(0)
-            if selected_provider:  # Valid selection
-                break
-            click.secho(
-                "No provider selected. Please try again or press 'q' to exit.", fg="red"
-            )
+        selected_provider = None
 
-        # Check if the selected provider has predefined models
+        if provider: 
+            provider = provider.lower()
+            if provider in provider_models:
+                selected_provider = provider
+                click.secho(f"Using specified provider: {selected_provider.capitalize()}", fg="green")
+            else:
+                click.secho(f"Warning: Specified provider '{provider}' is not recognized. Please select one.", fg="yellow")
+
+        if not selected_provider:
+            existing_provider = None
+            for p, env_keys in ENV_VARS.items():
+                if any(
+                    "key_name" in details and details["key_name"] in env_vars
+                    for details in env_keys
+                ):
+                    existing_provider = p
+                    break
+
+            if existing_provider:
+                if not click.confirm(
+                    f"Found existing environment variable configuration for {existing_provider.capitalize()}. Do you want to override it?"
+                ):
+                    click.secho("Keeping existing provider configuration. Exiting provider setup.", fg="yellow")
+                    copy_template_files(folder_path, name, class_name, parent_folder)
+                    click.secho(f"Crew '{name}' created successfully!", fg="green")
+                    click.secho(f"To run your crew, cd into '{folder_name}' and run 'crewai run'", fg="cyan")
+                    return
+                else:
+                    pass
+
+            while True:
+                selected_provider = select_provider(provider_models)
+                if selected_provider is None:  
+                    click.secho("Exiting...", fg="yellow")
+                    sys.exit(0)
+                if selected_provider:  
+                    break
+                click.secho(
+                    "No provider selected. Please try again or press 'q' to exit.", fg="red"
+                )
+
+        if not selected_provider:
+             click.secho("Provider selection failed. Exiting.", fg="red")
+             sys.exit(1)
+
+
         if selected_provider in MODELS and MODELS[selected_provider]:
             while True:
                 selected_model = select_model(selected_provider, provider_models)
-                if selected_model is None:  # User typed 'q'
+                if selected_model is None:  
                     click.secho("Exiting...", fg="yellow")
                     sys.exit(0)
-                if selected_model:  # Valid selection
+                if selected_model:  
                     break
                 click.secho(
                     "No model selected. Please try again or press 'q' to exit.",
@@ -144,17 +160,14 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
                 )
             env_vars["MODEL"] = selected_model
 
-        # Check if the selected provider requires API keys
         if selected_provider in ENV_VARS:
             provider_env_vars = ENV_VARS[selected_provider]
             for details in provider_env_vars:
                 if details.get("default", False):
-                    # Automatically add default key-value pairs
                     for key, value in details.items():
                         if key not in ["prompt", "key_name", "default"]:
                             env_vars[key] = value
                 elif "key_name" in details:
-                    # Prompt for non-default key-value pairs
                     prompt = details["prompt"]
                     key_name = details["key_name"]
                     api_key_value = click.prompt(prompt, default="", show_default=False)
@@ -167,41 +180,12 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
             click.secho("API keys and model saved to .env file", fg="green")
         else:
             click.secho(
-                "No API keys provided. Skipping .env file creation.", fg="yellow"
+                "No API keys provided or required by provider. Skipping .env file creation.", fg="yellow"
             )
 
         click.secho(f"Selected model: {env_vars.get('MODEL', 'N/A')}", fg="green")
 
-    package_dir = Path(__file__).parent
-    templates_dir = package_dir / "templates" / "crew"
+    copy_template_files(folder_path, name, class_name, parent_folder)
 
-    root_template_files = (
-        [".gitignore", "pyproject.toml", "README.md", "knowledge/user_preference.txt"]
-        if not parent_folder
-        else []
-    )
-    tools_template_files = ["tools/custom_tool.py", "tools/__init__.py"]
-    config_template_files = ["config/agents.yaml", "config/tasks.yaml"]
-    src_template_files = (
-        ["__init__.py", "main.py", "crew.py"] if not parent_folder else ["crew.py"]
-    )
-
-    for file_name in root_template_files:
-        src_file = templates_dir / file_name
-        dst_file = folder_path / file_name
-        copy_template(src_file, dst_file, name, class_name, folder_name)
-
-    src_folder = folder_path / "src" / folder_name if not parent_folder else folder_path
-
-    for file_name in src_template_files:
-        src_file = templates_dir / file_name
-        dst_file = src_folder / file_name
-        copy_template(src_file, dst_file, name, class_name, folder_name)
-
-    if not parent_folder:
-        for file_name in tools_template_files + config_template_files:
-            src_file = templates_dir / file_name
-            dst_file = src_folder / file_name
-            copy_template(src_file, dst_file, name, class_name, folder_name)
-
-    click.secho(f"Crew {name} created successfully!", fg="green", bold=True)
+    click.secho(f"Crew '{name}' created successfully!", fg="green")
+    click.secho(f"To run your crew, cd into '{folder_name}' and run 'crewai run'", fg="cyan")
