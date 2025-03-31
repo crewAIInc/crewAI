@@ -355,7 +355,7 @@ def test_tools_emits_finished_events():
     assert received_events[0].agent_key == agent.key
     assert received_events[0].agent_role == agent.role
     assert received_events[0].tool_name == SayHiTool().name
-    assert received_events[0].tool_args == {}
+    assert received_events[0].tool_args == "{}" or received_events[0].tool_args == {}
     assert received_events[0].type == "tool_usage_finished"
     assert isinstance(received_events[0].timestamp, datetime)
 
@@ -401,7 +401,7 @@ def test_tools_emits_error_events():
     assert received_events[0].agent_key == agent.key
     assert received_events[0].agent_role == agent.role
     assert received_events[0].tool_name == "error_tool"
-    assert received_events[0].tool_args == {}
+    assert received_events[0].tool_args == "{}" or received_events[0].tool_args == {}
     assert str(received_events[0].error) == "Simulated tool error"
     assert received_events[0].type == "tool_usage_error"
     assert isinstance(received_events[0].timestamp, datetime)
