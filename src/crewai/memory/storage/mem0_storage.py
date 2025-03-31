@@ -13,10 +13,10 @@ class Mem0Storage(Storage):
 
     def __init__(self, type, crew=None, config=None):
         super().__init__()
-        supported_types = ["user", "short_term", "long_term", "entities"]
+        supported_types = ["user", "short_term", "long_term", "entities", "external"]
         if type not in supported_types:
             raise ValueError(
-                "Invalid type for Mem0Storage. Must be one of: "
+                f"Invalid type '{type}' for Mem0Storage. Must be one of: "
                 + ", ".join(supported_types)
             )
 
@@ -61,9 +61,6 @@ class Mem0Storage(Storage):
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self._get_user_id()
         agent_name = self._get_agent_name()
-        if user_id:
-            self.memory.add(value, user_id=user_id, metadata={**metadata})
-
         if self.memory_type == "short_term":
             self.memory.add(
                 value, agent_id=agent_name, metadata={"type": "short_term", **metadata}
@@ -77,7 +74,14 @@ class Mem0Storage(Storage):
             )
         elif self.memory_type == "entities":
             self.memory.add(
-                value, user_id=agent_name, metadata={"type": "entity", **metadata}
+                value, agent_id=agent_name, metadata={"type": "entity", **metadata}
+            )
+        elif self.memory_type == "external":
+            self.memory.add(
+                value,
+                user_id=user_id,
+                agent_id=agent_name,
+                metadata={"type": "external", **metadata},
             )
 
     def search(
@@ -90,18 +94,19 @@ class Mem0Storage(Storage):
         if user_id := self._get_user_id():
             params["user_id"] = user_id
 
+        agent_name = self._get_agent_name()
         if self.memory_type == "short_term":
-            agent_name = self._get_agent_name()
             params["agent_id"] = agent_name
             params["metadata"] = {"type": "short_term"}
         elif self.memory_type == "long_term":
-            agent_name = self._get_agent_name()
             params["agent_id"] = agent_name
             params["metadata"] = {"type": "long_term"}
         elif self.memory_type == "entities":
-            agent_name = self._get_agent_name()
             params["agent_id"] = agent_name
             params["metadata"] = {"type": "entity"}
+        elif self.memory_type == "external":
+            params["agent_id"] = agent_name
+            params["metadata"] = {"type": "external"}
 
         # Discard the filters for now since we create the filters
         # automatically when the crew is created.
