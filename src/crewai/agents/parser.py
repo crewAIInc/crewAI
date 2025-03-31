@@ -1,5 +1,5 @@
 import re
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from json_repair import repair_json
 
@@ -65,6 +65,10 @@ class CrewAgentParser:
     """
 
     _i18n: I18N = I18N()
+    agent: Any = None
+
+    def __init__(self, agent: Optional[Any] = None):
+        self.agent = agent
 
     @staticmethod
     def parse_text(text: str) -> Union[AgentAction, AgentFinish]:
@@ -87,6 +91,14 @@ class CrewAgentParser:
             r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         )
         action_match = re.search(regex, text, re.DOTALL)
+
+        # Check if both final answer and action are present
+        if includes_answer and action_match:
+            raise OutputParserException(
+                f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}"
+            )
+
+        # Handle final answer case
         if includes_answer:
             final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
             # Check whether the final answer ends with triple backticks.
@@ -98,11 +110,9 @@ class CrewAgentParser:
                     final_answer = final_answer[:-3].rstrip()
             return AgentFinish(thought, final_answer, text)
 
+        # Handle action case
         elif action_match:
-            if includes_answer:
-                raise OutputParserException(
-                    f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}"
-                )
+            print("made it here action_match", action_match)
             action = action_match.group(1)
             clean_action = self._clean_action(action)
 
