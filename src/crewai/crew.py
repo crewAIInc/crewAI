@@ -1384,3 +1384,6 @@ class Crew(BaseModel):
             memory_system.reset()
         except Exception as e:
             raise RuntimeError(f"Failed to reset {name} memory") from e
+
+
+Crewai = Crew
