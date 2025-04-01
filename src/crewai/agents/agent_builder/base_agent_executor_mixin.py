@@ -53,7 +53,8 @@ class CrewAgentExecutorMixin:
             self.crew
             and self.agent
             and self.task
-            and getattr(self.crew, "_external_memory", None)
+            and hasattr(self.crew, "_external_memory")
+            and self.crew._external_memory
         ):
             try:
                 self.crew._external_memory.save(

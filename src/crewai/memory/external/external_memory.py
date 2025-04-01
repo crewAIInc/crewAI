@@ -1,8 +1,11 @@
-from typing import Any, Dict, Optional, Self
+from typing import TYPE_CHECKING, Any, Dict, Optional, Self
 
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.interface import Storage
+
+if TYPE_CHECKING:
+    from crewai.memory.storage.mem0_storage import Mem0Storage
 
 
 class ExternalMemory(Memory):
@@ -10,23 +13,23 @@ class ExternalMemory(Memory):
         super().__init__(storage=storage, **data)
 
     @staticmethod
-    def _configure_mem0(crew, config) -> "Mem0Storage":
+    def _configure_mem0(crew: Any, config: Dict[str, Any]) -> "Mem0Storage":
         from crewai.memory.storage.mem0_storage import Mem0Storage
 
         return Mem0Storage(type="external", crew=crew, config=config)
 
     @staticmethod
-    def external_supported_storages():
+    def external_supported_storages() -> Dict[str, Any]:
         return {
             "mem0": ExternalMemory._configure_mem0,
         }
 
     @staticmethod
-    def create_storage(crew, embedder_config):
+    def create_storage(crew: Any, embedder_config: Optional[Dict[str, Any]]) -> Storage:
         if not embedder_config:
             raise ValueError("embedder_config is required")
 
-        if embedder_config and "provider" not in embedder_config:
+        if "provider" not in embedder_config:
             raise ValueError("embedder_config must include a 'provider' key")
 
         provider = embedder_config["provider"]
