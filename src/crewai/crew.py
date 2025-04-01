@@ -296,9 +296,10 @@ class Crew(BaseModel):
                 else EntityMemory(crew=self, embedder_config=self.embedder)
             )
             self._external_memory = (
-                self.external_memory
+                # External memory doesn’t support a default value since it was designed to be managed entirely externally
+                self.external_memory.set_crew(self)
                 if self.external_memory
-                else ExternalMemory(crew=self, embedder_config=self.embedder)
+                else None
             )
             if (
                 self.memory_config

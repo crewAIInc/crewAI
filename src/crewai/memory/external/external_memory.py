@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Self
 
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
@@ -10,10 +10,10 @@ class ExternalMemory(Memory):
         storage = (
             storage
             if storage
-            else self._create_storage(crew=crew, embedder_config=embedder_config)
+            else self.create_storage(crew=crew, embedder_config=embedder_config)
         )
 
-        super().__init__(storage=storage)
+        super().__init__(storage=storage, embedder_config=embedder_config, crew=crew)
 
     @staticmethod
     def _configure_mem0(crew, config) -> "Mem0Storage":
@@ -21,26 +21,26 @@ class ExternalMemory(Memory):
 
         return Mem0Storage(type="external", crew=crew, config=config)
 
-    @property
-    def external_supported_storages(self):
+    @staticmethod
+    def external_supported_storages():
         return {
-            "mem0": self._configure_mem0,
+            "mem0": ExternalMemory._configure_mem0,
         }
 
-    def _create_storage(self, crew, embedder_config):
+    @staticmethod
+    def create_storage(crew, embedder_config):
         if not embedder_config:
-            return Storage()
+            raise ValueError("embedder_config is required")
 
         if embedder_config and "provider" not in embedder_config:
             raise ValueError("embedder_config must include a 'provider' key")
 
         provider = embedder_config["provider"]
-        if provider not in self.external_supported_storages:
+        supported_storages = ExternalMemory.external_supported_storages()
+        if provider not in supported_storages:
             raise ValueError(f"Provider {provider} not supported")
 
-        return self.external_supported_storages[provider](
-            crew, embedder_config.get("config", {})
-        )
+        return supported_storages[provider](crew, embedder_config.get("config", {}))
 
     def save(
         self,
@@ -54,3 +54,9 @@ class ExternalMemory(Memory):
 
     def reset(self) -> None:
         self.storage.reset()
+
+    def set_crew(self, crew: Any) -> Self:
+        super().set_crew(crew)
+        self.storage = self.create_storage(crew, self.embedder_config)
+
+        return self
