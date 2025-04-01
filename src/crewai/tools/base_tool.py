@@ -305,12 +305,16 @@ class ToolCollection:
         ```
         """
         try:
+            import mcp
             from mcpadapt.core import MCPAdapt
             from mcpadapt.crewai_adapter import CrewAIAdapter
         except ImportError:
             raise ImportError(
                 """Please install 'mcp' extra to use ToolCollection.from_mcp: `pip install "crewai[mcp]"`."""
             )
+
+        if not isinstance(server_parameters, (dict, mcp.StdioServerParameters)):
+            raise ValueError("server_parameters must be either a dict or StdioServerParameters")
 
         with MCPAdapt(server_parameters, CrewAIAdapter()) as tools:
             yield cls(tools)
