@@ -16,7 +16,7 @@ class DatabricksQueryToolSchema(BaseModel):
     catalog: Optional[str] = Field(
         None, description="Databricks catalog name (optional, defaults to configured catalog)"
     )
-    schema: Optional[str] = Field(
+    db_schema: Optional[str] = Field(
         None, description="Databricks schema name (optional, defaults to configured schema)"
     )
     warehouse_id: Optional[str] = Field(
@@ -168,7 +168,7 @@ class DatabricksQueryTool(BaseTool):
         Args:
             query (str): SQL query to execute
             catalog (Optional[str]): Databricks catalog name
-            schema (Optional[str]): Databricks schema name
+            db_schema (Optional[str]): Databricks schema name
             warehouse_id (Optional[str]): SQL warehouse ID
             row_limit (Optional[int]): Maximum number of rows to return
 
@@ -179,7 +179,7 @@ class DatabricksQueryTool(BaseTool):
             # Get parameters with fallbacks to default values
             query = kwargs.get("query")
             catalog = kwargs.get("catalog") or self.default_catalog
-            schema = kwargs.get("schema") or self.default_schema
+            db_schema = kwargs.get("db_schema") or self.default_schema
             warehouse_id = kwargs.get("warehouse_id") or self.default_warehouse_id
             row_limit = kwargs.get("row_limit", 1000)
 
@@ -187,7 +187,7 @@ class DatabricksQueryTool(BaseTool):
             validated_input = DatabricksQueryToolSchema(
                 query=query,
                 catalog=catalog,
-                schema=schema,
+                db_schema=db_schema,
                 warehouse_id=warehouse_id,
                 row_limit=row_limit
             )
@@ -195,15 +195,15 @@ class DatabricksQueryTool(BaseTool):
             # Extract validated parameters
             query = validated_input.query
             catalog = validated_input.catalog
-            schema = validated_input.schema
+            db_schema = validated_input.db_schema
             warehouse_id = validated_input.warehouse_id
 
             # Setup SQL context with catalog/schema if provided
             context = {}
             if catalog:
                 context["catalog"] = catalog
-            if schema:
-                context["schema"] = schema
+            if db_schema:
+                context["schema"] = db_schema
 
             # Execute query
             statement = self.workspace_client.statement_execution
