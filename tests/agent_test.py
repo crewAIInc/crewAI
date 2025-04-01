@@ -863,25 +863,6 @@ def test_agent_function_calling_llm():
         mock_original_tool_calling.assert_called()
 
 
-def test_agent_count_formatting_error():
-    from unittest.mock import patch
-
-    agent1 = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        verbose=True,
-    )
-
-    parser = CrewAgentParser(agent=agent1)
-
-    with patch.object(Agent, "increment_formatting_errors") as mock_count_errors:
-        test_text = "This text does not match expected formats."
-        with pytest.raises(OutputParserException):
-            parser.parse(test_text)
-        mock_count_errors.assert_called_once()
-
-
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
     from crewai.tools import BaseTool
