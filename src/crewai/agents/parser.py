@@ -103,10 +103,6 @@ class CrewAgentParser:
             return AgentFinish(thought, final_answer, text)
 
         elif action_match:
-            if includes_answer:
-                raise OutputParserException(
-                    f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}"
-                )
             action = action_match.group(1)
             clean_action = self._clean_action(action)
 
