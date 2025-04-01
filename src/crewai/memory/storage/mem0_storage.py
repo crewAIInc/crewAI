@@ -61,28 +61,34 @@ class Mem0Storage(Storage):
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self._get_user_id()
         agent_name = self._get_agent_name()
+        params = None
         if self.memory_type == "short_term":
-            self.memory.add(
-                value, agent_id=agent_name, metadata={"type": "short_term", **metadata}
-            )
+            params = {
+                "agent_id": agent_name,
+                "infer": False,
+                "metadata": {"type": "short_term", **metadata},
+            }
         elif self.memory_type == "long_term":
-            self.memory.add(
-                value,
-                agent_id=agent_name,
-                infer=False,
-                metadata={"type": "long_term", **metadata},
-            )
+            params = {
+                "agent_id": agent_name,
+                "infer": False,
+                "metadata": {"type": "long_term", **metadata},
+            }
         elif self.memory_type == "entities":
-            self.memory.add(
-                value, agent_id=agent_name, metadata={"type": "entity", **metadata}
-            )
+            params = {
+                "agent_id": agent_name,
+                "infer": False,
+                "metadata": {"type": "entity", **metadata},
+            }
         elif self.memory_type == "external":
-            self.memory.add(
-                value,
-                user_id=user_id,
-                agent_id=agent_name,
-                metadata={"type": "external", **metadata},
-            )
+            params = {
+                "user_id": user_id,
+                "agent_id": agent_name,
+                "metadata": {"type": "external", **metadata},
+            }
+
+        if params:
+            self.memory.add(value, **params | {"output_format": "v1.1"})
 
     def search(
         self,
