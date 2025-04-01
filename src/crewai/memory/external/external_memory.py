@@ -2,17 +2,12 @@ from typing import Any, Dict, Optional, Self
 
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
+from crewai.memory.storage.interface import Storage
 
 
 class ExternalMemory(Memory):
-    def __init__(self, crew=None, embedder_config=None, storage=None):
-        storage = (
-            storage
-            if storage
-            else self.create_storage(crew=crew, embedder_config=embedder_config)
-        )
-
-        super().__init__(storage=storage, embedder_config=embedder_config, crew=crew)
+    def __init__(self, storage: Optional[Storage] = None, **data: Any):
+        super().__init__(storage=storage, **data)
 
     @staticmethod
     def _configure_mem0(crew, config) -> "Mem0Storage":
@@ -56,6 +51,8 @@ class ExternalMemory(Memory):
 
     def set_crew(self, crew: Any) -> Self:
         super().set_crew(crew)
-        self.storage = self.create_storage(crew, self.embedder_config)
+
+        if not self.storage:
+            self.storage = self.create_storage(crew, self.embedder_config)
 
         return self
