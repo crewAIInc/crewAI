@@ -4,7 +4,7 @@ from typing import Any, Optional, Type
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class FixedSeleniumScrapingToolSchema(BaseModel):
@@ -23,7 +23,7 @@ class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
         description="Mandatory css reference for element to scrape from the website",
     )
 
-    @validator("website_url")
+    @field_validator("website_url")
     def validate_website_url(cls, v):
         if not v:
             raise ValueError("Website URL cannot be empty")
