@@ -4,7 +4,7 @@ from typing import Optional, Type
 
 from crewai.tools import BaseTool
 from openai import OpenAI
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 
 class ImagePromptSchema(BaseModel):
@@ -12,7 +12,7 @@ class ImagePromptSchema(BaseModel):
 
     image_path_url: str = "The image path or URL."
 
-    @validator("image_path_url")
+    @field_validator("image_path_url")
     def validate_image_path_url(cls, v: str) -> str:
         if v.startswith("http"):
             return v
