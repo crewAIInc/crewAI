@@ -13,14 +13,13 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.llm import LLM
+from crewai.llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
 from crewai.utilities.events import (
     ToolUsageErrorEvent,
-    ToolUsageStartedEvent,
     crewai_event_bus,
 )
 from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
@@ -61,7 +60,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         callbacks: List[Any] = [],
     ):
         self._i18n: I18N = I18N()
-        self.llm: LLM = llm
+        self.llm: BaseLLM = llm
         self.task = task
         self.agent = agent
         self.crew = crew
@@ -87,8 +86,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tool_name_to_tool_map: Dict[str, BaseTool] = {
             tool.name: tool for tool in self.tools
         }
-        self.stop = stop_words
-        self.llm.stop = list(set(self.llm.stop + self.stop))
+        existing_stop = self.llm.stop or []
+        self.llm.stop = list(
+            set(
+                existing_stop + self.stop
+                if isinstance(existing_stop, list)
+                else self.stop
+            )
+        )
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
@@ -147,8 +152,21 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 formatted_answer = self._process_llm_response(answer)
 
                 if isinstance(formatted_answer, AgentAction):
+                    # Extract agent fingerprint if available
+                    fingerprint_context = {}
+                    if (
+                        self.agent
+                        and hasattr(self.agent, "security_config")
+                        and hasattr(self.agent.security_config, "fingerprint")
+                    ):
+                        fingerprint_context = {
+                            "agent_fingerprint": str(
+                                self.agent.security_config.fingerprint
+                            )
+                        }
+
                     tool_result = self._execute_tool_and_check_finality(
-                        formatted_answer
+                        formatted_answer, fingerprint_context=fingerprint_context
                     )
                     formatted_answer = self._handle_agent_action(
                         formatted_answer, tool_result
@@ -354,19 +372,35 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
                 )
 
-    def _execute_tool_and_check_finality(self, agent_action: AgentAction) -> ToolResult:
+    def _execute_tool_and_check_finality(
+        self,
+        agent_action: AgentAction,
+        fingerprint_context: Optional[Dict[str, str]] = None,
+    ) -> ToolResult:
         try:
+            fingerprint_context = fingerprint_context or {}
+
             if self.agent:
+                # Create tool usage event with fingerprint information
+                event_data = {
+                    "agent_key": self.agent.key,
+                    "agent_role": self.agent.role,
+                    "tool_name": agent_action.tool,
+                    "tool_args": agent_action.tool_input,
+                    "tool_class": agent_action.tool,
+                    "agent": self.agent,  # Pass the agent object for fingerprint extraction
+                }
+
+                # Include fingerprint context
+                if fingerprint_context:
+                    event_data.update(fingerprint_context)
+
+                # Emit the tool usage started event with agent information
                 crewai_event_bus.emit(
                     self,
-                    event=ToolUsageStartedEvent(
-                        agent_key=self.agent.key,
-                        agent_role=self.agent.role,
-                        tool_name=agent_action.tool,
-                        tool_args=agent_action.tool_input,
-                        tool_class=agent_action.tool,
-                    ),
+                    event=ToolUsageStartedEvent(**event_data),
                 )
+
             tool_usage = ToolUsage(
                 tools_handler=self.tools_handler,
                 tools=self.tools,
@@ -377,6 +411,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 task=self.task,  # type: ignore[arg-type]
                 agent=self.agent,
                 action=agent_action,
+                fingerprint_context=fingerprint_context,  # Pass fingerprint context
             )
             tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
@@ -405,16 +440,23 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         except Exception as e:
             # TODO: drop
             if self.agent:
+                error_event_data = {
+                    "agent_key": self.agent.key,
+                    "agent_role": self.agent.role,
+                    "tool_name": agent_action.tool,
+                    "tool_args": agent_action.tool_input,
+                    "tool_class": agent_action.tool,
+                    "error": str(e),
+                    "agent": self.agent,  # Pass the agent object for fingerprint extraction
+                }
+
+                # Include fingerprint context
+                if fingerprint_context:
+                    error_event_data.update(fingerprint_context)
+
                 crewai_event_bus.emit(
                     self,
-                    event=ToolUsageErrorEvent(  # validation error
-                        agent_key=self.agent.key,
-                        agent_role=self.agent.role,
-                        tool_name=agent_action.tool,
-                        tool_args=agent_action.tool_input,
-                        tool_class=agent_action.tool,
-                        error=str(e),
-                    ),
+                    event=ToolUsageErrorEvent(**error_event_data),
                 )
             raise e
 

@@ -1,5 +1,7 @@
+import datetime
 import json
 import random
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +13,7 @@ from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import (
     ToolSelectionErrorEvent,
+    ToolUsageFinishedEvent,
     ToolValidateInputErrorEvent,
 )
 
@@ -624,3 +627,161 @@ def test_tool_validate_input_error_event():
         assert event.agent_role == "test_role"
         assert event.tool_name == "test_tool"
         assert "must be a valid dictionary" in event.error
+
+
+def test_tool_usage_finished_event_with_result():
+    """Test that ToolUsageFinishedEvent is emitted with correct result attributes."""
+    # Create mock agent with proper string values
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
+    mock_agent.i18n = MagicMock()
+    mock_agent.verbose = False
+
+    # Create mock task
+    mock_task = MagicMock()
+    mock_task.delegations = 0
+
+    # Create mock tool
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool"
+
+        def _run(self, input: dict) -> str:
+            return "test result"
+
+    test_tool = TestTool()
+
+    # Create mock tool calling
+    mock_tool_calling = MagicMock()
+    mock_tool_calling.arguments = {"arg1": "value1"}
+
+    # Create ToolUsage instance
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[test_tool],
+        original_tools=[test_tool],
+        tools_description="Test Tool Description",
+        tools_names="Test Tool",
+        task=mock_task,
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=MagicMock(),
+    )
+
+    # Track received events
+    received_events = []
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def event_handler(source, event):
+        received_events.append(event)
+
+    # Call on_tool_use_finished with test data
+    started_at = time.time()
+    result = "test output result"
+    tool_usage.on_tool_use_finished(
+        tool=test_tool,
+        tool_calling=mock_tool_calling,
+        from_cache=False,
+        started_at=started_at,
+        result=result,
+    )
+
+    # Verify event was emitted
+    assert len(received_events) == 1, "Expected one event to be emitted"
+    event = received_events[0]
+    assert isinstance(event, ToolUsageFinishedEvent)
+
+    # Verify event attributes
+    assert event.agent_key == "test_agent_key"
+    assert event.agent_role == "test_agent_role"
+    assert event.tool_name == "Test Tool"
+    assert event.tool_args == {"arg1": "value1"}
+    assert event.tool_class == "TestTool"
+    assert event.run_attempts == 1  # Default value from ToolUsage
+    assert event.delegations == 0
+    assert event.from_cache is False
+    assert event.output == "test output result"
+    assert isinstance(event.started_at, datetime.datetime)
+    assert isinstance(event.finished_at, datetime.datetime)
+    assert event.type == "tool_usage_finished"
+
+
+def test_tool_usage_finished_event_with_cached_result():
+    """Test that ToolUsageFinishedEvent is emitted with correct result attributes when using cached result."""
+    # Create mock agent with proper string values
+    mock_agent = MagicMock()
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
+    mock_agent.i18n = MagicMock()
+    mock_agent.verbose = False
+
+    # Create mock task
+    mock_task = MagicMock()
+    mock_task.delegations = 0
+
+    # Create mock tool
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool"
+
+        def _run(self, input: dict) -> str:
+            return "test result"
+
+    test_tool = TestTool()
+
+    # Create mock tool calling
+    mock_tool_calling = MagicMock()
+    mock_tool_calling.arguments = {"arg1": "value1"}
+
+    # Create ToolUsage instance
+    tool_usage = ToolUsage(
+        tools_handler=MagicMock(),
+        tools=[test_tool],
+        original_tools=[test_tool],
+        tools_description="Test Tool Description",
+        tools_names="Test Tool",
+        task=mock_task,
+        function_calling_llm=None,
+        agent=mock_agent,
+        action=MagicMock(),
+    )
+
+    # Track received events
+    received_events = []
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def event_handler(source, event):
+        received_events.append(event)
+
+    # Call on_tool_use_finished with test data and from_cache=True
+    started_at = time.time()
+    result = "cached test output result"
+    tool_usage.on_tool_use_finished(
+        tool=test_tool,
+        tool_calling=mock_tool_calling,
+        from_cache=True,
+        started_at=started_at,
+        result=result,
+    )
+
+    # Verify event was emitted
+    assert len(received_events) == 1, "Expected one event to be emitted"
+    event = received_events[0]
+    assert isinstance(event, ToolUsageFinishedEvent)
+
+    # Verify event attributes
+    assert event.agent_key == "test_agent_key"
+    assert event.agent_role == "test_agent_role"
+    assert event.tool_name == "Test Tool"
+    assert event.tool_args == {"arg1": "value1"}
+    assert event.tool_class == "TestTool"
+    assert event.run_attempts == 1  # Default value from ToolUsage
+    assert event.delegations == 0
+    assert event.from_cache is True
+    assert event.output == "cached test output result"
+    assert isinstance(event.started_at, datetime.datetime)
+    assert isinstance(event.finished_at, datetime.datetime)
+    assert event.type == "tool_usage_finished"

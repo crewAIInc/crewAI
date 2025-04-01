@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
-from crewai.llm import LLM
+from crewai.llm import BaseLLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
@@ -24,7 +24,7 @@ class CrewEvaluator:
 
     Attributes:
         crew (Crew): The crew of agents to evaluate.
-        eval_llm (LLM): Language model instance to use for evaluations
+        eval_llm (BaseLLM): Language model instance to use for evaluations
         tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
         iteration (int): The current iteration of the evaluation.
     """
@@ -33,7 +33,7 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, eval_llm: InstanceOf[LLM]):
+    def __init__(self, crew, eval_llm: InstanceOf[BaseLLM]):
         self.crew = crew
         self.llm = eval_llm
         self._telemetry = Telemetry()
