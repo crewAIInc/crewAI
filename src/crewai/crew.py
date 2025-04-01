@@ -1326,7 +1326,15 @@ class Crew(BaseModel):
             RuntimeError: If memory reset operation fails.
         """
         VALID_TYPES = frozenset(
-            ["long", "short", "entity", "knowledge", "kickoff_outputs", "all"]
+            [
+                "long",
+                "short",
+                "entity",
+                "knowledge",
+                "kickoff_outputs",
+                "all",
+                "external",
+            ]
         )
 
         if command_type not in VALID_TYPES:
