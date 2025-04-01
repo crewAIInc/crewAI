@@ -181,7 +181,9 @@ my_project/
             └── tasks.yaml
 ```
 
-You can now start developing your crew by editing the files in the `src/my_project` folder. The `main.py` file is the entry point of the project, the `crew.py` file is where you define your crew, the `agents.yaml` file is where you define your agents, and the `tasks.yaml` file is where you define your tasks.
+You can now start developing your crew by editing the files in the `src/my_project` folder. The `main.py` file is the entry point of the project, the `crew.py` file is where you define your crew, the `agents.yaml` file is where you define your agents, and the `tasks.yaml` file is where you define your tasks. A  sample screenshot of generated `src/my_project`  is seen below for proper understanding.
+
+![](./docs/images/generatedsrcmy_project_folder.png)
 
 #### To customize your project, you can:
 
@@ -696,3 +698,10 @@ A: Yes, CrewAI provides extensive beginner-friendly tutorials, courses, and docu
 
 ### Q: Can CrewAI automate human-in-the-loop workflows?
 A: Yes, CrewAI fully supports human-in-the-loop workflows, allowing seamless collaboration between human experts and AI agents for enhanced decision-making.
+
+
+### Q: When RunningCrewAI do i need to export appropriate API_key ?
+A: Yes, for example, should you select openai's model, you need to export the Openai key in the terminal as seen below for example purposes
+
+
+![img](./docs/images/exportAPIkeyinterminal.png)
