@@ -11,7 +11,9 @@ import pydantic_core
 import pytest
 
 from crewai.agent import Agent
+from crewai.agents import CacheHandler
 from crewai.agents.cache import CacheHandler
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
@@ -3732,6 +3734,44 @@ def test_multimodal_agent_image_tool_handling():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_multimodal_agent_describing_image_successfully():
+    """
+    Test that a multimodal agent can process images without validation errors.
+    This test reproduces the scenario from issue #2475.
+    """
+    llm = LLM(model="openai/gpt-4o", temperature=0.7)  # model with vision capabilities
+
+    expert_analyst = Agent(
+        role="Visual Quality Inspector",
+        goal="Perform detailed quality analysis of product images",
+        backstory="Senior quality control expert with expertise in visual inspection",
+        llm=llm,
+        verbose=True,
+        allow_delegation=False,
+        multimodal=True,
+    )
+
+    inspection_task = Task(
+        description="""
+        Analyze the product image at https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244 with focus on:
+        1. Quality of materials
+        2. Manufacturing defects
+        3. Compliance with standards
+        Provide a detailed report highlighting any issues found.
+        """,
+        expected_output="A detailed report highlighting any issues found",
+        agent=expert_analyst,
+    )
+
+    crew = Crew(agents=[expert_analyst], tasks=[inspection_task])
+    result = crew.kickoff()
+
+    task_output = result.tasks_output[0]
+    assert isinstance(task_output, TaskOutput)
+    assert task_output.raw == result.raw
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_multimodal_agent_live_image_analysis():
     """
     Test that multimodal agents can analyze images through a real API call
@@ -4025,3 +4065,52 @@ def test_crew_with_knowledge_sources_works_with_copy():
     assert len(crew_copy.tasks) == len(crew.tasks)
 
     assert len(crew_copy.tasks) == len(crew.tasks)
+
+
+def test_crew_kickoff_for_each_works_with_manager_agent_copy():
+    researcher = Agent(
+        role="Researcher",
+        goal="Conduct thorough research and analysis on AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently researching for a new client.",
+        allow_delegation=False
+    )
+
+    writer = Agent(
+        role="Senior Writer",
+        goal="Create compelling content about AI and AI agents",
+        backstory="You're a senior writer, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently writing content for a new client.",
+        allow_delegation=False
+    )
+
+    # Define task
+    task = Task(
+        description="Generate a list of 5 interesting ideas for an article, then write one captivating paragraph for each idea that showcases the potential of a full article on this topic. Return the list of ideas with their paragraphs and your notes.",
+        expected_output="5 bullet points, each with a paragraph and accompanying notes.",
+    )
+
+    # Define manager agent
+    manager = Agent(
+        role="Project Manager",
+        goal="Efficiently manage the crew and ensure high-quality task completion",
+        backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
+        allow_delegation=True
+    )
+
+    # Instantiate crew with a custom manager
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+        manager_agent=manager,
+        process=Process.hierarchical,
+        verbose=True
+    )
+
+    crew_copy = crew.copy()
+    assert crew_copy.manager_agent is not None
+    assert crew_copy.manager_agent.id != crew.manager_agent.id
+    assert crew_copy.manager_agent.role == crew.manager_agent.role
+    assert crew_copy.manager_agent.goal == crew.manager_agent.goal
+    assert crew_copy.manager_agent.backstory == crew.manager_agent.backstory
+    assert isinstance(crew_copy.manager_agent.agent_executor, CrewAgentExecutor)
+    assert isinstance(crew_copy.manager_agent.cache_handler, CacheHandler)
+

@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, List
 
-from mem0 import MemoryClient
+from mem0 import Memory, MemoryClient
 
 from crewai.memory.storage.interface import Storage
 
@@ -31,14 +31,21 @@ class Mem0Storage(Storage):
         mem0_api_key = config.get("api_key") or os.getenv("MEM0_API_KEY")
         mem0_org_id = config.get("org_id")
         mem0_project_id = config.get("project_id")
+        mem0_local_config = config.get("local_mem0_config")
 
-        # Initialize MemoryClient with available parameters
-        if mem0_org_id and mem0_project_id:
-            self.memory = MemoryClient(
-                api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
-            )
+        # Initialize MemoryClient or Memory based on the presence of the mem0_api_key
+        if mem0_api_key:
+            if mem0_org_id and mem0_project_id:
+                self.memory = MemoryClient(
+                    api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
+                )
+            else:
+                self.memory = MemoryClient(api_key=mem0_api_key)
         else:
-            self.memory = MemoryClient(api_key=mem0_api_key)
+            if mem0_local_config and len(mem0_local_config):
+                self.memory = Memory.from_config(config)
+            else:
+                self.memory = Memory()
 
     def _sanitize_role(self, role: str) -> str:
         """
@@ -111,3 +118,7 @@ class Mem0Storage(Storage):
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         return agents
+
+    def reset(self):
+        if self.memory:
+            self.memory.reset()

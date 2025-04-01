@@ -60,7 +60,8 @@ my_crew = Crew(
 ```python Code
 from crewai import Crew, Process
 from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
-from crewai.memory.storage import LTMSQLiteStorage, RAGStorage
+from crewai.memory.storage.rag_storage import RAGStorage
+from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
 from typing import List, Optional
 
 # Assemble your crew with memory capabilities
@@ -119,7 +120,7 @@ Example using environment variables:
 import os
 from crewai import Crew
 from crewai.memory import LongTermMemory
-from crewai.memory.storage import LTMSQLiteStorage
+from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
 
 # Configure storage path using environment variable
 storage_path = os.getenv("CREWAI_STORAGE_DIR", "./storage")
@@ -148,7 +149,7 @@ crew = Crew(memory=True)  # Uses default storage locations
 ```python
 from crewai import Crew
 from crewai.memory import LongTermMemory
-from crewai.memory.storage import LTMSQLiteStorage
+from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
 
 # Configure custom storage paths
 crew = Crew(
@@ -163,7 +164,10 @@ crew = Crew(
 
 [Mem0](https://mem0.ai/) is a self-improving memory layer for LLM applications, enabling personalized AI experiences. 
 
-To include user-specific memory you can get your API key [here](https://app.mem0.ai/dashboard/api-keys) and refer the [docs](https://docs.mem0.ai/platform/quickstart#4-1-create-memories) for adding user preferences.
+
+### Using Mem0 API platform
+
+To include user-specific memory you can get your API key [here](https://app.mem0.ai/dashboard/api-keys) and refer the [docs](https://docs.mem0.ai/platform/quickstart#4-1-create-memories) for adding user preferences. In this case `user_memory` is set to `MemoryClient` from mem0.
 
 
 ```python Code
@@ -174,18 +178,7 @@ from mem0 import MemoryClient
 # Set environment variables for Mem0
 os.environ["MEM0_API_KEY"] = "m0-xx"
 
-# Step 1: Record preferences based on past conversation or user input
-client = MemoryClient()
-messages = [
-    {"role": "user", "content": "Hi there! I'm planning a vacation and could use some advice."},
-    {"role": "assistant", "content": "Hello! I'd be happy to help with your vacation planning. What kind of destination do you prefer?"},
-    {"role": "user", "content": "I am more of a beach person than a mountain person."},
-    {"role": "assistant", "content": "That's interesting. Do you like hotels or Airbnb?"},
-    {"role": "user", "content": "I like Airbnb more."},
-]
-client.add(messages, user_id="john")
-
-# Step 2: Create a Crew with User Memory
+# Step 1: Create a Crew with User Memory
 
 crew = Crew(
     agents=[...],
@@ -196,11 +189,12 @@ crew = Crew(
     memory_config={
         "provider": "mem0",
         "config": {"user_id": "john"},
+        "user_memory" : {} #Set user_memory explicitly to a dictionary, we are working on this issue.
     },
 )
 ```
 
-## Memory Configuration Options
+#### Additional Memory Configuration Options
 If you want to access a specific organization and project, you can set the `org_id` and `project_id` parameters in the memory configuration.
 
 ```python Code
@@ -214,9 +208,73 @@ crew = Crew(
     memory_config={
         "provider": "mem0",
         "config": {"user_id": "john", "org_id": "my_org_id", "project_id": "my_project_id"},
+        "user_memory" : {} #Set user_memory explicitly to a dictionary, we are working on this issue.
     },
 )
 ```
+
+### Using Local Mem0 memory
+If you want to use local mem0 memory, with a custom configuration, you can set a parameter `local_mem0_config` in the config itself.
+If both os environment key is set and local_mem0_config is given, the API platform takes higher priority over the local configuration.
+Check [this](https://docs.mem0.ai/open-source/python-quickstart#run-mem0-locally) mem0 local configuration docs for more understanding.
+In this case `user_memory` is set to `Memory` from mem0.
+
+
+```python Code
+from crewai import Crew
+
+
+#local mem0 config
+config = {
+    "vector_store": {
+        "provider": "qdrant",
+        "config": {
+            "host": "localhost",
+            "port": 6333
+        }
+    },
+    "llm": {
+        "provider": "openai",
+        "config": {
+            "api_key": "your-api-key",
+            "model": "gpt-4"
+        }
+    },
+    "embedder": {
+        "provider": "openai",
+        "config": {
+            "api_key": "your-api-key",
+            "model": "text-embedding-3-small"
+        }
+    },
+    "graph_store": {
+        "provider": "neo4j",
+        "config": {
+            "url": "neo4j+s://your-instance",
+            "username": "neo4j",
+            "password": "password"
+        }
+    },
+    "history_db_path": "/path/to/history.db",
+    "version": "v1.1",
+    "custom_fact_extraction_prompt": "Optional custom prompt for fact extraction for memory",
+    "custom_update_memory_prompt": "Optional custom prompt for update memory"
+}
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    verbose=True,
+    memory=True,
+    memory_config={
+        "provider": "mem0",
+        "config": {"user_id": "john", 'local_mem0_config': config},
+        "user_memory" : {} #Set user_memory explicitly to a dictionary, we are working on this issue.
+    },
+)
+```
+
+
 
 ## Additional Embedding Providers
 
