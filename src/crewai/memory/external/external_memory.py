@@ -2,7 +2,6 @@ from typing import Any, Dict, Optional, Self
 
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
-from crewai.memory.storage.interface import Storage
 
 
 class ExternalMemory(Memory):
