@@ -274,6 +274,102 @@ crew = Crew(
 )
 ```
 
+### Using External Memory
+
+External Memory is a powerful feature that allows you to integrate external memory systems with your CrewAI applications. This is particularly useful when you want to use specialized memory providers or maintain memory across different applications.
+
+#### Basic Usage with Mem0
+
+The most common way to use External Memory is with Mem0 as the provider:
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
+
+agent = Agent(
+    role="You are a helpful assistant",
+    goal="Plan a vacation for the user",
+    backstory="You are a helpful assistant that can plan a vacation for the user",
+    verbose=True,
+)
+task = Task(
+    description="Give things related to the user's vacation",
+    expected_output="A plan for the vacation",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    memory=True,
+    external_memory=ExternalMemory(
+        embedder_config={"provider": "mem0", "config": {"user_id": "U-123"}} # you can provide an entire Mem0 configuration
+    ),
+)
+
+crew.kickoff(
+    inputs={"question": "which destination is better for a beach vacation?"}
+)
+```
+
+#### Using External Memory with Custom Storage
+
+You can also create custom storage implementations for External Memory. Here's an example of how to create a custom storage:
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
+from crewai.memory.storage.interface import Storage
+
+
+class CustomStorage(Storage):
+    def __init__(self):
+        self.memories = []
+
+    def save(self, value, metadata=None, agent=None):
+        self.memories.append({"value": value, "metadata": metadata, "agent": agent})
+
+    def search(self, query, limit=10, score_threshold=0.5):
+        # Implement your search logic here
+        return []
+
+    def reset(self):
+        self.memories = []
+
+
+# Create external memory with custom storage
+external_memory = ExternalMemory(
+    storage=CustomStorage(),
+    embedder_config={"provider": "mem0", "config": {"user_id": "U-123"}},
+)
+
+agent = Agent(
+    role="You are a helpful assistant",
+    goal="Plan a vacation for the user",
+    backstory="You are a helpful assistant that can plan a vacation for the user",
+    verbose=True,
+)
+task = Task(
+    description="Give things related to the user's vacation",
+    expected_output="A plan for the vacation",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    memory=True,
+    external_memory=external_memory,
+)
+
+crew.kickoff(
+    inputs={"question": "which destination is better for a beach vacation?"}
+)
+```
 
 
 ## Additional Embedding Providers
