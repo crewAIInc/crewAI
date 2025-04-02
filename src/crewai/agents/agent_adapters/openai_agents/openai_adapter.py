@@ -18,40 +18,50 @@ from crewai.utilities.events.agent_events import (
 
 class OpenAIAgentAdapter(BaseAgent, BaseModel):
     """Adapter for OpenAI Assistants"""
-    model_config = {
-        "arbitrary_types_allowed": True  # Add this to allow unknown types
-    }
-    
+
+    model_config = {"arbitrary_types_allowed": True}
+
     _openai_agent: OpenAIAgent = PrivateAttr()
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger())
     _active_thread: Optional[str] = PrivateAttr(default=None)
     function_calling_llm: Any = Field(default=None)
     step_callback: Any = Field(default=None)
     converted_tools: Optional[List[Tool]] = Field(default=None)
-    
-    def __init__(self, openai_agent: OpenAIAgent, model: str = 'gpt-4o-mini', tools: Optional[List[BaseTool]] = None, **kwargs):
+
+    def __init__(
+        self,
+        openai_agent: OpenAIAgent,
+        model: str = "gpt-4o-mini",
+        tools: Optional[List[BaseTool]] = None,
+        **kwargs,
+    ):
         super().__init__(
             role=openai_agent.name,
             goal=openai_agent.instructions,
             backstory=openai_agent.instructions,
-            **kwargs
+            **kwargs,
         )
+
+        # Add logging configuration
+        import logging
+
+        logging.getLogger("agents.tracing").setLevel(logging.WARNING)
+        logging.getLogger("agents").setLevel(logging.WARNING)
+
         self._openai_agent = openai_agent
         self._openai_agent.model = model
         if tools:
             self.tools = self._configure_tools(tools)
 
-
     def execute_task(
         self,
         task: Any,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None
+        tools: Optional[List[BaseTool]] = None,
     ) -> str:
         """Execute a task using the OpenAI Assistant"""
-        # TODO: tools should have the adapter for delegate/ask_questions
-        converted_tools = self._convert_tools_to_openai_format(tools)
-        print("converted_tools", converted_tools)
+        if self.converted_tools:
+            self.converted_tools.extend(self._convert_tools_to_openai_format(tools))
         if self.verbose:
             print("we verbose")
             enable_verbose_stdout_logging()
@@ -71,7 +81,7 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
                 ),
             )
             if self.converted_tools:
-                self._openai_agent.tools = [*self.converted_tools, *tools]
+                self._openai_agent.tools = self.converted_tools
             # This is pretty much the agent_executor logic:
             result = Runner.run_sync(self._openai_agent, task_prompt)
             return result.final_output
@@ -79,13 +89,13 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         except Exception as e:
             self._logger.log("error", f"Error executing OpenAI task: {str(e)}")
             crewai_event_bus.emit(
-                    self,
-                    event=AgentExecutionErrorEvent(
-                        agent=self,
-                        task=task,
-                        error=str(e),
-                    ),
-                )
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
             raise
 
     def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
@@ -94,7 +104,7 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
 
     def _prepare_task_input(self, task: Any, context: Optional[str]) -> str:
         """Prepare the task input with context if available"""
-        task_input = task.description if hasattr(task, 'description') else str(task)
+        task_input = task.description if hasattr(task, "description") else str(task)
         if context:
             task_input = f"Context:\n{context}\n\nTask:\n{task_input}"
         return task_input
@@ -104,7 +114,9 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         openai_tools = self._convert_tools_to_openai_format(tools)
         self.converted_tools = openai_tools
 
-    def _convert_tools_to_openai_format(self, tools: Optional[List[BaseTool]]) -> List[Tool]:
+    def _convert_tools_to_openai_format(
+        self, tools: Optional[List[BaseTool]]
+    ) -> List[Tool]:
         """Convert CrewAI tools to OpenAI Assistant tool format"""
         if not tools:
             return []
@@ -112,54 +124,58 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         def sanitize_tool_name(name: str) -> str:
             """Convert tool name to match OpenAI's required pattern"""
             import re
-            sanitized = re.sub(r'[^a-zA-Z0-9_-]', '_', name).lower()
+
+            sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", name).lower()
             return sanitized
 
         def create_tool_wrapper(tool: BaseTool):
             """Create a wrapper function that handles the OpenAI function tool interface"""
+
             async def wrapper(context_wrapper: Any, arguments: Any) -> Any:
                 # Get the parameter name from the schema
-                param_name = list(tool.args_schema.model_json_schema()["properties"].keys())[0]
-                
+                param_name = list(
+                    tool.args_schema.model_json_schema()["properties"].keys()
+                )[0]
+
                 # Handle different argument types
                 if isinstance(arguments, dict):
                     args_dict = arguments
                 elif isinstance(arguments, str):
                     try:
                         import json
+
                         args_dict = json.loads(arguments)
                     except json.JSONDecodeError:
                         args_dict = {param_name: arguments}
                 else:
                     args_dict = {param_name: str(arguments)}
-                
+
                 # Run the tool with the processed arguments
                 result = tool._run(**args_dict)
-                
+
                 # Ensure the result is JSON serializable
                 if isinstance(result, (dict, list, str, int, float, bool, type(None))):
                     return result
                 return str(result)
-            
+
             return wrapper
 
         openai_tools = []
         for tool in tools:
+            print("tools coming in", tool)
             schema = tool.args_schema.model_json_schema()
-            
-            schema.update({
-                "additionalProperties": False,
-                "type": "object"
-            })
-            
+
+            schema.update({"additionalProperties": False, "type": "object"})
+            print("schema here", schema)
+
             openai_tool = FunctionTool(
                 name=sanitize_tool_name(tool.name),
                 description=tool.description,
                 params_json_schema=schema,
-                on_invoke_tool=create_tool_wrapper(tool)
+                on_invoke_tool=create_tool_wrapper(tool),
             )
             openai_tools.append(openai_tool)
-        
+
         return openai_tools
 
     def _get_tool_parameters(self, tool: BaseTool) -> Dict[str, Any]:
@@ -168,20 +184,17 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         return {
             "type": "object",
             "properties": {
-                "input": {
-                    "type": "string",
-                    "description": "The input for the tool"
-                }
+                "input": {"type": "string", "description": "The input for the tool"}
             },
-            "required": ["input"]
+            "required": ["input"],
         }
 
     def _process_response(self, response: Any) -> str:
         """Process the OpenAI Assistant response"""
         # Extract the actual response content from the OpenAI response
-        if hasattr(response, 'output'):
+        if hasattr(response, "output"):
             return response.output
-        elif hasattr(response, 'content'):
+        elif hasattr(response, "content"):
             return response.content
         else:
             return str(response)
@@ -192,9 +205,12 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         tools = agent_tools.tools()
         return tools
 
-    def get_output_converter(self, llm: Any, text: str, model: Any, instructions: str) -> Any:
+    def get_output_converter(
+        self, llm: Any, text: str, model: Any, instructions: str
+    ) -> Any:
         """Convert output format if needed"""
         from crewai.utilities.converter import Converter
+
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
