@@ -890,10 +890,16 @@ class LLM(BaseLLM):
         Derives the custom_llm_provider from the model string.
         - For example, if the model is "openrouter/deepseek/deepseek-chat", returns "openrouter".
         - If the model is "gemini/gemini-1.5-pro", returns "gemini".
-        - If there is no '/', defaults to "openai".
+        - If the model starts with "gemini-", returns "gemini" only for valid Gemini models.
+        - If there is no '/' or recognized prefix, returns None.
         """
         if "/" in self.model:
             return self.model.split("/")[0]
+        if self.model.startswith("gemini-"):
+            valid_gemini_models = ["gemini-2.5-pro-exp-03-25", "gemini-2.0-flash", 
+                                  "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-flash-8b"]
+            if self.model in valid_gemini_models:
+                return "gemini"
         return None
 
     def _validate_call_params(self) -> None:
@@ -957,9 +963,19 @@ class LLM(BaseLLM):
         self.context_window_size = int(
             DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
         )
-        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if self.model.startswith(key):
-                self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
+        
+        model_name = self.model
+        if "/" in model_name:
+            model_name = model_name.split("/", 1)[1]
+            
+        if model_name in LLM_CONTEXT_WINDOW_SIZES:
+            self.context_window_size = int(LLM_CONTEXT_WINDOW_SIZES[model_name] * CONTEXT_WINDOW_USAGE_RATIO)
+        else:
+            for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
+                if model_name.startswith(key):
+                    self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
+                    break
+                    
         return self.context_window_size
 
     def set_callbacks(self, callbacks: List[Any]):
