@@ -1,0 +1,529 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Research Assistant.
+      You are a helpful research assistant who can search for information about the
+      population of Tokyo.\nYour personal goal is: Find information about the population
+      of Tokyo\n\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: search_web\nTool Arguments:
+      {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search
+      the web for information about a topic.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [search_web], just the name, exactly as
+      it''s written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "What is the population of Tokyo and how many people would that be per square
+      kilometer if Tokyo''s area is 2,194 square kilometers?"}], "model": "gpt-4o-mini",
+      "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1280'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHEnpxAj1kSC6XAUxC3lDuHZzp4T9\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743448177,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to find the current
+      population of Tokyo to calculate the population density.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"current population of Tokyo 2023\\\"}\\n```\\n\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      251,\n    \"completion_tokens\": 41,\n    \"total_tokens\": 292,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 929224621caa15b4-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 19:09:38 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=lFp0qMEF8XsDLnRNgKznAW30x4CW7Ov_R_1y90OvOPo-1743448178-1.0.1.1-n9T6ffJvOtX6aaUCbbMDNY6KEq3d3ajgtZi7hUklSw4SGBd1Ev.HK8fQe6pxQbU5MsOb06j7e1taxo5SRxUkXp9KxrzUSPZ.oomnIgOHjLk;
+        path=/; expires=Mon, 31-Mar-25 19:39:38 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=QPN2C5j8nyEThYQY2uARI13U6EWRRnrF_6XLns6RuQw-1743448178193-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1156'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999711'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_4e6d771474288d33bdec811401977c80
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Research Assistant.
+      You are a helpful research assistant who can search for information about the
+      population of Tokyo.\nYour personal goal is: Find information about the population
+      of Tokyo\n\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: search_web\nTool Arguments:
+      {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search
+      the web for information about a topic.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [search_web], just the name, exactly as
+      it''s written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "What is the population of Tokyo and how many people would that be per square
+      kilometer if Tokyo''s area is 2,194 square kilometers?"}, {"role": "assistant",
+      "content": "```\nThought: I need to find the current population of Tokyo to
+      calculate the population density.\nAction: search_web\nAction Input: {\"query\":\"current
+      population of Tokyo 2023\"}\n```\n\nObservation: Tokyo''s population in 2023
+      was approximately 21 million people in the city proper, and 37 million in the
+      greater metropolitan area."}], "model": "gpt-4o-mini", "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1652'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=lFp0qMEF8XsDLnRNgKznAW30x4CW7Ov_R_1y90OvOPo-1743448178-1.0.1.1-n9T6ffJvOtX6aaUCbbMDNY6KEq3d3ajgtZi7hUklSw4SGBd1Ev.HK8fQe6pxQbU5MsOb06j7e1taxo5SRxUkXp9KxrzUSPZ.oomnIgOHjLk;
+        _cfuvid=QPN2C5j8nyEThYQY2uARI13U6EWRRnrF_6XLns6RuQw-1743448178193-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHEnqB0VnEIObehNbRRxGmyYyAru0\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743448178,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have found that the
+      population of Tokyo is approximately 21 million people. Now, I need to calculate
+      the population density using the area of 2,194 square kilometers.\\n```\\n\\nPopulation
+      Density = Population / Area = 21,000,000 / 2,194 \u2248 9,570 people per square
+      kilometer.\\n\\n```\\nFinal Answer: The population of Tokyo is approximately
+      21 million people, resulting in a population density of about 9,570 people per
+      square kilometer.\\n```\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 325,\n    \"completion_tokens\":
+      104,\n    \"total_tokens\": 429,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9292246a3c7c15b4-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 19:09:40 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1796'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999630'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_73c3da7f5c7f244a8b4790cd2a686127
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cs4BCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAQoQIy0eVsjB7Rn1tmA3fvylUxIIP0BZv2JQ6vAqClRvb2wgVXNhZ2UwATmgHXCF
+      4fgxGEEgZ4OF4fgxGEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEwOC4wShkKCXRvb2xfbmFtZRIM
+      CgpzZWFyY2hfd2ViSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '209'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 31 Mar 2025 19:09:40 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Research Assistant.
+      You are a helpful research assistant who can search for information about the
+      population of Tokyo.\nYour personal goal is: Find information about the population
+      of Tokyo\n\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: search_web\nTool Arguments:
+      {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search
+      the web for information about a topic.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [search_web], just the name, exactly as
+      it''s written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "What are the effects of climate change on coral reefs?"}], "model": "gpt-4o-mini",
+      "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1204'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=lFp0qMEF8XsDLnRNgKznAW30x4CW7Ov_R_1y90OvOPo-1743448178-1.0.1.1-n9T6ffJvOtX6aaUCbbMDNY6KEq3d3ajgtZi7hUklSw4SGBd1Ev.HK8fQe6pxQbU5MsOb06j7e1taxo5SRxUkXp9KxrzUSPZ.oomnIgOHjLk;
+        _cfuvid=QPN2C5j8nyEThYQY2uARI13U6EWRRnrF_6XLns6RuQw-1743448178193-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHEnsVlmHXlessiDjYgHjd6Cz2hlT\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743448180,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I should search for information
+      about the effects of climate change on coral reefs.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"effects of climate change on coral reefs\\\"}\\n```\\n\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      234,\n    \"completion_tokens\": 41,\n    \"total_tokens\": 275,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92922476092e15b4-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 19:09:41 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1057'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999730'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_0db30a142a72b224c52d2388deef7200
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Research Assistant.
+      You are a helpful research assistant who can search for information about the
+      population of Tokyo.\nYour personal goal is: Find information about the population
+      of Tokyo\n\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: search_web\nTool Arguments:
+      {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search
+      the web for information about a topic.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [search_web], just the name, exactly as
+      it''s written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "What are the effects of climate change on coral reefs?"}, {"role": "assistant",
+      "content": "```\nThought: I should search for information about the effects
+      of climate change on coral reefs.\nAction: search_web\nAction Input: {\"query\":\"effects
+      of climate change on coral reefs\"}\n```\n\nObservation: Climate change severely
+      impacts coral reefs through: 1) Ocean warming causing coral bleaching, 2) Ocean
+      acidification reducing calcification, 3) Sea level rise affecting light availability,
+      4) Increased storm frequency damaging reef structures. Sources: NOAA Coral Reef
+      Conservation Program, Global Coral Reef Alliance."}], "model": "gpt-4o-mini",
+      "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1772'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=lFp0qMEF8XsDLnRNgKznAW30x4CW7Ov_R_1y90OvOPo-1743448178-1.0.1.1-n9T6ffJvOtX6aaUCbbMDNY6KEq3d3ajgtZi7hUklSw4SGBd1Ev.HK8fQe6pxQbU5MsOb06j7e1taxo5SRxUkXp9KxrzUSPZ.oomnIgOHjLk;
+        _cfuvid=QPN2C5j8nyEThYQY2uARI13U6EWRRnrF_6XLns6RuQw-1743448178193-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHEntjDYNZqWsFxx678q6KZguXh2w\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743448181,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
+      Answer: Climate change affects coral reefs primarily through ocean warming leading
+      to coral bleaching, ocean acidification reducing calcification, increased sea
+      level affecting light availability, and more frequent storms damaging reef structures.\\n```\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      340,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 392,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_86d0290411\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9292247d48ac15b4-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 19:09:42 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '952'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999599'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_7529bbfbafb1a594022d8d25e41ba109
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
