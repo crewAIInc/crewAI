@@ -26,7 +26,7 @@ tool = QdrantVectorSearchTool(
     collection_name="example_collections",
     limit=3,
     qdrant_url="https://your-qdrant-cluster-url.com",
-    qdrant_api_key="your-qdrant-api-key",
+    qdrant_api_key="your-qdrant-api-key", # (optional)
 )
 
 
@@ -43,7 +43,7 @@ rag_agent = Agent(
 
 - `collection_name` : The name of the collection to search within. (Required)
 - `qdrant_url` : The URL of the Qdrant cluster. (Required)
-- `qdrant_api_key` : The API key for the Qdrant cluster. (Required)
+- `qdrant_api_key` : The API key for the Qdrant cluster. (Optional)
 - `limit` : The number of results to return. (Optional)
 - `vectorizer` : The vectorizer to use. (Optional)
 
