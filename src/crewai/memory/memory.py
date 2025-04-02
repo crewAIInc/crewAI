@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Self
 
 from pydantic import BaseModel
 
@@ -9,6 +9,7 @@ class Memory(BaseModel):
     """
 
     embedder_config: Optional[Dict[str, Any]] = None
+    crew: Optional[Any] = None
 
     storage: Any
 
@@ -36,3 +37,7 @@ class Memory(BaseModel):
         return self.storage.search(
             query=query, limit=limit, score_threshold=score_threshold
         )
+
+    def set_crew(self, crew: Any) -> Self:
+        self.crew = crew
+        return self

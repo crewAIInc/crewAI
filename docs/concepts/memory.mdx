@@ -18,7 +18,8 @@ reason, and learn from past interactions.
 | **Long-Term Memory** | Preserves valuable insights and learnings from past executions, allowing agents to build and refine their knowledge over time. |
 | **Entity Memory**    | Captures and organizes information about entities (people, places, concepts) encountered during tasks, facilitating deeper understanding and relationship mapping. Uses `RAG` for storing entity information. |
 | **Contextual Memory**| Maintains the context of interactions by combining `ShortTermMemory`, `LongTermMemory`, and `EntityMemory`, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
-| **User Memory**      | Stores user-specific information and preferences, enhancing personalization and user experience. |
+| **External Memory**  | Enables integration with external memory systems and providers (like Mem0), allowing for specialized memory storage and retrieval across different applications. Supports custom storage implementations for flexible memory management. |
+| **User Memory**      | ⚠️ **DEPRECATED**: This component is deprecated and will be removed in a future version. Please use [External Memory](#using-external-memory) instead. |
 
 ## How Memory Systems Empower Agents
 
@@ -274,6 +275,102 @@ crew = Crew(
 )
 ```
 
+### Using External Memory
+
+External Memory is a powerful feature that allows you to integrate external memory systems with your CrewAI applications. This is particularly useful when you want to use specialized memory providers or maintain memory across different applications.
+
+#### Basic Usage with Mem0
+
+The most common way to use External Memory is with Mem0 as the provider:
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
+
+agent = Agent(
+    role="You are a helpful assistant",
+    goal="Plan a vacation for the user",
+    backstory="You are a helpful assistant that can plan a vacation for the user",
+    verbose=True,
+)
+task = Task(
+    description="Give things related to the user's vacation",
+    expected_output="A plan for the vacation",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    memory=True,
+    external_memory=ExternalMemory(
+        embedder_config={"provider": "mem0", "config": {"user_id": "U-123"}} # you can provide an entire Mem0 configuration
+    ),
+)
+
+crew.kickoff(
+    inputs={"question": "which destination is better for a beach vacation?"}
+)
+```
+
+#### Using External Memory with Custom Storage
+
+You can also create custom storage implementations for External Memory. Here's an example of how to create a custom storage:
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.memory.external.external_memory import ExternalMemory
+from crewai.memory.storage.interface import Storage
+
+
+class CustomStorage(Storage):
+    def __init__(self):
+        self.memories = []
+
+    def save(self, value, metadata=None, agent=None):
+        self.memories.append({"value": value, "metadata": metadata, "agent": agent})
+
+    def search(self, query, limit=10, score_threshold=0.5):
+        # Implement your search logic here
+        return []
+
+    def reset(self):
+        self.memories = []
+
+
+# Create external memory with custom storage
+external_memory = ExternalMemory(
+    storage=CustomStorage(),
+    embedder_config={"provider": "mem0", "config": {"user_id": "U-123"}},
+)
+
+agent = Agent(
+    role="You are a helpful assistant",
+    goal="Plan a vacation for the user",
+    backstory="You are a helpful assistant that can plan a vacation for the user",
+    verbose=True,
+)
+task = Task(
+    description="Give things related to the user's vacation",
+    expected_output="A plan for the vacation",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    memory=True,
+    external_memory=external_memory,
+)
+
+crew.kickoff(
+    inputs={"question": "which destination is better for a beach vacation?"}
+)
+```
 
 
 ## Additional Embedding Providers

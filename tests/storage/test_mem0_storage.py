@@ -29,41 +29,32 @@ def mem0_storage_with_mocked_config(mock_mem0_memory):
     """Fixture to create a Mem0Storage instance with mocked dependencies"""
 
     # Patch the Memory class to return our mock
-    with patch('mem0.memory.main.Memory.from_config', return_value=mock_mem0_memory):
+    with patch("mem0.memory.main.Memory.from_config", return_value=mock_mem0_memory):
         config = {
             "vector_store": {
                 "provider": "mock_vector_store",
-                "config": {
-                    "host": "localhost",
-                    "port": 6333
-                }
+                "config": {"host": "localhost", "port": 6333},
             },
             "llm": {
                 "provider": "mock_llm",
-                "config": {
-                    "api_key": "mock-api-key",
-                    "model": "mock-model"
-                }
+                "config": {"api_key": "mock-api-key", "model": "mock-model"},
             },
             "embedder": {
                 "provider": "mock_embedder",
-                "config": {
-                    "api_key": "mock-api-key",
-                    "model": "mock-model"
-                }
+                "config": {"api_key": "mock-api-key", "model": "mock-model"},
             },
             "graph_store": {
                 "provider": "mock_graph_store",
                 "config": {
                     "url": "mock-url",
                     "username": "mock-user",
-                    "password": "mock-password"
-                }
+                    "password": "mock-password",
+                },
             },
             "history_db_path": "/mock/path",
             "version": "test-version",
             "custom_fact_extraction_prompt": "mock prompt 1",
-            "custom_update_memory_prompt": "mock prompt 2"
+            "custom_update_memory_prompt": "mock prompt 2",
         }
 
         # Instantiate the class with memory_config
@@ -92,23 +83,73 @@ def mock_mem0_memory_client():
 
 
 @pytest.fixture
-def mem0_storage_with_memory_client(mock_mem0_memory_client):
+def mem0_storage_with_memory_client_using_config_from_crew(mock_mem0_memory_client):
     """Fixture to create a Mem0Storage instance with mocked dependencies"""
 
     # We need to patch the MemoryClient before it's instantiated
-    with patch.object(MemoryClient, '__new__', return_value=mock_mem0_memory_client):
-            crew = MockCrew(
-                memory_config={
-                    "provider": "mem0",
-                    "config": {"user_id": "test_user", "api_key": "ABCDEFGH", "org_id": "my_org_id", "project_id": "my_project_id"},
-                }
-            )
+    with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client):
+        crew = MockCrew(
+            memory_config={
+                "provider": "mem0",
+                "config": {
+                    "user_id": "test_user",
+                    "api_key": "ABCDEFGH",
+                    "org_id": "my_org_id",
+                    "project_id": "my_project_id",
+                },
+            }
+        )
 
-            mem0_storage = Mem0Storage(type="short_term", crew=crew)
-            return mem0_storage
+        mem0_storage = Mem0Storage(type="short_term", crew=crew)
+        return mem0_storage
 
 
-def test_mem0_storage_with_memory_client_initialization(mem0_storage_with_memory_client, mock_mem0_memory_client):
+@pytest.fixture
+def mem0_storage_with_memory_client_using_explictly_config(mock_mem0_memory_client):
+    """Fixture to create a Mem0Storage instance with mocked dependencies"""
+
+    # We need to patch the MemoryClient before it's instantiated
+    with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client):
+        crew = MockCrew(
+            memory_config={
+                "provider": "mem0",
+                "config": {
+                    "user_id": "test_user",
+                    "api_key": "ABCDEFGH",
+                    "org_id": "my_org_id",
+                    "project_id": "my_project_id",
+                },
+            }
+        )
+
+        new_config = {"provider": "mem0", "config": {"api_key": "new-api-key"}}
+
+        mem0_storage = Mem0Storage(type="short_term", crew=crew, config=new_config)
+        return mem0_storage
+
+
+def test_mem0_storage_with_memory_client_initialization(
+    mem0_storage_with_memory_client_using_config_from_crew, mock_mem0_memory_client
+):
     """Test Mem0Storage initialization with MemoryClient"""
-    assert mem0_storage_with_memory_client.memory_type == "short_term"
-    assert mem0_storage_with_memory_client.memory is mock_mem0_memory_client
+    assert (
+        mem0_storage_with_memory_client_using_config_from_crew.memory_type
+        == "short_term"
+    )
+    assert (
+        mem0_storage_with_memory_client_using_config_from_crew.memory
+        is mock_mem0_memory_client
+    )
+
+
+def test_mem0_storage_with_explict_config(
+    mem0_storage_with_memory_client_using_explictly_config,
+):
+    expected_config = {"provider": "mem0", "config": {"api_key": "new-api-key"}}
+    assert (
+        mem0_storage_with_memory_client_using_explictly_config.config == expected_config
+    )
+    assert (
+        mem0_storage_with_memory_client_using_explictly_config.memory_config
+        == expected_config
+    )

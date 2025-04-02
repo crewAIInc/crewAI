@@ -129,6 +129,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self._create_short_term_memory(formatted_answer)
         self._create_long_term_memory(formatted_answer)
+        self._create_external_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self) -> AgentFinish:
