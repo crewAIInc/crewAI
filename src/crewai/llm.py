@@ -71,21 +71,26 @@ class FilteredStream:
             return self._original_stream.flush()
 
 
+PRO_CONTEXT_SIZE = 2097152  # 2M tokens
+FLASH_CONTEXT_SIZE = 1048576  # 1M tokens
+GPT4_TURBO_CONTEXT_SIZE = 128000
+CLAUDE_LARGE_CONTEXT_SIZE = 200000
+
 LLM_CONTEXT_WINDOW_SIZES = {
     # openai
     "gpt-4": 8192,
-    "gpt-4o": 128000,
-    "gpt-4o-mini": 128000,
-    "gpt-4-turbo": 128000,
-    "o1-preview": 128000,
-    "o1-mini": 128000,
-    "o3-mini": 200000,  # Based on official o3-mini specifications
+    "gpt-4o": GPT4_TURBO_CONTEXT_SIZE,
+    "gpt-4o-mini": GPT4_TURBO_CONTEXT_SIZE,
+    "gpt-4-turbo": GPT4_TURBO_CONTEXT_SIZE,
+    "o1-preview": GPT4_TURBO_CONTEXT_SIZE,
+    "o1-mini": GPT4_TURBO_CONTEXT_SIZE,
+    "o3-mini": CLAUDE_LARGE_CONTEXT_SIZE,  # Based on official o3-mini specifications
     # gemini
-    "gemini-2.5-pro-exp-03-25": 2097152,
-    "gemini-2.0-flash": 1048576,
-    "gemini-1.5-pro": 2097152,
-    "gemini-1.5-flash": 1048576,
-    "gemini-1.5-flash-8b": 1048576,
+    "gemini-2.5-pro-exp-03-25": PRO_CONTEXT_SIZE,
+    "gemini-2.0-flash": FLASH_CONTEXT_SIZE,
+    "gemini-1.5-pro": PRO_CONTEXT_SIZE,
+    "gemini-1.5-flash": FLASH_CONTEXT_SIZE,
+    "gemini-1.5-flash-8b": FLASH_CONTEXT_SIZE,
     # deepseek
     "deepseek-chat": 128000,
     # groq
