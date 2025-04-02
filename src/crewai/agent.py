@@ -142,15 +142,13 @@ class Agent(BaseAgent):
                 self.embedder = crew_embedder
 
             if self.knowledge_sources:
-                full_pattern = re.compile(r"[^a-zA-Z0-9\-_\r\n]|(\.\.)")
-                knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
                         embedder=self.embedder,
-                        collection_name=knowledge_agent_name,
+                        collection_name=self.role,
                         storage=self.knowledge_storage or None,
                     )
         except (TypeError, ValueError) as e:

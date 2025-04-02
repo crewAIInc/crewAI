@@ -1,10 +1,9 @@
 import json
+import uuid
 from datetime import date, datetime
 from typing import Any, Dict, List, Union
 
 from pydantic import BaseModel
-
-from crewai.flow import Flow
 
 SerializablePrimitive = Union[str, int, float, bool, None]
 Serializable = Union[
@@ -12,27 +11,11 @@ Serializable = Union[
 ]
 
 
-def export_state(flow: Flow) -> dict[str, Serializable]:
-    """Exports the Flow's internal state as JSON-compatible data structures.
-
-    Performs a one-way transformation of a Flow's state into basic Python types
-    that can be safely serialized to JSON. To prevent infinite recursion with
-    circular references, the conversion is limited to a depth of 5 levels.
-
-    Args:
-        flow: The Flow object whose state needs to be exported
-
-    Returns:
-        dict[str, Any]: The transformed state using JSON-compatible Python
-            types.
-    """
-    result = to_serializable(flow._state)
-    assert isinstance(result, dict)
-    return result
-
-
 def to_serializable(
-    obj: Any, max_depth: int = 5, _current_depth: int = 0
+    obj: Any,
+    exclude: set[str] | None = None,
+    max_depth: int = 5,
+    _current_depth: int = 0,
 ) -> Serializable:
     """Converts a Python object into a JSON-compatible representation.
 
@@ -42,6 +25,7 @@ def to_serializable(
 
     Args:
         obj (Any): Object to transform.
+        exclude (set[str], optional): Set of keys to exclude from the result.
         max_depth (int, optional): Maximum recursion depth. Defaults to 5.
 
     Returns:
@@ -50,21 +34,39 @@ def to_serializable(
     if _current_depth >= max_depth:
         return repr(obj)
 
+    if exclude is None:
+        exclude = set()
+
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
+    elif isinstance(obj, uuid.UUID):
+        return str(obj)
     elif isinstance(obj, (date, datetime)):
         return obj.isoformat()
     elif isinstance(obj, (list, tuple, set)):
-        return [to_serializable(item, max_depth, _current_depth + 1) for item in obj]
+        return [
+            to_serializable(
+                item, max_depth=max_depth, _current_depth=_current_depth + 1
+            )
+            for item in obj
+        ]
     elif isinstance(obj, dict):
         return {
             _to_serializable_key(key): to_serializable(
-                value, max_depth, _current_depth + 1
+                obj=value,
+                exclude=exclude,
+                max_depth=max_depth,
+                _current_depth=_current_depth + 1,
             )
             for key, value in obj.items()
+            if key not in exclude
         }
     elif isinstance(obj, BaseModel):
-        return to_serializable(obj.model_dump(), max_depth, _current_depth + 1)
+        return to_serializable(
+            obj=obj.model_dump(exclude=exclude),
+            max_depth=max_depth,
+            _current_depth=_current_depth + 1,
+        )
     else:
         return repr(obj)
 

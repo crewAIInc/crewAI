@@ -388,7 +388,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context))
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -464,11 +464,11 @@ class Task(BaseModel):
                     )
                 )
                 self._save_file(content)
-            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output))
+            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output, task=self))
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e)))
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:
@@ -572,7 +572,15 @@ class Task(BaseModel):
     def copy(
         self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
     ) -> "Task":
-        """Create a deep copy of the Task."""
+        """Creates a deep copy of the Task while preserving its original class type.
+
+        Args:
+            agents: List of agents available for the task.
+            task_mapping: Dictionary mapping task IDs to Task instances.
+
+        Returns:
+            A copy of the task with the same class type as the original.
+        """
         exclude = {
             "id",
             "agent",
@@ -595,7 +603,7 @@ class Task(BaseModel):
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = copy(self.tools) if self.tools else []
 
-        copied_task = Task(
+        copied_task = self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
