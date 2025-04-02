@@ -1,6 +1,6 @@
 import pytest
 
-from crewai.llm import LLM, CONTEXT_WINDOW_USAGE_RATIO, PRO_CONTEXT_SIZE
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM, PRO_CONTEXT_SIZE
 
 
 def test_get_custom_llm_provider_gemini_2_5():
