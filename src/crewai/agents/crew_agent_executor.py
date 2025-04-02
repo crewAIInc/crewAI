@@ -58,8 +58,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         respect_context_window: bool = False,
         request_within_rpm_limit: Optional[Callable[[], bool]] = None,
         callbacks: List[Any] = [],
+        i18n: I18N = I18N()
     ):
-        self._i18n: I18N = I18N()
+        self._i18n = i18n
         self.llm: BaseLLM = llm
         self.task = task
         self.agent = agent
@@ -560,7 +561,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return prompt
 
     def _format_answer(self, answer: str) -> Union[AgentAction, AgentFinish]:
-        return CrewAgentParser(agent=self.agent).parse(answer)
+        return CrewAgentParser(agent=self.agent, i18n=self._i18n).parse(answer)
 
     def _format_msg(self, prompt: str, role: str = "user") -> Dict[str, str]:
         prompt = prompt.rstrip()
