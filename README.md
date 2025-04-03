@@ -267,6 +267,7 @@ In addition to the sequential process, you can use the hierarchical process, whi
 - **Role-Based Agent Design**: Customize agents with specific roles, goals, and tools.
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enhancing problem-solving efficiency.
 - **Flexible Task Management**: Define tasks with customizable tools and assign them to agents dynamically.
+- **Tool Instructions**: Attach specific usage instructions to tools for better control over when and how agents use them.
 - **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
 - **Save output as file**: Save the output of individual tasks as a file, so you can use it later.
 - **Parse output as Pydantic or Json**: Parse the output of individual tasks as a Pydantic model or as a Json if you want to.
