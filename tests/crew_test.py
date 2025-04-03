@@ -24,6 +24,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools import tool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
 from crewai.utilities.events import (
@@ -38,7 +39,6 @@ from crewai.utilities.events.crew_events import (
 from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from crewai.tools import tool
 
 # Skip streaming tests when running in CI/CD environments
 skip_streaming_in_ci = pytest.mark.skipif(
