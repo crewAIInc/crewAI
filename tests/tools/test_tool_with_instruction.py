@@ -65,3 +65,46 @@ class TestToolWithInstruction:
         
         assert wrapped_tool.name == tool.name
         assert "Instructions: Only use this tool for XYZ" in wrapped_tool.description
+    
+    def test_empty_instructions(self):
+        """Test that empty instructions raise ValueError."""
+        tool = MockTool()
+        
+        with pytest.raises(ValueError, match="Instructions cannot be empty"):
+            ToolWithInstruction(tool=tool, instructions="")
+        
+        with pytest.raises(ValueError, match="Instructions cannot be empty"):
+            ToolWithInstruction(tool=tool, instructions="   ")
+    
+    def test_too_long_instructions(self):
+        """Test that instructions exceeding maximum length raise ValueError."""
+        tool = MockTool()
+        long_instructions = "x" * (ToolWithInstruction.MAX_INSTRUCTION_LENGTH + 1)
+        
+        with pytest.raises(ValueError, match="Instructions exceed maximum length"):
+            ToolWithInstruction(tool=tool, instructions=long_instructions)
+    
+    def test_update_instructions(self):
+        """Test updating instructions dynamically."""
+        tool = MockTool()
+        initial_instructions = "Initial instructions"
+        new_instructions = "Updated instructions"
+        
+        wrapped_tool = ToolWithInstruction(tool=tool, instructions=initial_instructions)
+        assert "Instructions: Initial instructions" in wrapped_tool.description
+        
+        wrapped_tool.update_instructions(new_instructions)
+        assert "Instructions: Updated instructions" in wrapped_tool.description
+        assert wrapped_tool.instructions == new_instructions
+    
+    def test_update_instructions_validation(self):
+        """Test validation when updating instructions."""
+        tool = MockTool()
+        wrapped_tool = ToolWithInstruction(tool=tool, instructions="Valid instructions")
+        
+        with pytest.raises(ValueError, match="Instructions cannot be empty"):
+            wrapped_tool.update_instructions("")
+        
+        long_instructions = "x" * (ToolWithInstruction.MAX_INSTRUCTION_LENGTH + 1)
+        with pytest.raises(ValueError, match="Instructions exceed maximum length"):
+            wrapped_tool.update_instructions(long_instructions)
