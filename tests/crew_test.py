@@ -350,7 +350,7 @@ def test_hierarchical_process():
 
     assert (
         result.raw
-        == "Here are the 5 interesting ideas along with a compelling paragraph for each that showcases how good an article on the topic could be:\n\n1. **The Evolution and Future of AI Agents in Everyday Life**:\nThe rapid development of AI agents from rudimentary virtual assistants like Siri and Alexa to today's sophisticated systems marks a significant technological leap. This article will explore the evolving landscape of AI agents, detailing their seamless integration into daily activities ranging from managing smart home devices to streamlining workflows. We will examine the multifaceted benefits these agents bring, such as increased efficiency and personalized user experiences, while also addressing ethical concerns like data privacy and algorithmic bias. Looking ahead, we will forecast the advancements slated for the next decade, including AI agents in personalized health coaching and automated legal consultancy. With more advanced machine learning algorithms, the potential for these AI systems to revolutionize our daily lives is immense.\n\n2. **AI in Healthcare: Revolutionizing Diagnostics and Treatment**:\nArtificial Intelligence is poised to revolutionize the healthcare sector by offering unprecedented improvements in diagnostic accuracy and personalized treatments. This article will delve into the transformative power of AI in healthcare, highlighting real-world applications like AI-driven imaging technologies that aid in early disease detection and predictive analytics that enable personalized patient care plans. We will discuss the ethical challenges, such as data privacy and the implications of AI-driven decision-making in medicine. Through compelling case studies, we will showcase successful AI implementations that have made significant impacts, ultimately painting a picture of a future where AI plays a central role in proactive and precise healthcare delivery.\n\n3. **The Role of AI in Enhancing Cybersecurity**:\nAs cyber threats become increasingly sophisticated, AI stands at the forefront of the battle against cybercrime. This article will discuss the crucial role AI plays in detecting and responding to threats in real-time, its capacity to predict and prevent potential attacks, and the inherent challenges of an AI-dependent cybersecurity framework. We will highlight recent advancements in AI-based security tools and provide case studies where AI has been instrumental in mitigating cyber threats effectively. By examining these elements, we'll underline the potential and limitations of AI in creating a more secure digital environment, showcasing how it can adapt to evolving threats faster than traditional methods.\n\n4. **The Intersection of AI and Autonomous Vehicles: Driving Towards a Safer Future**:\nThe prospect of AI-driven autonomous vehicles promises to redefine transportation. This article will explore the technological underpinnings of self-driving cars, their developmental milestones, and the hurdles they face, including regulatory and ethical challenges. We will discuss the profound implications for various industries and employment sectors, coupled with the benefits such as reduced traffic accidents, improved fuel efficiency, and enhanced mobility for people with disabilities. By detailing these aspects, the article will offer a comprehensive overview of how AI-powered autonomous vehicles are steering us towards a safer, more efficient future.\n\n5. **AI and the Future of Work: Embracing Change in the Workplace**:\nAI is transforming the workplace by automating mundane tasks, enabling advanced data analysis, and fostering creativity and strategic decision-making. This article will explore the profound impact of AI on the job market, addressing concerns about job displacement and the evolution of new roles that demand reskilling. We will provide insights into the necessity for upskilling to keep pace with an AI-driven economy. Through interviews with industry experts and narratives from workers who have experienced AI's impact firsthand, we will present a balanced perspective. The aim is to paint a future where humans and AI work in synergy, driving innovation and productivity in a continuously evolving workplace landscape."
+        == "**1. The Rise of Autonomous AI Agents in Daily Life**  \nAs artificial intelligence technology progresses, the integration of autonomous AI agents into everyday life becomes increasingly prominent. These agents, capable of making decisions without human intervention, are reshaping industries from healthcare to finance. Exploring case studies where autonomous AI has successfully decreased operational costs or improved efficiency can reveal not only the benefits but also the ethical implications of delegating decision-making to machines. This topic offers an exciting opportunity to dive into the AI landscape, showcasing current developments such as AI assistants and autonomous vehicles.\n\n**2. Ethical Implications of Generative AI in Creative Industries**  \nThe surge of generative AI tools in creative fields, such as art, music, and writing, has sparked a heated debate about authorship and originality. This article could investigate how these tools are being used by artists and creators, examining both the potential for innovation and the risk of devaluing traditional art forms. Highlighting perspectives from creators, legal experts, and ethicists could provide a comprehensive overview of the challenges faced, including copyright concerns and the emotional impact on human artists. This discussion is vital as the creative landscape evolves alongside technological advancements, making it ripe for exploration.\n\n**3. AI in Climate Change Mitigation: Current Solutions and Future Potential**  \nAs the world grapples with climate change, AI technology is increasingly being harnessed to develop innovative solutions for sustainability. From predictive analytics that optimize energy consumption to machine learning algorithms that improve carbon capture methods, AI's potential in environmental science is vast. This topic invites an exploration of existing AI applications in climate initiatives, with a focus on groundbreaking research and initiatives aimed at reducing humanity's carbon footprint. Highlighting successful projects and technology partnerships can illustrate the positive impact AI can have on global climate efforts, inspiring further exploration and investment in this area.\n\n**4. The Future of Work: How AI is Reshaping Employment Landscapes**  \nThe discussions around AI's impact on the workforce are both urgent and complex, as advances in automation and machine learning continue to transform the job market. This article could delve into the current trends of AI-driven job displacement alongside opportunities for upskilling and the creation of new job roles. By examining case studies of companies that integrate AI effectively and the resulting workforce adaptations, readers can gain valuable insights into preparing for a future where humans and AI collaborate. This exploration highlights the importance of policies that promote workforce resilience in the face of change.\n\n**5. Decentralized AI: Exploring the Role of Blockchain in AI Development**  \nAs blockchain technology sweeps through various sectors, its application in AI development presents a fascinating topic worth examining. Decentralized AI could address issues of data privacy, security, and democratization in AI models by allowing users to retain ownership of data while benefiting from AI's capabilities. This article could analyze how decentralized networks are disrupting traditional AI development models, featuring innovative projects that harness the synergy between blockchain and AI. Highlighting potential pitfalls and the future landscape of decentralized AI could stimulate discussion among technologists, entrepreneurs, and policymakers alike.\n\nThese topics not only reflect current trends but also probe deeper into ethical and practical considerations, making them timely and relevant for contemporary audiences."
     )
 
 
@@ -2157,14 +2157,20 @@ def test_tools_with_custom_caching():
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
     ) as add_to_cache:
-        with patch.object(CacheHandler, "read", wraps=crew._cache_handler.read) as _:
-            result = crew.kickoff()
-            add_to_cache.assert_called_once_with(
-                tool="multiplcation_tool",
-                input={"first_number": 2, "second_number": 6},
-                output=12,
-            )
-            assert result.raw == "3"
+
+        result = crew.kickoff()
+
+        # Check that add_to_cache was called exactly twice
+        assert add_to_cache.call_count == 2
+
+        # Verify that one of those calls was with the even number that should be cached
+        add_to_cache.assert_any_call(
+            tool="multiplcation_tool",
+            input={"first_number": 2, "second_number": 6},
+            output=12,
+        )
+
+        assert result.raw == "3"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -4072,14 +4078,14 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
         role="Researcher",
         goal="Conduct thorough research and analysis on AI and AI agents",
         backstory="You're an expert researcher, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently researching for a new client.",
-        allow_delegation=False
+        allow_delegation=False,
     )
 
     writer = Agent(
         role="Senior Writer",
         goal="Create compelling content about AI and AI agents",
         backstory="You're a senior writer, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently writing content for a new client.",
-        allow_delegation=False
+        allow_delegation=False,
     )
 
     # Define task
@@ -4093,7 +4099,7 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
         role="Project Manager",
         goal="Efficiently manage the crew and ensure high-quality task completion",
         backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
-        allow_delegation=True
+        allow_delegation=True,
     )
 
     # Instantiate crew with a custom manager
@@ -4102,7 +4108,7 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
         tasks=[task],
         manager_agent=manager,
         process=Process.hierarchical,
-        verbose=True
+        verbose=True,
     )
 
     crew_copy = crew.copy()
@@ -4113,4 +4119,3 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
     assert crew_copy.manager_agent.backstory == crew.manager_agent.backstory
     assert isinstance(crew_copy.manager_agent.agent_executor, CrewAgentExecutor)
     assert isinstance(crew_copy.manager_agent.cache_handler, CacheHandler)
-
