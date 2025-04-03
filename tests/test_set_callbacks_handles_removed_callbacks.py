@@ -1,6 +1,7 @@
+from typing import Any
+
 import litellm
 import pytest
-from typing import Any
 
 from crewai.llm import LLM
 
