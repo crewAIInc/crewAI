@@ -618,7 +618,10 @@ class Crew(BaseModel):
                 agent.set_knowledge(crew_embedder=self.embedder)
                 # TODO: Create an AgentFunctionCalling protocol for future refactoring
                 if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
-                    agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
+                    if self.function_calling_llm:
+                        agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
+                    else:
+                        agent.function_calling_llm = agent.llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
 
                 if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
                     agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"

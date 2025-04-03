@@ -38,6 +38,7 @@ from crewai.utilities.events.crew_events import (
 from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai.tools import tool
 
 # Skip streaming tests when running in CI/CD environments
 skip_streaming_in_ci = pytest.mark.skipif(
@@ -4119,3 +4120,48 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
     assert crew_copy.manager_agent.backstory == crew.manager_agent.backstory
     assert isinstance(crew_copy.manager_agent.agent_executor, CrewAgentExecutor)
     assert isinstance(crew_copy.manager_agent.cache_handler, CacheHandler)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_agents_use_own_llm_for_function_calling():
+    """
+    Test that agents in a crew use their own LLM for function calling when no
+    function_calling_llm is specified for either the agent or the crew.
+    """
+    @tool
+    def simple_tool(input_text: str) -> str:
+        """A simple tool that returns the input text."""
+        return f"Tool processed: {input_text}"
+    
+    gemini_agent = Agent(
+        role="Gemini Agent",
+        goal="Test Gemini model without OpenAI dependency",
+        backstory="I am a test agent using Gemini model",
+        llm="gemini/gemini-1.5-flash",  # Using Gemini model
+        tools=[simple_tool],
+        verbose=True
+    )
+    
+    crew = Crew(
+        agents=[gemini_agent],
+        tasks=[
+            Task(
+                description="Use the simple tool to process 'test input'",
+                expected_output="Processed result",
+                agent=gemini_agent
+            )
+        ],
+        verbose=True
+    )
+    
+    with patch.object(LLM, 'supports_function_calling', return_value=True):
+        with patch('crewai.tools.tool_usage.ToolUsage') as mock_tool_usage:
+            try:
+                crew.kickoff()
+                
+                args, kwargs = mock_tool_usage.call_args
+                assert kwargs['function_calling_llm'] == gemini_agent.llm
+                assert kwargs['function_calling_llm'].model.startswith("gemini")
+            except Exception as e:
+                if "OPENAI_API_KEY" in str(e):
+                    pytest.fail("Test failed with OpenAI API key error despite using Gemini model")

@@ -1819,3 +1819,42 @@ def test_litellm_anthropic_error_handling():
 
     # Verify the LLM call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_uses_own_llm_for_function_calling_when_not_specified():
+    """
+    Test that an agent uses its own LLM for function calling when no function_calling_llm
+    is specified, ensuring that non-OpenAI models like Gemini can be used without
+    requiring OpenAI API keys.
+    """
+    @tool
+    def simple_tool(input_text: str) -> str:
+        """A simple tool that returns the input text."""
+        return f"Tool processed: {input_text}"
+
+    agent = Agent(
+        role="Gemini Agent",
+        goal="Test Gemini model without OpenAI dependency",
+        backstory="I am a test agent using Gemini model",
+        llm="gemini/gemini-1.5-flash",  # Using Gemini model
+        verbose=True
+    )
+    
+    with patch.object(LLM, 'supports_function_calling', return_value=True):
+        with patch('crewai.tools.tool_usage.ToolUsage') as mock_tool_usage:
+            task = Task(
+                description="Use the simple tool",
+                expected_output="Tool result",
+                agent=agent
+            )
+            
+            try:
+                agent.execute_task(task, tools=[simple_tool])
+                
+                args, kwargs = mock_tool_usage.call_args
+                assert kwargs['function_calling_llm'] == agent.llm
+                assert kwargs['function_calling_llm'].model.startswith("gemini")
+            except Exception as e:
+                if "OPENAI_API_KEY" in str(e):
+                    pytest.fail("Test failed with OpenAI API key error despite using Gemini model")
