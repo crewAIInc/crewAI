@@ -963,14 +963,15 @@ class LLM(BaseLLM):
         """
         with suppress_warnings():
             callback_types = [type(callback) for callback in callbacks]
-            for callback in litellm.success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm.success_callback.remove(callback)
-
-            for callback in litellm._async_success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm._async_success_callback.remove(callback)
-
+            
+            litellm.success_callback = [
+                cb for cb in litellm.success_callback if type(cb) not in callback_types
+            ]
+            
+            litellm._async_success_callback = [
+                cb for cb in litellm._async_success_callback if type(cb) not in callback_types
+            ]
+            
             litellm.callbacks = callbacks
 
     def set_env_callbacks(self):
