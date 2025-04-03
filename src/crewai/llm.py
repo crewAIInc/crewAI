@@ -956,23 +956,42 @@ class LLM(BaseLLM):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
-    def set_callbacks(self, callbacks: List[Any]):
+    def set_callbacks(self, callbacks: List[Any]) -> None:
         """
         Attempt to keep a single set of callbacks in litellm by removing old
         duplicates and adding new ones.
+        
+        This method safely updates the litellm callback lists by:
+        1. Identifying the types of new callbacks
+        2. Filtering out existing callbacks of the same types
+        3. Setting the new callbacks
+        
+        Args:
+            callbacks: List of callback objects to set in litellm
+            
+        Returns:
+            None
+            
+        Note:
+            Uses list comprehension to avoid "list.remove(x): x not in list" errors
+            that can occur with direct removal during iteration.
         """
-        with suppress_warnings():
-            callback_types = [type(callback) for callback in callbacks]
-            
-            litellm.success_callback = [
-                cb for cb in litellm.success_callback if type(cb) not in callback_types
-            ]
-            
-            litellm._async_success_callback = [
-                cb for cb in litellm._async_success_callback if type(cb) not in callback_types
-            ]
-            
-            litellm.callbacks = callbacks
+        try:
+            with suppress_warnings():
+                callback_types = [type(callback) for callback in callbacks]
+                
+                litellm.success_callback = [
+                    cb for cb in litellm.success_callback if type(cb) not in callback_types
+                ]
+                
+                litellm._async_success_callback = [
+                    cb for cb in litellm._async_success_callback if type(cb) not in callback_types
+                ]
+                
+                litellm.callbacks = callbacks
+        except Exception as e:
+            logging.error(f"Error setting callbacks: {str(e)}")
+            raise
 
     def set_env_callbacks(self):
         """
