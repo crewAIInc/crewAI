@@ -589,6 +589,23 @@ class Crew(BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
+        """
+        Starts the crew to work on its assigned tasks.
+        
+        This method initializes all agents, sets up their configurations, and executes
+        the tasks according to the specified process (sequential or hierarchical).
+        
+        For each agent, if no function_calling_llm is specified:
+        - Uses the crew's function_calling_llm if available
+        - Otherwise uses the agent's own LLM for function calling, enabling
+          non-OpenAI models to work without requiring OpenAI credentials
+        
+        Args:
+            inputs: Optional dictionary of inputs to be used in task execution
+            
+        Returns:
+            CrewOutput: The result of the crew's execution
+        """
         try:
             for before_callback in self.before_kickoff_callbacks:
                 if inputs is None:

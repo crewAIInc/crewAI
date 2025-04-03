@@ -1827,6 +1827,9 @@ def test_agent_uses_own_llm_for_function_calling_when_not_specified():
     Test that an agent uses its own LLM for function calling when no function_calling_llm
     is specified, ensuring that non-OpenAI models like Gemini can be used without
     requiring OpenAI API keys.
+    
+    This test verifies the fix for issue #2517, where users would get OpenAI authentication
+    errors even when using non-OpenAI models like Gemini.
     """
     @tool
     def simple_tool(input_text: str) -> str:
@@ -1853,8 +1856,8 @@ def test_agent_uses_own_llm_for_function_calling_when_not_specified():
                 agent.execute_task(task, tools=[simple_tool])
                 
                 args, kwargs = mock_tool_usage.call_args
-                assert kwargs['function_calling_llm'] == agent.llm
-                assert kwargs['function_calling_llm'].model.startswith("gemini")
+                assert kwargs['function_calling_llm'] == agent.llm, "Agent should use its own LLM for function calling"
+                assert kwargs['function_calling_llm'].model.startswith("gemini"), "Function calling LLM should be Gemini"
             except Exception as e:
                 if "OPENAI_API_KEY" in str(e):
                     pytest.fail("Test failed with OpenAI API key error despite using Gemini model")
