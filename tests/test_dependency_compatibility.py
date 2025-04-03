@@ -1,6 +1,6 @@
 import importlib.util
-import sys
 import pytest
+import sys
 
 
 def test_httpx_litellm_compatibility():
@@ -20,8 +20,8 @@ def test_exa_py_compatibility():
         pytest.skip("exa-py not installed")
     
     import exa
-    import litellm
     import httpx
+    import litellm
     
     assert hasattr(exa, "__version__")
     assert hasattr(httpx, "__version__")
@@ -37,8 +37,8 @@ def test_google_genai_compatibility():
         pytest.skip("google-genai not installed")
     
     from google import generativeai
-    import litellm
     import httpx
+    import litellm
     
     assert hasattr(generativeai, "version")
     assert hasattr(httpx, "__version__")
