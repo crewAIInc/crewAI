@@ -589,6 +589,23 @@ class Crew(BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
+        """
+        Starts the crew to work on its assigned tasks.
+        
+        This method initializes all agents, sets up their configurations, and executes
+        the tasks according to the specified process (sequential or hierarchical).
+        
+        For each agent, if no function_calling_llm is specified:
+        - Uses the crew's function_calling_llm if available
+        - Otherwise uses the agent's own LLM for function calling, enabling
+          non-OpenAI models to work without requiring OpenAI credentials
+        
+        Args:
+            inputs: Optional dictionary of inputs to be used in task execution
+            
+        Returns:
+            CrewOutput: The result of the crew's execution
+        """
         try:
             for before_callback in self.before_kickoff_callbacks:
                 if inputs is None:
@@ -618,7 +635,10 @@ class Crew(BaseModel):
                 agent.set_knowledge(crew_embedder=self.embedder)
                 # TODO: Create an AgentFunctionCalling protocol for future refactoring
                 if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
-                    agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
+                    if self.function_calling_llm:
+                        agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
+                    else:
+                        agent.function_calling_llm = agent.llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
 
                 if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
                     agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"

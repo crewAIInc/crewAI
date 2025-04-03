@@ -1,0 +1,74 @@
+interactions:
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "\nCurrent Task: Use
+      the simple tool\n\nThis is the expected criteria for your final answer: Tool
+      result\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}]}], "system_instruction":
+      {"parts": [{"text": "You are Gemini Agent. I am a test agent using Gemini model\nYour
+      personal goal is: Test Gemini model without OpenAI dependency\nYou ONLY have
+      access to the following tools, and should NEVER make up tools that are not listed
+      here:\n\nTool Name: simple_tool\nTool Arguments: {''input_text'': {''description'':
+      None, ''type'': ''str''}}\nTool Description: A simple tool that returns the
+      input text.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [simple_tool], just the name, exactly as it''s written.\nAction Input:
+      the input to the action, just a simple JSON object, enclosed in curly braces,
+      using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}]}, "generationConfig": {"stop_sequences": ["\nObservation:"]}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1447'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - litellm/1.60.2
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=None
+  response:
+    content: "{\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"API key not
+      valid. Please pass a valid API key.\",\n    \"status\": \"INVALID_ARGUMENT\",\n
+      \   \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n
+      \       \"reason\": \"API_KEY_INVALID\",\n        \"domain\": \"googleapis.com\",\n
+      \       \"metadata\": {\n          \"service\": \"generativelanguage.googleapis.com\"\n
+      \       }\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.LocalizedMessage\",\n
+      \       \"locale\": \"en-US\",\n        \"message\": \"API key not valid. Please
+      pass a valid API key.\"\n      }\n    ]\n  }\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 03 Apr 2025 11:39:05 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=47
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    http_version: HTTP/1.1
+    status_code: 400
+version: 1
