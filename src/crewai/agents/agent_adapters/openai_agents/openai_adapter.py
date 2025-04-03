@@ -41,17 +41,9 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
             backstory=openai_agent.instructions,
             **kwargs,
         )
-
-        # Add logging configuration
-        import logging
-
-        logging.getLogger("agents.tracing").setLevel(logging.WARNING)
-        logging.getLogger("agents").setLevel(logging.WARNING)
-
         self._openai_agent = openai_agent
         self._openai_agent.model = model
-        if tools:
-            self.tools = self._configure_tools(tools)
+        self.tools = tools
 
     def execute_task(
         self,
@@ -60,11 +52,11 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         tools: Optional[List[BaseTool]] = None,
     ) -> str:
         """Execute a task using the OpenAI Assistant"""
-        if self.converted_tools:
-            self.converted_tools.extend(self._convert_tools_to_openai_format(tools))
+        self.create_agent_executor(tools)
+
         if self.verbose:
-            print("we verbose")
             enable_verbose_stdout_logging()
+
         try:
             task_prompt = task.prompt()
             if context:
@@ -80,10 +72,8 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
                     task=task,
                 ),
             )
-            if self.converted_tools:
-                self._openai_agent.tools = self.converted_tools
             # This is pretty much the agent_executor logic:
-            result = Runner.run_sync(self._openai_agent, task_prompt)
+            result = self.agent_executor.run_sync(self._openai_agent, task_prompt)
             return result.final_output
 
         except Exception as e:
@@ -99,8 +89,19 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
             raise
 
     def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
-        """Create an agent executor - not needed for OpenAI but required by BaseAgent"""
-        pass  # OpenAI handles execution differently
+        """
+        Configure the OpenAI agent for execution.
+        While OpenAI handles execution differently through Runner,
+        we can use this method to set up tools and configurations.
+        """
+        all_tools = list(self.tools or []) + list(tools or [])
+
+        if all_tools:
+            self._configure_tools(all_tools)
+            if self.converted_tools:
+                self._openai_agent.tools = self.converted_tools
+
+        self.agent_executor = Runner
 
     def _prepare_task_input(self, task: Any, context: Optional[str]) -> str:
         """Prepare the task input with context if available"""
@@ -111,7 +112,11 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
 
     def _configure_tools(self, tools: List[BaseTool]) -> None:
         """Configure tools for the OpenAI Assistant"""
-        openai_tools = self._convert_tools_to_openai_format(tools)
+        if self.tools:
+            all_tools = tools + self.tools
+        else:
+            all_tools = tools
+        openai_tools = self._convert_tools_to_openai_format(all_tools)
         self.converted_tools = openai_tools
 
     def _convert_tools_to_openai_format(
@@ -177,27 +182,6 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
             openai_tools.append(openai_tool)
 
         return openai_tools
-
-    def _get_tool_parameters(self, tool: BaseTool) -> Dict[str, Any]:
-        """Extract tool parameters in OpenAI format"""
-        # This is a simplified version - expand based on your tool structure
-        return {
-            "type": "object",
-            "properties": {
-                "input": {"type": "string", "description": "The input for the tool"}
-            },
-            "required": ["input"],
-        }
-
-    def _process_response(self, response: Any) -> str:
-        """Process the OpenAI Assistant response"""
-        # Extract the actual response content from the OpenAI response
-        if hasattr(response, "output"):
-            return response.output
-        elif hasattr(response, "content"):
-            return response.content
-        else:
-            return str(response)
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support"""
