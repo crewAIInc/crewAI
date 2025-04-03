@@ -1,6 +1,7 @@
 import importlib.util
-import pytest
 import sys
+
+import pytest
 
 
 def test_httpx_litellm_compatibility():
@@ -36,9 +37,9 @@ def test_google_genai_compatibility():
     if importlib.util.find_spec("google.generativeai") is None:
         pytest.skip("google-genai not installed")
     
-    from google import generativeai
     import httpx
     import litellm
+    from google import generativeai
     
     assert hasattr(generativeai, "version")
     assert hasattr(httpx, "__version__")
