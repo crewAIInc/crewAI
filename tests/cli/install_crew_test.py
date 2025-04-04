@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 from click.testing import CliRunner
 
-from crewai.cli.install_crew import install_crew, _check_pyproject_exists
+from crewai.cli.install_crew import _check_pyproject_exists, install_crew
 
 TEST_CONSTANTS = {
     "ERROR_NO_PYPROJECT": "Error: No pyproject.toml found in current directory.",
