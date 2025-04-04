@@ -1,7 +1,7 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from agents import Agent as OpenAIAgent
-from agents import FunctionTool, Runner, Tool, enable_verbose_stdout_logging
+from agents import Runner, Tool, enable_verbose_stdout_logging
 from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai.agent import BaseAgent
@@ -14,6 +14,7 @@ from crewai.utilities.events.agent_events import (
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
+from .openai_agent_tool_adapter import OpenAIAgentToolAdapter
 
 
 class OpenAIAgentAdapter(BaseAgent, BaseModel):
@@ -27,6 +28,7 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
     function_calling_llm: Any = Field(default=None)
     step_callback: Any = Field(default=None)
     converted_tools: Optional[List[Tool]] = Field(default=None)
+    _tool_adapter: OpenAIAgentToolAdapter = PrivateAttr()
 
     def __init__(
         self,
@@ -44,6 +46,7 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         self._openai_agent = openai_agent
         self._openai_agent.model = model
         self.tools = tools
+        self._tool_adapter = OpenAIAgentToolAdapter(tools=tools)
 
     def execute_task(
         self,
@@ -97,9 +100,9 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         all_tools = list(self.tools or []) + list(tools or [])
 
         if all_tools:
-            self._configure_tools(all_tools)
-            if self.converted_tools:
-                self._openai_agent.tools = self.converted_tools
+            self._tool_adapter.configure_tools(all_tools)
+            if self._tool_adapter.converted_tools:
+                self._openai_agent.tools = self._tool_adapter.converted_tools
 
         self.agent_executor = Runner
 
@@ -109,79 +112,6 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         if context:
             task_input = f"Context:\n{context}\n\nTask:\n{task_input}"
         return task_input
-
-    def _configure_tools(self, tools: List[BaseTool]) -> None:
-        """Configure tools for the OpenAI Assistant"""
-        if self.tools:
-            all_tools = tools + self.tools
-        else:
-            all_tools = tools
-        openai_tools = self._convert_tools_to_openai_format(all_tools)
-        self.converted_tools = openai_tools
-
-    def _convert_tools_to_openai_format(
-        self, tools: Optional[List[BaseTool]]
-    ) -> List[Tool]:
-        """Convert CrewAI tools to OpenAI Assistant tool format"""
-        if not tools:
-            return []
-
-        def sanitize_tool_name(name: str) -> str:
-            """Convert tool name to match OpenAI's required pattern"""
-            import re
-
-            sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", name).lower()
-            return sanitized
-
-        def create_tool_wrapper(tool: BaseTool):
-            """Create a wrapper function that handles the OpenAI function tool interface"""
-
-            async def wrapper(context_wrapper: Any, arguments: Any) -> Any:
-                # Get the parameter name from the schema
-                param_name = list(
-                    tool.args_schema.model_json_schema()["properties"].keys()
-                )[0]
-
-                # Handle different argument types
-                if isinstance(arguments, dict):
-                    args_dict = arguments
-                elif isinstance(arguments, str):
-                    try:
-                        import json
-
-                        args_dict = json.loads(arguments)
-                    except json.JSONDecodeError:
-                        args_dict = {param_name: arguments}
-                else:
-                    args_dict = {param_name: str(arguments)}
-
-                # Run the tool with the processed arguments
-                result = tool._run(**args_dict)
-
-                # Ensure the result is JSON serializable
-                if isinstance(result, (dict, list, str, int, float, bool, type(None))):
-                    return result
-                return str(result)
-
-            return wrapper
-
-        openai_tools = []
-        for tool in tools:
-            print("tools coming in", tool)
-            schema = tool.args_schema.model_json_schema()
-
-            schema.update({"additionalProperties": False, "type": "object"})
-            print("schema here", schema)
-
-            openai_tool = FunctionTool(
-                name=sanitize_tool_name(tool.name),
-                description=tool.description,
-                params_json_schema=schema,
-                on_invoke_tool=create_tool_wrapper(tool),
-            )
-            openai_tools.append(openai_tool)
-
-        return openai_tools
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support"""
