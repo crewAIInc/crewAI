@@ -1,9 +1,9 @@
 import subprocess
+from pathlib import Path
 from unittest import mock
 
 import pytest
 from click.testing import CliRunner
-from pathlib import Path
 
 from crewai.cli.install_crew import install_crew
 
