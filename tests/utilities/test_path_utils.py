@@ -41,7 +41,7 @@ class TestPathUtils(unittest.TestCase):
     @patch('pathlib.Path.exists')
     def test_add_project_to_path_without_src(self, mock_exists, mock_getcwd):
         mock_getcwd.return_value = "/home/user/project"
-        mock_exists.return_value = False
+        mock_exists.side_effect = [True, False]
         
         original_sys_path = sys.path.copy()
         
@@ -78,3 +78,23 @@ class TestPathUtils(unittest.TestCase):
             self.assertIn(os.path.join(custom_dir, "src"), sys.path)
         finally:
             sys.path = original_sys_path
+    
+    @patch('pathlib.Path.exists')
+    def test_add_project_to_path_with_nonexistent_dir(self, mock_exists):
+        mock_exists.return_value = False
+        
+        with self.assertRaises(ValueError):
+            add_project_to_path("/nonexistent/path")
+    
+    @patch('os.getcwd')
+    @patch('pathlib.Path.exists')
+    def test_add_project_to_path_with_nonexistent_cwd(self, mock_exists, mock_getcwd):
+        mock_getcwd.return_value = "/nonexistent/path"
+        mock_exists.return_value = False
+        
+        with self.assertRaises(ValueError):
+            add_project_to_path()
+    
+    def test_add_project_to_path_with_empty_string(self):
+        with self.assertRaises(ValueError):
+            add_project_to_path("")
