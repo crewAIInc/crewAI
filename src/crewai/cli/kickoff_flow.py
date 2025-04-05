@@ -9,7 +9,11 @@ def kickoff_flow() -> None:
     """
     Kickoff the flow by running a command in the UV environment.
     """
-    add_project_to_path()
+    try:
+        add_project_to_path()
+    except ValueError as e:
+        click.echo(f"Error setting up project path: {e}", err=True)
+        return
     
     command = ["uv", "run", "kickoff"]
 
