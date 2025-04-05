@@ -1,6 +1,7 @@
 ---
 title: 'Event Listeners'
 description: 'Tap into CrewAI events to build custom integrations and monitoring'
+icon: spinner
 ---
 
 # Event Listeners
@@ -12,7 +13,7 @@ CrewAI provides a powerful event system that allows you to listen for and react 
 CrewAI uses an event bus architecture to emit events throughout the execution lifecycle. The event system is built on the following components:
 
 1. **CrewAIEventsBus**: A singleton event bus that manages event registration and emission
-2. **CrewEvent**: Base class for all events in the system
+2. **BaseEvent**: Base class for all events in the system
 3. **BaseEventListener**: Abstract base class for creating custom event listeners
 
 When specific actions occur in CrewAI (like a Crew starting execution, an Agent completing a task, or a tool being used), the system emits corresponding events. You can register handlers for these events to execute custom code when they occur.
@@ -233,7 +234,7 @@ Each event handler receives two parameters:
 1. **source**: The object that emitted the event
 2. **event**: The event instance, containing event-specific data
 
-The structure of the event object depends on the event type, but all events inherit from `CrewEvent` and include:
+The structure of the event object depends on the event type, but all events inherit from `BaseEvent` and include:
 
 - **timestamp**: The time when the event was emitted
 - **type**: A string identifier for the event type

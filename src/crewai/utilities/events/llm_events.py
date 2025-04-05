@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from crewai.utilities.events.base_events import CrewEvent
+from crewai.utilities.events.base_events import BaseEvent
 
 
 class LLMCallType(Enum):
@@ -11,17 +11,22 @@ class LLMCallType(Enum):
     LLM_CALL = "llm_call"
 
 
-class LLMCallStartedEvent(CrewEvent):
-    """Event emitted when a LLM call starts"""
+class LLMCallStartedEvent(BaseEvent):
+    """Event emitted when a LLM call starts
+
+    Attributes:
+        messages: Content can be either a string or a list of dictionaries that support
+            multimodal content (text, images, etc.)
+    """
 
     type: str = "llm_call_started"
-    messages: Union[str, List[Dict[str, str]]]
+    messages: Union[str, List[Dict[str, Any]]]
     tools: Optional[List[dict]] = None
     callbacks: Optional[List[Any]] = None
     available_functions: Optional[Dict[str, Any]] = None
 
 
-class LLMCallCompletedEvent(CrewEvent):
+class LLMCallCompletedEvent(BaseEvent):
     """Event emitted when a LLM call completes"""
 
     type: str = "llm_call_completed"
@@ -29,14 +34,14 @@ class LLMCallCompletedEvent(CrewEvent):
     call_type: LLMCallType
 
 
-class LLMCallFailedEvent(CrewEvent):
+class LLMCallFailedEvent(BaseEvent):
     """Event emitted when a LLM call fails"""
 
     error: str
     type: str = "llm_call_failed"
 
 
-class LLMStreamChunkEvent(CrewEvent):
+class LLMStreamChunkEvent(BaseEvent):
     """Event emitted when a streaming chunk is received"""
 
     type: str = "llm_stream_chunk"

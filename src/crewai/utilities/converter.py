@@ -287,8 +287,9 @@ def generate_model_description(model: Type[BaseModel]) -> str:
         else:
             return str(field_type)
 
-    fields = model.__annotations__
+    fields = model.model_fields
     field_descriptions = [
-        f'"{name}": {describe_field(type_)}' for name, type_ in fields.items()
+        f'"{name}": {describe_field(field.annotation)}'
+        for name, field in fields.items()
     ]
     return "{\n  " + ",\n  ".join(field_descriptions) + "\n}"

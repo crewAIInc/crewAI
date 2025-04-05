@@ -11,13 +11,18 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
-from crewai.llm import LLM
+from crewai.llm import BaseLLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.security import Fingerprint
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
+from crewai.utilities.agent_utils import (
+    get_tool_names,
+    parse_tools,
+    render_text_description_and_args,
+)
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.events.agent_events import (
@@ -71,10 +76,10 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: Union[str, InstanceOf[LLM], Any] = Field(
+    llm: Union[str, InstanceOf[BaseLLM], Any] = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
+    function_calling_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: Optional[str] = Field(
@@ -85,9 +90,6 @@ class Agent(BaseAgent):
     )
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
-    )
-    tools_results: Optional[List[Any]] = Field(
-        default=[], description="Results of the tools used by the agent."
     )
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
@@ -118,7 +120,9 @@ class Agent(BaseAgent):
         self.agent_ops_agent_name = self.role
 
         self.llm = create_llm(self.llm)
-        if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
+        if self.function_calling_llm and not isinstance(
+            self.function_calling_llm, BaseLLM
+        ):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
         if not self.agent_executor:
@@ -140,15 +144,13 @@ class Agent(BaseAgent):
                 self.embedder = crew_embedder
 
             if self.knowledge_sources:
-                full_pattern = re.compile(r"[^a-zA-Z0-9\-_\r\n]|(\.\.)")
-                knowledge_agent_name = f"{re.sub(full_pattern, '_', self.role)}"
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
                     self.knowledge = Knowledge(
                         sources=self.knowledge_sources,
                         embedder=self.embedder,
-                        collection_name=knowledge_agent_name,
+                        collection_name=self.role,
                         storage=self.knowledge_storage or None,
                     )
         except (TypeError, ValueError) as e:
@@ -300,12 +302,12 @@ class Agent(BaseAgent):
         Returns:
             An instance of the CrewAgentExecutor class.
         """
-        tools = tools or self.tools or []
-        parsed_tools = self._parse_tools(tools)
+        raw_tools: List[BaseTool] = tools or self.tools or []
+        parsed_tools = parse_tools(raw_tools)
 
         prompt = Prompts(
             agent=self,
-            tools=tools,
+            has_tools=len(raw_tools) > 0,
             i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
@@ -327,12 +329,12 @@ class Agent(BaseAgent):
             crew=self.crew,
             tools=parsed_tools,
             prompt=prompt,
-            original_tools=tools,
+            original_tools=raw_tools,
             stop_words=stop_words,
             max_iter=self.max_iter,
             tools_handler=self.tools_handler,
-            tools_names=self.__tools_names(parsed_tools),
-            tools_description=self._render_text_description_and_args(parsed_tools),
+            tools_names=get_tool_names(parsed_tools),
+            tools_description=render_text_description_and_args(parsed_tools),
             step_callback=self.step_callback,
             function_calling_llm=self.function_calling_llm,
             respect_context_window=self.respect_context_window,
@@ -366,25 +368,6 @@ class Agent(BaseAgent):
 
     def get_output_converter(self, llm, text, model, instructions):
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
-
-    def _parse_tools(self, tools: List[Any]) -> List[Any]:  # type: ignore
-        """Parse tools to be used for the task."""
-        tools_list = []
-        try:
-            # tentatively try to import from crewai_tools import BaseTool as CrewAITool
-            from crewai.tools import BaseTool as CrewAITool
-
-            for tool in tools:
-                if isinstance(tool, CrewAITool):
-                    tools_list.append(tool.to_structured_tool())
-                else:
-                    tools_list.append(tool)
-        except ModuleNotFoundError:
-            tools_list = []
-            for tool in tools:
-                tools_list.append(tool)
-
-        return tools_list
 
     def _training_handler(self, task_prompt: str) -> str:
         """Handle training data for the agent task prompt to improve output on Training."""
@@ -431,23 +414,6 @@ class Agent(BaseAgent):
 
         return description
 
-    def _render_text_description_and_args(self, tools: List[BaseTool]) -> str:
-        """Render the tool name, description, and args in plain text.
-
-            Output will be in the format of:
-
-            .. code-block:: markdown
-
-            search: This tool is used for search, args: {"query": {"type": "string"}}
-            calculator: This tool is used for math, \
-            args: {"expression": {"type": "string"}}
-        """
-        tool_strings = []
-        for tool in tools:
-            tool_strings.append(tool.description)
-
-        return "\n".join(tool_strings)
-
     def _validate_docker_installation(self) -> None:
         """Check if Docker is installed and running."""
         if not shutil.which("docker"):
@@ -467,10 +433,6 @@ class Agent(BaseAgent):
                 f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
             )
 
-    @staticmethod
-    def __tools_names(tools) -> str:
-        return ", ".join([t.name for t in tools])
-
     def __repr__(self):
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
 
@@ -483,3 +445,6 @@ class Agent(BaseAgent):
             Fingerprint: The agent's fingerprint
         """
         return self.security_config.fingerprint
+
+    def set_fingerprint(self, fingerprint: Fingerprint):
+        self.security_config.fingerprint = fingerprint

@@ -1,10 +1,10 @@
 from unittest.mock import Mock
 
-from crewai.utilities.events.base_events import CrewEvent
+from crewai.utilities.events.base_events import BaseEvent
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
 
-class TestEvent(CrewEvent):
+class TestEvent(BaseEvent):
     pass
 
 
@@ -24,7 +24,7 @@ def test_specific_event_handler():
 def test_wildcard_event_handler():
     mock_handler = Mock()
 
-    @crewai_event_bus.on(CrewEvent)
+    @crewai_event_bus.on(BaseEvent)
     def handler(source, event):
         mock_handler(source, event)
 
