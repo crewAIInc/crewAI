@@ -2,11 +2,15 @@ import subprocess
 
 import click
 
+from crewai.utilities.path_utils import add_project_to_path
+
 
 def kickoff_flow() -> None:
     """
     Kickoff the flow by running a command in the UV environment.
     """
+    add_project_to_path()
+    
     command = ["uv", "run", "kickoff"]
 
     try:

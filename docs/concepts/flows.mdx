@@ -760,6 +760,64 @@ uv run kickoff
 
 The flow will execute, and you should see the output in the console.
 
+## Running a Flow from a Custom Script
+
+When running a Flow from a custom script (not using the CLI commands), you might encounter import errors like `ModuleNotFoundError`. This happens because Python can't find the modules due to how the import system works.
+
+To fix this issue, CrewAI provides a utility function that adds your project directory to the Python path:
+
+```python
+from crewai.utilities.path_utils import add_project_to_path
+
+# Call this function before importing your flow modules
+add_project_to_path()
+
+# Now you can import your flow modules without import errors
+from your_project.main import YourFlow
+
+# Create and kickoff your flow
+flow = YourFlow()
+result = flow.kickoff()
+```
+
+This utility function should be called before importing your flow modules. It adds your project directory to the Python path, allowing Python to find and import your modules correctly.
+
+Here's a complete example:
+
+```python
+#!/usr/bin/env python
+import os
+
+# Add this import to fix module import errors
+from crewai.utilities.path_utils import add_project_to_path
+
+# Call this function before importing your flow modules
+add_project_to_path()
+
+# Now you can import your flow modules without ModuleNotFoundError
+from my_flow.main import MyFlow
+
+def main():
+    """Run the flow from a custom script."""
+    # Create your flow instance
+    flow = MyFlow()
+    
+    # Kickoff the flow
+    result = flow.kickoff()
+    
+    # Process the result
+    print(f"Flow completed with result: {result}")
+
+if __name__ == "__main__":
+    main()
+```
+
+If your project is in a different directory, you can specify it:
+
+```python
+add_project_to_path('/path/to/your/project')
+```
+
 ## Plot Flows
 
 Visualizing your AI workflows can provide valuable insights into the structure and execution paths of your flows. CrewAI offers a powerful visualization tool that allows you to generate interactive plots of your flows, making it easier to understand and optimize your AI workflows.
