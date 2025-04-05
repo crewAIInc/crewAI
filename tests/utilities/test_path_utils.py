@@ -1,8 +1,8 @@
 import os
 import sys
-from pathlib import Path
 import unittest
-from unittest.mock import patch, MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from crewai.utilities.path_utils import add_project_to_path
 

@@ -10,7 +10,7 @@ from crewai.utilities.path_utils import add_project_to_path
 
 add_project_to_path()
 
-from my_flow.main import MyFlow
+from my_flow.main import MyFlow  # noqa: E402
 
 def main():
     """Run the flow from a custom script."""
