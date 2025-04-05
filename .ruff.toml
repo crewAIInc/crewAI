@@ -1,6 +1,7 @@
 exclude = [
     "templates",
     "__init__.py",
+    "examples/custom_flow_script.py",
 ]
 
 [lint]
