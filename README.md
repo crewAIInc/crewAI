@@ -329,9 +329,26 @@ llm = LLM(model="gpt-4o", cache_enabled=True)
 
 # Enable caching with TTL (for providers that support it, like Gemini)
 llm = LLM(model="gemini-1.5-pro", cache_enabled=True, cache_ttl=3600)  # TTL in seconds
+
+# Disable caching at runtime if needed
+llm.cache_enabled = False
+
+# Temporarily enable caching for specific operations
+with llm.temporary_cache_settings(enabled=True, ttl=7200):
+    result = llm.call(messages=[...])
 ```
 
 This can be particularly useful for flows or crews where multiple tool calls have to be made with parts of the prompt having lengthy and mostly unchanging context.
+
+#### Important Considerations
+
+- **Memory Usage**: Monitor memory usage when enabling caching with large prompts, as cached content is stored in memory.
+- **Cache Invalidation**: Cache is automatically invalidated under the following conditions:
+  - When TTL expires (if specified)
+  - When the process restarts
+  - When explicitly disabled via `llm.cache_enabled = False`
+- **Provider Differences**: Different LLM providers implement caching differently, which may affect performance and behavior.
+- **Security**: Cached prompts may contain sensitive information. Ensure your application handles this data appropriately.
 
 ## How CrewAI Compares
 

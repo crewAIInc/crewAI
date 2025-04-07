@@ -169,14 +169,86 @@ class LLM:
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
-        self.cache_enabled = cache_enabled
-        self.cache_ttl = cache_ttl
+        self._cache_enabled = cache_enabled
+        self._cache_ttl = None
+        self._set_cache_ttl(cache_ttl)
         self.kwargs = kwargs
 
         litellm.drop_params = True
         litellm.set_verbose = False
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
+
+    def _set_cache_ttl(self, ttl: Optional[int]) -> None:
+        """Validate and set the cache TTL value.
+        
+        Args:
+            ttl: Time-to-live for cache entries in seconds. Must be positive if provided.
+        
+        Raises:
+            ValueError: If ttl is not None and not positive.
+        """
+        if ttl is not None and ttl <= 0:
+            raise ValueError("cache_ttl must be positive")
+        self._cache_ttl = ttl
+    
+    @property
+    def cache_enabled(self) -> bool:
+        """Whether context caching is enabled."""
+        return self._cache_enabled
+    
+    @cache_enabled.setter
+    def cache_enabled(self, value: bool) -> None:
+        """Set whether context caching is enabled."""
+        self._cache_enabled = value
+    
+    @property
+    def cache_ttl(self) -> Optional[int]:
+        """Time-to-live for cache entries in seconds."""
+        return self._cache_ttl
+    
+    @cache_ttl.setter
+    def cache_ttl(self, value: Optional[int]) -> None:
+        """Set time-to-live for cache entries in seconds."""
+        self._set_cache_ttl(value)
+    
+    def clear_cache(self) -> None:
+        """Clear the LLM's response cache.
+        
+        Note: This is a placeholder method as LiteLLM doesn't currently provide
+        a direct way to clear the cache. This will be implemented when the
+        functionality becomes available.
+        """
+        pass
+    
+    @contextmanager
+    def temporary_cache_settings(self, enabled: bool, ttl: Optional[int] = None):
+        """Temporarily change cache settings within a context.
+        
+        Args:
+            enabled: Whether to enable caching within the context.
+            ttl: Optional time-to-live for cache entries in seconds.
+            
+        Yields:
+            None
+            
+        Example:
+            ```python
+            llm = LLM(model="gpt-4o")
+            with llm.temporary_cache_settings(enabled=True, ttl=3600):
+                result = llm.call(messages=[...])
+            ```
+        """
+        original_enabled = self.cache_enabled
+        original_ttl = self.cache_ttl
+        try:
+            self.cache_enabled = enabled
+            if ttl is not None:
+                self.cache_ttl = ttl
+            yield
+        finally:
+            self.cache_enabled = original_enabled
+            self.cache_ttl = original_ttl
 
     def call(self, messages: List[Dict[str, str]], callbacks: List[Any] = []) -> str:
         with suppress_warnings():
