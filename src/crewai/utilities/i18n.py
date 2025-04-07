@@ -13,6 +13,10 @@ class I18N(BaseModel):
         default=None,
         description="Path to the prompt_file file to load",
     )
+    language: Optional[str] = Field(
+        default="en",
+        description="Language to use for translations",
+    )
 
     @model_validator(mode="after")
     def load_prompts(self) -> "I18N":
@@ -23,8 +27,12 @@ class I18N(BaseModel):
                     self._prompts = json.load(f)
             else:
                 dir_path = os.path.dirname(os.path.realpath(__file__))
-                prompts_path = os.path.join(dir_path, "../translations/en.json")
-
+                lang = self.language or "en"
+                prompts_path = os.path.join(dir_path, f"../translations/{lang}.json")
+                
+                if not os.path.exists(prompts_path):
+                    prompts_path = os.path.join(dir_path, "../translations/en.json")
+                
                 with open(prompts_path, "r", encoding="utf-8") as f:
                     self._prompts = json.load(f)
         except FileNotFoundError:
