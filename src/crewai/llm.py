@@ -92,6 +92,38 @@ def suppress_warnings():
 
 
 class LLM:
+    """LLM class for interfacing with language models.
+    
+    This class provides functionality for:
+    - Making calls to language models via LiteLLM
+    - Checking model capabilities (function calling, stop words)
+    - Setting callbacks for success and failure events
+    - Context window size management
+    - Prompt/Context caching to improve performance and reduce costs
+    
+    Attributes:
+        model: The name of the model to use
+        timeout: Timeout for API calls
+        temperature: Controls randomness in the output
+        top_p: Controls diversity via nucleus sampling
+        n: Number of completions to generate
+        stop: Sequences where the API will stop generating further tokens
+        max_completion_tokens: Maximum number of tokens to generate
+        max_tokens: Alias for max_completion_tokens
+        presence_penalty: Penalizes repeated tokens
+        frequency_penalty: Penalizes frequent tokens
+        logit_bias: Modifies likelihood of specific tokens appearing
+        response_format: Format for the response
+        seed: Random seed for deterministic results
+        logprobs: Whether to return log probabilities
+        top_logprobs: Number of most likely tokens to return
+        base_url: Base URL for API calls
+        api_version: API version to use
+        api_key: API key for authentication
+        callbacks: Callbacks for success and failure events
+        cache_enabled: Whether to enable prompt/context caching
+        cache_ttl: Time-to-live for cache entries (in seconds), relevant for Gemini
+    """
     def __init__(
         self,
         model: str,
@@ -113,6 +145,8 @@ class LLM:
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
+        cache_enabled: bool = False,
+        cache_ttl: Optional[int] = None,
         **kwargs,
     ):
         self.model = model
@@ -135,6 +169,8 @@ class LLM:
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
+        self.cache_enabled = cache_enabled
+        self.cache_ttl = cache_ttl
         self.kwargs = kwargs
 
         litellm.drop_params = True
@@ -170,6 +206,12 @@ class LLM:
                     "stream": False,
                     **self.kwargs,
                 }
+
+                if self.cache_enabled:
+                    cache_control = {"enabled": True}
+                    if self.cache_ttl is not None:
+                        cache_control["ttl"] = self.cache_ttl
+                    params["cache_control"] = cache_control
 
                 # Remove None values to avoid passing unnecessary parameters
                 params = {k: v for k, v in params.items() if v is not None}

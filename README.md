@@ -311,6 +311,28 @@ CrewAI supports using various LLMs through a variety of connection options. By d
 
 Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
 
+### Context Caching
+
+CrewAI supports context/prompt caching to improve performance and reduce costs when making repeated API calls. This feature is available for all LLM providers supported by LiteLLM, with behavior varying by provider:
+
+- OpenAI and Deepseek models have prompt caching enabled automatically when you enable caching in CrewAI
+- Anthropic and Gemini require explicit caching instructions which are handled by CrewAI when you enable caching
+- Gemini also supports specifying a TTL (time-to-live) for cached prompts
+
+To enable context caching, you can configure it when creating an LLM instance:
+
+```python
+from crewai import LLM
+
+# Enable caching with default settings
+llm = LLM(model="gpt-4o", cache_enabled=True)
+
+# Enable caching with TTL (for providers that support it, like Gemini)
+llm = LLM(model="gemini-1.5-pro", cache_enabled=True, cache_ttl=3600)  # TTL in seconds
+```
+
+This can be particularly useful for flows or crews where multiple tool calls have to be made with parts of the prompt having lengthy and mostly unchanging context.
+
 ## How CrewAI Compares
 
 **CrewAI's Advantage**: CrewAI is built with production in mind. It offers the flexibility of Autogen's conversational agents and the structured process approach of ChatDev, but without the rigidity. CrewAI's processes are designed to be dynamic and adaptable, fitting seamlessly into both development and production workflows.
