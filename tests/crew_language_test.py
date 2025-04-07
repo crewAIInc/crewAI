@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from crewai import Agent, Crew, Process, Task
 from crewai.utilities.i18n import I18N
