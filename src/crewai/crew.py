@@ -783,7 +783,26 @@ class Crew(BaseModel):
             task_outputs = self._process_async_tasks(futures, was_replayed)
             futures.clear()
 
-        previous_output = task_outputs[task_index - 1] if task_outputs else None
+        if task.context and len(task.context) > 0:
+            context_task_outputs = []
+            for context_task in task.context:
+                context_task_index = self._find_task_index(context_task)
+                if context_task_index != -1 and context_task_index < task_index:
+                    for output in task_outputs:
+                        if output.description == context_task.description:
+                            context_task_outputs.append(output)
+                            break
+            previous_output = context_task_outputs[-1] if context_task_outputs else None
+        else:
+            non_conditional_outputs = []
+            for i in range(task_index):
+                if i < len(self.tasks) and not isinstance(self.tasks[i], ConditionalTask):
+                    for output in task_outputs:
+                        if output.description == self.tasks[i].description:
+                            non_conditional_outputs.append(output)
+                            break
+            previous_output = non_conditional_outputs[-1] if non_conditional_outputs else (task_outputs[task_index - 1] if task_outputs and task_index > 0 and task_index <= len(task_outputs) else None)
+            
         if previous_output is not None and not task.should_execute(previous_output):
             self._logger.log(
                 "debug",
