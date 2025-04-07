@@ -617,7 +617,7 @@ class Crew(BaseModel):
                 self._interpolate_inputs(inputs)
             self._set_tasks_callbacks()
 
-            i18n = I18N(prompt_file=self.prompt_file, language=self.language)
+            i18n = self._create_i18n()
 
             for agent in self.agents:
                 agent.i18n = i18n
@@ -758,8 +758,17 @@ class Crew(BaseModel):
         self._create_manager_agent()
         return self._execute_tasks(self.tasks)
 
+    def _create_i18n(self) -> I18N:
+        """
+        Create an I18N instance with the crew's configuration.
+        
+        Returns:
+            I18N: An internationalization instance configured with the crew's settings.
+        """
+        return I18N(prompt_file=self.prompt_file, language=self.language)
+        
     def _create_manager_agent(self):
-        i18n = I18N(prompt_file=self.prompt_file, language=self.language)
+        i18n = self._create_i18n()
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
