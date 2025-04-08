@@ -22,7 +22,7 @@ usage of tools, API calls, responses, any data processed by the agents, or secre
 When the `share_crew` feature is enabled, detailed data including task descriptions, agents' backstories or goals, and other specific attributes are collected 
 to provide deeper insights. This expanded data collection may include personal information if users have incorporated it into their crews or tasks. 
 Users should carefully consider the content of their crews and tasks before enabling `share_crew`. 
-Users can disable telemetry by setting the environment variable `OTEL_SDK_DISABLED` to `true`.
+Users can disable telemetry by setting the environment variable `CREWAI_DISABLE_TELEMETRY` to `true` or by setting `OTEL_SDK_DISABLED` to `true` (note that the latter disables all OpenTelemetry instrumentation globally).
 
 ### Data Explanation:
 | Defaulted | Data                                      | Reason and Specifics                                                                                                       |
