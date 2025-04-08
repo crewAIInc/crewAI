@@ -1,4 +1,5 @@
 import pytest
+
 from crewai.utilities import sanitize_collection_name
 
 
