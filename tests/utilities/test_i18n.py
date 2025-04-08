@@ -42,3 +42,13 @@ def test_prompt_file():
     i18n.load_prompts()
     assert isinstance(i18n.retrieve("slices", "role_playing"), str)
     assert i18n.retrieve("slices", "role_playing") == "Lorem ipsum dolor sit amet"
+
+
+def test_language_parameter():
+    i18n = I18N(language="en")
+    i18n.load_prompts()
+    assert isinstance(i18n.slice("role_playing"), str)
+
+    i18n = I18N(language="nonexistent")
+    i18n.load_prompts()
+    assert isinstance(i18n.slice("role_playing"), str)
