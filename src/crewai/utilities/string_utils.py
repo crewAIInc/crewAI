@@ -1,5 +1,6 @@
 import re
 from typing import Any, Dict, List, Optional, Union
+from unidecode import unidecode
 
 
 def interpolate_only(
@@ -80,3 +81,39 @@ def interpolate_only(
             result = result.replace(placeholder, value)
 
     return result
+
+
+def sanitize_collection_name(name: str) -> str:
+    """
+    Sanitizes a string to be used as a ChromaDB collection name.
+    
+    ChromaDB collection names must:
+    1. Contain 3-63 characters
+    2. Start and end with an alphanumeric character
+    3. Otherwise contain only alphanumeric characters, underscores or hyphens (-)
+    4. Contain no two consecutive periods (..)
+    5. Not be a valid IPv4 address
+    
+    Args:
+        name: The string to sanitize
+        
+    Returns:
+        A sanitized string that can be used as a ChromaDB collection name
+    """
+    name = unidecode(name)
+    
+    name = re.sub(r'[^\w\-]', '_', name)
+    
+    name = re.sub(r'_+', '_', name)
+    
+    name = re.sub(r'^[^a-zA-Z0-9]+', '', name)
+    name = re.sub(r'[^a-zA-Z0-9]+$', '', name)
+    
+    if len(name) < 3:
+        name = name + 'x' * (3 - len(name))
+    
+    if len(name) > 63:
+        name = name[:63]
+        name = re.sub(r'[^a-zA-Z0-9]+$', '', name)
+    
+    return name
