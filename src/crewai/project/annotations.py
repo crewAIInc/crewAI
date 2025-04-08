@@ -16,6 +16,12 @@ def after_kickoff(func):
 
 
 def task(func):
+    """Decorator to mark a method as a task creator.
+    
+    When applied to a method in a class decorated with @CrewBase,
+    this makes the method's return value accessible as an element
+    of the self.tasks list.
+    """
     func.is_task = True
 
     @wraps(func)
@@ -29,6 +35,12 @@ def task(func):
 
 
 def agent(func):
+    """Decorator to mark a method as an agent creator.
+    
+    When applied to a method in a class decorated with @CrewBase,
+    this makes the method's return value accessible as an element
+    of the self.agents list.
+    """
     func.is_agent = True
     func = memoize(func)
     return func

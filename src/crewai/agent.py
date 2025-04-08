@@ -23,6 +23,7 @@ from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_F
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.typing import AgentConfig
 
 agentops = None
 
@@ -88,6 +89,7 @@ class Agent(BaseAgent):
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
     )
+    config: Optional[Union[Dict[str, Any], AgentConfig]] = Field(default=None)
     system_template: Optional[str] = Field(
         default=None, description="System format for the agent."
     )

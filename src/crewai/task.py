@@ -41,6 +41,7 @@ from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
+from crewai.utilities.typing import TaskConfig
 
 
 class Task(BaseModel):
@@ -74,7 +75,7 @@ class Task(BaseModel):
     expected_output: str = Field(
         description="Clear definition of expected output for the task."
     )
-    config: Optional[Dict[str, Any]] = Field(
+    config: Optional[Union[Dict[str, Any], TaskConfig]] = Field(
         description="Configuration for the agent",
         default=None,
     )

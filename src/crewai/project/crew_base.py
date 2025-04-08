@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, Callable, Dict, List, TypeVar, cast
 
 import yaml
 from dotenv import load_dotenv
@@ -66,6 +66,9 @@ def CrewBase(cls: T) -> T:
             self._kickoff = self._filter_functions(
                 self._original_functions, "is_kickoff"
             )
+            
+            self.agents = []  # type: List[Any]
+            self.tasks = []   # type: List[Any]
 
         @staticmethod
         def load_yaml(config_path: Path):
