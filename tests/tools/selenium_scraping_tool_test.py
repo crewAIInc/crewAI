@@ -1,4 +1,6 @@
 from unittest.mock import MagicMock, patch
+import tempfile
+import os
 
 from bs4 import BeautifulSoup
 
@@ -27,7 +29,11 @@ def initialize_tool_with(mock_driver):
     return tool
 
 
-def test_tool_initialization():
+@patch("selenium.webdriver.Chrome")
+def test_tool_initialization(mocked_chrome):
+    temp_dir = tempfile.mkdtemp()
+    mocked_chrome.return_value = MagicMock()
+    
     tool = SeleniumScrapingTool()
 
     assert tool.website_url is None
@@ -35,6 +41,11 @@ def test_tool_initialization():
     assert tool.cookie is None
     assert tool.wait_time == 3
     assert tool.return_html is False
+    
+    try:
+        os.rmdir(temp_dir)
+    except:
+        pass
 
 
 @patch("selenium.webdriver.Chrome")

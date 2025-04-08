@@ -8,10 +8,7 @@ from dotenv import load_dotenv
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-import boto3
-from botocore.exceptions import ClientError
 
-# Import custom exceptions
 from ..exceptions import BedrockAgentError, BedrockValidationError
 
 # Load environment variables from .env file
@@ -92,6 +89,12 @@ class BedrockInvokeAgentTool(BaseTool):
             raise BedrockValidationError(f"Parameter validation failed: {str(e)}")
 
     def _run(self, query: str) -> str:
+        try:
+            import boto3
+            from botocore.exceptions import ClientError
+        except ImportError:
+            raise ImportError("`boto3` package not found, please run `uv add boto3`")
+
         try:
             # Initialize the Bedrock Agent Runtime client
             bedrock_agent = boto3.client(
