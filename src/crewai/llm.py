@@ -879,9 +879,10 @@ class LLM(BaseLLM):
                     formatted_messages.append(msg)
                     continue
                 
+                formatted_content: list[dict[str, str]] = [{"type": "text", "text": msg["content"]}]
                 formatted_messages.append({
                     "role": msg["role"],
-                    "content": [{"type": "text", "text": msg["content"]}]
+                    "content": formatted_content
                 })
             return formatted_messages
 
