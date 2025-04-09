@@ -54,10 +54,12 @@ class Prompts(BaseModel):
         response_template=None,
     ) -> str:
         """Constructs a prompt string from specified components."""
-        if not system_template and not prompt_template:
+        if not system_template or not prompt_template:
+            # If any of the required templates are missing, fall back to the default format
             prompt_parts = [self.i18n.slice(component) for component in components]
             prompt = "".join(prompt_parts)
         else:
+            # All templates are provided, use them
             prompt_parts = [
                 self.i18n.slice(component)
                 for component in components
@@ -67,8 +69,12 @@ class Prompts(BaseModel):
             prompt = prompt_template.replace(
                 "{{ .Prompt }}", "".join(self.i18n.slice("task"))
             )
-            response = response_template.split("{{ .Response }}")[0]
-            prompt = f"{system}\n{prompt}\n{response}"
+            # Handle missing response_template
+            if response_template:
+                response = response_template.split("{{ .Response }}")[0]
+                prompt = f"{system}\n{prompt}\n{response}"
+            else:
+                prompt = f"{system}\n{prompt}"
 
         prompt = (
             prompt.replace("{goal}", self.agent.goal)
