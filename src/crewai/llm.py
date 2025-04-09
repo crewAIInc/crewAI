@@ -177,6 +177,10 @@ class LLM:
                 response = litellm.completion(**params)
                 return response["choices"][0]["message"]["content"]
             except Exception as e:
+                if "ollama" in str(self.model).lower() and ("connection refused" in str(e).lower() or "ollamaexception" in str(e).lower()):
+                    from crewai.utilities.exceptions.ollama_connection_exception import OllamaConnectionException
+                    raise OllamaConnectionException(str(e))
+                
                 if not LLMContextLengthExceededException(
                     str(e)
                 )._is_context_limit_error(str(e)):
