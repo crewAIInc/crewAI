@@ -1,5 +1,10 @@
 from typing import Any, Dict, List, Optional
 
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
+
 from crewai.memory.storage.rag_storage import RAGStorage
 
 
