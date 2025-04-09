@@ -1,5 +1,5 @@
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
@@ -15,18 +15,13 @@ if TYPE_CHECKING:
 
 
 class CrewAgentExecutorMixin:
-    crew: Optional["Crew"]
-    agent: Optional["BaseAgent"]
-    task: Optional["Task"]
+    crew: "Crew"
+    agent: "BaseAgent"
+    task: "Task"
     iterations: int
-    have_forced_answer: bool
     max_iter: int
     _i18n: I18N
     _printer: Printer = Printer()
-
-    def _should_force_answer(self) -> bool:
-        """Determine if a forced answer is required based on iteration count."""
-        return (self.iterations >= self.max_iter) and not self.have_forced_answer
 
     def _create_short_term_memory(self, output) -> None:
         """Create and save a short-term memory item if conditions are met."""
@@ -50,6 +45,27 @@ class CrewAgentExecutorMixin:
                     )
             except Exception as e:
                 print(f"Failed to add to short term memory: {e}")
+                pass
+
+    def _create_external_memory(self, output) -> None:
+        """Create and save a external-term memory item if conditions are met."""
+        if (
+            self.crew
+            and self.agent
+            and self.task
+            and hasattr(self.crew, "_external_memory")
+            and self.crew._external_memory
+        ):
+            try:
+                self.crew._external_memory.save(
+                    value=output.text,
+                    metadata={
+                        "description": self.task.description,
+                    },
+                    agent=self.agent.role,
+                )
+            except Exception as e:
+                print(f"Failed to add to external memory: {e}")
                 pass
 
     def _create_long_term_memory(self, output) -> None:
@@ -100,18 +116,34 @@ class CrewAgentExecutorMixin:
                 pass
 
     def _ask_human_input(self, final_answer: str) -> str:
-        """Prompt human input for final decision making."""
+        """Prompt human input with mode-appropriate messaging."""
         self._printer.print(
             content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"
         )
 
-        self._printer.print(
-            content=(
+        # Training mode prompt (single iteration)
+        if self.crew and getattr(self.crew, "_train", False):
+            prompt = (
                 "\n\n=====\n"
-                "## Please provide feedback on the Final Result and the Agent's actions. "
-                "Respond with 'looks good' or a similar phrase when you're satisfied.\n"
+                "## TRAINING MODE: Provide feedback to improve the agent's performance.\n"
+                "This will be used to train better versions of the agent.\n"
+                "Please provide detailed feedback about the result quality and reasoning process.\n"
                 "=====\n"
-            ),
-            color="bold_yellow",
-        )
-        return input()
+            )
+        # Regular human-in-the-loop prompt (multiple iterations)
+        else:
+            prompt = (
+                "\n\n=====\n"
+                "## HUMAN FEEDBACK: Provide feedback on the Final Result and Agent's actions.\n"
+                "Please follow these guidelines:\n"
+                " - If you are happy with the result, simply hit Enter without typing anything.\n"
+                " - Otherwise, provide specific improvement requests.\n"
+                " - You can provide multiple rounds of feedback until satisfied.\n"
+                "=====\n"
+            )
+
+        self._printer.print(content=prompt, color="bold_yellow")
+        response = input()
+        if response.strip() != "":
+            self._printer.print(content="\nProcessing your feedback...", color="cyan")
+        return response

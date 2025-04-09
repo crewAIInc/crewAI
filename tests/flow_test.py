@@ -1,10 +1,20 @@
 """Test Flow creation and execution basic functionality."""
 
 import asyncio
+from datetime import datetime
 
 import pytest
+from pydantic import BaseModel
 
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
+from crewai.utilities.events import (
+    FlowFinishedEvent,
+    FlowStartedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
+    crewai_event_bus,
+)
+from crewai.utilities.events.flow_events import FlowPlotEvent
 
 
 def test_simple_sequential_flow():
@@ -265,6 +275,81 @@ def test_flow_with_custom_state():
     assert flow.counter == 2
 
 
+def test_flow_uuid_unstructured():
+    """Test that unstructured (dictionary) flow states automatically get a UUID that persists."""
+    initial_id = None
+
+    class UUIDUnstructuredFlow(Flow):
+        @start()
+        def first_method(self):
+            nonlocal initial_id
+            # Verify ID is automatically generated
+            assert "id" in self.state
+            assert isinstance(self.state["id"], str)
+            # Store initial ID for comparison
+            initial_id = self.state["id"]
+            # Add some data to trigger state update
+            self.state["data"] = "example"
+
+        @listen(first_method)
+        def second_method(self):
+            # Ensure the ID persists after state updates
+            assert "id" in self.state
+            assert self.state["id"] == initial_id
+            # Update state again to verify ID preservation
+            self.state["more_data"] = "test"
+            assert self.state["id"] == initial_id
+
+    flow = UUIDUnstructuredFlow()
+    flow.kickoff()
+    # Verify ID persists after flow completion
+    assert flow.state["id"] == initial_id
+    # Verify UUID format (36 characters, including hyphens)
+    assert len(flow.state["id"]) == 36
+
+
+def test_flow_uuid_structured():
+    """Test that structured (Pydantic) flow states automatically get a UUID that persists."""
+    initial_id = None
+
+    class MyStructuredState(BaseModel):
+        counter: int = 0
+        message: str = "initial"
+
+    class UUIDStructuredFlow(Flow[MyStructuredState]):
+        @start()
+        def first_method(self):
+            nonlocal initial_id
+            # Verify ID is automatically generated and accessible as attribute
+            assert hasattr(self.state, "id")
+            assert isinstance(self.state.id, str)
+            # Store initial ID for comparison
+            initial_id = self.state.id
+            # Update some fields to trigger state changes
+            self.state.counter += 1
+            self.state.message = "updated"
+
+        @listen(first_method)
+        def second_method(self):
+            # Ensure the ID persists after state updates
+            assert hasattr(self.state, "id")
+            assert self.state.id == initial_id
+            # Update state again to verify ID preservation
+            self.state.counter += 1
+            self.state.message = "final"
+            assert self.state.id == initial_id
+
+    flow = UUIDStructuredFlow()
+    flow.kickoff()
+    # Verify ID persists after flow completion
+    assert flow.state.id == initial_id
+    # Verify UUID format (36 characters, including hyphens)
+    assert len(flow.state.id) == 36
+    # Verify other state fields were properly updated
+    assert flow.state.counter == 2
+    assert flow.state.message == "final"
+
+
 def test_router_with_multiple_conditions():
     """Test a router that triggers when any of multiple steps complete (OR condition),
     and another router that triggers only after all specified steps complete (AND condition).
@@ -322,3 +407,351 @@ def test_router_with_multiple_conditions():
 
     # final_step should run after router_and
     assert execution_order.index("log_final_step") > execution_order.index("router_and")
+
+
+def test_unstructured_flow_event_emission():
+    """Test that the correct events are emitted during unstructured flow
+    execution with all fields validated."""
+
+    class PoemFlow(Flow):
+        @start()
+        def prepare_flower(self):
+            self.state["flower"] = "roses"
+            return "foo"
+
+        @start()
+        def prepare_color(self):
+            self.state["color"] = "red"
+            return "bar"
+
+        @listen(prepare_color)
+        def write_first_sentence(self):
+            return f"{self.state['flower']} are {self.state['color']}"
+
+        @listen(write_first_sentence)
+        def finish_poem(self, first_sentence):
+            separator = self.state.get("separator", "\n")
+            return separator.join([first_sentence, "violets are blue"])
+
+        @listen(finish_poem)
+        def save_poem_to_database(self):
+            # A method without args/kwargs to ensure events are sent correctly
+            return "roses are red\nviolets are blue"
+
+    flow = PoemFlow()
+    received_events = []
+
+    @crewai_event_bus.on(FlowStartedEvent)
+    def handle_flow_start(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(MethodExecutionStartedEvent)
+    def handle_method_start(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(FlowFinishedEvent)
+    def handle_flow_end(source, event):
+        received_events.append(event)
+
+    flow.kickoff(inputs={"separator": ", "})
+    assert isinstance(received_events[0], FlowStartedEvent)
+    assert received_events[0].flow_name == "PoemFlow"
+    assert received_events[0].inputs == {"separator": ", "}
+    assert isinstance(received_events[0].timestamp, datetime)
+
+    # All subsequent events are MethodExecutionStartedEvent
+    for event in received_events[1:-1]:
+        assert isinstance(event, MethodExecutionStartedEvent)
+        assert event.flow_name == "PoemFlow"
+        assert isinstance(event.state, dict)
+        assert isinstance(event.state["id"], str)
+        assert event.state["separator"] == ", "
+
+    assert received_events[1].method_name == "prepare_flower"
+    assert received_events[1].params == {}
+    assert "flower" not in received_events[1].state
+
+    assert received_events[2].method_name == "prepare_color"
+    assert received_events[2].params == {}
+    print("received_events[2]", received_events[2])
+    assert "flower" in received_events[2].state
+
+    assert received_events[3].method_name == "write_first_sentence"
+    assert received_events[3].params == {}
+    assert received_events[3].state["flower"] == "roses"
+    assert received_events[3].state["color"] == "red"
+
+    assert received_events[4].method_name == "finish_poem"
+    assert received_events[4].params == {"_0": "roses are red"}
+    assert received_events[4].state["flower"] == "roses"
+    assert received_events[4].state["color"] == "red"
+
+    assert received_events[5].method_name == "save_poem_to_database"
+    assert received_events[5].params == {}
+    assert received_events[5].state["flower"] == "roses"
+    assert received_events[5].state["color"] == "red"
+
+    assert isinstance(received_events[6], FlowFinishedEvent)
+    assert received_events[6].flow_name == "PoemFlow"
+    assert received_events[6].result == "roses are red\nviolets are blue"
+    assert isinstance(received_events[6].timestamp, datetime)
+
+
+def test_structured_flow_event_emission():
+    """Test that the correct events are emitted during structured flow
+    execution with all fields validated."""
+
+    class OnboardingState(BaseModel):
+        name: str = ""
+        sent: bool = False
+
+    class OnboardingFlow(Flow[OnboardingState]):
+        @start()
+        def user_signs_up(self):
+            self.state.sent = False
+
+        @listen(user_signs_up)
+        def send_welcome_message(self):
+            self.state.sent = True
+            return f"Welcome, {self.state.name}!"
+
+    flow = OnboardingFlow()
+    flow.kickoff(inputs={"name": "Anakin"})
+
+    received_events = []
+
+    @crewai_event_bus.on(FlowStartedEvent)
+    def handle_flow_start(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(MethodExecutionStartedEvent)
+    def handle_method_start(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(MethodExecutionFinishedEvent)
+    def handle_method_end(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(FlowFinishedEvent)
+    def handle_flow_end(source, event):
+        received_events.append(event)
+
+    flow.kickoff(inputs={"name": "Anakin"})
+
+    assert isinstance(received_events[0], FlowStartedEvent)
+    assert received_events[0].flow_name == "OnboardingFlow"
+    assert received_events[0].inputs == {"name": "Anakin"}
+    assert isinstance(received_events[0].timestamp, datetime)
+
+    assert isinstance(received_events[1], MethodExecutionStartedEvent)
+    assert received_events[1].method_name == "user_signs_up"
+
+    assert isinstance(received_events[2], MethodExecutionFinishedEvent)
+    assert received_events[2].method_name == "user_signs_up"
+
+    assert isinstance(received_events[3], MethodExecutionStartedEvent)
+    assert received_events[3].method_name == "send_welcome_message"
+    assert received_events[3].params == {}
+    assert getattr(received_events[3].state, "sent") is False
+
+    assert isinstance(received_events[4], MethodExecutionFinishedEvent)
+    assert received_events[4].method_name == "send_welcome_message"
+    assert getattr(received_events[4].state, "sent") is True
+    assert received_events[4].result == "Welcome, Anakin!"
+
+    assert isinstance(received_events[5], FlowFinishedEvent)
+    assert received_events[5].flow_name == "OnboardingFlow"
+    assert received_events[5].result == "Welcome, Anakin!"
+    assert isinstance(received_events[5].timestamp, datetime)
+
+
+def test_stateless_flow_event_emission():
+    """Test that the correct events are emitted stateless during flow execution
+    with all fields validated."""
+
+    class StatelessFlow(Flow):
+        @start()
+        def init(self):
+            pass
+
+        @listen(init)
+        def process(self):
+            return "Deeds will not be less valiant because they are unpraised."
+
+    event_log = []
+
+    def handle_event(_, event):
+        event_log.append(event)
+
+    flow = StatelessFlow()
+    received_events = []
+
+    @crewai_event_bus.on(FlowStartedEvent)
+    def handle_flow_start(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(MethodExecutionStartedEvent)
+    def handle_method_start(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(MethodExecutionFinishedEvent)
+    def handle_method_end(source, event):
+        received_events.append(event)
+
+    @crewai_event_bus.on(FlowFinishedEvent)
+    def handle_flow_end(source, event):
+        received_events.append(event)
+
+    flow.kickoff()
+
+    assert isinstance(received_events[0], FlowStartedEvent)
+    assert received_events[0].flow_name == "StatelessFlow"
+    assert received_events[0].inputs is None
+    assert isinstance(received_events[0].timestamp, datetime)
+
+    assert isinstance(received_events[1], MethodExecutionStartedEvent)
+    assert received_events[1].method_name == "init"
+
+    assert isinstance(received_events[2], MethodExecutionFinishedEvent)
+    assert received_events[2].method_name == "init"
+
+    assert isinstance(received_events[3], MethodExecutionStartedEvent)
+    assert received_events[3].method_name == "process"
+
+    assert isinstance(received_events[4], MethodExecutionFinishedEvent)
+    assert received_events[4].method_name == "process"
+
+    assert isinstance(received_events[5], FlowFinishedEvent)
+    assert received_events[5].flow_name == "StatelessFlow"
+    assert (
+        received_events[5].result
+        == "Deeds will not be less valiant because they are unpraised."
+    )
+    assert isinstance(received_events[5].timestamp, datetime)
+
+
+def test_flow_plotting():
+    class StatelessFlow(Flow):
+        @start()
+        def init(self):
+            return "Initializing flow..."
+
+        @listen(init)
+        def process(self):
+            return "Deeds will not be less valiant because they are unpraised."
+
+    flow = StatelessFlow()
+    flow.kickoff()
+    received_events = []
+
+    @crewai_event_bus.on(FlowPlotEvent)
+    def handle_flow_plot(source, event):
+        received_events.append(event)
+
+    flow.plot("test_flow")
+
+    assert len(received_events) == 1
+    assert isinstance(received_events[0], FlowPlotEvent)
+    assert received_events[0].flow_name == "StatelessFlow"
+    assert isinstance(received_events[0].timestamp, datetime)
+
+
+def test_multiple_routers_from_same_trigger():
+    """Test that multiple routers triggered by the same method all activate their listeners."""
+    execution_order = []
+
+    class MultiRouterFlow(Flow):
+        def __init__(self):
+            super().__init__()
+            # Set diagnosed conditions to trigger all routers
+            self.state["diagnosed_conditions"] = "DHA"  # Contains D, H, and A
+
+        @start()
+        def scan_medical(self):
+            execution_order.append("scan_medical")
+            return "scan_complete"
+
+        @router(scan_medical)
+        def diagnose_conditions(self):
+            execution_order.append("diagnose_conditions")
+            return "diagnosis_complete"
+
+        @router(diagnose_conditions)
+        def diabetes_router(self):
+            execution_order.append("diabetes_router")
+            if "D" in self.state["diagnosed_conditions"]:
+                return "diabetes"
+            return None
+
+        @listen("diabetes")
+        def diabetes_analysis(self):
+            execution_order.append("diabetes_analysis")
+            return "diabetes_analysis_complete"
+
+        @router(diagnose_conditions)
+        def hypertension_router(self):
+            execution_order.append("hypertension_router")
+            if "H" in self.state["diagnosed_conditions"]:
+                return "hypertension"
+            return None
+
+        @listen("hypertension")
+        def hypertension_analysis(self):
+            execution_order.append("hypertension_analysis")
+            return "hypertension_analysis_complete"
+
+        @router(diagnose_conditions)
+        def anemia_router(self):
+            execution_order.append("anemia_router")
+            if "A" in self.state["diagnosed_conditions"]:
+                return "anemia"
+            return None
+
+        @listen("anemia")
+        def anemia_analysis(self):
+            execution_order.append("anemia_analysis")
+            return "anemia_analysis_complete"
+
+    flow = MultiRouterFlow()
+    flow.kickoff()
+
+    # Verify all methods were called
+    assert "scan_medical" in execution_order
+    assert "diagnose_conditions" in execution_order
+
+    # Verify all routers were called
+    assert "diabetes_router" in execution_order
+    assert "hypertension_router" in execution_order
+    assert "anemia_router" in execution_order
+
+    # Verify all listeners were called - this is the key test for the fix
+    assert "diabetes_analysis" in execution_order
+    assert "hypertension_analysis" in execution_order
+    assert "anemia_analysis" in execution_order
+
+    # Verify execution order constraints
+    assert execution_order.index("diagnose_conditions") > execution_order.index(
+        "scan_medical"
+    )
+
+    # All routers should execute after diagnose_conditions
+    assert execution_order.index("diabetes_router") > execution_order.index(
+        "diagnose_conditions"
+    )
+    assert execution_order.index("hypertension_router") > execution_order.index(
+        "diagnose_conditions"
+    )
+    assert execution_order.index("anemia_router") > execution_order.index(
+        "diagnose_conditions"
+    )
+
+    # All analyses should execute after their respective routers
+    assert execution_order.index("diabetes_analysis") > execution_order.index(
+        "diabetes_router"
+    )
+    assert execution_order.index("hypertension_analysis") > execution_order.index(
+        "hypertension_router"
+    )
+    assert execution_order.index("anemia_analysis") > execution_order.index(
+        "anemia_router"
+    )

@@ -25,17 +25,17 @@ class OutputConverter(BaseModel, ABC):
     llm: Any = Field(description="The language model to be used to convert the text.")
     model: Any = Field(description="The model to be used to convert the text.")
     instructions: str = Field(description="Conversion instructions to the LLM.")
-    max_attempts: Optional[int] = Field(
+    max_attempts: int = Field(
         description="Max number of attempts to try to get the output formatted.",
         default=3,
     )
 
     @abstractmethod
-    def to_pydantic(self, current_attempt=1):
+    def to_pydantic(self, current_attempt=1) -> BaseModel:
         """Convert text to pydantic."""
         pass
 
     @abstractmethod
-    def to_json(self, current_attempt=1):
+    def to_json(self, current_attempt=1) -> dict:
         """Convert text to json."""
         pass
