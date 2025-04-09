@@ -219,7 +219,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """Returns the list of all outputs from executed methods."""
         return self._method_outputs
 
-    def _initialize_state(self, inputs: Dict[str, Any]) -> None:
+    def _initialize_state(self, inputs: Optional[Dict[str, Any]] = None) -> None:
+        """Initialize the state of the flow."""
+        if inputs is None:
+            return
+            
         if isinstance(self._state, BaseModel):
             # Structured state
             try:
@@ -245,6 +249,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._state.update(inputs)
         else:
             raise TypeError("State must be a BaseModel instance or a dictionary.")
+            
+        self._interpolate_inputs_in_crew(inputs)
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         self.event_emitter.send(
@@ -406,6 +412,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             traceback.print_exc()
 
+    def _interpolate_inputs_in_crew(self, inputs: Dict[str, Any]) -> None:
+        """Interpolate inputs in the crew's tasks and agents if a crew is present."""
+        if hasattr(self, 'crew') and self.crew:
+            self.crew._interpolate_inputs(inputs)
+            
     def plot(self, filename: str = "crewai_flow") -> None:
         self._telemetry.flow_plotting_span(
             self.__class__.__name__, list(self._methods.keys())

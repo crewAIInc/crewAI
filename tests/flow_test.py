@@ -322,3 +322,43 @@ def test_router_with_multiple_conditions():
 
     # final_step should run after router_and
     assert execution_order.index("log_final_step") > execution_order.index("router_and")
+
+
+def test_flow_inputs_passed_to_tasks():
+    """Test that inputs passed to Flow's kickoff method are correctly interpolated in task descriptions."""
+    from crewai import Agent, Crew, Task
+    from crewai.llm import LLM
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        llm=LLM(model="gpt-4o-mini")
+    )
+
+    task = Task(
+        description="Process data about {topic}",
+        expected_output="Information about {topic}",
+        agent=agent
+    )
+
+    crew = Crew(
+        agents=[agent],
+        tasks=[task]
+    )
+
+    class TestFlow(Flow):
+        def __init__(self):
+            super().__init__()
+            self.crew = crew
+
+        @start()
+        def start_process(self):
+            pass
+
+    flow = TestFlow()
+    inputs = {"topic": "artificial intelligence"}
+    flow.kickoff(inputs=inputs)
+
+    assert task.description == "Process data about artificial intelligence"
+    assert task.expected_output == "Information about artificial intelligence"
