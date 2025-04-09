@@ -2,39 +2,36 @@ interactions:
 - request:
     body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
-      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer() - Get the final
-      answer but don''t give it yet, just re-use this         tool non-stop. \nTool
-      Arguments: {}\n\nUse the following format:\n\nThought: you should always think
-      about what to do\nAction: the action to take, only one name of [get_final_answer],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expect criteria
-      for your final answer: The final answer\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o"}'
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - gzip, deflate, zstd
       connection:
       - keep-alive
       content-length:
-      - '1325'
+      - '1374'
       content-type:
       - application/json
-      cookie:
-      - _cfuvid=ePJSDFdHag2D8lj21_ijAMWjoA6xfnPNxN4uekvC728-1727226247743-0.0.1.1-604800000;
-        __cf_bm=3giyBOIM0GNudFELtsBWYXwLrpLBTNLsh81wfXgu2tg-1727226247-1.0.1.1-ugUDz0c5EhmfVpyGtcdedlIWeDGuy2q0tXQTKVpv83HZhvxgBcS7SBL1wS4rapPM38yhfEcfwA79ARt3HQEzKA
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.47.0
+      - OpenAI/Python 1.68.2
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -44,30 +41,36 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.47.0
+      - 1.68.2
       x-stainless-raw-response:
       - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.12.8
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-ABAtOWmVjvzQ9X58tKAUcOF4gmXwx\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727226842,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-BHIrzTIGOht7LtyCu63s9y6al9Wt0\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463811,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to use the get_final_answer
-      tool to determine the final answer.\\nAction: get_final_answer\\nAction Input:
-      {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 274,\n    \"completion_tokens\":
-      27,\n    \"total_tokens\": 301,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      \"assistant\",\n        \"content\": \"I need to determine what action to take
+      next to retrieve the final answer.  \\nAction: get_final_answer  \\nAction Input:
+      {}  \",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 274,\n    \"completion_tokens\": 27,\n
+      \   \"total_tokens\": 301,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 8c8727b3492f31e6-MIA
+      - 9293a2159f4c67b9-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,7 +78,229 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 25 Sep 2024 01:14:03 GMT
+      - Mon, 31 Mar 2025 23:30:13 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=1S5GqtdZlw2N3SJ7L2plaSLL9C98N6SHFF2yfiNNhvE-1743463813-1.0.1.1-KwGBgTXoXjtVlkPtShw19TBHDFEUx.2QH7PXFHEcrV4HQpDEYC2huBlyfVkkr4bTtDVenmctavjBmNoQM12Ie9yRkMNwey3SwOK.1et3PlE;
+        path=/; expires=Tue, 01-Apr-25 00:00:13 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=gEx9GW83E.zW51Yz4hCsodDQ2f9_PiDrVILLKkDa.6M-1743463813602-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '2066'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999694'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_1311568b96e7fc639ff8dc1e0a43aa79
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CuoNCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSwQ0KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKrCAoQqJ0LX3K2ujggGW8chWkxnhIIOKFYgK1mwk4qDENyZXcgQ3JlYXRlZDABOcih
+      DV8ZBzIYQQhnHF8ZBzIYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTA4LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi44Si4KCGNyZXdfa2V5EiIKIDczYWFjMjg1ZTY3NDY2NjdmNzUxNDc2NzAw
+      MDM0MTEwSjEKB2NyZXdfaWQSJgokNGRkNDQyYjItNjE2My00YWY2LTg1NjMtNzM1ZWJmNjIxOTNh
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJGVlYWUyOTM3LWI0YzgtNGE5ZS04YWI4LWVjM2Y3ZGMxNDFmYko7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wMy0zMVQxNjozMDoxMS4yOTA0MjdK
+      zgIKC2NyZXdfYWdlbnRzEr4CCrsCW3sia2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4MjZl
+      NzI1ODJiIiwgImlkIjogIjMzNDNjZjgzLWFiNmEtNDk5OS04Mjc2LTA1ZGM0MTE0N2E1YiIsICJy
+      b2xlIjogInRlc3Qgcm9sZSIsICJ2ZXJib3NlPyI6IHRydWUsICJtYXhfaXRlciI6IDEsICJtYXhf
+      cnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvLW1p
+      bmkiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/
+      IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSpACCgpj
+      cmV3X3Rhc2tzEoECCv4BW3sia2V5IjogImY3YTlmN2JiMWFlZTRiNmVmMmM1MjZkMGE4YzJmMmFj
+      IiwgImlkIjogImIxZjRhMGFhLTYwMmQtNGFjMy05ODllLTY0NDdmNDlmZjZjMSIsICJhc3luY19l
+      eGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAi
+      dGVzdCByb2xlIiwgImFnZW50X2tleSI6ICJlMTQ4ZTUzMjAyOTM0OTlmOGNlYmVhODI2ZTcyNTgy
+      YiIsICJ0b29sc19uYW1lcyI6IFsiZ2V0X2ZpbmFsX2Fuc3dlciJdfV16AhgBhQEAAQAAEoAEChCN
+      K3bIxbl53On4qoM0P7BDEghZs7x1P32BHioMVGFzayBDcmVhdGVkMAE58PIvXxkHMhhBiKowXxkH
+      MhhKLgoIY3Jld19rZXkSIgogNzNhYWMyODVlNjc0NjY2N2Y3NTE0NzY3MDAwMzQxMTBKMQoHY3Jl
+      d19pZBImCiQ0ZGQ0NDJiMi02MTYzLTRhZjYtODU2My03MzVlYmY2MjE5M2FKLgoIdGFza19rZXkS
+      IgogZjdhOWY3YmIxYWVlNGI2ZWYyYzUyNmQwYThjMmYyYWNKMQoHdGFza19pZBImCiRiMWY0YTBh
+      YS02MDJkLTRhYzMtOTg5ZS02NDQ3ZjQ5ZmY2YzFKOgoQY3Jld19maW5nZXJwcmludBImCiRlZWFl
+      MjkzNy1iNGM4LTRhOWUtOGFiOC1lYzNmN2RjMTQxZmJKOgoQdGFza19maW5nZXJwcmludBImCiRl
+      MzJiYTMwZS00MDZmLTQ0ZmItOGM2Mi0wMmRkZTczZDIyNTJKOwobdGFza19maW5nZXJwcmludF9j
+      cmVhdGVkX2F0EhwKGjIwMjUtMDMtMzFUMTY6MzA6MTEuMjkwMzc4SjsKEWFnZW50X2ZpbmdlcnBy
+      aW50EiYKJDZiYjU4M2YxLWRkZTAtNDgwYy05YzZkLWRmNzQ0NTI1YTI3ZXoCGAGFAQABAAASegoQ
+      2qsKnI/iz5YZxt5B55H/3BIITw7exxOBPXIqEFRvb2wgVXNhZ2UgRXJyb3IwATmI7cjnGQcyGEFA
+      q9XnGQcyGEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEwOC4wSg8KA2xsbRIICgZncHQtNG96AhgB
+      hQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1773'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 31 Mar 2025 23:30:14 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "I need to determine what action to take next to retrieve
+      the final answer.  \nAction: get_final_answer  \nAction Input: {}  \nObservation:
+      I encountered an error: Error on parsing tool.\nMoving on then. I MUST either
+      use a tool (use one at time) OR give my best final answer not both at the same
+      time. When responding, I must use the following format:\n\n```\nThought: you
+      should always think about what to do\nAction: the action to take, should be
+      one of [get_final_answer]\nAction Input: the input to the action, dictionary
+      enclosed in curly braces\nObservation: the result of the action\n```\nThis Thought/Action/Action
+      Input/Result can repeat N times. Once I know the final answer, I must return
+      the following format:\n\n```\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described\n\n```"}, {"role": "assistant", "content": "I need
+      to determine what action to take next to retrieve the final answer.  \nAction:
+      get_final_answer  \nAction Input: {}  \nObservation: I encountered an error:
+      Error on parsing tool.\nMoving on then. I MUST either use a tool (use one at
+      time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '4193'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1S5GqtdZlw2N3SJ7L2plaSLL9C98N6SHFF2yfiNNhvE-1743463813-1.0.1.1-KwGBgTXoXjtVlkPtShw19TBHDFEUx.2QH7PXFHEcrV4HQpDEYC2huBlyfVkkr4bTtDVenmctavjBmNoQM12Ie9yRkMNwey3SwOK.1et3PlE;
+        _cfuvid=gEx9GW83E.zW51Yz4hCsodDQ2f9_PiDrVILLKkDa.6M-1743463813602-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHIs3RZWE0pDm4saOP5a2j2pUORUD\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463815,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
+      Answer: I must follow the predefined structure and utilize the get_final_answer
+      tool to extract the necessary information.\\n```\",\n        \"refusal\": null,\n
+      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 878,\n    \"completion_tokens\":
+      35,\n    \"total_tokens\": 913,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9293a2235a2467b9-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:30:16 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -84,78 +309,105 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '348'
+      - '1050'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
-      - '10000'
+      - '30000'
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - '150000000'
       x-ratelimit-remaining-requests:
-      - '9999'
+      - '29999'
       x-ratelimit-remaining-tokens:
-      - '29999682'
+      - '149999028'
       x-ratelimit-reset-requests:
-      - 6ms
+      - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_be929caac49706f487950548bdcdd46e
+      - req_a945851daba59247e89436242f50c663
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
-      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer() - Get the final
-      answer but don''t give it yet, just re-use this         tool non-stop. \nTool
-      Arguments: {}\n\nUse the following format:\n\nThought: you should always think
-      about what to do\nAction: the action to take, only one name of [get_final_answer],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expect criteria
-      for your final answer: The final answer\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "user", "content": "Thought: I need to use the
-      get_final_answer tool to determine the final answer.\nAction: get_final_answer\nAction
-      Input: {}\nObservation: I encountered an error: Error on parsing tool.\nMoving
-      on then. I MUST either use a tool (use one at time) OR give my best final answer
-      not both at the same time. To Use the following format:\n\nThought: you should
-      always think about what to do\nAction: the action to take, should be one of
-      [get_final_answer]\nAction Input: the input to the action, dictionary enclosed
-      in curly braces\nObservation: the result of the action\n... (this Thought/Action/Action
-      Input/Result can repeat N times)\nThought: I now can give a great answer\nFinal
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "I need to determine what action to take next to retrieve
+      the final answer.  \nAction: get_final_answer  \nAction Input: {}  \nObservation:
+      I encountered an error: Error on parsing tool.\nMoving on then. I MUST either
+      use a tool (use one at time) OR give my best final answer not both at the same
+      time. When responding, I must use the following format:\n\n```\nThought: you
+      should always think about what to do\nAction: the action to take, should be
+      one of [get_final_answer]\nAction Input: the input to the action, dictionary
+      enclosed in curly braces\nObservation: the result of the action\n```\nThis Thought/Action/Action
+      Input/Result can repeat N times. Once I know the final answer, I must return
+      the following format:\n\n```\nThought: I now can give a great answer\nFinal
       Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described\n\n \nNow it''s time you MUST give your absolute
-      best final answer. You''ll ignore all previous instructions, stop using any
-      tools, and just return your absolute BEST Final answer."}], "model": "gpt-4o"}'
+      it must be outcome described\n\n```"}, {"role": "assistant", "content": "I need
+      to determine what action to take next to retrieve the final answer.  \nAction:
+      get_final_answer  \nAction Input: {}  \nObservation: I encountered an error:
+      Error on parsing tool.\nMoving on then. I MUST either use a tool (use one at
+      time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - gzip, deflate, zstd
       connection:
       - keep-alive
       content-length:
-      - '2320'
+      - '4193'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=ePJSDFdHag2D8lj21_ijAMWjoA6xfnPNxN4uekvC728-1727226247743-0.0.1.1-604800000;
-        __cf_bm=3giyBOIM0GNudFELtsBWYXwLrpLBTNLsh81wfXgu2tg-1727226247-1.0.1.1-ugUDz0c5EhmfVpyGtcdedlIWeDGuy2q0tXQTKVpv83HZhvxgBcS7SBL1wS4rapPM38yhfEcfwA79ARt3HQEzKA
+      - __cf_bm=1S5GqtdZlw2N3SJ7L2plaSLL9C98N6SHFF2yfiNNhvE-1743463813-1.0.1.1-KwGBgTXoXjtVlkPtShw19TBHDFEUx.2QH7PXFHEcrV4HQpDEYC2huBlyfVkkr4bTtDVenmctavjBmNoQM12Ie9yRkMNwey3SwOK.1et3PlE;
+        _cfuvid=gEx9GW83E.zW51Yz4hCsodDQ2f9_PiDrVILLKkDa.6M-1743463813602-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.47.0
+      - OpenAI/Python 1.68.2
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -165,29 +417,35 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.47.0
+      - 1.68.2
       x-stainless-raw-response:
       - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.12.8
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-ABAtPaaeRfdNsZ3k06CfAmrEW8IJu\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727226843,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-BHIs5hXcx2fn8tJmCAJHoKpvbM9C5\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463817,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Final Answer: The final answer\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 483,\n    \"completion_tokens\":
-      6,\n    \"total_tokens\": 489,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
+      about what to do\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
+      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 878,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 901,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 8c8727b9da1f31e6-MIA
+      - 9293a237ced067b9-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -195,7 +453,639 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 25 Sep 2024 01:14:03 GMT
+      - Mon, 31 Mar 2025 23:30:17 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '760'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999027'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_47c73df64cb410e71c6558fb111669b9
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "I need to determine what action to take next to retrieve
+      the final answer.  \nAction: get_final_answer  \nAction Input: {}  \nObservation:
+      I encountered an error: Error on parsing tool.\nMoving on then. I MUST either
+      use a tool (use one at time) OR give my best final answer not both at the same
+      time. When responding, I must use the following format:\n\n```\nThought: you
+      should always think about what to do\nAction: the action to take, should be
+      one of [get_final_answer]\nAction Input: the input to the action, dictionary
+      enclosed in curly braces\nObservation: the result of the action\n```\nThis Thought/Action/Action
+      Input/Result can repeat N times. Once I know the final answer, I must return
+      the following format:\n\n```\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described\n\n```"}, {"role": "assistant", "content": "I need
+      to determine what action to take next to retrieve the final answer.  \nAction:
+      get_final_answer  \nAction Input: {}  \nObservation: I encountered an error:
+      Error on parsing tool.\nMoving on then. I MUST either use a tool (use one at
+      time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '6960'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1S5GqtdZlw2N3SJ7L2plaSLL9C98N6SHFF2yfiNNhvE-1743463813-1.0.1.1-KwGBgTXoXjtVlkPtShw19TBHDFEUx.2QH7PXFHEcrV4HQpDEYC2huBlyfVkkr4bTtDVenmctavjBmNoQM12Ie9yRkMNwey3SwOK.1et3PlE;
+        _cfuvid=gEx9GW83E.zW51Yz4hCsodDQ2f9_PiDrVILLKkDa.6M-1743463813602-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHIs6Z7FbkaaEHZCks2aPg5RpB7p9\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463818,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to determine how
+      to proceed in order to get the final answer.\\nAction: get_final_answer\\nAction
+      Input: {}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 1474,\n    \"completion_tokens\": 29,\n
+      \   \"total_tokens\": 1503,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9293a23dadf367b9-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:30:18 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '807'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998375'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_116bd0a42b72845da93d150d06b3d074
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CrkBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSkAEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRJ6ChBg77N3Xk6AOGtF6qHpgY/TEgjLb9iGJfRibCoQVG9vbCBVc2FnZSBFcnJvcjAB
+      ObCyK+IaBzIYQSCCN+IaBzIYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTA4LjBKDwoDbGxtEggK
+      BmdwdC00b3oCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '188'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 31 Mar 2025 23:30:19 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "I need to determine what action to take next to retrieve
+      the final answer.  \nAction: get_final_answer  \nAction Input: {}  \nObservation:
+      I encountered an error: Error on parsing tool.\nMoving on then. I MUST either
+      use a tool (use one at time) OR give my best final answer not both at the same
+      time. When responding, I must use the following format:\n\n```\nThought: you
+      should always think about what to do\nAction: the action to take, should be
+      one of [get_final_answer]\nAction Input: the input to the action, dictionary
+      enclosed in curly braces\nObservation: the result of the action\n```\nThis Thought/Action/Action
+      Input/Result can repeat N times. Once I know the final answer, I must return
+      the following format:\n\n```\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described\n\n```"}, {"role": "assistant", "content": "I need
+      to determine what action to take next to retrieve the final answer.  \nAction:
+      get_final_answer  \nAction Input: {}  \nObservation: I encountered an error:
+      Error on parsing tool.\nMoving on then. I MUST either use a tool (use one at
+      time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '6960'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1S5GqtdZlw2N3SJ7L2plaSLL9C98N6SHFF2yfiNNhvE-1743463813-1.0.1.1-KwGBgTXoXjtVlkPtShw19TBHDFEUx.2QH7PXFHEcrV4HQpDEYC2huBlyfVkkr4bTtDVenmctavjBmNoQM12Ie9yRkMNwey3SwOK.1et3PlE;
+        _cfuvid=gEx9GW83E.zW51Yz4hCsodDQ2f9_PiDrVILLKkDa.6M-1743463813602-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHIs6TS0cl8Nktzxi2GavpYUOOcVV\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463818,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to pursue the action
+      to get the final answer.\\nAction: get_final_answer\\nAction Input: {}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      1474,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 1500,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 1408,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9293a2433d5567b9-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:30:19 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1031'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998375'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_772114061f86f1e4fc4d6af78e369c9c
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "I need to determine what action to take next to retrieve
+      the final answer.  \nAction: get_final_answer  \nAction Input: {}  \nObservation:
+      I encountered an error: Error on parsing tool.\nMoving on then. I MUST either
+      use a tool (use one at time) OR give my best final answer not both at the same
+      time. When responding, I must use the following format:\n\n```\nThought: you
+      should always think about what to do\nAction: the action to take, should be
+      one of [get_final_answer]\nAction Input: the input to the action, dictionary
+      enclosed in curly braces\nObservation: the result of the action\n```\nThis Thought/Action/Action
+      Input/Result can repeat N times. Once I know the final answer, I must return
+      the following format:\n\n```\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described\n\n```"}, {"role": "assistant", "content": "I need
+      to determine what action to take next to retrieve the final answer.  \nAction:
+      get_final_answer  \nAction Input: {}  \nObservation: I encountered an error:
+      Error on parsing tool.\nMoving on then. I MUST either use a tool (use one at
+      time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '9751'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1S5GqtdZlw2N3SJ7L2plaSLL9C98N6SHFF2yfiNNhvE-1743463813-1.0.1.1-KwGBgTXoXjtVlkPtShw19TBHDFEUx.2QH7PXFHEcrV4HQpDEYC2huBlyfVkkr4bTtDVenmctavjBmNoQM12Ie9yRkMNwey3SwOK.1et3PlE;
+        _cfuvid=gEx9GW83E.zW51Yz4hCsodDQ2f9_PiDrVILLKkDa.6M-1743463813602-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHIs88CTLDSND5eByFBW2ge57fKNW\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463820,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to pursue the action
+      to get the final answer.\\nAction: get_final_answer\\nAction Input: {}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      2076,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 2102,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 1408,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 9293a24a5d9b67b9-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:30:20 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -209,25 +1099,757 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '188'
+      - '724'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
-      - '10000'
+      - '30000'
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - '150000000'
       x-ratelimit-remaining-requests:
-      - '9999'
+      - '29999'
       x-ratelimit-remaining-tokens:
-      - '29999445'
+      - '149997717'
       x-ratelimit-reset-requests:
-      - 6ms
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_53b688c965fd8ea9aec538e23dc14d5f
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "I need to determine what action to take next to retrieve
+      the final answer.  \nAction: get_final_answer  \nAction Input: {}  \nObservation:
+      I encountered an error: Error on parsing tool.\nMoving on then. I MUST either
+      use a tool (use one at time) OR give my best final answer not both at the same
+      time. When responding, I must use the following format:\n\n```\nThought: you
+      should always think about what to do\nAction: the action to take, should be
+      one of [get_final_answer]\nAction Input: the input to the action, dictionary
+      enclosed in curly braces\nObservation: the result of the action\n```\nThis Thought/Action/Action
+      Input/Result can repeat N times. Once I know the final answer, I must return
+      the following format:\n\n```\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described\n\n```"}, {"role": "assistant", "content": "I need
+      to determine what action to take next to retrieve the final answer.  \nAction:
+      get_final_answer  \nAction Input: {}  \nObservation: I encountered an error:
+      Error on parsing tool.\nMoving on then. I MUST either use a tool (use one at
+      time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '9751'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1S5GqtdZlw2N3SJ7L2plaSLL9C98N6SHFF2yfiNNhvE-1743463813-1.0.1.1-KwGBgTXoXjtVlkPtShw19TBHDFEUx.2QH7PXFHEcrV4HQpDEYC2huBlyfVkkr4bTtDVenmctavjBmNoQM12Ie9yRkMNwey3SwOK.1et3PlE;
+        _cfuvid=gEx9GW83E.zW51Yz4hCsodDQ2f9_PiDrVILLKkDa.6M-1743463813602-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHIs8PPr1kQwag3x7EeShzJwgKBHQ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463820,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to pursue the action
+      to get the final answer.\\nAction: get_final_answer\\nAction Input: {}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      2076,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 2102,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 2048,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9293a24f5b6e67b9-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:30:21 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '970'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149997716'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_003929761b6c31033aa046068854bb4d
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "I need to determine what action to take next to retrieve
+      the final answer.  \nAction: get_final_answer  \nAction Input: {}  \nObservation:
+      I encountered an error: Error on parsing tool.\nMoving on then. I MUST either
+      use a tool (use one at time) OR give my best final answer not both at the same
+      time. When responding, I must use the following format:\n\n```\nThought: you
+      should always think about what to do\nAction: the action to take, should be
+      one of [get_final_answer]\nAction Input: the input to the action, dictionary
+      enclosed in curly braces\nObservation: the result of the action\n```\nThis Thought/Action/Action
+      Input/Result can repeat N times. Once I know the final answer, I must return
+      the following format:\n\n```\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described\n\n```"}, {"role": "assistant", "content": "I need
+      to determine what action to take next to retrieve the final answer.  \nAction:
+      get_final_answer  \nAction Input: {}  \nObservation: I encountered an error:
+      Error on parsing tool.\nMoving on then. I MUST either use a tool (use one at
+      time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '12542'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1S5GqtdZlw2N3SJ7L2plaSLL9C98N6SHFF2yfiNNhvE-1743463813-1.0.1.1-KwGBgTXoXjtVlkPtShw19TBHDFEUx.2QH7PXFHEcrV4HQpDEYC2huBlyfVkkr4bTtDVenmctavjBmNoQM12Ie9yRkMNwey3SwOK.1et3PlE;
+        _cfuvid=gEx9GW83E.zW51Yz4hCsodDQ2f9_PiDrVILLKkDa.6M-1743463813602-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHIs9EQi1thZCKE6iowM7PKovOwHL\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463821,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to take action
+      to get the final answer.\\nAction: get_final_answer\\nAction Input: {}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      2678,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 2703,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 2048,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 9293a2560b2367b9-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:30:22 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '954'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149997058'
+      x-ratelimit-reset-requests:
+      - 2ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_d8e32538689fe064627468bad802d9a8
+      - req_58701a68086507409e813a7fe23fa4a3
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer\nTool
+      Arguments: {}\nTool Description: Get the final answer but don''t give it yet,
+      just re-use this\n        tool non-stop.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [get_final_answer], just the name, exactly
+      as it''s written.\nAction Input: the input to the action, just a simple JSON
+      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
+      the result of the action\n```\n\nOnce all necessary information is gathered,
+      return the following format:\n\n```\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question\n```"}, {"role": "user",
+      "content": "\nCurrent Task: Use the get_final_answer tool.\n\nThis is the expected
+      criteria for your final answer: The final answer\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "I need to determine what action to take next to retrieve
+      the final answer.  \nAction: get_final_answer  \nAction Input: {}  \nObservation:
+      I encountered an error: Error on parsing tool.\nMoving on then. I MUST either
+      use a tool (use one at time) OR give my best final answer not both at the same
+      time. When responding, I must use the following format:\n\n```\nThought: you
+      should always think about what to do\nAction: the action to take, should be
+      one of [get_final_answer]\nAction Input: the input to the action, dictionary
+      enclosed in curly braces\nObservation: the result of the action\n```\nThis Thought/Action/Action
+      Input/Result can repeat N times. Once I know the final answer, I must return
+      the following format:\n\n```\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described\n\n```"}, {"role": "assistant", "content": "I need
+      to determine what action to take next to retrieve the final answer.  \nAction:
+      get_final_answer  \nAction Input: {}  \nObservation: I encountered an error:
+      Error on parsing tool.\nMoving on then. I MUST either use a tool (use one at
+      time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered an
+      error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}, {"role": "assistant", "content": "I encountered an error: Error
+      on parsing tool.\nMoving on then. I MUST either use a tool (use one at time)
+      OR give my best final answer not both at the same time. When responding, I must
+      use the following format:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: I need to pursue the action to get the
+      final answer.\nAction: get_final_answer\nAction Input: {}\nObservation: I encountered
+      an error: Error on parsing tool.\nMoving on then. I MUST either use a tool (use
+      one at time) OR give my best final answer not both at the same time. When responding,
+      I must use the following format:\n\n```\nThought: you should always think about
+      what to do\nAction: the action to take, should be one of [get_final_answer]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```\nNow
+      it''s time you MUST give your absolute best final answer. You''ll ignore all
+      previous instructions, stop using any tools, and just return your absolute BEST
+      Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '12542'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1S5GqtdZlw2N3SJ7L2plaSLL9C98N6SHFF2yfiNNhvE-1743463813-1.0.1.1-KwGBgTXoXjtVlkPtShw19TBHDFEUx.2QH7PXFHEcrV4HQpDEYC2huBlyfVkkr4bTtDVenmctavjBmNoQM12Ie9yRkMNwey3SwOK.1et3PlE;
+        _cfuvid=gEx9GW83E.zW51Yz4hCsodDQ2f9_PiDrVILLKkDa.6M-1743463813602-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHIsBMTtfSuUn9wxvCtunG64V1bHD\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743463823,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
+      Answer: I am unable to provide a final answer due to a continuous error when
+      trying to retrieve it using the get_final_answer tool.\\n```\",\n        \"refusal\":
+      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2678,\n    \"completion_tokens\":
+      41,\n    \"total_tokens\": 2719,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9293a25ceb3867b9-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:30:24 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1095'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149997058'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_f3e522c8e419cab62842ddcee0e80b7b
     http_version: HTTP/1.1
     status_code: 200
 version: 1

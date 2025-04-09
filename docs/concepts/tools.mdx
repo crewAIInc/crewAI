@@ -15,6 +15,18 @@ A tool in CrewAI is a skill or function that agents can utilize to perform vario
 This includes tools from the [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools),
 enabling everything from simple searches to complex interactions and effective teamwork among agents.
 
+<Note type="info" title="Enterprise Enhancement: Tools Repository">
+CrewAI Enterprise provides a comprehensive Tools Repository with pre-built integrations for common business systems and APIs. Deploy agents with enterprise tools in minutes instead of days.
+
+![Tools Repository Screenshot](../images/enterprise/tools-repository.png)
+
+The Enterprise Tools Repository includes:
+- Pre-built connectors for popular enterprise systems
+- Custom tool creation interface
+- Version control and sharing capabilities
+- Security and compliance features
+</Note>
+
 ## Key Characteristics of Tools
 
 - **Utility**: Crafted for tasks such as web searching, data analysis, content generation, and agent collaboration.
@@ -79,7 +91,7 @@ research = Task(
 )
 
 write = Task(
-    description='Write an engaging blog post about the AI industry, based on the research analyst’s summary. Draw inspiration from the latest blog posts in the directory.',
+    description='Write an engaging blog post about the AI industry, based on the research analyst's summary. Draw inspiration from the latest blog posts in the directory.',
     expected_output='A 4-paragraph blog post formatted in markdown with engaging, informative, and accessible content, avoiding complex jargon.',
     agent=writer,
     output_file='blog-posts/new_post.md'  # The final blog post will be saved here
@@ -106,6 +118,7 @@ Here is a list of the available tools and their descriptions:
 
 | Tool                             | Description                                                                                    |
 | :------------------------------- | :--------------------------------------------------------------------------------------------- |
+| **ApifyActorsTool**              | A tool that integrates Apify Actors with your workflows for web scraping and automation tasks. |
 | **BrowserbaseLoadTool**          | A tool for interacting with and extracting data from web browsers.                             |
 | **CodeDocsSearchTool**           | A RAG tool optimized for searching through code documentation and related technical documents. |
 | **CodeInterpreterTool**          | A tool for interpreting python code.                                                           |
@@ -140,7 +153,7 @@ Here is a list of the available tools and their descriptions:
 ## Creating your own Tools
 
 <Tip>
-  Developers can craft `custom tools` tailored for their agent’s needs or
+  Developers can craft `custom tools` tailored for their agent's needs or
   utilize pre-built options.
 </Tip>
 
@@ -150,15 +163,20 @@ There are two main ways for one to create a CrewAI tool:
 
 ```python Code
 from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
 
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
-    description: str = "Clear description for what this tool is useful for, your agent will need this information to use it."
+    description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = MyToolInput
 
     def _run(self, argument: str) -> str:
-        # Implementation goes here
-        return "Result from custom tool"
+        # Your tool's logic here
+        return "Tool's result"
 ```
 
 ### Utilizing the `tool` Decorator

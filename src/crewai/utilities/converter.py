@@ -20,23 +20,52 @@ class ConverterError(Exception):
 class Converter(OutputConverter):
     """Class that converts text into either pydantic or json."""
 
-    def to_pydantic(self, current_attempt=1):
+    def to_pydantic(self, current_attempt=1) -> BaseModel:
         """Convert text to pydantic."""
         try:
             if self.llm.supports_function_calling():
-                return self._create_instructor().to_pydantic()
+                result = self._create_instructor().to_pydantic()
             else:
-                return self.llm.call(
+                response = self.llm.call(
                     [
                         {"role": "system", "content": self.instructions},
                         {"role": "user", "content": self.text},
                     ]
                 )
+                try:
+                    # Try to directly validate the response JSON
+                    result = self.model.model_validate_json(response)
+                except ValidationError:
+                    # If direct validation fails, attempt to extract valid JSON
+                    result = handle_partial_json(response, self.model, False, None)
+                    # Ensure result is a BaseModel instance
+                    if not isinstance(result, BaseModel):
+                        if isinstance(result, dict):
+                            result = self.model.parse_obj(result)
+                        elif isinstance(result, str):
+                            try:
+                                parsed = json.loads(result)
+                                result = self.model.parse_obj(parsed)
+                            except Exception as parse_err:
+                                raise ConverterError(
+                                    f"Failed to convert partial JSON result into Pydantic: {parse_err}"
+                                )
+                        else:
+                            raise ConverterError(
+                                "handle_partial_json returned an unexpected type."
+                            )
+            return result
+        except ValidationError as e:
+            if current_attempt < self.max_attempts:
+                return self.to_pydantic(current_attempt + 1)
+            raise ConverterError(
+                f"Failed to convert text into a Pydantic model due to validation error: {e}"
+            )
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
-            return ConverterError(
-                f"Failed to convert text into a pydantic model due to the following error: {e}"
+            raise ConverterError(
+                f"Failed to convert text into a Pydantic model due to error: {e}"
             )
 
     def to_json(self, current_attempt=1):
@@ -66,7 +95,6 @@ class Converter(OutputConverter):
             llm=self.llm,
             model=self.model,
             content=self.text,
-            instructions=self.instructions,
         )
         return inst
 
@@ -187,10 +215,19 @@ def convert_with_instructions(
 
 
 def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
-    instructions = "I'm gonna convert this raw text into valid JSON."
+    instructions = "Please convert the following text into valid JSON."
     if llm.supports_function_calling():
         model_schema = PydanticSchemaParser(model=model).get_schema()
-        instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
+        instructions += (
+            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
+            f"The JSON must follow this schema exactly:\n```json\n{model_schema}\n```"
+        )
+    else:
+        model_description = generate_model_description(model)
+        instructions += (
+            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
+            f"The JSON must follow this format exactly:\n{model_description}"
+        )
     return instructions
 
 
@@ -230,9 +267,13 @@ def generate_model_description(model: Type[BaseModel]) -> str:
         origin = get_origin(field_type)
         args = get_args(field_type)
 
-        if origin is Union and type(None) in args:
+        if origin is Union or (origin is None and len(args) > 0):
+            # Handle both Union and the new '|' syntax
             non_none_args = [arg for arg in args if arg is not type(None)]
-            return f"Optional[{describe_field(non_none_args[0])}]"
+            if len(non_none_args) == 1:
+                return f"Optional[{describe_field(non_none_args[0])}]"
+            else:
+                return f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
         elif origin is list:
             return f"List[{describe_field(args[0])}]"
         elif origin is dict:
@@ -241,11 +282,14 @@ def generate_model_description(model: Type[BaseModel]) -> str:
             return f"Dict[{key_type}, {value_type}]"
         elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
             return generate_model_description(field_type)
-        else:
+        elif hasattr(field_type, "__name__"):
             return field_type.__name__
+        else:
+            return str(field_type)
 
-    fields = model.__annotations__
+    fields = model.model_fields
     field_descriptions = [
-        f'"{name}": {describe_field(type_)}' for name, type_ in fields.items()
+        f'"{name}": {describe_field(field.annotation)}'
+        for name, field in fields.items()
     ]
     return "{\n  " + ",\n  ".join(field_descriptions) + "\n}"

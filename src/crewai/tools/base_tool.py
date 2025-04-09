@@ -1,8 +1,15 @@
+import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
 from typing import Any, Callable, Type, get_args, get_origin
 
-from pydantic import BaseModel, ConfigDict, Field, create_model, validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    create_model,
+    field_validator,
+)
 from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -12,13 +19,15 @@ class BaseTool(BaseModel, ABC):
     class _ArgsSchemaPlaceholder(PydanticBaseModel):
         pass
 
-    model_config = ConfigDict()
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
     """The unique name of the tool that clearly communicates its purpose."""
     description: str
     """Used to tell the model how/when/why to use the tool."""
-    args_schema: Type[PydanticBaseModel] = Field(default_factory=_ArgsSchemaPlaceholder)
+    args_schema: Type[PydanticBaseModel] = Field(
+        default_factory=_ArgsSchemaPlaceholder, validate_default=True
+    )
     """The schema for the arguments that the tool accepts."""
     description_updated: bool = False
     """Flag to check if the description has been updated."""
@@ -27,7 +36,8 @@ class BaseTool(BaseModel, ABC):
     result_as_answer: bool = False
     """Flag to check if the tool should be the final agent answer."""
 
-    @validator("args_schema", always=True, pre=True)
+    @field_validator("args_schema", mode="before")
+    @classmethod
     def _default_args_schema(
         cls, v: Type[PydanticBaseModel]
     ) -> Type[PydanticBaseModel]:

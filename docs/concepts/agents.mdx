@@ -18,6 +18,18 @@ In the CrewAI framework, an `Agent` is an autonomous unit that can:
 Think of an agent as a specialized team member with specific skills, expertise, and responsibilities. For example, a `Researcher` agent might excel at gathering and analyzing information, while a `Writer` agent might be better at creating content.
 </Tip>
 
+<Note type="info" title="Enterprise Enhancement: Visual Agent Builder">
+CrewAI Enterprise includes a Visual Agent Builder that simplifies agent creation and configuration without writing code. Design your agents visually and test them in real-time.
+
+![Visual Agent Builder Screenshot](../images/enterprise/crew-studio-quickstart)
+
+The Visual Agent Builder enables:
+- Intuitive agent configuration with form-based interfaces
+- Real-time testing and validation
+- Template library with pre-configured agent types
+- Easy customization of agent attributes and behaviors
+</Note>
+
 ## Agent Attributes
 
 | Attribute                               | Parameter                | Type                          | Description                                                                                                          |
@@ -43,7 +55,7 @@ Think of an agent as a specialized team member with specific skills, expertise, 
 | **Max Retry Limit** _(optional)_        | `max_retry_limit`        | `int`                         | Maximum number of retries when an error occurs. Default is 2.                                                         |
 | **Respect Context Window** _(optional)_ | `respect_context_window` | `bool`                        | Keep messages under context window size by summarizing. Default is True.                                              |
 | **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`   | Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct). Default is 'safe'.                               |
-| **Embedder Config** _(optional)_        | `embedder_config`        | `Optional[Dict[str, Any]]`    | Configuration for the embedder used by the agent.                                                                     |
+| **Embedder** _(optional)_               | `embedder`               | `Optional[Dict[str, Any]]`    | Configuration for the embedder used by the agent.                                                                     |
 | **Knowledge Sources** _(optional)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | Knowledge sources available to the agent.                                                                     |
 | **Use System Prompt** _(optional)_      | `use_system_prompt`      | `Optional[bool]`              | Whether to use system prompt (for o1 model support). Default is True.                                                 |
 
@@ -101,6 +113,8 @@ from crewai_tools import SerperDevTool
 class LatestAiDevelopmentCrew():
   """LatestAiDevelopment crew"""
 
+  agents_config = "config/agents.yaml"
+
   @agent
   def researcher(self) -> Agent:
     return Agent(
@@ -150,7 +164,7 @@ agent = Agent(
     use_system_prompt=True,  # Default: True
     tools=[SerperDevTool()],  # Optional: List of tools
     knowledge_sources=None,  # Optional: List of knowledge sources
-    embedder_config=None,  # Optional: Custom embedder configuration
+    embedder=None,  # Optional: Custom embedder configuration
     system_template=None,  # Optional: Custom system prompt template
     prompt_template=None,  # Optional: Custom prompt template
     response_template=None,  # Optional: Custom response template
@@ -231,7 +245,7 @@ custom_agent = Agent(
 
 #### Code Execution
 - `allow_code_execution`: Must be True to run code
-- `code_execution_mode`: 
+- `code_execution_mode`:
   - `"safe"`: Uses Docker (recommended for production)
   - `"unsafe"`: Direct execution (use only in trusted environments)
 
