@@ -11,7 +11,7 @@ def test_huggingface_env_vars():
     """Test that Huggingface environment variables are properly configured."""
     assert "huggingface" in ENV_VARS
     assert any(
-        detail.get("key_name") == "HUGGINGFACE_API_KEY"
+        detail.get("key_name") == "HF_TOKEN"
         for detail in ENV_VARS["huggingface"]
     )
 

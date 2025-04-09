@@ -87,12 +87,8 @@ ENV_VARS = {
     ],
     "huggingface": [
         {
-            "prompt": "Enter your HUGGINGFACE API key (press Enter to skip)",
-            "key_name": "HUGGINGFACE_API_KEY",
-        },
-        {
-            "prompt": "Enter your Huggingface API base URL (press Enter to skip)",
-            "key_name": "base_url",
+            "prompt": "Enter your Huggingface API key (HF_TOKEN) (press Enter to skip)",
+            "key_name": "HF_TOKEN",
         },
     ],
 }
