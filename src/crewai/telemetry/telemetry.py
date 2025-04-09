@@ -50,33 +50,31 @@ class Telemetry:
 
         if self._is_telemetry_disabled():
             return
-            
+
         try:
             telemetry_endpoint = "https://telemetry.crewai.com:4319"
-            
-            otlp_exporter = OTLPSpanExporter(
-                endpoint=f"{telemetry_endpoint}/v1/traces"
+            self.resource = Resource(
+                attributes={SERVICE_NAME: "crewAI-telemetry"},
             )
+            with suppress_warnings():
+                self.provider = TracerProvider(resource=self.resource)
 
-            span_processor = BatchSpanProcessor(otlp_exporter)
-
-            tracer_provider = TracerProvider(
-                resource=Resource.create(
-                    {
-                        "service.name": "crewai",
-                        "service.version": version("crewai"),
-                    }
+            processor = BatchSpanProcessor(
+                OTLPSpanExporter(
+                    endpoint=f"{telemetry_endpoint}/v1/traces",
+                    timeout=30,
                 )
             )
 
-            tracer_provider.add_span_processor(span_processor)
-
-            trace.set_tracer_provider(tracer_provider)
-
-            self.tracer = trace.get_tracer("crewai")
+            self.provider.add_span_processor(processor)
             self.ready = True
-        except Exception:
-            pass
+        except Exception as e:
+            if isinstance(
+                e,
+                (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
+            ):
+                raise  # Re-raise the exception to not interfere with system signals
+            self.ready = False
             
     def _is_telemetry_disabled(self) -> bool:
         """Check if telemetry should be disabled based on environment variables."""
@@ -88,7 +86,9 @@ class Telemetry:
     def set_tracer(self):
         if self.ready and not self.trace_set:
             try:
-                self.trace_set = True
+                with suppress_warnings():
+                    trace.set_tracer_provider(self.provider)
+                    self.trace_set = True
             except Exception:
                 self.ready = False
                 self.trace_set = False
