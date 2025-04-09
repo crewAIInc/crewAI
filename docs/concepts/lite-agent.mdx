@@ -93,11 +93,15 @@ This example demonstrates the core features of a LiteAgent:
 For more complex scenarios, you can integrate LiteAgents into a Flow. Here's an example of a market research flow:
 
 ````python
-from typing import List
+import asyncio
+from typing import Any, Dict, List
+
+from crewai_tools import SerperDevTool
 from pydantic import BaseModel, Field
-from crewai.flow.flow import Flow, start, listen
-from crewai.lite_agent import LiteAgent
-from crewai.tools import WebSearchTool
+
+from crewai.agent import Agent
+from crewai.flow.flow import Flow, listen, start
+
 
 # Define a structured output format
 class MarketAnalysis(BaseModel):
@@ -105,29 +109,30 @@ class MarketAnalysis(BaseModel):
     market_size: str = Field(description="Estimated market size")
     competitors: List[str] = Field(description="Major competitors in the space")
 
+
 # Define flow state
 class MarketResearchState(BaseModel):
     product: str = ""
-    analysis: MarketAnalysis = None
+    analysis: MarketAnalysis | None = None
+
 
 # Create a flow class
 class MarketResearchFlow(Flow[MarketResearchState]):
     @start()
-    def initialize_research(self, product: str):
-        print(f"Starting market research for {product}")
-        self.state.product = product
+    def initialize_research(self) -> Dict[str, Any]:
+        print(f"Starting market research for {self.state.product}")
+        return {"product": self.state.product}
 
     @listen(initialize_research)
-    async def analyze_market(self):
-        # Create a LiteAgent for market research
-        analyst = LiteAgent(
+    async def analyze_market(self) -> Dict[str, Any]:
+        # Create an Agent for market research
+        analyst = Agent(
             role="Market Research Analyst",
             goal=f"Analyze the market for {self.state.product}",
             backstory="You are an experienced market analyst with expertise in "
-                     "identifying market trends and opportunities.",
-            tools=[WebSearchTool()],
+            "identifying market trends and opportunities.",
+            tools=[SerperDevTool()],
             verbose=True,
-            response_format=MarketAnalysis
         )
 
         # Define the research query
@@ -140,58 +145,53 @@ class MarketResearchFlow(Flow[MarketResearchState]):
         Format your response according to the specified structure.
         """
 
-        # Execute the analysis
-        result = await analyst.kickoff_async(query)
-        self.state.analysis = result.pydantic
-        return result.pydantic
+        # Execute the analysis with structured output format
+        result = await analyst.kickoff_async(query, response_format=MarketAnalysis)
+        if result.pydantic:
+            print("result", result.pydantic)
+        else:
+            print("result", result)
+
+        # Return the analysis to update the state
+        return {"analysis": result.pydantic}
 
     @listen(analyze_market)
-    def present_results(self):
-        analysis = self.state.analysis
+    def present_results(self, analysis) -> None:
         print("\nMarket Analysis Results")
         print("=====================")
 
-        print("\nKey Market Trends:")
-        for trend in analysis.key_trends:
-            print(f"- {trend}")
+        if isinstance(analysis, dict):
+            # If we got a dict with 'analysis' key, extract the actual analysis object
+            market_analysis = analysis.get("analysis")
+        else:
+            market_analysis = analysis
 
-        print(f"\nMarket Size: {analysis.market_size}")
+        if market_analysis and isinstance(market_analysis, MarketAnalysis):
+            print("\nKey Market Trends:")
+            for trend in market_analysis.key_trends:
+                print(f"- {trend}")
 
-        print("\nMajor Competitors:")
-        for competitor in analysis.competitors:
-            print(f"- {competitor}")
+            print(f"\nMarket Size: {market_analysis.market_size}")
+
+            print("\nMajor Competitors:")
+            for competitor in market_analysis.competitors:
+                print(f"- {competitor}")
+        else:
+            print("No structured analysis data available.")
+            print("Raw analysis:", analysis)
+
 
 # Usage example
-import asyncio
-
 async def run_flow():
     flow = MarketResearchFlow()
-    result = await flow.kickoff(inputs={"product": "AI-powered chatbots"})
+    result = await flow.kickoff_async(inputs={"product": "AI-powered chatbots"})
     return result
+
 
 # Run the flow
 if __name__ == "__main__":
+    # Use asyncio.run at the top level only
     asyncio.run(run_flow())
-
-## Key Features
-
-### 1. Simplified Setup
-Unlike regular Agents, LiteAgents are designed for quick setup and standalone operation. They don't require crew configuration or task management.
-
-### 2. Structured Output
-LiteAgents support Pydantic models for response formatting, making it easy to get structured, type-safe data from your agent's operations.
-
-### 3. Tool Integration
-Just like regular Agents, LiteAgents can use tools to enhance their capabilities:
-```python
-from crewai.tools import SerperDevTool, CalculatorTool
-
-agent = LiteAgent(
-    role="Research Assistant",
-    goal="Find and analyze information",
-    tools=[SerperDevTool(), CalculatorTool()],
-    verbose=True
-)
 ````
 
 ### 4. Async Support
