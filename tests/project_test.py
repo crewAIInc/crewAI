@@ -2,7 +2,16 @@ import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
-from crewai.project import CrewBase, after_kickoff, agent, before_kickoff, crew, task
+from crewai.llm import LLM
+from crewai.project import (
+    CrewBase,
+    after_kickoff,
+    agent,
+    before_kickoff,
+    crew,
+    llm,
+    task,
+)
 from crewai.task import Task
 
 
@@ -30,6 +39,13 @@ class SimpleCrew:
 class InternalCrew:
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
+
+    @llm
+    def local_llm(self):
+        return LLM(
+            model='openai/model_name',
+            api_key="None",
+            base_url="http://xxx.xxx.xxx.xxx:8000/v1")
 
     @agent
     def researcher(self):
@@ -103,6 +119,20 @@ def test_task_name():
     assert (
         custom_named_task.name == "Custom"
     ), "Custom task name is not being set as expected"
+
+
+def test_agent_function_calling_llm():
+    crew = InternalCrew()
+    llm = crew.local_llm()
+    obj_llm_agent = crew.researcher()
+    assert (
+        obj_llm_agent.function_calling_llm is llm
+    ), "agent's function_calling_llm is incorrect"
+
+    str_llm_agent = crew.reporting_analyst()
+    assert (
+        str_llm_agent.function_calling_llm.model == "online_llm"
+    ), "agent's function_calling_llm is incorrect"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
