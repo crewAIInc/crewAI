@@ -1,3 +1,8 @@
+from typing import Any, List, Optional
+
+from crewai.tools.base_tool import BaseTool
+
+
 class LangGraphToolAdapter:
     """Adapts CrewAI tools to LangGraph-compatible format"""
 
