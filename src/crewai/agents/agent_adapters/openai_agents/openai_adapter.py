@@ -2,11 +2,11 @@ from typing import Any, List, Optional
 
 from agents import Agent as OpenAIAgent
 from agents import Runner, Tool, enable_verbose_stdout_logging
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import Field, PrivateAttr
 
-from crewai.agent import BaseAgent
+from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools import BaseTool
-
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Logger
 from crewai.utilities.events import crewai_event_bus
@@ -14,10 +14,11 @@ from crewai.utilities.events.agent_events import (
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
+
 from .openai_agent_tool_adapter import OpenAIAgentToolAdapter
 
 
-class OpenAIAgentAdapter(BaseAgent, BaseModel):
+class OpenAIAgentAdapter(BaseAgentAdapter):
     """Adapter for OpenAI Assistants"""
 
     model_config = {"arbitrary_types_allowed": True}
@@ -47,6 +48,7 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         self._openai_agent.model = model
         self.tools = tools
         self._tool_adapter = OpenAIAgentToolAdapter(tools=tools)
+        self.llm = model
 
     def execute_task(
         self,
@@ -77,7 +79,7 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
             )
             # This is pretty much the agent_executor logic:
             result = self.agent_executor.run_sync(self._openai_agent, task_prompt)
-            return result.final_output
+            return self.handle_execution_result(result)
 
         except Exception as e:
             self._logger.log("error", f"Error executing OpenAI task: {str(e)}")
@@ -100,18 +102,20 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
         all_tools = list(self.tools or []) + list(tools or [])
 
         if all_tools:
-            self._tool_adapter.configure_tools(all_tools)
-            if self._tool_adapter.converted_tools:
-                self._openai_agent.tools = self._tool_adapter.converted_tools
+            self.configure_tools(all_tools)
 
         self.agent_executor = Runner
 
-    def _prepare_task_input(self, task: Any, context: Optional[str]) -> str:
-        """Prepare the task input with context if available"""
-        task_input = task.description if hasattr(task, "description") else str(task)
-        if context:
-            task_input = f"Context:\n{context}\n\nTask:\n{task_input}"
-        return task_input
+    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
+        """Configure tools for the OpenAI Assistant"""
+        if tools:
+            self._tool_adapter.configure_tools(tools)
+            if self._tool_adapter.converted_tools:
+                self._openai_agent.tools = self._tool_adapter.converted_tools
+
+    def handle_execution_result(self, result: Any) -> str:
+        """Process OpenAI Assistant execution result"""
+        return result.final_output
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support"""
@@ -129,4 +133,34 @@ class OpenAIAgentAdapter(BaseAgent, BaseModel):
 
     def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
         """Parse and validate tools"""
-        return tools
+        tools_list = []
+        try:
+            # tentatively try to import from crewai_tools import BaseTool as CrewAITool
+            from crewai.tools import BaseTool as CrewAITool
+
+            for tool in tools:
+                if isinstance(tool, CrewAITool):
+                    tools_list.append(tool.to_structured_tool())
+                else:
+                    tools_list.append(tool)
+        except ModuleNotFoundError:
+            tools_list = []
+            for tool in tools:
+                tools_list.append(tool)
+
+        return tools_list
+
+    def configure_structured_output(self, task) -> None:
+        """Configure the structured output for the specific agent implementation.
+
+        Args:
+            structured_output: The structured output to be configured
+        """
+        if task.output_json or task.output_pydantic:
+            # Generate the schema based on the output format
+            if task.output_json:
+                # schema = json.dumps(task.output_json, indent=2)
+                self._openai_agent.output_type = task.output_json
+
+            elif task.output_pydantic:
+                self._openai_agent.output_type = task.output_pydantic
