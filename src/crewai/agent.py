@@ -10,8 +10,8 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
-from crewai.llm import BaseLLM
 from crewai.lite_agent import LiteAgent, LiteAgentOutput
+from crewai.llm import BaseLLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.security import Fingerprint
 from crewai.task import Task
