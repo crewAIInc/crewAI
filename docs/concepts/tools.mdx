@@ -15,6 +15,18 @@ A tool in CrewAI is a skill or function that agents can utilize to perform vario
 This includes tools from the [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools),
 enabling everything from simple searches to complex interactions and effective teamwork among agents.
 
+<Note type="info" title="Enterprise Enhancement: Tools Repository">
+CrewAI Enterprise provides a comprehensive Tools Repository with pre-built integrations for common business systems and APIs. Deploy agents with enterprise tools in minutes instead of days.
+
+![Tools Repository Screenshot](../images/enterprise/tools-repository.png)
+
+The Enterprise Tools Repository includes:
+- Pre-built connectors for popular enterprise systems
+- Custom tool creation interface
+- Version control and sharing capabilities
+- Security and compliance features
+</Note>
+
 ## Key Characteristics of Tools
 
 - **Utility**: Crafted for tasks such as web searching, data analysis, content generation, and agent collaboration.
@@ -79,7 +91,7 @@ research = Task(
 )
 
 write = Task(
-    description='Write an engaging blog post about the AI industry, based on the research analyst’s summary. Draw inspiration from the latest blog posts in the directory.',
+    description='Write an engaging blog post about the AI industry, based on the research analyst's summary. Draw inspiration from the latest blog posts in the directory.',
     expected_output='A 4-paragraph blog post formatted in markdown with engaging, informative, and accessible content, avoiding complex jargon.',
     agent=writer,
     output_file='blog-posts/new_post.md'  # The final blog post will be saved here
@@ -141,7 +153,7 @@ Here is a list of the available tools and their descriptions:
 ## Creating your own Tools
 
 <Tip>
-  Developers can craft `custom tools` tailored for their agent’s needs or
+  Developers can craft `custom tools` tailored for their agent's needs or
   utilize pre-built options.
 </Tip>
 
