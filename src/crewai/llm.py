@@ -839,9 +839,13 @@ class LLM(BaseLLM):
 
         # Validate message format first
         for msg in messages:
-            if not isinstance(msg, dict) or "role" not in msg or "content" not in msg:
+            if not isinstance(msg, dict) or "role" not in msg:
                 raise TypeError(
-                    "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
+                    "Invalid message format. Each message must be a dict with 'role' key"
+                )
+            if "content" not in msg and msg["role"] != "system":
+                raise TypeError(
+                    "Invalid message format. Each non-system message must have a 'content' key"
                 )
 
         # Handle O1 models specially
@@ -867,6 +871,19 @@ class LLM(BaseLLM):
                 )  # Create a copy to avoid modifying the original
                 messages.append({"role": "user", "content": "Please continue."})
             return messages
+
+        if "qwen" in self.model.lower():
+            formatted_messages = []
+            for msg in messages:
+                if not isinstance(msg.get("content"), str):
+                    formatted_messages.append(msg)
+                    continue
+                
+                formatted_messages.append({
+                    "role": msg["role"],
+                    "content": [{"type": "text", "text": msg["content"]}]
+                })
+            return formatted_messages
 
         # Handle Anthropic models
         if not self.is_anthropic:
