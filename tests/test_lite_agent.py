@@ -4,8 +4,8 @@ from typing import cast
 import pytest
 from pydantic import BaseModel, Field
 
-from crewai import LLM
-from crewai.lite_agent import LiteAgent
+from crewai import LLM, Agent
+from crewai.lite_agent import LiteAgent, LiteAgentOutput
 from crewai.tools import BaseTool
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
@@ -64,11 +64,73 @@ class ResearchResult(BaseModel):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.parametrize("verbose", [True, False])
+def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
+    """Test that LiteAgent is created with the correct parameters when Agent.kickoff() is called."""
+    # Create a test agent with specific parameters
+    llm = LLM(model="gpt-4o-mini")
+    custom_tools = [WebSearchTool(), CalculatorTool()]
+    max_iter = 10
+    max_execution_time = 300
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        llm=llm,
+        tools=custom_tools,
+        max_iter=max_iter,
+        max_execution_time=max_execution_time,
+        verbose=verbose,
+    )
+
+    # Create a mock to capture the created LiteAgent
+    created_lite_agent = None
+    original_lite_agent = LiteAgent
+
+    # Define a mock LiteAgent class that captures its arguments
+    class MockLiteAgent(original_lite_agent):
+        def __init__(self, **kwargs):
+            nonlocal created_lite_agent
+            created_lite_agent = kwargs
+            super().__init__(**kwargs)
+
+    # Patch the LiteAgent class
+    monkeypatch.setattr("crewai.agent.LiteAgent", MockLiteAgent)
+
+    # Call kickoff to create the LiteAgent
+    agent.kickoff("Test query")
+
+    # Verify all parameters were passed correctly
+    assert created_lite_agent is not None
+    assert created_lite_agent["role"] == "Test Agent"
+    assert created_lite_agent["goal"] == "Test Goal"
+    assert created_lite_agent["backstory"] == "Test Backstory"
+    assert created_lite_agent["llm"] == llm
+    assert len(created_lite_agent["tools"]) == 2
+    assert isinstance(created_lite_agent["tools"][0], WebSearchTool)
+    assert isinstance(created_lite_agent["tools"][1], CalculatorTool)
+    assert created_lite_agent["max_iterations"] == max_iter
+    assert created_lite_agent["max_execution_time"] == max_execution_time
+    assert created_lite_agent["verbose"] == verbose
+    assert created_lite_agent["response_format"] is None
+
+    # Test with a response_format
+    monkeypatch.setattr("crewai.agent.LiteAgent", MockLiteAgent)
+
+    class TestResponse(BaseModel):
+        test_field: str
+
+    agent.kickoff("Test query", response_format=TestResponse)
+    assert created_lite_agent["response_format"] == TestResponse
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_lite_agent_with_tools():
-    """Test that LiteAgent can use tools."""
+    """Test that Agent can use tools."""
     # Create a LiteAgent with tools
     llm = LLM(model="gpt-4o-mini")
-    agent = LiteAgent(
+    agent = Agent(
         role="Research Assistant",
         goal="Find information about the population of Tokyo",
         backstory="You are a helpful research assistant who can search for information about the population of Tokyo.",
@@ -106,7 +168,7 @@ def test_lite_agent_with_tools():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_lite_agent_structured_output():
-    """Test that LiteAgent can return a simple structured output."""
+    """Test that Agent can return a simple structured output."""
 
     class SimpleOutput(BaseModel):
         """Simple structure for agent outputs."""
@@ -117,18 +179,18 @@ def test_lite_agent_structured_output():
     web_search_tool = WebSearchTool()
 
     llm = LLM(model="gpt-4o-mini")
-    agent = LiteAgent(
+    agent = Agent(
         role="Info Gatherer",
         goal="Provide brief information",
         backstory="You gather and summarize information quickly.",
         llm=llm,
         tools=[web_search_tool],
         verbose=True,
-        response_format=SimpleOutput,
     )
 
     result = agent.kickoff(
-        "What is the population of Tokyo? Return your strucutred output in JSON format with the following fields: summary, confidence"
+        "What is the population of Tokyo? Return your strucutred output in JSON format with the following fields: summary, confidence",
+        response_format=SimpleOutput,
     )
 
     print(f"\n=== Agent Result Type: {type(result)}")
@@ -155,7 +217,7 @@ def test_lite_agent_structured_output():
 def test_lite_agent_returns_usage_metrics():
     """Test that LiteAgent returns usage metrics."""
     llm = LLM(model="gpt-4o-mini")
-    agent = LiteAgent(
+    agent = Agent(
         role="Research Assistant",
         goal="Find information about the population of Tokyo",
         backstory="You are a helpful research assistant who can search for information about the population of Tokyo.",
@@ -168,5 +230,28 @@ def test_lite_agent_returns_usage_metrics():
         "What is the population of Tokyo? Return your strucutred output in JSON format with the following fields: summary, confidence"
     )
 
+    assert result.usage_metrics is not None
+    assert result.usage_metrics["total_tokens"] > 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_lite_agent_returns_usage_metrics_async():
+    """Test that LiteAgent returns usage metrics when run asynchronously."""
+    llm = LLM(model="gpt-4o-mini")
+    agent = Agent(
+        role="Research Assistant",
+        goal="Find information about the population of Tokyo",
+        backstory="You are a helpful research assistant who can search for information about the population of Tokyo.",
+        llm=llm,
+        tools=[WebSearchTool()],
+        verbose=True,
+    )
+
+    result = await agent.kickoff_async(
+        "What is the population of Tokyo? Return your strucutred output in JSON format with the following fields: summary, confidence"
+    )
+    assert isinstance(result, LiteAgentOutput)
+    assert "21 million" in result.raw or "37 million" in result.raw
     assert result.usage_metrics is not None
     assert result.usage_metrics["total_tokens"] > 0
