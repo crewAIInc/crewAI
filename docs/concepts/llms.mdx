@@ -600,14 +600,13 @@ Learn how to get the most out of your LLM configuration:
 
   <Accordion title="Hugging Face">
     ```python Code
-    HUGGINGFACE_API_KEY=<your-api-key>
+    HF_TOKEN=<your-api-key>
     ```
 
     Example usage:
     ```python Code
     llm = LLM(
-        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
-        base_url="your_api_endpoint"
+        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
     )
     ```
   </Accordion>
