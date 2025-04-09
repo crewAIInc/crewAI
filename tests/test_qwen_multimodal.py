@@ -1,5 +1,5 @@
-import pytest
 from crewai.llm import LLM
+import pytest
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
