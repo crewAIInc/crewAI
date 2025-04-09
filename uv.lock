@@ -695,7 +695,7 @@ requires-dist = [
     { name = "blinker", specifier = ">=1.9.0" },
     { name = "chromadb", specifier = ">=0.5.23" },
     { name = "click", specifier = ">=8.1.7" },
-    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.38.0" },
+    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.40.1" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "fastembed", marker = "extra == 'fastembed'", specifier = ">=0.4.1" },
     { name = "instructor", specifier = ">=1.3.3" },
@@ -745,7 +745,7 @@ dev = [
 
 [[package]]
 name = "crewai-tools"
-version = "0.38.1"
+version = "0.40.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chromadb" },
@@ -760,9 +760,9 @@ dependencies = [
     { name = "pytube" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/85/3f/d3b5697b4c6756cec65316c9ea9ccd9054f7b73670d1580befd3632ba031/crewai_tools-0.38.1.tar.gz", hash = "sha256:6abe75b3b339d53a9cf4e2d80124d863ff62a82b36753c30bec64318881876b2", size = 737620 }
+sdist = { url = "https://files.pythonhosted.org/packages/16/ff/0c16c9943ec1501b12fc72aca7815f191ffe94d5f1fe4e9c353ee8c4ad1d/crewai_tools-0.40.1.tar.gz", hash = "sha256:6af5040b2277df8fd592238a17bf584f95dcc9ef7766236534999c8a9e9d0b52", size = 744094 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2b/2b/a6c9007647ffbb6a3c204b3ef26806030d6b041e3e012d4cec43c21335d6/crewai_tools-0.38.1-py3-none-any.whl", hash = "sha256:d9d3a88060f1f30c8f4ea044f6dd564a50d0a22b8a018a6fcec202b36246b9d8", size = 561414 },
+    { url = "https://files.pythonhosted.org/packages/35/05/619c00bae2dda038f0d218dd5197120c938e9c9ccef1b9e50cfb037486f6/crewai_tools-0.40.1-py3-none-any.whl", hash = "sha256:8f459f74dee64364bfdbc524c815c4afcfb9ed532b51e6b8b4f616398d46cf1e", size = 573286 },
 ]
 
 [[package]]

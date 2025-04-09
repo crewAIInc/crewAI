@@ -92,12 +92,14 @@ coding_agent = Agent(
 # Create tasks that require code execution
 task_1 = Task(
     description="Analyze the first dataset and calculate the average age of participants. Ages: {ages}",
-    agent=coding_agent
+    agent=coding_agent,
+    expected_output="The average age of the participants."
 )
 
 task_2 = Task(
     description="Analyze the second dataset and calculate the average age of participants. Ages: {ages}",
-    agent=coding_agent
+    agent=coding_agent,
+    expected_output="The average age of the participants."
 )
 
 # Create two crews and add tasks

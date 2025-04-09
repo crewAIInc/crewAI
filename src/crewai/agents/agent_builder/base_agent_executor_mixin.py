@@ -1,5 +1,5 @@
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 
 
 class CrewAgentExecutorMixin:
-    crew: Optional["Crew"]
-    agent: Optional["BaseAgent"]
-    task: Optional["Task"]
+    crew: "Crew"
+    agent: "BaseAgent"
+    task: "Task"
     iterations: int
     max_iter: int
     _i18n: I18N
@@ -45,6 +45,27 @@ class CrewAgentExecutorMixin:
                     )
             except Exception as e:
                 print(f"Failed to add to short term memory: {e}")
+                pass
+
+    def _create_external_memory(self, output) -> None:
+        """Create and save a external-term memory item if conditions are met."""
+        if (
+            self.crew
+            and self.agent
+            and self.task
+            and hasattr(self.crew, "_external_memory")
+            and self.crew._external_memory
+        ):
+            try:
+                self.crew._external_memory.save(
+                    value=output.text,
+                    metadata={
+                        "description": self.task.description,
+                    },
+                    agent=self.agent.role,
+                )
+            except Exception as e:
+                print(f"Failed to add to external memory: {e}")
                 pass
 
     def _create_long_term_memory(self, output) -> None:

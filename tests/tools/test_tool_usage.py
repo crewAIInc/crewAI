@@ -99,9 +99,6 @@ def test_tool_usage_render():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[tool],
-        original_tools=[tool],
-        tools_description="Sample tool for testing",
-        tools_names="random_number_generator",
         task=MagicMock(),
         function_calling_llm=MagicMock(),
         agent=MagicMock(),
@@ -136,9 +133,6 @@ def test_validate_tool_input_booleans_and_none():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=MagicMock(),
         agent=MagicMock(),
@@ -158,9 +152,6 @@ def test_validate_tool_input_mixed_types():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=MagicMock(),
         agent=MagicMock(),
@@ -180,9 +171,6 @@ def test_validate_tool_input_single_quotes():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=MagicMock(),
         agent=MagicMock(),
@@ -202,9 +190,6 @@ def test_validate_tool_input_invalid_json_repairable():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=MagicMock(),
         agent=MagicMock(),
@@ -224,9 +209,6 @@ def test_validate_tool_input_with_special_characters():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=MagicMock(),
         agent=MagicMock(),
@@ -245,9 +227,6 @@ def test_validate_tool_input_none_input():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=MagicMock(),
@@ -262,9 +241,6 @@ def test_validate_tool_input_valid_json():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=MagicMock(),
@@ -282,9 +258,6 @@ def test_validate_tool_input_python_dict():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=MagicMock(),
@@ -302,9 +275,6 @@ def test_validate_tool_input_json5_unquoted_keys():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=MagicMock(),
@@ -322,9 +292,6 @@ def test_validate_tool_input_with_trailing_commas():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=MagicMock(),
@@ -355,9 +322,6 @@ def test_validate_tool_input_invalid_input():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=mock_agent,
@@ -388,9 +352,6 @@ def test_validate_tool_input_complex_structure():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=MagicMock(),
@@ -427,9 +388,6 @@ def test_validate_tool_input_code_content():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=MagicMock(),
@@ -450,9 +408,6 @@ def test_validate_tool_input_with_escaped_quotes():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=MagicMock(),
@@ -470,9 +425,6 @@ def test_validate_tool_input_large_json_content():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
-        original_tools=[],
-        tools_description="",
-        tools_names="",
         task=MagicMock(),
         function_calling_llm=None,
         agent=MagicMock(),
@@ -512,9 +464,6 @@ def test_tool_selection_error_event_direct():
     tool_usage = ToolUsage(
         tools_handler=mock_tools_handler,
         tools=[test_tool],
-        original_tools=[test_tool],
-        tools_description="Test Tool Description",
-        tools_names="Test Tool",
         task=mock_task,
         function_calling_llm=None,
         agent=mock_agent,
@@ -536,7 +485,8 @@ def test_tool_selection_error_event_direct():
     assert event.agent_role == "test_role"
     assert event.tool_name == "Non Existent Tool"
     assert event.tool_args == {}
-    assert event.tool_class == "Test Tool Description"
+    assert "Tool Name: Test Tool" in event.tool_class
+    assert "A test tool" in event.tool_class
     assert "don't exist" in event.error
 
     received_events.clear()
@@ -550,7 +500,7 @@ def test_tool_selection_error_event_direct():
     assert event.agent_role == "test_role"
     assert event.tool_name == ""
     assert event.tool_args == {}
-    assert event.tool_class == "Test Tool Description"
+    assert "Test Tool" in event.tool_class
     assert "forgot the Action name" in event.error
 
 
@@ -591,9 +541,6 @@ def test_tool_validate_input_error_event():
     tool_usage = ToolUsage(
         tools_handler=mock_tools_handler,
         tools=[test_tool],
-        original_tools=[test_tool],
-        tools_description="Test Tool Description",
-        tools_names="Test Tool",
         task=mock_task,
         function_calling_llm=None,
         agent=mock_agent,
@@ -661,9 +608,6 @@ def test_tool_usage_finished_event_with_result():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[test_tool],
-        original_tools=[test_tool],
-        tools_description="Test Tool Description",
-        tools_names="Test Tool",
         task=mock_task,
         function_calling_llm=None,
         agent=mock_agent,
@@ -740,9 +684,6 @@ def test_tool_usage_finished_event_with_cached_result():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[test_tool],
-        original_tools=[test_tool],
-        tools_description="Test Tool Description",
-        tools_names="Test Tool",
         task=mock_task,
         function_calling_llm=None,
         agent=mock_agent,
