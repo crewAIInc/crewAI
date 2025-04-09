@@ -85,6 +85,16 @@ ENV_VARS = {
             "key_name": "CEREBRAS_API_KEY",
         },
     ],
+    "huggingface": [
+        {
+            "prompt": "Enter your HUGGINGFACE API key (press Enter to skip)",
+            "key_name": "HUGGINGFACE_API_KEY",
+        },
+        {
+            "prompt": "Enter your Huggingface API base URL (press Enter to skip)",
+            "key_name": "base_url",
+        },
+    ],
 }
 
 
@@ -93,6 +103,7 @@ PROVIDERS = [
     "anthropic",
     "gemini",
     "groq",
+    "huggingface",
     "ollama",
     "watson",
     "bedrock",
@@ -155,6 +166,12 @@ MODELS = {
         "bedrock/meta.llama2-70b-chat-v1",
         "bedrock/mistral.mistral-7b-instruct-v0:2",
         "bedrock/mistral.mixtral-8x7b-instruct-v0:1",
+    ],
+    "huggingface": [
+        "huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
+        "huggingface/mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "huggingface/tiiuae/falcon-180B-chat",
+        "huggingface/google/gemma-7b-it",
     ],
 }
 
