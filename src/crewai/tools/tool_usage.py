@@ -2,7 +2,6 @@ import ast
 import datetime
 import json
 import time
-
 from difflib import SequenceMatcher
 from json import JSONDecodeError
 from textwrap import dedent
@@ -23,10 +22,10 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import (
-    ToolUsageStartedEvent,
     ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
     ToolValidateInputErrorEvent,
 )
 
