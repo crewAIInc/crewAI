@@ -1043,6 +1043,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             import traceback
 
             traceback.print_exc()
+            raise
 
     def _log_flow_event(
         self, message: str, color: str = "yellow", level: str = "info"
