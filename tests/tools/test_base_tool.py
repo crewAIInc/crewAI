@@ -1,6 +1,13 @@
-from typing import Callable
+import asyncio
+import inspect
+import unittest
+from typing import Any, Callable, Dict, List
+from unittest.mock import patch
 
 from crewai.tools import BaseTool, tool
+
+# Import the necessary classes
+from crewai.tools.base_tool import BaseTool
 
 
 def test_creating_a_tool_using_annotation():
@@ -122,3 +129,93 @@ def test_result_as_answer_in_tool_decorator():
     
     converted_tool = my_tool_with_default.to_structured_tool()
     assert converted_tool.result_as_answer is False
+
+
+class SyncTool(BaseTool):
+    """Test implementation with a synchronous _run method"""
+    name: str = "sync_tool"
+    description: str = "A synchronous tool for testing"
+
+    def _run(self, input_text: str) -> str:
+        """Process input text synchronously."""
+        return f"Processed {input_text} synchronously"
+
+
+class AsyncTool(BaseTool):
+    """Test implementation with an asynchronous _run method"""
+    name: str = "async_tool"
+    description: str = "An asynchronous tool for testing"
+
+    async def _run(self, input_text: str) -> str:
+        """Process input text asynchronously."""
+        await asyncio.sleep(0.1)  # Simulate async operation
+        return f"Processed {input_text} asynchronously"
+
+
+class BaseToolCoroutineTest(unittest.TestCase):
+    def test_sync_run_returns_direct_result(self):
+        """Test that _run in a synchronous tool returns a direct result, not a coroutine."""
+        tool = SyncTool()
+        
+        # Call _run directly
+        result = tool._run(input_text="hello")
+        
+        # Verify it's not a coroutine
+        self.assertFalse(asyncio.iscoroutine(result))
+        self.assertEqual(result, "Processed hello synchronously")
+        
+        # Verify that run method returns the expected result
+        run_result = tool.run(input_text="hello")
+        self.assertEqual(run_result, "Processed hello synchronously")
+    
+    def test_async_run_returns_coroutine(self):
+        """Test that _run in an asynchronous tool returns a coroutine object."""
+        tool = AsyncTool()
+        
+        # Call _run directly
+        result = tool._run(input_text="hello")
+        
+        # Verify it's a coroutine
+        self.assertTrue(asyncio.iscoroutine(result))
+        
+        # Cancel the coroutine to avoid warnings
+        result.close()
+    
+
+class BaseToolCoroutineTest(unittest.TestCase):
+    def test_run_calls_asyncio_run_for_async_tools(self):
+        """Test that asyncio.run is called when using async tools."""
+        # Test with async tool
+        async_tool = AsyncTool()
+        
+        # Patch asyncio.run for this specific test
+        with patch('asyncio.run') as mock_run:
+            # Setup the mock to pass through to the real implementation
+            mock_run.return_value = "Processed test asynchronously"
+            
+            # Call the tool's run method
+            async_result = async_tool.run(input_text="test")
+            
+            # Verify asyncio.run was called exactly once
+            mock_run.assert_called_once()
+            
+            # Verify the result is correct
+            self.assertEqual(async_result, "Processed test asynchronously")
+    
+    def test_run_does_not_call_asyncio_run_for_sync_tools(self):
+        """Test that asyncio.run is NOT called when using sync tools."""
+        # Test with sync tool
+        sync_tool = SyncTool()
+        
+        # Patch asyncio.run for this specific test
+        with patch('asyncio.run') as mock_run:
+            # Setup the mock to pass through to the real implementation
+
+            # Call the tool's run method
+            sync_result = sync_tool.run(input_text="test")
+            
+            # Verify asyncio.run was NOT called
+            mock_run.assert_not_called()
+            
+            # Verify the result is correct
+            self.assertEqual(sync_result, "Processed test synchronously")

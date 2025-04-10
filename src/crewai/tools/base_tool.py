@@ -1,3 +1,4 @@
+import asyncio
 import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
@@ -65,7 +66,13 @@ class BaseTool(BaseModel, ABC):
         **kwargs: Any,
     ) -> Any:
         print(f"Using Tool: {self.name}")
-        return self._run(*args, **kwargs)
+        result = self._run(*args, **kwargs)
+
+        # If _run is async, we safely run it
+        if asyncio.iscoroutine(result):
+            return asyncio.run(result)
+
+        return result
 
     @abstractmethod
     def _run(
