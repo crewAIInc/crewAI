@@ -12,6 +12,9 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,9 +24,8 @@ jobs:
         with:
           enable-cache: true
 
-
-      - name: Set up Python
-        run: uv python install 3.12.8
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
         run: uv sync --dev --all-extras
