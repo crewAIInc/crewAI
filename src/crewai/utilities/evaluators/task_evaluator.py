@@ -65,13 +65,18 @@ class TaskEvaluator:
             instructions = f"{instructions}\n\nReturn only valid JSON with the following schema:\n```json\n{model_schema}\n```"
 
         converter = Converter(
+            agent=self.original_agent, # Pass agent
             llm=self.llm,
             text=evaluation_query,
             model=TaskEvaluation,
             instructions=instructions,
         )
 
-        return converter.to_pydantic()
+        result = converter.to_pydantic()
+        if isinstance(result, TaskEvaluation):
+            return result
+        else:
+            raise TypeError(f"Expected TaskEvaluation, got {type(result)}")
 
     def evaluate_training_data(
         self, training_data: dict, agent_id: str
@@ -134,6 +139,7 @@ class TaskEvaluator:
             instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
         converter = Converter(
+            agent=self.original_agent, # Pass agent
             llm=self.llm,
             text=evaluation_query,
             model=TrainingTaskEvaluation,
@@ -141,4 +147,7 @@ class TaskEvaluator:
         )
 
         pydantic_result = converter.to_pydantic()
-        return pydantic_result
+        if isinstance(pydantic_result, TrainingTaskEvaluation):
+            return pydantic_result
+        else:
+            raise TypeError(f"Expected TrainingTaskEvaluation, got {type(pydantic_result)}")

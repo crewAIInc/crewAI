@@ -81,13 +81,13 @@ class BaseAgentTool(BaseTool):
             available_agents = [agent.role for agent in self.agents]
             logger.debug(f"Available agents: {available_agents}")
 
-            agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
+            matching_agents = [
                 available_agent
                 for available_agent in self.agents
                 if self.sanitize_agent_name(available_agent.role) == sanitized_name
             ]
             logger.debug(
-                f"Found {len(agent)} matching agents for role '{sanitized_name}'"
+                f"Found {len(matching_agents)} matching agents for role '{sanitized_name}'"
             )
         except (AttributeError, ValueError) as e:
             # Handle specific exceptions that might occur during role name processing
@@ -101,7 +101,7 @@ class BaseAgentTool(BaseTool):
                 error=str(e),
             )
 
-        if not agent:
+        if not matching_agents:
             # No matching agent found after sanitization
             return self.i18n.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
@@ -113,7 +113,7 @@ class BaseAgentTool(BaseTool):
                 error=f"No agent found with role '{sanitized_name}'",
             )
 
-        agent = agent[0]
+        agent: BaseAgent = matching_agents[0]
         try:
             task_with_assigned_agent = Task(
                 description=task,

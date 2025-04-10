@@ -7,6 +7,19 @@ from crewai.utilities import I18N
 
 i18n = I18N()
 
+def _get_add_image_tool_name() -> str:
+    """Safely get the tool name from i18n."""
+    tool_info = i18n.tools("add_image")
+    if isinstance(tool_info, dict):
+        return tool_info.get("name", "Add Image")
+    return "Add Image" # Default name if not a dict
+
+def _get_add_image_tool_description() -> str:
+    """Safely get the tool description from i18n."""
+    tool_info = i18n.tools("add_image")
+    if isinstance(tool_info, dict):
+        return tool_info.get("description", "Tool for adding images to the content")
+    return "Tool for adding images to the content" # Default description if not a dict
 
 class AddImageToolSchema(BaseModel):
     image_url: str = Field(..., description="The URL or path of the image to add")
@@ -18,10 +31,8 @@ class AddImageToolSchema(BaseModel):
 class AddImageTool(BaseTool):
     """Tool for adding images to the content"""
 
-    name: str = Field(default_factory=lambda: i18n.tools("add_image")["name"])  # type: ignore
-    description: str = Field(
-        default_factory=lambda: i18n.tools("add_image")["description"]
-    )  # type: ignore
+    name: str = Field(default_factory=_get_add_image_tool_name)
+    description: str = Field(default_factory=_get_add_image_tool_description)
     args_schema: type[BaseModel] = AddImageToolSchema
 
     def _run(
