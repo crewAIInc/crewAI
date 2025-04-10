@@ -247,7 +247,7 @@ class ToolUsage:
 
             if self.tools_handler:
                 should_cache = True
-                if (
+                if available_tool is not None and (
                     hasattr(available_tool, "cache_function")
                     and available_tool.cache_function
                 ):
@@ -255,8 +255,9 @@ class ToolUsage:
                         calling.arguments, result
                     )
 
+                output_result = "" if result is None else result
                 self.tools_handler.on_tool_use(
-                    calling=calling, output=result, should_cache=should_cache
+                    calling=calling, output=output_result, should_cache=should_cache
                 )
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
