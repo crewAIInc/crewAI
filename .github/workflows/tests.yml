@@ -11,6 +11,10 @@ env:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+      fail-fast: false # Allow all matrix jobs to finish even if one fails
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -22,8 +26,8 @@ jobs:
           enable-cache: true
 
 
-      - name: Set up Python
-        run: uv python install 3.12.8
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
         run: uv sync --dev --all-extras
