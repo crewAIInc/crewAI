@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Self
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -38,6 +38,6 @@ class Memory(BaseModel):
             query=query, limit=limit, score_threshold=score_threshold
         )
 
-    def set_crew(self, crew: Any) -> Self:
+    def set_crew(self, crew: Any) -> "Memory":
         self.crew = crew
         return self
