@@ -54,7 +54,7 @@ def test_agent_with_deterministic_fingerprint():
         role="Researcher",
         goal="Research quantum computing",
         backstory="Expert in quantum physics",
-        security_config=security_config
+        security_config=security_config,
     )
 
     # Create another agent with the same security config
@@ -62,7 +62,7 @@ def test_agent_with_deterministic_fingerprint():
         role="Completely different role",
         goal="Different goal",
         backstory="Different backstory",
-        security_config=security_config
+        security_config=security_config,
     )
 
     # Both agents should have the same fingerprint UUID
@@ -84,9 +84,7 @@ def test_task_with_deterministic_fingerprint():
 
     # Create an agent first (required for tasks)
     agent = Agent(
-        role="Assistant",
-        goal="Help with tasks",
-        backstory="Helpful AI assistant"
+        role="Assistant", goal="Help with tasks", backstory="Helpful AI assistant"
     )
 
     # Create a task with the deterministic fingerprint
@@ -94,7 +92,7 @@ def test_task_with_deterministic_fingerprint():
         description="Analyze data",
         expected_output="Data analysis report",
         agent=agent,
-        security_config=security_config
+        security_config=security_config,
     )
 
     # Create another task with the same security config
@@ -102,7 +100,7 @@ def test_task_with_deterministic_fingerprint():
         description="Different task description",
         expected_output="Different expected output",
         agent=agent,
-        security_config=security_config
+        security_config=security_config,
     )
 
     # Both tasks should have the same fingerprint UUID
@@ -119,36 +117,18 @@ def test_crew_with_deterministic_fingerprint():
 
     # Create agents for the crew
     agent1 = Agent(
-        role="Researcher",
-        goal="Research information",
-        backstory="Expert researcher"
+        role="Researcher", goal="Research information", backstory="Expert researcher"
     )
 
-    agent2 = Agent(
-        role="Writer",
-        goal="Write reports",
-        backstory="Expert writer"
-    )
+    agent2 = Agent(role="Writer", goal="Write reports", backstory="Expert writer")
 
     # Create a crew with the deterministic fingerprint
-    crew1 = Crew(
-        agents=[agent1, agent2],
-        tasks=[],
-        security_config=security_config
-    )
+    crew1 = Crew(agents=[agent1, agent2], tasks=[], security_config=security_config)
 
     # Create another crew with the same security config but different agents
-    agent3 = Agent(
-        role="Analyst",
-        goal="Analyze data",
-        backstory="Expert analyst"
-    )
+    agent3 = Agent(role="Analyst", goal="Analyze data", backstory="Expert analyst")
 
-    crew2 = Crew(
-        agents=[agent3],
-        tasks=[],
-        security_config=security_config
-    )
+    crew2 = Crew(agents=[agent3], tasks=[], security_config=security_config)
 
     # Both crews should have the same fingerprint UUID
     assert crew1.fingerprint.uuid_str == crew2.fingerprint.uuid_str
@@ -168,7 +148,7 @@ def test_recreating_components_with_same_seed():
         role="Researcher",
         goal="Research topic",
         backstory="Expert researcher",
-        security_config=security_config1
+        security_config=security_config1,
     )
 
     uuid_from_first_session = agent1.fingerprint.uuid_str
@@ -181,7 +161,7 @@ def test_recreating_components_with_same_seed():
         role="Researcher",
         goal="Research topic",
         backstory="Expert researcher",
-        security_config=security_config2
+        security_config=security_config2,
     )
 
     # Should have same UUID across sessions
@@ -209,7 +189,7 @@ def test_security_config_with_seed_string():
         role="Tester",
         goal="Test fingerprints",
         backstory="Expert tester",
-        security_config=security_config
+        security_config=security_config,
     )
 
     # Agent should have the same fingerprint UUID
@@ -236,7 +216,7 @@ def test_complex_component_hierarchy_with_deterministic_fingerprints():
         role="Complex Test Agent",
         goal="Test complex fingerprint scenarios",
         backstory="Expert in testing",
-        security_config=agent_config
+        security_config=agent_config,
     )
 
     # Create a task
@@ -244,15 +224,11 @@ def test_complex_component_hierarchy_with_deterministic_fingerprints():
         description="Test complex fingerprinting",
         expected_output="Verification of fingerprint stability",
         agent=agent,
-        security_config=task_config
+        security_config=task_config,
     )
 
     # Create a crew
-    crew = Crew(
-        agents=[agent],
-        tasks=[task],
-        security_config=crew_config
-    )
+    crew = Crew(agents=[agent], tasks=[task], security_config=crew_config)
 
     # Each component should have its own deterministic fingerprint
     assert agent.fingerprint.uuid_str == agent_fingerprint.uuid_str

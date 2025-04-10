@@ -1,4 +1,3 @@
-
 def get_legend_items(colors):
     return [
         {"label": "Start Method", "color": colors["start"]},

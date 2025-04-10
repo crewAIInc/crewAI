@@ -170,9 +170,13 @@ def CrewBase(cls: T) -> T:
 
             if function_calling_llm := agent_info.get("function_calling_llm"):
                 try:
-                    self.agents_config[agent_name]["function_calling_llm"] = llms[function_calling_llm]()
+                    self.agents_config[agent_name]["function_calling_llm"] = llms[
+                        function_calling_llm
+                    ]()
                 except KeyError:
-                    self.agents_config[agent_name]["function_calling_llm"] = function_calling_llm
+                    self.agents_config[agent_name]["function_calling_llm"] = (
+                        function_calling_llm
+                    )
 
             if step_callback := agent_info.get("step_callback"):
                 self.agents_config[agent_name]["step_callback"] = callbacks[

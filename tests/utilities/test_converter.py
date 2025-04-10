@@ -197,6 +197,101 @@ def test_convert_with_instructions_success(
     assert output.age == 50
 
 
+@patch("crewai.utilities.converter.get_conversion_instructions")
+@patch("crewai.utilities.converter.create_converter")
+def test_convert_with_instructions_respects_use_system_prompt_false(
+    mock_create_converter, mock_get_instructions, mock_agent
+):
+    """
+    Test that convert_with_instructions does not use a system prompt
+    when agent.use_system_prompt is False and the LLM doesn't support function calling.
+    """
+    mock_agent.use_system_prompt = False
+    mock_llm = MagicMock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_agent.llm = mock_llm
+    mock_agent.function_calling_llm = None  # Ensure fallback to agent.llm
+
+    mock_get_instructions.return_value = "Test Instructions"
+
+    mock_converter_instance = MagicMock(spec=Converter)
+    mock_converter_instance.agent = mock_agent  # Set the agent on the mock converter
+    mock_converter_instance.llm = mock_llm
+    mock_converter_instance.instructions = "Test Instructions"
+    mock_converter_instance.text = "Some text"
+    mock_converter_instance.model = SimpleModel
+
+    converter = Converter(
+        agent=mock_agent,
+        llm=mock_llm,
+        text="Some text",
+        model=SimpleModel,
+        instructions="Test Instructions",
+    )
+    mock_create_converter.return_value = (
+        converter  # This instance will be used by convert_with_instructions
+    )
+
+    converter.llm.call = MagicMock(return_value='{"name": "Mock Name", "age": 99}')
+
+    convert_with_instructions("Some text", SimpleModel, False, mock_agent)
+
+    converter.llm.call.assert_called_once()
+    call_args = converter.llm.call.call_args[0][0]  # Get the 'messages' list argument
+
+    assert not any(msg.get("role") == "system" for msg in call_args)
+    user_message = next((msg for msg in call_args if msg.get("role") == "user"), None)
+    assert user_message is not None
+    assert "Test Instructions" in user_message["content"]
+    assert "Some text" in user_message["content"]
+    assert user_message["content"].startswith("Test Instructions\n\n")
+
+
+@patch("crewai.utilities.converter.get_conversion_instructions")
+@patch("crewai.utilities.converter.create_converter")
+def test_convert_with_instructions_respects_use_system_prompt_true(
+    mock_create_converter, mock_get_instructions, mock_agent
+):
+    """
+    Test that convert_with_instructions uses a system prompt
+    when agent.use_system_prompt is True and the LLM doesn't support function calling.
+    """
+    mock_agent.use_system_prompt = True  # Explicitly True
+    mock_llm = MagicMock()
+    mock_llm.supports_function_calling.return_value = False
+    mock_agent.llm = mock_llm
+    mock_agent.function_calling_llm = None
+
+    mock_get_instructions.return_value = "Test Instructions"
+
+    converter = Converter(
+        agent=mock_agent,
+        llm=mock_llm,
+        text="Some text",
+        model=SimpleModel,
+        instructions="Test Instructions",
+    )
+    mock_create_converter.return_value = (
+        converter  # This instance will be used by convert_with_instructions
+    )
+
+    converter.llm.call = MagicMock(return_value='{"name": "Mock Name", "age": 99}')
+
+    convert_with_instructions("Some text", SimpleModel, False, mock_agent)
+
+    converter.llm.call.assert_called_once()
+    call_args = converter.llm.call.call_args[0][0]
+
+    system_message = next(
+        (msg for msg in call_args if msg.get("role") == "system"), None
+    )
+    assert system_message is not None
+    assert system_message["content"] == "Test Instructions"
+    user_message = next((msg for msg in call_args if msg.get("role") == "user"), None)
+    assert user_message is not None
+    assert user_message["content"] == "Some text"
+
+
 @patch("crewai.utilities.converter.create_converter")
 @patch("crewai.utilities.converter.get_conversion_instructions")
 def test_convert_with_instructions_failure(
@@ -334,7 +429,10 @@ def test_convert_with_instructions():
     sample_text = "Name: Alice, Age: 30"
 
     instructions = get_conversion_instructions(SimpleModel, llm)
+    mock_agent = Mock()  # Add mock agent if not available
+    mock_agent.use_system_prompt = True  # Default or set as needed
     converter = Converter(
+        agent=mock_agent,  # Add agent argument
         llm=llm,
         text=sample_text,
         model=SimpleModel,
@@ -362,7 +460,10 @@ def test_converter_with_llama3_2_model():
     llm = LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434")
     sample_text = "Name: Alice Llama, Age: 30"
     instructions = get_conversion_instructions(SimpleModel, llm)
+    mock_agent = Mock()  # Add mock agent if not available
+    mock_agent.use_system_prompt = True  # Default or set as needed
     converter = Converter(
+        agent=mock_agent,  # Add agent argument
         llm=llm,
         text=sample_text,
         model=SimpleModel,
@@ -380,7 +481,10 @@ def test_converter_with_llama3_1_model():
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     sample_text = "Name: Alice Llama, Age: 30"
     instructions = get_conversion_instructions(SimpleModel, llm)
+    mock_agent = Mock()  # Add mock agent if not available
+    mock_agent.use_system_prompt = True  # Default or set as needed
     converter = Converter(
+        agent=mock_agent,  # Add agent argument
         llm=llm,
         text=sample_text,
         model=SimpleModel,
@@ -405,7 +509,11 @@ def test_converter_with_nested_model():
     sample_text = "Name: John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"
 
     instructions = get_conversion_instructions(Person, llm)
+    mock_agent = Mock()
+    mock_agent.use_system_prompt = True
+
     converter = Converter(
+        agent=mock_agent,
         llm=llm,
         text=sample_text,
         model=Person,
@@ -431,7 +539,10 @@ def test_converter_error_handling():
     sample_text = "Name: Alice, Age: 30"
 
     instructions = get_conversion_instructions(SimpleModel, llm)
+    mock_agent = Mock()  # Add mock agent if not available
+    mock_agent.use_system_prompt = True  # Default or set as needed
     converter = Converter(
+        agent=mock_agent,  # Add agent argument
         llm=llm,
         text=sample_text,
         model=SimpleModel,
@@ -456,7 +567,11 @@ def test_converter_retry_logic():
     sample_text = "Name: Retry Alice, Age: 30"
 
     instructions = get_conversion_instructions(SimpleModel, llm)
+    mock_agent = Mock()
+    mock_agent.use_system_prompt = True
+
     converter = Converter(
+        agent=mock_agent,
         llm=llm,
         text=sample_text,
         model=SimpleModel,
@@ -485,7 +600,11 @@ def test_converter_with_optional_fields():
     sample_text = "Name: Bob, age: None"
 
     instructions = get_conversion_instructions(OptionalModel, llm)
+    mock_agent = Mock()
+    mock_agent.use_system_prompt = True
+
     converter = Converter(
+        agent=mock_agent,
         llm=llm,
         text=sample_text,
         model=OptionalModel,
@@ -510,7 +629,11 @@ def test_converter_with_list_field():
     sample_text = "Items: 1, 2, 3"
 
     instructions = get_conversion_instructions(ListModel, llm)
+    mock_agent = Mock()
+    mock_agent.use_system_prompt = True
+
     converter = Converter(
+        agent=mock_agent,
         llm=llm,
         text=sample_text,
         model=ListModel,
@@ -543,7 +666,11 @@ def test_converter_with_enum():
     sample_text = "Name: Alice, Color: Red"
 
     instructions = get_conversion_instructions(EnumModel, llm)
+    mock_agent = Mock()
+    mock_agent.use_system_prompt = True
+
     converter = Converter(
+        agent=mock_agent,
         llm=llm,
         text=sample_text,
         model=EnumModel,
@@ -565,7 +692,11 @@ def test_converter_with_ambiguous_input():
     sample_text = "Charlie is thirty years old"
 
     instructions = get_conversion_instructions(SimpleModel, llm)
+    mock_agent = Mock()
+    mock_agent.use_system_prompt = True
+
     converter = Converter(
+        agent=mock_agent,
         llm=llm,
         text=sample_text,
         model=SimpleModel,
@@ -586,7 +717,11 @@ def test_converter_with_function_calling():
     instructor = Mock()
     instructor.to_pydantic.return_value = SimpleModel(name="Eve", age=35)
 
+    mock_agent = Mock()
+    mock_agent.use_system_prompt = True
+
     converter = Converter(
+        agent=mock_agent,
         llm=llm,
         text="Name: Eve, Age: 35",
         model=SimpleModel,

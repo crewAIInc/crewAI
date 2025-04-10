@@ -6,6 +6,7 @@ from crewai.flow.persistence import persist
 
 class PoemState(FlowState):
     """Test state model with default values that should be overridden."""
+
     sentence_count: int = 1000  # Default that should be overridden
     has_set_count: bool = False  # Track whether we've set the count
     poem_type: str = ""
@@ -46,11 +47,13 @@ def test_default_value_override():
 
     # Fourth run - explicit override should work
     flow3 = PoemFlow()
-    flow3.kickoff(inputs={
-        "id": original_uuid,
-        "has_set_count": True,
-        "sentence_count": 5,  # Override persisted value
-    })
+    flow3.kickoff(
+        inputs={
+            "id": original_uuid,
+            "has_set_count": True,
+            "sentence_count": 5,  # Override persisted value
+        }
+    )
     assert flow3.state.sentence_count == 5  # Should use override value
 
     # Third run - should not load sentence_count=2 instead of default 1000
@@ -96,17 +99,12 @@ def test_multi_step_default_override():
 
     # Second run - should load persisted state and update poem type
     flow2 = MultiStepPoemFlow()
-    flow2.kickoff(inputs={
-        "id": original_uuid,
-        "sentence_count": 5
-    })
+    flow2.kickoff(inputs={"id": original_uuid, "sentence_count": 5})
     assert flow2.state.sentence_count == 5
     assert flow2.state.poem_type == "limerick"
 
     # Third run - new flow without persisted state should use defaults
     flow3 = MultiStepPoemFlow()
-    flow3.kickoff(inputs={
-        "id": original_uuid
-    })
+    flow3.kickoff(inputs={"id": original_uuid})
     assert flow3.state.sentence_count == 5
     assert flow3.state.poem_type == "limerick"

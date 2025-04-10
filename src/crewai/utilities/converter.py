@@ -2,7 +2,7 @@ import json
 import re
 from typing import Any, Optional, Type, Union, get_args, get_origin
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
 from crewai.utilities.printer import Printer
@@ -20,18 +20,27 @@ class ConverterError(Exception):
 class Converter(OutputConverter):
     """Class that converts text into either pydantic or json."""
 
+    agent: Any = Field(description="The agent instance associated with this converter.")
+
     def to_pydantic(self, current_attempt=1) -> BaseModel:
         """Convert text to pydantic."""
         try:
             if self.llm.supports_function_calling():
                 result = self._create_instructor().to_pydantic()
             else:
-                response = self.llm.call(
-                    [
-                        {"role": "system", "content": self.instructions},
-                        {"role": "user", "content": self.text},
-                    ]
-                )
+                messages = []
+                if self.agent and getattr(self.agent, "use_system_prompt", True):
+                    messages.append({"role": "system", "content": self.instructions})
+                    messages.append({"role": "user", "content": self.text})
+                else:
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": f"{self.instructions}\n\n{self.text}",
+                        }
+                    )
+
+                response = self.llm.call(messages)  # Assign the result to 'response'
                 try:
                     # Try to directly validate the response JSON
                     result = self.model.model_validate_json(response)
@@ -74,14 +83,20 @@ class Converter(OutputConverter):
             if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
             else:
-                return json.dumps(
-                    self.llm.call(
-                        [
-                            {"role": "system", "content": self.instructions},
-                            {"role": "user", "content": self.text},
-                        ]
+                messages = []
+                if self.agent and getattr(self.agent, "use_system_prompt", True):
+                    messages.append({"role": "system", "content": self.instructions})
+                    messages.append({"role": "user", "content": self.text})
+                else:
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": f"{self.instructions}\n\n{self.text}",
+                        }
                     )
-                )
+
+                llm_result = self.llm.call(messages)
+                return json.dumps(llm_result)
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
@@ -239,11 +254,11 @@ def create_converter(
 ) -> Converter:
     if agent and not converter_cls:
         if hasattr(agent, "get_output_converter"):
-            converter = agent.get_output_converter(*args, **kwargs)
+            converter = agent.get_output_converter(agent=agent, *args, **kwargs)
         else:
             raise AttributeError("Agent does not have a 'get_output_converter' method")
     elif converter_cls:
-        converter = converter_cls(*args, **kwargs)
+        converter = converter_cls(agent=agent, *args, **kwargs)
     else:
         raise ValueError("Either agent or converter_cls must be provided")
 

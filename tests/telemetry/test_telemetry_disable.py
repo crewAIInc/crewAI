@@ -6,14 +6,17 @@ import pytest
 from crewai.telemetry import Telemetry
 
 
-@pytest.mark.parametrize("env_var,value,expected_ready", [
-    ("OTEL_SDK_DISABLED", "true", False),
-    ("OTEL_SDK_DISABLED", "TRUE", False),
-    ("CREWAI_DISABLE_TELEMETRY", "true", False),
-    ("CREWAI_DISABLE_TELEMETRY", "TRUE", False),
-    ("OTEL_SDK_DISABLED", "false", True),
-    ("CREWAI_DISABLE_TELEMETRY", "false", True),
-])
+@pytest.mark.parametrize(
+    "env_var,value,expected_ready",
+    [
+        ("OTEL_SDK_DISABLED", "true", False),
+        ("OTEL_SDK_DISABLED", "TRUE", False),
+        ("CREWAI_DISABLE_TELEMETRY", "true", False),
+        ("CREWAI_DISABLE_TELEMETRY", "TRUE", False),
+        ("OTEL_SDK_DISABLED", "false", True),
+        ("CREWAI_DISABLE_TELEMETRY", "false", True),
+    ],
+)
 def test_telemetry_environment_variables(env_var, value, expected_ready):
     """Test telemetry state with different environment variable configurations."""
     with patch.dict(os.environ, {env_var: value}):

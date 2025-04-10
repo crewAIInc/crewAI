@@ -47,10 +47,7 @@ class BaseAgentTool(BaseTool):
         return coworker
 
     def _execute(
-        self,
-        agent_name: Optional[str],
-        task: str,
-        context: Optional[str] = None
+        self, agent_name: Optional[str], task: str, context: Optional[str] = None
     ) -> str:
         """
         Execute delegation to an agent with case-insensitive and whitespace-tolerant matching.
@@ -77,7 +74,9 @@ class BaseAgentTool(BaseTool):
             # when it should look like this:
             # {"task": "....", "coworker": "...."}
             sanitized_name = self.sanitize_agent_name(agent_name)
-            logger.debug(f"Sanitized agent name from '{agent_name}' to '{sanitized_name}'")
+            logger.debug(
+                f"Sanitized agent name from '{agent_name}' to '{sanitized_name}'"
+            )
 
             available_agents = [agent.role for agent in self.agents]
             logger.debug(f"Available agents: {available_agents}")
@@ -87,23 +86,31 @@ class BaseAgentTool(BaseTool):
                 for available_agent in self.agents
                 if self.sanitize_agent_name(available_agent.role) == sanitized_name
             ]
-            logger.debug(f"Found {len(agent)} matching agents for role '{sanitized_name}'")
+            logger.debug(
+                f"Found {len(agent)} matching agents for role '{sanitized_name}'"
+            )
         except (AttributeError, ValueError) as e:
             # Handle specific exceptions that might occur during role name processing
             return self.i18n.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
-                    [f"- {self.sanitize_agent_name(agent.role)}" for agent in self.agents]
+                    [
+                        f"- {self.sanitize_agent_name(agent.role)}"
+                        for agent in self.agents
+                    ]
                 ),
-                error=str(e)
+                error=str(e),
             )
 
         if not agent:
             # No matching agent found after sanitization
             return self.i18n.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
-                    [f"- {self.sanitize_agent_name(agent.role)}" for agent in self.agents]
+                    [
+                        f"- {self.sanitize_agent_name(agent.role)}"
+                        for agent in self.agents
+                    ]
                 ),
-                error=f"No agent found with role '{sanitized_name}'"
+                error=f"No agent found with role '{sanitized_name}'",
             )
 
         agent = agent[0]
@@ -114,11 +121,12 @@ class BaseAgentTool(BaseTool):
                 expected_output=agent.i18n.slice("manager_request"),
                 i18n=agent.i18n,
             )
-            logger.debug(f"Created task for agent '{self.sanitize_agent_name(agent.role)}': {task}")
+            logger.debug(
+                f"Created task for agent '{self.sanitize_agent_name(agent.role)}': {task}"
+            )
             return agent.execute_task(task_with_assigned_agent, context)
         except Exception as e:
             # Handle task creation or execution errors
             return self.i18n.errors("agent_tool_execution_error").format(
-                agent_role=self.sanitize_agent_name(agent.role),
-                error=str(e)
+                agent_role=self.sanitize_agent_name(agent.role), error=str(e)
             )

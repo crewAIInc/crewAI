@@ -193,7 +193,6 @@ class Task(BaseModel):
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
-
                 return_annotation_args = get_args(return_annotation)
                 if not (
                     get_origin(return_annotation) is tuple
@@ -464,7 +463,9 @@ class Task(BaseModel):
                     )
                 )
                 self._save_file(content)
-            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output, task=self))
+            crewai_event_bus.emit(
+                self, TaskCompletedEvent(output=task_output, task=self)
+            )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()

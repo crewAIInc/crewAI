@@ -34,13 +34,13 @@ class FlowPlot:
         ValueError
             If flow object is invalid or missing required attributes.
         """
-        if not hasattr(flow, '_methods'):
+        if not hasattr(flow, "_methods"):
             raise ValueError("Invalid flow object: missing '_methods' attribute")
-        if not hasattr(flow, '_listeners'):
+        if not hasattr(flow, "_listeners"):
             raise ValueError("Invalid flow object: missing '_listeners' attribute")
-        if not hasattr(flow, '_start_methods'):
+        if not hasattr(flow, "_start_methods"):
             raise ValueError("Invalid flow object: missing '_start_methods' attribute")
-            
+
         self.flow = flow
         self.colors = COLORS
         self.node_styles = NODE_STYLES
@@ -65,7 +65,7 @@ class FlowPlot:
         """
         if not filename or not isinstance(filename, str):
             raise ValueError("Filename must be a non-empty string")
-            
+
         try:
             # Initialize network
             net = Network(
@@ -121,7 +121,9 @@ class FlowPlot:
                 network_html = net.generate_html()
                 final_html_content = self._generate_final_html(network_html)
             except Exception as e:
-                raise RuntimeError(f"Failed to generate network visualization: {str(e)}")
+                raise RuntimeError(
+                    f"Failed to generate network visualization: {str(e)}"
+                )
 
             # Save the final HTML content to the file
             try:
@@ -129,7 +131,9 @@ class FlowPlot:
                     f.write(final_html_content)
                 print(f"Plot saved as {filename}.html")
             except IOError as e:
-                raise IOError(f"Failed to save flow visualization to {filename}.html: {str(e)}")
+                raise IOError(
+                    f"Failed to save flow visualization to {filename}.html: {str(e)}"
+                )
 
         except (ValueError, RuntimeError, IOError) as e:
             raise e
@@ -165,7 +169,9 @@ class FlowPlot:
         try:
             # Extract just the body content from the generated HTML
             current_dir = os.path.dirname(__file__)
-            template_path = safe_path_join("assets", "crewai_flow_visual_template.html", root=current_dir)
+            template_path = safe_path_join(
+                "assets", "crewai_flow_visual_template.html", root=current_dir
+            )
             logo_path = safe_path_join("assets", "crewai_logo.svg", root=current_dir)
 
             if not os.path.exists(template_path):
@@ -197,6 +203,7 @@ class FlowPlot:
             lib_folder = safe_path_join("lib", root=os.getcwd())
             if os.path.exists(lib_folder) and os.path.isdir(lib_folder):
                 import shutil
+
                 shutil.rmtree(lib_folder)
         except ValueError as e:
             print(f"Error validating lib folder path: {e}")

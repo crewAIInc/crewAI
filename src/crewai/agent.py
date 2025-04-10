@@ -367,8 +367,12 @@ class Agent(BaseAgent):
                 "info", "Coding tools not available. Install crewai_tools. "
             )
 
-    def get_output_converter(self, llm, text, model, instructions):
-        return Converter(llm=llm, text=text, model=model, instructions=instructions)
+    def get_output_converter(
+        self, agent, llm, text, model, instructions
+    ):  # Add agent parameter
+        return Converter(
+            agent=agent, llm=llm, text=text, model=model, instructions=instructions
+        )
 
     def _training_handler(self, task_prompt: str) -> str:
         """Handle training data for the agent task prompt to improve output on Training."""

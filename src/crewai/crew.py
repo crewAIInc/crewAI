@@ -297,9 +297,7 @@ class Crew(BaseModel):
             )
             self._external_memory = (
                 # External memory doesn’t support a default value since it was designed to be managed entirely externally
-                self.external_memory.set_crew(self)
-                if self.external_memory
-                else None
+                self.external_memory.set_crew(self) if self.external_memory else None
             )
             if (
                 self.memory_config

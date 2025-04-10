@@ -18,9 +18,7 @@ class KickoffTaskOutputsSQLiteStorage:
     An updated SQLite storage class for kickoff task outputs storage.
     """
 
-    def __init__(
-        self, db_path: Optional[str] = None
-    ) -> None:
+    def __init__(self, db_path: Optional[str] = None) -> None:
         if db_path is None:
             # Get the parent directory of the default db path and create our db file there
             db_path = str(Path(db_storage_path()) / "latest_kickoff_task_outputs.db")
@@ -146,7 +144,9 @@ class KickoffTaskOutputsSQLiteStorage:
                 conn.commit()
 
                 if cursor.rowcount == 0:
-                    logger.warning(f"No row found with task_index {task_index}. No update performed.")
+                    logger.warning(
+                        f"No row found with task_index {task_index}. No update performed."
+                    )
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.UPDATE_ERROR, e)
             logger.error(error_msg)

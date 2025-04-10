@@ -18,7 +18,7 @@ def test_multimodal_agent_with_image_url():
     llm = LLM(
         model="openai/gpt-4o",  # model with vision capabilities
         api_key=OPENAI_API_KEY,
-        temperature=0.7
+        temperature=0.7,
     )
 
     expert_analyst = Agent(
@@ -28,7 +28,7 @@ def test_multimodal_agent_with_image_url():
         llm=llm,
         verbose=True,
         allow_delegation=False,
-        multimodal=True
+        multimodal=True,
     )
 
     inspection_task = Task(
@@ -40,7 +40,7 @@ def test_multimodal_agent_with_image_url():
         Provide a detailed report highlighting any issues found.
         """,
         expected_output="A detailed report highlighting any issues found",
-        agent=expert_analyst
+        agent=expert_analyst,
     )
 
     crew = Crew(agents=[expert_analyst], tasks=[inspection_task])

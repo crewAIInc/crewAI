@@ -170,7 +170,7 @@ def test_fingerprint_from_dict():
     fingerprint_dict = {
         "uuid_str": uuid_str,
         "created_at": created_at_iso,
-        "metadata": metadata
+        "metadata": metadata,
     }
 
     fingerprint = Fingerprint.from_dict(fingerprint_dict)
@@ -207,11 +207,7 @@ def test_invalid_uuid_str():
     uuid_str = "not-a-valid-uuid"
     created_at = datetime.now().isoformat()
 
-    fingerprint_dict = {
-        "uuid_str": uuid_str,
-        "created_at": created_at,
-        "metadata": {}
-    }
+    fingerprint_dict = {"uuid_str": uuid_str, "created_at": created_at, "metadata": {}}
 
     # The Fingerprint.from_dict method accepts even invalid UUIDs
     # This seems to be the current behavior
@@ -243,7 +239,7 @@ def test_fingerprint_metadata_mutation():
     expected_metadata = {
         "version": "1.0",
         "status": "published",
-        "author": "Test Author"
+        "author": "Test Author",
     }
     assert fingerprint.metadata == expected_metadata
 

@@ -15,7 +15,7 @@ def test_agent_with_security_config():
         role="Tester",
         goal="Test fingerprinting",
         backstory="Testing fingerprinting",
-        security_config=security_config
+        security_config=security_config,
     )
 
     assert agent.security_config is not None
@@ -28,9 +28,7 @@ def test_agent_fingerprint_property():
     """Test the fingerprint property on Agent."""
     # Create agent without security_config
     agent = Agent(
-        role="Tester",
-        goal="Test fingerprinting",
-        backstory="Testing fingerprinting"
+        role="Tester", goal="Test fingerprinting", backstory="Testing fingerprinting"
     )
 
     # Fingerprint should be automatically generated
@@ -45,21 +43,14 @@ def test_crew_with_security_config():
     security_config = SecurityConfig()
 
     agent1 = Agent(
-        role="Tester1",
-        goal="Test fingerprinting",
-        backstory="Testing fingerprinting"
+        role="Tester1", goal="Test fingerprinting", backstory="Testing fingerprinting"
     )
 
     agent2 = Agent(
-        role="Tester2",
-        goal="Test fingerprinting",
-        backstory="Testing fingerprinting"
+        role="Tester2", goal="Test fingerprinting", backstory="Testing fingerprinting"
     )
 
-    crew = Crew(
-        agents=[agent1, agent2],
-        security_config=security_config
-    )
+    crew = Crew(agents=[agent1, agent2], security_config=security_config)
 
     assert crew.security_config is not None
     assert crew.security_config == security_config
@@ -71,15 +62,11 @@ def test_crew_fingerprint_property():
     """Test the fingerprint property on Crew."""
     # Create crew without security_config
     agent1 = Agent(
-        role="Tester1",
-        goal="Test fingerprinting",
-        backstory="Testing fingerprinting"
+        role="Tester1", goal="Test fingerprinting", backstory="Testing fingerprinting"
     )
 
     agent2 = Agent(
-        role="Tester2",
-        goal="Test fingerprinting",
-        backstory="Testing fingerprinting"
+        role="Tester2", goal="Test fingerprinting", backstory="Testing fingerprinting"
     )
 
     crew = Crew(agents=[agent1, agent2])
@@ -96,16 +83,14 @@ def test_task_with_security_config():
     security_config = SecurityConfig()
 
     agent = Agent(
-        role="Tester",
-        goal="Test fingerprinting",
-        backstory="Testing fingerprinting"
+        role="Tester", goal="Test fingerprinting", backstory="Testing fingerprinting"
     )
 
     task = Task(
         description="Test task",
         expected_output="Testing output",
         agent=agent,
-        security_config=security_config
+        security_config=security_config,
     )
 
     assert task.security_config is not None
@@ -118,16 +103,10 @@ def test_task_fingerprint_property():
     """Test the fingerprint property on Task."""
     # Create task without security_config
     agent = Agent(
-        role="Tester",
-        goal="Test fingerprinting",
-        backstory="Testing fingerprinting"
+        role="Tester", goal="Test fingerprinting", backstory="Testing fingerprinting"
     )
 
-    task = Task(
-        description="Test task",
-        expected_output="Testing output",
-        agent=agent
-    )
+    task = Task(description="Test task", expected_output="Testing output", agent=agent)
 
     # Fingerprint should be automatically generated
     assert task.fingerprint is not None
@@ -139,33 +118,20 @@ def test_end_to_end_fingerprinting():
     """Test end-to-end fingerprinting across Agent, Crew, and Task."""
     # Create components with auto-generated fingerprints
     agent1 = Agent(
-        role="Researcher",
-        goal="Research information",
-        backstory="Expert researcher"
+        role="Researcher", goal="Research information", backstory="Expert researcher"
     )
 
-    agent2 = Agent(
-        role="Writer",
-        goal="Write content",
-        backstory="Expert writer"
-    )
+    agent2 = Agent(role="Writer", goal="Write content", backstory="Expert writer")
 
     task1 = Task(
-        description="Research topic",
-        expected_output="Research findings",
-        agent=agent1
+        description="Research topic", expected_output="Research findings", agent=agent1
     )
 
     task2 = Task(
-        description="Write article",
-        expected_output="Written article",
-        agent=agent2
+        description="Write article", expected_output="Written article", agent=agent2
     )
 
-    crew = Crew(
-        agents=[agent1, agent2],
-        tasks=[task1, task2]
-    )
+    crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
 
     # Verify all fingerprints were automatically generated
     assert agent1.fingerprint is not None
@@ -180,18 +146,18 @@ def test_end_to_end_fingerprinting():
         agent2.fingerprint.uuid_str,
         task1.fingerprint.uuid_str,
         task2.fingerprint.uuid_str,
-        crew.fingerprint.uuid_str
+        crew.fingerprint.uuid_str,
     ]
-    assert len(fingerprints) == len(set(fingerprints)), "All fingerprints should be unique"
+    assert len(fingerprints) == len(
+        set(fingerprints)
+    ), "All fingerprints should be unique"
 
 
 def test_fingerprint_persistence():
     """Test that fingerprints persist and don't change."""
     # Create an agent and check its fingerprint
     agent = Agent(
-        role="Tester",
-        goal="Test fingerprinting",
-        backstory="Testing fingerprinting"
+        role="Tester", goal="Test fingerprinting", backstory="Testing fingerprinting"
     )
 
     # Get initial fingerprint
@@ -201,11 +167,7 @@ def test_fingerprint_persistence():
     assert agent.fingerprint.uuid_str == initial_fingerprint
 
     # Create a task with the agent
-    task = Task(
-        description="Test task",
-        expected_output="Testing output",
-        agent=agent
-    )
+    task = Task(description="Test task", expected_output="Testing output", agent=agent)
 
     # Check that task has its own unique fingerprint
     assert task.fingerprint is not None
@@ -223,27 +185,25 @@ def test_shared_security_config_fingerprints():
         role="Researcher",
         goal="Research information",
         backstory="Expert researcher",
-        security_config=shared_security_config
+        security_config=shared_security_config,
     )
 
     agent2 = Agent(
         role="Writer",
         goal="Write content",
         backstory="Expert writer",
-        security_config=shared_security_config
+        security_config=shared_security_config,
     )
 
     task = Task(
         description="Write article",
         expected_output="Written article",
         agent=agent1,
-        security_config=shared_security_config
+        security_config=shared_security_config,
     )
 
     crew = Crew(
-        agents=[agent1, agent2],
-        tasks=[task],
-        security_config=shared_security_config
+        agents=[agent1, agent2], tasks=[task], security_config=shared_security_config
     )
 
     # Verify all components have the same fingerprint UUID
