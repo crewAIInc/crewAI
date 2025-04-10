@@ -7,8 +7,10 @@ from pydantic import BaseModel
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
+from crewai.utilities.events import (
+    LLMCallCompletedEvent,
+    LLMStreamChunkEvent,
+)
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 
@@ -304,6 +306,27 @@ def test_context_window_validation():
     assert "must be between 1024 and 2097152" in str(excinfo.value)
 
 
+@pytest.fixture
+def get_weather_tool_schema():
+    return {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather in a given location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state, e.g. San Francisco, CA",
+                    }
+                },
+                "required": ["location"],
+            },
+        },
+    }
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.fixture
 def anthropic_llm():
@@ -395,3 +418,117 @@ def test_deepseek_r1_with_open_router():
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
+
+
+def assert_event_count(
+    mock_emit,
+    expected_completed_tool_call: int = 0,
+    expected_stream_chunk: int = 0,
+    expected_completed_llm_call: int = 0,
+    expected_final_chunk_result: str = "",
+):
+    event_count = {
+        "completed_tool_call": 0,
+        "stream_chunk": 0,
+        "completed_llm_call": 0,
+    }
+    final_chunk_result = ""
+    for _call in mock_emit.call_args_list:
+        event = _call[1]["event"]
+
+        if (
+            isinstance(event, LLMCallCompletedEvent)
+            and event.call_type.value == "tool_call"
+        ):
+            event_count["completed_tool_call"] += 1
+        elif isinstance(event, LLMStreamChunkEvent):
+            event_count["stream_chunk"] += 1
+            final_chunk_result += event.chunk
+        elif (
+            isinstance(event, LLMCallCompletedEvent)
+            and event.call_type.value == "llm_call"
+        ):
+            event_count["completed_llm_call"] += 1
+        else:
+            continue
+
+    assert event_count["completed_tool_call"] == expected_completed_tool_call
+    assert event_count["stream_chunk"] == expected_stream_chunk
+    assert event_count["completed_llm_call"] == expected_completed_llm_call
+    assert final_chunk_result == expected_final_chunk_result
+
+
+@pytest.fixture
+def mock_emit() -> MagicMock:
+    from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus
+
+    with patch.object(CrewAIEventsBus, "emit") as mock_emit:
+        yield mock_emit
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
+    llm = LLM(model="openai/gpt-4o", stream=True)
+    response = llm.call(
+        messages=[
+            {"role": "user", "content": "What is the weather in New York?"},
+        ],
+        tools=[get_weather_tool_schema],
+        available_functions={
+            "get_weather": lambda location: f"The weather in {location} is sunny"
+        },
+    )
+    assert response == "The weather in New York, NY is sunny"
+
+    expected_final_chunk_result = (
+        '{"location":"New York, NY"}The weather in New York, NY is sunny'
+    )
+    assert_event_count(
+        mock_emit=mock_emit,
+        expected_completed_tool_call=1,
+        expected_stream_chunk=10,
+        expected_completed_llm_call=1,
+        expected_final_chunk_result=expected_final_chunk_result,
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_handle_streaming_tool_calls_no_available_functions(
+    get_weather_tool_schema, mock_emit
+):
+    llm = LLM(model="openai/gpt-4o", stream=True)
+    response = llm.call(
+        messages=[
+            {"role": "user", "content": "What is the weather in New York?"},
+        ],
+        tools=[get_weather_tool_schema],
+    )
+    assert response == ""
+
+    assert_event_count(
+        mock_emit=mock_emit,
+        expected_stream_chunk=9,
+        expected_completed_llm_call=1,
+        expected_final_chunk_result='{"location":"New York, NY"}',
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_handle_streaming_tool_calls_no_tools(mock_emit):
+    llm = LLM(model="openai/gpt-4o", stream=True)
+    response = llm.call(
+        messages=[
+            {"role": "user", "content": "What is the weather in New York?"},
+        ],
+    )
+    assert (
+        response
+        == "I'm unable to provide real-time information or current weather updates. For the latest weather information in New York, I recommend checking a reliable weather website or app, such as the National Weather Service, Weather.com, or a similar service."
+    )
+
+    assert_event_count(
+        mock_emit=mock_emit,
+        expected_stream_chunk=46,
+        expected_completed_llm_call=1,
+        expected_final_chunk_result=response,
+    )
