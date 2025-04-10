@@ -1,14 +1,14 @@
 import pytest
-from unittest.mock import patch, MagicMock
-from typing import List, Dict, Any, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+from unittest.mock import MagicMock, patch
 
-from crewai import Agent, Task, Crew
-from crewai.tools import BaseTool
+from crewai import Agent, Crew, Task
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.tools.tool_usage import ToolUsage
 from crewai.tasks.task_output import TaskOutput
+from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
-from crewai.tools.tool_calling import ToolCalling, InstructorToolCalling
+from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
+from crewai.tools.tool_usage import ToolUsage
 
 
 class TestCodeInterpreterTool(BaseTool):

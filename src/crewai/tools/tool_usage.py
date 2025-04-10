@@ -152,7 +152,7 @@ class ToolUsage:
     ) -> str:
         if self._check_tool_repeated_usage(calling=calling):
             try:
-                result = self._i18n.errors("task_repeated_usage").format(
+                repeated_result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
                 self._telemetry.tool_repeated_usage(
@@ -160,8 +160,8 @@ class ToolUsage:
                     tool_name=tool.name,
                     attempts=self._run_attempts,
                 )
-                result = self._format_result(result=result)
-                return result
+                repeated_result = self._format_result(result=repeated_result)
+                return repeated_result
 
             except Exception:
                 if self.task:
@@ -172,10 +172,12 @@ class ToolUsage:
         result: Optional[str] = None
 
         if self.tools_handler and self.tools_handler.cache:
-            result = self.tools_handler.cache.read(
+            cache_result = self.tools_handler.cache.read(
                 tool=calling.tool_name, input=calling.arguments
             )
-            from_cache = result is not None
+            if cache_result is not None:
+                result = cache_result
+                from_cache = True
 
         available_tool = next(
             (
@@ -276,12 +278,13 @@ class ToolUsage:
             result=result,
         )
 
-        if (
+        if available_tool is not None and (
             hasattr(available_tool, "result_as_answer")
             and available_tool.result_as_answer
         ):
             result_as_answer = available_tool.result_as_answer
-            data["result_as_answer"] = result_as_answer
+            if isinstance(result_as_answer, bool):
+                data["result_as_answer"] = result_as_answer
 
         if self.agent and hasattr(self.agent, "tools_results"):
             self.agent.tools_results.append(data)
