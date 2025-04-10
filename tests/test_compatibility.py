@@ -1,5 +1,6 @@
 import pytest
 
+
 def test_basic_import():
     """
     Tests that the crewai package can be imported without raising exceptions.
