@@ -46,3 +46,4 @@ class LLMStreamChunkEvent(BaseEvent):
 
     type: str = "llm_stream_chunk"
     chunk: str
+    tool_call: Optional[dict] = None
