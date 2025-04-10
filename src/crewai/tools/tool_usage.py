@@ -141,7 +141,8 @@ class ToolUsage:
                     self._printer.print(content=f"\n\n{error}\n", color="red")
                 return error
 
-        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
+        result = self._use(tool_string=tool_string, tool=tool, calling=calling)
+        return f"{result}"
 
     def _use(
         self,
@@ -149,7 +150,7 @@ class ToolUsage:
         tool: CrewStructuredTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:
-        if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
+        if self._check_tool_repeated_usage(calling=calling):
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
@@ -159,8 +160,8 @@ class ToolUsage:
                     tool_name=tool.name,
                     attempts=self._run_attempts,
                 )
-                result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
-                return result  # type: ignore # Fix the return type of this function
+                result = self._format_result(result=result)
+                return result
 
             except Exception:
                 if self.task:
@@ -168,12 +169,12 @@ class ToolUsage:
 
         started_at = time.time()
         from_cache = False
-        result = None  # type: ignore
+        result: Optional[str] = None
 
         if self.tools_handler and self.tools_handler.cache:
             result = self.tools_handler.cache.read(
                 tool=calling.tool_name, input=calling.arguments
-            )  # type: ignore
+            )
             from_cache = result is not None
 
         available_tool = next(
@@ -236,19 +237,19 @@ class ToolUsage:
                         self._printer.print(
                             content=f"\n\n{error_message}\n", color="red"
                         )
-                    return error  # type: ignore # No return value expected
+                    return error
 
                 if self.task:
                     self.task.increment_tools_errors()
-                return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
+                return self.use(calling=calling, tool_string=tool_string)
 
             if self.tools_handler:
                 should_cache = True
                 if (
                     hasattr(available_tool, "cache_function")
-                    and available_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+                    and available_tool.cache_function
                 ):
-                    should_cache = available_tool.cache_function(  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+                    should_cache = available_tool.cache_function(
                         calling.arguments, result
                     )
 
@@ -260,7 +261,7 @@ class ToolUsage:
             tool_name=tool.name,
             attempts=self._run_attempts,
         )
-        result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
+        result = self._format_result(result=result)
         data = {
             "result": result,
             "tool_name": tool.name,
@@ -277,10 +278,10 @@ class ToolUsage:
 
         if (
             hasattr(available_tool, "result_as_answer")
-            and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+            and available_tool.result_as_answer
         ):
-            result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
-            data["result_as_answer"] = result_as_answer  # type: ignore
+            result_as_answer = available_tool.result_as_answer
+            data["result_as_answer"] = result_as_answer
 
         if self.agent and hasattr(self.agent, "tools_results"):
             self.agent.tools_results.append(data)
@@ -448,7 +449,7 @@ class ToolUsage:
                     self.task.increment_tools_errors()
                 if self.agent and self.agent.verbose:
                     self._printer.print(content=f"\n\n{e}\n", color="red")
-                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
+                return ToolUsageErrorException(
                     f"{self._i18n.errors('tool_usage_error').format(error=e)}\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                 )
             return self._tool_calling(tool_string)
