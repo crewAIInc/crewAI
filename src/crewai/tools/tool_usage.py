@@ -179,12 +179,7 @@ class ToolUsage:
             if self.agent.fingerprint:
                 event_data.update(self.agent.fingerprint)
 
-            crewai_event_bus.emit(
-                self,
-                ToolUsageStartedEvent(
-                   **event_data 
-                ),
-            )
+            crewai_event_bus.emit(self,ToolUsageStartedEvent(**event_data))
             
         started_at = time.time()
         from_cache = False

@@ -150,6 +150,10 @@ class LiteAgent(BaseModel):
         default=[], description="Results of the tools used by the agent."
     )
 
+    # Reference of Agent
+    original_agent: Optional[BaseAgent] = Field(
+        default=None, description="Reference to the agent that created this LiteAgent"
+    )
     # Private Attributes
     _parsed_tools: List[CrewStructuredTool] = PrivateAttr(default_factory=list)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
@@ -158,7 +162,7 @@ class LiteAgent(BaseModel):
     _messages: List[Dict[str, str]] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
     _printer: Printer = PrivateAttr(default_factory=Printer)
-
+    
     @model_validator(mode="after")
     def setup_llm(self):
         """Set up the LLM and other components after initialization."""
@@ -414,6 +418,7 @@ class LiteAgent(BaseModel):
                             i18n=self.i18n,
                             agent_key=self.key,
                             agent_role=self.role,
+                            agent=self.original_agent,
                         )
                     except Exception as e:
                         raise e
