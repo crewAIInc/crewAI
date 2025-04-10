@@ -38,6 +38,7 @@ dependencies = [
     "blinker>=1.9.0",
     "json5>=0.10.0",
 ]
+    "typing-extensions>=4.7.0", # For Self type backport
 
 [project.urls]
 Homepage = "https://crewai.com"

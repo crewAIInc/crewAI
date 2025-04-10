@@ -1,4 +1,10 @@
-from typing import Any, Dict, List, Optional, Self
+import sys
+from typing import Any, Dict, List, Optional
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 from pydantic import BaseModel
 
