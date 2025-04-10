@@ -866,6 +866,12 @@ class LLM(BaseLLM):
                     messages.copy()
                 )  # Create a copy to avoid modifying the original
                 messages.append({"role": "user", "content": "Please continue."})
+            
+            # Change the role of any message from system to assistant
+            for msg in messages:
+                if msg["role"] == "system":
+                    msg["role"] = "assistant"
+                    
             return messages
 
         # Handle Anthropic models
