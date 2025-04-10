@@ -9,6 +9,9 @@ from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
 from crewai.agents.agent_adapters.langgraph.langgraph_tool_adapter import (
     LangGraphToolAdapter,
 )
+from crewai.agents.agent_adapters.langgraph.structured_output_converter import (
+    LangGraphConverterAdapter,
+)
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool
@@ -58,6 +61,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             **kwargs,
         )
         self._tool_adapter = LangGraphToolAdapter(tools=tools)
+        self._converter_adapter = LangGraphConverterAdapter(self)
         self._max_iterations = max_iterations
         self._setup_graph()
 
@@ -69,13 +73,15 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
 
             # Convert CrewAI tools to LangGraph/LangChain compatible tools
             converted_tools = self._tool_adapter.converted_tools
+            print("langgraph converted_tools", converted_tools)
 
             # Create the agent graph with ReAct pattern
             self._graph = create_react_agent(
-                model=self.llm,  # Pass as model parameter
+                model=self.llm,
                 tools=converted_tools,
                 checkpointer=self._memory,
             )
+            print("langgraph graph", self._graph)
 
         except ImportError as e:
             self._logger.log(
@@ -88,7 +94,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
 
     def _build_system_prompt(self) -> str:
         """Build a system prompt for the LangGraph agent."""
-        return f"""You are {self.role}.
+        base_prompt = f"""You are {self.role}.
         
 Your goal is: {self.goal}
 
@@ -96,6 +102,8 @@ Your backstory: {self.backstory}
 
 When working on tasks, think step-by-step and use the available tools when necessary.
 """
+        # Enhance with structured output instructions if configured
+        return self._converter_adapter.enhance_system_prompt(base_prompt)
 
     def execute_task(
         self,
@@ -105,6 +113,9 @@ When working on tasks, think step-by-step and use the available tools when neces
     ) -> str:
         """Execute a task using the LangGraph workflow."""
         self.create_agent_executor(tools)
+
+        # Configure structured output if needed
+        self.configure_structured_output(task)
 
         try:
             task_prompt = task.prompt() if hasattr(task, "prompt") else str(task)
@@ -131,24 +142,33 @@ When working on tasks, think step-by-step and use the available tools when neces
             config = {"configurable": {"thread_id": session_id}}
 
             # Invoke the agent graph with the task prompt
-            result = self._graph.invoke({"messages": [("user", task_prompt)]}, config)
-            print("result", result)
+            result = self._graph.invoke(
+                {
+                    "messages": [
+                        ("system", self._build_system_prompt()),
+                        ("user", task_prompt),
+                    ]
+                },
+                config,
+            )
 
             # Get the final response
             messages = result.get("messages", [])
             last_message = messages[-1] if messages else None
 
             final_answer = ""
-            print("final_answer", final_answer)
             if isinstance(last_message, dict):
                 final_answer = last_message.get("content", "")
             elif hasattr(last_message, "content"):
                 final_answer = getattr(last_message, "content", "")
 
-            return (
-                final_answer
+            # Post-process to ensure correct structured output format if needed
+            final_answer = (
+                self._converter_adapter.post_process_result(final_answer)
                 or "Task execution completed but no clear answer was provided."
             )
+
+            return final_answer
 
         except Exception as e:
             self._logger.log("error", f"Error executing LangGraph task: {str(e)}")
@@ -259,5 +279,4 @@ When working on tasks, think step-by-step and use the available tools when neces
 
     def configure_structured_output(self, task) -> None:
         """Configure the structured output for LangGraph."""
-        # This will be implemented in a separate improvement
-        pass
+        self._converter_adapter.configure_structured_output(task)

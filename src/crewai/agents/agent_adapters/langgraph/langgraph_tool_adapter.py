@@ -20,7 +20,7 @@ class LangGraphToolAdapter:
         Convert CrewAI tools to LangGraph-compatible tools
         LangGraph expects tools in langchain_core.tools format
         """
-        from langchain_core.tools import Tool
+        from langchain_core.tools import StructuredTool
 
         converted_tools = []
 
@@ -35,9 +35,11 @@ class LangGraphToolAdapter:
                 else:
                     return tool.run(**kwargs)
 
-            # Create a LangChain Tool
-            converted_tool = Tool(
-                name=tool.name, description=tool.description, func=tool_wrapper
+            converted_tool = StructuredTool(
+                name=tool.name,
+                description=tool.description,
+                func=tool_wrapper,
+                args_schema=tool.args_schema,
             )
 
             converted_tools.append(converted_tool)

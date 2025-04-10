@@ -5,6 +5,9 @@ from agents import Runner, Tool, enable_verbose_stdout_logging
 from pydantic import Field, PrivateAttr
 
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
+from crewai.agents.agent_adapters.openai_agents.structured_output_adapter import (
+    OpenAIConverterAdapter,
+)
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -30,6 +33,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     step_callback: Any = Field(default=None)
     converted_tools: Optional[List[Tool]] = Field(default=None)
     _tool_adapter: OpenAIAgentToolAdapter = PrivateAttr()
+    _converter_adapter: OpenAIConverterAdapter = PrivateAttr()
 
     def __init__(
         self,
@@ -49,6 +53,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         self.tools = tools
         self._tool_adapter = OpenAIAgentToolAdapter(tools=tools)
         self.llm = model
+        self._converter_adapter = OpenAIConverterAdapter(self)
 
     def execute_task(
         self,
@@ -58,6 +63,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     ) -> str:
         """Execute a task using the OpenAI Assistant"""
         self.create_agent_executor(tools)
+        self._converter_adapter.configure_structured_output(task)
 
         if self.verbose:
             enable_verbose_stdout_logging()
@@ -114,8 +120,8 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
                 self._openai_agent.tools = self._tool_adapter.converted_tools
 
     def handle_execution_result(self, result: Any) -> str:
-        """Process OpenAI Assistant execution result"""
-        return result.final_output
+        """Process OpenAI Assistant execution result converting any structured output to a string"""
+        return self._converter_adapter.post_process_result(result.final_output)
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support"""
@@ -156,11 +162,4 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         Args:
             structured_output: The structured output to be configured
         """
-        if task.output_json or task.output_pydantic:
-            # Generate the schema based on the output format
-            if task.output_json:
-                # schema = json.dumps(task.output_json, indent=2)
-                self._openai_agent.output_type = task.output_json
-
-            elif task.output_pydantic:
-                self._openai_agent.output_type = task.output_pydantic
+        self._converter_adapter.configure_structured_output(task)
