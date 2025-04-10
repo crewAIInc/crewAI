@@ -13,6 +13,7 @@ dependencies = [
     "openai>=1.13.3",
     "litellm==1.60.2",
     "instructor>=1.3.3",
+    "typing_extensions>=4.0.0",
     # Text Processing
     "pdfplumber>=0.11.4",
     "regex>=2024.9.11",

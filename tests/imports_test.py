@@ -13,3 +13,14 @@ def test_crew_output_import():
     from crewai import CrewOutput
     
     assert CrewOutput is not None
+
+
+def test_memory_imports():
+    """Test that memory imports work correctly across Python versions."""
+    import importlib
+    importlib.import_module("crewai.memory.memory")
+    importlib.import_module("crewai.memory.external.external_memory")
+    
+    from crewai.memory.memory import Memory
+    
+    assert hasattr(Memory, "set_crew")

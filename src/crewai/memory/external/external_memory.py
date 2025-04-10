@@ -1,4 +1,9 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Self
+import sys
+if sys.version_info < (3, 11):
+    from typing_extensions import Self
+    from typing import TYPE_CHECKING, Any, Dict, Optional
+else:
+    from typing import TYPE_CHECKING, Any, Dict, Optional, Self
 
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
