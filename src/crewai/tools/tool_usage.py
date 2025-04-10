@@ -168,8 +168,8 @@ class ToolUsage:
 
         if self.agent:
             event_data = {
-                "agent_key": self.agent.key if self.agent else None,
-                "agent_role": self.agent.role if self.agent else None,
+                "agent_key": self.agent.key,
+                "agent_role": self.agent.role,
                 "tool_name": self.action.tool,
                 "tool_args": self.action.tool_input,
                 "tool_class": self.action.tool,
