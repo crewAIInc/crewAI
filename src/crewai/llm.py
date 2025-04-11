@@ -296,6 +296,15 @@ class LLM(BaseLLM):
         ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
         return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
 
+    def _is_mistral_model(self) -> bool:
+        """Determine if the model is from Mistral provider.
+        
+        Returns:
+            bool: True if the model is from Mistral, False otherwise.
+        """
+
+        return "mistral" in self.model.lower()
+    
     def _prepare_completion_params(
         self,
         messages: Union[str, List[Dict[str, str]]],
@@ -857,7 +866,7 @@ class LLM(BaseLLM):
                     formatted_messages.append(msg)
             return formatted_messages
 
-        # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
+        # Handle Mistral models - they require the last message to have a role of 'user' or 'tool
         if "mistral" in self.model.lower():
             # Check if the last message has a role of 'assistant'
             if messages and messages[-1]["role"] == "assistant":

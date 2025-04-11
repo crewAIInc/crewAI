@@ -26,12 +26,20 @@ class Converter(OutputConverter):
             if self.llm.supports_function_calling():
                 result = self._create_instructor().to_pydantic()
             else:
-                response = self.llm.call(
-                    [
-                        {"role": "system", "content": self.instructions},
-                        {"role": "user", "content": self.text},
-                    ]
-                )
+                if self.llm.is_mistral_model():
+                    # Mistral models require a different approach
+                    response = self.llm.call(
+                        [
+                            {"role": "user", "content": self.instructions + "/n" + self.text}
+                        ]
+                    )
+                else:
+                    response = self.llm.call(
+                        [
+                            {"role": "system", "content": self.instructions},
+                            {"role": "user", "content": self.text},
+                        ]
+                    )
                 try:
                     # Try to directly validate the response JSON
                     result = self.model.model_validate_json(response)
@@ -74,14 +82,21 @@ class Converter(OutputConverter):
             if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
             else:
-                return json.dumps(
-                    self.llm.call(
+                if self.llm.is_mistral_model():
+                    # Mistral models require a different approach
+                    response = self.llm.call(
+                        [
+                            {"role": "user", "content": self.instructions + "/n" + self.text}
+                        ]
+                    )
+                else:
+                    response = self.llm.call(
                         [
                             {"role": "system", "content": self.instructions},
                             {"role": "user", "content": self.text},
                         ]
                     )
-                )
+                return response
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
