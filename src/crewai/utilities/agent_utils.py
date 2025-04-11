@@ -16,7 +16,6 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities import I18N, Printer
-from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )

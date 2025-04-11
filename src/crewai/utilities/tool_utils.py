@@ -5,11 +5,6 @@ from crewai.security import Fingerprint
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
-from crewai.utilities.events import crewai_event_bus
-from crewai.utilities.events.tool_usage_events import (
-    ToolUsageErrorEvent,
-    ToolUsageStartedEvent,
-)
 from crewai.utilities.i18n import I18N
 
 
@@ -42,10 +37,8 @@ def execute_tool_and_check_finality(
         ToolResult containing the execution result and whether it should be treated as a final answer
     """
     try:
-        # Create tool name to tool map
         tool_name_to_tool_map = {tool.name: tool for tool in tools}
 
-        # Emit tool usage event if agent info is available
         if agent_key and agent_role and agent:
             fingerprint_context = fingerprint_context or {}
             if agent:
@@ -58,22 +51,6 @@ def execute_tool_and_check_finality(
                             agent.set_fingerprint(fingerprint_obj)
                         except Exception as e:
                             raise ValueError(f"Failed to set fingerprint: {e}")
-
-            event_data = {
-                "agent_key": agent_key,
-                "agent_role": agent_role,
-                "tool_name": agent_action.tool,
-                "tool_args": agent_action.tool_input,
-                "tool_class": agent_action.tool,
-                "agent": agent,
-            }
-            event_data.update(fingerprint_context)
-            crewai_event_bus.emit(
-                agent,
-                event=ToolUsageStartedEvent(
-                    **event_data,
-                ),
-            )
 
         # Create tool usage instance
         tool_usage = ToolUsage(
@@ -110,17 +87,4 @@ def execute_tool_and_check_finality(
         return ToolResult(tool_result, False)
 
     except Exception as e:
-        # Emit error event if agent info is available
-        if agent_key and agent_role and agent:
-            crewai_event_bus.emit(
-                agent,
-                event=ToolUsageErrorEvent(
-                    agent_key=agent_key,
-                    agent_role=agent_role,
-                    tool_name=agent_action.tool,
-                    tool_args=agent_action.tool_input,
-                    tool_class=agent_action.tool,
-                    error=str(e),
-                ),
-            )
         raise e

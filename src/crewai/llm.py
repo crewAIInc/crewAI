@@ -709,15 +709,6 @@ class LLM(BaseLLM):
                 logging.error(f"Error executing function '{function_name}': {e}")
                 crewai_event_bus.emit(
                     self,
-                    event=ToolExecutionErrorEvent(
-                        tool_name=function_name,
-                        tool_args=function_args,
-                        tool_class=fn,
-                        error=str(e),
-                    ),
-                )
-                crewai_event_bus.emit(
-                    self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),
                 )
         return None
