@@ -1,4 +1,5 @@
 """Error message definitions for CrewAI database operations."""
+
 from typing import Optional
 
 

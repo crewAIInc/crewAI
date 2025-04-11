@@ -63,13 +63,11 @@ def test_security_config_from_dict():
     fingerprint_dict = {
         "uuid_str": "b723c6ff-95de-5e87-860b-467b72282bd8",
         "created_at": datetime.now().isoformat(),
-        "metadata": {"version": "1.0"}
+        "metadata": {"version": "1.0"},
     }
 
     # Create a config dict with just the fingerprint
-    config_dict = {
-        "fingerprint": fingerprint_dict
-    }
+    config_dict = {"fingerprint": fingerprint_dict}
 
     # Create config manually since from_dict has a specific implementation
     config = SecurityConfig()

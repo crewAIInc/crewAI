@@ -8,6 +8,7 @@ from crewai.agents.parser import OutputParserException
 
 """Parser for converting text outputs into Pydantic models."""
 
+
 class CrewPydanticOutputParser:
     """Parses text outputs into specified Pydantic models."""
 

@@ -2157,7 +2157,6 @@ def test_tools_with_custom_caching():
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
     ) as add_to_cache:
-
         result = crew.kickoff()
 
         # Check that add_to_cache was called exactly twice

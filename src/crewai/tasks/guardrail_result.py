@@ -22,6 +22,7 @@ class GuardrailResult(BaseModel):
         result (Any, optional): The validated/transformed result if successful
         error (str, optional): Error message if validation failed
     """
+
     success: bool
     result: Optional[Any] = None
     error: Optional[str] = None
@@ -32,9 +33,13 @@ class GuardrailResult(BaseModel):
         values = info.data
         if "success" in values:
             if values["success"] and v and "error" in values and values["error"]:
-                raise ValueError("Cannot have both result and error when success is True")
+                raise ValueError(
+                    "Cannot have both result and error when success is True"
+                )
             if not values["success"] and v and "result" in values and values["result"]:
-                raise ValueError("Cannot have both result and error when success is False")
+                raise ValueError(
+                    "Cannot have both result and error when success is False"
+                )
         return v
 
     @classmethod
@@ -52,5 +57,5 @@ class GuardrailResult(BaseModel):
         return cls(
             success=success,
             result=data if success else None,
-            error=data if not success else None
+            error=data if not success else None,
         )

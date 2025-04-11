@@ -12,9 +12,7 @@ class LTMSQLiteStorage:
     An updated SQLite storage class for LTM data storage.
     """
 
-    def __init__(
-        self, db_path: Optional[str] = None
-    ) -> None:
+    def __init__(self, db_path: Optional[str] = None) -> None:
         if db_path is None:
             # Get the parent directory of the default db path and create our db file there
             db_path = str(Path(db_storage_path()) / "long_term_memory_storage.db")

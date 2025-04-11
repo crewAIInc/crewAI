@@ -5,6 +5,7 @@ import appdirs
 
 """Path management utilities for CrewAI storage and configuration."""
 
+
 def db_storage_path() -> str:
     """Returns the path for SQLite database storage.
 

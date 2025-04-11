@@ -46,6 +46,7 @@ def test_evaluate_training_data(converter_mock):
     converter_mock.assert_has_calls(
         [
             mock.call(
+                agent=original_agent, # Add agent argument
                 llm=original_agent.llm,
                 text="Assess the quality of the training data based on the llm output, human feedback , and llm "
                 "output improved result.\n\nIteration: data1\nInitial Output:\nInitial output 1\n\nHuman Feedback:\nHuman feedback "

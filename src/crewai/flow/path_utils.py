@@ -43,18 +43,18 @@ def safe_path_join(*parts: str, root: Union[str, Path, None] = None) -> str:
 
         # Establish root directory
         root_path = Path(root).resolve() if root else Path.cwd()
-        
+
         # Join and resolve the full path
         full_path = Path(root_path, *clean_parts).resolve()
-        
+
         # Check if the resolved path is within root
         if not str(full_path).startswith(str(root_path)):
             raise ValueError(
                 f"Invalid path: Potential directory traversal. Path must be within {root_path}"
             )
-            
+
         return str(full_path)
-        
+
     except Exception as e:
         if isinstance(e, ValueError):
             raise
@@ -84,17 +84,17 @@ def validate_path_exists(path: Union[str, Path], file_type: str = "file") -> str
     """
     try:
         path_obj = Path(path).resolve()
-        
+
         if not path_obj.exists():
             raise ValueError(f"Path does not exist: {path}")
-            
+
         if file_type == "file" and not path_obj.is_file():
             raise ValueError(f"Path is not a file: {path}")
         elif file_type == "directory" and not path_obj.is_dir():
             raise ValueError(f"Path is not a directory: {path}")
-            
+
         return str(path_obj)
-        
+
     except Exception as e:
         if isinstance(e, ValueError):
             raise
@@ -126,9 +126,9 @@ def list_files(directory: Union[str, Path], pattern: str = "*") -> List[str]:
         dir_path = Path(directory).resolve()
         if not dir_path.is_dir():
             raise ValueError(f"Not a directory: {directory}")
-            
+
         return [str(p) for p in dir_path.glob(pattern) if p.is_file()]
-        
+
     except Exception as e:
         if isinstance(e, ValueError):
             raise

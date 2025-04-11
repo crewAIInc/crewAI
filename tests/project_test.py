@@ -43,9 +43,10 @@ class InternalCrew:
     @llm
     def local_llm(self):
         return LLM(
-            model='openai/model_name',
+            model="openai/model_name",
             api_key="None",
-            base_url="http://xxx.xxx.xxx.xxx:8000/v1")
+            base_url="http://xxx.xxx.xxx.xxx:8000/v1",
+        )
 
     @agent
     def researcher(self):

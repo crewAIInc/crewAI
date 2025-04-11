@@ -380,6 +380,7 @@ class ToolUsage:
             else ToolCalling
         )
         converter = Converter(
+            agent=None, # Agent not needed here as function calling is supported/used
             text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n### TEXT \n{tool_string}",
             llm=self.function_calling_llm,
             model=model,

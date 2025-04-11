@@ -107,18 +107,18 @@ def test_result_as_answer_in_tool_decorator():
     def my_tool_with_result_as_answer(question: str) -> str:
         """This tool will return its result as the final answer."""
         return question
-    
+
     assert my_tool_with_result_as_answer.result_as_answer is True
-    
+
     converted_tool = my_tool_with_result_as_answer.to_structured_tool()
     assert converted_tool.result_as_answer is True
-    
+
     @tool("Tool with default result_as_answer")
     def my_tool_with_default(question: str) -> str:
         """This tool uses the default result_as_answer value."""
         return question
-    
+
     assert my_tool_with_default.result_as_answer is False
-    
+
     converted_tool = my_tool_with_default.to_structured_tool()
     assert converted_tool.result_as_answer is False
