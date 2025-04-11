@@ -819,8 +819,8 @@ class LLM(BaseLLM):
         )
 
     def _format_messages_for_provider(
-        self, messages: List[Dict[str, str]]
-    ) -> List[Dict[str, str]]:
+        self, messages: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Format messages according to provider requirements.
 
         Args:
@@ -830,6 +830,7 @@ class LLM(BaseLLM):
         Returns:
             List of formatted messages according to provider requirements.
             For Anthropic models, ensures first message has 'user' role.
+            For multimodal content, ensures proper formatting of image URLs.
 
         Raises:
             TypeError: If messages is None or contains invalid message format.
@@ -844,40 +845,71 @@ class LLM(BaseLLM):
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
 
+        formatted_messages = []
+        for msg in messages:
+            if isinstance(msg["content"], list):
+                formatted_content = []
+                for item in msg["content"]:
+                    if isinstance(item, dict):
+                        if item.get("type") == "text":
+                            formatted_content.append({
+                                "type": "text",
+                                "text": item["text"]
+                            })
+                        elif item.get("type") == "image_url":
+                            formatted_content.append({
+                                "type": "image_url",
+                                "image_url": item["image_url"]
+                            })
+                        else:
+                            formatted_content.append(item)
+                    else:
+                        formatted_content.append({
+                            "type": "text",
+                            "text": str(item)
+                        })
+                
+                formatted_messages.append({
+                    "role": msg["role"],
+                    "content": formatted_content
+                })
+            else:
+                formatted_messages.append(msg)
+        
         # Handle O1 models specially
         if "o1" in self.model.lower():
-            formatted_messages = []
-            for msg in messages:
+            result = []
+            for msg in formatted_messages:
                 # Convert system messages to assistant messages
                 if msg["role"] == "system":
-                    formatted_messages.append(
+                    result.append(
                         {"role": "assistant", "content": msg["content"]}
                     )
                 else:
-                    formatted_messages.append(msg)
-            return formatted_messages
+                    result.append(msg)
+            return result
 
         # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
         if "mistral" in self.model.lower():
             # Check if the last message has a role of 'assistant'
-            if messages and messages[-1]["role"] == "assistant":
+            if formatted_messages and formatted_messages[-1]["role"] == "assistant":
                 # Add a dummy user message to ensure the last message has a role of 'user'
-                messages = (
-                    messages.copy()
+                formatted_messages = (
+                    formatted_messages.copy()
                 )  # Create a copy to avoid modifying the original
-                messages.append({"role": "user", "content": "Please continue."})
-            return messages
+                formatted_messages.append({"role": "user", "content": "Please continue."})
+            return formatted_messages
 
         # Handle Anthropic models
         if not self.is_anthropic:
-            return messages
+            return formatted_messages
 
         # Anthropic requires messages to start with 'user' role
-        if not messages or messages[0]["role"] == "system":
+        if not formatted_messages or formatted_messages[0]["role"] == "system":
             # If first message is system or empty, add a placeholder user message
-            return [{"role": "user", "content": "."}, *messages]
+            return [{"role": "user", "content": "."}, *formatted_messages]
 
-        return messages
+        return formatted_messages
 
     def _get_custom_llm_provider(self) -> Optional[str]:
         """

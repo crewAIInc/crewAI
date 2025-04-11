@@ -3820,6 +3820,88 @@ def test_multimodal_agent_live_image_analysis():
     assert "error" not in result.raw.lower()  # No error messages in response
 
 
+def test_format_messages_for_provider_with_multimodal_content():
+    """
+    Test that the _format_messages_for_provider method correctly formats multimodal content.
+    This specifically tests that image URLs are formatted as structured multimodal content
+    rather than plain text.
+    """
+    llm = LLM(model="gpt-4o")
+    
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Analyze this image:"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": "https://example.com/test-image.jpg"
+                }
+            ]
+        }
+    ]
+    
+    formatted_messages = llm._format_messages_for_provider(messages)
+    
+    assert len(formatted_messages) == 1
+    assert formatted_messages[0]["role"] == "user"
+    assert isinstance(formatted_messages[0]["content"], list)
+    
+    content = formatted_messages[0]["content"]
+    assert len(content) == 2
+    
+    assert content[0]["type"] == "text"
+    assert content[0]["text"] == "Analyze this image:"
+    
+    assert content[1]["type"] == "image_url"
+    assert "image_url" in content[1]
+    
+    messages_with_string_url = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Analyze this image:"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": "https://example.com/test-image.jpg"
+                }
+            ]
+        }
+    ]
+    
+    formatted_messages_string_url = llm._format_messages_for_provider(messages_with_string_url)
+    assert formatted_messages_string_url[0]["content"][1]["type"] == "image_url"
+    assert "image_url" in formatted_messages_string_url[0]["content"][1]
+    
+    messages_with_dict_url = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Analyze this image:"
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "https://example.com/test-image.jpg"
+                    }
+                }
+            ]
+        }
+    ]
+    
+    formatted_messages_dict_url = llm._format_messages_for_provider(messages_with_dict_url)
+    assert formatted_messages_dict_url[0]["content"][1]["type"] == "image_url"
+    assert "image_url" in formatted_messages_dict_url[0]["content"][1]
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_failing_task_guardrails():
     """Test that crew properly handles failing guardrails and retries with validation feedback."""
