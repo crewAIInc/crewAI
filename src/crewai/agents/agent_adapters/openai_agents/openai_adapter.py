@@ -1,7 +1,7 @@
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from agents import Agent as OpenAIAgent
-from agents import Runner, Tool, enable_verbose_stdout_logging
+from agents import Runner, enable_verbose_stdout_logging
 from pydantic import Field, PrivateAttr
 
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
@@ -36,23 +36,39 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
 
     def __init__(
         self,
-        openai_agent: OpenAIAgent,
         model: str = "gpt-4o-mini",
         tools: Optional[List[BaseTool]] = None,
+        agent_config: Optional[dict] = None,
         **kwargs,
     ):
+        role = kwargs.pop("role", None)
+        goal = kwargs.pop("goal", None)
+        backstory = kwargs.pop("backstory", None)
         super().__init__(
-            role=openai_agent.name,
-            goal=openai_agent.instructions,
-            backstory=openai_agent.instructions,
+            role=role,
+            goal=goal,
+            backstory=backstory,
+            agent_config=agent_config,
             **kwargs,
         )
-        self._openai_agent = openai_agent
-        self._openai_agent.model = model
+        self.tools = tools
         self.tools = tools
         self._tool_adapter = OpenAIAgentToolAdapter(tools=tools)
         self.llm = model
         self._converter_adapter = OpenAIConverterAdapter(self)
+
+    def _build_system_prompt(self) -> str:
+        """Build a system prompt for the OpenAI agent."""
+        base_prompt = f"""
+            You are {self.role}.
+        
+            Your goal is: {self.goal}
+
+            Your backstory: {self.backstory}
+
+            When working on tasks, think step-by-step and use the available tools when necessary.
+        """
+        return self._converter_adapter.enhance_system_prompt(base_prompt)
 
     def execute_task(
         self,
@@ -105,6 +121,13 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         we can use this method to set up tools and configurations.
         """
         all_tools = list(self.tools or []) + list(tools or [])
+
+        self._openai_agent = OpenAIAgent(
+            name=self.role,
+            instructions=self._build_system_prompt(),
+            model=self.llm,
+            **self._agent_config or {},
+        )
 
         if all_tools:
             self.configure_tools(all_tools)
