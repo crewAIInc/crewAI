@@ -857,8 +857,8 @@ class LLM(BaseLLM):
                     formatted_messages.append(msg)
             return formatted_messages
 
-        # Handle Mistral models - they require the last message to have a role of 'user' or 'tool
-        if "mistral" in self.model.lower():
+        # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
+        if self._is_mistral_model():
             # Check if the last message has a role of 'assistant'
             if messages and messages[-1]["role"] == "assistant":
                 # Add a dummy user message to ensure the last message has a role of 'user'
