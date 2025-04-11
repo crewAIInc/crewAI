@@ -1,10 +1,11 @@
 import json
 import re
 
+from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
 from crewai.utilities.converter import generate_model_description
 
 
-class OpenAIConverterAdapter:
+class OpenAIConverterAdapter(BaseConverterAdapter):
     """
     Adapter for handling structured output conversion in OpenAI agents.
 
@@ -53,6 +54,28 @@ class OpenAIConverterAdapter:
             self._output_model = task.output_pydantic
             self.agent_adapter._openai_agent.output_type = task.output_pydantic
 
+    def enhance_system_prompt(self, base_prompt: str) -> str:
+        """
+        Enhance the base system prompt with structured output requirements if needed.
+
+        Args:
+            base_prompt: The original system prompt
+
+        Returns:
+            Enhanced system prompt with output format instructions if needed
+        """
+        if not self._output_format:
+            return base_prompt
+
+        output_instructions = f"""
+        Your response MUST conform to the following {self._output_format.upper()} schema:
+        {self._schema}
+        
+        Ensure your final response is properly formatted according to this schema.
+        """
+
+        return f"{base_prompt}\n\n{output_instructions}"
+
     def post_process_result(self, result: str) -> str:
         """
         Post-process the result to ensure it matches the expected format.
@@ -65,10 +88,8 @@ class OpenAIConverterAdapter:
         Returns:
             Processed result conforming to the expected output format
         """
-        print("result", result)
         if not self._output_format:
             return result
-        print("self._output_format", self._output_format)
         # Try to extract valid JSON if it's wrapped in code blocks or other text
         if isinstance(result, str) and self._output_format in ["json", "pydantic"]:
             # First, try to parse as is

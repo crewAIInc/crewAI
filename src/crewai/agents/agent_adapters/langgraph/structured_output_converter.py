@@ -1,9 +1,10 @@
 import json
 
+from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
 from crewai.utilities.converter import generate_model_description
 
 
-class LangGraphConverterAdapter:
+class LangGraphConverterAdapter(BaseConverterAdapter):
     """Adapter for handling structured output conversion in LangGraph agents"""
 
     def __init__(self, agent_adapter):

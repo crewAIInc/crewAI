@@ -45,9 +45,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         role: str,
         goal: str,
         backstory: str,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[List[BaseTool]] = [],
         llm: Any = None,
         max_iterations: int = 10,
+        agent_config: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
         """Initialize the LangGraph agent adapter."""
@@ -57,9 +58,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             backstory=backstory,
             tools=tools,
             llm=llm or self.model,
+            agent_config=agent_config,
             **kwargs,
         )
-        self._tool_adapter = LangGraphToolAdapter(tools=tools)
+        self._tool_adapter = LangGraphToolAdapter(tools=tools or [])
         self._converter_adapter = LangGraphConverterAdapter(self)
         self._max_iterations = max_iterations
         self._setup_graph()
@@ -70,15 +72,13 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             # Initialize memory for the agent
             self._memory = MemorySaver()
 
-            # Convert CrewAI tools to LangGraph/LangChain compatible tools
             converted_tools = self._tool_adapter.converted_tools
-            print("langgraph converted_tools", converted_tools)
 
-            # Create the agent graph with ReAct pattern
             self._graph = create_react_agent(
                 model=self.llm,
                 tools=converted_tools,
                 checkpointer=self._memory,
+                debug=self.verbose,
             )
 
         except ImportError as e:
