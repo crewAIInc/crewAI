@@ -26,7 +26,7 @@ class Converter(OutputConverter):
             if self.llm.supports_function_calling():
                 result = self._create_instructor().to_pydantic()
             else:
-                if self.llm.is_mistral_model():
+                if self.llm._is_mistral_model():
                     # Mistral models require a different approach
                     response = self.llm.call(
                         [
@@ -82,7 +82,7 @@ class Converter(OutputConverter):
             if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
             else:
-                if self.llm.is_mistral_model():
+                if self.llm._is_mistral_model():
                     # Mistral models require a different approach
                     response = self.llm.call(
                         [
