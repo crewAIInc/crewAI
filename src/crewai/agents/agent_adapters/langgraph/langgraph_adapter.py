@@ -1,8 +1,5 @@
 from typing import Any, AsyncIterable, Dict, List, Optional
 
-from langchain_core.messages import ToolMessage
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import create_react_agent
 from pydantic import Field, PrivateAttr
 
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
@@ -22,6 +19,15 @@ from crewai.utilities.events.agent_events import (
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
+
+try:
+    from langchain_core.messages import ToolMessage
+    from langgraph.checkpoint.memory import MemorySaver
+    from langgraph.prebuilt import create_react_agent
+
+    LANGGRAPH_AVAILABLE = True
+except ImportError:
+    LANGGRAPH_AVAILABLE = False
 
 
 class LangGraphAgentAdapter(BaseAgentAdapter):
@@ -52,6 +58,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         **kwargs,
     ):
         """Initialize the LangGraph agent adapter."""
+        print("LANGGRAPH_AVAILABLE", LANGGRAPH_AVAILABLE)
         super().__init__(
             role=role,
             goal=goal,
@@ -61,10 +68,15 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             agent_config=agent_config,
             **kwargs,
         )
-        self._tool_adapter = LangGraphToolAdapter(tools=tools or [])
-        self._converter_adapter = LangGraphConverterAdapter(self)
-        self._max_iterations = max_iterations
-        self._setup_graph()
+        if LANGGRAPH_AVAILABLE:
+            self._tool_adapter = LangGraphToolAdapter(tools=tools or [])
+            self._converter_adapter = LangGraphConverterAdapter(self)
+            self._max_iterations = max_iterations
+            self._setup_graph()
+        else:
+            raise ImportError(
+                "LangGraph Agent Dependencies are not installed. Please install it using `uv add langchain-core langgraph`"
+            )
 
     def _setup_graph(self) -> None:
         """Set up the LangGraph workflow graph."""
