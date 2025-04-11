@@ -148,7 +148,7 @@ class ToolUsage:
         tool_string: str,
         tool: CrewStructuredTool,
         calling: Union[ToolCalling, InstructorToolCalling],
-    ) -> str:        
+    ) -> str:
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
