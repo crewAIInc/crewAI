@@ -45,10 +45,10 @@ class Telemetry:
     """
 
     def __init__(self):
-        self.ready = False
-        self.trace_set = False
+        self.ready: bool = False
+        self.trace_set: bool = False
 
-        if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
+        if self._is_telemetry_disabled():
             return
 
         try:
@@ -75,6 +75,13 @@ class Telemetry:
             ):
                 raise  # Re-raise the exception to not interfere with system signals
             self.ready = False
+            
+    def _is_telemetry_disabled(self) -> bool:
+        """Check if telemetry should be disabled based on environment variables."""
+        return (
+            os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true" or
+            os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
+        )
 
     def set_tracer(self):
         if self.ready and not self.trace_set:

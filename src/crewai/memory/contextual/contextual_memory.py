@@ -1,6 +1,12 @@
 from typing import Any, Dict, Optional
 
-from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory, UserMemory
+from crewai.memory import (
+    EntityMemory,
+    ExternalMemory,
+    LongTermMemory,
+    ShortTermMemory,
+    UserMemory,
+)
 
 
 class ContextualMemory:
@@ -11,6 +17,7 @@ class ContextualMemory:
         ltm: LongTermMemory,
         em: EntityMemory,
         um: UserMemory,
+        exm: ExternalMemory,
     ):
         if memory_config is not None:
             self.memory_provider = memory_config.get("provider")
@@ -20,6 +27,7 @@ class ContextualMemory:
         self.ltm = ltm
         self.em = em
         self.um = um
+        self.exm = exm
 
     def build_context_for_task(self, task, context) -> str:
         """
@@ -35,6 +43,7 @@ class ContextualMemory:
         context.append(self._fetch_ltm_context(task.description))
         context.append(self._fetch_stm_context(query))
         context.append(self._fetch_entity_context(query))
+        context.append(self._fetch_external_context(query))
         if self.memory_provider == "mem0":
             context.append(self._fetch_user_context(query))
         return "\n".join(filter(None, context))
@@ -106,3 +115,24 @@ class ContextualMemory:
             f"- {result['memory']}" for result in user_memories
         )
         return f"User memories/preferences:\n{formatted_memories}"
+
+    def _fetch_external_context(self, query: str) -> str:
+        """
+        Fetches and formats relevant information from External Memory.
+        Args:
+            query (str): The search query to find relevant information.
+        Returns:
+            str: Formatted information as bullet points, or an empty string if none found.
+        """
+        if self.exm is None:
+            return ""
+
+        external_memories = self.exm.search(query)
+
+        if not external_memories:
+            return ""
+
+        formatted_memories = "\n".join(
+            f"- {result['memory']}" for result in external_memories
+        )
+        return f"External memories:\n{formatted_memories}"
