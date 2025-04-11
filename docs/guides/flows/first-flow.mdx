@@ -263,6 +263,7 @@ Let's create our flow in the `main.py` file:
 ```python
 #!/usr/bin/env python
 import json
+import os
 from typing import List, Dict
 from pydantic import BaseModel, Field
 from crewai import LLM
@@ -340,6 +341,9 @@ class GuideCreatorFlow(Flow[GuideCreatorState]):
         # Parse the JSON response
         outline_dict = json.loads(response)
         self.state.guide_outline = GuideOutline(**outline_dict)
+
+        # Ensure output directory exists before saving
+        os.makedirs("output", exist_ok=True)
 
         # Save the outline to a file
         with open("output/guide_outline.json", "w") as f:
