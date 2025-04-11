@@ -1,7 +1,6 @@
-import re
 import shutil
 import subprocess
-from typing import Any, Dict, List, Literal, Optional, Sequence, Union
+from typing import Any, Dict, List, Literal, Optional, Sequence, Type, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -11,6 +10,7 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
+from crewai.lite_agent import LiteAgent, LiteAgentOutput
 from crewai.llm import BaseLLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.security import Fingerprint
@@ -207,6 +207,7 @@ class Agent(BaseAgent):
                 self.crew._long_term_memory,
                 self.crew._entity_memory,
                 self.crew._user_memory,
+                self.crew._external_memory,
             )
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
@@ -448,3 +449,74 @@ class Agent(BaseAgent):
 
     def set_fingerprint(self, fingerprint: Fingerprint):
         self.security_config.fingerprint = fingerprint
+
+    def kickoff(
+        self,
+        messages: Union[str, List[Dict[str, str]]],
+        response_format: Optional[Type[Any]] = None,
+    ) -> LiteAgentOutput:
+        """
+        Execute the agent with the given messages using a LiteAgent instance.
+
+        This method is useful when you want to use the Agent configuration but
+        with the simpler and more direct execution flow of LiteAgent.
+
+        Args:
+            messages: Either a string query or a list of message dictionaries.
+                     If a string is provided, it will be converted to a user message.
+                     If a list is provided, each dict should have 'role' and 'content' keys.
+            response_format: Optional Pydantic model for structured output.
+
+        Returns:
+            LiteAgentOutput: The result of the agent execution.
+        """
+        lite_agent = LiteAgent(
+            role=self.role,
+            goal=self.goal,
+            backstory=self.backstory,
+            llm=self.llm,
+            tools=self.tools or [],
+            max_iterations=self.max_iter,
+            max_execution_time=self.max_execution_time,
+            respect_context_window=self.respect_context_window,
+            verbose=self.verbose,
+            response_format=response_format,
+            i18n=self.i18n,
+        )
+
+        return lite_agent.kickoff(messages)
+
+    async def kickoff_async(
+        self,
+        messages: Union[str, List[Dict[str, str]]],
+        response_format: Optional[Type[Any]] = None,
+    ) -> LiteAgentOutput:
+        """
+        Execute the agent asynchronously with the given messages using a LiteAgent instance.
+
+        This is the async version of the kickoff method.
+
+        Args:
+            messages: Either a string query or a list of message dictionaries.
+                     If a string is provided, it will be converted to a user message.
+                     If a list is provided, each dict should have 'role' and 'content' keys.
+            response_format: Optional Pydantic model for structured output.
+
+        Returns:
+            LiteAgentOutput: The result of the agent execution.
+        """
+        lite_agent = LiteAgent(
+            role=self.role,
+            goal=self.goal,
+            backstory=self.backstory,
+            llm=self.llm,
+            tools=self.tools or [],
+            max_iterations=self.max_iter,
+            max_execution_time=self.max_execution_time,
+            respect_context_window=self.respect_context_window,
+            verbose=self.verbose,
+            response_format=response_format,
+            i18n=self.i18n,
+        )
+
+        return await lite_agent.kickoff_async(messages)
