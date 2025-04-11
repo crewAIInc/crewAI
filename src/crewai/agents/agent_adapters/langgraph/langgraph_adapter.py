@@ -58,7 +58,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         **kwargs,
     ):
         """Initialize the LangGraph agent adapter."""
-        print("LANGGRAPH_AVAILABLE", LANGGRAPH_AVAILABLE)
+        if not LANGGRAPH_AVAILABLE:
+            raise ImportError(
+                "LangGraph Agent Dependencies are not installed. Please install it using `uv add langchain-core langgraph`"
+            )
         super().__init__(
             role=role,
             goal=goal,
@@ -68,15 +71,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             agent_config=agent_config,
             **kwargs,
         )
-        if LANGGRAPH_AVAILABLE:
-            self._tool_adapter = LangGraphToolAdapter(tools=tools or [])
-            self._converter_adapter = LangGraphConverterAdapter(self)
-            self._max_iterations = max_iterations
-            self._setup_graph()
-        else:
-            raise ImportError(
-                "LangGraph Agent Dependencies are not installed. Please install it using `uv add langchain-core langgraph`"
-            )
+        self._tool_adapter = LangGraphToolAdapter(tools=tools or [])
+        self._converter_adapter = LangGraphConverterAdapter(self)
+        self._max_iterations = max_iterations
+        self._setup_graph()
 
     def _setup_graph(self) -> None:
         """Set up the LangGraph workflow graph."""

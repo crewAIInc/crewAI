@@ -1,7 +1,5 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
-from agents import Agent as OpenAIAgent
-from agents import Runner, enable_verbose_stdout_logging
 from pydantic import Field, PrivateAttr
 
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
@@ -18,7 +16,15 @@ from crewai.utilities.events.agent_events import (
     AgentExecutionStartedEvent,
 )
 
-from .openai_agent_tool_adapter import OpenAIAgentToolAdapter
+try:
+    from agents import Agent as OpenAIAgent  # type: ignore
+    from agents import Runner, enable_verbose_stdout_logging  # type: ignore
+
+    from .openai_agent_tool_adapter import OpenAIAgentToolAdapter
+
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
 
 
 class OpenAIAgentAdapter(BaseAgentAdapter):
@@ -26,12 +32,12 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    _openai_agent: OpenAIAgent = PrivateAttr()
+    _openai_agent: "OpenAIAgent" = PrivateAttr()
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger())
     _active_thread: Optional[str] = PrivateAttr(default=None)
     function_calling_llm: Any = Field(default=None)
     step_callback: Any = Field(default=None)
-    _tool_adapter: OpenAIAgentToolAdapter = PrivateAttr()
+    _tool_adapter: "OpenAIAgentToolAdapter" = PrivateAttr()
     _converter_adapter: OpenAIConverterAdapter = PrivateAttr()
 
     def __init__(
@@ -41,21 +47,26 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         agent_config: Optional[dict] = None,
         **kwargs,
     ):
-        role = kwargs.pop("role", None)
-        goal = kwargs.pop("goal", None)
-        backstory = kwargs.pop("backstory", None)
-        super().__init__(
-            role=role,
-            goal=goal,
-            backstory=backstory,
-            agent_config=agent_config,
-            **kwargs,
-        )
-        self.tools = tools
-        self.tools = tools
-        self._tool_adapter = OpenAIAgentToolAdapter(tools=tools)
-        self.llm = model
-        self._converter_adapter = OpenAIConverterAdapter(self)
+        if not OPENAI_AVAILABLE:
+            raise ImportError(
+                "OpenAI Agent Dependencies are not installed. Please install it using `uv add openai-agents`"
+            )
+        else:
+            role = kwargs.pop("role", None)
+            goal = kwargs.pop("goal", None)
+            backstory = kwargs.pop("backstory", None)
+            super().__init__(
+                role=role,
+                goal=goal,
+                backstory=backstory,
+                agent_config=agent_config,
+                **kwargs,
+            )
+
+            self.tools = tools
+            self._tool_adapter = OpenAIAgentToolAdapter(tools=tools)
+            self.llm = model
+            self._converter_adapter = OpenAIConverterAdapter(self)
 
     def _build_system_prompt(self) -> str:
         """Build a system prompt for the OpenAI agent."""
