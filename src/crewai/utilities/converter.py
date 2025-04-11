@@ -96,7 +96,7 @@ class Converter(OutputConverter):
                             {"role": "user", "content": self.text},
                         ]
                     )
-                return response
+                return json.dumps(response)
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
