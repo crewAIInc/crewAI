@@ -448,6 +448,7 @@ def test_converter_error_handling():
 def test_converter_retry_logic():
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
+    llm._is_mistral_model = False
     llm.call.side_effect = [
         "Invalid JSON",
         "Still invalid",
@@ -480,6 +481,7 @@ def test_converter_with_optional_fields():
 
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
+    llm._is_mistral_model = False
     # Simulate the LLM's response with 'age' explicitly set to null
     llm.call.return_value = '{"name": "Bob", "age": null}'
     sample_text = "Name: Bob, age: None"
@@ -506,6 +508,7 @@ def test_converter_with_list_field():
 
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
+    llm._is_mistral_model = False
     llm.call.return_value = '{"items": [1, 2, 3]}'
     sample_text = "Items: 1, 2, 3"
 
@@ -539,6 +542,7 @@ def test_converter_with_enum():
 
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
+    llm._is_mistral_model = False
     llm.call.return_value = '{"name": "Alice", "color": "red"}'
     sample_text = "Name: Alice, Color: Red"
 
