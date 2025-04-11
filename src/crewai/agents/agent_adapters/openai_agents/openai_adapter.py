@@ -159,25 +159,6 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
 
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
-        """Parse and validate tools"""
-        tools_list = []
-        try:
-            # tentatively try to import from crewai_tools import BaseTool as CrewAITool
-            from crewai.tools import BaseTool as CrewAITool
-
-            for tool in tools:
-                if isinstance(tool, CrewAITool):
-                    tools_list.append(tool.to_structured_tool())
-                else:
-                    tools_list.append(tool)
-        except ModuleNotFoundError:
-            tools_list = []
-            for tool in tools:
-                tools_list.append(tool)
-
-        return tools_list
-
     def configure_structured_output(self, task) -> None:
         """Configure the structured output for the specific agent implementation.
 
