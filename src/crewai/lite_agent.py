@@ -47,11 +47,6 @@ from crewai.utilities.events.llm_events import (
     LLMCallStartedEvent,
     LLMCallType,
 )
-from crewai.utilities.events.tool_usage_events import (
-    ToolUsageErrorEvent,
-    ToolUsageFinishedEvent,
-    ToolUsageStartedEvent,
-)
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -155,6 +150,10 @@ class LiteAgent(BaseModel):
         default=[], description="Results of the tools used by the agent."
     )
 
+    # Reference of Agent
+    original_agent: Optional[BaseAgent] = Field(
+        default=None, description="Reference to the agent that created this LiteAgent"
+    )
     # Private Attributes
     _parsed_tools: List[CrewStructuredTool] = PrivateAttr(default_factory=list)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
@@ -163,7 +162,7 @@ class LiteAgent(BaseModel):
     _messages: List[Dict[str, str]] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
     _printer: Printer = PrivateAttr(default_factory=Printer)
-
+    
     @model_validator(mode="after")
     def setup_llm(self):
         """Set up the LLM and other components after initialization."""
@@ -412,18 +411,6 @@ class LiteAgent(BaseModel):
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
                 if isinstance(formatted_answer, AgentAction):
-                    # Emit tool usage started event
-                    crewai_event_bus.emit(
-                        self,
-                        event=ToolUsageStartedEvent(
-                            agent_key=self.key,
-                            agent_role=self.role,
-                            tool_name=formatted_answer.tool,
-                            tool_args=formatted_answer.tool_input,
-                            tool_class=formatted_answer.tool,
-                        ),
-                    )
-
                     try:
                         tool_result = execute_tool_and_check_finality(
                             agent_action=formatted_answer,
@@ -431,34 +418,9 @@ class LiteAgent(BaseModel):
                             i18n=self.i18n,
                             agent_key=self.key,
                             agent_role=self.role,
-                        )
-                        # Emit tool usage finished event
-                        crewai_event_bus.emit(
-                            self,
-                            event=ToolUsageFinishedEvent(
-                                agent_key=self.key,
-                                agent_role=self.role,
-                                tool_name=formatted_answer.tool,
-                                tool_args=formatted_answer.tool_input,
-                                tool_class=formatted_answer.tool,
-                                started_at=datetime.now(),
-                                finished_at=datetime.now(),
-                                output=tool_result.result,
-                            ),
+                            agent=self.original_agent,
                         )
                     except Exception as e:
-                        # Emit tool usage error event
-                        crewai_event_bus.emit(
-                            self,
-                            event=ToolUsageErrorEvent(
-                                agent_key=self.key,
-                                agent_role=self.role,
-                                tool_name=formatted_answer.tool,
-                                tool_args=formatted_answer.tool_input,
-                                tool_class=formatted_answer.tool,
-                                error=str(e),
-                            ),
-                        )
                         raise e
 
                     formatted_answer = handle_agent_action_core(
