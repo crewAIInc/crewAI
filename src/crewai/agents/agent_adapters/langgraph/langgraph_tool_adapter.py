@@ -1,30 +1,29 @@
 from typing import Any, List, Optional
 
+from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
 from crewai.tools.base_tool import BaseTool
 
 
-class LangGraphToolAdapter:
-    """Adapts CrewAI tools to LangGraph-compatible format"""
+class LangGraphToolAdapter(BaseToolAdapter):
+    """Adapts CrewAI tools to LangGraph agent tool compatible format"""
 
     def __init__(self, tools: Optional[List[BaseTool]] = None):
-        self.tools = tools or []
-        self.converted_tools = []
+        self.original_tools = tools or []
 
     def configure_tools(self, tools: List[BaseTool]) -> None:
-        """Convert CrewAI tools to LangGraph tools"""
-        self.tools = tools
-        self.converted_tools = self._convert_tools(tools)
-
-    def _convert_tools(self, tools: List[BaseTool]) -> List[Any]:
         """
-        Convert CrewAI tools to LangGraph-compatible tools
-        LangGraph expects tools in langchain_core.tools format
+        Configure and convert CrewAI tools to LangGraph-compatible format.
+        LangGraph expects tools in langchain_core.tools format.
         """
         from langchain_core.tools import StructuredTool
 
-        converted_tools = []
-
-        for tool in tools:
+        self.tools = tools
+        self.converted_tools = []
+        if self.original_tools:
+            all_tools = tools + self.original_tools
+        else:
+            all_tools = tools
+        for tool in all_tools:
             # Create a wrapper function that matches LangGraph's expected format
             def tool_wrapper(*args, tool=tool, **kwargs):
                 # Extract inputs based on the tool's schema
@@ -36,12 +35,13 @@ class LangGraphToolAdapter:
                     return tool.run(**kwargs)
 
             converted_tool = StructuredTool(
-                name=tool.name,
+                name=tool.name.replace(" ", "_"),
                 description=tool.description,
                 func=tool_wrapper,
                 args_schema=tool.args_schema,
             )
 
-            converted_tools.append(converted_tool)
+            self.converted_tools.append(converted_tool)
 
-        return converted_tools
+    def all_tools(self) -> List[Any]:
+        return self.converted_tools

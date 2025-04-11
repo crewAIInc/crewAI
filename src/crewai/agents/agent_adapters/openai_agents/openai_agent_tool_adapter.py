@@ -2,21 +2,20 @@ from typing import Any, List, Optional
 
 from agents import FunctionTool, Tool
 
+from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
 from crewai.tools import BaseTool
 
 
-class OpenAIAgentToolAdapter:
+class OpenAIAgentToolAdapter(BaseToolAdapter):
     """Adapter for OpenAI Assistant tools"""
 
-    converted_tools: Optional[List[Tool]] = None
-
     def __init__(self, tools: Optional[List[BaseTool]] = None):
-        self.tools = tools
+        self.original_tools = tools or []
 
     def configure_tools(self, tools: List[BaseTool]) -> None:
         """Configure tools for the OpenAI Assistant"""
-        if self.tools:
-            all_tools = tools + self.tools
+        if self.original_tools:
+            all_tools = tools + self.original_tools
         else:
             all_tools = tools
         if all_tools:

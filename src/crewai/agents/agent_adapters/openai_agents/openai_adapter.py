@@ -31,7 +31,6 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     _active_thread: Optional[str] = PrivateAttr(default=None)
     function_calling_llm: Any = Field(default=None)
     step_callback: Any = Field(default=None)
-    converted_tools: Optional[List[Tool]] = Field(default=None)
     _tool_adapter: OpenAIAgentToolAdapter = PrivateAttr()
     _converter_adapter: OpenAIConverterAdapter = PrivateAttr()
 

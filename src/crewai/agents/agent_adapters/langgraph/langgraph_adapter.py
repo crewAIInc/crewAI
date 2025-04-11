@@ -37,7 +37,6 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
     function_calling_llm: Any = Field(default=None)
     step_callback: Any = Field(default=None)
 
-    # Config parameters for LangGraph
     model: str = Field(default="gpt-4o")
     verbose: bool = Field(default=False)
 
@@ -81,7 +80,6 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
                 tools=converted_tools,
                 checkpointer=self._memory,
             )
-            print("langgraph graph", self._graph)
 
         except ImportError as e:
             self._logger.log(
@@ -94,15 +92,15 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
 
     def _build_system_prompt(self) -> str:
         """Build a system prompt for the LangGraph agent."""
-        base_prompt = f"""You are {self.role}.
+        base_prompt = f"""
+            You are {self.role}.
         
-Your goal is: {self.goal}
+            Your goal is: {self.goal}
 
-Your backstory: {self.backstory}
+            Your backstory: {self.backstory}
 
-When working on tasks, think step-by-step and use the available tools when necessary.
-"""
-        # Enhance with structured output instructions if configured
+            When working on tasks, think step-by-step and use the available tools when necessary.
+        """
         return self._converter_adapter.enhance_system_prompt(base_prompt)
 
     def execute_task(
@@ -114,7 +112,6 @@ When working on tasks, think step-by-step and use the available tools when neces
         """Execute a task using the LangGraph workflow."""
         self.create_agent_executor(tools)
 
-        # Configure structured output if needed
         self.configure_structured_output(task)
 
         try:
