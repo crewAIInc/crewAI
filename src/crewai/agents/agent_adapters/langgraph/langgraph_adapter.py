@@ -270,10 +270,6 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         """Convert output format if needed."""
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
-        """Parse and validate tools."""
-        return tools
-
     def configure_structured_output(self, task) -> None:
         """Configure the structured output for LangGraph."""
         self._converter_adapter.configure_structured_output(task)
