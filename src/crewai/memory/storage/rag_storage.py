@@ -120,7 +120,11 @@ class RAGStorage(BaseRAGStorage):
 
         try:
             with suppress_logging():
-                response = self.collection.query(query_texts=query, n_results=limit)
+                response = self.collection.query(
+                    query_texts=query, 
+                    n_results=limit,
+                    where=filter
+                )
 
             results = []
             for i in range(len(response["ids"][0])):

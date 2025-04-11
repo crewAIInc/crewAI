@@ -46,22 +46,31 @@ class ShortTermMemory(Memory):
         value: Any,
         metadata: Optional[Dict[str, Any]] = None,
         agent: Optional[str] = None,
+        custom_key: Optional[str] = None,
     ) -> None:
         item = ShortTermMemoryItem(data=value, metadata=metadata, agent=agent)
         if self.memory_provider == "mem0":
             item.data = f"Remember the following insights from Agent run: {item.data}"
 
-        super().save(value=item.data, metadata=item.metadata, agent=item.agent)
+        super().save(value=item.data, metadata=item.metadata, agent=item.agent, custom_key=custom_key)
 
     def search(
         self,
         query: str,
         limit: int = 3,
         score_threshold: float = 0.35,
+        custom_key: Optional[str] = None,
     ):
+        filter_dict = None
+        if custom_key:
+            filter_dict = {"custom_key": {"$eq": custom_key}}
+            
         return self.storage.search(
-            query=query, limit=limit, score_threshold=score_threshold
-        )  # type: ignore # BUG? The reference is to the parent class, but the parent class does not have this parameters
+            query=query, 
+            limit=limit, 
+            score_threshold=score_threshold,
+            filter=filter_dict
+        )
 
     def reset(self) -> None:
         try:

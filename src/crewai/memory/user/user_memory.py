@@ -26,20 +26,27 @@ class UserMemory(Memory):
         value,
         metadata: Optional[Dict[str, Any]] = None,
         agent: Optional[str] = None,
+        custom_key: Optional[str] = None,
     ) -> None:
         # TODO: Change this function since we want to take care of the case where we save memories for the usr
         data = f"Remember the details about the user: {value}"
-        super().save(data, metadata)
+        super().save(data, metadata, custom_key=custom_key)
 
     def search(
         self,
         query: str,
         limit: int = 3,
         score_threshold: float = 0.35,
+        custom_key: Optional[str] = None,
     ):
+        filter_dict = None
+        if custom_key:
+            filter_dict = {"custom_key": {"$eq": custom_key}}
+            
         results = self.storage.search(
             query=query,
             limit=limit,
             score_threshold=score_threshold,
+            filter=filter_dict,
         )
         return results

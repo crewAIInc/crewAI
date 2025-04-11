@@ -70,22 +70,31 @@ class LTMSQLiteStorage:
             )
 
     def load(
-        self, task_description: str, latest_n: int
+        self, task_description: str, latest_n: int, custom_key: Optional[str] = None
     ) -> Optional[List[Dict[str, Any]]]:
         """Queries the LTM table by task description with error handling."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute(
-                    f"""
+                
+                query = """
                     SELECT metadata, datetime, score
                     FROM long_term_memories
                     WHERE task_description = ?
+                """
+                
+                params = [task_description]
+                
+                if custom_key:
+                    query += " AND json_extract(metadata, '$.custom_key') = ?"
+                    params.append(custom_key)
+                
+                query += f"""
                     ORDER BY datetime DESC, score ASC
                     LIMIT {latest_n}
-                """,  # nosec
-                    (task_description,),
-                )
+                """
+                
+                cursor.execute(query, params)
                 rows = cursor.fetchall()
                 if rows:
                     return [

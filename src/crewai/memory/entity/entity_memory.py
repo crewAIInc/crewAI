@@ -1,3 +1,5 @@
+from typing import Optional
+
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.rag_storage import RAGStorage
@@ -38,7 +40,7 @@ class EntityMemory(Memory):
             )
         super().__init__(storage)
 
-    def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
+    def save(self, item: EntityMemoryItem, custom_key: Optional[str] = None) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         """Saves an entity item into the SQLite storage."""
         if self.memory_provider == "mem0":
             data = f"""
@@ -49,7 +51,7 @@ class EntityMemory(Memory):
             """
         else:
             data = f"{item.name}({item.type}): {item.description}"
-        super().save(data, item.metadata)
+        super().save(data, item.metadata, custom_key=custom_key)
 
     def reset(self) -> None:
         try:

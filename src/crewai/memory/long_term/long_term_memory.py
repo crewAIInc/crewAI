@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.memory.memory import Memory
@@ -19,9 +19,12 @@ class LongTermMemory(Memory):
             storage = LTMSQLiteStorage(db_path=path) if path else LTMSQLiteStorage()
         super().__init__(storage)
 
-    def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
+    def save(self, item: LongTermMemoryItem, custom_key: Optional[str] = None) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         metadata = item.metadata
         metadata.update({"agent": item.agent, "expected_output": item.expected_output})
+        if custom_key:
+            metadata.update({"custom_key": custom_key})
+            
         self.storage.save(  # type: ignore # BUG?: Unexpected keyword argument "task_description","score","datetime" for "save" of "Storage"
             task_description=item.task,
             score=metadata["quality"],
@@ -29,8 +32,8 @@ class LongTermMemory(Memory):
             datetime=item.datetime,
         )
 
-    def search(self, task: str, latest_n: int = 3) -> List[Dict[str, Any]]:  # type: ignore # signature of "search" incompatible with supertype "Memory"
-        return self.storage.load(task, latest_n)  # type: ignore # BUG?: "Storage" has no attribute "load"
+    def search(self, task: str, latest_n: int = 3, custom_key: Optional[str] = None) -> List[Dict[str, Any]]:  # type: ignore # signature of "search" incompatible with supertype "Memory"
+        return self.storage.load(task, latest_n, custom_key)  # type: ignore # BUG?: "Storage" has no attribute "load"
 
     def reset(self) -> None:
         self.storage.reset()
