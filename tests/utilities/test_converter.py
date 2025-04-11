@@ -448,6 +448,7 @@ def test_converter_error_handling():
 def test_converter_retry_logic():
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
+    llm._is_mistral_model.return_value = False
     llm.call.side_effect = [
         "Invalid JSON",
         "Still invalid",
@@ -480,6 +481,7 @@ def test_converter_with_optional_fields():
 
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
+    llm._is_mistral_model.return_value = False
     # Simulate the LLM's response with 'age' explicitly set to null
     llm.call.return_value = '{"name": "Bob", "age": null}'
     sample_text = "Name: Bob, age: None"
@@ -506,6 +508,7 @@ def test_converter_with_list_field():
 
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
+    llm._is_mistral_model.return_value = False
     llm.call.return_value = '{"items": [1, 2, 3]}'
     sample_text = "Items: 1, 2, 3"
 
@@ -539,6 +542,7 @@ def test_converter_with_enum():
 
     llm = Mock(spec=LLM)
     llm.supports_function_calling.return_value = False
+    llm._is_mistral_model.return_value = False
     llm.call.return_value = '{"name": "Alice", "color": "red"}'
     sample_text = "Name: Alice, Color: Red"
 
@@ -609,3 +613,67 @@ def test_generate_model_description_union_field():
     description = generate_model_description(UnionModel)
     expected_description = '{\n  "field": int | str | None\n}'
     assert description == expected_description
+
+
+def test_converter_to_pydantic_with_mistral():
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm._is_mistral_model.return_value = True
+    llm.call.return_value = '{"name": "Alice", "age": 30}'
+    sample_text = "Name: Alice, Age: 30"
+
+    converter = Converter(
+        llm=llm,
+        text=sample_text,
+        model=SimpleModel,
+        instructions="Convert this text.",
+    )
+
+    output = converter.to_pydantic()
+
+    llm.call.assert_called_once()
+    args, kwargs = llm.call.call_args
+    
+    assert len(args) == 1
+
+    arg_list = args[0]
+    assert isinstance(arg_list, list)
+    assert len(arg_list) == 1
+
+    item = arg_list[0]
+    assert isinstance(item, dict)
+    assert item.get("role") == "user"
+
+
+def test_converter_to_json_with_mistral():
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm._is_mistral_model.return_value = False
+    llm.call.return_value = '{"name": "Alice", "age": 30}'
+    sample_text = "Name: Alice, Age: 30"
+
+    converter = Converter(
+        llm=llm,
+        text=sample_text,
+        model=SimpleModel,
+        instructions="Convert this text.",
+    )
+
+    output = converter.to_json()
+
+    llm.call.assert_called_once()
+    args, kwargs = llm.call.call_args
+    
+    assert len(args) == 1
+
+    arg_list = args[0]
+    assert isinstance(arg_list, list)
+    assert len(arg_list) == 2
+
+    item = arg_list[0]
+    assert isinstance(item, dict)
+    assert item.get("role") == "system"
+
+    item = arg_list[1]
+    assert isinstance(item, dict)
+    assert item.get("role") == "user"
