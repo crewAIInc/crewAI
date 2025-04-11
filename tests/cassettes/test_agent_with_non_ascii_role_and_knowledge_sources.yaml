@@ -1,0 +1,80 @@
+interactions:
+- request:
+    body: '{"input": ["GraphQL is a query language for APIs and a runtime for fulfilling
+      those queries with your existing data."], "model": "text-embedding-3-small",
+      "encoding_format": "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '183'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n    \"error\": {\n        \"message\": \"Incorrect API key provided:
+      sk-proj-********************************************************************************************************************************************************sLcA.
+      You can find your API key at https://platform.openai.com/account/api-keys.\",\n
+      \       \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\":
+      \"invalid_api_key\"\n    }\n}\n"
+    headers:
+      CF-RAY:
+      - 92ce9b496bd476a0-SEA
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '414'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 08 Apr 2025 03:16:33 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=S0TpOceTcU79JlMhdky0iDf4sfHcnaP9JOimob0aF1M-1744082193-1.0.1.1-owOv6J9Tl7Kh5ltS4PUm_QuIO.Z98d8uzA4T19GK1BSWsRL6W6qUKRO1OPDRRtX6hYUcriLQUhl3drxTf_Ck7oq1ueg8sSI3NSvmKQX4xMY;
+        path=/; expires=Tue, 08-Apr-25 03:46:33 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=033vbIHDWmO2i_U_qbo8bvpL4uiHSy5yuML2pM2GnKM-1744082193025-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Origin
+      x-request-id:
+      - req_4d2830717fd2a87766200324d4a30907
+    http_version: HTTP/1.1
+    status_code: 401
+version: 1

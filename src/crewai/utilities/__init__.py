@@ -11,6 +11,7 @@ from .exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
 from .embedding_configurator import EmbeddingConfigurator
+from .string_utils import sanitize_collection_name
 
 __all__ = [
     "Converter",
@@ -25,4 +26,5 @@ __all__ = [
     "YamlParser",
     "LLMContextLengthExceededException",
     "EmbeddingConfigurator",
+    "sanitize_collection_name",
 ]
