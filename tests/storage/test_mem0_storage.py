@@ -15,6 +15,7 @@ from crewai.task import Task
 class MockCrew:
     def __init__(self, memory_config):
         self.memory_config = memory_config
+        self.agents = []
 
 
 @pytest.fixture
@@ -153,3 +154,39 @@ def test_mem0_storage_with_explict_config(
         mem0_storage_with_memory_client_using_explictly_config.memory_config
         == expected_config
     )
+
+
+def test_mem0_storage_search(mem0_storage_with_memory_client_using_config_from_crew, mock_mem0_memory_client):
+    """Test that Mem0Storage search correctly handles the response format"""
+    mock_search_response = {
+        'results': [
+            {
+                'id': '1',
+                'score': 0.9,
+                'metadata': {'type': 'short_term'},
+                'context': 'test context 1'
+            },
+            {
+                'id': '2',
+                'score': 0.8,
+                'metadata': {'type': 'short_term'},
+                'context': 'test context 2'
+            },
+            {
+                'id': '3',
+                'score': 0.3,  # Below threshold
+                'metadata': {'type': 'short_term'},
+                'context': 'test context 3'
+            }
+        ]
+    }
+    
+    mock_mem0_memory_client.search.return_value = mock_search_response
+    
+    results = mem0_storage_with_memory_client_using_config_from_crew.search("test query", score_threshold=0.5)
+    
+    mock_mem0_memory_client.search.assert_called_once()
+    
+    assert len(results) == 2
+    assert results[0]['score'] == 0.9
+    assert results[1]['score'] == 0.8
