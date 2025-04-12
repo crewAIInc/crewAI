@@ -56,7 +56,7 @@ class ContextualMemory:
         stm_results = self.stm.search(query)
         formatted_results = "\n".join(
             [
-                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
+                f"- {result['context']}"
                 for result in stm_results
             ]
         )
@@ -89,7 +89,7 @@ class ContextualMemory:
         em_results = self.em.search(query)
         formatted_results = "\n".join(
             [
-                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
+                f"- {result['context']}"
                 for result in em_results
             ]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
