@@ -19,6 +19,8 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
@@ -2403,6 +2405,64 @@ def test_using_contextual_memory():
     with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_using_contextual_memory_with_long_term_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        long_term_memory=LongTermMemory(),
+    )
+
+    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+        crew.kickoff()
+        contextual_mem.assert_called_once()
+        assert crew.memory is False
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_using_contextual_memory_with_short_term_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        short_term_memory=ShortTermMemory(),
+    )
+
+    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+        crew.kickoff()
+        contextual_mem.assert_called_once()
+        assert crew.memory is False
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

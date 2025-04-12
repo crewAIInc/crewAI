@@ -61,6 +61,35 @@ def crew_with_external_memory(external_memory_with_mocked_config, patch_configur
     return crew
 
 
+@pytest.fixture
+def crew_with_external_memory_without_memory_flag(
+    external_memory_with_mocked_config, patch_configure_mem0
+):
+    agent = Agent(
+        role="Researcher",
+        goal="Search relevant data and provide results",
+        backstory="You are a researcher at a leading tech think tank.",
+        tools=[],
+        verbose=True,
+    )
+
+    task = Task(
+        description="Perform a search on specific topics.",
+        expected_output="A list of relevant URLs based on the search query.",
+        agent=agent,
+    )
+
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        verbose=True,
+        process=Process.sequential,
+        external_memory=external_memory_with_mocked_config,
+    )
+
+    return crew
+
+
 def test_external_memory_initialization(external_memory_with_mocked_config):
     assert external_memory_with_mocked_config is not None
     assert isinstance(external_memory_with_mocked_config, ExternalMemory)
@@ -137,11 +166,25 @@ def test_crew_external_memory_reset(mem_type, crew_with_external_memory):
 
 @pytest.mark.parametrize("mem_method", ["search", "save"])
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_external_memory_save(mem_method, crew_with_external_memory):
+def test_crew_external_memory_save_with_memory_flag(
+    mem_method, crew_with_external_memory
+):
     with patch(
         f"crewai.memory.external.external_memory.ExternalMemory.{mem_method}"
     ) as mock_method:
         crew_with_external_memory.kickoff()
+        assert mock_method.call_count > 0
+
+
+@pytest.mark.parametrize("mem_method", ["search", "save"])
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_external_memory_save_using_crew_without_memory_flag(
+    mem_method, crew_with_external_memory_without_memory_flag
+):
+    with patch(
+        f"crewai.memory.external.external_memory.ExternalMemory.{mem_method}"
+    ) as mock_method:
+        crew_with_external_memory_without_memory_flag.kickoff()
         assert mock_method.call_count > 0
 
 
