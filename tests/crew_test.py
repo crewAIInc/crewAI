@@ -2437,6 +2437,78 @@ def test_using_contextual_memory_with_long_term_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_warning_long_term_memory_without_entity_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        long_term_memory=LongTermMemory(),
+    )
+
+    with (
+        patch("crewai.utilities.printer.Printer.print") as mock_print,
+        patch(
+            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
+        ) as save_memory,
+    ):
+        crew.kickoff()
+        mock_print.assert_called_with(
+            content="Long term memory is enabled, but entity memory is not enabled. Please configure entity memory or set memory=True to automatically enable it.",
+            color="bold_yellow",
+        )
+        save_memory.assert_not_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_long_term_memory_with_memory_flag():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        memory=True,
+        long_term_memory=LongTermMemory(),
+    )
+
+    with (
+        patch("crewai.utilities.printer.Printer.print") as mock_print,
+        patch(
+            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
+        ) as save_memory,
+    ):
+        crew.kickoff()
+        mock_print.assert_not_called()
+        save_memory.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory_with_short_term_memory():
     from unittest.mock import patch
 
