@@ -1,13 +1,9 @@
 """Test Agent creation and execution basic functionality."""
 
 import hashlib
-import tempfile
-import os
-import pydantic_core
-from crewai.memory.short_term.short_term_memory import ShortTermMemory
-
 import json
 import os
+import tempfile
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -24,6 +20,7 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
