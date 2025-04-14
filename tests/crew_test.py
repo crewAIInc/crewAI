@@ -3936,9 +3936,6 @@ def test_crew_guardrail_feedback_in_context():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.skipif(
-    sys.version_info.minor == 11, reason="VCR cassette issues in Python 3.11"
-)
 def test_before_kickoff_callback():
     from crewai.project import CrewBase, agent, before_kickoff, task
 

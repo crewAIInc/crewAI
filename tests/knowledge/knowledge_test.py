@@ -568,9 +568,6 @@ def test_docling_source(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.skipif(
-    sys.version_info.minor == 11, reason="VCR cassette issues in Python 3.11"
-)
 def test_multiple_docling_sources():
     urls: List[Union[Path, str]] = [
         "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
