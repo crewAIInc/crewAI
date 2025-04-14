@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import tempfile
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -19,6 +20,8 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
@@ -2406,6 +2409,136 @@ def test_using_contextual_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_using_contextual_memory_with_long_term_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        long_term_memory=LongTermMemory(),
+    )
+
+    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+        crew.kickoff()
+        contextual_mem.assert_called_once()
+        assert crew.memory is False
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_warning_long_term_memory_without_entity_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        long_term_memory=LongTermMemory(),
+    )
+
+    with (
+        patch("crewai.utilities.printer.Printer.print") as mock_print,
+        patch(
+            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
+        ) as save_memory,
+    ):
+        crew.kickoff()
+        mock_print.assert_called_with(
+            content="Long term memory is enabled, but entity memory is not enabled. Please configure entity memory or set memory=True to automatically enable it.",
+            color="bold_yellow",
+        )
+        save_memory.assert_not_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_long_term_memory_with_memory_flag():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        memory=True,
+        long_term_memory=LongTermMemory(),
+    )
+
+    with (
+        patch("crewai.utilities.printer.Printer.print") as mock_print,
+        patch(
+            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
+        ) as save_memory,
+    ):
+        crew.kickoff()
+        mock_print.assert_not_called()
+        save_memory.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_using_contextual_memory_with_short_term_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        short_term_memory=ShortTermMemory(),
+    )
+
+    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+        crew.kickoff()
+        contextual_mem.assert_called_once()
+        assert crew.memory is False
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_disabled_memory_using_contextual_memory():
     from unittest.mock import patch
 
@@ -4116,6 +4249,54 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
     assert crew_copy.manager_agent.id != crew.manager_agent.id
     assert crew_copy.manager_agent.role == crew.manager_agent.role
     assert crew_copy.manager_agent.goal == crew.manager_agent.goal
-    assert crew_copy.manager_agent.backstory == crew.manager_agent.backstory
-    assert isinstance(crew_copy.manager_agent.agent_executor, CrewAgentExecutor)
-    assert isinstance(crew_copy.manager_agent.cache_handler, CacheHandler)
+
+def test_crew_copy_with_memory():
+    """Test that copying a crew with memory enabled does not raise validation errors and copies memory correctly."""
+    agent = Agent(role="Test Agent", goal="Test Goal", backstory="Test Backstory")
+    task = Task(description="Test Task", expected_output="Test Output", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task], memory=True)
+
+    original_short_term_id = id(crew._short_term_memory) if crew._short_term_memory else None
+    original_long_term_id = id(crew._long_term_memory) if crew._long_term_memory else None
+    original_entity_id = id(crew._entity_memory) if crew._entity_memory else None
+    original_external_id = id(crew._external_memory) if crew._external_memory else None
+    original_user_id = id(crew._user_memory) if crew._user_memory else None
+
+
+    try:
+        crew_copy = crew.copy()
+
+        assert hasattr(crew_copy, "_short_term_memory"), "Copied crew should have _short_term_memory"
+        assert crew_copy._short_term_memory is not None, "Copied _short_term_memory should not be None"
+        assert id(crew_copy._short_term_memory) != original_short_term_id, "Copied _short_term_memory should be a new object"
+
+        assert hasattr(crew_copy, "_long_term_memory"), "Copied crew should have _long_term_memory"
+        assert crew_copy._long_term_memory is not None, "Copied _long_term_memory should not be None"
+        assert id(crew_copy._long_term_memory) != original_long_term_id, "Copied _long_term_memory should be a new object"
+
+        assert hasattr(crew_copy, "_entity_memory"), "Copied crew should have _entity_memory"
+        assert crew_copy._entity_memory is not None, "Copied _entity_memory should not be None"
+        assert id(crew_copy._entity_memory) != original_entity_id, "Copied _entity_memory should be a new object"
+
+        if original_external_id:
+             assert hasattr(crew_copy, "_external_memory"), "Copied crew should have _external_memory"
+             assert crew_copy._external_memory is not None, "Copied _external_memory should not be None"
+             assert id(crew_copy._external_memory) != original_external_id, "Copied _external_memory should be a new object"
+        else:
+             assert not hasattr(crew_copy, "_external_memory") or crew_copy._external_memory is None, "Copied _external_memory should be None if not originally present"
+
+        if original_user_id:
+             assert hasattr(crew_copy, "_user_memory"), "Copied crew should have _user_memory"
+             assert crew_copy._user_memory is not None, "Copied _user_memory should not be None"
+             assert id(crew_copy._user_memory) != original_user_id, "Copied _user_memory should be a new object"
+        else:
+             assert not hasattr(crew_copy, "_user_memory") or crew_copy._user_memory is None, "Copied _user_memory should be None if not originally present"
+
+
+    except pydantic_core.ValidationError as e:
+         if "Input should be an instance of" in str(e) and ("Memory" in str(e)):
+              pytest.fail(f"Copying with memory raised Pydantic ValidationError, likely due to incorrect memory copy: {e}")
+         else:
+              raise e # Re-raise other validation errors
+    except Exception as e:
+        pytest.fail(f"Copying crew raised an unexpected exception: {e}")

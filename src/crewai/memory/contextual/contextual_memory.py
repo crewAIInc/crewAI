@@ -53,6 +53,10 @@ class ContextualMemory:
         Fetches recent relevant insights from STM related to the task's description and expected_output,
         formatted as bullet points.
         """
+
+        if self.stm is None:
+            return ""
+
         stm_results = self.stm.search(query)
         formatted_results = "\n".join(
             [
@@ -67,6 +71,10 @@ class ContextualMemory:
         Fetches historical data or insights from LTM that are relevant to the task's description and expected_output,
         formatted as bullet points.
         """
+
+        if self.ltm is None:
+            return ""
+
         ltm_results = self.ltm.search(task, latest_n=2)
         if not ltm_results:
             return None
@@ -86,6 +94,9 @@ class ContextualMemory:
         Fetches relevant entity information from Entity Memory related to the task's description and expected_output,
         formatted as bullet points.
         """
+        if self.em is None:
+            return ""
+
         em_results = self.em.search(query)
         formatted_results = "\n".join(
             [
