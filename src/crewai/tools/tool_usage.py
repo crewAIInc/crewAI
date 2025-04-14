@@ -2,7 +2,6 @@ import ast
 import datetime
 import json
 import time
-from dataclasses import dataclass
 from difflib import SequenceMatcher
 from json import JSONDecodeError
 from textwrap import dedent
@@ -26,6 +25,7 @@ from crewai.utilities.events.tool_usage_events import (
     ToolSelectionErrorEvent,
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
     ToolValidateInputErrorEvent,
 )
 
@@ -166,6 +166,21 @@ class ToolUsage:
                 if self.task:
                     self.task.increment_tools_errors()
 
+        if self.agent:
+            event_data = {
+                "agent_key": self.agent.key,
+                "agent_role": self.agent.role,
+                "tool_name": self.action.tool,
+                "tool_args": self.action.tool_input,
+                "tool_class": self.action.tool,
+                "agent": self.agent,
+            }
+
+            if self.agent.fingerprint:
+                event_data.update(self.agent.fingerprint)
+
+            crewai_event_bus.emit(self,ToolUsageStartedEvent(**event_data))
+            
         started_at = time.time()
         from_cache = False
         result = None  # type: ignore

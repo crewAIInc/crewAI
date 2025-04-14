@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Self
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
@@ -52,7 +52,7 @@ class ExternalMemory(Memory):
     def reset(self) -> None:
         self.storage.reset()
 
-    def set_crew(self, crew: Any) -> Self:
+    def set_crew(self, crew: Any) -> "ExternalMemory":
         super().set_crew(crew)
 
         if not self.storage:
