@@ -1,5 +1,5 @@
-from crewai.cli.constants import ENV_VARS, MODELS, PROVIDERS
 import pytest
+from crewai.cli.constants import ENV_VARS, MODELS, PROVIDERS
 
 
 def test_huggingface_in_providers():
