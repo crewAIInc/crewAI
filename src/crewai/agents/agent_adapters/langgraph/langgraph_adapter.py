@@ -71,6 +71,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             agent_config=agent_config,
             **kwargs,
         )
+        self.tools = tools or []
         self._tool_adapter = LangGraphToolAdapter(tools=tools or [])
         self._converter_adapter = LangGraphConverterAdapter(self)
         self._max_iterations = max_iterations
@@ -79,14 +80,13 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
     def _setup_graph(self) -> None:
         """Set up the LangGraph workflow graph."""
         try:
-            # Initialize memory for the agent
             self._memory = MemorySaver()
 
-            converted_tools = self._tool_adapter.converted_tools
+            converted_tools: List[Any] = self._tool_adapter.tools()
 
             self._graph = create_react_agent(
                 model=self.llm,
-                tools=converted_tools,
+                tools=converted_tools or [],
                 checkpointer=self._memory,
                 debug=self.verbose,
             )
@@ -142,13 +142,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
                 ),
             )
 
-            # Set up a session ID for this task
             session_id = f"task_{id(task)}"
 
-            # Configure the invocation
             config = {"configurable": {"thread_id": session_id}}
 
-            # Invoke the agent graph with the task prompt
             result = self._graph.invoke(
                 {
                     "messages": [
@@ -159,7 +156,6 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
                 config,
             )
 
-            # Get the final response
             messages = result.get("messages", [])
             last_message = messages[-1] if messages else None
 
@@ -169,7 +165,6 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             elif hasattr(last_message, "content"):
                 final_answer = getattr(last_message, "content", "")
 
-            # Post-process to ensure correct structured output format if needed
             final_answer = (
                 self._converter_adapter.post_process_result(final_answer)
                 or "Task execution completed but no clear answer was provided."
@@ -256,18 +251,15 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
 
     def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
         """Configure the LangGraph agent for execution."""
-        if tools:
-            self.configure_tools(tools)
-
-        # No need for a separate executor in LangGraph
+        self.configure_tools(tools)
 
     def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
         """Configure tools for the LangGraph agent."""
         if tools:
             all_tools = list(self.tools or []) + list(tools or [])
             self._tool_adapter.configure_tools(all_tools)
-            # We need to recreate the graph with the new tools
-            self._setup_graph()
+            available_tools = self._tool_adapter.tools()
+            self._graph.tools = available_tools
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support for LangGraph."""

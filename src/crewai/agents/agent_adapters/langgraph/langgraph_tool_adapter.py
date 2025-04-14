@@ -9,6 +9,7 @@ class LangGraphToolAdapter(BaseToolAdapter):
 
     def __init__(self, tools: Optional[List[BaseTool]] = None):
         self.original_tools = tools or []
+        self.converted_tools = []
 
     def configure_tools(self, tools: List[BaseTool]) -> None:
         """
@@ -17,16 +18,14 @@ class LangGraphToolAdapter(BaseToolAdapter):
         """
         from langchain_core.tools import StructuredTool
 
-        self.tools = tools
-        self.converted_tools = []
+        converted_tools = []
         if self.original_tools:
             all_tools = tools + self.original_tools
         else:
             all_tools = tools
         for tool in all_tools:
-            # Create a wrapper function that matches LangGraph's expected format
+
             def tool_wrapper(*args, tool=tool, **kwargs):
-                # Extract inputs based on the tool's schema
                 if len(args) > 0 and isinstance(args[0], str):
                     return tool.run(args[0])
                 elif "input" in kwargs:
@@ -34,14 +33,18 @@ class LangGraphToolAdapter(BaseToolAdapter):
                 else:
                     return tool.run(**kwargs)
 
+            sanitized_tool_name = self.sanitize_tool_name(tool.name)
+
             converted_tool = StructuredTool(
-                name=tool.name.replace(" ", "_"),
+                name=sanitized_tool_name,
                 description=tool.description,
                 func=tool_wrapper,
                 args_schema=tool.args_schema,
             )
 
-            self.converted_tools.append(converted_tool)
+            converted_tools.append(converted_tool)
 
-    def all_tools(self) -> List[Any]:
-        return self.converted_tools
+        self.converted_tools = converted_tools
+
+    def tools(self) -> List[Any]:
+        return self.converted_tools or []

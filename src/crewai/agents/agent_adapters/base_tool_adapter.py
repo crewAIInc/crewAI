@@ -12,11 +12,12 @@ class BaseToolAdapter(ABC):
     different frameworks and platforms.
     """
 
-    original_tools: List[BaseTool] = []
-    converted_tools: List[Any] = []
+    original_tools: List[BaseTool]
+    converted_tools: List[Any]
 
     def __init__(self, tools: Optional[List[BaseTool]] = None):
-        self.tools = tools or []
+        self.original_tools = tools or []
+        self.converted_tools = []
 
     @abstractmethod
     def configure_tools(self, tools: List[BaseTool]) -> None:
@@ -27,6 +28,10 @@ class BaseToolAdapter(ABC):
         """
         pass
 
-    def all_tools(self) -> List[Any]:
+    def tools(self) -> List[Any]:
         """Return all converted tools."""
         return self.converted_tools
+
+    def sanitize_tool_name(self, tool_name: str) -> str:
+        """Sanitize tool name for API compatibility."""
+        return tool_name.replace(" ", "_")
