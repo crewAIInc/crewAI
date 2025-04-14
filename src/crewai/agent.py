@@ -156,6 +156,23 @@ class Agent(BaseAgent):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
+    def _is_any_available_memory(self) -> bool:
+        """Check if any memory is available."""
+        if not self.crew:
+            return False
+
+        memory_attributes = [
+            "memory",
+            "memory_config",
+            "_short_term_memory",
+            "_long_term_memory",
+            "_entity_memory",
+            "_user_memory",
+            "_external_memory",
+        ]
+
+        return any(getattr(self.crew, attr) for attr in memory_attributes)
+
     def execute_task(
         self,
         task: Task,
@@ -200,7 +217,7 @@ class Agent(BaseAgent):
                 task=task_prompt, context=context
             )
 
-        if self.crew and self.crew.memory:
+        if self._is_any_available_memory():
             contextual_memory = ContextualMemory(
                 self.crew.memory_config,
                 self.crew._short_term_memory,
