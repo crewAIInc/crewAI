@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 from crewai.utilities.events import (
@@ -25,7 +26,7 @@ class AgentOpsListener(BaseEventListener):
         super().__init__()
 
     def setup_listeners(self, crewai_event_bus):
-        if not AGENTOPS_INSTALLED:
+        if not AGENTOPS_INSTALLED or not os.getenv("AGENTOPS_API_KEY"):
             return
 
         @crewai_event_bus.on(CrewKickoffStartedEvent)

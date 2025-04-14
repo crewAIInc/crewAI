@@ -39,6 +39,10 @@ from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
+import sys
+from unittest.mock import Mock, MagicMock
+
+
 # Skip streaming tests when running in CI/CD environments
 skip_streaming_in_ci = pytest.mark.skipif(
     os.getenv("CI") is not None, reason="Skipping streaming tests in CI/CD environments"
@@ -4119,3 +4123,44 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
     assert crew_copy.manager_agent.backstory == crew.manager_agent.backstory
     assert isinstance(crew_copy.manager_agent.agent_executor, CrewAgentExecutor)
     assert isinstance(crew_copy.manager_agent.cache_handler, CacheHandler)
+
+@patch.dict(os.environ, {}, clear=True) # Ensure AGENTOPS_API_KEY is not set
+@patch("sys.modules")
+def test_crew_kickoff_with_agentops_installed_no_key(mock_sys_modules):
+    """
+    Test that crew kickoff does not raise an error if agentops is installed
+    but the AGENTOPS_API_KEY environment variable is not set.
+    This simulates the scenario described in issue #2601.
+    """
+    mock_agentops = MagicMock()
+    mock_sys_modules["agentops"] = mock_agentops
+
+    listener_module_name = "crewai.utilities.events.third_party.agentops_listener"
+    if listener_module_name in sys.modules:
+        del sys.modules[listener_module_name]
+
+    import importlib
+    agentops_listener_module = importlib.import_module(listener_module_name) # noqa: F841 - Used for side effects (registration)
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.invoke = Mock(return_value="Task completed.")
+    mock_llm.tokens_usage = [] # Mock token usage tracking if needed
+
+    test_agent = Agent(role="tester", goal="test", backstory="testing", llm=mock_llm)
+    test_task = Task(description="test task", expected_output="tested", agent=test_agent)
+
+    # Create the crew
+    crew = Crew(agents=[test_agent], tasks=[test_task])
+
+    try:
+        crew.kickoff()
+    except Exception as e:
+        if "agentops" in str(type(e)).lower() or "api key" in str(e).lower():
+             pytest.fail(f"Crew kickoff raised an unexpected AgentOps exception: {e}")
+
+    mock_agentops.init.assert_not_called()
+
+    if "agentops" in sys.modules:
+        del sys.modules["agentops"]
+    if listener_module_name in sys.modules:
+        del sys.modules[listener_module_name]
