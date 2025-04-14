@@ -1176,10 +1176,14 @@ class Crew(BaseModel):
             "_execution_span",
             "_file_handler",
             "_cache_handler",
-            "_short_term_memory",
+            "_short_term_memory", # Exclude private attributes if they exist
             "_long_term_memory",
             "_entity_memory",
             "_external_memory",
+            "short_term_memory",  # Exclude public memory attributes from model_dump
+            "long_term_memory",
+            "entity_memory",
+            "external_memory",
             "_telemetry",
             "agents",
             "tasks",
@@ -1214,12 +1218,7 @@ class Crew(BaseModel):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-        if self.short_term_memory:
-            copied_data["short_term_memory"] = self.short_term_memory.model_copy(deep=True)
-        if self.long_term_memory:
-            copied_data["long_term_memory"] = self.long_term_memory.model_copy(deep=True)
-        if self.entity_memory:
-            copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
+
 
 
         copied_data.pop("agents", None)
