@@ -250,6 +250,9 @@ class Agent(BaseAgent):
                     task=task,
                 ),
             )
+
+            if not isinstance(self.max_execution_time, int) or self.max_execution_time <= 0:
+                raise ValueError("Max Execution time must be a positive integer greater than zero")
             
             # Apply timeout if specified
             if self.max_execution_time is not None:
@@ -275,10 +278,21 @@ class Agent(BaseAgent):
                             event=AgentExecutionErrorEvent(
                                 agent=self,
                                 task=task,
-                                error=f"Execution exceeded maximum time limit of {self.max_execution_time} seconds",
+                                error=f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. Consider increasing max_execution_time or optimizing the task.",
                             ),
                         )
-                        raise TimeoutError(f"Execution exceeded maximum time limit of {self.max_execution_time} seconds")
+                        raise TimeoutError(f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. Consider increasing max_execution_time or optimizing the task.")
+                    except Exception as error:
+                        future.cancel()
+                        crewai_event_bus.emit(
+                            self,
+                            event=AgentExecutionErrorEvent(
+                                agent=self,
+                                task=task,
+                                error=f"Task execution failed: {str(error)}"
+                            ),
+                        )
+                        raise RuntimeError(f"Task execution failed: {str(error)}")
             else:
                 # Original execution without timeout
                 result = self.agent_executor.invoke(
