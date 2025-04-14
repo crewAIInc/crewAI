@@ -16,6 +16,7 @@ from crewai.utilities import Logger
 from crewai.utilities.converter import Converter
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.agent_events import (
+    AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
@@ -168,6 +169,12 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             final_answer = (
                 self._converter_adapter.post_process_result(final_answer)
                 or "Task execution completed but no clear answer was provided."
+            )
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionCompletedEvent(
+                    agent=self, task=task, output=final_answer
+                ),
             )
 
             return final_answer

@@ -12,6 +12,7 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Logger
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.agent_events import (
+    AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
 )
@@ -109,9 +110,15 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
                     task=task,
                 ),
             )
-            # This is pretty much the agent_executor logic:
             result = self.agent_executor.run_sync(self._openai_agent, task_prompt)
-            return self.handle_execution_result(result)
+            final_answer = self.handle_execution_result(result)
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionCompletedEvent(
+                    agent=self, task=task, output=final_answer
+                ),
+            )
+            return final_answer
 
         except Exception as e:
             self._logger.log("error", f"Error executing OpenAI task: {str(e)}")
