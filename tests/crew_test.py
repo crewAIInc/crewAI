@@ -4,11 +4,9 @@ import hashlib
 import json
 import os
 import sys
-
 from concurrent.futures import Future
 from unittest import mock
-from unittest.mock import MagicMock, patch
-
+from unittest.mock import MagicMock, Mock, patch
 
 import pydantic_core
 import pytest
@@ -40,7 +38,6 @@ from crewai.utilities.events.crew_events import (
 from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-
 
 # Skip streaming tests when running in CI/CD environments
 skip_streaming_in_ci = pytest.mark.skipif(
