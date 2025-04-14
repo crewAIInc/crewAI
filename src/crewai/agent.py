@@ -482,6 +482,7 @@ class Agent(BaseAgent):
             verbose=self.verbose,
             response_format=response_format,
             i18n=self.i18n,
+            original_agent=self,
         )
 
         return lite_agent.kickoff(messages)

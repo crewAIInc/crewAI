@@ -1,3 +1,4 @@
+import asyncio
 import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
@@ -65,7 +66,13 @@ class BaseTool(BaseModel, ABC):
         **kwargs: Any,
     ) -> Any:
         print(f"Using Tool: {self.name}")
-        return self._run(*args, **kwargs)
+        result = self._run(*args, **kwargs)
+
+        # If _run is async, we safely run it
+        if asyncio.iscoroutine(result):
+            return asyncio.run(result)
+
+        return result
 
     @abstractmethod
     def _run(
@@ -244,9 +251,13 @@ def to_langchain(
     return [t.to_structured_tool() if isinstance(t, BaseTool) else t for t in tools]
 
 
-def tool(*args):
+def tool(*args, result_as_answer=False):
     """
     Decorator to create a tool from a function.
+    
+    Args:
+        *args: Positional arguments, either the function to decorate or the tool name.
+        result_as_answer: Flag to indicate if the tool result should be used as the final agent answer.
     """
 
     def _make_with_name(tool_name: str) -> Callable:
@@ -272,6 +283,7 @@ def tool(*args):
                 description=f.__doc__,
                 func=f,
                 args_schema=args_schema,
+                result_as_answer=result_as_answer,
             )
 
         return _make_tool

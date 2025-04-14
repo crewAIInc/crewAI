@@ -76,9 +76,7 @@
               "concepts/testing",
               "concepts/cli",
               "concepts/tools",
-              "concepts/event-listener",
-              "concepts/langchain-tools",
-              "concepts/llamaindex-tools"
+              "concepts/event-listener"
             ]
           },
           {
@@ -97,7 +95,9 @@
               "how-to/kickoff-async",
               "how-to/kickoff-for-each",
               "how-to/replay-tasks-from-latest-crew-kickoff",
-              "how-to/conditional-tasks"
+              "how-to/conditional-tasks",
+              "how-to/langchain-tools",
+              "how-to/llamaindex-tools"
             ]
           },
           {
@@ -196,6 +196,11 @@
           "anchor": "Community",
           "href": "https://community.crewai.com",
           "icon": "discourse"
+        },
+        {
+          "anchor": "Tutorials",
+          "href": "https://www.youtube.com/@crewAIInc",
+          "icon": "youtube"
         }
       ]
     }
