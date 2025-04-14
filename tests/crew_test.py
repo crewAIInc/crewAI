@@ -3,7 +3,6 @@
 import hashlib
 import json
 import os
-import sys
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch

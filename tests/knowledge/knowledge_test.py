@@ -1,6 +1,5 @@
 """Test Knowledge creation and querying functionality."""
 
-import sys
 from pathlib import Path
 from typing import List, Union
 from unittest.mock import patch
