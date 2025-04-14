@@ -15,6 +15,7 @@ from crewai.task import Task
 class MockCrew:
     def __init__(self, memory_config):
         self.memory_config = memory_config
+        self.agents = []  # Add empty agents list for testing
 
 
 @pytest.fixture
@@ -153,3 +154,46 @@ def test_mem0_storage_with_explict_config(
         mem0_storage_with_memory_client_using_explictly_config.memory_config
         == expected_config
     )
+
+
+def test_mem0_storage_external_memory_search(
+    mem0_storage_with_memory_client_using_config_from_crew, mock_mem0_memory_client
+):
+    """Test that Mem0Storage search correctly handles external memory with metadata parameter."""
+    mem0_storage_with_memory_client_using_config_from_crew.memory_type = "external"
+    
+    mock_search_response = {
+        'results': [
+            {
+                'id': '1',
+                'score': 0.9,
+                'metadata': {'type': 'external'},
+                'memory': 'test external memory 1'
+            },
+            {
+                'id': '2',
+                'score': 0.8,
+                'metadata': {'type': 'external'},
+                'memory': 'test external memory 2'
+            },
+            {
+                'id': '3',
+                'score': 0.3,  # Below threshold
+                'metadata': {'type': 'external'},
+                'memory': 'test external memory 3'
+            }
+        ]
+    }
+    
+    mock_mem0_memory_client.search.return_value = mock_search_response
+    
+    results = mem0_storage_with_memory_client_using_config_from_crew.search(
+        "test query", 
+        score_threshold=0.5
+    )
+    
+    mock_mem0_memory_client.search.assert_called_once()
+    
+    assert len(results) == 2
+    assert results[0]['score'] == 0.9
+    assert results[1]['score'] == 0.8

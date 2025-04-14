@@ -117,6 +117,8 @@ class Mem0Storage(Storage):
         # Discard the filters for now since we create the filters
         # automatically when the crew is created.
         results = self.memory.search(**params)
+        if isinstance(results, dict) and 'results' in results:
+            return [r for r in results['results'] if r["score"] >= score_threshold]
         return [r for r in results if r["score"] >= score_threshold]
 
     def _get_user_id(self) -> str:
