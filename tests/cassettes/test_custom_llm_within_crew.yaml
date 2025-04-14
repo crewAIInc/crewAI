@@ -1,0 +1,305 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": [{"role": "system", "content": "You are Say Hi.
+      You just say hi to the user\nYour personal goal is: Say hi to the user\nTo give
+      my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Say hi to the user\n\nThis is the expected criteria
+      for your final answer: A greeting to the user\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}]}], "model": "gpt-4o-mini", "tools": null}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '931'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\",\n
+      \   \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\",\n
+      \   \"code\": \"missing_required_parameter\"\n  }\n}"
+    headers:
+      CF-RAY:
+      - 91b54660799a15b4-SJC
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '219'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Mar 2025 23:50:16 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=OwS.6cyfDpbxxx8vPp4THv5eNoDMQK0qSVN.wSUyOYk-1741132216-1.0.1.1-QBVd08CjfmDBpNnYQM5ILGbTUWKh6SDM9E4ARG4SV2Z9Q4ltFSFLXoo38OGJApUNZmzn4PtRsyAPsHt_dsrHPF6MD17FPcGtrnAHqCjJrfU;
+        path=/; expires=Wed, 05-Mar-25 00:20:16 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=n_ebDsAOhJm5Mc7OMx8JDiOaZq5qzHCnVxyS3KN0BwA-1741132216951-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '19'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999974'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_042a4e8f9432f6fde7a02037bb6caafa
+    http_version: HTTP/1.1
+    status_code: 400
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": [{"role": "system", "content": "You are Say Hi.
+      You just say hi to the user\nYour personal goal is: Say hi to the user\nTo give
+      my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Say hi to the user\n\nThis is the expected criteria
+      for your final answer: A greeting to the user\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}]}], "model": "gpt-4o-mini", "tools": null}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '931'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\",\n
+      \   \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\",\n
+      \   \"code\": \"missing_required_parameter\"\n  }\n}"
+    headers:
+      CF-RAY:
+      - 91b54664bb1acef1-SJC
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '219'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Mar 2025 23:50:17 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=.wGU4pJEajaSzFWjp05TBQwWbCNA2CgpYNu7UYOzbbM-1741132217-1.0.1.1-NoLiAx4qkplllldYYxZCOSQGsX6hsPUJIEyqmt84B3g7hjW1s7.jk9C9PYzXagHWjT0sQ9Ny4LZBA94lDJTfDBZpty8NJQha7ZKW0P_msH8;
+        path=/; expires=Wed, 05-Mar-25 00:20:17 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=GAjgJjVLtN49bMeWdWZDYLLkEkK51z5kxK4nKqhAzxY-1741132217161-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '25'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999974'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_7a1d027da1ef4468e861e570c72e98fb
+    http_version: HTTP/1.1
+    status_code: 400
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": [{"role": "system", "content": "You are Say Hi.
+      You just say hi to the user\nYour personal goal is: Say hi to the user\nTo give
+      my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Say hi to the user\n\nThis is the expected criteria
+      for your final answer: A greeting to the user\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}]}], "model": "gpt-4o-mini", "tools": null}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '931'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"error\": {\n    \"message\": \"Missing required parameter: 'messages[1].content[0].type'.\",\n
+      \   \"type\": \"invalid_request_error\",\n    \"param\": \"messages[1].content[0].type\",\n
+      \   \"code\": \"missing_required_parameter\"\n  }\n}"
+    headers:
+      CF-RAY:
+      - 91b54666183beb22-SJC
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '219'
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Mar 2025 23:50:17 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=VwjWHHpkZMJlosI9RbMqxYDBS1t0JK4tWpAy4lST2QM-1741132217-1.0.1.1-u7PU.ZvVBTXNB5R8vaYfWdPXAjWZ3ZcTAy656VaGDZmKIckk5od._eQdn0W0EGVtEMm3TuF60z4GZAPDwMYvb3_3cw1RuEMmQbp4IIrl7VY;
+        path=/; expires=Wed, 05-Mar-25 00:20:17 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=NglAAsQBoiabMuuHFgilRjflSPFqS38VGKnGyweuCuw-1741132217438-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '56'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999974'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3c335b308b82cc2214783a4bf2fc0fd4
+    http_version: HTTP/1.1
+    status_code: 400
+version: 1

@@ -40,6 +40,7 @@ with warnings.catch_warnings():
     from litellm.utils import supports_response_schema
 
 
+from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -114,6 +115,60 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "Llama-3.2-11B-Vision-Instruct": 16384,
     "Meta-Llama-3.2-3B-Instruct": 4096,
     "Meta-Llama-3.2-1B-Instruct": 16384,
+    # bedrock
+    "us.amazon.nova-pro-v1:0": 300000,
+    "us.amazon.nova-micro-v1:0": 128000,
+    "us.amazon.nova-lite-v1:0": 300000,
+    "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
+    "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "us.anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
+    "us.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "us.anthropic.claude-3-opus-20240229-v1:0": 200000,
+    "us.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "us.meta.llama3-2-11b-instruct-v1:0": 128000,
+    "us.meta.llama3-2-3b-instruct-v1:0": 131000,
+    "us.meta.llama3-2-90b-instruct-v1:0": 128000,
+    "us.meta.llama3-2-1b-instruct-v1:0": 131000,
+    "us.meta.llama3-1-8b-instruct-v1:0": 128000,
+    "us.meta.llama3-1-70b-instruct-v1:0": 128000,
+    "us.meta.llama3-3-70b-instruct-v1:0": 128000,
+    "us.meta.llama3-1-405b-instruct-v1:0": 128000,
+    "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
+    "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
+    "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "amazon.nova-pro-v1:0": 300000,
+    "amazon.nova-micro-v1:0": 128000,
+    "amazon.nova-lite-v1:0": 300000,
+    "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
+    "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
+    "anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "anthropic.claude-3-opus-20240229-v1:0": 200000,
+    "anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "anthropic.claude-v2:1": 200000,
+    "anthropic.claude-v2": 100000,
+    "anthropic.claude-instant-v1": 100000,
+    "meta.llama3-1-405b-instruct-v1:0": 128000,
+    "meta.llama3-1-70b-instruct-v1:0": 128000,
+    "meta.llama3-1-8b-instruct-v1:0": 128000,
+    "meta.llama3-70b-instruct-v1:0": 8000,
+    "meta.llama3-8b-instruct-v1:0": 8000,
+    "amazon.titan-text-lite-v1": 4000,
+    "amazon.titan-text-express-v1": 8000,
+    "cohere.command-text-v14": 4000,
+    "ai21.j2-mid-v1": 8191,
+    "ai21.j2-ultra-v1": 8191,
+    "ai21.jamba-instruct-v1:0": 256000,
+    "mistral.mistral-7b-instruct-v0:2": 32000,
+    "mistral.mixtral-8x7b-instruct-v0:1": 32000,
     # mistral
     "mistral-tiny": 32768,
     "mistral-small-latest": 32768,
@@ -164,7 +219,7 @@ class StreamingChoices(TypedDict):
     finish_reason: Optional[str]
 
 
-class LLM:
+class LLM(BaseLLM):
     def __init__(
         self,
         model: str,
@@ -652,15 +707,6 @@ class LLM:
                     function_name, lambda: None
                 )  # Ensure fn is always a callable
                 logging.error(f"Error executing function '{function_name}': {e}")
-                crewai_event_bus.emit(
-                    self,
-                    event=ToolExecutionErrorEvent(
-                        tool_name=function_name,
-                        tool_args=function_args,
-                        tool_class=fn,
-                        error=str(e),
-                    ),
-                )
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),

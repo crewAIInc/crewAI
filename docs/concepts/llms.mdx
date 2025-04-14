@@ -59,7 +59,7 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
         goal: Conduct comprehensive research and analysis
         backstory: A dedicated research professional with years of experience
         verbose: true
-        llm: openai/gpt-4o-mini # your model here 
+        llm: openai/gpt-4o-mini # your model here
         # (see provider configuration examples below for more)
     ```
 
@@ -111,7 +111,7 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
 ## Provider Configuration Examples
 
 
-CrewAI supports a multitude of LLM providers, each offering unique features, authentication methods, and model capabilities. 
+CrewAI supports a multitude of LLM providers, each offering unique features, authentication methods, and model capabilities.
 In this section, you'll find detailed examples that help you select, configure, and optimize the LLM that best fits your project's needs.
 
 <AccordionGroup>
@@ -121,7 +121,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```toml Code
     # Required
     OPENAI_API_KEY=sk-...
-    
+
     # Optional
     OPENAI_API_BASE=<custom-base-url>
     OPENAI_ORGANIZATION=<your-org-id>
@@ -158,7 +158,11 @@ In this section, you'll find detailed examples that help you select, configure, 
 
   <Accordion title="Anthropic">
     ```toml Code
+    # Required
     ANTHROPIC_API_KEY=sk-ant-...
+
+    # Optional
+    ANTHROPIC_API_BASE=<custom-base-url>
     ```
 
     Example usage in your CrewAI project:
@@ -222,7 +226,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     AZURE_API_KEY=<your-api-key>
     AZURE_API_BASE=<your-resource-url>
     AZURE_API_VERSION=<api-version>
-    
+
     # Optional
     AZURE_AD_TOKEN=<your-azure-ad-token>
     AZURE_API_TYPE=<your-azure-api-type>
@@ -250,8 +254,42 @@ In this section, you'll find detailed examples that help you select, configure, 
         model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
     )
     ```
+
+    Before using Amazon Bedrock, make sure you have boto3 installed in your environment
+
+    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) is a managed service that provides access to multiple foundation models from top AI companies through a unified API, enabling secure and responsible AI application development.
+
+    | Model                   | Context Window       | Best For                                                          |
+    |-------------------------|----------------------|-------------------------------------------------------------------|
+    | Amazon Nova Pro         | Up to 300k tokens    | High-performance, model balancing accuracy, speed, and cost-effectiveness across diverse tasks. |
+    | Amazon Nova Micro       | Up to 128k tokens    | High-performance, cost-effective text-only model optimized for lowest latency responses. |
+    | Amazon Nova Lite        | Up to 300k tokens    | High-performance, affordable multimodal processing for images, video, and text with real-time capabilities. |
+    | Claude 3.7 Sonnet       | Up to 128k tokens    | High-performance, best for complex reasoning, coding & AI agents |
+    | Claude 3.5 Sonnet v2    | Up to 200k tokens    | State-of-the-art model specialized in software engineering, agentic capabilities, and computer interaction at optimized cost. |
+    | Claude 3.5 Sonnet       | Up to 200k tokens    | High-performance model delivering superior intelligence and reasoning across diverse tasks with optimal speed-cost balance. |
+    | Claude 3.5 Haiku        | Up to 200k tokens    | Fast, compact multimodal model optimized for quick responses and seamless human-like interactions |
+    | Claude 3 Sonnet         | Up to 200k tokens    | Multimodal model balancing intelligence and speed for high-volume deployments. |
+    | Claude 3 Haiku          | Up to 200k tokens    | Compact, high-speed multimodal model optimized for quick responses and natural conversational interactions |
+    | Claude 3 Opus           | Up to 200k tokens    | Most advanced multimodal model exceling at complex tasks with human-like reasoning and superior contextual understanding. |
+    | Claude 2.1              | Up to 200k tokens    | Enhanced version with expanded context window, improved reliability, and reduced hallucinations for long-form and RAG applications |
+    | Claude                  | Up to 100k tokens    | Versatile model excelling in sophisticated dialogue, creative content, and precise instruction following. |
+    | Claude Instant          | Up to 100k tokens    | Fast, cost-effective model for everyday tasks like dialogue, analysis, summarization, and document Q&A |
+    | Llama 3.1 405B Instruct | Up to 128k tokens    | Advanced LLM for synthetic data generation, distillation, and inference for chatbots, coding, and domain-specific tasks. |
+    | Llama 3.1 70B Instruct  | Up to 128k tokens    | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
+    | Llama 3.1 8B Instruct   | Up to 128k tokens    | Advanced state-of-the-art model with language understanding, superior reasoning, and text generation. |
+    | Llama 3 70B Instruct    | Up to 8k tokens      | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
+    | Llama 3 8B Instruct     | Up to 8k tokens      | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
+    | Titan Text G1 - Lite    | Up to 4k tokens      | Lightweight, cost-effective model optimized for English tasks and fine-tuning with focus on summarization and content generation. |
+    | Titan Text G1 - Express | Up to 8k tokens      | Versatile model for general language tasks, chat, and RAG applications with support for English and 100+ languages. |
+    | Cohere Command          | Up to 4k tokens      | Model specialized in following user commands and delivering practical enterprise solutions. |
+    | Jurassic-2 Mid          | Up to 8,191 tokens   | Cost-effective model balancing quality and affordability for diverse language tasks like Q&A, summarization, and content generation. |
+    | Jurassic-2 Ultra        | Up to 8,191 tokens   | Model for advanced text generation and comprehension, excelling in complex tasks like analysis and content creation. |
+    | Jamba-Instruct          | Up to 256k tokens    | Model with extended context window optimized for cost-effective text generation, summarization, and Q&A. |
+    | Mistral 7B Instruct     | Up to 32k tokens     | This LLM follows instructions, completes requests, and generates creative text. |
+    | Mistral 8x7B Instruct   | Up to 32k tokens     | An MOE LLM that follows instructions, completes requests, and generates creative text. |
+
   </Accordion>
-  
+
   <Accordion title="Amazon SageMaker">
     ```toml Code
     AWS_ACCESS_KEY_ID=<your-access-key>
@@ -368,6 +406,46 @@ In this section, you'll find detailed examples that help you select, configure, 
     | baichuan-inc/baichuan2-13b-chat                                  | 4,096 tokens   | Support Chinese and English chat, coding, math, instruction following, solving quizzes |
   </Accordion>
 
+  <Accordion title="Local NVIDIA NIM Deployed using WSL2">
+    
+    NVIDIA NIM enables you to run powerful LLMs locally on your Windows machine using WSL2 (Windows Subsystem for Linux). 
+    This approach allows you to leverage your NVIDIA GPU for private, secure, and cost-effective AI inference without relying on cloud services. 
+    Perfect for development, testing, or production scenarios where data privacy or offline capabilities are required.
+    
+    Here is a step-by-step guide to setting up a local NVIDIA NIM model:
+    
+    1. Follow installation instructions from [NVIDIA Website](https://docs.nvidia.com/nim/wsl2/latest/getting-started.html)
+
+    2. Install the local model. For Llama 3.1-8b follow [instructions](https://build.nvidia.com/meta/llama-3_1-8b-instruct/deploy)
+
+    3. Configure your crewai local models:
+  
+    ```python Code
+    from crewai.llm import LLM
+
+    local_nvidia_nim_llm = LLM(
+        model="openai/meta/llama-3.1-8b-instruct", # it's an openai-api compatible model
+        base_url="http://localhost:8000/v1",
+        api_key="<your_api_key|any text if you have not configured it>", # api_key is required, but you can use any text
+    )
+
+    # Then you can use it in your crew:
+
+    @CrewBase
+    class MyCrew():
+        # ...
+
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                config=self.agents_config['researcher'],
+                llm=local_nvidia_nim_llm
+            )
+        
+        # ...
+    ```
+  </Accordion>
+
   <Accordion title="Groq">
     Set the following environment variables in your `.env` file:
 
@@ -396,7 +474,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     WATSONX_URL=<your-url>
     WATSONX_APIKEY=<your-apikey>
     WATSONX_PROJECT_ID=<your-project-id>
-    
+
     # Optional
     WATSONX_TOKEN=<your-token>
     WATSONX_DEPLOYMENT_SPACE_ID=<your-space-id>
@@ -413,7 +491,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
   <Accordion title="Ollama (Local LLMs)">
     1. Install Ollama: [ollama.ai](https://ollama.ai/)
-    2. Run a model: `ollama run llama2`
+    2. Run a model: `ollama run llama3`
     3. Configure:
 
     ```python Code
@@ -522,7 +600,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```toml Code
     OPENROUTER_API_KEY=<your-api-key>
     ```
-    
+
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
@@ -645,7 +723,7 @@ Learn how to get the most out of your LLM configuration:
         - Small tasks (up to 4K tokens): Standard models
         - Medium tasks (between 4K-32K): Enhanced models
         - Large tasks (over 32K): Large context models
-        
+
         ```python
         # Configure model with appropriate settings
         llm = LLM(
@@ -682,11 +760,11 @@ Learn how to get the most out of your LLM configuration:
     <Warning>
       Most authentication issues can be resolved by checking API key format and environment variable names.
     </Warning>
-    
+
     ```bash
     # OpenAI
     OPENAI_API_KEY=sk-...
-    
+
     # Anthropic
     ANTHROPIC_API_KEY=sk-ant-...
     ```
@@ -695,11 +773,11 @@ Learn how to get the most out of your LLM configuration:
     <Check>
       Always include the provider prefix in model names
     </Check>
-    
+
     ```python
     # Correct
     llm = LLM(model="openai/gpt-4")
-    
+
     # Incorrect
     llm = LLM(model="gpt-4")
     ```
@@ -709,4 +787,9 @@ Learn how to get the most out of your LLM configuration:
       Use larger context models for extensive tasks
     </Tip>
     
+    ```python
+    # Large context model
+    llm = LLM(model="openai/gpt-4o")  # 128K tokens
     ```
+  </Tab>
+</Tabs>
