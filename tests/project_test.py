@@ -1,6 +1,9 @@
+from typing import List
+
 import pytest
 
 from crewai.agent import Agent
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
 from crewai.llm import LLM
 from crewai.project import (
@@ -40,28 +43,32 @@ class InternalCrew:
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
 
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
     @llm
     def local_llm(self):
         return LLM(
-            model='openai/model_name',
+            model="openai/model_name",
             api_key="None",
-            base_url="http://xxx.xxx.xxx.xxx:8000/v1")
+            base_url="http://xxx.xxx.xxx.xxx:8000/v1",
+        )
 
     @agent
     def researcher(self):
-        return Agent(config=self.agents_config["researcher"])
+        return Agent(config=self.agents_config["researcher"])  # type: ignore[index]
 
     @agent
     def reporting_analyst(self):
-        return Agent(config=self.agents_config["reporting_analyst"])
+        return Agent(config=self.agents_config["reporting_analyst"])  # type: ignore[index]
 
     @task
     def research_task(self):
-        return Task(config=self.tasks_config["research_task"])
+        return Task(config=self.tasks_config["research_task"])  # type: ignore[index]
 
     @task
     def reporting_task(self):
-        return Task(config=self.tasks_config["reporting_task"])
+        return Task(config=self.tasks_config["reporting_task"])  # type: ignore[index]
 
     @before_kickoff
     def modify_inputs(self, inputs):
@@ -165,24 +172,27 @@ def test_before_kickoff_with_none_input():
 def test_multiple_before_after_kickoff():
     @CrewBase
     class MultipleHooksCrew:
+        agents: List[BaseAgent]
+        tasks: List[Task]
+
         agents_config = "config/agents.yaml"
         tasks_config = "config/tasks.yaml"
 
         @agent
         def researcher(self):
-            return Agent(config=self.agents_config["researcher"])
+            return Agent(config=self.agents_config["researcher"])  # type: ignore[index]
 
         @agent
         def reporting_analyst(self):
-            return Agent(config=self.agents_config["reporting_analyst"])
+            return Agent(config=self.agents_config["reporting_analyst"])  # type: ignore[index]
 
         @task
         def research_task(self):
-            return Task(config=self.tasks_config["research_task"])
+            return Task(config=self.tasks_config["research_task"])  # type: ignore[index]
 
         @task
         def reporting_task(self):
-            return Task(config=self.tasks_config["reporting_task"])
+            return Task(config=self.tasks_config["reporting_task"])  # type: ignore[index]
 
         @before_kickoff
         def first_before(self, inputs):

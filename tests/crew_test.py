@@ -3936,11 +3936,17 @@ def test_crew_guardrail_feedback_in_context():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_callback():
-    from crewai.project import CrewBase, agent, before_kickoff, task
+    from crewai.project import CrewBase
 
     @CrewBase
     class TestCrewClass:
-        from crewai.project import crew
+        from typing import List
+
+        from crewai.agents.agent_builder.base_agent import BaseAgent
+        from crewai.project import CrewBase, agent, before_kickoff, crew, task
+
+        agents: List[BaseAgent]
+        tasks: List[Task]
 
         agents_config = None
         tasks_config = None

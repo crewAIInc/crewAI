@@ -438,7 +438,7 @@ In this section, you'll find detailed examples that help you select, configure, 
         @agent
         def researcher(self) -> Agent:
             return Agent(
-                config=self.agents_config['researcher'],
+                config=self.agents_config['researcher'], # type: ignore[index]
                 llm=local_nvidia_nim_llm
             )
         
