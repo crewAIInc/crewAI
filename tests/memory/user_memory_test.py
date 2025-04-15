@@ -1,4 +1,3 @@
-
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -66,3 +65,26 @@ def test_save_and_search(user_memory):
         find = UserMemory.search("test value", score_threshold=0.01)[0]
         mock_search.assert_called_once_with("test value", score_threshold=0.01)
         assert find == expected_result[0]
+
+def test_search_with_llm(user_memory):
+    """Test search behavior when llm attribute exists in storage."""
+    storage_mock = MagicMock()
+    setattr(storage_mock, "llm", True)
+
+    mock_search_results = {"results": [{"context": "test context", "score": 0.9}]}
+    storage_mock.search.return_value = mock_search_results
+    user_memory.storage = storage_mock
+
+    results = user_memory.search("test query")
+    
+    storage_mock.search.assert_called_once()
+    call_args = storage_mock.search.call_args[1]
+    assert "query" in call_args
+    assert "limit" in call_args
+    assert "score_threshold" in call_args
+
+    assert "metadata" not in call_args
+    assert "output_format" not in call_args
+
+    # Verify the results are processed correctly
+    assert results == [{"context": "test context", "score": 0.9}]
