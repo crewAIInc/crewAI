@@ -2,7 +2,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from crewai.utilities.pyinstaller_compat import is_bundled, get_bundle_dir
+from crewai.utilities.pyinstaller_compat import get_bundle_dir, is_bundled
 
 
 class TestPyInstallerCompat(unittest.TestCase):
