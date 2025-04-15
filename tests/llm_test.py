@@ -298,6 +298,22 @@ def test_gpt_4_1(model):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_gemini_2_5_pro():
+    llm = LLM(model="gemini/gemini-2.5-pro-exp-03-25")
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_gpt_4_1():
+    llm = LLM(model="gpt-4.1")
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_o3_mini_reasoning_effort_high():
     llm = LLM(
         model="o3-mini",
