@@ -1,4 +1,4 @@
-from typing import Optional, Union, Dict, Any
+from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -7,7 +7,9 @@ from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 
 class DelegateWorkToolSchema(BaseModel):
     task: Union[str, Dict[str, Any]] = Field(..., description="The task to delegate")
-    context: Union[str, Dict[str, Any]] = Field(..., description="The context for the task")
+    context: Union[str, Dict[str, Any]] = Field(
+        ..., description="The context for the task"
+    )
     coworker: str = Field(
         ..., description="The role/name of the coworker to delegate to"
     )
@@ -29,9 +31,9 @@ class DelegateWorkTool(BaseAgentTool):
         # Convert task and context to strings if they're dictionaries
         if isinstance(task, dict) and "description" in task:
             task = task["description"]
-        
+
         if isinstance(context, dict) and "description" in context:
             context = context["description"]
-            
+
         coworker = self._get_coworker(coworker, **kwargs)
         return self._execute(coworker, task, context)
