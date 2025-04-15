@@ -7,7 +7,7 @@ from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 
 class DelegateWorkToolSchema(BaseModel):
     task: Union[str, Dict[str, Any]] = Field(..., description="The task to delegate")
-    context: str = Field(..., description="The context for the task")
+    context: Union[str, Dict[str, Any]] = Field(..., description="The context for the task")
     coworker: str = Field(
         ..., description="The role/name of the coworker to delegate to"
     )
