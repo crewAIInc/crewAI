@@ -1,6 +1,7 @@
 import os
 import sys
 
+
 def is_bundled():
     """Check if the application is running from a PyInstaller bundle."""
     return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
