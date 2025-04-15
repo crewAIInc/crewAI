@@ -1,4 +1,5 @@
-from typing import Optional
+import json
+from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -6,8 +7,8 @@ from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 
 
 class DelegateWorkToolSchema(BaseModel):
-    task: str = Field(..., description="The task to delegate")
-    context: str = Field(..., description="The context for the task")
+    task: Union[str, Dict[str, Any]] = Field(..., description="The task to delegate")
+    context: Union[str, Dict[str, Any]] = Field(..., description="The context for the task")
     coworker: str = Field(
         ..., description="The role/name of the coworker to delegate to"
     )
@@ -21,10 +22,12 @@ class DelegateWorkTool(BaseAgentTool):
 
     def _run(
         self,
-        task: str,
-        context: str,
+        task: Union[str, Dict[str, Any]],
+        context: Union[str, Dict[str, Any]],
         coworker: Optional[str] = None,
         **kwargs,
     ) -> str:
         coworker = self._get_coworker(coworker, **kwargs)
-        return self._execute(coworker, task, context)
+        task_str = json.dumps(task) if isinstance(task, dict) else task
+        context_str = json.dumps(context) if isinstance(context, dict) else context
+        return self._execute(coworker, task_str, context_str)
