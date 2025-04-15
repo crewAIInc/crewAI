@@ -1,6 +1,6 @@
+import sys
 import unittest
 from unittest.mock import patch
-import sys
 
 from crewai.utilities.pyinstaller_compat import is_bundled, get_bundle_dir
 
