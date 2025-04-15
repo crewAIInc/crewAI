@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   notify-downstream:
     runs-on: ubuntu-latest
