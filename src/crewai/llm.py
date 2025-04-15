@@ -84,6 +84,7 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "o1-mini": 128000,
     "o3-mini": 200000,  # Based on official o3-mini specifications
     # gemini
+    "gemini-2.0-flash": 1048576,
     "gemini-2.0-flash-thinking-exp-01-21": 32768,
     "gemini-2.0-flash-lite-001": 1048576,
     "gemini-2.0-flash-001": 1048576,
