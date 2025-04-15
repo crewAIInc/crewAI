@@ -440,5 +440,16 @@ A: CrewAI uses anonymous telemetry to collect usage data for improvement purpose
 ### Q: Where can I find examples of CrewAI in action?
 A: You can find various real-life examples in the [CrewAI-examples repository](https://github.com/crewAIInc/crewAI-examples), including trip planners, stock analysis tools, and more.
 
+### Q: Can I package my CrewAI application as an executable?
+A: Yes, CrewAI is compatible with PyInstaller, which allows you to package your application into a standalone executable. To create an executable:
+```shell
+# Install PyInstaller
+pip install pyinstaller
+
+# Create the executable
+pyinstaller --onefile your_script.py
+```
+The generated executable will be in the `dist` directory.
+
 ### Q: How can I contribute to CrewAI?
 A: Contributions are welcome! You can fork the repository, create a new branch for your feature, add your improvement, and send a pull request. Check the Contribution section in the README for more details.
