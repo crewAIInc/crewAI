@@ -145,6 +145,7 @@ from crewai.memory import LongTermMemory
 # Simple memory configuration
 crew = Crew(memory=True)  # Uses default storage locations
 ```
+Note that External Memory won’t be defined when `memory=True` is set, as we can’t infer which external memory would be suitable for your case
 
 ### Custom Storage Configuration
 ```python
@@ -278,14 +279,18 @@ crew = Crew(
 ### Using External Memory
 
 External Memory is a powerful feature that allows you to integrate external memory systems with your CrewAI applications. This is particularly useful when you want to use specialized memory providers or maintain memory across different applications.
+Since it’s an external memory, we’re not able to add a default value to it - unlike with Long Term and Short Term memory. 
 
 #### Basic Usage with Mem0
 
 The most common way to use External Memory is with Mem0 as the provider:
 
 ```python
+import os
 from crewai import Agent, Crew, Process, Task
 from crewai.memory.external.external_memory import ExternalMemory
+
+os.environ["MEM0_API_KEY"] = "YOUR-API-KEY"
 
 agent = Agent(
     role="You are a helpful assistant",
@@ -304,7 +309,6 @@ crew = Crew(
     tasks=[task],
     verbose=True,
     process=Process.sequential,
-    memory=True,
     external_memory=ExternalMemory(
         embedder_config={"provider": "mem0", "config": {"user_id": "U-123"}} # you can provide an entire Mem0 configuration
     ),
@@ -363,7 +367,6 @@ crew = Crew(
     tasks=[task],
     verbose=True,
     process=Process.sequential,
-    memory=True,
     external_memory=external_memory,
 )
 

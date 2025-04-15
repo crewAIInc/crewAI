@@ -52,11 +52,15 @@ After creating your CrewAI project as outlined in the [Installation](/installati
 ```python code
 from crewai import Agent, Crew, Task, Process
 from crewai.project import CrewBase, agent, task, crew, before_kickoff, after_kickoff
-
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
 
 @CrewBase
 class YourCrewName:
     """Description of your crew"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
 
     # Paths to your YAML configuration files
     # To see an example agent and task defined in YAML, checkout the following:
@@ -80,27 +84,27 @@ class YourCrewName:
     @agent
     def agent_one(self) -> Agent:
         return Agent(
-            config=self.agents_config['agent_one'],
+            config=self.agents_config['agent_one'], # type: ignore[index]
             verbose=True
         )
 
     @agent
     def agent_two(self) -> Agent:
         return Agent(
-            config=self.agents_config['agent_two'],
+            config=self.agents_config['agent_two'], # type: ignore[index]
             verbose=True
         )
 
     @task
     def task_one(self) -> Task:
         return Task(
-            config=self.tasks_config['task_one']
+            config=self.tasks_config['task_one'] # type: ignore[index]
         )
 
     @task
     def task_two(self) -> Task:
         return Task(
-            config=self.tasks_config['task_two']
+            config=self.tasks_config['task_two'] # type: ignore[index]
         )
 
     @crew
