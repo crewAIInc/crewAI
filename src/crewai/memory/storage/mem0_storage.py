@@ -61,7 +61,7 @@ class Mem0Storage(Storage):
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self._get_user_id()
         agent_name = self._get_agent_name()
-        params = {"output_format": "v1.1"} if not hasattr(self, "llm") else {}
+        params = None
         if self.memory_type == "short_term":
             params = {
                 "agent_id": agent_name,
@@ -88,6 +88,8 @@ class Mem0Storage(Storage):
             }
 
         if params:
+            if not hasattr(self, "llm"):
+                params["output_format"] = "v1.1"
             self.memory.add(value, **params)
 
     def search(

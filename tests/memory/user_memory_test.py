@@ -86,5 +86,4 @@ def test_search_with_llm(user_memory):
     assert "metadata" not in call_args
     assert "output_format" not in call_args
 
-    # Verify the results are processed correctly
-    assert results == [{"context": "test context", "score": 0.9}]
+    assert results == {"results": [{"context": "test context", "score": 0.9}]}
