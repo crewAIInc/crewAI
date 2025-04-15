@@ -3,9 +3,9 @@
 import hashlib
 import json
 import os
+from concurrent.futures import TimeoutError
 from functools import partial
 from typing import Tuple, Union
-from concurrent.futures import TimeoutError
 from unittest.mock import MagicMock, patch
 
 import pytest
