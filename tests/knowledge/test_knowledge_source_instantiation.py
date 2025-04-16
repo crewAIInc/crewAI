@@ -5,6 +5,7 @@ import pytest
 
 from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
 
+
 @patch('crewai.knowledge.source.base_file_knowledge_source.BaseFileKnowledgeSource.validate_content')
 @patch('crewai.knowledge.source.pdf_knowledge_source.PDFKnowledgeSource.load_content')
 def test_pdf_knowledge_source_instantiation(mock_load_content, mock_validate_content, tmp_path):
