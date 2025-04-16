@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: tibdex/github-app-token@v1
+        uses: tibdex/github-app-token@v2
         with:
           app_id: ${{ secrets.OSS_SYNC_APP_ID }}
           private_key: ${{ secrets.OSS_SYNC_APP_PRIVATE_KEY }}
