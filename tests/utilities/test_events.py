@@ -50,6 +50,14 @@ from crewai.utilities.events.tool_usage_events import (
     ToolUsageErrorEvent,
 )
 
+
+@pytest.fixture(scope="module")
+def vcr_config(request) -> dict:
+    return {
+        "cassette_library_dir": "tests/utilities/cassettes",
+    }
+
+
 # Skip streaming tests when running in CI/CD environments
 skip_streaming_in_ci = pytest.mark.skipif(
     os.getenv("CI") is not None, reason="Skipping streaming tests in CI/CD environments"
