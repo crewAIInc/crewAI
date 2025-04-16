@@ -9,6 +9,11 @@ from contextlib import contextmanager
 from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Optional
 
+from crewai.telemetry.constants import (
+    CREWAI_TELEMETRY_BASE_URL, 
+    CREWAI_TELEMETRY_SERVICE_NAME,
+)
+
 
 @contextmanager
 def suppress_warnings():
@@ -52,16 +57,15 @@ class Telemetry:
             return
 
         try:
-            telemetry_endpoint = "https://telemetry.crewai.com:4319"
             self.resource = Resource(
-                attributes={SERVICE_NAME: "crewAI-telemetry"},
+                attributes={SERVICE_NAME: CREWAI_TELEMETRY_SERVICE_NAME},
             )
             with suppress_warnings():
                 self.provider = TracerProvider(resource=self.resource)
 
             processor = BatchSpanProcessor(
                 OTLPSpanExporter(
-                    endpoint=f"{telemetry_endpoint}/v1/traces",
+                    endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
                     timeout=30,
                 )
             )
