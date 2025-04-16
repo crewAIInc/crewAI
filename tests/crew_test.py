@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import tempfile
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -11,12 +12,16 @@ import pydantic_core
 import pytest
 
 from crewai.agent import Agent
+from crewai.agents import CacheHandler
 from crewai.agents.cache import CacheHandler
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
@@ -348,7 +353,7 @@ def test_hierarchical_process():
 
     assert (
         result.raw
-        == "Here are the 5 interesting ideas along with a compelling paragraph for each that showcases how good an article on the topic could be:\n\n1. **The Evolution and Future of AI Agents in Everyday Life**:\nThe rapid development of AI agents from rudimentary virtual assistants like Siri and Alexa to today's sophisticated systems marks a significant technological leap. This article will explore the evolving landscape of AI agents, detailing their seamless integration into daily activities ranging from managing smart home devices to streamlining workflows. We will examine the multifaceted benefits these agents bring, such as increased efficiency and personalized user experiences, while also addressing ethical concerns like data privacy and algorithmic bias. Looking ahead, we will forecast the advancements slated for the next decade, including AI agents in personalized health coaching and automated legal consultancy. With more advanced machine learning algorithms, the potential for these AI systems to revolutionize our daily lives is immense.\n\n2. **AI in Healthcare: Revolutionizing Diagnostics and Treatment**:\nArtificial Intelligence is poised to revolutionize the healthcare sector by offering unprecedented improvements in diagnostic accuracy and personalized treatments. This article will delve into the transformative power of AI in healthcare, highlighting real-world applications like AI-driven imaging technologies that aid in early disease detection and predictive analytics that enable personalized patient care plans. We will discuss the ethical challenges, such as data privacy and the implications of AI-driven decision-making in medicine. Through compelling case studies, we will showcase successful AI implementations that have made significant impacts, ultimately painting a picture of a future where AI plays a central role in proactive and precise healthcare delivery.\n\n3. **The Role of AI in Enhancing Cybersecurity**:\nAs cyber threats become increasingly sophisticated, AI stands at the forefront of the battle against cybercrime. This article will discuss the crucial role AI plays in detecting and responding to threats in real-time, its capacity to predict and prevent potential attacks, and the inherent challenges of an AI-dependent cybersecurity framework. We will highlight recent advancements in AI-based security tools and provide case studies where AI has been instrumental in mitigating cyber threats effectively. By examining these elements, we'll underline the potential and limitations of AI in creating a more secure digital environment, showcasing how it can adapt to evolving threats faster than traditional methods.\n\n4. **The Intersection of AI and Autonomous Vehicles: Driving Towards a Safer Future**:\nThe prospect of AI-driven autonomous vehicles promises to redefine transportation. This article will explore the technological underpinnings of self-driving cars, their developmental milestones, and the hurdles they face, including regulatory and ethical challenges. We will discuss the profound implications for various industries and employment sectors, coupled with the benefits such as reduced traffic accidents, improved fuel efficiency, and enhanced mobility for people with disabilities. By detailing these aspects, the article will offer a comprehensive overview of how AI-powered autonomous vehicles are steering us towards a safer, more efficient future.\n\n5. **AI and the Future of Work: Embracing Change in the Workplace**:\nAI is transforming the workplace by automating mundane tasks, enabling advanced data analysis, and fostering creativity and strategic decision-making. This article will explore the profound impact of AI on the job market, addressing concerns about job displacement and the evolution of new roles that demand reskilling. We will provide insights into the necessity for upskilling to keep pace with an AI-driven economy. Through interviews with industry experts and narratives from workers who have experienced AI's impact firsthand, we will present a balanced perspective. The aim is to paint a future where humans and AI work in synergy, driving innovation and productivity in a continuously evolving workplace landscape."
+        == "**1. The Rise of Autonomous AI Agents in Daily Life**  \nAs artificial intelligence technology progresses, the integration of autonomous AI agents into everyday life becomes increasingly prominent. These agents, capable of making decisions without human intervention, are reshaping industries from healthcare to finance. Exploring case studies where autonomous AI has successfully decreased operational costs or improved efficiency can reveal not only the benefits but also the ethical implications of delegating decision-making to machines. This topic offers an exciting opportunity to dive into the AI landscape, showcasing current developments such as AI assistants and autonomous vehicles.\n\n**2. Ethical Implications of Generative AI in Creative Industries**  \nThe surge of generative AI tools in creative fields, such as art, music, and writing, has sparked a heated debate about authorship and originality. This article could investigate how these tools are being used by artists and creators, examining both the potential for innovation and the risk of devaluing traditional art forms. Highlighting perspectives from creators, legal experts, and ethicists could provide a comprehensive overview of the challenges faced, including copyright concerns and the emotional impact on human artists. This discussion is vital as the creative landscape evolves alongside technological advancements, making it ripe for exploration.\n\n**3. AI in Climate Change Mitigation: Current Solutions and Future Potential**  \nAs the world grapples with climate change, AI technology is increasingly being harnessed to develop innovative solutions for sustainability. From predictive analytics that optimize energy consumption to machine learning algorithms that improve carbon capture methods, AI's potential in environmental science is vast. This topic invites an exploration of existing AI applications in climate initiatives, with a focus on groundbreaking research and initiatives aimed at reducing humanity's carbon footprint. Highlighting successful projects and technology partnerships can illustrate the positive impact AI can have on global climate efforts, inspiring further exploration and investment in this area.\n\n**4. The Future of Work: How AI is Reshaping Employment Landscapes**  \nThe discussions around AI's impact on the workforce are both urgent and complex, as advances in automation and machine learning continue to transform the job market. This article could delve into the current trends of AI-driven job displacement alongside opportunities for upskilling and the creation of new job roles. By examining case studies of companies that integrate AI effectively and the resulting workforce adaptations, readers can gain valuable insights into preparing for a future where humans and AI collaborate. This exploration highlights the importance of policies that promote workforce resilience in the face of change.\n\n**5. Decentralized AI: Exploring the Role of Blockchain in AI Development**  \nAs blockchain technology sweeps through various sectors, its application in AI development presents a fascinating topic worth examining. Decentralized AI could address issues of data privacy, security, and democratization in AI models by allowing users to retain ownership of data while benefiting from AI's capabilities. This article could analyze how decentralized networks are disrupting traditional AI development models, featuring innovative projects that harness the synergy between blockchain and AI. Highlighting potential pitfalls and the future landscape of decentralized AI could stimulate discussion among technologists, entrepreneurs, and policymakers alike.\n\nThese topics not only reflect current trends but also probe deeper into ethical and practical considerations, making them timely and relevant for contemporary audiences."
     )
 
 
@@ -2155,14 +2160,20 @@ def test_tools_with_custom_caching():
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
     ) as add_to_cache:
-        with patch.object(CacheHandler, "read", wraps=crew._cache_handler.read) as _:
-            result = crew.kickoff()
-            add_to_cache.assert_called_once_with(
-                tool="multiplcation_tool",
-                input={"first_number": 2, "second_number": 6},
-                output=12,
-            )
-            assert result.raw == "3"
+
+        result = crew.kickoff()
+
+        # Check that add_to_cache was called exactly twice
+        assert add_to_cache.call_count == 2
+
+        # Verify that one of those calls was with the even number that should be cached
+        add_to_cache.assert_any_call(
+            tool="multiplcation_tool",
+            input={"first_number": 2, "second_number": 6},
+            output=12,
+        )
+
+        assert result.raw == "3"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -2395,6 +2406,136 @@ def test_using_contextual_memory():
     with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_using_contextual_memory_with_long_term_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        long_term_memory=LongTermMemory(),
+    )
+
+    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+        crew.kickoff()
+        contextual_mem.assert_called_once()
+        assert crew.memory is False
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_warning_long_term_memory_without_entity_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        long_term_memory=LongTermMemory(),
+    )
+
+    with (
+        patch("crewai.utilities.printer.Printer.print") as mock_print,
+        patch(
+            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
+        ) as save_memory,
+    ):
+        crew.kickoff()
+        mock_print.assert_called_with(
+            content="Long term memory is enabled, but entity memory is not enabled. Please configure entity memory or set memory=True to automatically enable it.",
+            color="bold_yellow",
+        )
+        save_memory.assert_not_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_long_term_memory_with_memory_flag():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        memory=True,
+        long_term_memory=LongTermMemory(),
+    )
+
+    with (
+        patch("crewai.utilities.printer.Printer.print") as mock_print,
+        patch(
+            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
+        ) as save_memory,
+    ):
+        crew.kickoff()
+        mock_print.assert_not_called()
+        save_memory.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_using_contextual_memory_with_short_term_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        short_term_memory=ShortTermMemory(),
+    )
+
+    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+        crew.kickoff()
+        contextual_mem.assert_called_once()
+        assert crew.memory is False
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -3732,6 +3873,44 @@ def test_multimodal_agent_image_tool_handling():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_multimodal_agent_describing_image_successfully():
+    """
+    Test that a multimodal agent can process images without validation errors.
+    This test reproduces the scenario from issue #2475.
+    """
+    llm = LLM(model="openai/gpt-4o", temperature=0.7)  # model with vision capabilities
+
+    expert_analyst = Agent(
+        role="Visual Quality Inspector",
+        goal="Perform detailed quality analysis of product images",
+        backstory="Senior quality control expert with expertise in visual inspection",
+        llm=llm,
+        verbose=True,
+        allow_delegation=False,
+        multimodal=True,
+    )
+
+    inspection_task = Task(
+        description="""
+        Analyze the product image at https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244 with focus on:
+        1. Quality of materials
+        2. Manufacturing defects
+        3. Compliance with standards
+        Provide a detailed report highlighting any issues found.
+        """,
+        expected_output="A detailed report highlighting any issues found",
+        agent=expert_analyst,
+    )
+
+    crew = Crew(agents=[expert_analyst], tasks=[inspection_task])
+    result = crew.kickoff()
+
+    task_output = result.tasks_output[0]
+    assert isinstance(task_output, TaskOutput)
+    assert task_output.raw == result.raw
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_multimodal_agent_live_image_analysis():
     """
     Test that multimodal agents can analyze images through a real API call
@@ -3890,11 +4069,17 @@ def test_crew_guardrail_feedback_in_context():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_callback():
-    from crewai.project import CrewBase, agent, before_kickoff, task
+    from crewai.project import CrewBase
 
     @CrewBase
     class TestCrewClass:
-        from crewai.project import crew
+        from typing import List
+
+        from crewai.agents.agent_builder.base_agent import BaseAgent
+        from crewai.project import CrewBase, agent, before_kickoff, crew, task
+
+        agents: List[BaseAgent]
+        tasks: List[Task]
 
         agents_config = None
         tasks_config = None
@@ -4025,3 +4210,99 @@ def test_crew_with_knowledge_sources_works_with_copy():
     assert len(crew_copy.tasks) == len(crew.tasks)
 
     assert len(crew_copy.tasks) == len(crew.tasks)
+
+
+def test_crew_kickoff_for_each_works_with_manager_agent_copy():
+    researcher = Agent(
+        role="Researcher",
+        goal="Conduct thorough research and analysis on AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently researching for a new client.",
+        allow_delegation=False,
+    )
+
+    writer = Agent(
+        role="Senior Writer",
+        goal="Create compelling content about AI and AI agents",
+        backstory="You're a senior writer, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently writing content for a new client.",
+        allow_delegation=False,
+    )
+
+    # Define task
+    task = Task(
+        description="Generate a list of 5 interesting ideas for an article, then write one captivating paragraph for each idea that showcases the potential of a full article on this topic. Return the list of ideas with their paragraphs and your notes.",
+        expected_output="5 bullet points, each with a paragraph and accompanying notes.",
+    )
+
+    # Define manager agent
+    manager = Agent(
+        role="Project Manager",
+        goal="Efficiently manage the crew and ensure high-quality task completion",
+        backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
+        allow_delegation=True,
+    )
+
+    # Instantiate crew with a custom manager
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+        manager_agent=manager,
+        process=Process.hierarchical,
+        verbose=True,
+    )
+
+    crew_copy = crew.copy()
+    assert crew_copy.manager_agent is not None
+    assert crew_copy.manager_agent.id != crew.manager_agent.id
+    assert crew_copy.manager_agent.role == crew.manager_agent.role
+    assert crew_copy.manager_agent.goal == crew.manager_agent.goal
+
+def test_crew_copy_with_memory():
+    """Test that copying a crew with memory enabled does not raise validation errors and copies memory correctly."""
+    agent = Agent(role="Test Agent", goal="Test Goal", backstory="Test Backstory")
+    task = Task(description="Test Task", expected_output="Test Output", agent=agent)
+    crew = Crew(agents=[agent], tasks=[task], memory=True)
+
+    original_short_term_id = id(crew._short_term_memory) if crew._short_term_memory else None
+    original_long_term_id = id(crew._long_term_memory) if crew._long_term_memory else None
+    original_entity_id = id(crew._entity_memory) if crew._entity_memory else None
+    original_external_id = id(crew._external_memory) if crew._external_memory else None
+    original_user_id = id(crew._user_memory) if crew._user_memory else None
+
+
+    try:
+        crew_copy = crew.copy()
+
+        assert hasattr(crew_copy, "_short_term_memory"), "Copied crew should have _short_term_memory"
+        assert crew_copy._short_term_memory is not None, "Copied _short_term_memory should not be None"
+        assert id(crew_copy._short_term_memory) != original_short_term_id, "Copied _short_term_memory should be a new object"
+
+        assert hasattr(crew_copy, "_long_term_memory"), "Copied crew should have _long_term_memory"
+        assert crew_copy._long_term_memory is not None, "Copied _long_term_memory should not be None"
+        assert id(crew_copy._long_term_memory) != original_long_term_id, "Copied _long_term_memory should be a new object"
+
+        assert hasattr(crew_copy, "_entity_memory"), "Copied crew should have _entity_memory"
+        assert crew_copy._entity_memory is not None, "Copied _entity_memory should not be None"
+        assert id(crew_copy._entity_memory) != original_entity_id, "Copied _entity_memory should be a new object"
+
+        if original_external_id:
+             assert hasattr(crew_copy, "_external_memory"), "Copied crew should have _external_memory"
+             assert crew_copy._external_memory is not None, "Copied _external_memory should not be None"
+             assert id(crew_copy._external_memory) != original_external_id, "Copied _external_memory should be a new object"
+        else:
+             assert not hasattr(crew_copy, "_external_memory") or crew_copy._external_memory is None, "Copied _external_memory should be None if not originally present"
+
+        if original_user_id:
+             assert hasattr(crew_copy, "_user_memory"), "Copied crew should have _user_memory"
+             assert crew_copy._user_memory is not None, "Copied _user_memory should not be None"
+             assert id(crew_copy._user_memory) != original_user_id, "Copied _user_memory should be a new object"
+        else:
+             assert not hasattr(crew_copy, "_user_memory") or crew_copy._user_memory is None, "Copied _user_memory should be None if not originally present"
+
+
+    except pydantic_core.ValidationError as e:
+         if "Input should be an instance of" in str(e) and ("Memory" in str(e)):
+              pytest.fail(f"Copying with memory raised Pydantic ValidationError, likely due to incorrect memory copy: {e}")
+         else:
+              raise e # Re-raise other validation errors
+    except Exception as e:
+        pytest.fail(f"Copying crew raised an unexpected exception: {e}")

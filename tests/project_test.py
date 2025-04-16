@@ -1,8 +1,20 @@
+from typing import List
+
 import pytest
 
 from crewai.agent import Agent
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
-from crewai.project import CrewBase, after_kickoff, agent, before_kickoff, crew, task
+from crewai.llm import LLM
+from crewai.project import (
+    CrewBase,
+    after_kickoff,
+    agent,
+    before_kickoff,
+    crew,
+    llm,
+    task,
+)
 from crewai.task import Task
 
 
@@ -31,21 +43,32 @@ class InternalCrew:
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
 
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
+    @llm
+    def local_llm(self):
+        return LLM(
+            model="openai/model_name",
+            api_key="None",
+            base_url="http://xxx.xxx.xxx.xxx:8000/v1",
+        )
+
     @agent
     def researcher(self):
-        return Agent(config=self.agents_config["researcher"])
+        return Agent(config=self.agents_config["researcher"])  # type: ignore[index]
 
     @agent
     def reporting_analyst(self):
-        return Agent(config=self.agents_config["reporting_analyst"])
+        return Agent(config=self.agents_config["reporting_analyst"])  # type: ignore[index]
 
     @task
     def research_task(self):
-        return Task(config=self.tasks_config["research_task"])
+        return Task(config=self.tasks_config["research_task"])  # type: ignore[index]
 
     @task
     def reporting_task(self):
-        return Task(config=self.tasks_config["reporting_task"])
+        return Task(config=self.tasks_config["reporting_task"])  # type: ignore[index]
 
     @before_kickoff
     def modify_inputs(self, inputs):
@@ -105,6 +128,20 @@ def test_task_name():
     ), "Custom task name is not being set as expected"
 
 
+def test_agent_function_calling_llm():
+    crew = InternalCrew()
+    llm = crew.local_llm()
+    obj_llm_agent = crew.researcher()
+    assert (
+        obj_llm_agent.function_calling_llm is llm
+    ), "agent's function_calling_llm is incorrect"
+
+    str_llm_agent = crew.reporting_analyst()
+    assert (
+        str_llm_agent.function_calling_llm.model == "online_llm"
+    ), "agent's function_calling_llm is incorrect"
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_modification():
     crew = InternalCrew()
@@ -135,24 +172,27 @@ def test_before_kickoff_with_none_input():
 def test_multiple_before_after_kickoff():
     @CrewBase
     class MultipleHooksCrew:
+        agents: List[BaseAgent]
+        tasks: List[Task]
+
         agents_config = "config/agents.yaml"
         tasks_config = "config/tasks.yaml"
 
         @agent
         def researcher(self):
-            return Agent(config=self.agents_config["researcher"])
+            return Agent(config=self.agents_config["researcher"])  # type: ignore[index]
 
         @agent
         def reporting_analyst(self):
-            return Agent(config=self.agents_config["reporting_analyst"])
+            return Agent(config=self.agents_config["reporting_analyst"])  # type: ignore[index]
 
         @task
         def research_task(self):
-            return Task(config=self.tasks_config["research_task"])
+            return Task(config=self.tasks_config["research_task"])  # type: ignore[index]
 
         @task
         def reporting_task(self):
-            return Task(config=self.tasks_config["reporting_task"])
+            return Task(config=self.tasks_config["reporting_task"])  # type: ignore[index]
 
         @before_kickoff
         def first_before(self, inputs):

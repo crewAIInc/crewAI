@@ -13,10 +13,24 @@ CrewAI provides a powerful event system that allows you to listen for and react 
 CrewAI uses an event bus architecture to emit events throughout the execution lifecycle. The event system is built on the following components:
 
 1. **CrewAIEventsBus**: A singleton event bus that manages event registration and emission
-2. **CrewEvent**: Base class for all events in the system
+2. **BaseEvent**: Base class for all events in the system
 3. **BaseEventListener**: Abstract base class for creating custom event listeners
 
 When specific actions occur in CrewAI (like a Crew starting execution, an Agent completing a task, or a tool being used), the system emits corresponding events. You can register handlers for these events to execute custom code when they occur.
+
+<Note type="info" title="Enterprise Enhancement: Prompt Tracing">
+CrewAI Enterprise provides a built-in Prompt Tracing feature that leverages the event system to track, store, and visualize all prompts, completions, and associated metadata. This provides powerful debugging capabilities and transparency into your agent operations.
+
+![Prompt Tracing Dashboard](../images/enterprise/prompt-tracing.png)
+
+With Prompt Tracing you can:
+- View the complete history of all prompts sent to your LLM
+- Track token usage and costs
+- Debug agent reasoning failures
+- Share prompt sequences with your team
+- Compare different prompt strategies
+- Export traces for compliance and auditing
+</Note>
 
 ## Creating a Custom Event Listener
 
@@ -40,17 +54,17 @@ from crewai.utilities.events.base_event_listener import BaseEventListener
 class MyCustomListener(BaseEventListener):
     def __init__(self):
         super().__init__()
-    
+
     def setup_listeners(self, crewai_event_bus):
         @crewai_event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source, event):
             print(f"Crew '{event.crew_name}' has started execution!")
-        
+
         @crewai_event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source, event):
             print(f"Crew '{event.crew_name}' has completed execution!")
             print(f"Output: {event.output}")
-        
+
         @crewai_event_bus.on(AgentExecutionCompletedEvent)
         def on_agent_execution_completed(source, event):
             print(f"Agent '{event.agent.role}' completed task")
@@ -83,7 +97,7 @@ my_listener = MyCustomListener()
 
 class MyCustomCrew:
     # Your crew implementation...
-    
+
     def crew(self):
         return Crew(
             agents=[...],
@@ -106,7 +120,7 @@ my_listener = MyCustomListener()
 
 class MyCustomFlow(Flow):
     # Your flow implementation...
-    
+
     @start()
     def first_step(self):
         # ...
@@ -234,7 +248,7 @@ Each event handler receives two parameters:
 1. **source**: The object that emitted the event
 2. **event**: The event instance, containing event-specific data
 
-The structure of the event object depends on the event type, but all events inherit from `CrewEvent` and include:
+The structure of the event object depends on the event type, but all events inherit from `BaseEvent` and include:
 
 - **timestamp**: The time when the event was emitted
 - **type**: A string identifier for the event type
@@ -324,9 +338,9 @@ with crewai_event_bus.scoped_handlers():
     @crewai_event_bus.on(CrewKickoffStartedEvent)
     def temp_handler(source, event):
         print("This handler only exists within this context")
-    
+
     # Do something that emits events
-    
+
 # Outside the context, the temporary handler is removed
 ```
 

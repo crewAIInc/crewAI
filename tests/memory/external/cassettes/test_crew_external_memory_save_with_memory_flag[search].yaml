@@ -1,0 +1,1425 @@
+interactions:
+- request:
+    body: '{"input": ["Perform a search on specific topics."], "model": "text-embedding-3-small",
+      "encoding_format": "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '115'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      7,\n    \"total_tokens\": 7\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f575b5ddc27dec-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:26:39 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=FIPwcipZP4faG6u.UZ0VUbpQ15Dz4z8_QZv_6xQ0GQM-1744489599-1.0.1.1-UMdQ71ibozWnbxUEtzIovmFjiHG47RkgSeWISeEjCz8p4jepJs3llWKL5qXOZp4v2nxvO9Npb07uVJlGiIB63CBiTcqNmiGu.5DcDJJl02w;
+        path=/; expires=Sat, 12-Apr-25 20:56:39 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=gDsKzGTdfritvzjX7P3jkxQy1tBIdZR8876FolHrzTY-1744489599196-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '241'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-7d86d58f9c-fmk2c
+      x-envoy-upstream-service-time:
+      - '164'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999991'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_f50f5433d6ac755239a8c9707348b72f
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"input": ["Perform a search on specific topics."], "model": "text-embedding-3-small",
+      "encoding_format": "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '115'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      7,\n    \"total_tokens\": 7\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f575bb3c007dfe-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:26:40 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=Jm73zgaX93R7dmdHzthaQLZvS.FDTE7mV9FjnnXOzfk-1744489600-1.0.1.1-PoukpcSnzv7SStgVNleiuwDs4T5hZv9FaVqJkkBq_o1SOXnoQ4d4zSCJ2.fmyc8TLrPx1Ykh1NK4D13sIHXLKj5Oic8deea9HMeiDr3X4y0;
+        path=/; expires=Sat, 12-Apr-25 20:56:40 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=_e.uFVx98Z8p0BNXXGWGZiyLKJW8yG7vjquHkWxJXnI-1744489600237-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '119'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-54db47bfc6-vjbpf
+      x-envoy-upstream-service-time:
+      - '80'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999991'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_1bf27e828b7268ecd56800819bff96c0
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Ct8MCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkStgwKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcCAoQX0YRUL8eiOdyMZ9UyG+SGxIIqZnu2Hw5xU8qDENyZXcgQ3JlYXRlZDABOXD+
+      LfkLrDUYQfAGN/kLrDUYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTE0LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi45Si4KCGNyZXdfa2V5EiIKIDA3YTcxNzY4Y2M0YzkzZWFiM2IzMWUzYzhk
+      MjgzMmM2SjEKB2NyZXdfaWQSJgokZjQzMGJiYTUtYWNmNS00NjRiLWJjMzMtYThjMDkxMWFiN2Yy
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAUoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJDIxYjUyYTc5LTlmZTMtNDI5Ny05OTZlLTNiNGQ3MjIxMGI4OUo7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNC0xMlQxNzoyNjozOC4wMzIwMDdK
+      0AIKC2NyZXdfYWdlbnRzEsACCr0CW3sia2V5IjogIjAyZGYxM2UzNjcxMmFiZjUxZDIzOGZlZWJh
+      YjFjYTI2IiwgImlkIjogIjYyOTVhZTk5LTg5ZjAtNDA5Yi1iMmEwLTdiYzBjYWE1M2VmOSIsICJy
+      b2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiB0cnVlLCAibWF4X2l0ZXIiOiAyNSwgIm1h
+      eF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8t
+      bWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlv
+      bj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEK
+      CmNyZXdfdGFza3MS8AEK7QFbeyJrZXkiOiAiN2I0MmRmM2MzYzc0YzIxYzg5NDgwZTBjMDcwNTM4
+      NWYiLCAiaWQiOiAiNTM2ODI0YzYtNzAzOC00ODk0LTk0MjItZDEwOTc1MWNkMTJmIiwgImFzeW5j
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6
+      ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICIwMmRmMTNlMzY3MTJhYmY1MWQyMzhmZWViYWIx
+      Y2EyNiIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEoAEChBHv769lTpKECHWsnSuLOyr
+      EgjzK09Rxkmd2yoMVGFzayBDcmVhdGVkMAE5OLlB+QusNRhBWAdC+QusNRhKLgoIY3Jld19rZXkS
+      IgogMDdhNzE3NjhjYzRjOTNlYWIzYjMxZTNjOGQyODMyYzZKMQoHY3Jld19pZBImCiRmNDMwYmJh
+      NS1hY2Y1LTQ2NGItYmMzMy1hOGMwOTExYWI3ZjJKLgoIdGFza19rZXkSIgogN2I0MmRmM2MzYzc0
+      YzIxYzg5NDgwZTBjMDcwNTM4NWZKMQoHdGFza19pZBImCiQ1MzY4MjRjNi03MDM4LTQ4OTQtOTQy
+      Mi1kMTA5NzUxY2QxMmZKOgoQY3Jld19maW5nZXJwcmludBImCiQyMWI1MmE3OS05ZmUzLTQyOTct
+      OTk2ZS0zYjRkNzIyMTBiODlKOgoQdGFza19maW5nZXJwcmludBImCiQyOGQyMmViOC0zOGU2LTQ5
+      Y2UtYmUyNy1jOTlkYzcwYTUwOGRKOwobdGFza19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwKGjIw
+      MjUtMDQtMTJUMTc6MjY6MzguMDMxOTc2SjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJGI1YTEwYjRl
+      LWQ1YWMtNDBmMS1iMThlLTJhODUxY2ZiNTdkYnoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1634'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sat, 12 Apr 2025 20:26:41 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You are
+      a researcher at a leading tech think tank.\nYour personal goal is: Search relevant
+      data and provide results\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Perform a search
+      on specific topics.\n\nThis is the expected criteria for your final answer:
+      A list of relevant URLs based on the search query.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\n# Useful context: \nExternal
+      memories:\n\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '989'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BLbiyMGQm6ZA3CZgBhUncdqsW8Ru4\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744489600,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: \\n\\n1. **Artificial Intelligence in Healthcare**\\n   - URL: [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7073215/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7073215/)
+      - This article explores various applications of AI in healthcare, including
+      diagnostics and treatment personalization.\\n\\n2. **Blockchain Technology and
+      Its Impact on Supply Chain**\\n   - URL: [https://www.researchgate.net/publication/341717309_Blockchain_Technology_in_Supply_Chain_Management](https://www.researchgate.net/publication/341717309_Blockchain_Technology_in_Supply_Chain_Management)
+      - This research paper discusses the potential of blockchain in enhancing supply
+      chain transparency and efficiency.\\n\\n3. **Cybersecurity Trends for 2023**\\n
+      \  - URL: [https://www.cybersecurity-insiders.com/cybersecurity-trends-2023/](https://www.cybersecurity-insiders.com/cybersecurity-trends-2023/)
+      - This resource outlines the major cybersecurity trends expected to shape the
+      industry in 2023, including emerging threats and mitigation strategies.\\n\\n4.
+      **The Impact of Remote Work on Productivity**\\n   - URL: [https://www.mitpressjournals.org/doi/full/10.1162/99608f92.2020.12.01](https://www.mitpressjournals.org/doi/full/10.1162/99608f92.2020.12.01)
+      - This journal article provides insights into how remote work affects productivity,
+      work-life balance, and organizational dynamics.\\n\\n5. **Quantum Computing:
+      A Beginner's Guide**\\n   - URL: [https://www.ibm.com/quantum-computing/learn/what-is-quantum-computing/](https://www.ibm.com/quantum-computing/learn/what-is-quantum-computing/)
+      - This resource serves as an introduction to quantum computing, detailing its
+      principles and potential applications.\\n\\n6. **Sustainable Energy Technologies
+      for the Future**\\n   - URL: [https://www.energy.gov/eere/solar/articles/sustainable-energy-technology-future](https://www.energy.gov/eere/solar/articles/sustainable-energy-technology-future)
+      - This article discusses various sustainable energy technologies that could
+      play a crucial role in future energy landscapes.\\n\\n7. **5G Technology and
+      Its Implications**\\n   - URL: [https://www.qualcomm.com/invention/5g/what-is-5g](https://www.qualcomm.com/invention/5g/what-is-5g)
+      - This page explains what 5G technology is and explores its potential implications
+      for various sectors including telecommunications and the Internet of Things
+      (IoT). \\n\\nThese resources have been carefully selected to meet the specified
+      topics and provide comprehensive insights.\",\n        \"refusal\": null,\n
+      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 185,\n    \"completion_tokens\":
+      598,\n    \"total_tokens\": 783,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_80cf447eee\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92f575c23de77dff-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:26:50 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=nSje5Zn_Lk69BDG85XIauC2hrZjGl0pR2sel9__KWGw-1744489610-1.0.1.1-CPlAgcgTAE30uWrbi_2wiCWrbRDRWiaa.YuQMgST42DLDVg_wdNlJMDQT3Lsqk.g.BO68A66TTirWA0blQaQw.9xdBbPwKO609_ftjdwi5U;
+        path=/; expires=Sat, 12-Apr-25 20:56:50 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=XLC52GLAWCOeWn2vI379CnSGKjPa7f.qr2vSAQ_R66M-1744489610542-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '9693'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999788'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_b4e0a78aa1862709077bd91cf4a45064
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"input": ["I now can give a great answer   Final Answer:   1. **Artificial
+      Intelligence in Healthcare**    - URL: [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7073215/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7073215/)
+      - This article explores various applications of AI in healthcare, including
+      diagnostics and treatment personalization.  2. **Blockchain Technology and Its
+      Impact on Supply Chain**    - URL: [https://www.researchgate.net/publication/341717309_Blockchain_Technology_in_Supply_Chain_Management](https://www.researchgate.net/publication/341717309_Blockchain_Technology_in_Supply_Chain_Management)
+      - This research paper discusses the potential of blockchain in enhancing supply
+      chain transparency and efficiency.  3. **Cybersecurity Trends for 2023**    -
+      URL: [https://www.cybersecurity-insiders.com/cybersecurity-trends-2023/](https://www.cybersecurity-insiders.com/cybersecurity-trends-2023/)
+      - This resource outlines the major cybersecurity trends expected to shape the
+      industry in 2023, including emerging threats and mitigation strategies.  4.
+      **The Impact of Remote Work on Productivity**    - URL: [https://www.mitpressjournals.org/doi/full/10.1162/99608f92.2020.12.01](https://www.mitpressjournals.org/doi/full/10.1162/99608f92.2020.12.01)
+      - This journal article provides insights into how remote work affects productivity,
+      work-life balance, and organizational dynamics.  5. **Quantum Computing: A Beginner''s
+      Guide**    - URL: [https://www.ibm.com/quantum-computing/learn/what-is-quantum-computing/](https://www.ibm.com/quantum-computing/learn/what-is-quantum-computing/)
+      - This resource serves as an introduction to quantum computing, detailing its
+      principles and potential applications.  6. **Sustainable Energy Technologies
+      for the Future**    - URL: [https://www.energy.gov/eere/solar/articles/sustainable-energy-technology-future](https://www.energy.gov/eere/solar/articles/sustainable-energy-technology-future)
+      - This article discusses various sustainable energy technologies that could
+      play a crucial role in future energy landscapes.  7. **5G Technology and Its
+      Implications**    - URL: [https://www.qualcomm.com/invention/5g/what-is-5g](https://www.qualcomm.com/invention/5g/what-is-5g)
+      - This page explains what 5G technology is and explores its potential implications
+      for various sectors including telecommunications and the Internet of Things
+      (IoT).   These resources have been carefully selected to meet the specified
+      topics and provide comprehensive insights."], "model": "text-embedding-3-small",
+      "encoding_format": "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2571'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=FIPwcipZP4faG6u.UZ0VUbpQ15Dz4z8_QZv_6xQ0GQM-1744489599-1.0.1.1-UMdQ71ibozWnbxUEtzIovmFjiHG47RkgSeWISeEjCz8p4jepJs3llWKL5qXOZp4v2nxvO9Npb07uVJlGiIB63CBiTcqNmiGu.5DcDJJl02w;
+        _cfuvid=gDsKzGTdfritvzjX7P3jkxQy1tBIdZR8876FolHrzTY-1744489599196-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      606,\n    \"total_tokens\": 606\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f57602bbdf7e0d-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:26:51 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '278'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-6db676c665-kppq9
+      x-envoy-upstream-service-time:
+      - '234'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999376'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 3ms
+      x-request-id:
+      - req_030874a7f102fccbecd0742b5caa51e6
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Assess the quality of the task
+      completed based on the description, expected output, and actual results.\n\nTask
+      Description:\nPerform a search on specific topics.\n\nExpected Output:\nA list
+      of relevant URLs based on the search query.\n\nActual Output:\nI now can give
+      a great answer  \nFinal Answer: \n\n1. **Artificial Intelligence in Healthcare**\n   -
+      URL: [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7073215/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7073215/)
+      - This article explores various applications of AI in healthcare, including
+      diagnostics and treatment personalization.\n\n2. **Blockchain Technology and
+      Its Impact on Supply Chain**\n   - URL: [https://www.researchgate.net/publication/341717309_Blockchain_Technology_in_Supply_Chain_Management](https://www.researchgate.net/publication/341717309_Blockchain_Technology_in_Supply_Chain_Management)
+      - This research paper discusses the potential of blockchain in enhancing supply
+      chain transparency and efficiency.\n\n3. **Cybersecurity Trends for 2023**\n   -
+      URL: [https://www.cybersecurity-insiders.com/cybersecurity-trends-2023/](https://www.cybersecurity-insiders.com/cybersecurity-trends-2023/)
+      - This resource outlines the major cybersecurity trends expected to shape the
+      industry in 2023, including emerging threats and mitigation strategies.\n\n4.
+      **The Impact of Remote Work on Productivity**\n   - URL: [https://www.mitpressjournals.org/doi/full/10.1162/99608f92.2020.12.01](https://www.mitpressjournals.org/doi/full/10.1162/99608f92.2020.12.01)
+      - This journal article provides insights into how remote work affects productivity,
+      work-life balance, and organizational dynamics.\n\n5. **Quantum Computing: A
+      Beginner''s Guide**\n   - URL: [https://www.ibm.com/quantum-computing/learn/what-is-quantum-computing/](https://www.ibm.com/quantum-computing/learn/what-is-quantum-computing/)
+      - This resource serves as an introduction to quantum computing, detailing its
+      principles and potential applications.\n\n6. **Sustainable Energy Technologies
+      for the Future**\n   - URL: [https://www.energy.gov/eere/solar/articles/sustainable-energy-technology-future](https://www.energy.gov/eere/solar/articles/sustainable-energy-technology-future)
+      - This article discusses various sustainable energy technologies that could
+      play a crucial role in future energy landscapes.\n\n7. **5G Technology and Its
+      Implications**\n   - URL: [https://www.qualcomm.com/invention/5g/what-is-5g](https://www.qualcomm.com/invention/5g/what-is-5g)
+      - This page explains what 5G technology is and explores its potential implications
+      for various sectors including telecommunications and the Internet of Things
+      (IoT). \n\nThese resources have been carefully selected to meet the specified
+      topics and provide comprehensive insights.\n\nPlease provide:\n- Bullet points
+      suggestions to improve future similar tasks\n- A score from 0 to 10 evaluating
+      on completion, quality, and overall performance- Entities extracted from the
+      task output, if any, their type, description, and relationships"}], "model":
+      "gpt-4o-mini", "tool_choice": {"type": "function", "function": {"name": "TaskEvaluation"}},
+      "tools": [{"type": "function", "function": {"name": "TaskEvaluation", "description":
+      "Correctly extracted `TaskEvaluation` with all the required parameters with
+      correct types", "parameters": {"$defs": {"Entity": {"properties": {"name": {"description":
+      "The name of the entity.", "title": "Name", "type": "string"}, "type": {"description":
+      "The type of the entity.", "title": "Type", "type": "string"}, "description":
+      {"description": "Description of the entity.", "title": "Description", "type":
+      "string"}, "relationships": {"description": "Relationships of the entity.",
+      "items": {"type": "string"}, "title": "Relationships", "type": "array"}}, "required":
+      ["name", "type", "description", "relationships"], "title": "Entity", "type":
+      "object"}}, "properties": {"suggestions": {"description": "Suggestions to improve
+      future similar tasks.", "items": {"type": "string"}, "title": "Suggestions",
+      "type": "array"}, "quality": {"description": "A score from 0 to 10 evaluating
+      on completion, quality, and overall performance, all taking into account the
+      task description, expected output, and the result of the task.", "title": "Quality",
+      "type": "number"}, "entities": {"description": "Entities extracted from the
+      task output.", "items": {"$ref": "#/$defs/Entity"}, "title": "Entities", "type":
+      "array"}}, "required": ["entities", "quality", "suggestions"], "type": "object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4549'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=nSje5Zn_Lk69BDG85XIauC2hrZjGl0pR2sel9__KWGw-1744489610-1.0.1.1-CPlAgcgTAE30uWrbi_2wiCWrbRDRWiaa.YuQMgST42DLDVg_wdNlJMDQT3Lsqk.g.BO68A66TTirWA0blQaQw.9xdBbPwKO609_ftjdwi5U;
+        _cfuvid=XLC52GLAWCOeWn2vI379CnSGKjPa7f.qr2vSAQ_R66M-1744489610542-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BLbjARfvpsFHRIcsRy1tkoLnzgoND\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744489612,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+      \           \"id\": \"call_NWNQXwfvDMoLSvt0qFPlk5so\",\n            \"type\":
+      \"function\",\n            \"function\": {\n              \"name\": \"TaskEvaluation\",\n
+      \             \"arguments\": \"{\\\"suggestions\\\":[\\\"Ensure the search query
+      is clearly defined to better guide the selection of URLs.\\\",\\\"Provide a
+      brief summary or context for each URL to enhance relevance and understanding.\\\",\\\"Use
+      a consistent format for URL presentation, possibly including the title in a
+      uniform manner.\\\",\\\"Consider including a wider variety of sources (peer-reviewed
+      articles, news sites, etc.) for a more comprehensive output.\\\",\\\"Verify
+      the quality and credibility of the URLs before including them.\\\"],\\\"quality\\\":9,\\\"entities\\\":[{\\\"name\\\":\\\"Artificial
+      Intelligence in Healthcare\\\",\\\"type\\\":\\\"Topic\\\",\\\"description\\\":\\\"Exploration
+      of AI applications in healthcare, including diagnostics and treatment.\\\",\\\"relationships\\\":[\\\"Has
+      URL\\\",\\\"Is relevant to healthcare advancements\\\"]},{\\\"name\\\":\\\"Blockchain
+      Technology\\\",\\\"type\\\":\\\"Topic\\\",\\\"description\\\":\\\"Impact of
+      blockchain on supply chain management.\\\",\\\"relationships\\\":[\\\"Has URL\\\",\\\"Is
+      relevant to supply chain technology\\\"]},{\\\"name\\\":\\\"Cybersecurity Trends
+      for 2023\\\",\\\"type\\\":\\\"Topic\\\",\\\"description\\\":\\\"Key trends expected
+      in the cybersecurity field for the year 2023.\\\",\\\"relationships\\\":[\\\"Has
+      URL\\\",\\\"Is relevant to cybersecurity awareness\\\"]},{\\\"name\\\":\\\"Impact
+      of Remote Work on Productivity\\\",\\\"type\\\":\\\"Topic\\\",\\\"description\\\":\\\"Effects
+      of remote work on productivity and organizational dynamics.\\\",\\\"relationships\\\":[\\\"Has
+      URL\\\",\\\"Is relevant to work-life balance discussions\\\"]},{\\\"name\\\":\\\"Quantum
+      Computing\\\",\\\"type\\\":\\\"Topic\\\",\\\"description\\\":\\\"Introduction
+      to the principles and applications of quantum computing.\\\",\\\"relationships\\\":[\\\"Has
+      URL\\\",\\\"Is relevant to advancements in computing technology\\\"]},{\\\"name\\\":\\\"Sustainable
+      Energy Technologies\\\",\\\"type\\\":\\\"Topic\\\",\\\"description\\\":\\\"Technologies
+      that contribute to sustainable energy solutions.\\\",\\\"relationships\\\":[\\\"Has
+      URL\\\",\\\"Is relevant to future energy discussions\\\"]},{\\\"name\\\":\\\"5G
+      Technology\\\",\\\"type\\\":\\\"Topic\\\",\\\"description\\\":\\\"Explanation
+      of 5G technology and its implications for various sectors.\\\",\\\"relationships\\\":[\\\"Has
+      URL\\\",\\\"Is relevant to telecommunications advancements\\\"]}]}\"\n            }\n
+      \         }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 879,\n    \"completion_tokens\":
+      354,\n    \"total_tokens\": 1233,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92f57609ea7f7dff-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:26:56 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '4323'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999249'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_cf14ba71ebe0bb5b3353c5204210a419
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"input": ["Artificial Intelligence in Healthcare(Topic): Exploration of
+      AI applications in healthcare, including diagnostics and treatment."], "model":
+      "text-embedding-3-small", "encoding_format": "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '207'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=Jm73zgaX93R7dmdHzthaQLZvS.FDTE7mV9FjnnXOzfk-1744489600-1.0.1.1-PoukpcSnzv7SStgVNleiuwDs4T5hZv9FaVqJkkBq_o1SOXnoQ4d4zSCJ2.fmyc8TLrPx1Ykh1NK4D13sIHXLKj5Oic8deea9HMeiDr3X4y0;
+        _cfuvid=_e.uFVx98Z8p0BNXXGWGZiyLKJW8yG7vjquHkWxJXnI-1744489600237-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"Uo9NvCdZgrzh2k49x+JVO/NW9byMXJ27fnYovKe1Nj2yZho9jsaVPHuiNzzbpai9AOWMvFeYT72OJza8/DPougSwOrxB3r87nw3APPrbirmF6aI8veIBPdpn1LumH5q8S8QKPIXpIr1XmE88s/y2PN9nfjuitQw8hXbnO03ww7yfDUA8cjiAvLj84DxGfck8WKGnvGlSNTz+ehQ8RiUBPQlYHDx9oky7LZcAPASElj16DJu9aLwYu1vN4LxvL5O9zCkXvAbc8zsF7g69KVmXOmkUdr300oi8rlRVuw5YRj2kVAG7K/gLPaV3YjwYPpE8gTh+OqXqnbmPHnM8KVmXPKzqXL2Bf5W8fNczuwe5pzwA5Qy8oaw0vb4F4zzuVku8spK+vLObFj0cqB49cYdwvLakA70N7k09GmrKOxpqSry0BY+7J4WmvFlj6LmhOfm8e0GXuwByUbxGfcm8YX4avZt3jr2UXFy98JQfPKKj8Twtl4A7aYcxO1+zAT1phzE79zO+PFNaZrtJJZY8x+JVPc3rV7wUYUi9LFksvCbd7jx+qyQ9Co2YvJCahju/b9u6MY5SPAe5Jzxi6JK9i/IkvU8uGL1EsrA8cfqrvMtVO7st70i9ds4xvTl0iLwY9/m8sShGvfczvjuIStg7fDjUPNNV+rzxi1y8PwpPPRTCaLwaPia9U5glvVoLoLvc2iQ90CDpO4UVx7xQJVU8LlnBvHH6qzwOWMY8F2o1vcXrmL1f3yU8FwmVu9x5BDz5X3c8c1vhu65UVb1+A+28TIZLPJYwTT2niRI95XnYvAFPhTqeBGi8F5ZZPM70L70T90+8xRe9vMuB3zst70i9Y34vvOF5Lr0Tyyu8YEkevFP5RTwaasq8ox8FO4JB1rxKHFO8DljGvIPpDTv0wG29u9BRvev1Fb3p9YA8GQBSPM8yhLzRKUE97FY2u4t/6bwG3PO8x0P2vMv0GjwSYTO9aEldPTrMZbqSkcO8HXM3vcXrmLxt8T465OO7OxRhyDxTWmY8ngToPFahkjv0X009Oszlu1+zAT1Nj6M7wYGLPPVoJb0efI89o+oIvdcGHzwiPuU8HglUPB/drzwPYZ482V78OxQAqLuZZV69AU8FPee3LL3OVVA9/6+QPI8wjr2c2C69sMelPAzl9bzqt8E72mdUPeeLCL18DDA84NH2OxKWLz0gGwS7cYdwvJiaRbwDT5q9wdlTPEklFr0kUBU8hekivAFPhTvJtsa7vUMiOd55Gb2S8uM8di/SvCwtCD1yZCS8s/w2PUHePz1NUWQ6wa2vO14C8rzP/Qc8vUMiPMuBX70FGjM9xRe9PLw6yrxm32S9J4UmPDypGb2io/E8nUInvJgNgbxmfsQ7YNbiO8eKDTxus3+7mPtlOwQR27v9EJy9ilyIPNnRN7twmYs8EcsWPf9o+bzQZwC9GD6RPHIDBD0AclE9ShzTvF8LSryLf2m8v+KWO0hI4jvAQ7e8eQPDuweNAzz6aM+8MJcVPRcJFb0W1Jg7QHRHOxj3ebyKFXG99QeFvU8cfbzTyLU8IOYHPUfnQby1KPC8mQQ+PTreAD240Lw8xA7lPKdCezw/a+88ayamPZQwOL1VxN47YqH7u6m1SzyMXB09IXwkvXYv0rrVnCY9JFAVvb2b6jzC4qu8QBMnPeoY4ryFiAK9k88XvDj4dDySkcO8Mu/yPH1BLL0PYR68xK1EPD10sjxDfbS8tcfPvHXF2bwDp+I6W81gPcYglb2XBCm9B1iHvNcywzwRLDc8BBHbOyyFUL20vvc7G9TCvKi+Drx1xVm9bx34O9TRjb2VJ/W8Q0i4vTrMZTyJtFC829HMOkMKeb11OBU8udkUPUoc0zzSk7m5qbXLvCbdbjxm3+S84kTHvXAm0LtCP+C8Tlq8vDmpBLxNUWS8O9W9vVKPTb1TzaE8bfE+PVEuLT2bQhI9Y6pTvF6qKb2tS/08OmvFvHRkuTwm3e68W3WYPExaJ73hO++80CDpO2W8g7xWoRI8HqizvM8yhD0Mja28N5dUvJ6jR73OtnC8MCTaO6fhWj1JE/u5IxsZPWBJnr37RYM6I6jdPO/AQ725pBi8JnxOPOJEx7xC55c87ON6vc9eKD09ExI9lqOIPF0UDb2utXW9Ij7luxj3+TyY++U6lqOIO45TWjyMiME8lcZUPOq3wblCP+A77V8OvVzWuDxc1jg84dpOvO636zreeRm8eJlKPdx5BD0aCSq6I6hdPL0OpjvigoY8dqKNvLEoRrxA1Wc99zO+PeaCMLxr8ak8wND7u2YdJDtdoVE8/RCcvFOYJbz1PAG9ayamu9Wcpj1N8MM7sjEevHj66jyUvXy9fUEsvF1AMb0ksbW8NwqQPHzXM7zy7Py7wUwPO08uGDyRzwK98Sq8PEmyWr3s43q7ph8aPcggqrydmm+96E1JPeOl57ykVIE7Zh0kPRDCvjw+Afc7yOutvCAbhD2VmrA8XnUtPXw4VLwjCf68b7xXvaXqnbzC4qu6LC2IO2jxlDzs43q8TvmbO/doOjxzmSA9+9JHvP5FGLzY/Vs7Gt2FvE2PozymgDq9ey/8PA3CKT220Kc8+snvuwOnYjzs43o9IHPMPKJC0bw2Abi8zCmXPE9jFLwGTy+7xeuYO9S/cjzW0aI8ZegnvMJDTLruKqc7y4HfvDLv8rz4/lY9lL38POzjeru2pIM8ZLMrPWmzVbuXOaU7QEijvOV52LwN7s08iB60PMNMJDn4nbY7faJMuxmoiTywH+48+hAHvd9n/ry94oG8CVgcOyrvszdxL6g8Z4ccvX52KL2Bqzm8xoG1vBc1ubwkhRE81TuGPHmiojy82ak8zevXvFhAB7xSj808zF4TPZBlCr1X1o48+aaOO4V2Zzzut2s9JRuuPCBHKDySkUO8wyCAPBcJlbyIHjQ8qKzzPImILD0o7568u0MNuyv4CzwEhJY8WGwrPXP6QDzXMkO9o6xJPD4Bd7w9ExK8UQIJvYBKGTpc1ji8qoknPFfWjjzVZyo8/NsfvVpsQLuI8g87YhS3vGZ+xLyt87S8QhO8PFc3rzyMiEG8u0MNPcJDzLzGIJU7/XE8PSqOEzsOWEa8qOqyvNeTYz0ARi07LZeAPOXsEzw6zOU8cYfwPGzo5rtxLyg8K3x4OoYenzxwmQu9a37uurw6yrqbz1Y7f38Au6IWLbwn5sY8wkNMPNpnVDyxieY8vniePBRhSLxrJqY8oqNxvCobWD0A5Yw9J1kCu0UcKbxYbKu8M2sGPPbSnbx1OBU8BtxzvFU3mrs63oA7WXUDPbNU/7yVmrA6zsgLvQDT8by1KHA8lWW0uo8wDj1cC7W8X2zqvD6pLr36ye86aLwYPDKXKj0shVA8qVSrvKE5ebvmTTS8Ju+Ju7bQp7wF7g49lL18vJiaxTo0YsO5bPqBvE+7XL3Qk6Q8+aaOt0McFLw+SA48Kro3u3uit7zb0Uy8D7lmvEZ9ybsA5Yw7QBOnPCmxX7w+qS68EmGzvFhABz1DCvk8vqRCveba+LyFduc7MIX6vAvClLnTVXo9aEldPXYvUj39PEA98MmbPL2bajzbcCy8j73SPCDU7Lt5oiK7fAwwvTeX1DzFthy9ESw3PLzZqbvrwJm8ttCnO/Ah5Lwu+CC8ShxTPasfRLz9EBw9NcPju6MfBTuld2K8LY6oPCxZrDs3l1S8k8+Xu3XF2bys6tw8vw67PEZ9yTxyA4S9di9SvWiq/bojCf4846XnPDNrhr0Rjde8XgLyPLvQUTxmUqA8RLIwPfP11Dygdzi83K4AvEZ9Sbp2zrE84BiOvHnXHjwcqB48S8QKPdtwrDsCRkK8Vo93Ox/drzyfDcA8C/cQOwlYHDwmJIa89MDtvODR9jznVow7Zh2kvFNsgTsUwui8k8+XvNg7G72niRI9jIhBPLKSPr1ykEi9smYavGmz1boYPhE9brN/vNDIoLs/3qq8GD4RvW+QMzx/DMW8QucXPS8tnTyZBL68e0EXPahL0zuh2Ni8FctAvZUn9TxASCO89F9NvCF8pLtQJVU8nA0rvCHdxLwB3Mk8oUsUPN55GT2G4N87dC+9uyBHKLyiFi08udmUvPEqvDxlFMy83HmEvJ4E6DxpJhG97CoSPV2h0btRzQy7NDYfPJBlijyC4LU7HxKsPDli7bux/KG6r77NvF1Asbq52ZQ77cCuPM5VUDpjfq+8xoG1vI3yubz50rI8+J22O1hAh7x2og27xA5lPK8xiTyvvk29Xd8Qu9U7Bjwt78i79F/NPHEvqDyIHjQ8PwrPPOJEx7uXOaW8zevXukXnrLwVaqA8qKzzPLzZKbzxKjy96hhiO9cyQ7vfZ368kfsmu5iaxTtiFLe8BRqzPHtBlz3aZ9S8zOJ/Oz2gVrtxL6g8uNA8O8W2HLxmUqC8+jyrvHaijbxsWyI9KhvYPGOqUzu4/OA6tcfPPJ9u4LxuUl88/68QvPAh5LpMWic9S8SKvAManjvH4tW6iB60PFyqlLzCtgc8Vo/3PN8PtjyjS6k8ql2DvIGrOTvDTCQ8h+k3PC3DJDzrwJk6AxoePHmiorv+ehQ7brN/POoY4jzRiuE7a8WFvAwsjTzWKeu8JBJWPTP4yrweR5O8mG6hO8ZMOTxFdPG8kYhrPY9csjwy7/K8KhvYOhrdhTz/aPk8/gdZPIIVMj3y7Hy88So8vbkFuTxVbJa8zlXQu7CbgToJIyC8ZbyDvHQvPb13DAY94dpOPAyNLT3g0Xa81L/yOtAgabxph7G8h7S7O4QM7zx/beU5+snvPGDW4rtkhwe8Id1EvE+PuLyfDcC7bx34OjregDzyaJA8K/gLO3nXnjwZYfI6US6tPB1zt7pM+QY8AT3qPBpqSrwUwui8rfM0vKPqiDl2L1I9x+JVvOq3Qb3ZBrS7LWKEvIq9qLyd4QY9Rn3JPEhI4rsBeym8jx7zPJiaRTztX468NGLDPHCZC7ygdzg87CqSPIE4fjwjCf48yyC/vDg/DDxuUt86j73SvBTUAzwRLDc8sYlmvAuE1bwKuTy9Ko6Tu94GXjzL9Bq8Tlq8vBLu9zykVAE9KFC/vDXD4zt2oo08wEO3vM/9h7wgR6g8GagJPSmx3zyPka68ybbGPGmzVTvU0Q08+jwrPODR9rp1Jvo8Rn3JO24mO7poHbk8FcvAuwQRW7vjpec7L2IZPYB2PT1EURA9QrKbPJllXjxEUZC89zO+O5GIa7t/4KA80GeAO85V0Dtus/+8Q300Oumu6bxVxN48MMO5Oy9imbyZ2Jk71nACPBXLQL3Skzm857esPGodzjwARi29NAEjO+JEx7wLwpQ98/XUOkZRJbwwhfo8okLRu5fYBDuVZTS9ipEEvPzbH7tovJi8Co0YPcuB37w+SI67De7NPN/jETxuJru8lWW0PE1RZL0KuTy8N5fUvCmFu7wtlwC9iErYvJAnS7tDqdg8Vs22uv08wLsWLOE8kpFDvBafHDspsV8854uIPGZSILu4m8C73qU9PUMK+TtDqdi81tEiPL6kwjv1aKU8fwxFPJPPFz3+B1m8iL0TvBdqNTr0X0093qU9PBEAk7xc1ri7qEvTvFvN4LvB2dM7oYCQPCkkGz1h3zo7ir2oPBmoCbziRMe7LVBpvHCZCzyGUxs8pRZCumyHxrwza4a8zvQvvEHeP7zHQ/a8TFqnvJ8NQD0jCX68tcfPPNL0WTxJJZY7Cu44vEZRJTy1Zi+9BOW2uQ1P7jwK7ri8BIQWvJAnS7xRLq08QBMnPZfYBLzAeLM6tcdPvcoXZ7wfsYu8gBUdu/JokDyUBBQ7+0WDuRXLwLzceQS8iEpYvI4nNjpCshu968CZPKis87s6PyE9+mjPPO/+grz2nSE99ipmPUMK+boQwr68plQWvVlj6DymHxo8jzAOvUDV5zxfC8o8E/fPuzeXVLzqGGK67OP6usK2B7zuKic7R4ahuzw23rsxAQ49zetXPdU7hjxLxAq9bvoWvK++zTzJ9IU7Oj8hPWN+L70pWZe71chKu6BCPL32nSE8WECHO7zZKT1YQAe9GdStvC3DpLwh3US8RiWBuSDU7Lq8Osq71wYfPCYkhjzVO4a8F5bZvOmu6by0BY+7QEijvLkFOT0o7x67Y0kzvUocUzxBfZ+6uNA8vKxdGL3S9Nm8z/2HvJP7uzs8l368KySwOwvClDvHig095K4/vPH+Fzybz9a6+DwWvIHX3Tpxh/C7x0N2uwF7KTxfbGq8GsvqvHhtJj0zoAI9DI0tPRoJKjyeo0c8MS2yPGt+bjspWZc8g0quvEfnwTzaZ9Q8Le9IPDw2XryoH686W83gO1oLILzznQy7oEK8vGxbojxl6Ce9LVDpvKMfBbybo7K8ibRQvB9q9LyitYw8lzmlvJDGqjybz9Y86oudO4ZTm7xksyu8P2tvvD8KTz02Ldw8xtn9PLhvHL19FQg9BbmSvESysLlrJia7Fp8cvdzapLti6JI7I6hdO3kDwzrnVow5jrR6PPFfOD0H5cu6plSWPDCXFT1Z1iO8m6MyPAeNgz0OywG8rzGJO4F/lTwiPuU7X9+lvJBlirwdc7e8UmOpPLXHz7uXke07GstqOx58D731BwU96fWAPYWIAj17orc8sjEeujeX1LzI6627XaHRPFhAB7y94gE8RiUBPMuBX71y8eg8J7qivK2+OLzDTKS8kCfLvIMeijxiQFs7oTl5vHYDrjwzoII7De7NPK2+uDrOKaw8AbAlvMK2B72VORC8XJj5vJ9uYDz5By88M1lrPGvxKTzsVja8jrT6uw+55jzgcFa8YuiSPAmw5LpNxB+9lSf1PMv0mjvqGOK73NqkusLiKz083pU8AuWhvJiaRbvtTXM7BISWu+oY4jyoS1M81inruz59ijvnVgy8OXQIO59u4DuDSi69SloSvXj66rz+B1m7SbLaOqAWGD36aM+8gEoZO8e2sbxoSV2881b1OuSCmzo9PzY8mg2Wu/g8Fr2MiEG8VwsLPU1RZLzepb080YphPWV1bLtsWyK8kpFDPOW3F7zuKqc8Ij5lPEslKzsActG8TvmbvDprRTvVyEo8EY1XPLcFJDxAEye8tL53uwfly7uhrLS8+hCHO+dWjDwTWHA7/9u0vAUas7wHjQM6AkbCO2zoZjlWoZK80YphPOMYozztwK67o+oIOxnUrbwGe9M6zvQvu+BwVrzAF5O8V5hPPHw41Lw3l9Q81F7SO/adobsa3QW9jIjBOi2OKL2Adj08SbLavDCXlTsNYYm8blLfuz+yhjpQmBC8A08au/eUXrswlxU8u28xOwzldbuAFR29TcQfPE8c/bpovJi7v2/bPMHZ0zwBPeq7o+oIPTregDv3Bxo7mPtlOq619byy8947PaBWOx1zN7yYDQE9WgsgO8XrmLzWKWu8BiMLvNw7xTy3BSS8c/pAPCSxtbvowAS88V+4uxTC6DyIStg7p4kSPQE9ajwFuZI79DMpvIeIFzyISli8xK3EPKjqMr1NxJ88a8UFvZHPgrqn4Vq7Eu53POJER7x2zrE88f6Xva3ztDqs6tw7TcQfu3kDw7tJUbo8by+TvBifMb0FGrO7LZcAPH1BrLuMiEG86fWAvM62cLslc/a8B7mnPJDGqjyM6WG8IbEgPF1Asbzqix28Vi7XO6V34jsm7wk83qU9PPtFAz08Cjq8WWPoOzLvcjqI8g88tm8HvVWYujyBOH48hH8qPDkBTbsSNY+8+dKyPLeSaLxqWw090CBpPKBCvLytkhQ9AHLRvNeTY7yG4F87arwtvJ8NwDskhZG7EMI+PG2QHj2/rZo6wUwPO7VmrzxRhnU82Qa0PAqNGLz0X028DU/uOw1Pbj2u/Aw7zlXQvJllXjy2bwe8VcRePHJkpDy9Dqa8AOUMPP08wDvLID+8lqMIO28deDvRXr08GPd5PLtDjTy4m0C8KbHfPHEvqLyT+7u8zimsPPLs/DzZpRM9qr6jPBXLwLyWowg9vniePDCFejyO+xE9C/eQvJeRbbvmTbS8ph8aPYJB1rsDGp48+dIyPNsy7byRMKO8p+FavEI/YDwdEhe8HRKXPIlTML3QIGk7udmUvKS1oTxsh0a8jfK5u+jAhDyyMZ68sYlmPMsgP7whsaC8RBPRPCVz9ry0vve8XRQNPbKSPr1/4CA9pXdiu08cfTxJJZY5rzGJu9CTpDpvW7c8\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      20,\n    \"total_tokens\": 20\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f5762688a27df4-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:26:56 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '53'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-569c8b5ffc-kjrfn
+      x-envoy-upstream-service-time:
+      - '36'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999967'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_56a888d0aed276f463e06d086a625c3b
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"input": ["Blockchain Technology(Topic): Impact of blockchain on supply
+      chain management."], "model": "text-embedding-3-small", "encoding_format": "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '157'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=Jm73zgaX93R7dmdHzthaQLZvS.FDTE7mV9FjnnXOzfk-1744489600-1.0.1.1-PoukpcSnzv7SStgVNleiuwDs4T5hZv9FaVqJkkBq_o1SOXnoQ4d4zSCJ2.fmyc8TLrPx1Ykh1NK4D13sIHXLKj5Oic8deea9HMeiDr3X4y0;
+        _cfuvid=_e.uFVx98Z8p0BNXXGWGZiyLKJW8yG7vjquHkWxJXnI-1744489600237-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      13,\n    \"total_tokens\": 13\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f5762afb707df4-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:26:57 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '118'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-5d57948d5d-4zlnq
+      x-envoy-upstream-service-time:
+      - '76'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999980'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_6ddb9bc394617365d7b16f4acf8f2e14
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"input": ["Cybersecurity Trends for 2023(Topic): Key trends expected in
+      the cybersecurity field for the year 2023."], "model": "text-embedding-3-small",
+      "encoding_format": "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '182'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=Jm73zgaX93R7dmdHzthaQLZvS.FDTE7mV9FjnnXOzfk-1744489600-1.0.1.1-PoukpcSnzv7SStgVNleiuwDs4T5hZv9FaVqJkkBq_o1SOXnoQ4d4zSCJ2.fmyc8TLrPx1Ykh1NK4D13sIHXLKj5Oic8deea9HMeiDr3X4y0;
+        _cfuvid=_e.uFVx98Z8p0BNXXGWGZiyLKJW8yG7vjquHkWxJXnI-1744489600237-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      25,\n    \"total_tokens\": 25\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f5762ffeb57df4-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:26:58 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '312'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-6c4b45ffdf-cwsls
+      x-envoy-upstream-service-time:
+      - '252'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999974'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_1a390dcc4e0ad9dfc99301a765d763d2
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"input": ["Impact of Remote Work on Productivity(Topic): Effects of remote
+      work on productivity and organizational dynamics."], "model": "text-embedding-3-small",
+      "encoding_format": "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '192'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=Jm73zgaX93R7dmdHzthaQLZvS.FDTE7mV9FjnnXOzfk-1744489600-1.0.1.1-PoukpcSnzv7SStgVNleiuwDs4T5hZv9FaVqJkkBq_o1SOXnoQ4d4zSCJ2.fmyc8TLrPx1Ykh1NK4D13sIHXLKj5Oic8deea9HMeiDr3X4y0;
+        _cfuvid=_e.uFVx98Z8p0BNXXGWGZiyLKJW8yG7vjquHkWxJXnI-1744489600237-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      20,\n    \"total_tokens\": 20\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f576351a487df4-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:26:59 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '133'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-cbdb5c968-tkrrp
+      x-envoy-upstream-service-time:
+      - '124'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999972'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_5104bbc052358ef7f3e17e8ed2d06987
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"input": ["Quantum Computing(Topic): Introduction to the principles and
+      applications of quantum computing."], "model": "text-embedding-3-small", "encoding_format":
+      "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '174'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=Jm73zgaX93R7dmdHzthaQLZvS.FDTE7mV9FjnnXOzfk-1744489600-1.0.1.1-PoukpcSnzv7SStgVNleiuwDs4T5hZv9FaVqJkkBq_o1SOXnoQ4d4zSCJ2.fmyc8TLrPx1Ykh1NK4D13sIHXLKj5Oic8deea9HMeiDr3X4y0;
+        _cfuvid=_e.uFVx98Z8p0BNXXGWGZiyLKJW8yG7vjquHkWxJXnI-1744489600237-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      16,\n    \"total_tokens\": 16\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f576398d1d7df4-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:27:00 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '48'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-54db47bfc6-lckj7
+      x-envoy-upstream-service-time:
+      - '35'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999977'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_cf296ef00ca28fa7666df280e1825686
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"input": ["Sustainable Energy Technologies(Topic): Technologies that contribute
+      to sustainable energy solutions."], "model": "text-embedding-3-small", "encoding_format":
+      "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '180'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=Jm73zgaX93R7dmdHzthaQLZvS.FDTE7mV9FjnnXOzfk-1744489600-1.0.1.1-PoukpcSnzv7SStgVNleiuwDs4T5hZv9FaVqJkkBq_o1SOXnoQ4d4zSCJ2.fmyc8TLrPx1Ykh1NK4D13sIHXLKj5Oic8deea9HMeiDr3X4y0;
+        _cfuvid=_e.uFVx98Z8p0BNXXGWGZiyLKJW8yG7vjquHkWxJXnI-1744489600237-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"QLaRPNS6lrsdoVs8vJj9u73PvTsRR089JTHtvPkrxzxGqmU9ysWHuyM1UTxK28+82Etfval8PryQxXi8oYW9PMknWDzOj4K7tmt3PHNLyTzH+ww9Im4DPJMvlTlOcyk92xVavEkUAj2BQRM8VTVcPZGTVzzv//e69vpcPTcmAL3P7W68Zow/vU9xtz1GqmU9yyP0uzu3yDxbMrM7Yi0YvA60lLxdXv68peRkvdfk7zyZ87m8AiPIvMtcJr29Zty8tg0LPbigxTwMUQk97NUevT7qpDxz5Fm9mvFHvB+kiLqXwN24+/mlPCiU+LwWDea71LoWvNXo07pSa2E9ch0MPXlIIDzqcKG6b4PAu8TKIj2N+329NvGxOq0WCryp5Z87eKpwO+miwrsZQEI9EBmSu0YRVbwqlyW8phulvJheDb3lc0q84HsSvQzoJ70T3Hs7IQkGvVhouLyOmS29Nrj/vO3TLL0+6iQ8bfCFvXt06zwRgAE8qBfBPN4Yh7sHUsC8mI68PCnJRjwtygE9GEK0PBath7zSHtm85aqKvO//97uULSM9yZA5u011mzwiZ3K7mlqpujRVdDtQb0W9AJANvW23Uz17FI097JzsPLXWyr1PoWa9z1RevFE9JLwc2g27vp0cvRamdjxVNVw8iv/hPC74vjswxKu869eQvBAZEjzwBgm9Im4DvQYkAz1kwNI8CuX6u3d8s7yK/+G7SA1xvbQ/rLwkyn275UObvGZVf7zM8dI8ycDou9rnHD2LZlE9ducGPQDAPL33Lys7z1TeO9t+Oz1/pdU84NvwuxZGmL1TOcC88wAzPb3/bLxdxW29I2yRu7RvWz3HxEy9EHnwvI1i7TqR+kY8XV7+vAjp3juInNa7uwPRvMqOxzkEWJY7NCVFvUYR1byGoDq9+mKHvRhCtLtQpoU96QukvJRdUr3JJ9i8Ckzqu/4qkDpRBHK6pYQGvb1mXD3ZGT69INLFvCbPHDwlaC27GRATvbDghDyq4608YcYoPKh+ML1phmm7jZufPJ/wED0adwI7P+iyPLYNC71MDqw7a1RIPIFBE71riwi8aVisvESuST1GSgc8IKIWvHQbGj3dEfa8tG9bvHWAlzybvya96z4APYBDBT1Poea5jpktPPPQA70kap8785dRu9NVmTxATbC7RBU5vIDcFb3xNEa8ZyPePMeUHT0VSIo8Q4AMOr6dnL1vs++8v2L4PL9i+LwOfdS8Q+DqvGLENjwEiMW8ZyNevEupLr1WnEs8O7fIvBdEJrzopDS9NLzjPKkVTzzOJqE8ZrzuO8crvLtrJBm9FOGaPLZr97oF77Q81oYDPGeKTTy7OpG7xyu8Oo4wzLx4qnA9h853vBnXYL1iXUc73xaVvOw8jrw/TyK9NSPTu2cj3rwm/0u9AMA8vUDmwDzY6wA9JNOAvBhCtDxJFIK76dJxPSTK/TwiN8M8ksglveycbL0CjCm9H9S3O+qg0Lw87gi9OO1NPEhGIzsKTGq9+ZSou1JrYTudVNM6ImdyvCTK/bx7rZ09/1hNPWDIGr1hX7k7yfcoPMf7DL0B9Yo72YKfPLOhfDx3fLM8NSNTPHK2HDu6PIO8ziahPPv5Jb08hSe9FkaYvGkf+jyUXdK7utUTvcAwV73npqY82EvfvAhQzrsqAAe9lfJ+Pde0wLwaDqG9T6HmPEB93zyGB6o8tqQpvE7aGL3a5xw8FKraOfwnYz0d2Bu93t9UPXh6wTtYmGe9eKrwPJnzuTtLqa47XWeBvGBhK7tMPls8RqrlvFMJkb28oYA7T0GIPC6P3bxDsDu9E3wdvOYI97zmQSm9qeUfvFti4ju9z707NsGCvIMNgLwD8Sa8VHCAPC/2TD3MWrQ8MVnYPGGPaL2a8ce8JNMAvIDclTxVNdy7KclGusWPfrxDFys6gm/QOweCbz0c2o275qgYPbB3IzwGVDI9wDDXvIQLjjqqSp28CkzqvDZYoTs8TPU7b4NAPPE0Rru7A9G8OlBZPQWGUz1o8bw5r0LVvDeGXj2hVQ49jft9u8TKIr2Ryhe9RXyoO8P8wzw97Ba8z70/vGBhq7wNFuW88M3WPOpwobxztKq8QbSfut9GRD0Jtz07C+oZvQ1PlzsPGwQ9AVVpvM0ok7wYEgU9IwUivcGXxjz6Yoc8YY9oPFqblLx9qTk8KJsJOxB58LwIua88ZyPevJTEwTzI+Ro9Dn3UvAmHjjydi5O8iJxWvNhL3zwVeDm9fKsrvfRlsLyHNee8KpelvJXyfjzJJ1g80LtNPZztY7ue8gI7jQIPvdRTJ7ynGbM8Gj5Qu1j/VrxOOve7qEfwvOvXED1E5Ym7OYJ6PAxRiTwKhZy7rN/JPJy9NLw3Vq+8VAefvEYRVb3DzBQ7xGHBPL4EjDxJRLE8EeDfO9K3aTxx6D080CK9vHNLyby7asC7FKrau4fOd7yuFBg9r6nEPJWUEj0W3bY8dq7UOzbBAj0fPRk99Sz+vLPaLjw8hac5/cUSPAsaybzAmbg8/ygePOnScb3mQSm9UznAuoFxQj3/wa489GUwPDbBArxZZka9Ip6yvOYI97w1I1O9oeysPC7IDz1rJJm8+8BzPb02Lbvh4gG8PO4IvNQadTzbruq8W8nRPE5zKbwsk0G98AaJvdmCn70tYaC895iMPE11m7xM1+u6JWitPFMJEb3+KpA8IQmGPWUnwjwkyn08T6FmPaS2J7tztKq8EHlwvAhQzrxrJBm8dkflvJ+HrzyHbpk7saVgvf8oHjvmCPc8TtqYvPE0xjxwUZ+7P7iDPL9ieDw66Wk7WWZGvYQLjrztA1y7pkvUvIagurxphmm6gz2vu0SuSbyTL5W8ZFljvL3/bLsMgTi8WpuUPMnA6LxF45e8KpelPHIdjDxDgIw7+F1oO1k2l7vGXd28IGtWuxQRyrtKq6C8VZ49PZD8OD2l5OS8c0vJPD/osrwx8ug79y8rvTyFpzydu8K8kMV4O7Rv2zy6NXK8tG/bvEupLjvOjwI8SEYjPPj2eD3YhJG8UwkRPRnXYLuCb9C3CImAu/3FEr2J0SQ8ZV6CPUivhDxuHkO84neuPLw4n7wtwf47OunpPJ9Qb7vHKzy8nL00vViYZzyyQ5C8SK+EvPtglbuBccI8NyaAPGDImjvmqBg98Zu1PGWOsTxzS0k8obN6O4k6BrsykBg73t/UuYlqNb15sQG9jASBOyQDsLz+wyC9YCh5O0NHWryhVY66hAR9O2omCzuTloQ8wZfGOyOcwDofBGe46tmCPMMzhDwK5fo8Y8JEvcj5mrykH4k8TA6sPCVoLT1cMME8E9x7vMf7DDsYEoW7EUdPOCnJxjxiXce8lF3SvDhUvbsiB5S8OYJ6ui/2zDvOJiE9t9JmvFyXsL1h9lc8uwNRO4LYsTw/6LI8vJj9vIHao7yOMEy9XWeBu2danry7A1G77Gy9PBkQk7yULSO875+ZPAAnrLwFViQ9GKkjPA7kQz2h7Cw8CuV6O6OBWT1q7Vi7vZ8OvFacy7xKq6A8x8TMvPiWGrzJJ9g83t/UvCkyqLyADMW7BIhFPZzt4zymghS8INLFvG2HpLzlc8q7JTHtPPT+wLxtILU8Dk2lO9cdojs6UFm9Q7A7Os+9PzxF4xe9eq8PPMTKIr3cTJo7AiPIPKhH8LwdcSy9UNY0O3WAl7y5B7U8q3haOwuz2Ts2WKG7oroLveGpzzz0NYE8t3IIPVj/1rtZnYa8EHlwvG+DQLsZEJM7vJj9vIQ7vbwRR8+8rnsHO8aWjzxWnMs8rttlPFCmhTwWrYe8bOn0vFbTi7yEOz08b7PvPOQM27uudPY84XmgPMyK4zyEO728SEYjOzWKwrtmvO686nAhOh8EZ71HeES8r3kVvQ59VD3Kjke8iv9hvOgNlryDppC789ADvWjxvLyyDFA8zo8CPHBRH7yiugu8bIkWPQDAvLzCZSW8/McEvQ5NJT2XwN28H533PJAsaLuiGuo556YmPR0Iy7xwgc68jAQBPBlw8TuvEqY8Imdyu1rLQz0377+8iAPGPOvXkDxeLF08PuqkPB1xLL12R+U83OM4N6JTHLwPSzM6K8ViPeoJMr3Dk+K8RBU5vAIjSLy2a/e8xDESO1wwQb1qJou7KDSau86G/zyY9Ss8jgAdvDLARzooyzi6+C25O+VDG7wM6Ce9hAuOO2/sITx63747+mKHPRmnsTxM1+s7VtMLvS3B/jwN5rU62IQRPOlyEz2orl88J82qO6QfiTyOmS2946XrOw22hjypfL67Q7A7PccrPDwIiQC8uKBFPMJlJT06iYu9RhFVOh4/C73rPoA9EUdPPJRd0rzqcCG8LWGguxlw8bx7Dfy8pxmzvEDmwDvsNf284XmgPLDgBD2ECw69VpxLO9jrgLwQGRK8zcGju47J3Ls4VL28J82qOplcGz3xmzU94ULgu/nEV7upfL67OFQ9PfnEV7z8J+M8wJk4PahOAbxO2hg9w2OzvAFV6Twpyca846VrPOF5oDx5SCC9CFDOPHsUjTyxPvG8fNvavLluJL0g0kW8LcqBvB5vujyPl7u7CFDOPL40O7xPcbe8yl4YPAbtwrw+GtS8z70/vYU5Szy1Pbq8vTYtPTu3yLzlQ5s8t9JmPCte87sR4N+8ws6GPDm7LDyZwwq8z42QvDjtzTyKmPI7HQjLOmq9KbxVNdy6qH4wvGq9KT3Zgp88Nx/vvJNfxDtdXv48e3TrvBND67xgYSs9vp0cPMpemDwQScE7l8BdvIDcFT2ULSO7TdyKvPwn47zJJ1i8NfMjPFdqKj3sbD29NFX0u1wAkr13fDO8KWLXuyowNj1S0tA7o7iZvNkZPjslMW29V2oqvK1GOT2QZRo58TTGO96vpTznpiY8DFEJvDHyaLzmqBg9DU8XPVk2F70r/pQ8lydNvMLOhrtVNdy8NlghvJ+HrzoEuHS8oB7OPJRdUrxF4xe9uHCWuFA/FrwXq5U8wAAoPRo+0DzcfEm830bEPIhspzySyKW8OO1NvTi9njwxWdg87WrLvI2bH7vXHaK30h7Zu+tur7yYXg08LfowPApM6je11ko9UQRyvFYDO7y4OdY86HQFPcBpibz7YBU9gAzFPENH2jzDMwQ9cn1qPaUdFz3i4A+8RuElPHt0azzg23A8zPFSvJrBGLzWHxQ6McK5u3sN/DuzoXy9GKkjvM9U3jxjkpU8GdfgOaNRKr3/wa68xi2uO3rfPrxUcAA92347PL4EDLtPCNa7ab+bPEKyLb3a5xy7tdbKPH0QKbv89zO8bSC1uwa9k7xToqG8hAR9vH53GLydVFM7s0EePWtUSLxYOIk87QPcPMrFh7xtt9M7LJPBPLgJJ7xRPSS9eUggvS6PXTwwxCs8mVwbPFCmhbxWbJw8Gg4hvFacS7xrJBk7nL00vPwn47xUcIA8ImfyvGq9qbzzMOK6V2qqu+dvZj0WRhi8qqr7PKXkZLwrxeI8QLaROzxM9bxyHQw8WvvyPHd8MzwJHq069ZPtOpDFeLvKxQc8c+RZPK7bZTxcABI9/I5SORo+0DwD8aa8GwwvvDfvP7oWDeY7WDgJvdK36TwfBGe80u6pvLZrdzxVNVw8w5Niu2X3Ej1qJos6YfZXPNuu6rt14PW7Hj8LPZ+3Xjv7YBW7Ll+uPDuHmbq4OVY8GEI0PA59VDwywMe8Nx/vPNcdorxZnQa96tkCPZOPczzymcM8ReMXvczx0jvT7Dc8rtvlvMIs8zwo++e8Lihuu41ibbxTCZG7udcFPeF5IDt4ekG82BuwOzyFJzxe/C079vpcPFbTi7w2uP87P+gyu0ivhLlS0tC8hGtsvLnXBTw4JA67gdqjuVSgr7y6BcO76dLxPANaiLyVlBI92OsAPWUnwjxzS0m7iNOWu40yvjxs6fS8gUGTuuPenTxdXv6730bEPFCmBb3NWEK9/sOgPARYlrwhoKQ6fRCpPPqSNj0lMe285UObPLo1cjxt8AW9Q0daO2T5BD16Rq68AfUKPbRv2zsTE7y8Ky7EvPDNVry/Yvg7NsECvPBmZzzkRQ28F9vEvOsHwLz/wa67LcH+vOw1fbyLnwO9FUgKPBhCtLsvXTy8VZ49vRYNZru3cog8//HdPKO4mT3QIr27hdJbvVYDuzwga9Y8yPmavG4ew7ycvTQ6/iP/vFsyMz3Riaw8IGvWPLkHNTzLXCY6PO4IvU2lSj1ZnQa8llnuu6iuX7mcVsW8v2L4O1vJUbx4ShK8ducGPCWY3LxLqa48ebEBPbAQND1iLZg8kjEHOiVoLTzMWrS7/CfjvCTK/Txnik09et8+PNOFyLxY/9a82kf7u7vTITtyfeq7Rnq2vM3BIzyZ87k7ZY6xvJj1Kzr4Lbm85z+3vJIxBz31zJ878TRGvIgDxrrLXKY8P7gDvWMrJrxiXce8OFQ9PHDqLzwnZru5TQy6POR1vLzsNf08dxXEu7dyCD0HuyE9FqZ2vFtiYrlCsi29KpelPOIQP7xt8IW7JNOAu/Q1gTyort+8Nrj/u79i+Dyq4y28et++O/NnoruxdbE62uecO9x8ST3LwxW9+vuXPM8kL71RPaQ8LCxSPII/obwdodu6qkodO8n3KDwHUkA6bbdTPBB58DxuhbI8y/NEvCGgJL32MR28uQe1PIcFOD3VuKQ81SGGvA22hjvcfMk8XWcBvT2DtbzUU6e83njlvCGgpDurEeu7F3TVvD2zZLyEa+w7eEoSvHzb2jscOmw9e3TrujUjUzx821q7hAT9vCvFYjtzS8m7A1oIPbDghLwQGRI8x8TMvNW4pDwvLY270LtNPI6ZrbuoToE8C7NZPbQIbLzk3Ks8imhDO+M+/LoTfJ07cFEfPHIdjLypFc+8FKrauzxMdb3zZyK8XWcBvQCQDTtPQQi8t3IIPGUnwjtZZsa8rRYKPK0WirzdsRe8gEOFOywsUj3lc8q8AoypPKrjrbz1M488s9quPBp3Aj2udPY7x5QdPSUxbbtmXJA8aiYLPTS847y6PIO8peTkPC1hoDr99cE88GbnOv0sAr0Bjhs9JWitOYpoQ7xBG4+80h7ZPPMAMz0x8mi8ySdYPOF5ILz2yq08V2oqPBwKPbzXtEC8MZIKvUB9XzvhQuC8ZMDSPGLENrzVuCQ8ZfcSPPQ1gbzeGIc7F9tEvKuxjLsiBxQ7+mKHvBGwMLwK5fo8IQmGPL8CGrySYTY8fKuru3dMBL3wBok8t3IIvUzXazyOAJ07T3G3PLParjnJYIo8qUwPvOQMW7xVBS08StvPu60WirxrJBm8Y8JEuz6Bw7zUU6e8fneYO/krxzzPjRA8+f2JvN1KqLytFgq7ByKRu/Q1AbxLEJ659M4RPdhL3zz0NQG85HU8PZyNhbnr1xC97QNcvN4Yh7wv9ky9BB/kPPzHBLysSKu8uKBFvBBJQboKTOo70h7ZO1tiYj3nDwg9utUTvZrxRzz6krY50rfpPOc/tzvuoYu8FHorvJOPc7us30k8mcMKPDq5uryEO7285aoKvcknWLqfIEA8gUGTPBGAgbxUB586eq+PvKnlnzpwuoC8sUUCvA60lDwiZ3K7QUu+vDa4f7veGAe9MikpPaeAIjspMqi84z58O5cnzTwRsDC7nFbFvKrjLb32MR27olOcuxmnsby514W8QB0BPf4qEDoHgm88x8TMPJAs6Dxw6i+8fj7mvO0DXL2+BIy8Js+cvN2xl7kjnMA89jEdvDpQWTz3mIy8wJm4vIAMRb2514U8Lo9dvNQadbzrPoC71YFkvBR6q7yvEiY9NLzjvNDyDb3zZ6I7YpSHO6AeTjzOJiE9V9GZvH0QKTiTxjM7KDQaPIU5SzzQ8g09UD+WvC7Ijz2InNa73bGXvJ7yAjzUGvU7wJk4PNVRNTtB5M67uzoRPBThGjyKOBQ9EhWuvC8tjTzh4oG83xaVvMAw17wom4m8nFbFO4Rr7DzKxQe93RF2vFmdBj07t0g8MZIKPC7Ij7s18yM8gEOFu7eitzxam5S7wGmJPOqgUL3V6NM8vc89PQIjyLyRyhc9ZlX/vNIe2TwQeXA7/F6jPN1KqDkQefA8e60dPXqvD7wkah+8Ip4yvBQRyjz8x4S7wmWlPKzfybuN+/28lF1SPF9jHTwC85g76HSFPNLuKbxJrZI8fNtaPGkferyDPS88zo8CvMvzRDuyQxC9kGWau8sj9Dyuewc8\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      15,\n    \"total_tokens\": 15\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f5763e08747df4-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:27:00 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '81'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-54db47bfc6-lrh5m
+      x-envoy-upstream-service-time:
+      - '48'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999974'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_af41b415673a99d60da19b2d4c600738
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"input": ["5G Technology(Topic): Explanation of 5G technology and its
+      implications for various sectors."], "model": "text-embedding-3-small", "encoding_format":
+      "base64"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '171'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=Jm73zgaX93R7dmdHzthaQLZvS.FDTE7mV9FjnnXOzfk-1744489600-1.0.1.1-PoukpcSnzv7SStgVNleiuwDs4T5hZv9FaVqJkkBq_o1SOXnoQ4d4zSCJ2.fmyc8TLrPx1Ykh1NK4D13sIHXLKj5Oic8deea9HMeiDr3X4y0;
+        _cfuvid=_e.uFVx98Z8p0BNXXGWGZiyLKJW8yG7vjquHkWxJXnI-1744489600237-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/embeddings
+  response:
+    content: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\":
+      \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\n
+      \   }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\":
+      19,\n    \"total_tokens\": 19\n  }\n}\n"
+    headers:
+      CF-RAY:
+      - 92f576409a3d7df4-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:27:00 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-allow-origin:
+      - '*'
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-model:
+      - text-embedding-3-small
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '83'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      via:
+      - envoy-router-8486cc455c-9tl6g
+      x-envoy-upstream-service-time:
+      - '64'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9999977'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_2747968746840775dd660a77dacd834a
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

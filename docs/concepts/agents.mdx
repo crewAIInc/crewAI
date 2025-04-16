@@ -18,6 +18,18 @@ In the CrewAI framework, an `Agent` is an autonomous unit that can:
 Think of an agent as a specialized team member with specific skills, expertise, and responsibilities. For example, a `Researcher` agent might excel at gathering and analyzing information, while a `Writer` agent might be better at creating content.
 </Tip>
 
+<Note type="info" title="Enterprise Enhancement: Visual Agent Builder">
+CrewAI Enterprise includes a Visual Agent Builder that simplifies agent creation and configuration without writing code. Design your agents visually and test them in real-time.
+
+![Visual Agent Builder Screenshot](../images/enterprise/crew-studio-quickstart)
+
+The Visual Agent Builder enables:
+- Intuitive agent configuration with form-based interfaces
+- Real-time testing and validation
+- Template library with pre-configured agent types
+- Easy customization of agent attributes and behaviors
+</Note>
+
 ## Agent Attributes
 
 | Attribute                               | Parameter                | Type                          | Description                                                                                                          |
@@ -106,7 +118,7 @@ class LatestAiDevelopmentCrew():
   @agent
   def researcher(self) -> Agent:
     return Agent(
-      config=self.agents_config['researcher'],
+      config=self.agents_config['researcher'], # type: ignore[index]
       verbose=True,
       tools=[SerperDevTool()]
     )
@@ -114,7 +126,7 @@ class LatestAiDevelopmentCrew():
   @agent
   def reporting_analyst(self) -> Agent:
     return Agent(
-      config=self.agents_config['reporting_analyst'],
+      config=self.agents_config['reporting_analyst'], # type: ignore[index]
       verbose=True
     )
 ```
@@ -233,7 +245,7 @@ custom_agent = Agent(
 
 #### Code Execution
 - `allow_code_execution`: Must be True to run code
-- `code_execution_mode`: 
+- `code_execution_mode`:
   - `"safe"`: Uses Docker (recommended for production)
   - `"unsafe"`: Direct execution (use only in trusted environments)
 
