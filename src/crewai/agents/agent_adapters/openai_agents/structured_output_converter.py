@@ -73,13 +73,6 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
             .format(output_format=self._schema)
         )
 
-        # output_instructions = f"""
-        # Your response MUST conform to the following {self._output_format.upper()} schema:
-        # {self._schema}
-
-        # Ensure your final response is properly formatted according to this schema.
-        # """
-        # print("output_schema", output_schema)
         return f"{base_prompt}\n\n{output_schema}"
 
     def post_process_result(self, result: str) -> str:
@@ -96,7 +89,6 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         """
         if not self._output_format:
             return result
-        print("openai converter adapter result", result)
         # Try to extract valid JSON if it's wrapped in code blocks or other text
         if isinstance(result, str) and self._output_format in ["json", "pydantic"]:
             # First, try to parse as is

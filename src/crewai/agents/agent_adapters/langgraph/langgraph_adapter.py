@@ -52,7 +52,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         role: str,
         goal: str,
         backstory: str,
-        tools: Optional[List[BaseTool]] = [],
+        tools: Optional[List[BaseTool]] = None,
         llm: Any = None,
         max_iterations: int = 10,
         agent_config: Optional[Dict[str, Any]] = None,
@@ -72,8 +72,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             agent_config=agent_config,
             **kwargs,
         )
-        self.tools = tools or []
-        self._tool_adapter = LangGraphToolAdapter(tools=tools or [])
+        self._tool_adapter = LangGraphToolAdapter(tools=tools)
         self._converter_adapter = LangGraphConverterAdapter(self)
         self._max_iterations = max_iterations
         self._setup_graph()
@@ -87,7 +86,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             if self._agent_config:
                 self._graph = create_react_agent(
                     model=self.llm,
-                    tools=converted_tools or [],
+                    tools=converted_tools,
                     checkpointer=self._memory,
                     debug=self.verbose,
                     **self._agent_config,

@@ -60,11 +60,10 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
                 role=role,
                 goal=goal,
                 backstory=backstory,
+                tools=tools,
                 agent_config=agent_config,
                 **kwargs,
             )
-
-            self.tools = tools
             self._tool_adapter = OpenAIAgentToolAdapter(tools=tools)
             self.llm = model
             self._converter_adapter = OpenAIConverterAdapter(self)
