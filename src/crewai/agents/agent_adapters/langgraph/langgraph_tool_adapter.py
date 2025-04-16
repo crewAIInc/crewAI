@@ -1,5 +1,4 @@
 import inspect
-import asyncio
 from typing import Any, List, Optional
 
 from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
