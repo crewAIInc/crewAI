@@ -24,7 +24,7 @@ class Mem0Storage(Storage):
         self.crew = crew
         self.config = config or {}
         # TODO: Memory config will be removed in the future the config will be passed as a parameter
-        self.memory_config = self.config or getattr(crew, "memory_config", {}) or {}
+        self.memory_config = self.config if config is not None else getattr(crew, "memory_config", {}) or {}
 
         # User ID is required for user memory type "user" since it's used as a unique identifier for the user.
         user_id = self._get_user_id()
