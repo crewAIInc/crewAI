@@ -58,11 +58,6 @@ def vcr_config(request) -> dict:
     }
 
 
-# Skip streaming tests when running in CI/CD environments
-skip_streaming_in_ci = pytest.mark.skipif(
-    os.getenv("CI") is not None, reason="Skipping streaming tests in CI/CD environments"
-)
-
 base_agent = Agent(
     role="base_agent",
     llm="gpt-4o-mini",
@@ -633,7 +628,6 @@ def test_llm_emits_call_failed_event():
         assert received_events[0].error == error_message
 
 
-@skip_streaming_in_ci
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_emits_stream_chunk_events():
     """Test that LLM emits stream chunk events when streaming is enabled."""
@@ -658,7 +652,6 @@ def test_llm_emits_stream_chunk_events():
         assert "".join(received_chunks) == response
 
 
-@skip_streaming_in_ci
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_no_stream_chunks_when_streaming_disabled():
     """Test that LLM doesn't emit stream chunk events when streaming is disabled."""
