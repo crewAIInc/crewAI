@@ -1404,6 +1404,7 @@ class Crew(BaseModel):
             "entity": (getattr(self, "_entity_memory", None), "entity"),
             "knowledge": (getattr(self, "knowledge", None), "knowledge"),
             "kickoff_outputs": (getattr(self, "_task_output_handler", None), "task output"),
+            "external": (getattr(self, "_external_memory", None), "external"),
         }
 
         memory_system, name = reset_functions[memory_type]
