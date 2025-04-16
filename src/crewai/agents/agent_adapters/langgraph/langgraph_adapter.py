@@ -84,13 +84,21 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             self._memory = MemorySaver()
 
             converted_tools: List[Any] = self._tool_adapter.tools()
-
-            self._graph = create_react_agent(
-                model=self.llm,
-                tools=converted_tools or [],
-                checkpointer=self._memory,
-                debug=self.verbose,
-            )
+            if self._agent_config:
+                self._graph = create_react_agent(
+                    model=self.llm,
+                    tools=converted_tools or [],
+                    checkpointer=self._memory,
+                    debug=self.verbose,
+                    **self._agent_config,
+                )
+            else:
+                self._graph = create_react_agent(
+                    model=self.llm,
+                    tools=converted_tools or [],
+                    checkpointer=self._memory,
+                    debug=self.verbose,
+                )
 
         except ImportError as e:
             self._logger.log(
