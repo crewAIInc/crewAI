@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 from pydantic import Field, PrivateAttr
 
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
-from crewai.agents.agent_adapters.openai_agents.structured_output_adapter import (
+from crewai.agents.agent_adapters.openai_agents.structured_output_converter import (
     OpenAIConverterAdapter,
 )
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -89,8 +89,8 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         tools: Optional[List[BaseTool]] = None,
     ) -> str:
         """Execute a task using the OpenAI Assistant"""
-        self.create_agent_executor(tools)
         self._converter_adapter.configure_structured_output(task)
+        self.create_agent_executor(tools)
 
         if self.verbose:
             enable_verbose_stdout_logging()
@@ -140,9 +140,10 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         """
         all_tools = list(self.tools or []) + list(tools or [])
 
+        instructions = self._build_system_prompt()
         self._openai_agent = OpenAIAgent(
             name=self.role,
-            instructions=self._build_system_prompt(),
+            instructions=instructions,
             model=self.llm,
             **self._agent_config or {},
         )
@@ -168,14 +169,6 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
-
-    def get_output_converter(
-        self, llm: Any, text: str, model: Any, instructions: str
-    ) -> Any:
-        """Convert output format if needed"""
-        from crewai.utilities.converter import Converter
-
-        return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def configure_structured_output(self, task) -> None:
         """Configure the structured output for the specific agent implementation.

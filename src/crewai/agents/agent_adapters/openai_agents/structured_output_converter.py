@@ -3,6 +3,7 @@ import re
 
 from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
 from crewai.utilities.converter import generate_model_description
+from crewai.utilities.i18n import I18N
 
 
 class OpenAIConverterAdapter(BaseConverterAdapter):
@@ -13,7 +14,6 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
     and post-processes the results when needed.
 
     Attributes:
-        agent_adapter: Reference to the parent OpenAIAgentAdapter
         _output_format: The expected output format (json, pydantic, or None)
         _schema: The schema description for the expected output
         _output_model: The Pydantic model for the output
@@ -46,13 +46,13 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         if task.output_json:
             self._output_format = "json"
             self._schema = generate_model_description(task.output_json)
-            self._output_model = task.output_json
             self.agent_adapter._openai_agent.output_type = task.output_json
+            self._output_model = task.output_json
         elif task.output_pydantic:
             self._output_format = "pydantic"
             self._schema = generate_model_description(task.output_pydantic)
-            self._output_model = task.output_pydantic
             self.agent_adapter._openai_agent.output_type = task.output_pydantic
+            self._output_model = task.output_pydantic
 
     def enhance_system_prompt(self, base_prompt: str) -> str:
         """
@@ -67,14 +67,20 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         if not self._output_format:
             return base_prompt
 
-        output_instructions = f"""
-        Your response MUST conform to the following {self._output_format.upper()} schema:
-        {self._schema}
-        
-        Ensure your final response is properly formatted according to this schema.
-        """
+        output_schema = (
+            I18N()
+            .slice("formatted_task_instructions")
+            .format(output_format=self._schema)
+        )
 
-        return f"{base_prompt}\n\n{output_instructions}"
+        # output_instructions = f"""
+        # Your response MUST conform to the following {self._output_format.upper()} schema:
+        # {self._schema}
+
+        # Ensure your final response is properly formatted according to this schema.
+        # """
+        # print("output_schema", output_schema)
+        return f"{base_prompt}\n\n{output_schema}"
 
     def post_process_result(self, result: str) -> str:
         """
@@ -90,6 +96,7 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         """
         if not self._output_format:
             return result
+        print("openai converter adapter result", result)
         # Try to extract valid JSON if it's wrapped in code blocks or other text
         if isinstance(result, str) and self._output_format in ["json", "pydantic"]:
             # First, try to parse as is
