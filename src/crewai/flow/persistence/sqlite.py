@@ -21,7 +21,7 @@ class SQLiteFlowPersistence(FlowPersistence):
     moderate performance requirements.
     """
 
-    db_path: str  # Type annotation for instance variable
+    db_path: str
 
     def __init__(self, db_path: Optional[str] = None):
         """Initialize SQLite persistence.
