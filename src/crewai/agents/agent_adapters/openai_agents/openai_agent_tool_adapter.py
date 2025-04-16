@@ -1,3 +1,4 @@
+import inspect
 from typing import Any, List, Optional
 
 from agents import FunctionTool, Tool
@@ -58,7 +59,13 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                     args_dict = {param_name: str(arguments)}
 
                 # Run the tool with the processed arguments
-                result = tool._run(**args_dict)
+                output = tool._run(**args_dict)
+
+                # Await if the tool returned a coroutine
+                if inspect.isawaitable(output):
+                    result = await output
+                else:
+                    result = output
 
                 # Ensure the result is JSON serializable
                 if isinstance(result, (dict, list, str, int, float, bool, type(None))):

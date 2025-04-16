@@ -1,3 +1,5 @@
+import inspect
+import asyncio
 from typing import Any, List, Optional
 
 from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
@@ -28,18 +30,25 @@ class LangGraphToolAdapter(BaseToolAdapter):
                 converted_tools.append(tool)
                 continue
 
-            def tool_wrapper(*args, tool=tool, **kwargs):
-                if len(args) > 0 and isinstance(args[0], str):
-                    return tool.run(args[0])
-                elif "input" in kwargs:
-                    return tool.run(kwargs["input"])
-                else:
-                    return tool.run(**kwargs)
+            sanitized_name = self.sanitize_tool_name(tool.name)
 
-            sanitized_tool_name = self.sanitize_tool_name(tool.name)
+            async def tool_wrapper(*args, tool=tool, **kwargs):
+                output = None
+                if len(args) > 0 and isinstance(args[0], str):
+                    output = tool.run(args[0])
+                elif "input" in kwargs:
+                    output = tool.run(kwargs["input"])
+                else:
+                    output = tool.run(**kwargs)
+
+                if inspect.isawaitable(output):
+                    result = await output
+                else:
+                    result = output
+                return result
 
             converted_tool = StructuredTool(
-                name=sanitized_tool_name,
+                name=sanitized_name,
                 description=tool.description,
                 func=tool_wrapper,
                 args_schema=tool.args_schema,
