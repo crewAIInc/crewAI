@@ -1,6 +1,6 @@
-import sys
 import pytest
-from unittest.mock import patch, MagicMock
+import sys
+from unittest.mock import MagicMock, patch
 
 def test_openlit_compatibility():
     """Test that OpenLit can be imported and initialized with CrewAI."""
