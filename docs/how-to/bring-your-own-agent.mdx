@@ -23,7 +23,7 @@ with the CrewAI framework while adding adapter-specific requirements.
 Required Methods:
 
 1. `def configure_tools`
-2. `configure_structured_output`
+2. `def configure_structured_output`
 
 ## Creating your own Adapter
 To integrate an agent from a different framework (e.g., LangGraph, Autogen, OpenAI Assistants) into CrewAI, you need to create a custom adapter by inheriting from `BaseAgentAdapter`. This adapter acts as a compatibility layer, translating between the CrewAI interfaces and the specific requirements of your external agent.
@@ -150,6 +150,21 @@ Here's how you implement your custom tool adapter:
             "inputs": tool.args_schema.schema() if tool.args_schema else None,
             "implementation_reference": tool.run # Or however the framework needs to call it
         }
+        # Also ensure the tool works both sync and async
+        async def async_tool_wrapper(*args, **kwargs):
+            output = tool.run(*args, **kwargs)
+            if inspect.isawaitable(output):
+                return await output
+            else:
+                return output
+
+        adapted_tool = MyFrameworkTool(
+            name=sanitized_name,
+            description=tool.description,
+            inputs=tool.args_schema.schema() if tool.args_schema else None,
+            implementation_reference=async_tool_wrapper
+        )
+        
         return adapted_representation
 
     ```
@@ -206,7 +221,7 @@ Here's how you implement your custom converter adapter:
 
     ```python
     def __init__(self, agent_adapter: Any): # Use your specific AgentAdapter type hint
-        super().__init__(agent_adapter)
+        self.agent_adapter = agent_adapter
         print(f"Initializing MyCustomConverterAdapter for agent adapter: {type(agent_adapter).__name__}")
     ```
 
