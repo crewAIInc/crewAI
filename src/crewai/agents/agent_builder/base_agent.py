@@ -152,6 +152,9 @@ class BaseAgent(ABC, BaseModel):
     callbacks: List[Callable] = Field(
         default=[], description="Callbacks to be used for the agent"
     )
+    adapted_agent: bool = Field(
+        default=False, description="Whether the agent is adapted"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -258,12 +261,12 @@ class BaseAgent(ABC, BaseModel):
         """Set the task tools that init BaseAgenTools class."""
         pass
 
-    @abstractmethod
-    def get_output_converter(
-        self, llm: Any, text: str, model: type[BaseModel] | None, instructions: str
-    ) -> Converter:
-        """Get the converter class for the agent to create json/pydantic outputs."""
-        pass
+    # @abstractmethod
+    # def get_output_converter(
+    #     self, llm: Any, text: str, model: type[BaseModel] | None, instructions: str
+    # ) -> Converter:
+    #     """Get the converter class for the agent to create json/pydantic outputs."""
+    #     pass
 
     def copy(self: T) -> T:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
         """Create a deep copy of the Agent."""

@@ -21,7 +21,7 @@ class BaseAgentAdapter(BaseAgent, ABC):
     model_config = {"arbitrary_types_allowed": True}
 
     def __init__(self, agent_config: Optional[Dict[str, Any]] = None, **kwargs: Any):
-        super().__init__(**kwargs)
+        super().__init__(adapted_agent=True, **kwargs)
         self._agent_config = agent_config
 
     @abstractmethod
