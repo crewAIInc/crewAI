@@ -1,6 +1,7 @@
-from pathlib import Path
 import pytest
+from pathlib import Path
 from unittest.mock import patch
+
 from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
 
 @patch('crewai.knowledge.source.base_file_knowledge_source.BaseFileKnowledgeSource.validate_content')
