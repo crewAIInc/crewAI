@@ -4,10 +4,14 @@ import asyncio
 import json
 import os
 import platform
+import threading
 import warnings
 from contextlib import contextmanager
 from importlib.metadata import version
+from threading import local
 from typing import TYPE_CHECKING, Any, Optional
+
+_thread_local = local()
 
 
 @contextmanager
@@ -76,12 +80,20 @@ class Telemetry:
                 raise  # Re-raise the exception to not interfere with system signals
             self.ready = False
 
+    def _get_lock(self):
+        """Get a thread-local lock to avoid pickling issues."""
+        if not hasattr(_thread_local, "telemetry_lock"):
+            _thread_local.telemetry_lock = threading.Lock()
+        return _thread_local.telemetry_lock
+
     def set_tracer(self):
         if self.ready and not self.trace_set:
             try:
-                with suppress_warnings():
-                    trace.set_tracer_provider(self.provider)
-                    self.trace_set = True
+                with self._get_lock():
+                    if not self.trace_set:  # Double-check to avoid race condition
+                        with suppress_warnings():
+                            trace.set_tracer_provider(self.provider)
+                            self.trace_set = True
             except Exception:
                 self.ready = False
                 self.trace_set = False
@@ -90,7 +102,8 @@ class Telemetry:
         if not self.ready:
             return
         try:
-            operation()
+            with self._get_lock():
+                operation()
         except Exception:
             pass
 

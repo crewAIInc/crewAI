@@ -88,7 +88,7 @@ class Crew(BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
-    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
+    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr()
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
