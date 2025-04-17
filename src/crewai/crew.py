@@ -1399,12 +1399,12 @@ class Crew(BaseModel):
             RuntimeError: If the specified memory system fails to reset
         """
         reset_functions = {
-            "long": (self._long_term_memory, "long term"),
-            "short": (self._short_term_memory, "short term"),
-            "entity": (self._entity_memory, "entity"),
-            "knowledge": (self.knowledge, "knowledge"),
-            "kickoff_outputs": (self._task_output_handler, "task output"),
-            "external": (self._external_memory, "external"),
+            "long": (getattr(self, "_long_term_memory", None), "long term"),
+            "short": (getattr(self, "_short_term_memory", None), "short term"),
+            "entity": (getattr(self, "_entity_memory", None), "entity"),
+            "knowledge": (getattr(self, "knowledge", None), "knowledge"),
+            "kickoff_outputs": (getattr(self, "_task_output_handler", None), "task output"),
+            "external": (getattr(self, "_external_memory", None), "external"),
         }
 
         memory_system, name = reset_functions[memory_type]
