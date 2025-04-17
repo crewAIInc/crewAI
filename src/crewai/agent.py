@@ -191,6 +191,8 @@ class Agent(BaseAgent):
 
         Raises:
             TimeoutError: If execution exceeds the maximum execution time.
+            ValueError: If the max execution time is not a positive integer.
+            RuntimeError: If the agent execution fails for other reasons.
         """
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
