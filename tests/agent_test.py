@@ -1615,6 +1615,7 @@ def test_agent_with_knowledge_sources():
         assert "red" in result.raw.lower()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
@@ -1649,6 +1650,7 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
             )
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_default():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
