@@ -268,62 +268,26 @@ class Agent(BaseAgent):
                 ),
             )
 
-            if not isinstance(self.max_execution_time, int) or self.max_execution_time <= 0:
-                raise ValueError("Max Execution time must be a positive integer greater than zero")
-            
-            # Apply timeout if specified
+            # Determine execution method based on timeout setting
             if self.max_execution_time is not None:
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        self.agent_executor.invoke,
-                        {
-                            "input": task_prompt,
-                            "tool_names": self.agent_executor.tools_names,
-                            "tools": self.agent_executor.tools_description,
-                            "ask_for_human_input": task.human_input,
-                        }
-                    )
-                    
-                    try:
-                        result = future.result(timeout=self.max_execution_time)["output"]
-                    except concurrent.futures.TimeoutError:
-                        # Cancel the execution if possible
-                        future.cancel()
-                        crewai_event_bus.emit(
-                            self,
-                            event=AgentExecutionErrorEvent(
-                                agent=self,
-                                task=task,
-                                error=f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. Consider increasing max_execution_time or optimizing the task.",
-                            ),
-                        )
-                        raise TimeoutError(f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. Consider increasing max_execution_time or optimizing the task.")
-                    except Exception as error:
-                        future.cancel()
-                        crewai_event_bus.emit(
-                            self,
-                            event=AgentExecutionErrorEvent(
-                                agent=self,
-                                task=task,
-                                error=f"Task execution failed: {str(error)}"
-                            ),
-                        )
-                        raise RuntimeError(f"Task execution failed: {str(error)}")
+                if not isinstance(self.max_execution_time, int) or self.max_execution_time <= 0:
+                    raise ValueError("Max Execution time must be a positive integer greater than zero")
+                result = self._execute_with_timeout(task_prompt, task, self.max_execution_time)
             else:
-                # Original execution without timeout
-                result = self.agent_executor.invoke(
-                    {
-                        "input": task_prompt,
-                        "tool_names": self.agent_executor.tools_names,
-                        "tools": self.agent_executor.tools_description,
-                        "ask_for_human_input": task.human_input,
-                    }
-                )["output"]
+                result = self._execute_without_timeout(task_prompt, task)
+                
+        except TimeoutError as e:
+            # Propagate TimeoutError without retry
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. Consider increasing max_execution_time or optimizing the task.",
+                ),
+            )
+            raise TimeoutError(f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. Consider increasing max_execution_time or optimizing the task.")
         except Exception as e:
-            if isinstance(e, TimeoutError):
-                # Propagate TimeoutError without retry
-                raise e
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
                 crewai_event_bus.emit(
@@ -362,6 +326,66 @@ class Agent(BaseAgent):
             event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
         )
         return result
+
+    def _execute_with_timeout(
+        self,
+        task_prompt: str,
+        task: Task,
+        timeout: int
+    ) -> str:
+        """Execute a task with a timeout.
+        
+        Args:
+            task_prompt: The prompt to send to the agent.
+            task: The task being executed.
+            timeout: Maximum execution time in seconds.
+            
+        Returns:
+            The output of the agent.
+            
+        Raises:
+            TimeoutError: If execution exceeds the timeout.
+            RuntimeError: If execution fails for other reasons.
+        """
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(
+                self._execute_without_timeout,
+                task_prompt=task_prompt,
+                task=task
+            )
+            
+            try:
+                return future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                future.cancel()
+                raise TimeoutError(f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task.")
+            except Exception as e:
+                future.cancel()
+                raise RuntimeError(f"Task execution failed: {str(e)}")
+
+    def _execute_without_timeout(
+        self,
+        task_prompt: str,
+        task: Task
+    ) -> str:
+        """Execute a task without a timeout.
+        
+        Args:
+            task_prompt: The prompt to send to the agent.
+            task: The task being executed.
+            
+        Returns:
+            The output of the agent.
+        """
+        return self.agent_executor.invoke(
+            {
+                "input": task_prompt,
+                "tool_names": self.agent_executor.tools_names,
+                "tools": self.agent_executor.tools_description,
+                "ask_for_human_input": task.human_input,
+            }
+        )["output"]
 
     def create_agent_executor(
         self, tools: Optional[List[BaseTool]] = None, task=None
