@@ -1392,32 +1392,6 @@ def test_task_with_no_max_execution_time():
         execute.assert_called_once()
 
 
-# def test_task_with_max_execution_time():
-#     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
-#     researcher = Agent(
-#         role="Researcher",
-#         goal="Make the best research and analysis on content about AI and AI agents",
-#         backstory=(
-#             "You're an expert researcher, specialized in technology, software engineering, AI and startups. "
-#             "You work as a freelancer and are now working on doing research and analysis for a new customer."
-#         ),
-#         allow_delegation=False,
-#         max_execution_time=1  
-#     )
-
-#     task = Task(
-#         description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
-#         expected_output="Bullet point list of 5 interesting ideas.",
-#         agent=researcher,
-#     )
-
-#     with patch.object(Agent, "_execute_with_timeout") as mock_execute_with_timeout:
-#         mock_execute_with_timeout.return_value = "Test result"
-#         result = task.execute_sync(agent=researcher)
-        
-#         mock_execute_with_timeout.assert_called_once()
-#         assert result.raw == "Test result"
-
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_with_max_execution_time():
     from crewai.tools import tool
@@ -1447,15 +1421,11 @@ def test_task_with_max_execution_time():
         agent=researcher,
     )
 
-    # with patch.object(Agent, "_execute_with_timeout") as mock_execute_with_timeout:
-    #     mock_execute_with_timeout.return_value = "Test result"
     result = task.execute_sync(agent=researcher)
-        
-        # mock_execute_with_timeout.assert_called_once()
     assert result.raw == "okay"
 
 
-# def test_task_with_max_execution_time_exceeded():
+def test_task_with_max_execution_time_exceeded():
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
     researcher = Agent(
         role="Researcher",
