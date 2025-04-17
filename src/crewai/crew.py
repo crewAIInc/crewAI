@@ -1135,11 +1135,11 @@ class Crew(BaseModel):
         return result
 
     def query_knowledge(
-        self, query: List[str], limit: int = 3, score_threshold: float = 0.35
+        self, query: List[str], results_limit: int = 3, score_threshold: float = 0.35
     ) -> Union[List[Dict[str, Any]], None]:
         if self.knowledge:
             return self.knowledge.query(
-                query, limit=limit, score_threshold=score_threshold
+                query, results_limit=results_limit, score_threshold=score_threshold
             )
         return None
 

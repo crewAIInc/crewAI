@@ -163,7 +163,7 @@ You can configure the knowledge configuration for the crew or agent.
 ```python Code
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 
-knowledge_config = KnowledgeConfig(limit=10, score_threshold=0.5)
+knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
 
 agent = Agent(
     ...
@@ -172,7 +172,7 @@ agent = Agent(
 ```
 
 <Tip>
-  limit: is the number of relevant documents to return. Default is 3.
+  results_limit: is the number of relevant documents to return. Default is 3.
   score_threshold: is the minimum score for a document to be considered relevant. Default is 0.35.
 </Tip>
 
