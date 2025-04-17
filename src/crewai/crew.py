@@ -304,9 +304,7 @@ class Crew(BaseModel):
         """Initialize private memory attributes."""
         self._external_memory = (
             # External memory doesn’t support a default value since it was designed to be managed entirely externally
-            self.external_memory.set_crew(self)
-            if self.external_memory
-            else None
+            self.external_memory.set_crew(self) if self.external_memory else None
         )
 
         self._long_term_memory = self.long_term_memory
@@ -1136,9 +1134,13 @@ class Crew(BaseModel):
         result = self._execute_tasks(self.tasks, start_index, True)
         return result
 
-    def query_knowledge(self, query: List[str]) -> Union[List[Dict[str, Any]], None]:
+    def query_knowledge(
+        self, query: List[str], limit: int = 3, score_threshold: float = 0.35
+    ) -> Union[List[Dict[str, Any]], None]:
         if self.knowledge:
-            return self.knowledge.query(query)
+            return self.knowledge.query(
+                query, limit=limit, score_threshold=score_threshold
+            )
         return None
 
     def fetch_inputs(self) -> Set[str]:
@@ -1220,16 +1222,19 @@ class Crew(BaseModel):
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
         if self.short_term_memory:
-            copied_data["short_term_memory"] = self.short_term_memory.model_copy(deep=True)
+            copied_data["short_term_memory"] = self.short_term_memory.model_copy(
+                deep=True
+            )
         if self.long_term_memory:
-            copied_data["long_term_memory"] = self.long_term_memory.model_copy(deep=True)
+            copied_data["long_term_memory"] = self.long_term_memory.model_copy(
+                deep=True
+            )
         if self.entity_memory:
             copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
         if self.external_memory:
             copied_data["external_memory"] = self.external_memory.model_copy(deep=True)
         if self.user_memory:
             copied_data["user_memory"] = self.user_memory.model_copy(deep=True)
-
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
@@ -1403,7 +1408,10 @@ class Crew(BaseModel):
             "short": (getattr(self, "_short_term_memory", None), "short term"),
             "entity": (getattr(self, "_entity_memory", None), "entity"),
             "knowledge": (getattr(self, "knowledge", None), "knowledge"),
-            "kickoff_outputs": (getattr(self, "_task_output_handler", None), "task output"),
+            "kickoff_outputs": (
+                getattr(self, "_task_output_handler", None),
+                "task output",
+            ),
             "external": (getattr(self, "_external_memory", None), "external"),
         }
 

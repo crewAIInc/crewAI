@@ -4,7 +4,7 @@ import io
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union
 
 import chromadb
 import chromadb.errors
