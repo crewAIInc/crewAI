@@ -395,3 +395,19 @@ def test_deepseek_r1_with_open_router():
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
+
+
+def test_mistral_message_formatting():
+    """Test Mistral message formatting with various formats."""
+    llm = LLM(model="mistral-7b-chat")
+
+    # Test when first message is system
+    formatted = llm._format_messages_for_provider([{"role": "system", "content": "test"}])
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "assistant"
+    assert formatted[0]["content"] == "test"
+
+    # Test when first message is user
+    formatted = llm._format_messages_for_provider([{"role": "user", "content": "test"}])
+    assert len(formatted) == 1
+    assert formatted[0] == {"role": "user", "content": "test"}
