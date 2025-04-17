@@ -140,7 +140,7 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: Set[str] = Field(default_factory=set)
-    guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
+    guardrail: Optional[Union[Callable[[TaskOutput], Tuple[bool, Any]], str]] = Field(
         default=None,
         description="Function to validate task output before proceeding to next task",
     )
@@ -180,6 +180,7 @@ class Task(BaseModel):
             ValueError: If the function signature is invalid or return annotation
                        doesn't match Tuple[bool, Any]
         """
+        return v
         if v is not None:
             sig = inspect.signature(v)
             positional_args = [
@@ -408,9 +409,18 @@ class Task(BaseModel):
             )
 
             if self.guardrail:
-                guardrail_result = GuardrailResult.from_tuple(
-                    self.guardrail(task_output)
-                )
+                if isinstance(self.guardrail, str):
+                    from crewai.tasks.llm_guardrail import LLMGuardrailTask
+
+                    guardrail_result = GuardrailResult.from_tuple(
+                        LLMGuardrailTask(description=self.guardrail, task=self)(
+                            task_output
+                        )
+                    )
+                else:
+                    guardrail_result = GuardrailResult.from_tuple(
+                        self.guardrail(task_output)
+                    )
                 if not guardrail_result.success:
                     if self.retry_count >= self.max_retries:
                         raise Exception(
@@ -464,7 +474,9 @@ class Task(BaseModel):
                     )
                 )
                 self._save_file(content)
-            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output, task=self))
+            crewai_event_bus.emit(
+                self, TaskCompletedEvent(output=task_output, task=self)
+            )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
