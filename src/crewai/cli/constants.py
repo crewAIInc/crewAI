@@ -126,7 +126,7 @@ MODELS = {
         "gpt-4",
         "gpt-4.1",
         "gpt-4.1-mini-2025-04-14",
-        "gpt-4.1-nano--2025-04-14",
+        "gpt-4.1-nano-2025-04-14",
         "gpt-4o",
         "gpt-4o-mini",
         "o1-mini",

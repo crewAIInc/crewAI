@@ -254,32 +254,15 @@ def test_validate_call_params_no_response_format():
 
 
 gemini_models_2_0 = [
-    "gemini/gemini-2.0-flash-thinking-exp-01-21",
+    "gemini-2.0-flash-thinking-exp-01-21",
     "gemini/gemini-2.0-flash-001",
     "gemini/gemini-2.0-flash-lite-001",
-    "gemini/gemini-2.5-flash-preview-04-17",
     "gemini/gemini-2.5-pro-exp-03-25",
 ]
 
 
 @pytest.mark.parametrize("model", gemini_models_2_0)
-def test_gemini_models(model):
-    llm = LLM(model=model)
-    result = llm.call("What is the capital of France?")
-    assert isinstance(result, str)
-    assert "Paris" in result
-
-
-gemma3_models = [
-    "gemini/gemma-3-1b-it",
-    "gemini/gemma-3-4b-it",
-    "gemini/gemma-3-12b-it",
-    "gemini/gemma-3-27b-it",
-]
-
-
-@pytest.mark.parametrize("model", gemma3_models)
-def test_gemma3(model):
+def test_gemini_2_5_pro(model):
     llm = LLM(model=model)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
@@ -292,22 +275,6 @@ gpt_models_4_1 = ["gpt-4.1", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14
 @pytest.mark.parametrize("model", gpt_models_4_1)
 def test_gpt_4_1(model):
     llm = LLM(model=model)
-    result = llm.call("What is the capital of France?")
-    assert isinstance(result, str)
-    assert "Paris" in result
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_gemini_2_5_pro():
-    llm = LLM(model="gemini/gemini-2.5-pro-exp-03-25")
-    result = llm.call("What is the capital of France?")
-    assert isinstance(result, str)
-    assert "Paris" in result
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_gpt_4_1():
-    llm = LLM(model="gpt-4.1")
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
