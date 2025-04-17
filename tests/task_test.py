@@ -1424,6 +1424,7 @@ def test_task_with_max_execution_time():
     result = task.execute_sync(agent=researcher)
     assert result.raw == "okay"
 
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_with_max_execution_time_exceeded():
     from crewai.tools import tool
