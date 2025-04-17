@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import time
 from functools import partial
 from typing import Tuple, Union
 from unittest.mock import MagicMock, patch
@@ -16,7 +17,6 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
-import time
 
 
 def test_task_tool_reflect_agent_tools():
