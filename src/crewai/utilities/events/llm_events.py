@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
+from pydantic import BaseModel
+
 from crewai.utilities.events.base_events import BaseEvent
 
 
@@ -41,8 +43,21 @@ class LLMCallFailedEvent(BaseEvent):
     type: str = "llm_call_failed"
 
 
+class FunctionCall(BaseModel):
+    arguments: str
+    name: Optional[str] = None
+
+
+class ToolCall(BaseModel):
+    id: Optional[str] = None
+    function: FunctionCall
+    type: Optional[str] = None
+    index: int
+
+
 class LLMStreamChunkEvent(BaseEvent):
     """Event emitted when a streaming chunk is received"""
 
     type: str = "llm_stream_chunk"
     chunk: str
+    tool_call: Optional[ToolCall] = None
