@@ -92,14 +92,10 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gemini-1.5-pro": 2097152,
     "gemini-1.5-flash": 1048576,
     "gemini-1.5-flash-8b": 1048576,
-    "google/gemma-3-1b-it": 32000,
-    "google/gemma-3-1b": 32000,
-    "google/gemma-3-4b-it": 128000,
-    "google/gemma-3-4b": 128000,
-    "google/gemma-3-12b-it": 128000,
-    "google/gemma-3-12b": 128000,
-    "google/gemma-3-27b-it": 128000,
-    "google/gemma-3-27b": 128000,
+    "gemini/gemma-3-1b-it": 32000,
+    "gemini/gemma-3-4b-it": 128000,
+    "gemini/gemma-3-12b-it": 128000,
+    "gemini/gemma-3-27b-it": 128000,
     # deepseek
     "deepseek-chat": 128000,
     # groq
