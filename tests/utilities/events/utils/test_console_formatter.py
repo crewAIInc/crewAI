@@ -1,7 +1,8 @@
 import pytest
-from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 from rich.text import Text
 from rich.tree import Tree
+
+from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 
 
 def test_console_formatter_gbk_encoding():
