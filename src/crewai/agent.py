@@ -285,10 +285,10 @@ class Agent(BaseAgent):
                 event=AgentExecutionErrorEvent(
                     agent=self,
                     task=task,
-                    error=f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. Consider increasing max_execution_time or optimizing the task.",
+                    error=str(e),
                 ),
             )
-            raise TimeoutError(f"Task '{task.description}' execution timed out after {self.max_execution_time} seconds. Consider increasing max_execution_time or optimizing the task.")
+            raise e
         except Exception as e:
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
