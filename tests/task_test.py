@@ -1386,12 +1386,14 @@ def test_task_with_no_max_execution_time():
         agent=researcher,
     )
 
-    with patch.object(Agent, "execute_task", return_value = "ok") as execute:
+    with patch.object(Agent, "_execute_without_timeout", return_value = "ok") as execute:
         result = task.execute_sync(agent=researcher)
         assert result.raw == "ok"
         execute.assert_called_once()
 
-def test_task_with_max_execution_time_exceeded():
+
+def test_task_with_max_execution_time():
+    """Test that execution raises TimeoutError when max_execution_time is exceeded."""
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -1400,7 +1402,7 @@ def test_task_with_max_execution_time_exceeded():
             "You work as a freelancer and are now working on doing research and analysis for a new customer."
         ),
         allow_delegation=False,
-        max_execution_time=1
+        max_execution_time=1  
     )
 
     task = Task(
@@ -1409,15 +1411,38 @@ def test_task_with_max_execution_time_exceeded():
         agent=researcher,
     )
 
-    with patch('concurrent.futures.ThreadPoolExecutor') as mock_executor:
-        # Set up mock future that simulates a timeout
-        mock_future = MagicMock()
-        mock_future.result.side_effect = TimeoutError()
+    with patch.object(Agent, "_execute_with_timeout") as mock_execute_with_timeout:
+        mock_execute_with_timeout.return_value = "Test result"
+        result = task.execute_sync(agent=researcher)
+        
+        mock_execute_with_timeout.assert_called_once()
+        assert result.raw == "Test result"
 
-        # Configure executor mock
-        mock_executor_instance = MagicMock()
-        mock_executor_instance.submit.return_value = mock_future
-        mock_executor.return_value.__enter__.return_value = mock_executor_instance
 
+def test_task_with_max_execution_time_exceeded():
+    """Test that execution raises TimeoutError when max_execution_time is exceeded."""
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory=(
+            "You're an expert researcher, specialized in technology, software engineering, AI and startups. "
+            "You work as a freelancer and are now working on doing research and analysis for a new customer."
+        ),
+        allow_delegation=False,
+        max_execution_time=1 
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+    )
+
+    with patch.object(Agent, "_execute_with_timeout") as mock_execute_with_timeout:
+        mock_execute_with_timeout.side_effect = TimeoutError(
+            f"Task '{task.description}' execution timed out after 1 seconds."
+        )
+        
         with pytest.raises(TimeoutError):
             task.execute_sync(agent=researcher)
+        mock_execute_with_timeout.assert_called_once()
