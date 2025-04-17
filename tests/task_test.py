@@ -1425,6 +1425,7 @@ def test_task_with_max_execution_time():
 
     @tool("what amazing tool", result_as_answer=True)
     def my_tool() -> str:
+        "My tool"
         time.sleep(5)
         return "okay"
 
