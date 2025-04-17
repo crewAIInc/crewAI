@@ -96,15 +96,15 @@ class ConsoleFormatter:
             return
 
         if status == "completed":
-            prefix, style = "✅ Crew:", "green"
+            prefix, style = "[OK] Crew:", "green"
             title = "Crew Completion"
             content_title = "Crew Execution Completed"
         elif status == "failed":
-            prefix, style = "❌ Crew:", "red"
+            prefix, style = "[FAIL] Crew:", "red"
             title = "Crew Failure"
             content_title = "Crew Execution Failed"
         else:
-            prefix, style = "🚀 Crew:", "cyan"
+            prefix, style = "[LAUNCH] Crew:", "cyan"
             title = "Crew Execution"
             content_title = "Crew Execution Started"
 
@@ -130,7 +130,7 @@ class ConsoleFormatter:
             return None
 
         tree = Tree(
-            Text("🚀 Crew: ", style="cyan bold") + Text(crew_name, style="cyan")
+            Text("[LAUNCH] Crew: ", style="cyan bold") + Text(crew_name, style="cyan")
         )
 
         content = self.create_status_content(
@@ -155,7 +155,7 @@ class ConsoleFormatter:
             return None
 
         task_content = Text()
-        task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+        task_content.append(f"[TASK] Task: {task_id}", style="yellow bold")
         task_content.append("\n   Status: ", style="white")
         task_content.append("Executing Task...", style="yellow dim")
 
@@ -186,18 +186,18 @@ class ConsoleFormatter:
 
         if status == "completed":
             style = "green"
-            status_text = "✅ Completed"
+            status_text = "[OK] Completed"
             panel_title = "Task Completion"
         else:
             style = "red"
-            status_text = "❌ Failed"
+            status_text = "[FAIL] Failed"
             panel_title = "Task Failure"
 
         # Update tree label
         for branch in crew_tree.children:
             if str(task_id) in str(branch.label):
                 task_content = Text()
-                task_content.append(f"📋 Task: {task_id}", style=f"{style} bold")
+                task_content.append(f"[TASK] Task: {task_id}", style=f"{style} bold")
                 task_content.append("\n   Assigned to: ", style="white")
                 task_content.append(agent_role, style=style)
                 task_content.append("\n   Status: ", style="white")
@@ -221,7 +221,7 @@ class ConsoleFormatter:
 
         agent_branch = task_branch.add("")
         self.update_tree_label(
-            agent_branch, "🤖 Agent:", agent_role, "green", "In Progress"
+            agent_branch, "[AGENT] Agent:", agent_role, "green", "In Progress"
         )
 
         self.print(crew_tree)
@@ -245,10 +245,10 @@ class ConsoleFormatter:
 
         self.update_tree_label(
             agent_branch,
-            "🤖 Agent:",
+            "[AGENT] Agent:",
             agent_role,
             "green",
-            "✅ Completed" if status == "completed" else "❌ Failed",
+            "[OK] Completed" if status == "completed" else "[FAIL] Failed",
         )
 
         self.print(crew_tree)
@@ -263,14 +263,14 @@ class ConsoleFormatter:
 
         # Create initial tree with flow ID
         flow_label = Text()
-        flow_label.append("🌊 Flow: ", style="blue bold")
+        flow_label.append("[FLOW] Flow: ", style="blue bold")
         flow_label.append(flow_name, style="blue")
         flow_label.append("\n    ID: ", style="white")
         flow_label.append(flow_id, style="blue")
 
         flow_tree = Tree(flow_label)
-        self.add_tree_node(flow_tree, "✨ Created", "blue")
-        self.add_tree_node(flow_tree, "✅ Initialization Complete", "green")
+        self.add_tree_node(flow_tree, "[NEW] Created", "blue")
+        self.add_tree_node(flow_tree, "[OK] Initialization Complete", "green")
 
         return flow_tree
 
@@ -278,13 +278,13 @@ class ConsoleFormatter:
         """Initialize a flow execution tree."""
         flow_tree = Tree("")
         flow_label = Text()
-        flow_label.append("🌊 Flow: ", style="blue bold")
+        flow_label.append("[FLOW] Flow: ", style="blue bold")
         flow_label.append(flow_name, style="blue")
         flow_label.append("\n    ID: ", style="white")
         flow_label.append(flow_id, style="blue")
         flow_tree.label = flow_label
 
-        self.add_tree_node(flow_tree, "🧠 Starting Flow...", "yellow")
+        self.add_tree_node(flow_tree, "[THINKING] Starting Flow...", "yellow")
 
         self.print(flow_tree)
         self.print()
@@ -306,7 +306,7 @@ class ConsoleFormatter:
         # Update main flow label
         self.update_tree_label(
             flow_tree,
-            "✅ Flow Finished:" if status == "completed" else "❌ Flow Failed:",
+            "[OK] Flow Finished:" if status == "completed" else "[FAIL] Flow Failed:",
             flow_name,
             "green" if status == "completed" else "red",
         )
@@ -316,9 +316,9 @@ class ConsoleFormatter:
             if "Starting Flow" in str(child.label):
                 child.label = Text(
                     (
-                        "✅ Flow Completed"
+                        "[OK] Flow Completed"
                         if status == "completed"
-                        else "❌ Flow Failed"
+                        else "[FAIL] Flow Failed"
                     ),
                     style="green" if status == "completed" else "red",
                 )
@@ -351,20 +351,20 @@ class ConsoleFormatter:
             return None
 
         if status == "running":
-            prefix, style = "🔄 Running:", "yellow"
+            prefix, style = "[RUNNING] Running:", "yellow"
         elif status == "completed":
-            prefix, style = "✅ Completed:", "green"
+            prefix, style = "[OK] Completed:", "green"
             # Update initialization node when a method completes successfully
             for child in flow_tree.children:
                 if "Starting Flow" in str(child.label):
                     child.label = Text("Flow Method Step", style="white")
                     break
         else:
-            prefix, style = "❌ Failed:", "red"
+            prefix, style = "[FAIL] Failed:", "red"
             # Update initialization node on failure
             for child in flow_tree.children:
                 if "Starting Flow" in str(child.label):
-                    child.label = Text("❌ Flow Step Failed", style="red")
+                    child.label = Text("[FAIL] Flow Step Failed", style="red")
                     break
 
         if not method_branch:
@@ -413,7 +413,7 @@ class ConsoleFormatter:
         # Update label with current count
         self.update_tree_label(
             tool_branch,
-            "🔧",
+            "[TOOL]",
             f"Using {tool_name} ({self.tool_usage_counts[tool_name]})",
             "yellow",
         )
@@ -443,7 +443,7 @@ class ConsoleFormatter:
         # Update the existing tool node's label
         self.update_tree_label(
             tool_branch,
-            "🔧",
+            "[TOOL]",
             f"Used {tool_name} ({self.tool_usage_counts[tool_name]})",
             "green",
         )
@@ -473,7 +473,7 @@ class ConsoleFormatter:
         if tool_branch:
             self.update_tree_label(
                 tool_branch,
-                "🔧 Failed",
+                "[TOOL] Failed",
                 f"{tool_name} ({self.tool_usage_counts[tool_name]})",
                 "red",
             )
@@ -506,7 +506,7 @@ class ConsoleFormatter:
         # Only add thinking status if we don't have a current tool branch
         if self.current_tool_branch is None:
             tool_branch = branch_to_use.add("")
-            self.update_tree_label(tool_branch, "🧠", "Thinking...", "blue")
+            self.update_tree_label(tool_branch, "[THINKING]", "Thinking...", "blue")
             self.current_tool_branch = tool_branch
             self.print(tree_to_use)
             self.print()
@@ -554,14 +554,14 @@ class ConsoleFormatter:
 
         # Update tool branch if it exists
         if tool_branch:
-            tool_branch.label = Text("❌ LLM Failed", style="red bold")
+            tool_branch.label = Text("[FAIL] LLM Failed", style="red bold")
             if tree_to_use:
                 self.print(tree_to_use)
                 self.print()
 
         # Show error panel
         error_content = Text()
-        error_content.append("❌ LLM Call Failed\n", style="red bold")
+        error_content.append("[FAIL] LLM Call Failed\n", style="red bold")
         error_content.append("Error: ", style="white")
         error_content.append(str(error), style="red")
 
@@ -576,7 +576,7 @@ class ConsoleFormatter:
 
         # Create initial panel
         content = Text()
-        content.append("🧪 Starting Crew Test\n\n", style="blue bold")
+        content.append("[TEST] Starting Crew Test\n\n", style="blue bold")
         content.append("Crew: ", style="white")
         content.append(f"{crew_name}\n", style="blue")
         content.append("ID: ", style="white")
@@ -590,13 +590,13 @@ class ConsoleFormatter:
 
         # Create and display the test tree
         test_label = Text()
-        test_label.append("🧪 Test: ", style="blue bold")
+        test_label.append("[TEST] Test: ", style="blue bold")
         test_label.append(crew_name or "Crew", style="blue")
         test_label.append("\n    Status: ", style="white")
         test_label.append("In Progress", style="yellow")
 
         test_tree = Tree(test_label)
-        self.add_tree_node(test_tree, "🔄 Running tests...", "yellow")
+        self.add_tree_node(test_tree, "[RUNNING] Running tests...", "yellow")
 
         self.print(test_tree)
         self.print()
@@ -612,7 +612,7 @@ class ConsoleFormatter:
         if flow_tree:
             # Update test tree label to show completion
             test_label = Text()
-            test_label.append("✅ Test: ", style="green bold")
+            test_label.append("[OK] Test: ", style="green bold")
             test_label.append(crew_name or "Crew", style="green")
             test_label.append("\n    Status: ", style="white")
             test_label.append("Completed", style="green bold")
@@ -621,7 +621,7 @@ class ConsoleFormatter:
             # Update the running tests node
             for child in flow_tree.children:
                 if "Running tests" in str(child.label):
-                    child.label = Text("✅ Tests completed successfully", style="green")
+                    child.label = Text("[OK] Tests completed successfully", style="green")
                     break
 
             self.print(flow_tree)
@@ -643,7 +643,7 @@ class ConsoleFormatter:
             return
 
         content = Text()
-        content.append("📋 Crew Training Started\n", style="blue bold")
+        content.append("[TASK] Crew Training Started\n", style="blue bold")
         content.append("Crew: ", style="white")
         content.append(f"{crew_name}\n", style="blue")
         content.append("Time: ", style="white")
@@ -658,7 +658,7 @@ class ConsoleFormatter:
             return
 
         content = Text()
-        content.append("✅ Crew Training Completed\n", style="green bold")
+        content.append("[OK] Crew Training Completed\n", style="green bold")
         content.append("Crew: ", style="white")
         content.append(f"{crew_name}\n", style="green")
         content.append("Time: ", style="white")
@@ -673,7 +673,7 @@ class ConsoleFormatter:
             return
 
         failure_content = Text()
-        failure_content.append("❌ Crew Training Failed\n", style="red bold")
+        failure_content.append("[FAIL] Crew Training Failed\n", style="red bold")
         failure_content.append("Crew: ", style="white")
         failure_content.append(crew_name or "Crew", style="red")
 
@@ -686,7 +686,7 @@ class ConsoleFormatter:
             return
 
         failure_content = Text()
-        failure_content.append("❌ Crew Test Failed\n", style="red bold")
+        failure_content.append("[FAIL] Crew Test Failed\n", style="red bold")
         failure_content.append("Crew: ", style="white")
         failure_content.append(crew_name or "Crew", style="red")
 
@@ -701,7 +701,7 @@ class ConsoleFormatter:
         # Create initial tree for LiteAgent if it doesn't exist
         if not self.current_lite_agent_branch:
             lite_agent_label = Text()
-            lite_agent_label.append("🤖 LiteAgent: ", style="cyan bold")
+            lite_agent_label.append("[AGENT] LiteAgent: ", style="cyan bold")
             lite_agent_label.append(lite_agent_role, style="cyan")
             lite_agent_label.append("\n    Status: ", style="white")
             lite_agent_label.append("In Progress", style="yellow")
@@ -726,15 +726,15 @@ class ConsoleFormatter:
 
         # Determine style based on status
         if status == "completed":
-            prefix, style = "✅ LiteAgent:", "green"
+            prefix, style = "[OK] LiteAgent:", "green"
             status_text = "Completed"
             title = "LiteAgent Completion"
         elif status == "failed":
-            prefix, style = "❌ LiteAgent:", "red"
+            prefix, style = "[FAIL] LiteAgent:", "red"
             status_text = "Failed"
             title = "LiteAgent Error"
         else:
-            prefix, style = "🤖 LiteAgent:", "yellow"
+            prefix, style = "[AGENT] LiteAgent:", "yellow"
             status_text = "In Progress"
             title = "LiteAgent Status"
 
