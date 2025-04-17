@@ -74,6 +74,16 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         else:
             raise ValueError("No storage found to save documents.")
 
+    def add(self) -> None:
+        """
+        Process content from files, chunk it, compute embeddings, and save them.
+        This method is called after content is loaded from files.
+        """
+        for _, text in self.content.items():
+            new_chunks = self._chunk_text(text)
+            self.chunks.extend(new_chunks)
+        self._save_documents()
+
     def convert_to_path(self, path: Union[Path, str]) -> Path:
         """Convert a path to a Path object."""
         return Path(KNOWLEDGE_DIRECTORY + "/" + path) if isinstance(path, str) else path
