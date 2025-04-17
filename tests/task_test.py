@@ -1400,7 +1400,7 @@ def test_task_with_max_execution_time():
     @tool("what amazing tool", result_as_answer=True)
     def my_tool() -> str:
         "My tool"
-        time.sleep(5)
+        time.sleep(1)
         return "okay"
 
     researcher = Agent(
@@ -1412,7 +1412,7 @@ def test_task_with_max_execution_time():
         ),
         allow_delegation=False,
         tools=[my_tool],
-        max_execution_time=10
+        max_execution_time=4
     )
 
     task = Task(
