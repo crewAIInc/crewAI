@@ -1420,11 +1420,12 @@ def test_task_with_no_max_execution_time():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_with_max_execution_time():
+    from crewai.tools import tool
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
 
     @tool("what amazing tool", result_as_answer=True)
     def my_tool() -> str:
-        sleep(5)
+        time.sleep(5)
         return "okay"
 
     researcher = Agent(
