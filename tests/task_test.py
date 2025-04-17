@@ -3,7 +3,6 @@
 import hashlib
 import json
 import os
-from concurrent.futures import TimeoutError
 from functools import partial
 from typing import Tuple, Union
 from unittest.mock import MagicMock, patch
@@ -1442,7 +1441,7 @@ def test_task_with_max_execution_time_exceeded():
         mock_execute_with_timeout.side_effect = TimeoutError(
             f"Task '{task.description}' execution timed out after 1 seconds."
         )
-        
+
         with pytest.raises(TimeoutError):
             task.execute_sync(agent=researcher)
         mock_execute_with_timeout.assert_called_once()
