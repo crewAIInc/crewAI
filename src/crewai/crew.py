@@ -1328,6 +1328,19 @@ class Crew(BaseModel):
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+        
+    def plot(self, filename: str = "crewai_crew") -> None:
+        """
+        This method is not implemented for Crew objects.
+        Plot functionality is available only for Flow objects.
+        
+        To visualize a Flow, use flow_instance.plot() instead.
+        """
+        raise NotImplementedError(
+            "The plot method is not available for Crew objects. "
+            "Plot functionality is only available for Flow objects. "
+            "Please use flow_instance.plot() instead."
+        )
 
     def reset_memories(self, command_type: str) -> None:
         """Reset specific or all memories for the crew.

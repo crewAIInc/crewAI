@@ -1,23 +1,29 @@
-import subprocess
+import os
+import importlib.util
+import sys
 
 import click
 
 
 def plot_flow() -> None:
     """
-    Plot the flow by running a command in the UV environment.
+    Plot the flow by finding and importing the plot function from the project's main.py file.
     """
-    command = ["uv", "run", "plot"]
-
+    main_file_path = os.path.join(os.getcwd(), "main.py")
+    
     try:
-        result = subprocess.run(command, capture_output=False, text=True, check=True)
-
-        if result.stderr:
-            click.echo(result.stderr, err=True)
-
-    except subprocess.CalledProcessError as e:
-        click.echo(f"An error occurred while plotting the flow: {e}", err=True)
-        click.echo(e.output, err=True)
-
+        if os.path.exists(main_file_path):
+            spec = importlib.util.spec_from_file_location("main", main_file_path)
+            main = importlib.util.module_from_spec(spec)
+            sys.modules["main"] = main
+            spec.loader.exec_module(main)
+            
+            if hasattr(main, "plot"):
+                main.plot()
+            else:
+                click.echo("Error: No plot function found in main.py", err=True)
+        else:
+            click.echo("Error: Could not find main.py in the current directory", err=True)
+            
     except Exception as e:
-        click.echo(f"An unexpected error occurred: {e}", err=True)
+        click.echo(f"An error occurred while plotting the flow: {e}", err=True)
