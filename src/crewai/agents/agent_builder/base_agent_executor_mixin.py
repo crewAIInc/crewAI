@@ -72,7 +72,6 @@ class CrewAgentExecutorMixin:
         """Create and save long-term and entity memory items based on evaluation."""
         if (
             self.crew
-            and self.crew.memory
             and self.crew._long_term_memory
             and self.crew._entity_memory
             and self.task
@@ -114,6 +113,15 @@ class CrewAgentExecutorMixin:
             except Exception as e:
                 print(f"Failed to add to long term memory: {e}")
                 pass
+        elif (
+            self.crew
+            and self.crew._long_term_memory
+            and self.crew._entity_memory is None
+        ):
+            self._printer.print(
+                content="Long term memory is enabled, but entity memory is not enabled. Please configure entity memory or set memory=True to automatically enable it.",
+                color="bold_yellow",
+            )
 
     def _ask_human_input(self, final_answer: str) -> str:
         """Prompt human input with mode-appropriate messaging."""

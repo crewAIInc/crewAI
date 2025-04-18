@@ -91,6 +91,12 @@ ENV_VARS = {
             "key_name": "CEREBRAS_API_KEY",
         },
     ],
+    "huggingface": [
+        {
+            "prompt": "Enter your Huggingface API key (HF_TOKEN) (press Enter to skip)",
+            "key_name": "HF_TOKEN",
+        },
+    ],
     "sambanova": [
         {
             "prompt": "Enter your SambaNovaCloud API key (press Enter to skip)",
@@ -106,6 +112,7 @@ PROVIDERS = [
     "gemini",
     "nvidia_nim",
     "groq",
+    "huggingface",
     "ollama",
     "watson",
     "bedrock",
@@ -269,6 +276,12 @@ MODELS = {
         "bedrock/ai21.jamba-instruct-v1:0",
         "bedrock/mistral.mistral-7b-instruct-v0:2",
         "bedrock/mistral.mixtral-8x7b-instruct-v0:1",
+    ],
+    "huggingface": [
+        "huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
+        "huggingface/mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "huggingface/tiiuae/falcon-180B-chat",
+        "huggingface/google/gemma-7b-it",
     ],
     "sambanova": [
         "sambanova/Meta-Llama-3.3-70B-Instruct",

@@ -21,6 +21,13 @@ from crewai.utilities.converter import (
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
+@pytest.fixture(scope="module")
+def vcr_config(request) -> dict:
+    return {
+        "cassette_library_dir": "tests/utilities/cassettes",
+    }
+
+
 # Sample Pydantic models for testing
 class EmailResponse(BaseModel):
     previous_message_content: str

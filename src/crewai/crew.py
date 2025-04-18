@@ -275,46 +275,51 @@ class Crew(BaseModel):
 
         return self
 
+    def _initialize_user_memory(self):
+        if (
+            self.memory_config
+            and "user_memory" in self.memory_config
+            and self.memory_config.get("provider") == "mem0"
+        ):  # Check for user_memory in config
+            user_memory_config = self.memory_config["user_memory"]
+            if isinstance(
+                user_memory_config, dict
+            ):  # Check if it's a configuration dict
+                self._user_memory = UserMemory(crew=self)
+            else:
+                raise TypeError("user_memory must be a configuration dictionary")
+
+    def _initialize_default_memories(self):
+        self._long_term_memory = self._long_term_memory or LongTermMemory()
+        self._short_term_memory = self._short_term_memory or ShortTermMemory(
+            crew=self,
+            embedder_config=self.embedder,
+        )
+        self._entity_memory = self.entity_memory or EntityMemory(
+            crew=self, embedder_config=self.embedder
+        )
+
     @model_validator(mode="after")
     def create_crew_memory(self) -> "Crew":
-        """Set private attributes."""
+        """Initialize private memory attributes."""
+        self._external_memory = (
+            # External memory doesn’t support a default value since it was designed to be managed entirely externally
+            self.external_memory.set_crew(self)
+            if self.external_memory
+            else None
+        )
+
+        self._long_term_memory = self.long_term_memory
+        self._short_term_memory = self.short_term_memory
+        self._entity_memory = self.entity_memory
+
+        # UserMemory is gonna to be deprecated in the future, but we have to initialize a default value for now
+        self._user_memory = None
+
         if self.memory:
-            self._long_term_memory = (
-                self.long_term_memory if self.long_term_memory else LongTermMemory()
-            )
-            self._short_term_memory = (
-                self.short_term_memory
-                if self.short_term_memory
-                else ShortTermMemory(
-                    crew=self,
-                    embedder_config=self.embedder,
-                )
-            )
-            self._entity_memory = (
-                self.entity_memory
-                if self.entity_memory
-                else EntityMemory(crew=self, embedder_config=self.embedder)
-            )
-            self._external_memory = (
-                # External memory doesn’t support a default value since it was designed to be managed entirely externally
-                self.external_memory.set_crew(self)
-                if self.external_memory
-                else None
-            )
-            if (
-                self.memory_config
-                and "user_memory" in self.memory_config
-                and self.memory_config.get("provider") == "mem0"
-            ):  # Check for user_memory in config
-                user_memory_config = self.memory_config["user_memory"]
-                if isinstance(
-                    user_memory_config, dict
-                ):  # Check if it's a configuration dict
-                    self._user_memory = UserMemory(crew=self)
-                else:
-                    raise TypeError("user_memory must be a configuration dictionary")
-            else:
-                self._user_memory = None  # No user memory if not in config
+            self._initialize_default_memories()
+            self._initialize_user_memory()
+
         return self
 
     @model_validator(mode="after")
@@ -1214,6 +1219,17 @@ class Crew(BaseModel):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
+        if self.short_term_memory:
+            copied_data["short_term_memory"] = self.short_term_memory.model_copy(deep=True)
+        if self.long_term_memory:
+            copied_data["long_term_memory"] = self.long_term_memory.model_copy(deep=True)
+        if self.entity_memory:
+            copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
+        if self.external_memory:
+            copied_data["external_memory"] = self.external_memory.model_copy(deep=True)
+        if self.user_memory:
+            copied_data["user_memory"] = self.user_memory.model_copy(deep=True)
+
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
@@ -1383,12 +1399,12 @@ class Crew(BaseModel):
             RuntimeError: If the specified memory system fails to reset
         """
         reset_functions = {
-            "long": (self._long_term_memory, "long term"),
-            "short": (self._short_term_memory, "short term"),
-            "entity": (self._entity_memory, "entity"),
-            "knowledge": (self.knowledge, "knowledge"),
-            "kickoff_outputs": (self._task_output_handler, "task output"),
-            "external": (self._external_memory, "external"),
+            "long": (getattr(self, "_long_term_memory", None), "long term"),
+            "short": (getattr(self, "_short_term_memory", None), "short term"),
+            "entity": (getattr(self, "_entity_memory", None), "entity"),
+            "knowledge": (getattr(self, "knowledge", None), "knowledge"),
+            "kickoff_outputs": (getattr(self, "_task_output_handler", None), "task output"),
+            "external": (getattr(self, "_external_memory", None), "external"),
         }
 
         memory_system, name = reset_functions[memory_type]

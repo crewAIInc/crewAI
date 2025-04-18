@@ -81,10 +81,10 @@ dev-dependencies = [
     "pillow>=10.2.0",
     "cairosvg>=2.7.1",
     "pytest>=8.0.0",
-    "pytest-vcr>=1.0.2",
     "python-dotenv>=1.0.0",
     "pytest-asyncio>=0.23.7",
     "pytest-subprocess>=1.5.2",
+    "pytest-recording>=0.13.2",
 ]
 
 [project.scripts]
