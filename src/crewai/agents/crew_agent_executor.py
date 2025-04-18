@@ -283,6 +283,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ] or tool_calling.tool_name.casefold().replace("_", " ") in [
                 name.casefold().strip() for name in self.tool_name_to_tool_map
             ]:
+                if tool_calling.tool_name.casefold().strip() == self._i18n.tools("add_image")["name"].casefold().strip():
+                    tool_calling.kwargs['llm'] = self.llm
+                
                 tool_result = tool_usage.use(tool_calling, agent_action.text)
                 tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
                 if tool:

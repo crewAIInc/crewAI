@@ -1,4 +1,6 @@
 from typing import Dict, Optional, Union
+import os
+import base64
 
 from pydantic import BaseModel, Field
 
@@ -29,6 +31,20 @@ class AddImageTool(BaseTool):
         **kwargs,
     ) -> dict:
         action = action or i18n.tools("add_image")["default_action"]  # type: ignore
+        
+        if os.path.exists(image_url):
+            try:
+                with open(image_url, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+                image_url = f"data:image/jpeg;base64,{encoded_string}"
+            except Exception as e:
+                raise ValueError(f"Error encoding image: {e}")
+        
+        using_claude_3_7 = False
+        if "llm" in kwargs and hasattr(kwargs["llm"], "model"):
+            model_name = kwargs["llm"].model
+            using_claude_3_7 = "claude-3-7" in model_name.lower()
+        
         content = [
             {"type": "text", "text": action},
             {
