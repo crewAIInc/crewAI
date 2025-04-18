@@ -144,6 +144,7 @@ MODELS = {
         "gemini/gemini-2.0-flash-lite-001",
         "gemini/gemini-2.0-flash-001",
         "gemini/gemini-2.0-flash-thinking-exp-01-21",
+        "gemini/gemini-2.5-flash-preview-04-17",
         "gemini/gemini-2.5-pro-exp-03-25",
         "gemini/gemini-gemma-2-9b-it",
         "gemini/gemini-gemma-2-27b-it",
