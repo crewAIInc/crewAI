@@ -719,7 +719,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         async def run_flow():
             return await self.kickoff_async(inputs)
 
-        return asyncio.run(run_flow())
+        try:
+            return asyncio.run(run_flow())
+        except KeyboardInterrupt:
+            raise
 
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         """
