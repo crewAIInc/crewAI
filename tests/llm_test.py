@@ -257,12 +257,13 @@ gemini_models_2_0 = [
     "gemini/gemini-2.0-flash-thinking-exp-01-21",
     "gemini/gemini-2.0-flash-001",
     "gemini/gemini-2.0-flash-lite-001",
+    "gemini/gemini-2.5-flash-preview-04-17",
     "gemini/gemini-2.5-pro-exp-03-25",
 ]
 
 
 @pytest.mark.parametrize("model", gemini_models_2_0)
-def test_gemini_2_5_pro(model):
+def test_gemini_models(model):
     llm = LLM(model=model)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
