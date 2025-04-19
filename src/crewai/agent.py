@@ -114,6 +114,14 @@ class Agent(BaseAgent):
         default=None,
         description="Embedder configuration for the agent.",
     )
+    agent_knowledge_context: Optional[str] = Field(
+        default=None,
+        description="Knowledge context for the agent.",
+    )
+    crew_knowledge_context: Optional[str] = Field(
+        default=None,
+        description="Knowledge context for the crew.",
+    )
 
     @model_validator(mode="after")
     def post_init_setup(self):
@@ -234,22 +242,30 @@ class Agent(BaseAgent):
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
-
+        knowledge_config = (
+            self.knowledge_config.model_dump() if self.knowledge_config else {}
+        )
         if self.knowledge:
-            agent_knowledge_snippets = self.knowledge.query([task.prompt()])
+            agent_knowledge_snippets = self.knowledge.query(
+                [task.prompt()], **knowledge_config
+            )
             if agent_knowledge_snippets:
-                agent_knowledge_context = extract_knowledge_context(
+                self.agent_knowledge_context = extract_knowledge_context(
                     agent_knowledge_snippets
                 )
-                if agent_knowledge_context:
-                    task_prompt += agent_knowledge_context
+                if self.agent_knowledge_context:
+                    task_prompt += self.agent_knowledge_context
 
         if self.crew:
-            knowledge_snippets = self.crew.query_knowledge([task.prompt()])
+            knowledge_snippets = self.crew.query_knowledge(
+                [task.prompt()], **knowledge_config
+            )
             if knowledge_snippets:
-                crew_knowledge_context = extract_knowledge_context(knowledge_snippets)
-                if crew_knowledge_context:
-                    task_prompt += crew_knowledge_context
+                self.crew_knowledge_context = extract_knowledge_context(
+                    knowledge_snippets
+                )
+                if self.crew_knowledge_context:
+                    task_prompt += self.crew_knowledge_context
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)

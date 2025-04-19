@@ -19,6 +19,7 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
@@ -154,6 +155,10 @@ class BaseAgent(ABC, BaseModel):
     )
     adapted_agent: bool = Field(
         default=False, description="Whether the agent is adapted"
+    )
+    knowledge_config: Optional[KnowledgeConfig] = Field(
+        default=None,
+        description="Knowledge configuration for the agent such as limits and threshold",
     )
 
     @model_validator(mode="before")

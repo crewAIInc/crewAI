@@ -42,6 +42,16 @@ CrewAI supports various types of knowledge sources out of the box:
 | `collection_name`          | **str**                              | No       | Name of the collection where the knowledge will be stored. Used to identify different sets of knowledge. Defaults to "knowledge" if not provided.     |
 | `storage`                  | **Optional[KnowledgeStorage]**       | No       | Custom storage configuration for managing how the knowledge is stored and retrieved. If not provided, a default storage will be created.              |
 
+
+<Tip>
+Unlike retrieval from a vector database using a tool, agents preloaded with knowledge will not need a retrieval persona or task.
+Simply add the relevant knowledge sources your agent or crew needs to function.
+
+Knowledge sources can be added at the agent or crew level.
+Crew level knowledge sources will be used by **all agents** in the crew.
+Agent level knowledge sources will be used by the **specific agent** that is preloaded with the knowledge.
+</Tip>
+
 ## Quickstart Example
 
 <Tip>
@@ -145,6 +155,26 @@ result = crew.kickoff(
     }
 )
 ```
+
+## Knowledge Configuration
+
+You can configure the knowledge configuration for the crew or agent.
+
+```python Code
+from crewai.knowledge.knowledge_config import KnowledgeConfig
+
+knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
+
+agent = Agent(
+    ...
+    knowledge_config=knowledge_config
+)
+```
+
+<Tip>
+  `results_limit`: is the number of relevant documents to return. Default is 3.
+  `score_threshold`: is the minimum score for a document to be considered relevant. Default is 0.35.
+</Tip>
 
 ## More Examples
 
