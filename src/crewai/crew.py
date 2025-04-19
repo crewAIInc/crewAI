@@ -720,8 +720,13 @@ class Crew(BaseModel):
     def _handle_crew_planning(self):
         """Handles the Crew planning."""
         self._logger.log("info", "Planning the crew execution")
+        
+        agent_llm = self.agents[0].llm if self.agents and hasattr(self.agents[0], 'llm') else None
+        
         result = CrewPlanner(
-            tasks=self.tasks, planning_agent_llm=self.planning_llm
+            tasks=self.tasks, 
+            planning_agent_llm=self.planning_llm,
+            agent_llm=agent_llm
         )._handle_crew_planning()
 
         for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):

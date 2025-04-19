@@ -28,11 +28,22 @@ class PlannerTaskPydanticOutput(BaseModel):
 
 class CrewPlanner:
     """Plans and coordinates the execution of crew tasks."""
-    def __init__(self, tasks: List[Task], planning_agent_llm: Optional[Any] = None):
+    def __init__(self, tasks: List[Task], planning_agent_llm: Optional[Any] = None, agent_llm: Optional[Any] = None):
         self.tasks = tasks
 
         if planning_agent_llm is None:
-            self.planning_agent_llm = "gpt-4o-mini"
+            if agent_llm is not None and hasattr(agent_llm, "base_url") and agent_llm.base_url is not None:
+                from crewai.llm import LLM
+                self.planning_agent_llm = LLM(
+                    model="gpt-4o-mini",
+                    base_url=agent_llm.base_url,
+                    api_key=getattr(agent_llm, "api_key", None),
+                    organization=getattr(agent_llm, "organization", None),
+                    api_version=getattr(agent_llm, "api_version", None),
+                    extra_headers=getattr(agent_llm, "extra_headers", None)
+                )
+            else:
+                self.planning_agent_llm = "gpt-4o-mini"
         else:
             self.planning_agent_llm = planning_agent_llm
 
