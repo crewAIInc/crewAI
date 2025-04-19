@@ -253,16 +253,17 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
-gemini_models_2_0 = [
-    "gemini/gemini-2.0-flash-thinking-exp-01-21",
-    "gemini/gemini-2.0-flash-001",
-    "gemini/gemini-2.0-flash-lite-001",
-    "gemini/gemini-2.5-flash-preview-04-17",
-    "gemini/gemini-2.5-pro-exp-03-25",
-]
-
-
-@pytest.mark.parametrize("model", gemini_models_2_0)
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.parametrize(
+    "model",
+    [
+        "gemini/gemini-2.0-flash-thinking-exp-01-21",
+        "gemini/gemini-2.0-flash-001",
+        "gemini/gemini-2.0-flash-lite-001",
+        "gemini/gemini-2.5-flash-preview-04-17",
+        "gemini/gemini-2.5-pro-exp-03-25",
+    ],
+)
 def test_gemini_models(model):
     llm = LLM(model=model)
     result = llm.call("What is the capital of France?")
@@ -270,15 +271,16 @@ def test_gemini_models(model):
     assert "Paris" in result
 
 
-gemma3_models = [
-    "gemini/gemma-3-1b-it",
-    "gemini/gemma-3-4b-it",
-    "gemini/gemma-3-12b-it",
-    "gemini/gemma-3-27b-it",
-]
-
-
-@pytest.mark.parametrize("model", gemma3_models)
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.parametrize(
+    "model",
+    [
+        "gemini/gemma-3-1b-it",
+        "gemini/gemma-3-4b-it",
+        "gemini/gemma-3-12b-it",
+        "gemini/gemma-3-27b-it",
+    ],
+)
 def test_gemma3(model):
     llm = LLM(model=model)
     result = llm.call("What is the capital of France?")
@@ -286,10 +288,10 @@ def test_gemma3(model):
     assert "Paris" in result
 
 
-gpt_models_4_1 = ["gpt-4.1", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"]
-
-
-@pytest.mark.parametrize("model", gpt_models_4_1)
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.parametrize(
+    "model", ["gpt-4.1", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"]
+)
 def test_gpt_4_1(model):
     llm = LLM(model=model)
     result = llm.call("What is the capital of France?")
