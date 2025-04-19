@@ -122,7 +122,7 @@ To get started with CrewAI, follow these simple steps:
 
 ### 1. Installation
 
-Ensure you have Python >=3.10 <3.13 installed on your system. CrewAI uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+Ensure you have Python >=3.10 <3.12 installed on your system. CrewAI uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
 
 First, install CrewAI:
 
@@ -147,7 +147,9 @@ If you encounter issues during installation or usage, here are some common solut
    - If using embedchain or other tools: `pip install 'crewai[tools]'`
 
 2. **Failed building wheel for tiktoken**
-   - Ensure Rust compiler is installed (see installation steps above)
+   - For mac:
+     - Ensure Rust compiler is installed before installing tiktoken: `brew install rust && pip install tiktoken`
+     - Ensure that your python is version is not 3.13 (otherwise, you will get the error `error: the configured Python interpreter version (3.13) is newer than PyO3's maximum supported version (3.12)` when installing tiktoken
    - For Windows: Verify Visual C++ Build Tools are installed
    - Try upgrading pip: `pip install --upgrade pip`
    - If issues persist, use a pre-built wheel: `pip install tiktoken --prefer-binary`
