@@ -4,9 +4,12 @@ import os
 import sys
 import threading
 import warnings
+from collections import defaultdict
 from contextlib import contextmanager
+from types import SimpleNamespace
 from typing import (
     Any,
+    DefaultDict,
     Dict,
     List,
     Literal,
@@ -18,7 +21,8 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from litellm.types.utils import ChatCompletionDeltaToolCall
+from pydantic import BaseModel, Field
 
 from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
@@ -40,6 +44,7 @@ with warnings.catch_warnings():
     from litellm.utils import supports_response_schema
 
 
+from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -114,6 +119,60 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "Llama-3.2-11B-Vision-Instruct": 16384,
     "Meta-Llama-3.2-3B-Instruct": 4096,
     "Meta-Llama-3.2-1B-Instruct": 16384,
+    # bedrock
+    "us.amazon.nova-pro-v1:0": 300000,
+    "us.amazon.nova-micro-v1:0": 128000,
+    "us.amazon.nova-lite-v1:0": 300000,
+    "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
+    "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "us.anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
+    "us.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "us.anthropic.claude-3-opus-20240229-v1:0": 200000,
+    "us.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "us.meta.llama3-2-11b-instruct-v1:0": 128000,
+    "us.meta.llama3-2-3b-instruct-v1:0": 131000,
+    "us.meta.llama3-2-90b-instruct-v1:0": 128000,
+    "us.meta.llama3-2-1b-instruct-v1:0": 131000,
+    "us.meta.llama3-1-8b-instruct-v1:0": 128000,
+    "us.meta.llama3-1-70b-instruct-v1:0": 128000,
+    "us.meta.llama3-3-70b-instruct-v1:0": 128000,
+    "us.meta.llama3-1-405b-instruct-v1:0": 128000,
+    "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
+    "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
+    "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "amazon.nova-pro-v1:0": 300000,
+    "amazon.nova-micro-v1:0": 128000,
+    "amazon.nova-lite-v1:0": 300000,
+    "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
+    "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
+    "anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "anthropic.claude-3-opus-20240229-v1:0": 200000,
+    "anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "anthropic.claude-v2:1": 200000,
+    "anthropic.claude-v2": 100000,
+    "anthropic.claude-instant-v1": 100000,
+    "meta.llama3-1-405b-instruct-v1:0": 128000,
+    "meta.llama3-1-70b-instruct-v1:0": 128000,
+    "meta.llama3-1-8b-instruct-v1:0": 128000,
+    "meta.llama3-70b-instruct-v1:0": 8000,
+    "meta.llama3-8b-instruct-v1:0": 8000,
+    "amazon.titan-text-lite-v1": 4000,
+    "amazon.titan-text-express-v1": 8000,
+    "cohere.command-text-v14": 4000,
+    "ai21.j2-mid-v1": 8191,
+    "ai21.j2-ultra-v1": 8191,
+    "ai21.jamba-instruct-v1:0": 256000,
+    "mistral.mistral-7b-instruct-v0:2": 32000,
+    "mistral.mixtral-8x7b-instruct-v0:1": 32000,
     # mistral
     "mistral-tiny": 32768,
     "mistral-small-latest": 32768,
@@ -164,7 +223,16 @@ class StreamingChoices(TypedDict):
     finish_reason: Optional[str]
 
 
-class LLM:
+class FunctionArgs(BaseModel):
+    name: str = ""
+    arguments: str = ""
+
+
+class AccumulatedToolArgs(BaseModel):
+    function: FunctionArgs = Field(default_factory=FunctionArgs)
+
+
+class LLM(BaseLLM):
     def __init__(
         self,
         model: str,
@@ -316,6 +384,11 @@ class LLM:
         last_chunk = None
         chunk_count = 0
         usage_info = None
+        tool_calls = None
+
+        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs] = defaultdict(
+            AccumulatedToolArgs
+        )
 
         # --- 2) Make sure stream is set to True and include usage metrics
         params["stream"] = True
@@ -373,6 +446,20 @@ class LLM:
                             if chunk_content is None and isinstance(delta, dict):
                                 # Some models might send empty content chunks
                                 chunk_content = ""
+
+                            # Enable tool calls using streaming
+                            if "tool_calls" in delta:
+                                tool_calls = delta["tool_calls"]
+
+                                if tool_calls:
+                                    result = self._handle_streaming_tool_calls(
+                                        tool_calls=tool_calls,
+                                        accumulated_tool_args=accumulated_tool_args,
+                                        available_functions=available_functions,
+                                    )
+                                    if result is not None:
+                                        chunk_content = result
+
                 except Exception as e:
                     logging.debug(f"Error extracting content from chunk: {e}")
                     logging.debug(f"Chunk format: {type(chunk)}, content: {chunk}")
@@ -387,7 +474,6 @@ class LLM:
                         self,
                         event=LLMStreamChunkEvent(chunk=chunk_content),
                     )
-
             # --- 4) Fallback to non-streaming if no content received
             if not full_response.strip() and chunk_count == 0:
                 logging.warning(
@@ -446,7 +532,7 @@ class LLM:
                         )
 
             # --- 6) If still empty, raise an error instead of using a default response
-            if not full_response.strip():
+            if not full_response.strip() and len(accumulated_tool_args) == 0:
                 raise Exception(
                     "No content received from streaming response. Received empty chunks or failed to extract content."
                 )
@@ -478,8 +564,8 @@ class LLM:
                                 tool_calls = getattr(message, "tool_calls")
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
-
             # --- 8) If no tool calls or no available functions, return the text response directly
+
             if not tool_calls or not available_functions:
                 # Log token usage if available in streaming mode
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
@@ -512,6 +598,47 @@ class LLM:
                 event=LLMCallFailedEvent(error=str(e)),
             )
             raise Exception(f"Failed to get streaming response: {str(e)}")
+
+    def _handle_streaming_tool_calls(
+        self,
+        tool_calls: List[ChatCompletionDeltaToolCall],
+        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs],
+        available_functions: Optional[Dict[str, Any]] = None,
+    ) -> None | str:
+        for tool_call in tool_calls:
+            current_tool_accumulator = accumulated_tool_args[tool_call.index]
+
+            if tool_call.function.name:
+                current_tool_accumulator.function.name = tool_call.function.name
+
+            if tool_call.function.arguments:
+                current_tool_accumulator.function.arguments += (
+                    tool_call.function.arguments
+                )
+
+            crewai_event_bus.emit(
+                self,
+                event=LLMStreamChunkEvent(
+                    tool_call=tool_call.to_dict(),
+                    chunk=tool_call.function.arguments,
+                ),
+            )
+
+            if (
+                current_tool_accumulator.function.name
+                and current_tool_accumulator.function.arguments
+                and available_functions
+            ):
+                try:
+                    json.loads(current_tool_accumulator.function.arguments)
+
+                    return self._handle_tool_call(
+                        [current_tool_accumulator],
+                        available_functions,
+                    )
+                except json.JSONDecodeError:
+                    continue
+        return None
 
     def _handle_streaming_callbacks(
         self,
@@ -652,15 +779,6 @@ class LLM:
                     function_name, lambda: None
                 )  # Ensure fn is always a callable
                 logging.error(f"Error executing function '{function_name}': {e}")
-                crewai_event_bus.emit(
-                    self,
-                    event=ToolExecutionErrorEvent(
-                        tool_name=function_name,
-                        tool_args=function_args,
-                        tool_class=fn,
-                        error=str(e),
-                    ),
-                )
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),

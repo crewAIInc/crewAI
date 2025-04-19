@@ -18,9 +18,6 @@ class MockAgent(BaseAgent):
 
     def create_agent_executor(self, tools=None) -> None: ...
 
-    def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
-        return []
-
     def get_delegation_tools(self, agents: List["BaseAgent"]): ...
 
     def get_output_converter(

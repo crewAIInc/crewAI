@@ -87,15 +87,20 @@ Follow the steps below to get Crewing! 🚣‍♂️
     from crewai import Agent, Crew, Process, Task
     from crewai.project import CrewBase, agent, crew, task
     from crewai_tools import SerperDevTool
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from typing import List
 
     @CrewBase
     class LatestAiDevelopmentCrew():
       """LatestAiDevelopment crew"""
 
+      agents: List[BaseAgent]
+      tasks: List[Task]
+
       @agent
       def researcher(self) -> Agent:
         return Agent(
-          config=self.agents_config['researcher'],
+          config=self.agents_config['researcher'], # type: ignore[index]
           verbose=True,
           tools=[SerperDevTool()]
         )
@@ -103,20 +108,20 @@ Follow the steps below to get Crewing! 🚣‍♂️
       @agent
       def reporting_analyst(self) -> Agent:
         return Agent(
-          config=self.agents_config['reporting_analyst'],
+          config=self.agents_config['reporting_analyst'], # type: ignore[index]
           verbose=True
         )
 
       @task
       def research_task(self) -> Task:
         return Task(
-          config=self.tasks_config['research_task'],
+          config=self.tasks_config['research_task'], # type: ignore[index]
         )
 
       @task
       def reporting_task(self) -> Task:
         return Task(
-          config=self.tasks_config['reporting_task'],
+          config=self.tasks_config['reporting_task'], # type: ignore[index]
           output_file='output/report.md' # This is the file that will be contain the final report.
         )
 
@@ -200,6 +205,22 @@ Follow the steps below to get Crewing! 🚣‍♂️
         ```
       </CodeGroup>
   </Step>
+
+  <Step title="Enterprise Alternative: Create in Crew Studio">
+  For CrewAI Enterprise users, you can create the same crew without writing code:
+
+  1. Log in to your CrewAI Enterprise account (create a free account at [app.crewai.com](https://app.crewai.com))
+  2. Open Crew Studio
+  3. Type what is the automation you're tryign to build
+  4. Create your tasks visually and connect them in sequence
+  5. Configure your inputs and click "Download Code" or "Deploy"
+
+  ![Crew Studio Quickstart](../images/enterprise/crew-studio-quickstart.png)
+
+  <Card title="Try CrewAI Enterprise" icon="rocket" href="https://app.crewai.com">
+    Start your free account at CrewAI Enterprise
+  </Card>
+  </Step>
   <Step title="View your final report">
   You should see the output in the console and the `report.md` file should be created in the root of your project with the final report.
 
@@ -271,7 +292,7 @@ Follow the steps below to get Crewing! 🚣‍♂️
 </Steps>
 
 <Check>
-Congratulations! 
+Congratulations!
 
 You have successfully set up your crew project and are ready to start building your own agentic workflows!
 </Check>
@@ -300,7 +321,7 @@ email_summarizer:
 ```
 
 <Tip>
-  Note how we use the same name for the agent in the `tasks.yaml` (`email_summarizer_task`) file as the method name in the `crew.py` (`email_summarizer_task`) file.
+  Note how we use the same name for the task in the `tasks.yaml` (`email_summarizer_task`) file as the method name in the `crew.py` (`email_summarizer_task`) file.
 </Tip>
 
 ```yaml tasks.yaml
