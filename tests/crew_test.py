@@ -3,17 +3,17 @@
 import hashlib
 import json
 import os
+import sys
 import tempfile
 from concurrent.futures import Future
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pydantic_core
 import pytest
 
 from crewai.agent import Agent
 from crewai.agents import CacheHandler
-from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
@@ -2153,7 +2153,6 @@ def test_tools_with_custom_caching():
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
     ) as add_to_cache:
-
         result = crew.kickoff()
 
         # Check that add_to_cache was called exactly twice
@@ -4339,3 +4338,48 @@ def test_crew_copy_with_memory():
             raise e  # Re-raise other validation errors
     except Exception as e:
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
+
+
+@patch.dict(os.environ, {}, clear=True)  # Ensure AGENTOPS_API_KEY is not set
+@patch("sys.modules")
+def test_crew_kickoff_with_agentops_installed_no_key(mock_sys_modules):
+    """
+    Test that crew kickoff does not raise an error if agentops is installed
+    but the AGENTOPS_API_KEY environment variable is not set.
+    This simulates the scenario described in issue #2601.
+    """
+    mock_agentops = MagicMock()
+    mock_sys_modules["agentops"] = mock_agentops
+
+    listener_module_name = "crewai.utilities.events.third_party.agentops_listener"
+    if listener_module_name in sys.modules:
+        del sys.modules[listener_module_name]
+
+    import importlib
+
+    agentops_listener_module = importlib.import_module(listener_module_name)  # noqa: F841 - Used for side effects (registration)
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.invoke = Mock(return_value="Task completed.")
+    mock_llm.tokens_usage = []  # Mock token usage tracking if needed
+
+    test_agent = Agent(role="tester", goal="test", backstory="testing", llm=mock_llm)
+    test_task = Task(
+        description="test task", expected_output="tested", agent=test_agent
+    )
+
+    # Create the crew
+    crew = Crew(agents=[test_agent], tasks=[test_task])
+
+    try:
+        crew.kickoff()
+    except Exception as e:
+        if "agentops" in str(type(e)).lower() or "api key" in str(e).lower():
+            pytest.fail(f"Crew kickoff raised an unexpected AgentOps exception: {e}")
+
+    mock_agentops.init.assert_not_called()
+
+    if "agentops" in sys.modules:
+        del sys.modules["agentops"]
+    if listener_module_name in sys.modules:
+        del sys.modules[listener_module_name]
