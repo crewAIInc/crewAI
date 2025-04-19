@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 from crewai import Task
 from crewai.utilities.planning_handler import CrewPlanner
 
+
 def test_planning_llm_inherits_auth_params():
     """Test that planning LLM inherits authentication parameters from agent LLM."""
     mock_llm = MagicMock()
