@@ -132,7 +132,7 @@ class Mem0Storage(Storage):
         return agents
 
     def _get_config(self) -> Dict[str, Any]:
-        return self.config or getattr(self, "memory_config", {}).get("config", {}) or {}
+        return getattr(self, "config", {}).get("config", {}) or getattr(self, "memory_config", {}).get("config", {}) or {}
 
     def reset(self):
         if self.memory:
