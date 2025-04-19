@@ -29,7 +29,14 @@ class InternalInstructor:
             import instructor
             from litellm import completion
 
-            self._client = instructor.from_litellm(completion)
+            is_custom_openai = getattr(self.llm, 'model', '').startswith('custom_openai/')
+
+            mode = instructor.Mode.PARALLEL_TOOLS if is_custom_openai else instructor.Mode.TOOLS
+
+            self._client = instructor.from_litellm(
+                completion,
+                mode=mode,
+            )
 
     def to_json(self):
         model = self.to_pydantic()
@@ -40,4 +47,8 @@ class InternalInstructor:
         model = self._client.chat.completions.create(
             model=self.llm.model, response_model=self.model, messages=messages
         )
+        
+        if isinstance(model, list) and len(model) > 0:
+            return model[0]  # Return the first model from the list
+            
         return model
