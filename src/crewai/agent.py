@@ -196,9 +196,11 @@ class Agent(BaseAgent):
         else:
             # For any other type, attempt to extract relevant attributes
             llm_params = {
-                "model": getattr(self.llm, "model_name", None)
-                or getattr(self.llm, "deployment_name", None)
-                or str(self.llm),
+                "model": self._normalize_model_name(
+                    getattr(self.llm, "model_name", None)
+                    or getattr(self.llm, "deployment_name", None)
+                    or str(self.llm)
+                ),
                 "temperature": getattr(self.llm, "temperature", None),
                 "max_tokens": getattr(self.llm, "max_tokens", None),
                 "logprobs": getattr(self.llm, "logprobs", None),
@@ -533,6 +535,15 @@ class Agent(BaseAgent):
     @staticmethod
     def __tools_names(tools) -> str:
         return ", ".join([t.name for t in tools])
+
+    def _normalize_model_name(self, model_name):
+        """
+        Normalize the model name by removing any 'models/' prefix.
+        This fixes the issue with ChatGoogleGenerativeAI and potentially other LLM providers.
+        """
+        if model_name and isinstance(model_name, str) and model_name.startswith("models/"):
+            return model_name[7:]  # Remove "models/" prefix
+        return model_name
 
     def __repr__(self):
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
