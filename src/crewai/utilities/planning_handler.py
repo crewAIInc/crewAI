@@ -43,7 +43,8 @@ class CrewPlanner:
                     extra_headers=getattr(agent_llm, "extra_headers", None)
                 )
             else:
-                self.planning_agent_llm = "gpt-4o-mini"
+                from crewai.llm import LLM
+                self.planning_agent_llm = LLM(model="gpt-4o-mini")
         else:
             self.planning_agent_llm = planning_agent_llm
 
