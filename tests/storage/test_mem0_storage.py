@@ -15,6 +15,7 @@ from crewai.task import Task
 class MockCrew:
     def __init__(self, memory_config):
         self.memory_config = memory_config
+        self.agents = [MagicMock(role="Test Agent")]
 
 
 @pytest.fixture
@@ -107,11 +108,13 @@ def mem0_storage_with_memory_client_using_config_from_crew(mock_mem0_memory_clie
 
 
 @pytest.fixture
-def mem0_storage_with_memory_client_using_explictly_config(mock_mem0_memory_client):
+def mem0_storage_with_memory_client_using_explictly_config(mock_mem0_memory_client, mock_mem0_memory):
     """Fixture to create a Mem0Storage instance with mocked dependencies"""
 
-    # We need to patch the MemoryClient before it's instantiated
-    with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client):
+    # We need to patch both MemoryClient and Memory to prevent actual initialization
+    with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client), \
+         patch.object(Memory, "__new__", return_value=mock_mem0_memory):
+
         crew = MockCrew(
             memory_config={
                 "provider": "mem0",
@@ -154,4 +157,92 @@ def test_mem0_storage_with_explict_config(
     assert (
         mem0_storage_with_memory_client_using_explictly_config.memory_config
         == expected_config
+    )
+
+
+def test_save_method(mem0_storage_with_mocked_config):
+    """Test save method for different memory types"""
+    mem0_storage, _, _ = mem0_storage_with_mocked_config
+    mem0_storage.memory.add = MagicMock()
+    
+    # Test short_term memory type (already set in fixture)
+    test_value = "This is a test memory"
+    test_metadata = {"key": "value"}
+    
+    mem0_storage.save(test_value, test_metadata)
+    
+    mem0_storage.memory.add.assert_called_once_with(
+        test_value,
+        agent_id="Test_Agent",
+        infer=False,
+        metadata={"type": "short_term", "key": "value"},
+        output_format="v1.1"
+    )
+
+    # Reset mock and test long_term memory type
+    mem0_storage.memory.add.reset_mock()
+    mem0_storage.memory_type = "long_term"
+
+    mem0_storage.save(test_value, test_metadata)
+
+    mem0_storage.memory.add.assert_called_once_with(
+        test_value,
+        agent_id="Test_Agent",
+        infer=False,
+        metadata={"type": "long_term", "key": "value"},
+        output_format="v1.1"
+    )
+
+
+def test_search_method(mem0_storage_with_mocked_config):
+    """Test search method for different memory types"""
+    mem0_storage, _, _ = mem0_storage_with_mocked_config
+    mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
+    mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+    # Test short_term memory type (already set in fixture)
+    results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+    mem0_storage.memory.search.assert_called_once_with(
+        query="test query", 
+        limit=5, 
+        agent_id="Test_Agent", 
+        metadata={"type": "short_term"},
+        output_format="v1.1",
+        user_id="test_user"
+    )
+
+    # Only one result should remain after filtering by score_threshold
+    assert len(results) == 1
+    assert results[0]["content"] == "Result 1"
+
+    # Reset mock and test long_term memory type
+    mem0_storage.memory.search.reset_mock()
+    mem0_storage.memory_type = "long_term"
+
+    mem0_storage.search("test query", limit=3)
+
+    mem0_storage.memory.search.assert_called_once_with(
+        query="test query", 
+        limit=3, 
+        agent_id="Test_Agent", 
+        metadata={"type": "long_term"},
+        output_format="v1.1",
+        user_id="test_user"
+    )
+
+    # Test with llm attribute (special case)
+    mem0_storage.memory.search.reset_mock()
+    mem0_storage.memory_type = "short_term"
+    # Add llm attribute to memory mock
+    mem0_storage.memory.llm = "fake_llm"
+
+    mem0_storage.search("test query")
+
+    # When llm attribute exists, metadata and output_format should not be passed
+    mem0_storage.memory.search.assert_called_once_with(
+        query="test query", 
+        limit=3, 
+        agent_id="Test_Agent", 
+        user_id="test_user"
     )
