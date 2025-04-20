@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Union
-
+import datetime
 import pytest
+from pydantic import BaseModel
 
 from crewai.utilities.string_utils import interpolate_only
 
@@ -185,3 +186,96 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+        
+    
+    def test_container_types_list_access(self):
+        """Test accessing list items with Jinja2 syntax."""
+        template = "First item: {{items[0]}}, Second item: {{items[1]}}"
+        inputs = {
+            "items": ["apple", "banana", "orange"]
+        }
+        
+        result = interpolate_only(template, inputs)
+        assert result == "First item: apple, Second item: banana"
+    
+    def test_container_types_dict_access(self):
+        """Test accessing dictionary items with Jinja2 syntax."""
+        template = "Name: {{person.name}}, Age: {{person.age}}"
+        inputs = {
+            "person": {"name": "John", "age": 30}
+        }
+        
+        result = interpolate_only(template, inputs)
+        assert result == "Name: John, Age: 30"
+    
+    def test_conditional_statements(self):
+        """Test conditional statements with Jinja2 syntax."""
+        template = "{% if priority == 'high' %}URGENT: {% endif %}Task: {task}"
+        
+        inputs_high = {
+            "task": "Fix bug",
+            "priority": "high"
+        }
+        result_high = interpolate_only(template, inputs_high)
+        assert result_high == "URGENT: Task: Fix bug"
+        
+        inputs_low = {
+            "task": "Fix bug",
+            "priority": "low"
+        }
+        result_low = interpolate_only(template, inputs_low)
+        assert result_low == "Task: Fix bug"
+    
+    def test_loop_statements(self):
+        """Test loop statements with Jinja2 syntax."""
+        template = "Items: {% for item in items %}{{item}}{% if not loop.last %}, {% endif %}{% endfor %}"
+        inputs = {
+            "items": ["apple", "banana", "orange"]
+        }
+        
+        result = interpolate_only(template, inputs)
+        assert result == "Items: apple, banana, orange"
+    
+    def test_datetime_formatting(self):
+        """Test datetime formatting with Jinja2 filters."""
+        today = datetime.datetime(2024, 4, 20)
+        inputs = {"today": today}
+        
+        template = "Date: {{today|date}}"
+        result = interpolate_only(template, inputs)
+        assert result == "Date: 2024-04-20"
+        
+        template = "Date: {{today|date('%d/%m/%Y')}}"
+        result = interpolate_only(template, inputs)
+        assert result == "Date: 20/04/2024"
+    
+    def test_custom_objects(self):
+        """Test custom objects with Jinja2 syntax."""
+        class Person(BaseModel):
+            name: str
+            age: int
+            
+            def __str__(self):
+                return f"{self.name} ({self.age})"
+        
+        person = Person(name="John", age=30)
+        inputs = {"person": person}
+        
+        template = "Person: {person}"
+        result = interpolate_only(template, inputs)
+        assert result == "Person: John (30)"
+        
+        template = "Name: {{person.name}}, Age: {{person.age}}"
+        result = interpolate_only(template, inputs)
+        assert result == "Name: John, Age: 30"
+    
+    def test_mixed_syntax(self):
+        """Test mixed CrewAI and Jinja2 syntax."""
+        template = "Hello {name}! Items: {% for item in items %}{{item}}{% if not loop.last %}, {% endif %}{% endfor %}"
+        inputs = {
+            "name": "John",
+            "items": ["apple", "banana", "orange"]
+        }
+        
+        result = interpolate_only(template, inputs)
+        assert result == "Hello John! Items: apple, banana, orange"

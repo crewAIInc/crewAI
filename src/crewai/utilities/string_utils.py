@@ -1,31 +1,38 @@
 import re
 from typing import Any, Dict, List, Optional, Union
+from datetime import datetime
 
+from crewai.utilities.jinja_templating import render_template
 
 def interpolate_only(
     input_string: Optional[str],
-    inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
+    inputs: Dict[str, Any],
 ) -> str:
     """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
     Only interpolates placeholders that follow the pattern {variable_name} where
     variable_name starts with a letter/underscore and contains only letters, numbers, and underscores.
+    
+    This function now supports advanced Jinja2 templating features:
+    - Container types (List, Dict, Set)
+    - Standard objects (datetime, time)
+    - Custom objects
+    - Conditional and loop statements
+    - Filtering options
 
     Args:
         input_string: The string containing template variables to interpolate.
                      Can be None or empty, in which case an empty string is returned.
         inputs: Dictionary mapping template variables to their values.
-               Supported value types are strings, integers, floats, and dicts/lists
-               containing only these types and other nested dicts/lists.
+               Supports all types of values including complex objects.
 
     Returns:
         The interpolated string with all template variables replaced with their values.
         Empty string if input_string is None or empty.
 
     Raises:
-        ValueError: If a value contains unsupported types or a template variable is missing
+        ValueError: If inputs dictionary is empty when interpolating variables.
+        KeyError: If a required template variable is missing from inputs.
     """
-
-    # Validation function for recursive type checking
     def validate_type(value: Any) -> None:
         if value is None:
             return
@@ -35,12 +42,21 @@ def interpolate_only(
             for item in value.values() if isinstance(value, dict) else value:
                 validate_type(item)
             return
+        if isinstance(value, datetime):
+            return
+        # Check if it's a Pydantic model or other known custom type
+        try:
+            from pydantic import BaseModel
+            if isinstance(value, BaseModel):
+                return
+        except ImportError:
+            pass
+            
         raise ValueError(
             f"Unsupported type {type(value).__name__} in inputs. "
-            "Only str, int, float, bool, dict, and list are allowed."
+            "Only str, int, float, bool, dict, list, datetime, and custom objects are allowed."
         )
 
-    # Validate all input values
     for key, value in inputs.items():
         try:
             validate_type(value)
@@ -56,27 +72,35 @@ def interpolate_only(
             "Inputs dictionary cannot be empty when interpolating variables"
         )
 
-    # The regex pattern to find valid variable placeholders
-    # Matches {variable_name} where variable_name starts with a letter/underscore
-    # and contains only letters, numbers, and underscores
-    pattern = r"\{([A-Za-z_][A-Za-z0-9_]*)\}"
+    # Check if the template contains Jinja2 syntax ({% ... %} or {{ ... }})
+    has_jinja_syntax = "{{" in input_string or "{%" in input_string
+    has_complex_indexing = re.search(r"\{([A-Za-z_][A-Za-z0-9_]*)\[[0-9]+\]\}", input_string)
 
-    # Find all matching variables in the input string
-    variables = re.findall(pattern, input_string)
-    result = input_string
+    if has_jinja_syntax or has_complex_indexing:
+        return render_template(input_string, inputs)
+    else:
+        # The regex pattern to find valid variable placeholders
+        # Matches {variable_name} where variable_name starts with a letter/underscore
+        # and contains only letters, numbers, and underscores
+        pattern = r"\{([A-Za-z_][A-Za-z0-9_]*)\}"
 
-    # Check if all variables exist in inputs
-    missing_vars = [var for var in variables if var not in inputs]
-    if missing_vars:
-        raise KeyError(
-            f"Template variable '{missing_vars[0]}' not found in inputs dictionary"
-        )
-
-    # Replace each variable with its value
-    for var in variables:
-        if var in inputs:
-            placeholder = "{" + var + "}"
-            value = str(inputs[var])
-            result = result.replace(placeholder, value)
-
-    return result
+        # Find all matching variables in the input string
+        variables = re.findall(pattern, input_string)
+        
+        # Check if all variables exist in inputs
+        missing_vars = [var for var in variables if var not in inputs]
+        if missing_vars:
+            raise KeyError(
+                f"Template variable '{missing_vars[0]}' not found in inputs dictionary"
+            )
+        
+        try:
+            return render_template(input_string, inputs)
+        except Exception:
+            result = input_string
+            for var in variables:
+                if var in inputs:
+                    placeholder = "{" + var + "}"
+                    value = str(inputs[var])
+                    result = result.replace(placeholder, value)
+            return result

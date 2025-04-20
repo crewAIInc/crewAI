@@ -485,6 +485,19 @@ class Task(BaseModel):
         tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
 
+    def interpolate_inputs(self, inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]]) -> None:
+        """Interpolate inputs into the task description, expected output, and output file path.
+
+        Args:
+            inputs: Dictionary mapping template variables to their values.
+               Supported value types are strings, integers, floats, dicts, lists,
+               and other objects with string representation.
+
+        Raises:
+            ValueError: If a required template variable is missing from inputs.
+        """
+        self.interpolate_inputs_and_add_conversation_history(inputs)
+        
     def interpolate_inputs_and_add_conversation_history(
         self, inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]]
     ) -> None:
@@ -493,7 +506,8 @@ class Task(BaseModel):
 
         Args:
             inputs: Dictionary mapping template variables to their values.
-                   Supported value types are strings, integers, and floats.
+                   Supported value types are strings, integers, floats, dicts, lists,
+                   and other objects with string representation.
 
         Raises:
             ValueError: If a required template variable is missing from inputs.
@@ -508,23 +522,63 @@ class Task(BaseModel):
         if not inputs:
             return
 
-        try:
-            self.description = interpolate_only(
-                input_string=self._original_description, inputs=inputs
-            )
-        except KeyError as e:
-            raise ValueError(
-                f"Missing required template variable '{e.args[0]}' in description"
-            ) from e
-        except ValueError as e:
-            raise ValueError(f"Error interpolating description: {str(e)}") from e
+        # Check for complex indexing patterns like {topics[0]} in the description
+        has_complex_indexing = re.search(r"\{([A-Za-z_][A-Za-z0-9_]*)\[[0-9]+\]\}", self._original_description)
+        
+        if has_complex_indexing:
+            complex_patterns = re.findall(r"\{([A-Za-z_][A-Za-z0-9_]*)\[([0-9]+)\]\}", self._original_description)
+            result = self._original_description
+            
+            for var_name, index in complex_patterns:
+                if var_name in inputs and isinstance(inputs[var_name], list):
+                    try:
+                        idx = int(index)
+                        if 0 <= idx < len(inputs[var_name]):
+                            placeholder = f"{{{var_name}[{index}]}}"
+                            value = str(inputs[var_name][idx])
+                            result = result.replace(placeholder, value)
+                    except (ValueError, IndexError):
+                        pass
+            
+            self.description = result
+        else:
+            try:
+                self.description = interpolate_only(
+                    input_string=self._original_description, inputs=inputs
+                )
+            except KeyError as e:
+                raise ValueError(
+                    f"Missing required template variable '{e.args[0]}' in description"
+                ) from e
+            except ValueError as e:
+                raise ValueError(f"Error interpolating description: {str(e)}") from e
 
-        try:
-            self.expected_output = interpolate_only(
-                input_string=self._original_expected_output, inputs=inputs
-            )
-        except (KeyError, ValueError) as e:
-            raise ValueError(f"Error interpolating expected_output: {str(e)}") from e
+        # Check for complex indexing patterns in the expected output
+        has_complex_indexing = re.search(r"\{([A-Za-z_][A-Za-z0-9_]*)\[[0-9]+\]\}", self._original_expected_output)
+        
+        if has_complex_indexing:
+            complex_patterns = re.findall(r"\{([A-Za-z_][A-Za-z0-9_]*)\[([0-9]+)\]\}", self._original_expected_output)
+            result = self._original_expected_output
+            
+            for var_name, index in complex_patterns:
+                if var_name in inputs and isinstance(inputs[var_name], list):
+                    try:
+                        idx = int(index)
+                        if 0 <= idx < len(inputs[var_name]):
+                            placeholder = f"{{{var_name}[{index}]}}"
+                            value = str(inputs[var_name][idx])
+                            result = result.replace(placeholder, value)
+                    except (ValueError, IndexError):
+                        pass
+            
+            self.expected_output = result
+        else:
+            try:
+                self.expected_output = interpolate_only(
+                    input_string=self._original_expected_output, inputs=inputs
+                )
+            except (KeyError, ValueError) as e:
+                raise ValueError(f"Error interpolating expected_output: {str(e)}") from e
 
         if self.output_file is not None:
             try:
