@@ -76,32 +76,29 @@ def interpolate_only(
     # Check if the template contains Jinja2 syntax ({% ... %} or {{ ... }})
     has_jinja_syntax = "{{" in input_string or "{%" in input_string
     has_complex_indexing = re.search(r"\{([A-Za-z_][A-Za-z0-9_]*)\[[0-9]+\]\}", input_string)
-
+    
     if has_jinja_syntax or has_complex_indexing:
         return render_template(input_string, inputs)
-    else:
-        # The regex pattern to find valid variable placeholders
-        # Matches {variable_name} where variable_name starts with a letter/underscore
-        # and contains only letters, numbers, and underscores
-        pattern = r"\{([A-Za-z_][A-Za-z0-9_]*)\}"
+    
+    # The regex pattern to find valid variable placeholders
+    # Matches {variable_name} where variable_name starts with a letter/underscore
+    # and contains only letters, numbers, and underscores
+    pattern = r"\{([A-Za-z_][A-Za-z0-9_]*)\}"
 
-        # Find all matching variables in the input string
-        variables = re.findall(pattern, input_string)
-        
-        # Check if all variables exist in inputs
-        missing_vars = [var for var in variables if var not in inputs]
-        if missing_vars:
-            raise KeyError(
-                f"Template variable '{missing_vars[0]}' not found in inputs dictionary"
-            )
-        
-        try:
-            return render_template(input_string, inputs)
-        except Exception:
-            result = input_string
-            for var in variables:
-                if var in inputs:
-                    placeholder = "{" + var + "}"
-                    value = str(inputs[var])
-                    result = result.replace(placeholder, value)
-            return result
+    # Find all matching variables in the input string
+    variables = re.findall(pattern, input_string)
+    
+    # Check if all variables exist in inputs
+    missing_vars = [var for var in variables if var not in inputs]
+    if missing_vars:
+        raise KeyError(
+            f"Template variable '{missing_vars[0]}' not found in inputs dictionary"
+        )
+
+    result = input_string
+    for var in variables:
+        if var in inputs:
+            placeholder = "{" + var + "}"
+            value = str(inputs[var])
+            result = result.replace(placeholder, value)
+    return result

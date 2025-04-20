@@ -64,8 +64,24 @@ def render_template(
         
     jinja_template = to_jinja_template(input_string)
     
+    # Create a custom undefined class that allows loop variables
+    class LoopUndefined(jinja2.StrictUndefined):
+        """Custom undefined class that allows loop variables."""
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            
+        def __str__(self):
+            if self._undefined_name in ('loop', 'item', 'topic'):
+                return ''
+            return super().__str__()
+            
+        def __getattr__(self, name):
+            if self._undefined_name in ('loop', 'item', 'topic'):
+                return self
+            return super().__getattr__(name)
+    
     env = jinja2.Environment(
-        undefined=jinja2.StrictUndefined,  # Raise errors for undefined variables
+        undefined=LoopUndefined,  # Use custom undefined class for loop variables
         autoescape=True  # Enable autoescaping for security
     )
     
