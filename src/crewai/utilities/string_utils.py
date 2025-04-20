@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from crewai.utilities.jinja_templating import render_template
 
+
 def interpolate_only(
     input_string: Optional[str],
     inputs: Dict[str, Any],

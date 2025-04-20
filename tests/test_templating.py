@@ -1,9 +1,11 @@
 import datetime
-import pytest
 from typing import Dict, List
+
+import pytest
 
 from crewai.agent import Agent
 from crewai.task import Task
+
 
 class TestTemplating:
     def test_task_interpolation(self):

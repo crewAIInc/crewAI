@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import jinja2
 
+
 def to_jinja_template(input_string: str) -> str:
     """
     Convert CrewAI-style {var} templates to Jinja2-style {{var}} templates.
