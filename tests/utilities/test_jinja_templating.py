@@ -1,7 +1,7 @@
 import datetime
+import pytest
 from typing import Any, Dict, List
 
-import pytest
 from pydantic import BaseModel
 
 from crewai.utilities.jinja_templating import render_template, to_jinja_template

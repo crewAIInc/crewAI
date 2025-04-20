@@ -1,5 +1,4 @@
 import datetime
-
 import pytest
 from typing import Dict, List
 
