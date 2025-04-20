@@ -1,5 +1,6 @@
-from typing import Any, Dict, List, Union
 import datetime
+from typing import Any, Dict, List, Union
+
 import pytest
 from pydantic import BaseModel
 

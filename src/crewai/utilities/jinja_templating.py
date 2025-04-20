@@ -1,7 +1,8 @@
-from typing import Any, Dict, List, Optional, Union
-import jinja2
-import re
 from datetime import datetime
+import re
+from typing import Any, Dict, List, Optional, Union
+
+import jinja2
 
 def to_jinja_template(input_string: str) -> str:
     """
@@ -64,6 +65,7 @@ def render_template(
     
     env = jinja2.Environment(
         undefined=jinja2.StrictUndefined,  # Raise errors for undefined variables
+        autoescape=True  # Enable autoescaping for security
     )
     
     env.filters['date'] = lambda d, format='%Y-%m-%d': d.strftime(format) if isinstance(d, datetime) else str(d)

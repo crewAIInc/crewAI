@@ -1,6 +1,8 @@
-import pytest
 import datetime
+
+import pytest
 from typing import Dict, List
+
 from crewai.agent import Agent
 from crewai.task import Task
 

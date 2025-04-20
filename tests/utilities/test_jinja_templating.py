@@ -1,8 +1,10 @@
-import pytest
 import datetime
+from typing import Any, Dict, List
+
+import pytest
 from pydantic import BaseModel
-from typing import List, Dict, Any
-from crewai.utilities.jinja_templating import to_jinja_template, render_template
+
+from crewai.utilities.jinja_templating import render_template, to_jinja_template
 
 class Person(BaseModel):
     name: str

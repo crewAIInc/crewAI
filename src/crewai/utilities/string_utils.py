@@ -1,6 +1,6 @@
 import re
-from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
 
 from crewai.utilities.jinja_templating import render_template
 

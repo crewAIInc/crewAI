@@ -533,9 +533,10 @@ class Task(BaseModel):
                 if var_name in inputs and isinstance(inputs[var_name], list):
                     try:
                         idx = int(index)
-                        if 0 <= idx < len(inputs[var_name]):
+                        list_value = inputs[var_name]
+                        if isinstance(list_value, list) and 0 <= idx < len(list_value):
                             placeholder = f"{{{var_name}[{index}]}}"
-                            value = str(inputs[var_name][idx])
+                            value = str(list_value[idx])
                             result = result.replace(placeholder, value)
                     except (ValueError, IndexError):
                         pass
@@ -564,9 +565,10 @@ class Task(BaseModel):
                 if var_name in inputs and isinstance(inputs[var_name], list):
                     try:
                         idx = int(index)
-                        if 0 <= idx < len(inputs[var_name]):
+                        list_value = inputs[var_name]
+                        if isinstance(list_value, list) and 0 <= idx < len(list_value):
                             placeholder = f"{{{var_name}[{index}]}}"
-                            value = str(inputs[var_name][idx])
+                            value = str(list_value[idx])
                             result = result.replace(placeholder, value)
                     except (ValueError, IndexError):
                         pass
