@@ -11,7 +11,8 @@ class GuardrailTask:
 
     This class generates and executes Python code to validate task outputs based on
     specified criteria. It uses an LLM to generate the validation code and provides
-    safety guardrails for code execution.
+    safety guardrails for code execution. The code is executed in a Docker container
+    if available, otherwise it is executed in the current environment.
 
     Args:
         description (str): The description of the validation criteria.
@@ -28,11 +29,9 @@ class GuardrailTask:
         description: str,
         task: Task | None = None,
         llm: LLM | None = None,
-        unsafe_mode: bool = False,
         additional_instructions: str = "",
     ):
         self.description = description
-        self.unsafe_mode: bool = unsafe_mode
 
         fallback_llm: LLM | None = (
             task.agent.llm
@@ -138,7 +137,10 @@ class GuardrailTask:
         from crewai_tools import CodeInterpreterTool
 
         code = self.generate_code(task_output)
-        result = CodeInterpreterTool(code=code, unsafe_mode=self.unsafe_mode).run()
+
+        unsafe_mode = not self.check_docker_available()
+
+        result = CodeInterpreterTool(code=code, unsafe_mode=unsafe_mode).run()
 
         error_messages = [
             "Something went wrong while running the code",
@@ -152,3 +154,12 @@ class GuardrailTask:
             result = ast.literal_eval(result)
 
         return result
+
+    def check_docker_available(self) -> bool:
+        import subprocess
+
+        try:
+            subprocess.run(["docker", "--version"], check=True)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return False

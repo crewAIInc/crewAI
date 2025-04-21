@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 import pytest
 
@@ -319,3 +319,45 @@ def test_guardrail_emits_events(sample_agent):
         ]
         assert started_guardrail == expected_started_events
         assert completed_guardrail == expected_completed_events
+
+
+def test_guardrail_task_when_docker_is_not_available(mock_llm, task_output):
+    guardrail = GuardrailTask(description="Test validation", llm=mock_llm)
+    with (
+        patch(
+            "crewai_tools.CodeInterpreterTool.__init__", return_value=None
+        ) as mock_init,
+        patch(
+            "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
+        ) as mock_run,
+        patch(
+            "subprocess.run",
+            side_effect=FileNotFoundError,
+        ),
+    ):
+        mock_init.return_value = None
+        mock_run.return_value = (True, "Valid output")
+        guardrail(task_output)
+
+    mock_init.assert_called_once_with(code=ANY, unsafe_mode=True)
+
+
+def test_guardrail_task_when_docker_is_available(mock_llm, task_output):
+    guardrail = GuardrailTask(description="Test validation", llm=mock_llm)
+    with (
+        patch(
+            "crewai_tools.CodeInterpreterTool.__init__", return_value=None
+        ) as mock_init,
+        patch(
+            "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
+        ) as mock_run,
+        patch(
+            "subprocess.run",
+            return_value=True,
+        ),
+    ):
+        mock_init.return_value = None
+        mock_run.return_value = (True, "Valid output")
+        guardrail(task_output)
+
+    mock_init.assert_called_once_with(code=ANY, unsafe_mode=False)
