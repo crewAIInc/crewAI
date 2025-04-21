@@ -322,6 +322,14 @@ blog_task = Task(
    - On success: it returns a tuple of `(bool, Any)`. For example: `(True, validated_result)` 
    - On Failure: it returns a tuple of `(bool, str)`. For example: `(False, "Error message explain the failure")`
 
+### GuardrailTask
+
+The `GuardrailTask` class provides a sophisticated way to generate and execute validation code for task outputs. Here's how it works:
+
+#### Code Execution
+
+The generated code can be executed in two ways: Docker container (Default, Recommended) or current environment (unsafe mode)
+
 ### Error Handling Best Practices
 
 1. **Structured Error Responses**:
@@ -750,6 +758,8 @@ Task guardrails provide a powerful way to validate, transform, or filter task ou
 
 ### Basic Usage
 
+#### Define your own logic to validate
+
 ```python Code
 from typing import Tuple, Union
 from crewai import Task
@@ -766,6 +776,34 @@ task = Task(
     description="Generate JSON data",
     expected_output="Valid JSON object",
     guardrail=validate_json_output
+)
+```
+
+#### Leverage a no-code approach for validation
+
+```python Code
+from crewai import Task
+
+task = Task(
+    description="Generate JSON data",
+    expected_output="Valid JSON object",
+    guardrail="Ensure the response is a valid JSON object"
+)
+```
+
+#### Use custom models for code generation
+
+```python Code
+from crewai import Task
+from crewai.llm import LLM
+
+task = Task(
+    description="Generate JSON data",
+    expected_output="Valid JSON object",
+    guardrail=GuardrailTask(
+        description="Ensure the response is a valid JSON object",
+        llm=LLM(model="gpt-4o-mini"),
+    )
 )
 ```
 

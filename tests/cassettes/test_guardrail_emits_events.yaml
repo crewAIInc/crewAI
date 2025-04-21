@@ -1,0 +1,307 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Test task\n\nThis
+      is the expected criteria for your final answer: Output\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nBegin! This is
+      VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '807'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9.xrptc4Zx5NtXl.2MzDRi3N1u8YVt6tNHmSwFyx94A-1745272605-1.0.1.1-v3SFlNedUJ2GFxpW0cts207UyNYzhzfJLBW4o_D8D1t15aRi1Bfh8TEkoVN8JQQdIgDqze4xz4.o3yDgegWJrUGzKroLzXP0VeCDkmLibTc;
+        _cfuvid=e_MIZNumotQmvbprZ3okpLcxs_RLI2Yb_jiAh0fYHT8-1745272605039-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      CF-RAY:
+      - 93402298d9980110-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 21 Apr 2025 21:57:12 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '6385'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999832'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_2a19c29e1e9dd766289937937418044a
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Test task\n\nThis
+      is the expected criteria for your final answer: Output\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nThis is the context
+      you''re working with:\n### Previous attempt failed validation: bad result\n\n\n###
+      Previous result:\nAs a Test Agent, I have been tasked with providing a complete
+      response that meets the expected criteria for output. Therefore, here is the
+      full content without summarization, detailed as required.\n\nIn the realm of
+      testing, particularly software testing, several critical components come into
+      play. The fundamental types of testing include but are not limited to:\n\n1.
+      **Unit Testing**: This is the initial phase where individual components or modules
+      of the software are tested in isolation. Unit tests help ensure that each part
+      of the program functions correctly on its own, which aids in catching bugs early
+      in the development process.\n\n2. **Integration Testing**: After unit testing,
+      integration testing follows. This phase focuses on verifying the interaction
+      between various components or systems and ensuring that they work together as
+      intended.\n\n3. **System Testing**: Once the integrated components have been
+      tested, system testing involves validating the complete and fully integrated
+      software product. This ensures that it meets the specified requirements and
+      works as expected in a real-world environment.\n\n4. **Acceptance Testing**:
+      This is typically the final phase of testing and is usually carried out by end-users
+      or clients. The goal is to validate the usability and functionality of the system
+      against business requirements. Acceptance testing confirms that the software
+      is ready for deployment and meets the user\u2019s needs.\n\nTo facilitate these
+      testing processes effectively, various tools are leveraged. These tools can
+      include:\n\n- **Automated Testing Tools**: Tools like Selenium for web applications
+      or JUnit for Java applications allow testers to automate repetitive testing
+      tasks, which increases efficiency and reduces the possibility of human error.\n\n-
+      **Test Management Tools**: Tools such as JIRA or TestRail are essential for
+      tracking test progress, managing test cases, and reporting testing outcomes.\n\n-
+      **Continuous Integration Tools**: Tools like Jenkins help in automating the
+      process of running tests as part of the development pipeline, ensuring that
+      any changes made in the codebase are continuously tested.\n\nIn conclusion,
+      thorough testing through various stages\u2014unit, integration, system, and
+      acceptance\u2014combined with the strategic use of specialized tools, lays the
+      foundation for delivering high-quality software. It ensures that the product
+      not only functions correctly but also meets user expectations, paving the way
+      for successful implementations and satisfied clients.\n\n\nTry again, making
+      sure to address the validation error.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3539'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9.xrptc4Zx5NtXl.2MzDRi3N1u8YVt6tNHmSwFyx94A-1745272605-1.0.1.1-v3SFlNedUJ2GFxpW0cts207UyNYzhzfJLBW4o_D8D1t15aRi1Bfh8TEkoVN8JQQdIgDqze4xz4.o3yDgegWJrUGzKroLzXP0VeCDkmLibTc;
+        _cfuvid=e_MIZNumotQmvbprZ3okpLcxs_RLI2Yb_jiAh0fYHT8-1745272605039-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        DD9WZRIAAA==
+    headers:
+      CF-RAY:
+      - 934022c27c860110-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 21 Apr 2025 21:57:22 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '9187'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999158'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_94bb40dead4c4e9c7fa12de3bfb636b7
+    status:
+      code: 200
+      message: OK
+version: 1

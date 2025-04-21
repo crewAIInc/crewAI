@@ -140,7 +140,7 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: Set[str] = Field(default_factory=set)
-    guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
+    guardrail: Optional[Union[Callable[[TaskOutput], Tuple[bool, Any]], str]] = Field(
         default=None,
         description="Function to validate task output before proceeding to next task",
     )
@@ -157,8 +157,12 @@ class Task(BaseModel):
 
     @field_validator("guardrail")
     @classmethod
-    def validate_guardrail_function(cls, v: Optional[Callable]) -> Optional[Callable]:
-        """Validate that the guardrail function has the correct signature and behavior.
+    def validate_guardrail_function(
+        cls, v: Optional[str | Callable]
+    ) -> Optional[str | Callable]:
+        """
+        If v is a callable, validate that the guardrail function has the correct signature and behavior.
+        If v is a string, return it as is.
 
         While type hints provide static checking, this validator ensures runtime safety by:
         1. Verifying the function accepts exactly one parameter (the TaskOutput)
@@ -171,16 +175,16 @@ class Task(BaseModel):
         - Clear error messages help users debug guardrail implementation issues
 
         Args:
-            v: The guardrail function to validate
+            v: The guardrail function to validate or a string describing the guardrail task
 
         Returns:
-            The validated guardrail function
+            The validated guardrail function or a string describing the guardrail task
 
         Raises:
             ValueError: If the function signature is invalid or return annotation
                        doesn't match Tuple[bool, Any]
         """
-        if v is not None:
+        if v is not None and callable(v):
             sig = inspect.signature(v)
             positional_args = [
                 param
@@ -408,9 +412,7 @@ class Task(BaseModel):
             )
 
             if self.guardrail:
-                guardrail_result = GuardrailResult.from_tuple(
-                    self.guardrail(task_output)
-                )
+                guardrail_result = self._process_guardrail(task_output)
                 if not guardrail_result.success:
                     if self.retry_count >= self.max_retries:
                         raise Exception(
@@ -464,12 +466,51 @@ class Task(BaseModel):
                     )
                 )
                 self._save_file(content)
-            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output, task=self))
+            crewai_event_bus.emit(
+                self, TaskCompletedEvent(output=task_output, task=self)
+            )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
+
+    def _process_guardrail(self, task_output: TaskOutput) -> GuardrailResult:
+        if self.guardrail is None:
+            raise ValueError("Guardrail is not set")
+
+        from crewai.utilities.events import (
+            GuardrailTaskCompletedEvent,
+            GuardrailTaskStartedEvent,
+        )
+        from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+
+        crewai_event_bus.emit(
+            self,
+            GuardrailTaskStartedEvent(
+                guardrail=self.guardrail, retry_count=self.retry_count
+            ),
+        )
+
+        if isinstance(self.guardrail, str):
+            from crewai.tasks.guardrail_task import GuardrailTask
+
+            result = GuardrailTask(description=self.guardrail, task=self)(task_output)
+        else:
+            result = self.guardrail(task_output)
+
+        guardrail_result = GuardrailResult.from_tuple(result)
+
+        crewai_event_bus.emit(
+            self,
+            GuardrailTaskCompletedEvent(
+                success=guardrail_result.success,
+                result=guardrail_result.result,
+                error=guardrail_result.error,
+                retry_count=self.retry_count,
+            ),
+        )
+        return guardrail_result
 
     def prompt(self) -> str:
         """Prompt the task.
