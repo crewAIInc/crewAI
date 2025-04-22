@@ -535,7 +535,6 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_o4_mini_stop_parameter():
     """Test that o4-mini model works correctly without stop parameter."""
     llm = LLM(model="o4-mini", stop=["STOP", "END"])
@@ -547,5 +546,26 @@ def test_llm_o4_mini_stop_parameter():
     
     assert "stop" not in params
     
-    response = llm.call(messages=[{"role": "user", "content": "Hello, world!"}])
-    assert response is not None
+    with patch("litellm.completion") as mock_completion:
+        # Create a mock response
+        mock_message = MagicMock()
+        mock_message.content = "Test response"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 5,
+            "completion_tokens": 5,
+            "total_tokens": 10,
+        }
+        
+        # Set up the mock to return our response
+        mock_completion.return_value = mock_response
+        
+        response = llm.call(messages=[{"role": "user", "content": "Hello, world!"}])
+        
+        assert response == "Test response"
+        
+        call_args = mock_completion.call_args[1]
+        assert "stop" not in call_args
