@@ -227,6 +227,11 @@ print(result)
             "expected_result": False,
             "expected_output": "Invalid output format",
         },
+        {
+            "output": "bla-bla-bla",
+            "expected_result": False,
+            "expected_output": "Error parsing result: malformed node or string on line 1",
+        },
     ],
 )
 @patch("crewai_tools.CodeInterpreterTool.run")
@@ -237,7 +242,7 @@ def test_guardrail_task_execute_code(mock_run, mock_llm, tool_run_output, task_o
 
     result = guardrail(task_output)
     assert result[0] == tool_run_output["expected_result"]
-    assert result[1] == tool_run_output["expected_output"]
+    assert tool_run_output["expected_output"] in result[1]
 
 
 @patch("crewai_tools.CodeInterpreterTool.run")
@@ -343,6 +348,27 @@ def test_guardrail_task_when_docker_is_not_available(mock_llm, task_output):
 
 
 def test_guardrail_task_when_docker_is_available(mock_llm, task_output):
+    guardrail = GuardrailTask(description="Test validation", llm=mock_llm)
+    with (
+        patch(
+            "crewai_tools.CodeInterpreterTool.__init__", return_value=None
+        ) as mock_init,
+        patch(
+            "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
+        ) as mock_run,
+        patch(
+            "subprocess.run",
+            return_value=True,
+        ),
+    ):
+        mock_init.return_value = None
+        mock_run.return_value = (True, "Valid output")
+        guardrail(task_output)
+
+    mock_init.assert_called_once_with(code=ANY, unsafe_mode=False)
+
+
+def test_guardrail_task_when_tool_output_is_not_valid(mock_llm, task_output):
     guardrail = GuardrailTask(description="Test validation", llm=mock_llm)
     with (
         patch(

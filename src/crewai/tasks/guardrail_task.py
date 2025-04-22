@@ -61,7 +61,7 @@ class GuardrailTask:
             "You are a expert Python developer"
             "You **must strictly** follow the task description, use the provided raw output as the input in your code. "
             "Your code must:\n"
-            "- Return results with: print((True, data)) on success, or print((False, 'very detailed error message')) on failure. Make sure the final output is beign assined to 'result' variable.\n"
+            "- Return results with: print((True, data)) on success, or print((False, 'very detailed error message')) on failure. Make sure the final output is being assined to 'result' variable.\n"
             "- Use the literal string of the task output (already included in your input) if needed.\n"
             "- Generate the code **following strictly** the task description.\n"
             "- Be valid Python 3 — executable as-is.\n"
@@ -151,7 +151,10 @@ class GuardrailTask:
             return False, result
 
         if isinstance(result, str):
-            result = ast.literal_eval(result)
+            try:
+                result = ast.literal_eval(result)
+            except Exception as e:
+                return False, f"Error parsing result: {str(e)}"
 
         return result
 
