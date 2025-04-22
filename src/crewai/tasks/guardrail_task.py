@@ -19,7 +19,7 @@ class GuardrailTask:
         task (Task, optional): The task whose output needs validation.
         llm (LLM, optional): The language model to use for code generation.
         additional_instructions (str, optional): Additional instructions for the guardrail task.
-
+        unsafe_mode (bool, optional): Whether to run the code in unsafe mode.
     Raises:
         ValueError: If no valid LLM is provided.
     """
@@ -30,6 +30,7 @@ class GuardrailTask:
         task: Task | None = None,
         llm: LLM | None = None,
         additional_instructions: str = "",
+        unsafe_mode: bool | None = None,
     ):
         self.description = description
 
@@ -44,6 +45,7 @@ class GuardrailTask:
         self.llm: LLM | None = llm or fallback_llm
 
         self.additional_instructions = additional_instructions
+        self.unsafe_mode = unsafe_mode
 
     @property
     def system_instructions(self) -> str:
@@ -138,7 +140,11 @@ class GuardrailTask:
 
         code = self.generate_code(task_output)
 
-        unsafe_mode = not self.check_docker_available()
+        unsafe_mode = (
+            self.unsafe_mode
+            if self.unsafe_mode is not None
+            else not self.check_docker_available()
+        )
 
         result = CodeInterpreterTool(code=code, unsafe_mode=unsafe_mode).run()
 

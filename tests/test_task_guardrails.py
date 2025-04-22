@@ -334,14 +334,12 @@ def test_guardrail_task_when_docker_is_not_available(mock_llm, task_output):
         ) as mock_init,
         patch(
             "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
-        ) as mock_run,
+        ),
         patch(
             "subprocess.run",
             side_effect=FileNotFoundError,
         ),
     ):
-        mock_init.return_value = None
-        mock_run.return_value = (True, "Valid output")
         guardrail(task_output)
 
     mock_init.assert_called_once_with(code=ANY, unsafe_mode=True)
@@ -361,8 +359,6 @@ def test_guardrail_task_when_docker_is_available(mock_llm, task_output):
             return_value=True,
         ),
     ):
-        mock_init.return_value = None
-        mock_run.return_value = (True, "Valid output")
         guardrail(task_output)
 
     mock_init.assert_called_once_with(code=ANY, unsafe_mode=False)
@@ -380,10 +376,32 @@ def test_guardrail_task_when_tool_output_is_not_valid(mock_llm, task_output):
         patch(
             "subprocess.run",
             return_value=True,
-        ),
+        ) as docker_check,
     ):
-        mock_init.return_value = None
-        mock_run.return_value = (True, "Valid output")
         guardrail(task_output)
 
     mock_init.assert_called_once_with(code=ANY, unsafe_mode=False)
+    docker_check.assert_called_once()
+
+
+@pytest.mark.parametrize("unsafe_mode", [True, False])
+def test_guardrail_task_force_code_tool_unsafe_mode(mock_llm, task_output, unsafe_mode):
+    guardrail = GuardrailTask(
+        description="Test validation", llm=mock_llm, unsafe_mode=unsafe_mode
+    )
+    with (
+        patch(
+            "crewai_tools.CodeInterpreterTool.__init__", return_value=None
+        ) as mock_init,
+        patch(
+            "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
+        ),
+        patch(
+            "subprocess.run",
+            side_effect=FileNotFoundError,
+        ) as docker_check,
+    ):
+        guardrail(task_output)
+
+    docker_check.assert_not_called()
+    mock_init.assert_called_once_with(code=ANY, unsafe_mode=unsafe_mode)
