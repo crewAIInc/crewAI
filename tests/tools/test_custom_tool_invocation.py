@@ -8,6 +8,8 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools import BaseTool
+from crewai.utilities.i18n import I18N
+from crewai.utilities.tool_utils import execute_tool_and_check_finality
 
 
 class TestToolInput(BaseModel):
@@ -54,7 +56,18 @@ def test_custom_tool_invocation():
         text="I'll use the Test Custom Tool to get a result"
     )
     
-    result = executor._execute_tool_and_check_finality(action)
+    i18n = I18N()
+    result = execute_tool_and_check_finality(
+        agent_action=action,
+        tools=[custom_tool],
+        i18n=i18n,
+        agent_key=mock_agent.key if hasattr(mock_agent, "key") else None,
+        agent_role=mock_agent.role if hasattr(mock_agent, "role") else None,
+        tools_handler=tools_handler,
+        task=mock_task,
+        agent=mock_agent,
+        function_calling_llm=mock_llm
+    )
     
     assert "Tool executed with param: test_value" in result.result
     assert result.result_as_answer is False
