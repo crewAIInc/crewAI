@@ -8,6 +8,7 @@ class LLMContextLengthExceededException(Exception):
         "too many tokens",
         "input is too long",
         "exceeds token limit",
+        "ContextWindowExceededError",
     ]
 
     def __init__(self, error_message: str):
