@@ -1,6 +1,6 @@
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Task
