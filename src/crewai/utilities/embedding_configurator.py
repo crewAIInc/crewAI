@@ -38,7 +38,14 @@ class EmbeddingConfigurator:
                 f"Unsupported embedding provider: {provider}, supported providers: {list(self.embedding_functions.keys())}"
             )
 
-        embedding_function = self.embedding_functions[provider]
+        try:
+            embedding_function = self.embedding_functions[provider]
+        except ImportError as e:
+            missing_package = str(e).split()[-1]
+            raise ImportError( 
+                f"{missing_package} is not installed. Please install it with: pip install {missing_package}"
+            )
+
         return (
             embedding_function(config)
             if provider == "custom"
@@ -104,40 +111,28 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_vertexai(config, model_name):
-        try:
-            from chromadb.utils.embedding_functions.google_embedding_function import (
-                GoogleVertexEmbeddingFunction,
-            )
-            
-            return GoogleVertexEmbeddingFunction(
-                model_name=model_name,
-                api_key=config.get("api_key"),
-                project_id=config.get("project_id"),
-                region=config.get("region"),
-            )
-        except ImportError:
-            raise ImportError(
-                "Google Vertex AI dependencies are not installed. "
-                "Please install them using 'pip install google-cloud-aiplatform'."
-            )
+        from chromadb.utils.embedding_functions.google_embedding_function import (
+            GoogleVertexEmbeddingFunction,
+        )
+
+        return GoogleVertexEmbeddingFunction(
+            model_name=model_name,
+            api_key=config.get("api_key"),
+            project_id=config.get("project_id"),
+            region=config.get("region"),
+        )
 
     @staticmethod
     def _configure_google(config, model_name):
-        try:
-            from chromadb.utils.embedding_functions.google_embedding_function import (
-                GoogleGenerativeAiEmbeddingFunction,
-            )
-            
-            return GoogleGenerativeAiEmbeddingFunction(
-                model_name=model_name,
-                api_key=config.get("api_key"),
-                task_type=config.get("task_type"),
-            )
-        except ImportError:
-            raise ImportError(
-                "Google Generative AI dependencies are not installed. "
-                "Please install them using 'pip install google-generativeai'."
-            )
+        from chromadb.utils.embedding_functions.google_embedding_function import (
+            GoogleGenerativeAiEmbeddingFunction,
+        )
+
+        return GoogleGenerativeAiEmbeddingFunction(
+            model_name=model_name,
+            api_key=config.get("api_key"),
+            task_type=config.get("task_type"),
+        )
 
     @staticmethod
     def _configure_cohere(config, model_name):
