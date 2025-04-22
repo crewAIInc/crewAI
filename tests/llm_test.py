@@ -533,3 +533,19 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
         expected_completed_llm_call=1,
         expected_final_chunk_result=response,
     )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_o4_mini_stop_parameter():
+    """Test that o4-mini model works correctly without stop parameter."""
+    llm = LLM(model="o4-mini", stop=["STOP", "END"])
+    
+    # Check that stop parameter is set
+    assert llm.stop == ["STOP", "END"]
+    
+    params = llm._prepare_completion_params(messages=[{"role": "user", "content": "Hello"}])
+    
+    assert "stop" not in params
+    
+    response = llm.call(messages=[{"role": "user", "content": "Hello, world!"}])
+    assert response is not None

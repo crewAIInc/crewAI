@@ -358,7 +358,12 @@ class LLM(BaseLLM):
         }
 
         # Remove None values from params
-        return {k: v for k, v in params.items() if v is not None}
+        params = {k: v for k, v in params.items() if v is not None}
+        
+        if "o4-mini" in self.model:
+            params.pop("stop", None)
+            
+        return params
 
     def _handle_streaming_response(
         self,
