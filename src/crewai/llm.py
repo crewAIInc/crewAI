@@ -91,6 +91,7 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gemini-1.5-flash-8b": 1048576,
     # deepseek
     "deepseek-chat": 128000,
+    "deepseek-v3-250324": 128000,
     # groq
     "gemma2-9b-it": 8192,
     "gemma-7b-it": 8192,
@@ -922,6 +923,17 @@ class LLM(BaseLLM):
 
         # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
         if "mistral" in self.model.lower():
+            # Check if the last message has a role of 'assistant'
+            if messages and messages[-1]["role"] == "assistant":
+                # Add a dummy user message to ensure the last message has a role of 'user'
+                messages = (
+                    messages.copy()
+                )  # Create a copy to avoid modifying the original
+                messages.append({"role": "user", "content": "Please continue."})
+            return messages
+            
+        # Handle Deepseek-v3-250324 model - it also requires the last message to have a role of 'user'
+        if "deepseek-v3-250324" in self.model.lower():
             # Check if the last message has a role of 'assistant'
             if messages and messages[-1]["role"] == "assistant":
                 # Add a dummy user message to ensure the last message has a role of 'user'

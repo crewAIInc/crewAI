@@ -407,6 +407,37 @@ def test_anthropic_message_formatting(anthropic_llm, system_message, user_messag
     assert formatted[0] == system_message
 
 
+@pytest.fixture
+def deepseek_llm():
+    """Fixture for Deepseek-v3-250324 LLM instance."""
+    return LLM(model="deepseek-v3-250324")
+
+
+def test_deepseek_message_formatting(deepseek_llm):
+    """Test Deepseek-v3-250324 message formatting."""
+    # Test when last message is assistant
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there"},
+    ]
+    formatted = deepseek_llm._format_messages_for_provider(messages)
+    assert len(formatted) == 3
+    assert formatted[0]["role"] == "user"
+    assert formatted[1]["role"] == "assistant"
+    assert formatted[2]["role"] == "user"
+    assert formatted[2]["content"] == "Please continue."
+
+    # Test when last message is not assistant
+    messages = [
+        {"role": "assistant", "content": "Hi there"},
+        {"role": "user", "content": "Hello"},
+    ]
+    formatted = deepseek_llm._format_messages_for_provider(messages)
+    assert len(formatted) == 2
+    assert formatted[0]["role"] == "assistant"
+    assert formatted[1]["role"] == "user"
+
+
 def test_deepseek_r1_with_open_router():
     if not os.getenv("OPEN_ROUTER_API_KEY"):
         pytest.skip("OPEN_ROUTER_API_KEY not set; skipping test.")
