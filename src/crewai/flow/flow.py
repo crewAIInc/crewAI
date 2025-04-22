@@ -163,7 +163,7 @@ def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
 
 
 def listen(
-    condition: Union[str, dict, Callable] = None, *, method: str = None, output: str = None
+    condition: Optional[Union[str, dict, Callable]] = None, *, method: Optional[str] = None, output: Optional[str] = None
 ) -> Callable:
     """
     Creates a listener that executes when specified conditions are met.
