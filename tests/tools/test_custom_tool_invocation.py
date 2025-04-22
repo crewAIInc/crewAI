@@ -51,8 +51,7 @@ def test_custom_tool_invocation():
         tool="Test Custom Tool",
         tool_input={"test_param": "test_value"},
         thought="I'll use the custom tool",
-        text="I'll use the Test Custom Tool to get a result",
-        message_log=[]
+        text="I'll use the Test Custom Tool to get a result"
     )
     
     result = executor._execute_tool_and_check_finality(action)
