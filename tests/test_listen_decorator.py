@@ -57,8 +57,8 @@ def test_listen_with_explicit_output():
 
 def test_ambiguous_case_with_explicit_parameters():
     """Test case where method name matches a possible output value."""
-    import logging
     import asyncio
+    import logging
     import time
     logging.basicConfig(level=logging.DEBUG)
     
