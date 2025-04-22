@@ -111,7 +111,6 @@ class CrewAgentExecutorMixin:
                 print(f"Missing attributes for long term memory: {e}")
                 pass
             except Exception as e:
-                # Only log the error; don't let it affect task output
                 print(f"Failed to add to long term memory: {e}")
                 pass
         elif (
