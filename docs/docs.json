@@ -8,6 +8,9 @@
     "dark": "#C94C3C"
   },
   "favicon": "favicon.svg",
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude"]
+  },
   "navigation": {
     "tabs": [
       {
@@ -244,7 +247,12 @@
     "prompt": "Search CrewAI docs"
   },
   "seo": {
-    "indexing": "navigable"
+    "indexing": "all"
+  },
+  "errors": {
+    "404": {
+      "redirect": true
+    }
   },
   "footer": {
     "socials": {
