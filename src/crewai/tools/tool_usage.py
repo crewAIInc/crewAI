@@ -75,6 +75,7 @@ class ToolUsage:
         agent: Optional[Union["BaseAgent", "LiteAgent"]] = None,
         action: Any = None,
         fingerprint_context: Optional[Dict[str, str]] = None,
+        original_tools: List[Any] = [],
     ) -> None:
         self._i18n: I18N = agent.i18n if agent else I18N()
         self._printer: Printer = Printer()
@@ -86,6 +87,7 @@ class ToolUsage:
         self.tools_description = render_text_description_and_args(tools)
         self.tools_names = get_tool_names(tools)
         self.tools_handler = tools_handler
+        self.original_tools = original_tools
         self.tools = tools
         self.task = task
         self.action = action
@@ -191,13 +193,16 @@ class ToolUsage:
             )  # type: ignore
             from_cache = result is not None
 
+        original_tool = None
+        if hasattr(self, 'original_tools') and self.original_tools:
+            original_tool = next(
+                (ot for ot in self.original_tools if ot.name == tool.name),
+                None
+            )
+        
         available_tool = next(
-            (
-                available_tool
-                for available_tool in self.tools
-                if available_tool.name == tool.name
-            ),
-            None,
+            (at for at in self.tools if at.name == tool.name),
+            None
         )
 
         if result is None:
@@ -259,10 +264,11 @@ class ToolUsage:
 
             if self.tools_handler:
                 should_cache = True
-                if (
-                    hasattr(available_tool, "cache_function")
-                    and available_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
-                ):
+                if original_tool and hasattr(original_tool, "cache_function") and original_tool.cache_function:
+                    should_cache = original_tool.cache_function(
+                        calling.arguments, result
+                    )
+                elif available_tool and hasattr(available_tool, "cache_function") and available_tool.cache_function:
                     should_cache = available_tool.cache_function(  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
                         calling.arguments, result
                     )
@@ -290,10 +296,9 @@ class ToolUsage:
             result=result,
         )
 
-        if (
-            hasattr(available_tool, "result_as_answer")
-            and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
-        ):
+        if original_tool and hasattr(original_tool, "result_as_answer") and original_tool.result_as_answer:
+            result_as_answer = original_tool.result_as_answer
+        elif available_tool and hasattr(available_tool, "result_as_answer") and available_tool.result_as_answer:
             result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
             data["result_as_answer"] = result_as_answer  # type: ignore
 
