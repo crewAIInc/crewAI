@@ -106,7 +106,23 @@ The `@listen()` decorator is used to mark a method as a listener for the output 
 
 The `@listen()` decorator can be used in several ways:
 
-1. **Listening to a Method by Name**: You can pass the name of the method you want to listen to as a string. When that method completes, the listener method will be triggered.
+1. **Listening to a Method by Name Explicitly**: You can explicitly specify that you're listening for a method by name, which removes any ambiguity.
+
+   ```python Code
+   @listen(method="generate_city")
+   def generate_fun_fact(self, random_city):
+       # Implementation
+   ```
+
+2. **Listening to an Output Value Explicitly**: You can explicitly specify that you're listening for an output value, which removes any ambiguity.
+
+   ```python Code
+   @listen(output="success")
+   def handle_success(self):
+       # Implementation
+   ```
+
+3. **Legacy Usage - Listening to a Method by Name**: You can pass the name of the method you want to listen to as a string. When that method completes, the listener method will be triggered.
 
    ```python Code
    @listen("generate_city")
@@ -114,7 +130,7 @@ The `@listen()` decorator can be used in several ways:
        # Implementation
    ```
 
-2. **Listening to a Method Directly**: You can pass the method itself. When that method completes, the listener method will be triggered.
+4. **Legacy Usage - Listening to a Method Directly**: You can pass the method itself. When that method completes, the listener method will be triggered.
    ```python Code
    @listen(generate_city)
    def generate_fun_fact(self, random_city):

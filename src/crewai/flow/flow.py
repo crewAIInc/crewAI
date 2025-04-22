@@ -162,7 +162,9 @@ def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
     return decorator
 
 
-def listen(condition: Union[str, dict, Callable]) -> Callable:
+def listen(
+    condition: Union[str, dict, Callable] = None, *, method: str = None, output: str = None
+) -> Callable:
     """
     Creates a listener that executes when specified conditions are met.
 
@@ -172,11 +174,17 @@ def listen(condition: Union[str, dict, Callable]) -> Callable:
 
     Parameters
     ----------
-    condition : Union[str, dict, Callable]
-        Specifies when the listener should execute. Can be:
-        - str: Name of a method that triggers this listener
+    condition : Union[str, dict, Callable], optional
+        Legacy parameter specifies when the listener should execute. Can be:
+        - str: Name of a method that triggers this listener or an output string
         - dict: Contains "type" ("AND"/"OR") and "methods" (list of triggers)
         - Callable: A method reference that triggers this listener
+    method : str, optional
+        Name of a method that triggers this listener. This explicitly indicates
+        you're listening for a method execution rather than an output string.
+    output : str, optional
+        Output string value that triggers this listener. This explicitly indicates
+        you're listening for an output value rather than a method name.
 
     Returns
     -------
@@ -186,23 +194,46 @@ def listen(condition: Union[str, dict, Callable]) -> Callable:
     Raises
     ------
     ValueError
-        If the condition format is invalid.
+        If the parameters are invalid or incompatible.
 
     Examples
     --------
-    >>> @listen("process_data")  # Listen to single method
+    >>> @listen(method="process_data")  # Explicitly listen to method name
     >>> def handle_processed_data(self):
     ...     pass
-
-    >>> @listen(or_("success", "failure"))  # Listen to multiple methods
+    
+    >>> @listen(output="success")  # Explicitly listen to output string
+    >>> def handle_success_case(self):
+    ...     pass
+    
+    >>> @listen(or_("success", "failure"))  # Listen to multiple outputs
     >>> def handle_completion(self):
     ...     pass
     """
 
     def decorator(func):
+        if method is not None and output is not None:
+            raise ValueError("Cannot specify both 'method' and 'output' parameters")
+        
+        if method is not None:
+            func.__trigger_methods__ = [method]
+            func.__condition_type__ = "OR"
+            func.__is_output__ = False
+            return func
+            
+        if output is not None:
+            func.__trigger_methods__ = [output]
+            func.__condition_type__ = "OR"
+            func.__is_output__ = True
+            return func
+        
+        if condition is None:
+            raise ValueError("Must provide either 'condition', 'method', or 'output' parameter")
+            
         if isinstance(condition, str):
             func.__trigger_methods__ = [condition]
             func.__condition_type__ = "OR"
+            func.__is_output__ = None
         elif (
             isinstance(condition, dict)
             and "type" in condition
@@ -210,9 +241,11 @@ def listen(condition: Union[str, dict, Callable]) -> Callable:
         ):
             func.__trigger_methods__ = condition["methods"]
             func.__condition_type__ = condition["type"]
+            func.__is_output__ = None
         elif callable(condition) and hasattr(condition, "__name__"):
             func.__trigger_methods__ = [condition.__name__]
             func.__condition_type__ = "OR"
+            func.__is_output__ = False
         else:
             raise ValueError(
                 "Condition must be a method, string, or a result of or_() or and_()"
@@ -897,10 +930,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
         - Each router's result becomes a new trigger_method
         - Normal listeners are executed in parallel for efficiency
         - Listeners can receive the trigger method's result as a parameter
+        - Prevents infinite loops by tracking processed triggers
         """
+        processed_triggers = set()
+        
         # First, handle routers repeatedly until no router triggers anymore
         router_results = []
         current_trigger = trigger_method
+        processed_triggers.add(current_trigger)
 
         while True:
             routers_triggered = self._find_triggered_methods(
@@ -913,11 +950,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 await self._execute_single_listener(router_name, result)
                 # After executing router, the router's result is the path
                 router_result = self._method_outputs[-1]
-                if router_result:  # Only add non-None results
+                if router_result and router_result not in processed_triggers:  # Only add non-None and unprocessed results
                     router_results.append(router_result)
-                current_trigger = (
-                    router_result  # Update for next iteration of router chain
-                )
+                    processed_triggers.add(router_result)
+                current_trigger = router_result  # Update for next iteration of router chain
 
         # Now execute normal listeners for all router results and the original trigger
         all_triggers = [trigger_method] + router_results
@@ -946,7 +982,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Parameters
         ----------
         trigger_method : str
-            The name of the method that just completed execution.
+            The name of the method that just completed execution or an output value.
         router_only : bool
             If True, only consider router methods.
             If False, only consider non-router methods.
@@ -963,6 +999,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
           * AND: Triggers only when all conditions are met
         - Maintains state for AND conditions using _pending_and_listeners
         - Separates router and normal listener evaluation
+        - Respects the __is_output__ attribute to disambiguate between method names and output strings
         """
         triggered = []
         for listener_name, (condition_type, methods) in self._listeners.items():
@@ -971,10 +1008,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if router_only != is_router:
                 continue
 
+            method = self._methods.get(listener_name)
+            is_output = getattr(method, "__is_output__", None)
+
             if condition_type == "OR":
-                # If the trigger_method matches any in methods, run this
+                # For methods with explicit output=True, only match if trigger is not a method name
+                # For methods with explicit method=True, only match if trigger is a method name
+                
                 if trigger_method in methods:
-                    triggered.append(listener_name)
+                    trigger_is_method = trigger_method in self._methods
+                    
+                    if (is_output is None or  # Legacy behavior - always match
+                        (is_output is True and not trigger_is_method) or  # Output string listener
+                        (is_output is False and trigger_is_method)):  # Method name listener
+                        triggered.append(listener_name)
+                    
             elif condition_type == "AND":
                 # Initialize pending methods for this listener if not already done
                 if listener_name not in self._pending_and_listeners:
