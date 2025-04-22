@@ -1,12 +1,13 @@
 import pytest
 from unittest.mock import MagicMock
 
+from pydantic import BaseModel, Field
+
 from crewai import Agent, Task
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
-from crewai.tools import BaseTool
-from crewai.agents.tools_handler import ToolsHandler
 from crewai.agents.parser import AgentAction
-from pydantic import BaseModel, Field
+from crewai.agents.tools_handler import ToolsHandler
+from crewai.tools import BaseTool
 
 
 class TestToolInput(BaseModel):
