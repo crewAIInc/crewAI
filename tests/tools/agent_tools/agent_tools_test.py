@@ -16,6 +16,13 @@ delegate_tool = tools[0]
 ask_tool = tools[1]
 
 
+@pytest.fixture(scope="module")
+def vcr_config(request) -> dict:
+    return {
+        "cassette_library_dir": "tests/tools/agent_tools/cassettes",
+    }
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegate_work():
     result = delegate_tool.run(

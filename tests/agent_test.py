@@ -10,6 +10,8 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.agents.parser import CrewAgentParser, OutputParserException
+from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
@@ -259,7 +261,9 @@ def test_cache_hitting():
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    with (patch.object(CacheHandler, "read") as read,):
+    with (
+        patch.object(CacheHandler, "read") as read,
+    ):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -1609,6 +1613,78 @@ def test_agent_with_knowledge_sources():
 
         # Assert that the agent provides the correct information
         assert "red" in result.raw.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+    knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
+    with patch(
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+    ) as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+        with patch.object(Knowledge, "query") as mock_knowledge_query:
+            agent = Agent(
+                role="Information Agent",
+                goal="Provide information based on knowledge sources",
+                backstory="You have access to specific knowledge sources.",
+                llm=LLM(model="gpt-4o-mini"),
+                knowledge_sources=[string_source],
+                knowledge_config=knowledge_config,
+            )
+            task = Task(
+                description="What is Brandon's favorite color?",
+                expected_output="Brandon's favorite color.",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task])
+            crew.kickoff()
+
+            assert agent.knowledge is not None
+            mock_knowledge_query.assert_called_once_with(
+                [task.prompt()],
+                **knowledge_config.model_dump(),
+            )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_default():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+    knowledge_config = KnowledgeConfig()
+    with patch(
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+    ) as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+        with patch.object(Knowledge, "query") as mock_knowledge_query:
+            string_source = StringKnowledgeSource(content=content)
+            knowledge_config = KnowledgeConfig()
+            agent = Agent(
+                role="Information Agent",
+                goal="Provide information based on knowledge sources",
+                backstory="You have access to specific knowledge sources.",
+                llm=LLM(model="gpt-4o-mini"),
+                knowledge_sources=[string_source],
+                knowledge_config=knowledge_config,
+            )
+            task = Task(
+                description="What is Brandon's favorite color?",
+                expected_output="Brandon's favorite color.",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task])
+            crew.kickoff()
+
+            assert agent.knowledge is not None
+            mock_knowledge_query.assert_called_once_with(
+                [task.prompt()],
+                **knowledge_config.model_dump(),
+            )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
