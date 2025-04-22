@@ -253,7 +253,7 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
 @pytest.mark.parametrize(
     "model",
     [
@@ -271,7 +271,7 @@ def test_gemini_models(model):
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
 @pytest.mark.parametrize(
     "model",
     [

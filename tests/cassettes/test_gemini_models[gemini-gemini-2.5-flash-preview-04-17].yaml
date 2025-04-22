@@ -18,16 +18,16 @@ interactions:
       user-agent:
       - litellm/1.60.2
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=***
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAC/2WQT0vEMBDF7/kUIceyXVZxqevVPzdx0SKCeBjaaRtMk5JMdaXsdzdtt92UzSGE
-        eW9m8n4d41xkoHOZA6ETd/zTVzjvhrvXjCbU5IWp5IsNWDp7x9MFb28hPPRNIq2QZ9BIAsVNwZ8s
-        6Ay5dDyK9mCli6K1CDqP8/trdd5njcJ+WG1yVJP9OBlEIbV01SuCM7q3vaUvezGrUud48OUNmxYM
-        o0XroMRnJPDJYc4nGmvqhlLzjfretEPy23FWwGkpJyedjE+5kHbb1cVU9+B3ShXyC9D6iKAk/Q3s
-        Hj9SEWCgxdYJAwtoCapMW1a0/GCyYydcI8F3tE6OqEqsPbz4er2NCwWuihuLPxJ/481NfJUIdmT/
-        hq3AgCICAAA=
+        H4sIAAAAAAAC/2WQT0+EMBDF7/0UTY9k2ewaDerVPzfjRokxMR4mMEBjaUk76BrCd7fAslvcHppm
+        5s2bvl/HOBcZ6FzmQOjELf/wFc678R56RhNq8o255IsNWDppp9MFby8h3A9DIq2QZ9BIAsVNwR8t
+        6Ay5dDyKdmCli6K1CCb74/tzddpnjcLBrDY5qlnezwJRSC1d9YLgjB5kr+nzThy7Uue49+UNmxeM
+        1qJ1UOITEvjkcMwnGmvqhlLzhfrOtGPy68kr4LRoJzeHPhmfcjmZrM5c3b3fKVXIL0DrI4KS9Duy
+        e3hPRYCBFtYzBhbQElSZtqzo3we37IBrIviG1skJVYm1hxdfrK/iQoGr4sbit8SfeHMZbxPBevYH
+        O2bXiSICAAA=
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -36,11 +36,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 22 Apr 2025 13:43:51 GMT
+      - Tue, 22 Apr 2025 14:25:28 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1394
+      - gfet4t7; dur=20971
       Transfer-Encoding:
       - chunked
       Vary:

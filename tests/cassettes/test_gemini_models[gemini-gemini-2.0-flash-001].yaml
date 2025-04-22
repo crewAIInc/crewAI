@@ -18,7 +18,7 @@ interactions:
       user-agent:
       - litellm/1.60.2
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=***
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
   response:
     body:
       string: !!binary |
@@ -36,11 +36,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 22 Apr 2025 13:43:49 GMT
+      - Tue, 22 Apr 2025 14:25:05 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1113
+      - gfet4t7; dur=1219
       Transfer-Encoding:
       - chunked
       Vary:
