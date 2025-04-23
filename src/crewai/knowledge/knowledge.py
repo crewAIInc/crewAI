@@ -30,15 +30,27 @@ class Knowledge(BaseModel):
         sources: List[BaseKnowledgeSource],
         embedder: Optional[Dict[str, Any]] = None,
         storage: Optional[KnowledgeStorage] = None,
+        storage_provider: str = "chromadb",
         **data,
     ):
         super().__init__(**data)
         if storage:
             self.storage = storage
         else:
-            self.storage = KnowledgeStorage(
-                embedder=embedder, collection_name=collection_name
-            )
+            if storage_provider == "elasticsearch":
+                try:
+                    from crewai.knowledge.storage.elasticsearch_knowledge_storage import ElasticsearchKnowledgeStorage
+                    self.storage = ElasticsearchKnowledgeStorage(
+                        embedder=embedder, collection_name=collection_name
+                    )
+                except ImportError:
+                    raise ImportError(
+                        "Elasticsearch is not installed. Please install it with `pip install elasticsearch`."
+                    )
+            else:
+                self.storage = KnowledgeStorage(
+                    embedder=embedder, collection_name=collection_name
+                )
         self.sources = sources
         self.storage.initialize_knowledge_storage()
         self._add_sources()

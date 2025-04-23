@@ -24,7 +24,9 @@ class ShortTermMemory(Memory):
         else:
             memory_provider = None
 
-        if memory_provider == "mem0":
+        if storage:
+            pass
+        elif memory_provider == "mem0":
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
             except ImportError:
@@ -32,16 +34,25 @@ class ShortTermMemory(Memory):
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 )
             storage = Mem0Storage(type="short_term", crew=crew)
-        else:
-            storage = (
-                storage
-                if storage
-                else RAGStorage(
-                    type="short_term",
-                    embedder_config=embedder_config,
-                    crew=crew,
-                    path=path,
+        elif memory_provider == "elasticsearch":
+            try:
+                from crewai.memory.storage.elasticsearch_storage import ElasticsearchStorage
+            except ImportError:
+                raise ImportError(
+                    "Elasticsearch is not installed. Please install it with `pip install elasticsearch`."
                 )
+            storage = ElasticsearchStorage(
+                type="short_term",
+                embedder_config=embedder_config,
+                crew=crew,
+                path=path,
+            )
+        else:
+            storage = RAGStorage(
+                type="short_term",
+                embedder_config=embedder_config,
+                crew=crew,
+                path=path,
             )
         super().__init__(storage=storage)
         self._memory_provider = memory_provider
