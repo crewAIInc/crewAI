@@ -129,12 +129,24 @@ First, install CrewAI:
 ```shell
 pip install crewai
 ```
+
 If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
 
 ```shell
 pip install 'crewai[tools]'
 ```
-The command above installs the basic package and also adds extra components which require more dependencies to function.
+
+### Using conda
+
+You can also install CrewAI using conda:
+
+```shell
+conda install -c conda-forge crewai
+```
+
+Note: If you're using Python 3.10, make sure you have `typing_extensions` installed to resolve any 'Self' import issues.
+
+The commands above install the basic package and also add extra components which require more dependencies to function.
 
 ### Troubleshooting Dependencies
 
