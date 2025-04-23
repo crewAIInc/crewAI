@@ -482,6 +482,7 @@ class LLM(BaseLLM):
                     full_response += chunk_content
 
                     # Emit the chunk event
+                    assert hasattr(crewai_event_bus, "emit")
                     crewai_event_bus.emit(
                         self,
                         event=LLMStreamChunkEvent(chunk=chunk_content),
@@ -605,6 +606,7 @@ class LLM(BaseLLM):
                 return full_response
 
             # Emit failed event and re-raise the exception
+            assert hasattr(crewai_event_bus, "emit")
             crewai_event_bus.emit(
                 self,
                 event=LLMCallFailedEvent(error=str(e)),
@@ -627,7 +629,7 @@ class LLM(BaseLLM):
                 current_tool_accumulator.function.arguments += (
                     tool_call.function.arguments
                 )
-
+            assert hasattr(crewai_event_bus, "emit")
             crewai_event_bus.emit(
                 self,
                 event=LLMStreamChunkEvent(
@@ -791,6 +793,7 @@ class LLM(BaseLLM):
                     function_name, lambda: None
                 )  # Ensure fn is always a callable
                 logging.error(f"Error executing function '{function_name}': {e}")
+                assert hasattr(crewai_event_bus, "emit")
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),
@@ -828,6 +831,7 @@ class LLM(BaseLLM):
             LLMContextLengthExceededException: If input exceeds model's context limit
         """
         # --- 1) Emit call started event
+        assert hasattr(crewai_event_bus, "emit")
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
@@ -871,6 +875,7 @@ class LLM(BaseLLM):
                     )
 
             except Exception as e:
+                assert hasattr(crewai_event_bus, "emit")
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=str(e)),
@@ -888,6 +893,7 @@ class LLM(BaseLLM):
             response (str): The response from the LLM call.
             call_type (str): The type of call, either "tool_call" or "llm_call".
         """
+        assert hasattr(crewai_event_bus, "emit")
         crewai_event_bus.emit(
             self,
             event=LLMCallCompletedEvent(response=response, call_type=call_type),
