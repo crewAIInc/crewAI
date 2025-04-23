@@ -23,10 +23,6 @@ from .flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from .guardrail_task_events import (
-    GuardrailTaskCompletedEvent,
-    GuardrailTaskStartedEvent,
-)
 from .llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
@@ -37,6 +33,10 @@ from .task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
+)
+from .task_guardrail_events import (
+    TaskGuardrailCompletedEvent,
+    TaskGuardrailStartedEvent,
 )
 from .tool_usage_events import (
     ToolUsageErrorEvent,
@@ -72,6 +72,6 @@ EventTypes = Union[
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMStreamChunkEvent,
-    GuardrailTaskStartedEvent,
-    GuardrailTaskCompletedEvent,
+    TaskGuardrailStartedEvent,
+    TaskGuardrailCompletedEvent,
 ]

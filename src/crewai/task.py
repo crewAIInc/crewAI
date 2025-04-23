@@ -480,22 +480,22 @@ class Task(BaseModel):
             raise ValueError("Guardrail is not set")
 
         from crewai.utilities.events import (
-            GuardrailTaskCompletedEvent,
-            GuardrailTaskStartedEvent,
+            TaskGuardrailCompletedEvent,
+            TaskGuardrailStartedEvent,
         )
         from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
         crewai_event_bus.emit(
             self,
-            GuardrailTaskStartedEvent(
+            TaskGuardrailStartedEvent(
                 guardrail=self.guardrail, retry_count=self.retry_count
             ),
         )
 
         if isinstance(self.guardrail, str):
-            from crewai.tasks.guardrail_task import GuardrailTask
+            from crewai.tasks.task_guardrail import TaskGuardrail
 
-            result = GuardrailTask(description=self.guardrail, task=self)(task_output)
+            result = TaskGuardrail(description=self.guardrail, task=self)(task_output)
         else:
             result = self.guardrail(task_output)
 
@@ -503,7 +503,7 @@ class Task(BaseModel):
 
         crewai_event_bus.emit(
             self,
-            GuardrailTaskCompletedEvent(
+            TaskGuardrailCompletedEvent(
                 success=guardrail_result.success,
                 result=guardrail_result.result,
                 error=guardrail_result.error,

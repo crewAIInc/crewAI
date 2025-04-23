@@ -9,9 +9,9 @@ from .crew_events import (
     CrewTestCompletedEvent,
     CrewTestFailedEvent,
 )
-from .guardrail_task_events import (
-    GuardrailTaskCompletedEvent,
-    GuardrailTaskStartedEvent,
+from .task_guardrail_events import (
+    TaskGuardrailCompletedEvent,
+    TaskGuardrailStartedEvent,
 )
 from .agent_events import (
     AgentExecutionStartedEvent,

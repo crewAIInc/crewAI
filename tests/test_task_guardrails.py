@@ -4,11 +4,11 @@ import pytest
 
 from crewai import Agent, Task
 from crewai.llm import LLM
-from crewai.tasks.guardrail_task import GuardrailTask
+from crewai.tasks.task_guardrail import TaskGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.events import (
-    GuardrailTaskCompletedEvent,
-    GuardrailTaskStartedEvent,
+    TaskGuardrailCompletedEvent,
+    TaskGuardrailStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
@@ -148,20 +148,20 @@ def test_guardrail_using_llm(sample_agent):
     )
 
     with patch(
-        "crewai.tasks.guardrail_task.GuardrailTask.__call__",
+        "crewai.tasks.task_guardrail.TaskGuardrail.__call__",
         side_effect=[(False, "bad result"), (True, "good result")],
     ) as mock_guardrail:
         task.execute_sync(agent=sample_agent)
 
     assert mock_guardrail.call_count == 2
 
-    task.guardrail = GuardrailTask(
+    task.guardrail = TaskGuardrail(
         description="Ensure the output is equal to 'good result'",
         llm=LLM(model="gpt-4o-mini"),
     )
 
     with patch(
-        "crewai.tasks.guardrail_task.GuardrailTask.__call__",
+        "crewai.tasks.task_guardrail.TaskGuardrail.__call__",
         side_effect=[(False, "bad result"), (True, "good result")],
     ) as mock_guardrail:
         task.execute_sync(agent=sample_agent)
@@ -179,10 +179,10 @@ def task_output():
     )
 
 
-def test_guardrail_task_initialization_no_llm(task_output):
-    """Test GuardrailTask initialization fails without LLM"""
-    with pytest.raises(ValueError, match="Provide a valid LLM to the GuardrailTask"):
-        GuardrailTask(description="Test")(task_output)
+def test_task_guardrail_initialization_no_llm(task_output):
+    """Test TaskGuardrail initialization fails without LLM"""
+    with pytest.raises(ValueError, match="Provide a valid LLM to the TaskGuardrail"):
+        TaskGuardrail(description="Test")(task_output)
 
 
 @pytest.fixture
@@ -235,10 +235,10 @@ print(result)
     ],
 )
 @patch("crewai_tools.CodeInterpreterTool.run")
-def test_guardrail_task_execute_code(mock_run, mock_llm, tool_run_output, task_output):
+def test_task_guardrail_execute_code(mock_run, mock_llm, tool_run_output, task_output):
     mock_run.return_value = tool_run_output["output"]
 
-    guardrail = GuardrailTask(description="Test validation", llm=mock_llm)
+    guardrail = TaskGuardrail(description="Test validation", llm=mock_llm)
 
     result = guardrail(task_output)
     assert result[0] == tool_run_output["expected_result"]
@@ -251,7 +251,7 @@ def test_guardrail_using_additional_instructions(mock_run, mock_llm, task_output
     additional_instructions = (
         "This is an additional instruction created by the user follow it strictly"
     )
-    guardrail = GuardrailTask(
+    guardrail = TaskGuardrail(
         description="Test validation",
         llm=mock_llm,
         additional_instructions=additional_instructions,
@@ -269,13 +269,13 @@ def test_guardrail_emits_events(sample_agent):
 
     with crewai_event_bus.scoped_handlers():
 
-        @crewai_event_bus.on(GuardrailTaskStartedEvent)
+        @crewai_event_bus.on(TaskGuardrailStartedEvent)
         def handle_guardrail_started(source, event):
             started_guardrail.append(
                 {"guardrail": event.guardrail, "retry_count": event.retry_count}
             )
 
-        @crewai_event_bus.on(GuardrailTaskCompletedEvent)
+        @crewai_event_bus.on(TaskGuardrailCompletedEvent)
         def handle_guardrail_completed(source, event):
             completed_guardrail.append(
                 {
@@ -293,7 +293,7 @@ def test_guardrail_emits_events(sample_agent):
         )
 
         with patch(
-            "crewai.tasks.guardrail_task.GuardrailTask.__call__",
+            "crewai.tasks.task_guardrail.TaskGuardrail.__call__",
             side_effect=[(False, "bad result"), (True, "good result")],
         ):
             task.execute_sync(agent=sample_agent)
@@ -326,8 +326,8 @@ def test_guardrail_emits_events(sample_agent):
         assert completed_guardrail == expected_completed_events
 
 
-def test_guardrail_task_when_docker_is_not_available(mock_llm, task_output):
-    guardrail = GuardrailTask(description="Test validation", llm=mock_llm)
+def test_task_guardrail_when_docker_is_not_available(mock_llm, task_output):
+    guardrail = TaskGuardrail(description="Test validation", llm=mock_llm)
     with (
         patch(
             "crewai_tools.CodeInterpreterTool.__init__", return_value=None
@@ -345,8 +345,8 @@ def test_guardrail_task_when_docker_is_not_available(mock_llm, task_output):
     mock_init.assert_called_once_with(code=ANY, unsafe_mode=True)
 
 
-def test_guardrail_task_when_docker_is_available(mock_llm, task_output):
-    guardrail = GuardrailTask(description="Test validation", llm=mock_llm)
+def test_task_guardrail_when_docker_is_available(mock_llm, task_output):
+    guardrail = TaskGuardrail(description="Test validation", llm=mock_llm)
     with (
         patch(
             "crewai_tools.CodeInterpreterTool.__init__", return_value=None
@@ -364,8 +364,8 @@ def test_guardrail_task_when_docker_is_available(mock_llm, task_output):
     mock_init.assert_called_once_with(code=ANY, unsafe_mode=False)
 
 
-def test_guardrail_task_when_tool_output_is_not_valid(mock_llm, task_output):
-    guardrail = GuardrailTask(description="Test validation", llm=mock_llm)
+def test_task_guardrail_when_tool_output_is_not_valid(mock_llm, task_output):
+    guardrail = TaskGuardrail(description="Test validation", llm=mock_llm)
     with (
         patch(
             "crewai_tools.CodeInterpreterTool.__init__", return_value=None
@@ -385,8 +385,8 @@ def test_guardrail_task_when_tool_output_is_not_valid(mock_llm, task_output):
 
 
 @pytest.mark.parametrize("unsafe_mode", [True, False])
-def test_guardrail_task_force_code_tool_unsafe_mode(mock_llm, task_output, unsafe_mode):
-    guardrail = GuardrailTask(
+def test_task_guardrail_force_code_tool_unsafe_mode(mock_llm, task_output, unsafe_mode):
+    guardrail = TaskGuardrail(
         description="Test validation", llm=mock_llm, unsafe_mode=unsafe_mode
     )
     with (
