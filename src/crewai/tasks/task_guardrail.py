@@ -11,8 +11,9 @@ class TaskGuardrail:
 
     This class generates and executes Python code to validate task outputs based on
     specified criteria. It uses an LLM to generate the validation code and provides
-    safety guardrails for code execution. The code is executed in a Docker container
-    if available, otherwise it is executed in the current environment.
+    safety guardrails for code execution.
+    The code is executed in a Docker container if available, otherwise it is executed in a sandboxed environment.
+    If unsafe mode is enabled, the code is executed in the current environment.
 
     Args:
         description (str): The description of the validation criteria.
@@ -32,7 +33,7 @@ class TaskGuardrail:
         task: Task | None = None,
         llm: LLM | None = None,
         additional_instructions: str = "",
-        unsafe_mode: bool | None = None,
+        unsafe_mode: bool = False,
     ):
         self.description = description
 
@@ -139,13 +140,8 @@ class TaskGuardrail:
 
         self.generated_code = self.generate_code(task_output)
 
-        unsafe_mode = (
-            self.unsafe_mode
-            if self.unsafe_mode is not None
-            else not self.check_docker_available()
-        )
         result = CodeInterpreterTool(
-            code=self.generated_code, unsafe_mode=unsafe_mode
+            code=self.generated_code, unsafe_mode=self.unsafe_mode
         ).run()
 
         error_messages = [
@@ -163,12 +159,3 @@ class TaskGuardrail:
                 return False, f"Error parsing result: {str(e)}"
 
         return result
-
-    def check_docker_available(self) -> bool:
-        import subprocess
-
-        try:
-            subprocess.run(["docker", "--version"], check=True)
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return False
