@@ -81,14 +81,26 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4o": 128000,
     "gpt-4o-mini": 128000,
     "gpt-4-turbo": 128000,
+    "gpt-4.1": 1047576,  # Based on official docs
+    "gpt-4.1-mini-2025-04-14": 1047576,
+    "gpt-4.1-nano-2025-04-14": 1047576,
     "o1-preview": 128000,
     "o1-mini": 128000,
     "o3-mini": 200000,  # Based on official o3-mini specifications
     # gemini
     "gemini-2.0-flash": 1048576,
+    "gemini-2.0-flash-thinking-exp-01-21": 32768,
+    "gemini-2.0-flash-lite-001": 1048576,
+    "gemini-2.0-flash-001": 1048576,
+    "gemini-2.5-flash-preview-04-17": 1048576,
+    "gemini-2.5-pro-exp-03-25": 1048576,
     "gemini-1.5-pro": 2097152,
     "gemini-1.5-flash": 1048576,
     "gemini-1.5-flash-8b": 1048576,
+    "gemini/gemma-3-1b-it": 32000,
+    "gemini/gemma-3-4b-it": 128000,
+    "gemini/gemma-3-12b-it": 128000,
+    "gemini/gemma-3-27b-it": 128000,
     # deepseek
     "deepseek-chat": 128000,
     # groq

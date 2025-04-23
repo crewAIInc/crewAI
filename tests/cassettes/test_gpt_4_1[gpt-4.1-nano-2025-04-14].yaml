@@ -1,0 +1,101 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "What is the capital of France?"}],
+      "model": "gpt-4.1-nano-2025-04-14", "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '125'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJPb9swDMXv/hSCznEQuwrq5bgNBbZTh7aHYigMRqJtbbKkSXT/oMh3
+        L2Snsdt1wC4+8MdHv0fxOWOMa8V3jMsOSPbe5J8vqy/D96K/+PPjSn/Fh5szMewfb/eiar/d8lVS
+        uP0vlPSqWkvXe4OknZ2wDAiEaWpxLrZn5SchqhH0TqFJstZTLtZFbsG6vNyU23wj8kIc5Z3TEiPf
+        sZ8ZY4w9j99k1Cp85Du2Wb1WeowRWuS7UxNjPDiTKhxi1JHAEl/NUDpLaEfv1x0yCV4TGOYadhHA
+        SmQ6sksIOq6XqoDNECFZt4MxCwDWOoIUffR7dySHk0PjWh/cPr6T8kZbHbs6IERnk5tIzvORHjLG
+        7sZNDG/CcR9c76km9xvH3xViGsfnB5hhdWTkCMxcLsvVB8NqhQTaxMUiuQTZoZqV89ZhUNotQLaI
+        /LeXj2ZPsbVt/2f8DKRET6hqH1Bp+Tbv3BYwXee/2k4rHg3ziOFeS6xJY0jPoLCBwUwnw+NTJOzr
+        RtsWgw96upvG14gKq2ajxJZnh+wFAAD//wMATWCJPkYDAAA=
+    headers:
+      CF-RAY:
+      - 93458dd9aebff53b-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 22 Apr 2025 13:44:08 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '134'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999990'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_0ba738662e063fb55ea01793aafdcecc
+    status:
+      code: 200
+      message: OK
+version: 1
