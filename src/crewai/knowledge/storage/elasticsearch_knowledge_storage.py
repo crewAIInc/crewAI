@@ -31,21 +31,21 @@ class ElasticsearchKnowledgeStorage(BaseKnowledgeStorage):
     and improving search efficiency.
     """
 
-    app = None
+    app: Any = None
     collection_name: Optional[str] = "knowledge"
 
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
+        embedder_config: Optional[Dict[str, Any]] = None,
         collection_name: Optional[str] = None,
-        host="localhost",
-        port=9200,
-        username=None,
-        password=None,
-        **kwargs
+        host: str = "localhost",
+        port: int = 9200,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        **kwargs: Any
     ):
         self.collection_name = collection_name
-        self._set_embedder_config(embedder)
+        self._set_embedder_config(embedder_config)
         
         self.host = host
         self.port = port
@@ -67,7 +67,7 @@ class ElasticsearchKnowledgeStorage(BaseKnowledgeStorage):
         try:
             embedding = self._get_embedding_for_text(query[0])
             
-            search_query = {
+            search_query: Dict[str, Any] = {
                 "size": limit,
                 "query": {
                     "script_score": {
@@ -81,35 +81,45 @@ class ElasticsearchKnowledgeStorage(BaseKnowledgeStorage):
             }
             
             if filter:
-                for key, value in filter.items():
-                    search_query["query"]["script_score"]["query"] = {
-                        "bool": {
-                            "must": [
-                                search_query["query"]["script_score"]["query"],
-                                {"match": {f"metadata.{key}": value}}
-                            ]
-                        }
-                    }
+                query_obj = search_query.get("query", {})
+                if isinstance(query_obj, dict):
+                    script_score_obj = query_obj.get("script_score", {})
+                    if isinstance(script_score_obj, dict):
+                        query_part = script_score_obj.get("query", {})
+                        if isinstance(query_part, dict):
+                            for key, value in filter.items():
+                                script_score_obj["query"] = {
+                                    "bool": {
+                                        "must": [
+                                            query_part,
+                                            {"match": {f"metadata.{key}": value}}
+                                        ]
+                                    }
+                                }
             
             with suppress_logging():
-                response = self.app.search(
-                    index=self.index_name,
-                    body=search_query
-                )
-            
-            results = []
-            for hit in response["hits"]["hits"]:
-                adjusted_score = (hit["_score"] - 1.0)
+                if self.app is not None and hasattr(self.app, "search") and callable(getattr(self.app, "search")):
+                    response = self.app.search(
+                        index=self.index_name,
+                        body=search_query
+                    )
                 
-                if adjusted_score >= score_threshold:
-                    results.append({
-                        "id": hit["_id"],
-                        "metadata": hit["_source"]["metadata"],
-                        "context": hit["_source"]["text"],
-                        "score": adjusted_score,
-                    })
-                    
-            return results
+                    results = []
+                    for hit in response["hits"]["hits"]:
+                        adjusted_score = (hit["_score"] - 1.0)
+                        
+                        if adjusted_score >= score_threshold:
+                            results.append({
+                                "id": hit["_id"],
+                                "metadata": hit["_source"]["metadata"],
+                                "context": hit["_source"]["text"],
+                                "score": adjusted_score,
+                            })
+                        
+                    return results
+                else:
+                    Logger(verbose=True).log("error", "Elasticsearch client is not initialized", "red")
+                    return []
         except Exception as e:
             Logger(verbose=True).log("error", f"Search error: {e}", "red")
             raise Exception(f"Error during knowledge search: {str(e)}")
@@ -159,9 +169,9 @@ class ElasticsearchKnowledgeStorage(BaseKnowledgeStorage):
             )
             raise Exception(f"Error initializing Elasticsearch: {str(e)}")
 
-    def reset(self):
+    def reset(self) -> None:
         try:
-            if self.app:
+            if self.app is not None:
                 if self.app.indices.exists(index=self.index_name):
                     self.app.indices.delete(index=self.index_name)
                 
@@ -175,7 +185,7 @@ class ElasticsearchKnowledgeStorage(BaseKnowledgeStorage):
         self,
         documents: List[str],
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
-    ):
+    ) -> None:
         if not self.app:
             self.initialize_knowledge_storage()
 
@@ -201,12 +211,15 @@ class ElasticsearchKnowledgeStorage(BaseKnowledgeStorage):
                     "metadata": meta or {},
                 }
                 
-                self.app.index(
-                    index=self.index_name,
-                    id=doc_id,
-                    document=doc_body,
-                    refresh=True  # Make the document immediately available for search
-                )
+                if self.app is not None and hasattr(self.app, "index") and callable(getattr(self.app, "index")):
+                    self.app.index(
+                        index=self.index_name,
+                        id=doc_id,
+                        document=doc_body,
+                        refresh=True  # Make the document immediately available for search
+                    )
+                else:
+                    Logger(verbose=True).log("error", "Elasticsearch client is not initialized", "red")
                 
         except Exception as e:
             Logger(verbose=True).log("error", f"Save error: {e}", "red")
@@ -214,10 +227,14 @@ class ElasticsearchKnowledgeStorage(BaseKnowledgeStorage):
 
     def _get_embedding_for_text(self, text: str) -> List[float]:
         """Get embedding for text using the configured embedder."""
-        if hasattr(self.embedder_config, "embed_documents"):
-            return self.embedder_config.embed_documents([text])[0]
-        elif hasattr(self.embedder_config, "embed"):
-            return self.embedder_config.embed(text)
+        if self.embedder_config is None:
+            raise ValueError("Embedder configuration is not set")
+            
+        embedder = self.embedder_config
+        if hasattr(embedder, "embed_documents") and callable(getattr(embedder, "embed_documents")):
+            return embedder.embed_documents([text])[0]
+        elif hasattr(embedder, "embed") and callable(getattr(embedder, "embed")):
+            return embedder.embed(text)
         else:
             raise ValueError("Invalid embedding function configuration")
 

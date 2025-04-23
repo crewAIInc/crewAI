@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -40,9 +40,9 @@ class Knowledge(BaseModel):
             if storage_provider == "elasticsearch":
                 try:
                     from crewai.knowledge.storage.elasticsearch_knowledge_storage import ElasticsearchKnowledgeStorage
-                    self.storage = ElasticsearchKnowledgeStorage(
-                        embedder=embedder, collection_name=collection_name
-                    )
+                    self.storage = cast(KnowledgeStorage, ElasticsearchKnowledgeStorage(
+                        embedder_config=embedder, collection_name=collection_name
+                    ))
                 except ImportError:
                     raise ImportError(
                         "Elasticsearch is not installed. Please install it with `pip install elasticsearch`."
@@ -52,7 +52,8 @@ class Knowledge(BaseModel):
                     embedder=embedder, collection_name=collection_name
                 )
         self.sources = sources
-        self.storage.initialize_knowledge_storage()
+        if self.storage is not None:
+            self.storage.initialize_knowledge_storage()
         self._add_sources()
 
     def query(

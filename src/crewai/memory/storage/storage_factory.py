@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Type, cast
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.memory.storage.rag_storage import RAGStorage
@@ -56,7 +56,7 @@ class StorageFactory:
         elif provider == "mem0":
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
-                return Mem0Storage(type=type, crew=crew)
+                return cast(BaseRAGStorage, Mem0Storage(type=type, crew=crew))
             except ImportError:
                 Logger(verbose=True).log(
                     "error",
