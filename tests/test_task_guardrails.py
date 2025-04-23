@@ -262,6 +262,7 @@ def test_guardrail_using_additional_instructions(mock_run, mock_llm, task_output
     assert additional_instructions in str(mock_llm.call.call_args)
 
 
+# TODO: missing a test to cover callable func guardrail
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_emits_events(sample_agent):
     started_guardrail = []
@@ -292,27 +293,55 @@ def test_guardrail_emits_events(sample_agent):
             guardrail="Ensure the output is equal to 'good result'",
         )
 
-        with patch(
-            "crewai.tasks.task_guardrail.TaskGuardrail.__call__",
-            side_effect=[(False, "bad result"), (True, "good result")],
+        with (
+            patch(
+                "crewai_tools.CodeInterpreterTool.run",
+                side_effect=[
+                    "Something went wrong while running the code",
+                    (True, "good result"),
+                ],
+            ),
+            patch(
+                "crewai.tasks.task_guardrail.TaskGuardrail.generate_code",
+                return_value="""def guardrail(result: TaskOutput):
+    return (True, result.raw.upper())""",
+            ),
         ):
             task.execute_sync(agent=sample_agent)
 
+        def custom_guardrail(result: TaskOutput):
+            return (True, "good result from callable function")
+
+        task = Task(
+            description="Test task",
+            expected_output="Output",
+            guardrail=custom_guardrail,
+        )
+
+        task.execute_sync(agent=sample_agent)
+
         expected_started_events = [
             {
-                "guardrail": "Ensure the output is equal to 'good result'",
+                "guardrail": """def guardrail(result: TaskOutput):
+    return (True, result.raw.upper())""",
                 "retry_count": 0,
             },
             {
-                "guardrail": "Ensure the output is equal to 'good result'",
+                "guardrail": """def guardrail(result: TaskOutput):
+    return (True, result.raw.upper())""",
                 "retry_count": 1,
+            },
+            {
+                "guardrail": """def custom_guardrail(result: TaskOutput):
+            return (True, "good result from callable function")""",
+                "retry_count": 0,
             },
         ]
         expected_completed_events = [
             {
                 "success": False,
                 "result": None,
-                "error": "bad result",
+                "error": "Something went wrong while running the code",
                 "retry_count": 0,
             },
             {
@@ -320,6 +349,12 @@ def test_guardrail_emits_events(sample_agent):
                 "result": "good result",
                 "error": None,
                 "retry_count": 1,
+            },
+            {
+                "success": True,
+                "result": "good result from callable function",
+                "error": None,
+                "retry_count": 0,
             },
         ]
         assert started_guardrail == expected_started_events

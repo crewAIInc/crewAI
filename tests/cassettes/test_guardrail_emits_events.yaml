@@ -304,4 +304,388 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Test task\n\nThis
+      is the expected criteria for your final answer: Output\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nBegin! This is
+      VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '807'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFZdb+RUDH3vr7DyAkgzo27p7lZ9KwjECKFdUF+ARZXnXie59MYOvk7K
+        7Gr/O/LNTKddPsTLSBPbx/bxcZwPZwBNis01NKFHC8OY11+9/eUVfb0druyPn747f/vm5udxun81
+        XtzcXv34R7PyCNn9TsGOUZsgw5jJkvBiDkpo5KgvXl++vPzy4uryqhoGiZQ9rBttfSnrIXFaX5xf
+        XK7PX69fXB2ie0mBSnMNv54BAHyov14nR/qzuYbz1fHJQKVgR831oxNAo5L9SYOlpGLI1qxOxiBs
+        xLX0LbA8QECGLs0ECJ2XDcjlgRTgHX+bGDPc1P/XcNsTtPXJwcME9jIphEmV2MCw3EMqgAVayVke
+        yjW843e8ZVAK7hFppizjQGxlBTNqkqmAUehZsnSJCvQ4E+yIGGgYs+wpeh7iHjkQjCpxCpbmZHvA
+        oFIKDFO2NGaCQsFEywa+p/1z0MQhT5EA1VKbQsIMiY1yTh057Oc32y9WsMsS7kOPiVeAHMF6gi0b
+        KZOBtHDbJ+4KfL6V2y82Tkeh52lYDITzHtIwqswEMpKiywIzUOuZicMedpMB5iLQSjFSSMwyV7+a
+        N6qPo1N5sH7jBN6cyt5+Wjb0WEBpljw5QHpPERLHqZh6Sbs94GQyoCXuYJg4IlOdVFk5m3OKboho
+        CMiY9yWVpXti3GW3jaTFO6jQYSomAynQnyOpt0NlA9+KP0BfghXcbNejPJC6d4+2EyuASmCKXFrR
+        wUEfcQrpnAJ5oadyElfdglIZhQuV4zyUdkd2n6OgpdJicAoqZV89zvI0or2Ls5gSDjlxbU0lUClV
+        IVXbzqqnKtM45j0sAAMyduSi9SoXKXp0bWhErTOtURQmTbbfwNYKxKp5PRDHaJMSEJdJqYD1aAvA
+        UvRCUQVYKkjDMBnunFClOC0JewJN5d7F2CpOsbZ6+x8y9Y6DMFOo84/kXBffqA6dzjr4FchoaUjv
+        6UTI6lDEouNIIZUkvB7wPnG3gS1DGVANehnceSu3T3nGuv3QuiyYtNs/Vb8DB+GZuMpnAz+Iksyk
+        K58CdprClG1SzMeNXvCPxQ/CyUQhqIzQE2brVw5omnZTbdPEN14JC0XYJ8qxJq08UoQHLEaVujcz
+        Kea8cmY/XeYgOTttM7kQjvDk4AiD+CzbdnFYPbZnB94OCz37wOekwlU9hxfWaT038M2wUzwOtxBg
+        nF2E9Q1Zh6dT3XunUrRDTu/xoJc0HHpVGlymfoTIUs3qspeI+88KtFhsPaI3PqDek22engOldiro
+        J4mnnJ8YkFlsSeWH6LeD5ePj6cnSjSq78klo0yZOpb9z9oX9zBSTsanWj2cAv9UTNz27Ws2oMox2
+        Z3JPNd2Ll18ueM3psp6sFy9fHKwmhvlkuDy/XP0D4F0kw5TLkyvZBAw9xVPo6aTiFJM8MZw9afvv
+        5fwT9tJ64u7/wJ8MIdBoFO9GpZjC85ZPbkr+5fFvbo8014Kbw8v1zhKpjyJSi1Nevgeasi9Gw12b
+        uCMdNS0fBe14F3cY8NV5bM+bs49nfwEAAP//AwALFnowIgkAAA==
+    headers:
+      CF-RAY:
+      - 934f6a407817f25a-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 23 Apr 2025 18:27:32 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=D8rUl4mmy2b3VqelMZYHCXphdci9p3e7FkDX7.6c25o-1745432852-1.0.1.1-pcQGRgVRVWk_MfOL9NeN7ppL0qIWuFT39qQutTqPzvg7EL.wS.Mnln7VqzxGlhppOXL.kjvGKjt.n_qsBrty32u4yrKN1jcF0_TjUsIt7wc;
+        path=/; expires=Wed, 23-Apr-25 18:57:32 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=EvX1CkN4EY9yLTiNRdKFAZu58FpuU.4ljTBcTPpVL3c-1745432852682-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '4385'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999832'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_600ae3dd1619ff0d7a90c92968ec5af2
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Test task\n\nThis
+      is the expected criteria for your final answer: Output\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nBegin! This is
+      VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '807'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFRNbxtHDL3rVxB7lgTZluPUNzdI0e8WQYoCaQOBmuHuMp7lbDkcyWrg
+        /17MrGzJbQ69CKt5Q/K9Rw4/zwAa9s0tNK5Hc8MYFl//+uH1xf3du59/uX51+cPbH7d0/eH3b7/f
+        /3S4e3jTzEtE3H4iZ09RSxeHMZBxlAl2SmhUsl7crK/XV5dfXV1VYIieQgnrRlus42Jg4cXl6nK9
+        WN0sLl4fo/vIjlJzC3/MAAA+19/CUzw9NLewmj+dDJQSdtTcPl8CaDSGctJgSpwMxZr5CXRRjKRS
+        /w4k7sGhQMc7AoSu0AaUtCcF+FO+YcEAd/X/LbyPQJKyErhAqIDigdqWnJVoF4chCzssLszBegJ6
+        GMkZeXDKRsoIbdSKxGxjNuAEFmHUuGNPFUBnGQMc/SxZK1vYs/UxG6Q8DKj8N0u3hPc9JxgIJYGn
+        wDtSlq6mYWmjDpUKsACCJ0MO5Cvpkl2pJ0mF+IAipHMYiKzEYwiQRnLcHsWkGqT0V2algcQSJDLY
+        Hmopw3QPaNCj+CW8iVI8J3GHUnhiMRUNqGz1lB5GpZQKOVSCUTkqG1N1A31PSuWrZO8yF2lC6ckm
+        X3SfjEl9zMHDlkAp0A7F5if1O5rX2sk0O8tKHkLs2GEIh1KhRceBDY0giyctw+KrB6W10mFX9T5J
+        5VLSFxOzZxJHS3iLrocxshgMOVnhQQG3Ucv4Qx6jQMpty45JLBzmQFLcL5MpHexQOeYEWPy2BLGd
+        LI0ju+qF65nqZFofNeauP/ZPXMi1ece+H5bwWzAe0KgUqZPEw3G+lFKUorEMEeyY9qRpDm0OLYdQ
+        eGyj9SWIFYTITw2fpvdpAhKgGrscqrCSiaXWSS6O9Mwc0/3y/LUptTlhefGSQzgDUCQek5d3/vGI
+        PD6/7BC7UeM2/Su0aVk49RslTFHKK04Wx6aijzOAj3WD5BdLoRk1DqNtLN5TLXdxfTXla06L6wxd
+        3xxRi4bhBFytjovnZcLN9LjS2RJqHLqe/Cn0tLHK7MQzYHYm+790vpR7ks7S/Z/0J8A5Go38ZlTy
+        7F5KPl1T+lR31pevPdtcCTeJdMeONsakpRWeWsxhWrdNOiSjYdOydKSj8rRz23Hjt+jw1cq3q2b2
+        OPsHAAD//wMAcLZaxoEGAAA=
+    headers:
+      CF-RAY:
+      - 934f6c564c8c00c2-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 23 Apr 2025 18:28:56 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=5J6Y67MdrLaHLbjzPbL2gps5aWrBiBi7eB.FC8qOqXw-1745432936-1.0.1.1-abAjDqIVZB8HhOIuNj1dHuAq1TwfH7.dT43U9VcrBVKIkbtc9eaja9sZImC1Eg8d9rA9oCwgfQpQszDEbhsgwabeOCklRkctyiampeXPZGc;
+        path=/; expires=Wed, 23-Apr-25 18:58:56 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=_Ovw2Nu_YRjcy76bQoUeArUeTmPy9Ff2uxjHoDM_ZqI-1745432936206-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '3178'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999832'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_b821ac5d43aba662b7a7877ef44c8619
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Test task\n\nThis
+      is the expected criteria for your final answer: Output\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nThis is the context
+      you''re working with:\n### Previous attempt failed validation: Something went
+      wrong while running the code\n\n\n### Previous result:\nTo ensure clear and
+      effective communication, the expected criteria for the output is to provide
+      the actual complete content without summarizing. This means delivering the information
+      in a detailed and comprehensive manner, meeting all specifications and requirements
+      set by the task at hand. Consistency in format and clarity in expression are
+      priorities to adhere to the guidelines provided. The content should be relevant,
+      informative, and structured logically to facilitate understanding and engagement
+      by the intended audience. Each point must be elaborated upon sufficiently, encompassing
+      various aspects of the topic to achieve a thorough and conclusive delivery.
+      Ultimately, the aim is to resonate with viewers, fulfilling both their needs
+      and expectations as articulated within the scope of the task.\n\n\nTry again,
+      making sure to address the validation error.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1833'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=5J6Y67MdrLaHLbjzPbL2gps5aWrBiBi7eB.FC8qOqXw-1745432936-1.0.1.1-abAjDqIVZB8HhOIuNj1dHuAq1TwfH7.dT43U9VcrBVKIkbtc9eaja9sZImC1Eg8d9rA9oCwgfQpQszDEbhsgwabeOCklRkctyiampeXPZGc;
+        _cfuvid=_Ovw2Nu_YRjcy76bQoUeArUeTmPy9Ff2uxjHoDM_ZqI-1745432936206-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xWTW/cRgy9+1cQuvSyNmzH+fItRRsgBRoUhZFDm8DgjiiJ8YijkDO73gb57wVH
+        2g+nOfRiyKJIPj4+kvv1DKDhtrmFJgyYwzjF85//+OvV6zcPV/G3jb1/93v/4eH1L3H3/k99dvfh
+        Q7Nyj7T+TCHvvS5CGqdImZPM5qCEmTzq1cub5zfPrl/fXFXDmFqK7tZP+fwmnY8sfH59eX1zfvny
+        /OrV4j0kDmTNLfx9BgDwtf51nNLSY3MLl6v9m5HMsKfm9vARQKMp+psGzdgySm5WR2NIkkkq9Hcg
+        aQsBBXreECD0DhtQbEsK8FHesmCEN/X/W7hLQGJFCUIkVEBpgbqOQnbvkMaxCAd0FlaQBwJ6nChk
+        aiEoZ1JG6JJWSyp5KhnYICeYNG24pWrAkAtGWPj0qBUtbDkPqWSwMo6o/A9LfwF3AxsofSmsZFBq
+        sJYib2jOwtIlHSsgYAGEljJypLZC9xxKA4k5/BFFSFeA7UDK0nssjBFsosDdUpZVxyXjSJINjDKs
+        dzVdRnsAzDCgtBfwrpbnlXPA6OFGZMnI4kV5Y0jCznHNIGdMEZVzfUuPk5KZY69QuJfKQk21UNZC
+        X9grFrKLj/JR7oYjZTakEltYEyhF2qDk1ZGRDa1qwph6hxd3YFlLyEWp9XwdBo6cMRMUaUldRq3T
+        UpsuPfa1/kND2XM6ICwtkwS6gF8xDDAllgxjsexArHQdBybJcQcUcZ3UxwTK5JIh8Za4aKWHDSqn
+        Yg6EskHqZorTxKHyEQamqtk8JE2lH5aeSoilNnQRwu4C3iYFFq8g0Aq4A4QJNXMoERWs1FGGEXMm
+        9Z6tyQG0bKGYUbuCLe3JpEccWQg4GwxsOWltbqX8Ma/mh3FKiroD9oclq4PritPrr+NeT6ulk57Q
+        UtFAs8Q8zxTJYDuQEuBUXdbRGQCSwYNCKjrzO/f+bdE8kI5JaQXkpYP5bCbZo1eyJN7Sg442TFtS
+        W0FXYscxVuEPxApC1O6x+BTv9W+wp84b54FYDur/ycBCmmivfjIjyTzLnyUknWrHAVv6UvwhK4rx
+        HHtNeUske9Q211oXjifoYtq6Dp5MtYGNKeV99weyKm0SXO+LOUiy6jpFD+OvvcGpqBEQGsfdPEBp
+        0VBL8w5LG1LUMHiwPmFcdlZQ7DKgUzolMUeIGSRlSBJ3MJKL1v2/2x8RufXtByeswbpkwGhpGSx7
+        ivqwYuPuVC55oHFuJAqQKM8YvVu6lOuQZrbmTrLYVFdlN0vFP47eEKfyyYQdttjdUGy1n6U6/8fd
+        7CGPYtifDTafLhxTWdbD2ttT61xEVheHO0+aunnFOa+Sqffld3F6rZS6YugXU0qMJwYUSYso/U5+
+        WizfDpcxpn7StLbvXJuOhW24V0JL4lfQcpqaav12BvCpXuDy5Kg2k6Zxyvc5PVBN9+z6+RyvOR7+
+        o/X61dVizSljPBpeXL5Y/SDg/XyW7OSINwHDQO3R9XjxXRfpxHB2UvZ/4fwo9lw6S/9/wh8NIdCU
+        qb2flFoOT0s+fqb0ud78H392oLkCbox0w4HuM5N6K1rqsMT550pjO8s03ncsPemkPP9m6ab7do0B
+        X1y23WVz9u3sXwAAAP//AwCEYwG+wQkAAA==
+    headers:
+      CF-RAY:
+      - 934f6c8b98a402f6-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 23 Apr 2025 18:29:05 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '3961'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999577'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_99eee414635d2a4bfb7bb312377977bb
+    status:
+      code: 200
+      message: OK
 version: 1

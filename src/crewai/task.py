@@ -142,7 +142,7 @@ class Task(BaseModel):
     processed_by_agents: Set[str] = Field(default_factory=set)
     guardrail: Optional[Union[Callable[[TaskOutput], Tuple[bool, Any]], str]] = Field(
         default=None,
-        description="Function to validate task output before proceeding to next task",
+        description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
     max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
@@ -215,6 +215,7 @@ class Task(BaseModel):
                     )
         return v
 
+    _guardrail: Optional[Callable] = PrivateAttr(default=None)
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _original_output_file: Optional[str] = PrivateAttr(default=None)
@@ -233,6 +234,17 @@ class Task(BaseModel):
                 raise ValueError(
                     f"{field} must be provided either directly or through config"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def ensure_guardrail_is_callable(self) -> "Task":
+        if callable(self.guardrail):
+            self._guardrail = self.guardrail
+        elif isinstance(self.guardrail, str):
+            from crewai.tasks.task_guardrail import TaskGuardrail
+
+            self._guardrail = TaskGuardrail(description=self.guardrail, task=self)
+
         return self
 
     @field_validator("id", mode="before")
@@ -411,7 +423,7 @@ class Task(BaseModel):
                 output_format=self._get_output_format(),
             )
 
-            if self.guardrail:
+            if self._guardrail:
                 guardrail_result = self._process_guardrail(task_output)
                 if not guardrail_result.success:
                     if self.retry_count >= self.max_retries:
@@ -476,7 +488,7 @@ class Task(BaseModel):
             raise e  # Re-raise the exception after emitting the event
 
     def _process_guardrail(self, task_output: TaskOutput) -> GuardrailResult:
-        if self.guardrail is None:
+        if self._guardrail is None:
             raise ValueError("Guardrail is not set")
 
         from crewai.utilities.events import (
@@ -485,19 +497,14 @@ class Task(BaseModel):
         )
         from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
+        result = self._guardrail(task_output)
+
         crewai_event_bus.emit(
             self,
             TaskGuardrailStartedEvent(
-                guardrail=self.guardrail, retry_count=self.retry_count
+                guardrail=self._guardrail, retry_count=self.retry_count
             ),
         )
-
-        if isinstance(self.guardrail, str):
-            from crewai.tasks.task_guardrail import TaskGuardrail
-
-            result = TaskGuardrail(description=self.guardrail, task=self)(task_output)
-        else:
-            result = self.guardrail(task_output)
 
         guardrail_result = GuardrailResult.from_tuple(result)
 
