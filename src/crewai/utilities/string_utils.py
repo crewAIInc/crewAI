@@ -1,4 +1,3 @@
-# /home/ruby/PycharmProjects/crewAI/src/crewai/utilities/string_utils.py
 import re
 from typing import Any, Dict, Optional, Union
 
