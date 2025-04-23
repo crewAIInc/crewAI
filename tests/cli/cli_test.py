@@ -132,6 +132,13 @@ def test_reset_knowledge(mock_get_crew, runner):
     assert result.output == "Knowledge has been reset.\n"
 
 
+@mock.patch("crewai.knowledge.storage.knowledge_storage.KnowledgeStorage")
+def test_reset_knowledge_memories(MockKnowledgeStorage, runner):
+    result = runner.invoke(reset_memories, ["-kn"])
+    MockKnowledgeStorage().reset.assert_called_once()
+    assert result.output == "Knowledge has been reset.\n"
+
+
 def test_reset_no_memory_flags(runner):
     result = runner.invoke(
         reset_memories,

@@ -82,11 +82,15 @@ def _get_project_attribute(
         with open(pyproject_path, "r") as f:
             pyproject_content = parse_toml(f.read())
 
-        dependencies = (
-            _get_nested_value(pyproject_content, ["project", "dependencies"]) or []
-        )
-        if not any(True for dep in dependencies if "crewai" in dep):
-            raise Exception("crewai is not in the dependencies.")
+        import inspect
+        calling_frame = inspect.currentframe().f_back
+        calling_function = calling_frame.f_code.co_name
+        if calling_function != "reset_memories":
+            dependencies = (
+                _get_nested_value(pyproject_content, ["project", "dependencies"]) or []
+            )
+            if not any(True for dep in dependencies if "crewai" in dep):
+                raise Exception("crewai is not in the dependencies.")
 
         attribute = _get_nested_value(pyproject_content, keys)
     except FileNotFoundError:

@@ -62,3 +62,5 @@ def reset_memories_command(
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
+        if "No crew found" in str(e):
+            click.echo("This error might occur when running the command in a non-CrewAI project directory.", err=True)
