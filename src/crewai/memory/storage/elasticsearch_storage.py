@@ -181,7 +181,7 @@ class ElasticsearchStorage(BaseRAGStorage):
                         query_part = script_score_obj.get("query", {})
                         if isinstance(query_part, dict):
                             for key, value in filter.items():
-                                script_score_obj["query"] = {
+                                new_query = {
                                     "bool": {
                                         "must": [
                                             query_part,
@@ -189,10 +189,13 @@ class ElasticsearchStorage(BaseRAGStorage):
                                         ]
                                     }
                                 }
+                                if isinstance(script_score_obj, dict):
+                                    script_score_obj["query"] = new_query
             
             with suppress_logging():
-                if self.app is not None:
-                    response = self.app.search(
+                if self.app is not None and hasattr(self.app, "search") and callable(getattr(self.app, "search")):
+                    search_func = getattr(self.app, "search")
+                    response = search_func(
                         index=self.index_name,
                         body=search_query
                     )
@@ -224,9 +227,11 @@ class ElasticsearchStorage(BaseRAGStorage):
             
         embedder = self.embedder_config
         if hasattr(embedder, "embed_documents") and callable(getattr(embedder, "embed_documents")):
-            return embedder.embed_documents([text])[0]
+            embed_func = getattr(embedder, "embed_documents")
+            return embed_func([text])[0]
         elif hasattr(embedder, "embed") and callable(getattr(embedder, "embed")):
-            return embedder.embed(text)
+            embed_func = getattr(embedder, "embed")
+            return embed_func(text)
         else:
             raise ValueError("Invalid embedding function configuration")
 
@@ -247,7 +252,8 @@ class ElasticsearchStorage(BaseRAGStorage):
         }
         
         if self.app is not None and hasattr(self.app, "index") and callable(getattr(self.app, "index")):
-            result = self.app.index(
+            index_func = getattr(self.app, "index")
+            result = index_func(
                 index=self.index_name,
                 id=str(uuid.uuid4()),
                 document=doc,

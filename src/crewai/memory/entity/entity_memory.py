@@ -34,18 +34,17 @@ class EntityMemory(Memory):
             storage = Mem0Storage(type="entities", crew=crew)
         elif memory_provider == "elasticsearch":
             try:
-                from crewai.memory.storage.elasticsearch_storage import ElasticsearchStorage
+                storage = self._create_elasticsearch_storage(
+                    type="entities",
+                    allow_reset=True,
+                    embedder_config=embedder_config,
+                    crew=crew,
+                    path=path,
+                )
             except ImportError:
                 raise ImportError(
                     "Elasticsearch is not installed. Please install it with `pip install elasticsearch`."
                 )
-            storage = ElasticsearchStorage(
-                type="entities",
-                allow_reset=True,
-                embedder_config=embedder_config,
-                crew=crew,
-                path=path,
-            )
         else:
             storage = RAGStorage(
                 type="entities",
@@ -70,6 +69,11 @@ class EntityMemory(Memory):
         else:
             data = f"{item.name}({item.type}): {item.description}"
         super().save(data, item.metadata)
+
+    def _create_elasticsearch_storage(self, **kwargs):
+        """Create an Elasticsearch storage instance."""
+        from crewai.memory.storage.elasticsearch_storage import ElasticsearchStorage
+        return ElasticsearchStorage(**kwargs)
 
     def reset(self) -> None:
         try:

@@ -6,6 +6,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
+try:
+    from crewai.knowledge.storage.elasticsearch_knowledge_storage import (
+        ElasticsearchKnowledgeStorage,
+    )
+except ImportError:
+    ElasticsearchKnowledgeStorage = None
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
 
@@ -39,9 +46,8 @@ class Knowledge(BaseModel):
         else:
             if storage_provider == "elasticsearch":
                 try:
-                    from crewai.knowledge.storage.elasticsearch_knowledge_storage import ElasticsearchKnowledgeStorage
-                    self.storage = cast(KnowledgeStorage, ElasticsearchKnowledgeStorage(
-                        embedder_config=embedder, collection_name=collection_name
+                    self.storage = cast(KnowledgeStorage, self._create_elasticsearch_storage(
+                        embedder, collection_name
                     ))
                 except ImportError:
                     raise ImportError(
@@ -83,6 +89,16 @@ class Knowledge(BaseModel):
                 source.add()
         except Exception as e:
             raise e
+
+    def _create_elasticsearch_storage(self, embedder, collection_name):
+        """Create an Elasticsearch storage instance."""
+        if ElasticsearchKnowledgeStorage is None:
+            raise ImportError(
+                "Elasticsearch is not installed. Please install it with `pip install elasticsearch`."
+            )
+        return ElasticsearchKnowledgeStorage(
+            embedder_config=embedder, collection_name=collection_name
+        )
 
     def reset(self) -> None:
         if self.storage:

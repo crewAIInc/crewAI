@@ -6,7 +6,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crewai.knowledge.storage.elasticsearch_knowledge_storage import ElasticsearchKnowledgeStorage
+from crewai.knowledge.storage.elasticsearch_knowledge_storage import (
+    ElasticsearchKnowledgeStorage,
+)
 
 
 @pytest.mark.skipif(

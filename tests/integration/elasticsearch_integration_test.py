@@ -6,6 +6,8 @@ import unittest
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.knowledge import Knowledge
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 
 
 @pytest.mark.skipif(
@@ -54,9 +56,6 @@ class TestElasticsearchIntegration(unittest.TestCase):
         
     def test_crew_with_elasticsearch_knowledge(self):
         """Test a crew with Elasticsearch knowledge."""
-        from crewai.knowledge import Knowledge
-        from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
-        
         content = "AI is a field of computer science that focuses on creating machines that can perform tasks that typically require human intelligence."
         string_source = StringKnowledgeSource(
             content=content, metadata={"topic": "AI"}

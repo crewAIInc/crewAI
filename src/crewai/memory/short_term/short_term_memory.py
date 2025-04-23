@@ -36,17 +36,16 @@ class ShortTermMemory(Memory):
             storage = Mem0Storage(type="short_term", crew=crew)
         elif memory_provider == "elasticsearch":
             try:
-                from crewai.memory.storage.elasticsearch_storage import ElasticsearchStorage
+                storage = self._create_elasticsearch_storage(
+                    type="short_term",
+                    embedder_config=embedder_config,
+                    crew=crew,
+                    path=path,
+                )
             except ImportError:
                 raise ImportError(
                     "Elasticsearch is not installed. Please install it with `pip install elasticsearch`."
                 )
-            storage = ElasticsearchStorage(
-                type="short_term",
-                embedder_config=embedder_config,
-                crew=crew,
-                path=path,
-            )
         else:
             storage = RAGStorage(
                 type="short_term",
@@ -78,6 +77,11 @@ class ShortTermMemory(Memory):
         return self.storage.search(
             query=query, limit=limit, score_threshold=score_threshold
         )  # type: ignore # BUG? The reference is to the parent class, but the parent class does not have this parameters
+
+    def _create_elasticsearch_storage(self, **kwargs):
+        """Create an Elasticsearch storage instance."""
+        from crewai.memory.storage.elasticsearch_storage import ElasticsearchStorage
+        return ElasticsearchStorage(**kwargs)
 
     def reset(self) -> None:
         try:

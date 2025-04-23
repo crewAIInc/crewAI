@@ -4,6 +4,16 @@ from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.memory.storage.rag_storage import RAGStorage
 from crewai.utilities.logger import Logger
 
+try:
+    from crewai.memory.storage.elasticsearch_storage import ElasticsearchStorage
+except ImportError:
+    ElasticsearchStorage = None
+
+try:
+    from crewai.memory.storage.mem0_storage import Mem0Storage
+except ImportError:
+    Mem0Storage = None
+
 
 class StorageFactory:
     """Factory for creating storage instances based on provider type."""
@@ -34,17 +44,7 @@ class StorageFactory:
             Storage instance.
         """
         if provider == "elasticsearch":
-            try:
-                from crewai.memory.storage.elasticsearch_storage import ElasticsearchStorage
-                return ElasticsearchStorage(
-                    type=type,
-                    allow_reset=allow_reset,
-                    embedder_config=embedder_config,
-                    crew=crew,
-                    path=path,
-                    **kwargs,
-                )
-            except ImportError:
+            if ElasticsearchStorage is None:
                 Logger(verbose=True).log(
                     "error",
                     "Elasticsearch is not installed. Please install it with `pip install elasticsearch`.",
@@ -53,11 +53,16 @@ class StorageFactory:
                 raise ImportError(
                     "Elasticsearch is not installed. Please install it with `pip install elasticsearch`."
                 )
+            return ElasticsearchStorage(
+                type=type,
+                allow_reset=allow_reset,
+                embedder_config=embedder_config,
+                crew=crew,
+                path=path,
+                **kwargs,
+            )
         elif provider == "mem0":
-            try:
-                from crewai.memory.storage.mem0_storage import Mem0Storage
-                return cast(BaseRAGStorage, Mem0Storage(type=type, crew=crew))
-            except ImportError:
+            if Mem0Storage is None:
                 Logger(verbose=True).log(
                     "error",
                     "Mem0 is not installed. Please install it with `pip install mem0ai`.",
@@ -66,6 +71,7 @@ class StorageFactory:
                 raise ImportError(
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 )
+            return cast(BaseRAGStorage, Mem0Storage(type=type, crew=crew))
         return RAGStorage(
             type=type,
             allow_reset=allow_reset,
