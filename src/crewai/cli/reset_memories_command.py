@@ -12,7 +12,7 @@ from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandle
 def reset_memories_command(
     long,
     short,
-    entity,
+    entities,  # Changed from entity to entities to match CLI parameter
     knowledge,
     kickoff_outputs,
     all,
@@ -23,7 +23,7 @@ def reset_memories_command(
     Args:
       long (bool): Whether to reset the long-term memory.
       short (bool): Whether to reset the short-term memory.
-      entity (bool): Whether to reset the entity memory.
+      entities (bool): Whether to reset the entity memory.
       kickoff_outputs (bool): Whether to reset the latest kickoff task outputs.
       all (bool): Whether to reset all memories.
       knowledge (bool): Whether to reset the knowledge.
@@ -45,7 +45,7 @@ def reset_memories_command(
             if short:
                 ShortTermMemory().reset()
                 click.echo("Short term memory has been reset.")
-            if entity:
+            if entities:  # Changed from entity to entities
                 EntityMemory().reset()
                 click.echo("Entity memory has been reset.")
             if kickoff_outputs:
