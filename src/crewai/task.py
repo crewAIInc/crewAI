@@ -488,8 +488,7 @@ class Task(BaseModel):
             raise e  # Re-raise the exception after emitting the event
 
     def _process_guardrail(self, task_output: TaskOutput) -> GuardrailResult:
-        if self._guardrail is None:
-            raise ValueError("Guardrail is not set")
+        assert self._guardrail is not None
 
         from crewai.utilities.events import (
             TaskGuardrailCompletedEvent,
