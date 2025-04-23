@@ -262,7 +262,6 @@ def test_guardrail_using_additional_instructions(mock_run, mock_llm, task_output
     assert additional_instructions in str(mock_llm.call.call_args)
 
 
-# TODO: missing a test to cover callable func guardrail
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_emits_events(sample_agent):
     started_guardrail = []
@@ -361,64 +360,6 @@ def test_guardrail_emits_events(sample_agent):
         assert completed_guardrail == expected_completed_events
 
 
-def test_task_guardrail_when_docker_is_not_available(mock_llm, task_output):
-    guardrail = TaskGuardrail(description="Test validation", llm=mock_llm)
-    with (
-        patch(
-            "crewai_tools.CodeInterpreterTool.__init__", return_value=None
-        ) as mock_init,
-        patch(
-            "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
-        ),
-        patch(
-            "subprocess.run",
-            side_effect=FileNotFoundError,
-        ),
-    ):
-        guardrail(task_output)
-
-    mock_init.assert_called_once_with(code=ANY, unsafe_mode=True)
-
-
-def test_task_guardrail_when_docker_is_available(mock_llm, task_output):
-    guardrail = TaskGuardrail(description="Test validation", llm=mock_llm)
-    with (
-        patch(
-            "crewai_tools.CodeInterpreterTool.__init__", return_value=None
-        ) as mock_init,
-        patch(
-            "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
-        ) as mock_run,
-        patch(
-            "subprocess.run",
-            return_value=True,
-        ),
-    ):
-        guardrail(task_output)
-
-    mock_init.assert_called_once_with(code=ANY, unsafe_mode=False)
-
-
-def test_task_guardrail_when_tool_output_is_not_valid(mock_llm, task_output):
-    guardrail = TaskGuardrail(description="Test validation", llm=mock_llm)
-    with (
-        patch(
-            "crewai_tools.CodeInterpreterTool.__init__", return_value=None
-        ) as mock_init,
-        patch(
-            "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
-        ) as mock_run,
-        patch(
-            "subprocess.run",
-            return_value=True,
-        ) as docker_check,
-    ):
-        guardrail(task_output)
-
-    mock_init.assert_called_once_with(code=ANY, unsafe_mode=False)
-    docker_check.assert_called_once()
-
-
 @pytest.mark.parametrize("unsafe_mode", [True, False])
 def test_task_guardrail_force_code_tool_unsafe_mode(mock_llm, task_output, unsafe_mode):
     guardrail = TaskGuardrail(
@@ -431,12 +372,8 @@ def test_task_guardrail_force_code_tool_unsafe_mode(mock_llm, task_output, unsaf
         patch(
             "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
         ),
-        patch(
-            "subprocess.run",
-            side_effect=FileNotFoundError,
-        ) as docker_check,
     ):
-        guardrail(task_output)
+        result = guardrail(task_output)
 
-    docker_check.assert_not_called()
     mock_init.assert_called_once_with(code=ANY, unsafe_mode=unsafe_mode)
+    assert result == (True, "Valid output")
