@@ -4,6 +4,36 @@ description: View the latest updates and changes to CrewAI
 icon: timeline
 ---
 
+<Update label="2025-04-07" description="v0.114.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/v01140.png" />
+  </Frame>
+
+  **New Features & Enhancements**
+  - Agents as an atomic unit. (`Agent(...).kickoff()`)
+  - Support for [Custom LLM implementations](https://docs.crewai.com/guides/advanced/custom-llm).
+  - Integrated External Memory and [Opik observability](https://docs.crewai.com/how-to/opik-observability).
+  - Enhanced YAML extraction.
+  - Multimodal agent validation.
+  - Added Secure fingerprints for agents and crews.
+
+  **Core Improvements & Fixes**
+  - Improved serialization, agent copying, and Python compatibility.
+  - Added wildcard support to `emit()`
+  - Added support for additional router calls and context window adjustments.
+  - Fixed typing issues, validation, and import statements.
+  - Improved method performance.
+  - Enhanced agent task handling, event emissions, and memory management.
+  - Fixed CLI issues, conditional tasks, cloning behavior, and tool outputs.
+
+  **Documentation & Guides**
+  - Improved documentation structure, theme, and organization.
+  - Added guides for Local NVIDIA NIM with WSL2, W&B Weave, and Arize Phoenix.
+  - Updated tool configuration examples, prompts, and observability docs.
+  - Guide on using singular agents within Flows.
+</Update>
+
 <Update label="2025-03-17" description="v0.108.0">
   **Features**
   - Converted tabs to spaces in `crew.py` template
