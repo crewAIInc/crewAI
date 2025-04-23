@@ -1,0 +1,66 @@
+{% set name = "crewai" %}
+{% set version = "0.86.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ..
+
+build:
+  noarch: python
+  number: 0
+  script: {{ PYTHON }} -m pip install . -vv
+  entry_points:
+    - crewai = crewai.cli.cli:crewai
+
+requirements:
+  host:
+    - python >=3.10,<3.13
+    - pip
+    - hatchling
+  run:
+    - python >=3.10,<3.13
+    - pydantic >=2.4.2
+    - openai >=1.13.3
+    - opentelemetry-api >=1.22.0
+    - opentelemetry-sdk >=1.22.0
+    - opentelemetry-exporter-otlp-proto-http >=1.22.0
+    - instructor >=1.3.3
+    - regex >=2024.9.11
+    - click >=8.1.7
+    - python-dotenv >=1.0.0
+    - appdirs >=1.4.4
+    - jsonref >=1.1.0
+    - json-repair >=0.25.2
+    - auth0-python >=4.7.1
+    - litellm >=1.44.22
+    - pyvis >=0.3.2
+    - uv >=0.4.25
+    - tomli-w >=1.1.0
+    - tomli >=2.0.2
+    - chromadb >=0.5.23
+    - pdfplumber >=0.11.4
+    - openpyxl >=3.1.5
+    - blinker >=1.9.0
+
+test:
+  imports:
+    - crewai
+  commands:
+    - pip check
+    - crewai --help
+
+about:
+  home: https://crewai.com
+  doc_url: https://docs.crewai.com
+  dev_url: https://github.com/crewAIInc/crewAI
+  summary: Cutting-edge framework for orchestrating role-playing, autonomous AI agents
+  license: MIT
+
+extra:
+  recipe-maintainers:
+    - joaomoura
+    # For Python 3.10 compatibility (Self type)
+    - typing_extensions >=4.0.0
