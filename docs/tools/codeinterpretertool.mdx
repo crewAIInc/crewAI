@@ -8,11 +8,29 @@ icon: code-simple
 
 ## Description
 
-The `CodeInterpreterTool` enables CrewAI agents to execute Python 3 code that they generate autonomously. The code is run in a secure, isolated Docker container, ensuring safety regardless of the content. This functionality is particularly valuable as it allows agents to create code, execute it, obtain the results, and utilize that information to inform subsequent decisions and actions.
+The `CodeInterpreterTool` enables CrewAI agents to execute Python 3 code that they generate autonomously. This functionality is particularly valuable as it allows agents to create code, execute it, obtain the results, and utilize that information to inform subsequent decisions and actions.
 
-## Requirements
+There are several ways to use this tool:
 
-- Docker must be installed and running on your system. If you don't have it, you can install it from [here](https://docs.docker.com/get-docker/).
+### Docker Container (Recommended)
+
+This is the primary option. The code runs in a secure, isolated Docker container, ensuring safety regardless of its content.
+Make sure Docker is installed and running on your system. If you don’t have it, you can install it from [here](https://docs.docker.com/get-docker/).
+
+### Sandbox environment
+
+If Docker is unavailable — either not installed or not accessible for any reason — the code will be executed in a restricted Python environment - called sandbox.
+This environment is very limited, with strict restrictions on many modules and built-in functions.
+
+### Unsafe Execution
+
+**NOT RECOMMENDED FOR PRODUCTION** 
+This mode allows execution of any Python code, including dangerous calls to `sys, os..` and similar modules. [Check out](/tools/codeinterpretertool#enabling-unsafe-mode) how to enable this mode
+
+## Logging
+
+The `CodeInterpreterTool` logs the selected execution strategy to STDOUT
+
 
 ## Installation
 
@@ -74,18 +92,32 @@ programmer_agent = Agent(
 )
 ```
 
+### Enabling `unsafe_mode`
+
+```python Code
+from crewai_tools import CodeInterpreterTool
+
+code = """
+import os
+os.system("ls -la")
+"""
+
+CodeInterpreterTool(unsafe_mode=True).run(code=code)
+```
+
 ## Parameters
 
 The `CodeInterpreterTool` accepts the following parameters during initialization:
 
 - **user_dockerfile_path**: Optional. Path to a custom Dockerfile to use for the code interpreter container.
 - **user_docker_base_url**: Optional. URL to the Docker daemon to use for running the container.
-- **unsafe_mode**: Optional. Whether to run code directly on the host machine instead of in a Docker container. Default is `False`. Use with caution!
+- **unsafe_mode**: Optional. Whether to run code directly on the host machine instead of in a Docker container or sandbox. Default is `False`. Use with caution!
+- **default_image_tag**: Optional. Default Docker image tag. Default is `code-interpreter:latest`
 
 When using the tool with an agent, the agent will need to provide:
 
 - **code**: Required. The Python 3 code to execute.
-- **libraries_used**: Required. A list of libraries used in the code that need to be installed.
+- **libraries_used**: Optional. A list of libraries used in the code that need to be installed. Default is `[]`
 
 ## Agent Integration Example
 
@@ -152,7 +184,7 @@ class CodeInterpreterTool(BaseTool):
         if self.unsafe_mode:
             return self.run_code_unsafe(code, libraries_used)
         else:
-            return self.run_code_in_docker(code, libraries_used)
+            return self.run_code_safety(code, libraries_used)
 ```
 
 The tool performs the following steps:
@@ -168,8 +200,9 @@ The tool performs the following steps:
 By default, the `CodeInterpreterTool` runs code in an isolated Docker container, which provides a layer of security. However, there are still some security considerations to keep in mind:
 
 1. The Docker container has access to the current working directory, so sensitive files could potentially be accessed.
-2. The `unsafe_mode` parameter allows code to be executed directly on the host machine, which should only be used in trusted environments.
-3. Be cautious when allowing agents to install arbitrary libraries, as they could potentially include malicious code.
+2. If the Docker container is unavailable and the code needs to run safely, it will be executed in a sandbox environment. For security reasons, installing arbitrary libraries is not allowed
+3. The `unsafe_mode` parameter allows code to be executed directly on the host machine, which should only be used in trusted environments.
+4. Be cautious when allowing agents to install arbitrary libraries, as they could potentially include malicious code.
 
 ## Conclusion
 
