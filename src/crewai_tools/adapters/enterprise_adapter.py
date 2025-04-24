@@ -3,7 +3,6 @@ from pydantic import Field, create_model
 from typing import List, Any, Dict, Optional
 import json
 from crewai.tools import BaseTool
-from crewai import Agent, Task, Crew
 
 
 ENTERPRISE_ACTION_KIT_PROJECT_ID = "dd525517-df22-49d2-a69e-6a0eed211166"
@@ -202,58 +201,3 @@ class EnterpriseActionKitToolAdapter:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
-
-
-if __name__ == "__main__":
-    # IMPORTANT: Replace 'YOUR_TOKEN_HERE' with your actual valid token
-    # You can also load it from an environment variable for better security
-    import os
-
-    token = os.environ.get(
-        "ENTERPRISE_TOOL_TOKEN",
-    )  # Replace YOUR_TOKEN_HERE if not using env var
-
-    if token == "YOUR_TOKEN_HERE" or not token:
-        print("Error: ENTERPRISE_TOOL_TOKEN is not set.")
-        print(
-            "Please replace 'YOUR_TOKEN_HERE' in the code or set the ENTERPRISE_TOOL_TOKEN environment variable."
-        )
-    else:
-        try:
-            print("Initializing EnterpriseActionKitTool...")
-            adapter = EnterpriseActionKitToolAdapter(enterprise_action_token=token)
-            available_tools = adapter.tools()
-
-            agent = Agent(
-                model="gpt-4o",
-                tools=available_tools,
-                role="You are are expert at google sheets",
-                goal="Get the sheet with the data x",
-                backstory="You are a expert at google sheets",
-                verbose=True,
-            )
-
-            task = Task(
-                description="return data from the sheet with the id: {spreadsheetId}, with the limit: {limit}",
-                expected_output="The data from the sheet with the id: {spreadsheetId} with the limit: {limit}",
-                agent=agent,
-            )
-            crew = Crew(
-                agents=[agent],
-                tasks=[task],
-                verbose=True,
-            )
-            result = crew.kickoff(
-                inputs={
-                    "spreadsheetId": "1DHDIWGdhUXqXeYOO8yA44poiY222qHPQEUu28olipKs",
-                    "limit": 2,
-                }
-            )
-
-        except ValueError as e:
-            print(f"\nConfiguration Error: {e}")
-        except Exception as e:
-            print(f"\nAn unexpected error occurred during execution: {e}")
-            import traceback
-
-            traceback.print_exc()
