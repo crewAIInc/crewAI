@@ -29,7 +29,7 @@ def mock_knowledge_source():
     """
     return StringKnowledgeSource(content=content)
 
-@patch('crewai.knowledge.storage.knowledge_storage.chromadb')
+@patch('chromadb.PersistentClient')
 def test_knowledge_included_in_planning(mock_chroma):
     """Test that verifies knowledge sources are properly included in planning."""
     # Mock ChromaDB collection

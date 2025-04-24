@@ -100,7 +100,7 @@ class InternalCrewPlanner:
         # Knowledge field should not be present when empty
         assert '"agent_knowledge"' not in tasks_summary
 
-    @patch('crewai.knowledge.storage.knowledge_storage.chromadb')
+    @patch('chromadb.PersistentClient')
     def test_create_tasks_summary_with_knowledge_and_tools(self, mock_chroma):
         """Test task summary generation with both knowledge and tools present."""
         # Mock ChromaDB collection
