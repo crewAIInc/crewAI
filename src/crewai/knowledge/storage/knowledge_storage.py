@@ -4,13 +4,15 @@ import io
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast, TYPE_CHECKING
 
-import chromadb
-import chromadb.errors
-from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
-from chromadb.config import Settings
+# Type checking imports that don't cause runtime imports
+if TYPE_CHECKING:
+    import chromadb
+    import chromadb.errors
+    from chromadb.api import ClientAPI
+    from chromadb.api.types import OneOrMany
+    from chromadb.config import Settings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -43,9 +45,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
+    collection: Optional[Any] = None
     collection_name: Optional[str] = "knowledge"
-    app: Optional[ClientAPI] = None
+    app: Optional[Any] = None
 
     def __init__(
         self,
@@ -84,6 +86,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
+        # Import chromadb here to avoid importing at module level
+        import chromadb
+        from chromadb.config import Settings
+        
         base_path = os.path.join(db_storage_path(), "knowledge")
         chroma_client = chromadb.PersistentClient(
             path=base_path,
@@ -109,6 +115,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise Exception("Failed to create or get collection")
 
     def reset(self):
+        # Import chromadb here to avoid importing at module level
+        import chromadb
+        from chromadb.config import Settings
+        
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
         if not self.app:
             self.app = chromadb.PersistentClient(
@@ -126,6 +136,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         documents: List[str],
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
+        # Import chromadb here to avoid importing at module level
+        import chromadb
+        import chromadb.errors
+        from chromadb.api.types import OneOrMany
+        
         if not self.collection:
             raise Exception("Collection not initialized")
 
@@ -156,7 +171,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 filtered_ids.append(doc_id)
 
             # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
+            final_metadata: Optional[OneOrMany['chromadb.Metadata']] = (
                 None if all(m is None for m in filtered_metadata) else filtered_metadata
             )
 

@@ -1,8 +1,10 @@
 import os
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional, cast, TYPE_CHECKING
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
-from chromadb.api.types import validate_embedding_function
+# Type checking imports that don't cause runtime imports
+if TYPE_CHECKING:
+    from chromadb import Documents, EmbeddingFunction, Embeddings
+    from chromadb.api.types import EmbeddingFunction
 
 
 class EmbeddingConfigurator:
@@ -24,8 +26,12 @@ class EmbeddingConfigurator:
     def configure_embedder(
         self,
         embedder_config: Optional[Dict[str, Any]] = None,
-    ) -> EmbeddingFunction:
+    ) -> 'EmbeddingFunction':
         """Configures and returns an embedding function based on the provided config."""
+        # Import here to avoid importing chromadb at module level
+        from chromadb import EmbeddingFunction
+        from chromadb.api.types import validate_embedding_function
+        
         if embedder_config is None:
             return self._create_default_embedding_function()
 
@@ -182,6 +188,9 @@ class EmbeddingConfigurator:
                 "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
             ) from e
 
+        # Import chromadb types here to avoid importing at module level
+        from chromadb import Documents, Embeddings, EmbeddingFunction
+
         class WatsonEmbeddingFunction(EmbeddingFunction):
             def __call__(self, input: Documents) -> Embeddings:
                 if isinstance(input, str):
@@ -212,6 +221,10 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_custom(config):
+        # Import here to avoid importing chromadb at module level
+        from chromadb import EmbeddingFunction
+        from chromadb.api.types import validate_embedding_function
+        
         custom_embedder = config.get("embedder")
         if isinstance(custom_embedder, EmbeddingFunction):
             try:

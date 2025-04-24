@@ -4,9 +4,11 @@ import logging
 import os
 import shutil
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-from chromadb.api import ClientAPI
+# Type checking imports that don't cause runtime imports
+if TYPE_CHECKING:
+    from chromadb.api import ClientAPI
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -37,7 +39,7 @@ class RAGStorage(BaseRAGStorage):
     search efficiency.
     """
 
-    app: ClientAPI | None = None
+    app: Optional[Any] = None
 
     def __init__(
         self, type, allow_reset=True, embedder_config=None, crew=None, path=None
@@ -60,6 +62,7 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
+        # Import chromadb here to avoid importing at module level
         import chromadb
         from chromadb.config import Settings
 
