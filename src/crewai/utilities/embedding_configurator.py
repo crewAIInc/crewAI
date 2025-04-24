@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional, cast
 
 # Type checking imports that don't cause runtime imports
 if TYPE_CHECKING:
@@ -189,7 +189,7 @@ class EmbeddingConfigurator:
             ) from e
 
         # Import chromadb types here to avoid importing at module level
-        from chromadb import Documents, Embeddings, EmbeddingFunction
+        from chromadb import Documents, EmbeddingFunction, Embeddings
 
         class WatsonEmbeddingFunction(EmbeddingFunction):
             def __call__(self, input: Documents) -> Embeddings:

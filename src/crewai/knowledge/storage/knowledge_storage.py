@@ -4,7 +4,7 @@ import io
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Union, cast, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
 # Type checking imports that don't cause runtime imports
 if TYPE_CHECKING:
