@@ -497,4 +497,585 @@ interactions:
       - req_bb43402829dc4dc60bf6f4b76a72e6c9
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      CvIRCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSyREKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKvDQoQvAcNF9UeD7t09cBcweMTABIIKCD3f9LaxOYqDENyZXcgQ3JlYXRlZDABOZgQ
+      uy/9lTkYQWCQwy/9lTkYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTE0LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi45Si4KCGNyZXdfa2V5EiIKIDZiYTkxMmY5MTI5ZDY4NDlhMGFjNDljZmJk
+      MzIxZGFkSjEKB2NyZXdfaWQSJgokNmFjMGQ0ODMtYzU3YS00Y2U2LTkyMjQtYTEzZGVkODZlMDg3
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAJKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAko6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJDU3OGZiNjhlLTgzOTQtNGM4ZC1iNDk3LTQwNWQxNGQwOWE5ZUo7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNC0yNVQxMToyNzoyNS4yNDAzMzdK
+      zwUKC2NyZXdfYWdlbnRzEr8FCrwFW3sia2V5IjogIjczYzM0OWM5M2MxNjNiNWQ0ZGY5OGE2NGZh
+      YzFjNDMwIiwgImlkIjogIjNiOTJmYzcwLTRjOTAtNDYxNS1hZmIwLTgxNjk3NGRmMjMzMCIsICJy
+      b2xlIjogInt0b3BpY30gU2VuaW9yIERhdGEgUmVzZWFyY2hlclxuIiwgInZlcmJvc2U/IjogdHJ1
+      ZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxt
+      IjogIm9wZW5haS9tb2RlbF9uYW1lIiwgImxsbSI6ICJncHQtNG8tbWluaSIsICJkZWxlZ2F0aW9u
+      X2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9y
+      ZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiMTA0ZmUwNjU5ZTEw
+      YjQyNmNmODhmMDI0ZmI1NzE1NTMiLCAiaWQiOiAiYzIzMThhYzUtODg3ZC00ZTQ5LWFjMTMtOTZj
+      ZmI4YWU3MjE2IiwgInJvbGUiOiAie3RvcGljfSBSZXBvcnRpbmcgQW5hbHlzdFxuIiwgInZlcmJv
+      c2U/IjogdHJ1ZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2Nh
+      bGxpbmdfbGxtIjogIm9ubGluZV9sbG0iLCAibGxtIjogImdwdC00by1taW5pIiwgImRlbGVnYXRp
+      b25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4
+      X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUqTBAoKY3Jld190YXNrcxKEBAqB
+      BFt7ImtleSI6ICIwMDE3OTdlM2Y2MmQzM2NkMWQ2MzVlYjZmZGQ1YjQ1MyIsICJpZCI6ICI3ODg2
+      YzVkZS0xOTNlLTQ4OGItYWRhMi1jMzZkYWY2NDc3NGMiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZh
+      bHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInt0b3BpY30gU2VuaW9y
+      IERhdGEgUmVzZWFyY2hlclxuIiwgImFnZW50X2tleSI6ICI3M2MzNDljOTNjMTYzYjVkNGRmOThh
+      NjRmYWMxYzQzMCIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiYjE3YjE4OGRiZjE0Zjkz
+      YTk4ZTViOTVhYWQzNjc1NzciLCAiaWQiOiAiYTk0ZjlmNjMtMGNkMS00ZDNlLWI3ZTYtYzRlYjBk
+      OTg2M2JjIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNl
+      LCAiYWdlbnRfcm9sZSI6ICJ7dG9waWN9IFJlcG9ydGluZyBBbmFseXN0XG4iLCAiYWdlbnRfa2V5
+      IjogIjEwNGZlMDY1OWUxMGI0MjZjZjg4ZjAyNGZiNTcxNTUzIiwgInRvb2xzX25hbWVzIjogW119
+      XXoCGAGFAQABAAASgAQKEO4cuS5HPbqzS8Ax1T8E5cQSCLS7XSz6EKGlKgxUYXNrIENyZWF0ZWQw
+      ATnAkdUv/ZU5GEHwBtYv/ZU5GEouCghjcmV3X2tleRIiCiA2YmE5MTJmOTEyOWQ2ODQ5YTBhYzQ5
+      Y2ZiZDMyMWRhZEoxCgdjcmV3X2lkEiYKJDZhYzBkNDgzLWM1N2EtNGNlNi05MjI0LWExM2RlZDg2
+      ZTA4N0ouCgh0YXNrX2tleRIiCiAwMDE3OTdlM2Y2MmQzM2NkMWQ2MzVlYjZmZGQ1YjQ1M0oxCgd0
+      YXNrX2lkEiYKJDc4ODZjNWRlLTE5M2UtNDg4Yi1hZGEyLWMzNmRhZjY0Nzc0Y0o6ChBjcmV3X2Zp
+      bmdlcnByaW50EiYKJDU3OGZiNjhlLTgzOTQtNGM4ZC1iNDk3LTQwNWQxNGQwOWE5ZUo6ChB0YXNr
+      X2ZpbmdlcnByaW50EiYKJGU2NjgzYWRmLWI2MTctNDQ3YS05YTg2LTBlNTJmZDA2MTI2N0o7Cht0
+      YXNrX2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNC0yNVQxMToyNzoyNS4yNDAyNDBK
+      OwoRYWdlbnRfZmluZ2VycHJpbnQSJgokZGNlNjg5NWQtNmVlYi00OWRhLThkMTMtYjY4MjNkNWU2
+      YzE1egIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2293'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 25 Apr 2025 14:27:28 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Bicycles Senior Data
+      Researcher\n. You''re a seasoned researcher with a knack for uncovering the
+      latest developments in Bicycles. Known for your ability to find the most relevant
+      information and present it in a clear and concise manner.\n\nYour personal goal
+      is: Uncover cutting-edge developments in Bicycles\n\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Conduct a thorough research about Bicycles Make sure you find any interesting
+      and relevant information given the current year is 2025.\n\n\nThis is the expected
+      criteria for your final answer: A list with 10 bullet points of the most relevant
+      information about Bicycles\n\nyou MUST return the actual complete content as
+      the final answer, not a summary.\n\nBegin! This is VERY important to you, use
+      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1255'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        DwAAAP//AwC1cSuaOg4AAA==
+    headers:
+      CF-RAY:
+      - 935e856368caa672-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 25 Apr 2025 14:27:33 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '7417'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999721'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_e386d15318a2f6331fce590264267ebe
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a expert Python developerYou
+      **must strictly** follow the task description, use the provided raw output as
+      the input in your code. Your code must:\n- Return results with: print((True,
+      data)) on success, or print((False, ''very detailed error message'')) on failure.
+      Make sure the final output is being assined to ''result'' variable.\n- Use the
+      literal string of the task output (already included in your input) if needed.\n-
+      Generate the code **following strictly** the task description.\n- Be valid Python
+      3 \u2014 executable as-is.\n- DO NOT wrap the output in markdown or use triple
+      backticks. Return only raw Python code.- DO NOT use `exec`, `eval`, `compile`,
+      `open`, `os`, `subprocess`, `socket`, `shutil`, or any other system-level modules.\n-
+      Your code must not perform any file I/O, shell access, or dynamic code execution.\nAdditional
+      instructions (do not override the previous instructions):\n"}, {"role": "user",
+      "content": "Based on the task description below, generate Python 3 code that
+      validates the task output. \nTask description:\nmake sure each bullet contains
+      a minimum of 100 words\nHere is the raw output from the task: \n''1. **Electric
+      Bicycle Market Boom**: The popularity of electric bicycles (e-bikes) has surged,
+      with an estimated market growth of 30% year-over-year in 2025. Newer models
+      offer extended ranges due to advances in battery technology, some reaching up
+      to 150 miles on a single charge. \n\n2. **Smart Cycling Technologies**: Integration
+      of IoT (Internet of Things) allows for smart bicycles equipped with GPS navigation,
+      health monitoring, and ride optimization features. These bicycles can connect
+      to your smartphone to provide real-time analytics on performance and route planning.\n\n3.
+      **Sustainable Materials**: Manufacturers are increasingly using sustainable
+      materials such as bio-based composites and recycled metals to construct frames,
+      which not only reduces carbon footprints but also appeals to eco-conscious consumers.\n\n4.
+      **Advancements in Safety Features**: New safety technologies, including automatic
+      braking systems, integrated lights, and proximity sensors, are being introduced
+      to prevent accidents. Many urban bicycles now come standard with these features
+      to improve rider safety in crowded environments.\n\n5. **Focus on Urban Infrastructure**:
+      Cities worldwide are investing heavily in cycling infrastructure, developing
+      dedicated bike lanes, parking, and repair stations. This shift is aimed at promoting
+      cycling as a viable means of transportation, reducing traffic congestion and
+      pollution.\n\n6. **Foldable and Compact Designs**: The demand for foldable bicycles
+      has increased among urban dwellers, leading to innovations in lightweight, compact
+      designs that are convenient for commuting and storage in tight living spaces.\n\n7.
+      **Bike-Sharing Programs Expansion**: Cities continue to expand bike-sharing
+      programs, with new app-based models that allow users to locate, rent, and return
+      bicycles seamlessly. These systems are thriving as a cost-effective and environmentally
+      friendly transportation option.\n\n8. **Personalization and Customization Trends**:
+      Cyclists are seeking more personalized bicycles tailored to their riding style
+      and aesthetics. Customization options for frame size, color, components, and
+      accessories are becoming a standard offering from several manufacturers.\n\n9.
+      **Cross-Training Features**: Notably, more bicycles come equipped with features
+      promoting cross-training. For example, hybrid models incorporate removable components
+      that allow users to modify their bicycles for different activities like touring
+      or mountain biking.\n\n10. **Innovative Financing Options**: To make bicycles
+      more accessible, many retailers are offering innovative financing solutions
+      such as subscription services that allow consumers to pay monthly fees for bike
+      use, maintenance, and upgrades, making bike ownership more flexible and appealing.''
+      \nUse this exact string literal inside your generated code (do not reference
+      variables like task_output.raw).Now generate Python code that follows the instructions
+      above."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '4206'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      CF-RAY:
+      - 935e8593e86da672-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 25 Apr 2025 14:27:44 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '10807'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998986'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_24d2cc01e619a6bb716a1c58741de95f
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!binary |
+      CsAECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSlwQKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKABAoQgm88k6kvWnXfKwgB6Klo9hIIJ/X3pHUMguAqDFRhc2sgQ3JlYXRlZDABOXj5
+      DZcBljkYQcDhD5cBljkYSi4KCGNyZXdfa2V5EiIKIDZiYTkxMmY5MTI5ZDY4NDlhMGFjNDljZmJk
+      MzIxZGFkSjEKB2NyZXdfaWQSJgokNmFjMGQ0ODMtYzU3YS00Y2U2LTkyMjQtYTEzZGVkODZlMDg3
+      Si4KCHRhc2tfa2V5EiIKIGIxN2IxODhkYmYxNGY5M2E5OGU1Yjk1YWFkMzY3NTc3SjEKB3Rhc2tf
+      aWQSJgokYTk0ZjlmNjMtMGNkMS00ZDNlLWI3ZTYtYzRlYjBkOTg2M2JjSjoKEGNyZXdfZmluZ2Vy
+      cHJpbnQSJgokNTc4ZmI2OGUtODM5NC00YzhkLWI0OTctNDA1ZDE0ZDA5YTllSjoKEHRhc2tfZmlu
+      Z2VycHJpbnQSJgokNTUwZDhhZmEtY2U0Ni00YWUxLThjNDAtNTk1ZjI4MDgyYzdjSjsKG3Rhc2tf
+      ZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTA0LTI1VDExOjI3OjI1LjI0MDI5NUo7ChFh
+      Z2VudF9maW5nZXJwcmludBImCiRkYTAwM2NmYS1lM2JjLTQwY2EtYWIyNy01ZjRkYzU5ZWEwNGV6
+      AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '579'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 25 Apr 2025 14:27:48 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Bicycles Reporting
+      Analyst\n. You''re a meticulous analyst with a keen eye for detail. You''re
+      known for your ability to turn complex data into clear and concise reports,
+      making it easy for others to understand and act on the information you provide.\n\nYour
+      personal goal is: Create detailed reports based on Bicycles data analysis and
+      research findings\n\nTo give my best complete final answer to the task respond
+      using the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Review the context you got
+      and expand each topic into a full section for a report. Make sure the report
+      is detailed and contains any and all relevant information.\n\n\nThis is the
+      expected criteria for your final answer: A fully fledge reports with the mains
+      topics, each with a full section of information. Formatted as markdown without
+      ''```''\n\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is the context you''re working with:\ngood result\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1431'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      CF-RAY:
+      - 935e85d919d4a672-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 25 Apr 2025 14:28:00 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '16131'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999677'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_17c54ba3e3f29f41fa22361a6191b8e5
+    status:
+      code: 200
+      message: OK
 version: 1

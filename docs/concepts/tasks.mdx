@@ -791,6 +791,29 @@ task = Task(
 )
 ```
 
+##### Using YAML
+
+```yaml
+research_task:
+  ...
+  guardrail: make sure each bullet contains a minimum of 100 words
+  ...
+```
+
+```python Code
+@CrewBase
+class InternalCrew:
+    agents_config = "config/agents.yaml"
+    tasks_config = "config/tasks.yaml"
+
+    ...
+    @task
+    def research_task(self):
+        return Task(config=self.tasks_config["research_task"])  # type: ignore[index]
+    ...
+```
+
+
 #### Use custom models for code generation
 
 ```python Code

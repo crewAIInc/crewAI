@@ -492,4 +492,584 @@ interactions:
       - req_1a11ba8b9c0cb1803e99cd95fa1fb890
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      CuoRCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSwREKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKnDQoQa1D4CGN+4CdZeuPKfuwBSBIIBesOCPKBdOkqDENyZXcgQ3JlYXRlZDABOQj5
+      Z40SljkYQRg9eI0SljkYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTE0LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi45Si4KCGNyZXdfa2V5EiIKIDZiYTkxMmY5MTI5ZDY4NDlhMGFjNDljZmJk
+      MzIxZGFkSjEKB2NyZXdfaWQSJgokYjU4ZmQ1YWMtMTk4Ni00ZDAzLTg3NDgtNDBlMDU2OWY4Y2Yy
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAJKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAko6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJDI1ZDRmZDE1LTA1ODUtNGRhZS1hYTc0LTZlNTUyYzgxODk3N0o7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNC0yNVQxMToyODo1Ny4wMDYzODlK
+      xwUKC2NyZXdfYWdlbnRzErcFCrQFW3sia2V5IjogIjczYzM0OWM5M2MxNjNiNWQ0ZGY5OGE2NGZh
+      YzFjNDMwIiwgImlkIjogImMxZGU0N2JlLTFlMzEtNDQ0Ni1hZDQzLTA5NGJlM2RhZWIwNSIsICJy
+      b2xlIjogInt0b3BpY30gU2VuaW9yIERhdGEgUmVzZWFyY2hlclxuIiwgInZlcmJvc2U/IjogdHJ1
+      ZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxt
+      IjogImxvY2FsX2xsbSIsICJsbG0iOiAiZ3B0LTRvLW1pbmkiLCAiZGVsZWdhdGlvbl9lbmFibGVk
+      PyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGlt
+      aXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjEwNGZlMDY1OWUxMGI0MjZjZjg4
+      ZjAyNGZiNTcxNTUzIiwgImlkIjogImYwNzVkMzFmLTcyNzgtNGU1MS1iZjU3LTgwN2QxNzRhYWZl
+      YyIsICJyb2xlIjogInt0b3BpY30gUmVwb3J0aW5nIEFuYWx5c3RcbiIsICJ2ZXJib3NlPyI6IHRy
+      dWUsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xs
+      bSI6ICJvbmxpbmVfbGxtIiwgImxsbSI6ICJncHQtNG8tbWluaSIsICJkZWxlZ2F0aW9uX2VuYWJs
+      ZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9s
+      aW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KkwQKCmNyZXdfdGFza3MShAQKgQRbeyJrZXki
+      OiAiMDAxNzk3ZTNmNjJkMzNjZDFkNjM1ZWI2ZmRkNWI0NTMiLCAiaWQiOiAiNjJhOWM5N2QtY2I1
+      OC00MDU5LTkwNDQtZGFjMGM5NDE1NDgzIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1
+      bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ7dG9waWN9IFNlbmlvciBEYXRhIFJl
+      c2VhcmNoZXJcbiIsICJhZ2VudF9rZXkiOiAiNzNjMzQ5YzkzYzE2M2I1ZDRkZjk4YTY0ZmFjMWM0
+      MzAiLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogImIxN2IxODhkYmYxNGY5M2E5OGU1Yjk1
+      YWFkMzY3NTc3IiwgImlkIjogIjVmYjliYTA4LTg4NzctNGM2Ny1hZDY1LTQ5M2VmMWQyMmUzNCIs
+      ICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50
+      X3JvbGUiOiAie3RvcGljfSBSZXBvcnRpbmcgQW5hbHlzdFxuIiwgImFnZW50X2tleSI6ICIxMDRm
+      ZTA2NTllMTBiNDI2Y2Y4OGYwMjRmYjU3MTU1MyIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEA
+      AQAAEoAEChDCfDeSqiPVqIlnyFMODhbJEghtwT/c3MzqLyoMVGFzayBDcmVhdGVkMAE5CJKNjRKW
+      ORhBGDaOjRKWORhKLgoIY3Jld19rZXkSIgogNmJhOTEyZjkxMjlkNjg0OWEwYWM0OWNmYmQzMjFk
+      YWRKMQoHY3Jld19pZBImCiRiNThmZDVhYy0xOTg2LTRkMDMtODc0OC00MGUwNTY5ZjhjZjJKLgoI
+      dGFza19rZXkSIgogMDAxNzk3ZTNmNjJkMzNjZDFkNjM1ZWI2ZmRkNWI0NTNKMQoHdGFza19pZBIm
+      CiQ2MmE5Yzk3ZC1jYjU4LTQwNTktOTA0NC1kYWMwYzk0MTU0ODNKOgoQY3Jld19maW5nZXJwcmlu
+      dBImCiQyNWQ0ZmQxNS0wNTg1LTRkYWUtYWE3NC02ZTU1MmM4MTg5NzdKOgoQdGFza19maW5nZXJw
+      cmludBImCiRmYTc4M2NkZS0yYTIzLTQxNzAtYjU2ZC1iMzFjZTcxMGNhZDNKOwobdGFza19maW5n
+      ZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMDQtMjVUMTE6Mjg6NTcuMDA2MjU2SjsKEWFnZW50
+      X2ZpbmdlcnByaW50EiYKJDMzZmRiMDZkLWY0ZjItNGVhZS1iZDhkLTE0NGU4NmIwMWNiMnoCGAGF
+      AQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2285'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 25 Apr 2025 14:28:58 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are plants Senior Data
+      Researcher\n. You''re a seasoned researcher with a knack for uncovering the
+      latest developments in plants. Known for your ability to find the most relevant
+      information and present it in a clear and concise manner.\n\nYour personal goal
+      is: Uncover cutting-edge developments in plants\n\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Conduct a thorough research about plants Make sure you find any interesting
+      and relevant information given the current year is 2025.\n\n\nThis is the expected
+      criteria for your final answer: A list with 10 bullet points of the most relevant
+      information about plants\n\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1245'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        AAD//wMA4PXJ2A0PAAA=
+    headers:
+      CF-RAY:
+      - 935e87a06f4aa672-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 25 Apr 2025 14:29:05 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '8799'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999724'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_6c63c9b5ba9fa2d10d8dbb539b171c23
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a expert Python developerYou
+      **must strictly** follow the task description, use the provided raw output as
+      the input in your code. Your code must:\n- Return results with: print((True,
+      data)) on success, or print((False, ''very detailed error message'')) on failure.
+      Make sure the final output is being assined to ''result'' variable.\n- Use the
+      literal string of the task output (already included in your input) if needed.\n-
+      Generate the code **following strictly** the task description.\n- Be valid Python
+      3 \u2014 executable as-is.\n- DO NOT wrap the output in markdown or use triple
+      backticks. Return only raw Python code.- DO NOT use `exec`, `eval`, `compile`,
+      `open`, `os`, `subprocess`, `socket`, `shutil`, or any other system-level modules.\n-
+      Your code must not perform any file I/O, shell access, or dynamic code execution.\nAdditional
+      instructions (do not override the previous instructions):\n"}, {"role": "user",
+      "content": "Based on the task description below, generate Python 3 code that
+      validates the task output. \nTask description:\nmake sure each bullet contains
+      a minimum of 100 words\nHere is the raw output from the task: \n''1. **Genetic
+      Engineering Advances**: Recent breakthroughs in CRISPR technology have enabled
+      scientists to develop crops with enhanced traits such as drought resistance,
+      disease tolerance, and improved nutritional profiles, significantly impacting
+      food security.\n\n2. **Plant-Based Bioplastics**: The development of bioplastics
+      derived from plant materials is gaining traction, with innovations that reduce
+      reliance on fossil fuels. Companies are now producing biodegradable plastics
+      from sources like corn and sugarcane, contributing to environmental sustainability.\n\n3.
+      **Vertical Farming Trends**: Urban vertical farming has surged, utilizing hydroponics
+      and aeroponics to grow fresh produce in urban areas. This method minimizes land
+      use and transportation emissions, providing local food sources in densely populated
+      cities.\n\n4. **Plant Communication Research**: Studies have shown that certain
+      plants can communicate through mycorrhizal networks, allowing them to share
+      nutrients and even warn each other of pests. This has opened new avenues for
+      understanding plant ecology and cooperative behavior.\n\n5. **Medicinal Plant
+      Discoveries**: Research into traditional medicinal plants has led to the discovery
+      of new compounds with potential therapeutic effects, including anti-inflammatory
+      and antioxidant properties, paving the way for novel pharmaceuticals.\n\n6.
+      **Climate Resilience Initiatives**: Plant breeders are increasingly focused
+      on developing climate-resilient crops capable of thriving in extreme conditions
+      due to climate change. This includes breeding for heat tolerance and salinity
+      resistance to ensure food production sustainability.\n\n7. **Microbial Support
+      Systems**: The role of soil microbiomes in plant health has been spotlighted,
+      with findings indicating that beneficial microbes can enhance nutrient uptake,
+      disease resistance, and overall plant vigor, prompting a shift towards more
+      holistic farming practices.\n\n8. **Eco-friendly Pest Management**: Advances
+      in integrated pest management (IPM) techniques have emerged, utilizing biological
+      control agents, pheromone traps, and organic pesticides to reduce chemical input
+      while maintaining crop health.\n\n9. **Perennial Crop Research**: There is a
+      growing interest in perennial crops that do not require annual replanting and
+      can provide more sustainable agricultural options. Perennials conserve soil
+      health, improve biodiversity, and reduce carbon footprints.\n\n10. **Synthetic
+      Biology and Food Production**: The integration of synthetic biology into agriculture
+      has led to the creation of crops that can grow in suboptimal conditions, such
+      as salty or heavily polluted soils, allowing for the revitalization of degraded
+      lands and expanded agricultural frontiers.\n\nThese highlights represent the
+      forefront of plant research and innovation, demonstrating the myriad ways in
+      which plants continue to be a focal point for scientific inquiry and practical
+      application in addressing global challenges.'' \nUse this exact string literal
+      inside your generated code (do not reference variables like task_output.raw).Now
+      generate Python code that follows the instructions above."}], "model": "gpt-4o-mini",
+      "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '4415'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFdNbxw5Dr3nVxB9sR20DTtxPsbYHMYZZ5HZDZCNPdnDOAjYEquKGxVV
+        Q6m60wny3xeUqro7mVlgfbDhkkiRj3yP0tcHAAv2iytYuA6z64dwev2vm39eXnfPNv9YXWz43c34
+        8y9vbv/dcf90+PXxYmkWcfUfcnm2OnOxHwJljlKXnRJmMq8Xzy6fPPnp4vHl07LQR0/BzNohn17G
+        056FTx+dP7o8PX92evF8su4iO0qLK/j9AQDA1/Lb4hRPnxdXcL6cv/SUEra0uNptAlhoDPZlgSlx
+        yih5sdwvuiiZpITuMSO8gKOLM3j48O8klNnBjbQsRMrSws9+jeIoPXx4Be/IkWRYKeGn3Gkc2y4B
+        C7x89/r27TvI5DqJIbZb6HBNQIKrQB6SY5LMKSfIETytKcQBnMYhwYZzBySdneEhK3JOkEbXASbw
+        5YgMSjUJR0vwnAgTQY6BtH5C8cD9oHFNHmTMylYFDDBobDhQWkLiVrhhh5LD1jajy5ZdE6OHRG5U
+        ztuz+3u5v5dHBsXbgJJPrzGRh2uOQ8CU2RUU7jqak+gNjtjAar8DPClbII3GHgZzAz1mUsaQgBO0
+        yGJHZ7UYoiwrBiwS12gfEuQOLWk/OgKlwJYmRIEmpsQBmpFCOoOXsR9QmBKgEkjcWL5+dOZ8xdFT
+        q+itArCLrcSU4qiOEgT+ROCiSgEwjS2qQ6ElWHsor8aCUI5AsmaNYsligDSmjCy44rDH7LFh9p40
+        s8MAr1B7s71TEl8w+01XKLCeNzTThg6t2NqSX8KYOfCX8nXrNQ5RLGILDWn3b47QatxAo5S6KV+y
+        FhzLAaiE6QzuOk7QU+6iB2NXz18sX/M1Jio+s6KkIWoukAP1nJJhvzSna/YWR4gl1tIiE2Ys4EkS
+        hS0McRiDMRwcZ6Y0IXG56x4rUD8Ku3rEO0qE6jqD4zaP3gpXaJK6uJFac0dq2Na2SeBQwO2cEEyc
+        g37romrHXzCAUN5E/ZSWgCHETSlZR70hlbrSGEYIMneWN61JYIMqQOg6iLkjtQ4eKOUZOatKHEiM
+        TbQBXJOMlKCJCqN4UqNiAah2N7nKeXPvYhxIMfOaYEUdrjnqBMwTA+YNeXZs3KwQ/cLJxTUpzwJT
+        MQKWHK1GfqZyvzOcsLEgTVxsnxFycrS1ZCxqk+M4ip8kZoimeIzBdisONJrQUdOQy2kJLC6MJSeU
+        zKcsTcC+xxy15mVf42f2FvOglqOVfAkDrifEYYPbApHENQUYOtQeXTkGw9wcTw2Dl4FNECxZDkzG
+        7dfCmQtqBYaKzUqJDO1CbxabJ4mlDXaMG02YosxCZEG46vdUJ795kliHQ1GB2FgDcQmYBehzVupN
+        AaSinMCPpquzI3AdSktTU1SEKNWwqnYqdIR5L8VVSDCwcN4eqHYVkTQqVTZV3hZW/KWaPCutwk7j
+        yip2Ow7GVLjdpkz9ToNtxFlSKXKAvu6OfSVp7cyOMOSutMqKSCANMQduu2x6U9qi4dLJZuMLUUsx
+        McOKhBp2dnx1TZWO06jasQrGIeOng7l0OKsMDmtKDFPbwprbqEVj+qEchpA6bgzDDapP0Ecl6GJg
+        E+ydTg5lVridyDw3gG5cPG0sCB+28JZShjco2JLptGE0T27DgyXbODC1MqZDv9sJx6/fvjmps5v/
+        GGdRop5+lOUVG8+LfpcJEQNga8KyhKEjjX0UMs4OacpcWxR25UB2bL2T4zzWXEd9ccUyjBk2HQeC
+        HlnyNB6td6cCTkn/VJSVlESsLC9tw6Go3nVkREmAZUbUNs+klq+1xM6y0qKU2UeQaLP2j5HV+ldG
+        DKBUqlXlwJe616lAtT67pg0E2Cq7MeRRMUAcCpHOYBdmMqwSqem89WnNaDnfV8qg5jVp4rytsM0A
+        oa7KyI95UJY8l/7i3GC43Uruyl3tmvfq+8rI9XZHrpkoc/GNb8aXne1qsi1qu0+EfhTXcpWdrA/A
+        M1zKNGbj8cqS72tzTIKy3N3kEoa8hSoYay7TM4TR2tFQORxepip2ptKaMwb+sju5XmjIl0E+TbPP
+        A4p9+q4KjUbJTDpDdtdRIui47Qr5k9VXKVnz20lNVComZQ4Wmuo8h8rVcnczW4KnPkrKOisFQb9V
+        Rm/qX4i26dh1u/ltcUgV1RUBmnDbBIssuSQ63YwbdsBiLVjrONEdA+AwhPkCwQLovVKyKQBtiCsD
+        u8MQSFpKZ0f3ci9Zt1f3Yrf81RgC5Y/lsAQvwG76Z2kInI+PKi5HJ3WnRVJ32xnf2U2+7IcbCCTH
+        dfkE/gYX5+cHy/ajyIngPYaRblSjHjdH19VvTZlNAexeEjVfwdfq6verx+cfvp2dnc3hKKUxZHgB
+        x3c6mrJixpN7oc+Ohgw35Y/hgQno6keTVxgSLaE5eo+BfQWuQbZmrk8Ni+sKvqasx3Tyzc68l0Kw
+        4+rk5PChpNSMCe2xJmMIBwsoEuvVsTzRPkwr33aPshDbQeMq/WC6aFg4dR9tlkexB1jKcViU1W8P
+        AD6Ux9/43XtuUafFxxw/UTnu+fnj6m+xf3PuV58+mp6Gixwzhv3CxeWj2e47jx89ZeSQDh6QC4eu
+        I7+33b82cfQcDxYeHOT953j+ynfNnaX9f9zvF5zVnfzHQe0q+H3O+21K9ij/X9t2OJeAF+m/AAAA
+        //9KLSrLTE6NBxUW4M5walpiaQ6kq6xUDG5txKdl5qWnFoFTCEhJWkF8SlJicqKZQUqagRJXLRcA
+        AAD//wMAvk3QbD0QAAA=
+    headers:
+      CF-RAY:
+      - 935e87d8be83a672-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 25 Apr 2025 14:29:19 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '13449'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998934'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_17bb8696f535c626c17a5f2a2fcb08ef
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!binary |
+      CsAECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSlwQKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKABAoQ5GJxtiLjMfqcLosmZBGCHhIIFCC6dc+ZfEgqDFRhc2sgQ3JlYXRlZDABOfC0
+      gNUXljkYQVAcgtUXljkYSi4KCGNyZXdfa2V5EiIKIDZiYTkxMmY5MTI5ZDY4NDlhMGFjNDljZmJk
+      MzIxZGFkSjEKB2NyZXdfaWQSJgokYjU4ZmQ1YWMtMTk4Ni00ZDAzLTg3NDgtNDBlMDU2OWY4Y2Yy
+      Si4KCHRhc2tfa2V5EiIKIGIxN2IxODhkYmYxNGY5M2E5OGU1Yjk1YWFkMzY3NTc3SjEKB3Rhc2tf
+      aWQSJgokNWZiOWJhMDgtODg3Ny00YzY3LWFkNjUtNDkzZWYxZDIyZTM0SjoKEGNyZXdfZmluZ2Vy
+      cHJpbnQSJgokMjVkNGZkMTUtMDU4NS00ZGFlLWFhNzQtNmU1NTJjODE4OTc3SjoKEHRhc2tfZmlu
+      Z2VycHJpbnQSJgokNTJjZjkwYzUtYWIyOC00MTYxLWI0NjItZDhmNDg5YTUzZTlhSjsKG3Rhc2tf
+      ZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTA0LTI1VDExOjI4OjU3LjAwNjMzMUo7ChFh
+      Z2VudF9maW5nZXJwcmludBImCiRlODJmMThiMC01NTBjLTQ0ZTItOWRlNS0yYmI2NWMzZWZhY2J6
+      AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '579'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 25 Apr 2025 14:29:23 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are plants Reporting Analyst\n.
+      You''re a meticulous analyst with a keen eye for detail. You''re known for your
+      ability to turn complex data into clear and concise reports, making it easy
+      for others to understand and act on the information you provide.\n\nYour personal
+      goal is: Create detailed reports based on plants data analysis and research
+      findings\n\nTo give my best complete final answer to the task respond using
+      the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Review the context you got
+      and expand each topic into a full section for a report. Make sure the report
+      is detailed and contains any and all relevant information.\n\n\nThis is the
+      expected criteria for your final answer: A fully fledge reports with the mains
+      topics, each with a full section of information. Formatted as markdown without
+      ''```''\n\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is the context you''re working with:\ngood result\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1427'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      CF-RAY:
+      - 935e882e2d44a672-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 25 Apr 2025 14:29:32 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '12958'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999678'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_a16b6b72734b672d38321ca8b5d40ef7
+    status:
+      code: 200
+      message: OK
 version: 1
