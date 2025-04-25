@@ -156,7 +156,7 @@ class EmbeddingConfigurator:
         )
 
         # Allow custom model_name override with backwards compatibility
-        kwargs = {"session": config.get("session")}
+        kwargs = {"session": config.get("session"), "operation_name": "InvokeModel"}
         if model_name is not None:
             kwargs["model_name"] = model_name
         return AmazonBedrockEmbeddingFunction(**kwargs)
