@@ -2,28 +2,28 @@ import os
 from typing import Any, Dict, List, Optional, Union
 
 from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
-from crewai.llm import LLM
+from crewai.llm import LLM, BaseLLM
 
 
 def create_llm(
     llm_value: Union[str, LLM, Any, None] = None,
-) -> Optional[LLM]:
+) -> Optional[LLM | BaseLLM]:
     """
     Creates or returns an LLM instance based on the given llm_value.
 
     Args:
-        llm_value (str | LLM | Any | None):
+        llm_value (str | BaseLLM | Any | None):
             - str: The model name (e.g., "gpt-4").
-            - LLM: Already instantiated LLM, returned as-is.
+            - BaseLLM: Already instantiated BaseLLM (including LLM), returned as-is.
             - Any: Attempt to extract known attributes like model_name, temperature, etc.
             - None: Use environment-based or fallback default model.
 
     Returns:
-        An LLM instance if successful, or None if something fails.
+        A BaseLLM instance if successful, or None if something fails.
     """
 
-    # 1) If llm_value is already an LLM object, return it directly
-    if isinstance(llm_value, LLM):
+    # 1) If llm_value is already a BaseLLM or LLM object, return it directly
+    if isinstance(llm_value, LLM) or isinstance(llm_value, BaseLLM):
         return llm_value
 
     # 2) If llm_value is a string (model name)

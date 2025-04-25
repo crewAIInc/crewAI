@@ -7,8 +7,10 @@ icon: file-code
 # `JSONSearchTool`
 
 <Note>
-    The JSONSearchTool is currently in an experimental phase. This means the tool is under active development, and users might encounter unexpected behavior or changes. 
-    We highly encourage feedback on any issues or suggestions for improvements.
+  The JSONSearchTool is currently in an experimental phase. This means the tool
+  is under active development, and users might encounter unexpected behavior or
+  changes. We highly encourage feedback on any issues or suggestions for
+  improvements.
 </Note>
 
 ## Description
@@ -28,7 +30,7 @@ pip install 'crewai[tools]'
 Here are updated examples on how to utilize the JSONSearchTool effectively for searching within JSON files. These examples take into account the current implementation and usage patterns identified in the codebase.
 
 ```python Code
-from crewai.json_tools import JSONSearchTool  # Updated import path
+from crewai_tools import JSONSearchTool
 
 # General JSON content search
 # This approach is suitable when the JSON path is either known beforehand or can be dynamically identified.
@@ -60,7 +62,7 @@ tool = JSONSearchTool(
                 # stream=true,
             },
         },
-        "embedder": {
+        "embedding_model": {
             "provider": "google", # or openai, ollama, ...
             "config": {
                 "model": "models/embedding-001",

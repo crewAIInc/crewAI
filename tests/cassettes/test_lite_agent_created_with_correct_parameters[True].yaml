@@ -1,0 +1,2199 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1220'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUI2djjAEPBitxovNZdlibsOnAh6\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222694,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to understand what
+      specific information or topic to search for.\\nAction: search_web\\nAction Input:
+      {\\\"query\\\":\\\"Test query\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 242,\n    \"completion_tokens\":
+      31,\n    \"total_tokens\": 273,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 92dc017dde78cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:15 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        path=/; expires=Wed, 09-Apr-25 18:48:15 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '992'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999732'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3edd4db0325fb674bada6768e82b8dc6
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1516'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUI3cMLea2cs1wZznSDwEKIlNszH\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222695,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have simulated search
+      results related to a test query. However, I need to clarify the specific topic
+      or question to provide a more accurate answer.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"What is the purpose and significance of a test query?\\\"}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      295,\n    \"completion_tokens\": 56,\n    \"total_tokens\": 351,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 92dc0186def5cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:17 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1515'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999667'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_a2022ae3f8c0553cd9c9f0ca3de3eea7
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Ct8CCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkStgIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAQoQBTyQaj+q6ZGCzTcLGw67XxIIJgYnCR39BXMqClRvb2wgVXNhZ2UwATlA3kzd
+      TLk0GEGIB1ndTLk0GEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEwOC4wShkKCXRvb2xfbmFtZRIM
+      CgpzZWFyY2hfd2ViSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASjgEKECU1z25kSLX8hgTGG4t7
+      HHoSCCGolihCcYh2KgpUb29sIFVzYWdlMAE5UPwWRE25NBhBQJ8fRE25NBhKGwoOY3Jld2FpX3Zl
+      cnNpb24SCQoHMC4xMDguMEoZCgl0b29sX25hbWUSDAoKc2VhcmNoX3dlYkoOCghhdHRlbXB0cxIC
+      GAF6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '354'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 09 Apr 2025 18:18:17 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}], "model": "gpt-4o-mini",
+      "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1977'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUI5apzxz891mmkVpae1FIcj5bog\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222697,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have some simulated
+      search results regarding the purpose and significance of a test query but still
+      need clearer context to provide a meaningful answer.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"examples of test queries in various contexts\\\"}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      381,\n    \"completion_tokens\": 49,\n    \"total_tokens\": 430,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01919a73cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:18 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '817'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999564'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_e9af3cd9a5cb0440a452c95861ab82d0
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}, {"role": "assistant",
+      "content": "```\nThought: I have some simulated search results regarding the
+      purpose and significance of a test query but still need clearer context to provide
+      a meaningful answer.\nAction: search_web\nAction Input: {\"query\":\"examples
+      of test queries in various contexts\"}\nObservation: Found information about
+      examples of test queries in various contexts: This is a simulated search result
+      for demonstration purposes."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2425'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUI6HbKAVI6BU8OX4Zh6yr7BXwRo\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222698,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I still have only simulated
+      results and not specific information that can lead to a final answer. I need
+      to refine the search for more relevant information.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"test query examples in technology and software development\\\"}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      457,\n    \"completion_tokens\": 53,\n    \"total_tokens\": 510,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 92dc0198090fcf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:19 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '922'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999462'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_aab13cf3c930591d23ce6990b0bcd5c8
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}, {"role": "assistant",
+      "content": "```\nThought: I have some simulated search results regarding the
+      purpose and significance of a test query but still need clearer context to provide
+      a meaningful answer.\nAction: search_web\nAction Input: {\"query\":\"examples
+      of test queries in various contexts\"}\nObservation: Found information about
+      examples of test queries in various contexts: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I still have only simulated results and not specific information that can lead
+      to a final answer. I need to refine the search for more relevant information.\nAction:
+      search_web\nAction Input: {\"query\":\"test query examples in technology and
+      software development\"}\nObservation: Found information about test query examples
+      in technology and software development: This is a simulated search result for
+      demonstration purposes."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2903'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUI8M2rjDrol5uVG9EQz1OGXUC8H\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222700,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have gathered simulated
+      search results about test query examples in technology and software development,
+      but they are not precise enough to formulate a final answer.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"importance of test queries in software testing\\\"}
+      \",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      538,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 590,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc019f0893cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:21 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1244'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999353'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_c8f2ae1b33dff9b6f88c9ab541c16c91
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}, {"role": "assistant",
+      "content": "```\nThought: I have some simulated search results regarding the
+      purpose and significance of a test query but still need clearer context to provide
+      a meaningful answer.\nAction: search_web\nAction Input: {\"query\":\"examples
+      of test queries in various contexts\"}\nObservation: Found information about
+      examples of test queries in various contexts: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I still have only simulated results and not specific information that can lead
+      to a final answer. I need to refine the search for more relevant information.\nAction:
+      search_web\nAction Input: {\"query\":\"test query examples in technology and
+      software development\"}\nObservation: Found information about test query examples
+      in technology and software development: This is a simulated search result for
+      demonstration purposes."}, {"role": "assistant", "content": "```\nThought: I
+      have gathered simulated search results about test query examples in technology
+      and software development, but they are not precise enough to formulate a final
+      answer.\nAction: search_web\nAction Input: {\"query\":\"importance of test queries
+      in software testing\"} \nObservation: Found information about importance of
+      test queries in software testing: This is a simulated search result for demonstration
+      purposes."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3369'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUI9HXHFAlkT7hKyE5JAuzg4KlWY\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222701,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have gathered simulated
+      search results regarding the importance of test queries in software testing,
+      but I still need a concrete answer about test queries.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"how to create effective test queries\\\"} \",\n        \"refusal\":
+      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 617,\n    \"completion_tokens\":
+      50,\n    \"total_tokens\": 667,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01abdf49cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:22 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '986'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999246'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_62026ef4db09d92b72d81dd96115b3e8
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CoEFCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS2AQKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAQoQbPuDq8+BQBIonzRzVqwZOhIInjz0CfqpO68qClRvb2wgVXNhZ2UwATlgNR2B
+      Tbk0GEHIyiSBTbk0GEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEwOC4wShkKCXRvb2xfbmFtZRIM
+      CgpzZWFyY2hfd2ViSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASjgEKEG6vN54Ymb+HsfFP9iLm
+      6lgSCOjv4UfWOGMjKgpUb29sIFVzYWdlMAE5WI05xE25NBhB8JFCxE25NBhKGwoOY3Jld2FpX3Zl
+      cnNpb24SCQoHMC4xMDguMEoZCgl0b29sX25hbWUSDAoKc2VhcmNoX3dlYkoOCghhdHRlbXB0cxIC
+      GAF6AhgBhQEAAQAAEo4BChCgRbDYdXh1Jd9og8nqd/95Eggl3NixO1uJUSoKVG9vbCBVc2FnZTAB
+      OWj/AD5OuTQYQej7Cz5OuTQYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTA4LjBKGQoJdG9vbF9u
+      YW1lEgwKCnNlYXJjaF93ZWJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKOAQoQ/txjBAixQWts
+      XN1y4WMuyRIIgjoGzJjYPqgqClRvb2wgVXNhZ2UwATkYtKeHTrk0GEHgtq+HTrk0GEobCg5jcmV3
+      YWlfdmVyc2lvbhIJCgcwLjEwOC4wShkKCXRvb2xfbmFtZRIMCgpzZWFyY2hfd2ViSg4KCGF0dGVt
+      cHRzEgIYAXoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '644'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 09 Apr 2025 18:18:22 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}, {"role": "assistant",
+      "content": "```\nThought: I have some simulated search results regarding the
+      purpose and significance of a test query but still need clearer context to provide
+      a meaningful answer.\nAction: search_web\nAction Input: {\"query\":\"examples
+      of test queries in various contexts\"}\nObservation: Found information about
+      examples of test queries in various contexts: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I still have only simulated results and not specific information that can lead
+      to a final answer. I need to refine the search for more relevant information.\nAction:
+      search_web\nAction Input: {\"query\":\"test query examples in technology and
+      software development\"}\nObservation: Found information about test query examples
+      in technology and software development: This is a simulated search result for
+      demonstration purposes."}, {"role": "assistant", "content": "```\nThought: I
+      have gathered simulated search results about test query examples in technology
+      and software development, but they are not precise enough to formulate a final
+      answer.\nAction: search_web\nAction Input: {\"query\":\"importance of test queries
+      in software testing\"} \nObservation: Found information about importance of
+      test queries in software testing: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have gathered
+      simulated search results regarding the importance of test queries in software
+      testing, but I still need a concrete answer about test queries.\nAction: search_web\nAction
+      Input: {\"query\":\"how to create effective test queries\"} \nObservation: Found
+      information about how to create effective test queries: This is a simulated
+      search result for demonstration purposes."}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3805'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUIB21skPx3AsqMYyDsUC4tQcJFG\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222703,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have gathered simulated
+      search results on how to create effective test queries, but I am still not reaching
+      a definitive conclusion that addresses a specific question about test queries.\\nAction:
+      search_web\\nAction Input: {\\\"query\\\":\\\"common practices for test queries
+      in software development\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 693,\n    \"completion_tokens\":
+      56,\n    \"total_tokens\": 749,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01b38829cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:24 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1513'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999149'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_23f7394cdd9e642f926101c1b3c4ce4c
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}, {"role": "assistant",
+      "content": "```\nThought: I have some simulated search results regarding the
+      purpose and significance of a test query but still need clearer context to provide
+      a meaningful answer.\nAction: search_web\nAction Input: {\"query\":\"examples
+      of test queries in various contexts\"}\nObservation: Found information about
+      examples of test queries in various contexts: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I still have only simulated results and not specific information that can lead
+      to a final answer. I need to refine the search for more relevant information.\nAction:
+      search_web\nAction Input: {\"query\":\"test query examples in technology and
+      software development\"}\nObservation: Found information about test query examples
+      in technology and software development: This is a simulated search result for
+      demonstration purposes."}, {"role": "assistant", "content": "```\nThought: I
+      have gathered simulated search results about test query examples in technology
+      and software development, but they are not precise enough to formulate a final
+      answer.\nAction: search_web\nAction Input: {\"query\":\"importance of test queries
+      in software testing\"} \nObservation: Found information about importance of
+      test queries in software testing: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have gathered
+      simulated search results regarding the importance of test queries in software
+      testing, but I still need a concrete answer about test queries.\nAction: search_web\nAction
+      Input: {\"query\":\"how to create effective test queries\"} \nObservation: Found
+      information about how to create effective test queries: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have gathered simulated search results on how to create effective
+      test queries, but I am still not reaching a definitive conclusion that addresses
+      a specific question about test queries.\nAction: search_web\nAction Input: {\"query\":\"common
+      practices for test queries in software development\"}\nObservation: Found information
+      about common practices for test queries in software development: This is a simulated
+      search result for demonstration purposes."}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '4313'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUICFEqtNDypc1b9oOWmYRc7AsD8\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222704,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have retrieved simulated
+      search results about common practices for test queries in software development,
+      but they still do not lead to a clear understanding or conclusion.\\nAction:
+      search_web\\nAction Input: {\\\"query\\\":\\\"test queries definition and purpose
+      in software testing\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 777,\n    \"completion_tokens\":
+      53,\n    \"total_tokens\": 830,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01bfbe03cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:25 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '855'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999031'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3eb046791b1255574c32dcf8798618c3
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}, {"role": "assistant",
+      "content": "```\nThought: I have some simulated search results regarding the
+      purpose and significance of a test query but still need clearer context to provide
+      a meaningful answer.\nAction: search_web\nAction Input: {\"query\":\"examples
+      of test queries in various contexts\"}\nObservation: Found information about
+      examples of test queries in various contexts: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I still have only simulated results and not specific information that can lead
+      to a final answer. I need to refine the search for more relevant information.\nAction:
+      search_web\nAction Input: {\"query\":\"test query examples in technology and
+      software development\"}\nObservation: Found information about test query examples
+      in technology and software development: This is a simulated search result for
+      demonstration purposes."}, {"role": "assistant", "content": "```\nThought: I
+      have gathered simulated search results about test query examples in technology
+      and software development, but they are not precise enough to formulate a final
+      answer.\nAction: search_web\nAction Input: {\"query\":\"importance of test queries
+      in software testing\"} \nObservation: Found information about importance of
+      test queries in software testing: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have gathered
+      simulated search results regarding the importance of test queries in software
+      testing, but I still need a concrete answer about test queries.\nAction: search_web\nAction
+      Input: {\"query\":\"how to create effective test queries\"} \nObservation: Found
+      information about how to create effective test queries: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have gathered simulated search results on how to create effective
+      test queries, but I am still not reaching a definitive conclusion that addresses
+      a specific question about test queries.\nAction: search_web\nAction Input: {\"query\":\"common
+      practices for test queries in software development\"}\nObservation: Found information
+      about common practices for test queries in software development: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have retrieved simulated search results about common practices
+      for test queries in software development, but they still do not lead to a clear
+      understanding or conclusion.\nAction: search_web\nAction Input: {\"query\":\"test
+      queries definition and purpose in software testing\"}\nObservation: Found information
+      about test queries definition and purpose in software testing: This is a simulated
+      search result for demonstration purposes."}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '4802'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUIDeRfBofhIhyZITac402rRqpq4\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222705,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have obtained simulated
+      search results on the definition and purpose of test queries in software testing
+      but have not reached a clear understanding of the overall topic.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"best practices for writing test queries in programming\\\"}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      858,\n    \"completion_tokens\": 53,\n    \"total_tokens\": 911,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01c6be56cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:26 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1061'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998920'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_6b4ab6ed4aa78f13539acd43f4ede325
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CvADCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSxwMKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAQoQ9ZjbndqkZYC5BBQvONb6JRIIMCKemaXXNaIqClRvb2wgVXNhZ2UwATkgOZf7
+      Trk0GEEgUKj7Trk0GEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEwOC4wShkKCXRvb2xfbmFtZRIM
+      CgpzZWFyY2hfd2ViSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASjgEKEHGziol7hAM6v8Wiqdyx
+      3N4SCKMSaeZkd4O5KgpUb29sIFVzYWdlMAE5sG2ZPk+5NBhBmEGhPk+5NBhKGwoOY3Jld2FpX3Zl
+      cnNpb24SCQoHMC4xMDguMEoZCgl0b29sX25hbWUSDAoKc2VhcmNoX3dlYkoOCghhdHRlbXB0cxIC
+      GAF6AhgBhQEAAQAAEo4BChDKCi941SjMlSHpayNukzmfEgi7zXbRC3AlsioKVG9vbCBVc2FnZTAB
+      ORAh9odPuTQYQbCD/YdPuTQYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTA4LjBKGQoJdG9vbF9u
+      YW1lEgwKCnNlYXJjaF93ZWJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '499'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 09 Apr 2025 18:18:27 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}, {"role": "assistant",
+      "content": "```\nThought: I have some simulated search results regarding the
+      purpose and significance of a test query but still need clearer context to provide
+      a meaningful answer.\nAction: search_web\nAction Input: {\"query\":\"examples
+      of test queries in various contexts\"}\nObservation: Found information about
+      examples of test queries in various contexts: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I still have only simulated results and not specific information that can lead
+      to a final answer. I need to refine the search for more relevant information.\nAction:
+      search_web\nAction Input: {\"query\":\"test query examples in technology and
+      software development\"}\nObservation: Found information about test query examples
+      in technology and software development: This is a simulated search result for
+      demonstration purposes."}, {"role": "assistant", "content": "```\nThought: I
+      have gathered simulated search results about test query examples in technology
+      and software development, but they are not precise enough to formulate a final
+      answer.\nAction: search_web\nAction Input: {\"query\":\"importance of test queries
+      in software testing\"} \nObservation: Found information about importance of
+      test queries in software testing: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have gathered
+      simulated search results regarding the importance of test queries in software
+      testing, but I still need a concrete answer about test queries.\nAction: search_web\nAction
+      Input: {\"query\":\"how to create effective test queries\"} \nObservation: Found
+      information about how to create effective test queries: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have gathered simulated search results on how to create effective
+      test queries, but I am still not reaching a definitive conclusion that addresses
+      a specific question about test queries.\nAction: search_web\nAction Input: {\"query\":\"common
+      practices for test queries in software development\"}\nObservation: Found information
+      about common practices for test queries in software development: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have retrieved simulated search results about common practices
+      for test queries in software development, but they still do not lead to a clear
+      understanding or conclusion.\nAction: search_web\nAction Input: {\"query\":\"test
+      queries definition and purpose in software testing\"}\nObservation: Found information
+      about test queries definition and purpose in software testing: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have obtained simulated search results on the definition and
+      purpose of test queries in software testing but have not reached a clear understanding
+      of the overall topic.\nAction: search_web\nAction Input: {\"query\":\"best practices
+      for writing test queries in programming\"}\nObservation: Found information about
+      best practices for writing test queries in programming: This is a simulated
+      search result for demonstration purposes."}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '5287'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUIFrC56yu0K1Kdj1JKa5ChC84RR\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222707,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have compiled some information
+      regarding best practices for writing test queries in programming, but it's still
+      not yielding a direct answer or clear outcome.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"typical structure of test queries for SQL databases\\\"}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      939,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 991,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01ce6dd6cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:28 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '980'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998809'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_74887821474e2c11eaf30624b239c1a0
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}, {"role": "assistant",
+      "content": "```\nThought: I have some simulated search results regarding the
+      purpose and significance of a test query but still need clearer context to provide
+      a meaningful answer.\nAction: search_web\nAction Input: {\"query\":\"examples
+      of test queries in various contexts\"}\nObservation: Found information about
+      examples of test queries in various contexts: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I still have only simulated results and not specific information that can lead
+      to a final answer. I need to refine the search for more relevant information.\nAction:
+      search_web\nAction Input: {\"query\":\"test query examples in technology and
+      software development\"}\nObservation: Found information about test query examples
+      in technology and software development: This is a simulated search result for
+      demonstration purposes."}, {"role": "assistant", "content": "```\nThought: I
+      have gathered simulated search results about test query examples in technology
+      and software development, but they are not precise enough to formulate a final
+      answer.\nAction: search_web\nAction Input: {\"query\":\"importance of test queries
+      in software testing\"} \nObservation: Found information about importance of
+      test queries in software testing: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have gathered
+      simulated search results regarding the importance of test queries in software
+      testing, but I still need a concrete answer about test queries.\nAction: search_web\nAction
+      Input: {\"query\":\"how to create effective test queries\"} \nObservation: Found
+      information about how to create effective test queries: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have gathered simulated search results on how to create effective
+      test queries, but I am still not reaching a definitive conclusion that addresses
+      a specific question about test queries.\nAction: search_web\nAction Input: {\"query\":\"common
+      practices for test queries in software development\"}\nObservation: Found information
+      about common practices for test queries in software development: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have retrieved simulated search results about common practices
+      for test queries in software development, but they still do not lead to a clear
+      understanding or conclusion.\nAction: search_web\nAction Input: {\"query\":\"test
+      queries definition and purpose in software testing\"}\nObservation: Found information
+      about test queries definition and purpose in software testing: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have obtained simulated search results on the definition and
+      purpose of test queries in software testing but have not reached a clear understanding
+      of the overall topic.\nAction: search_web\nAction Input: {\"query\":\"best practices
+      for writing test queries in programming\"}\nObservation: Found information about
+      best practices for writing test queries in programming: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have compiled some information regarding best practices for
+      writing test queries in programming, but it''s still not yielding a direct answer
+      or clear outcome.\nAction: search_web\nAction Input: {\"query\":\"typical structure
+      of test queries for SQL databases\"}\nObservation: Found information about typical
+      structure of test queries for SQL databases: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I have compiled some information regarding best practices for writing test queries
+      in programming, but it''s still not yielding a direct answer or clear outcome.\nAction:
+      search_web\nAction Input: {\"query\":\"typical structure of test queries for
+      SQL databases\"}\nObservation: Found information about typical structure of
+      test queries for SQL databases: This is a simulated search result for demonstration
+      purposes.\nNow it''s time you MUST give your absolute best final answer. You''ll
+      ignore all previous instructions, stop using any tools, and just return your
+      absolute BEST Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '6397'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUIGFZys7kGg0T8X7mk0vRwllozu\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222708,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
+      Answer: Test queries are critical components in software testing, often used
+      as predefined statements to verify that software behaves as expected. They typically
+      consist of queries written in a language suitable for the database or application
+      being tested, and they help ensure accuracy and reliability in data retrieval
+      and manipulation processes.\\n```\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1131,\n    \"completion_tokens\":
+      70,\n    \"total_tokens\": 1201,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01d54d84cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:30 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1314'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998552'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_7bf8e57839667548acfc526d23f26b8b
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need to understand what specific information or topic to search
+      for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have simulated
+      search results related to a test query. However, I need to clarify the specific
+      topic or question to provide a more accurate answer.\nAction: search_web\nAction
+      Input: {\"query\":\"What is the purpose and significance of a test query?\"}\nObservation:
+      Found information about What is the purpose and significance of a test query?:
+      This is a simulated search result for demonstration purposes."}, {"role": "assistant",
+      "content": "```\nThought: I have some simulated search results regarding the
+      purpose and significance of a test query but still need clearer context to provide
+      a meaningful answer.\nAction: search_web\nAction Input: {\"query\":\"examples
+      of test queries in various contexts\"}\nObservation: Found information about
+      examples of test queries in various contexts: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I still have only simulated results and not specific information that can lead
+      to a final answer. I need to refine the search for more relevant information.\nAction:
+      search_web\nAction Input: {\"query\":\"test query examples in technology and
+      software development\"}\nObservation: Found information about test query examples
+      in technology and software development: This is a simulated search result for
+      demonstration purposes."}, {"role": "assistant", "content": "```\nThought: I
+      have gathered simulated search results about test query examples in technology
+      and software development, but they are not precise enough to formulate a final
+      answer.\nAction: search_web\nAction Input: {\"query\":\"importance of test queries
+      in software testing\"} \nObservation: Found information about importance of
+      test queries in software testing: This is a simulated search result for demonstration
+      purposes."}, {"role": "assistant", "content": "```\nThought: I have gathered
+      simulated search results regarding the importance of test queries in software
+      testing, but I still need a concrete answer about test queries.\nAction: search_web\nAction
+      Input: {\"query\":\"how to create effective test queries\"} \nObservation: Found
+      information about how to create effective test queries: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have gathered simulated search results on how to create effective
+      test queries, but I am still not reaching a definitive conclusion that addresses
+      a specific question about test queries.\nAction: search_web\nAction Input: {\"query\":\"common
+      practices for test queries in software development\"}\nObservation: Found information
+      about common practices for test queries in software development: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have retrieved simulated search results about common practices
+      for test queries in software development, but they still do not lead to a clear
+      understanding or conclusion.\nAction: search_web\nAction Input: {\"query\":\"test
+      queries definition and purpose in software testing\"}\nObservation: Found information
+      about test queries definition and purpose in software testing: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have obtained simulated search results on the definition and
+      purpose of test queries in software testing but have not reached a clear understanding
+      of the overall topic.\nAction: search_web\nAction Input: {\"query\":\"best practices
+      for writing test queries in programming\"}\nObservation: Found information about
+      best practices for writing test queries in programming: This is a simulated
+      search result for demonstration purposes."}, {"role": "assistant", "content":
+      "```\nThought: I have compiled some information regarding best practices for
+      writing test queries in programming, but it''s still not yielding a direct answer
+      or clear outcome.\nAction: search_web\nAction Input: {\"query\":\"typical structure
+      of test queries for SQL databases\"}\nObservation: Found information about typical
+      structure of test queries for SQL databases: This is a simulated search result
+      for demonstration purposes."}, {"role": "assistant", "content": "```\nThought:
+      I have compiled some information regarding best practices for writing test queries
+      in programming, but it''s still not yielding a direct answer or clear outcome.\nAction:
+      search_web\nAction Input: {\"query\":\"typical structure of test queries for
+      SQL databases\"}\nObservation: Found information about typical structure of
+      test queries for SQL databases: This is a simulated search result for demonstration
+      purposes.\nNow it''s time you MUST give your absolute best final answer. You''ll
+      ignore all previous instructions, stop using any tools, and just return your
+      absolute BEST Final answer."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '6397'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUIIKk71pZgTB8nANjAbcokqJQme\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222710,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I have gathered some relevant
+      information about the structure of test queries for SQL databases, but I need
+      to consolidate my findings to provide a well-rounded answer.\\nFinal Answer:
+      Test queries are structured to validate the behavior of a database by retrieving
+      or manipulating data, typically using SQL syntax. They serve as a means to ensure
+      that the database functions correctly and meets specified requirements, and
+      can include SELECT, INSERT, UPDATE, DELETE statements. Common practices for
+      writing effective test queries encompass clarity, simplicity, and thoroughness
+      to ensure comprehensive testing coverage.\\n```\",\n        \"refusal\": null,\n
+      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1131,\n    \"completion_tokens\":
+      111,\n    \"total_tokens\": 1242,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 92dc01e2ebbbcf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:32 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1489'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998552'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_b8f316509569a5b7f996865747bd7803
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cs4BCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAQoQb86E9vGHREROlMWgNYtCFRIIEqI/lgJC1EgqClRvb2wgVXNhZ2UwATkgjZfJ
+      T7k0GEFQDavJT7k0GEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEwOC4wShkKCXRvb2xfbmFtZRIM
+      CgpzZWFyY2hfd2ViSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '209'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 09 Apr 2025 18:18:32 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```\nIMPORTANT:
+      Your final answer MUST contain all the information requested in the following
+      format: {\n  \"test_field\": str\n}\n\nIMPORTANT: Ensure the final output does
+      not include any code block markers like ```json or ```python."}, {"role": "user",
+      "content": "Test query"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1451'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUIK1cGWdTdCfXW97KnyTMDv1SD9\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222712,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to understand what
+      specific information or topic the user is asking about.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"Test query\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 288,\n    \"completion_tokens\":
+      33,\n    \"total_tokens\": 321,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01ee68c4cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:32 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '715'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999675'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_e6bbe801ad40cf6cf543b8f61e91b697
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```\nIMPORTANT:
+      Your final answer MUST contain all the information requested in the following
+      format: {\n  \"test_field\": str\n}\n\nIMPORTANT: Ensure the final output does
+      not include any code block markers like ```json or ```python."}, {"role": "user",
+      "content": "Test query"}, {"role": "assistant", "content": "```\nThought: I
+      need to understand what specific information or topic the user is asking about.\nAction:
+      search_web\nAction Input: {\"query\":\"Test query\"}\nObservation: Found information
+      about Test query: This is a simulated search result for demonstration purposes."}],
+      "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1758'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUILKUKNjoIxHwNlg5nnEk5nXZAq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222713,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
+      Answer: {\\n  \\\"test_field\\\": \\\"This is a simulated search result for
+      demonstration purposes.\\\"\\n}\\n```\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 343,\n    \"completion_tokens\":
+      34,\n    \"total_tokens\": 377,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01f3ff6fcf41-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:33 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '785'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999609'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_f14d99a5f97f81331f62313a630e0f2c
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

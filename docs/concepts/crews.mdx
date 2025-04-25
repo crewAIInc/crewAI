@@ -20,13 +20,10 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Function Calling LLM** _(optional)_ | `function_calling_llm` | If passed, the crew will use this LLM to do function calling for tools for all agents in the crew. Each agent can have its own LLM, which overrides the crew's LLM for function calling.                                                                  |
 | **Config** _(optional)_               | `config`               | Optional configuration settings for the crew, in `Json` or `Dict[str, Any]` format.                                                                                                                                                                       |
 | **Max RPM** _(optional)_              | `max_rpm`              | Maximum requests per minute the crew adheres to during execution. Defaults to `None`.                                                                                                                                                                     |
-| **Language** _(optional)_             | `language`             | Language used for the crew, defaults to English.                                                                                                                                                                                                          |
-| **Language File** _(optional)_        | `language_file`        | Path to the language file to be used for the crew.                                                                                                                                                                                                        |
 | **Memory** _(optional)_               | `memory`               | Utilized for storing execution memories (short-term, long-term, entity memory).                                                                                                                                                                           |
 | **Memory Config** _(optional)_        | `memory_config`        | Configuration for the memory provider to be used by the crew.                                                                                                                                                                                             |
 | **Cache** _(optional)_                | `cache`                | Specifies whether to use a cache for storing the results of tools' execution. Defaults to `True`.                                                                                                                                                         |
 | **Embedder** _(optional)_             | `embedder`             | Configuration for the embedder to be used by the crew. Mostly used by memory for now. Default is `{"provider": "openai"}`.                                                                                                                                |
-| **Full Output** _(optional)_          | `full_output`          | Whether the crew should return the full output with all tasks outputs or just the final output. Defaults to `False`.                                                                                                                                      |
 | **Step Callback** _(optional)_        | `step_callback`        | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations; it won't override the agent-specific `step_callback`.                                                               |
 | **Task Callback** _(optional)_        | `task_callback`        | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution.                                                                                                                          |
 | **Share Crew** _(optional)_           | `share_crew`           | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models.                                                                                                      |
@@ -55,11 +52,15 @@ After creating your CrewAI project as outlined in the [Installation](/installati
 ```python code
 from crewai import Agent, Crew, Task, Process
 from crewai.project import CrewBase, agent, task, crew, before_kickoff, after_kickoff
-
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
 
 @CrewBase
 class YourCrewName:
     """Description of your crew"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
 
     # Paths to your YAML configuration files
     # To see an example agent and task defined in YAML, checkout the following:
@@ -83,27 +84,27 @@ class YourCrewName:
     @agent
     def agent_one(self) -> Agent:
         return Agent(
-            config=self.agents_config['agent_one'],
+            config=self.agents_config['agent_one'], # type: ignore[index]
             verbose=True
         )
 
     @agent
     def agent_two(self) -> Agent:
         return Agent(
-            config=self.agents_config['agent_two'],
+            config=self.agents_config['agent_two'], # type: ignore[index]
             verbose=True
         )
 
     @task
     def task_one(self) -> Task:
         return Task(
-            config=self.tasks_config['task_one']
+            config=self.tasks_config['task_one'] # type: ignore[index]
         )
 
     @task
     def task_two(self) -> Task:
         return Task(
-            config=self.tasks_config['task_two']
+            config=self.tasks_config['task_two'] # type: ignore[index]
         )
 
     @crew
