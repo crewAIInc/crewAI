@@ -257,10 +257,14 @@ reporting_task:
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import SerperDevTool
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
 
 @CrewBase
 class LatestAiDevelopmentCrew():
 	"""LatestAiDevelopment crew"""
+	agents: List[BaseAgent]
+	tasks: List[Task]
 
 	@agent
 	def researcher(self) -> Agent:
@@ -401,11 +405,16 @@ You can test different real life examples of AI crews in the [CrewAI-examples re
 
 ### Using Crews and Flows Together
 
-CrewAI's power truly shines when combining Crews with Flows to create sophisticated automation pipelines. Here's how you can orchestrate multiple Crews within a Flow:
+CrewAI's power truly shines when combining Crews with Flows to create sophisticated automation pipelines.
+CrewAI flows support logical operators like `or_` and `and_` to combine multiple conditions. This can be used with `@start`, `@listen`, or `@router` decorators to create complex triggering conditions.
+- `or_`: Triggers when any of the specified conditions are met. 
+- `and_`Triggers when all of the specified conditions are met.
+
+Here's how you can orchestrate multiple Crews within a Flow:
 
 ```python
-from crewai.flow.flow import Flow, listen, start, router
-from crewai import Crew, Agent, Task
+from crewai.flow.flow import Flow, listen, start, router, or_
+from crewai import Crew, Agent, Task, Process
 from pydantic import BaseModel
 
 # Define structured state for precise control
@@ -479,7 +488,7 @@ class AdvancedAnalysisFlow(Flow[MarketState]):
         )
         return strategy_crew.kickoff()
 
-    @listen("medium_confidence", "low_confidence")
+    @listen(or_("medium_confidence", "low_confidence"))
     def request_additional_analysis(self):
         self.state.recommendations.append("Gather more data")
         return "Additional analysis required"

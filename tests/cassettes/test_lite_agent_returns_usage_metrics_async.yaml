@@ -1,0 +1,249 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Research Assistant.
+      You are a helpful research assistant who can search for information about the
+      population of Tokyo.\nYour personal goal is: Find information about the population
+      of Tokyo\n\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: search_web\nTool Arguments:
+      {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search
+      the web for information about a topic.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [search_web], just the name, exactly as
+      it''s written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "What is the population of Tokyo? Return your strucutred output in JSON format
+      with the following fields: summary, confidence"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1290'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=u769MG.poap6iEjFpbByMFUC0FygMEqYSurr5DfLbas-1743447969501-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUM5MZbz4TG6qmUtTrgKo8gI48FO\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222945,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to find the current
+      population of Tokyo.\\nAction: search_web\\nAction Input: {\\\"query\\\":\\\"current
+      population of Tokyo 2023\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 248,\n    \"completion_tokens\":
+      33,\n    \"total_tokens\": 281,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc079f8e5a7ab0-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:22:26 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=1F.UUVSjZyp8QMRT0dTQXUJc5WlGpC3xAx4FY7KCQbs-1744222946-1.0.1.1-vcXIZcokSjfxyFeoTTUAWmBGmJpv0ss9iFqt5EJVZGE1PvSV2ov0erCS.KIo0xItBMuX_MtCgDSaYMPI3L9QDsLatWqfUFieHiFh0CrX4h8;
+        path=/; expires=Wed, 09-Apr-25 18:52:26 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=RbJuVW8hReYElyyghEbAFletdnJZ2mk5rn9D8EGuyNk-1744222946580-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1282'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999713'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_845ed875afd48dee3d88f33cbab88cc2
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Research Assistant.
+      You are a helpful research assistant who can search for information about the
+      population of Tokyo.\nYour personal goal is: Find information about the population
+      of Tokyo\n\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: search_web\nTool Arguments:
+      {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search
+      the web for information about a topic.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [search_web], just the name, exactly as
+      it''s written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "What is the population of Tokyo? Return your strucutred output in JSON format
+      with the following fields: summary, confidence"}, {"role": "assistant", "content":
+      "```\nThought: I need to find the current population of Tokyo.\nAction: search_web\nAction
+      Input: {\"query\":\"current population of Tokyo 2023\"}\nObservation: Tokyo''s
+      population in 2023 was approximately 21 million people in the city proper, and
+      37 million in the greater metropolitan area."}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1619'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=RbJuVW8hReYElyyghEbAFletdnJZ2mk5rn9D8EGuyNk-1744222946580-0.0.1.1-604800000;
+        __cf_bm=1F.UUVSjZyp8QMRT0dTQXUJc5WlGpC3xAx4FY7KCQbs-1744222946-1.0.1.1-vcXIZcokSjfxyFeoTTUAWmBGmJpv0ss9iFqt5EJVZGE1PvSV2ov0erCS.KIo0xItBMuX_MtCgDSaYMPI3L9QDsLatWqfUFieHiFh0CrX4h8
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUM69pnk6VLn5rpDjGdg21mOxFke\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222946,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
+      Answer: {\\\"summary\\\":\\\"The population of Tokyo is approximately 21 million
+      in the city proper and 37 million in the greater metropolitan area as of 2023.\\\",\\\"confidence\\\":\\\"high\\\"}\\n```\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      315,\n    \"completion_tokens\": 51,\n    \"total_tokens\": 366,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc07a8ac9f7ab0-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:22:27 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1024'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999642'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_d72860d8629025988b1170e939bc1f20
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

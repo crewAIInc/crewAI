@@ -1,0 +1,267 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "CrewAI",
+  "colors": {
+    "primary": "#EB6658",
+    "light": "#F3A78B",
+    "dark": "#C94C3C"
+  },
+  "favicon": "favicon.svg",
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude"]
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              {
+                "group": "Strategy",
+                "pages": [
+                  "guides/concepts/evaluating-use-cases"
+                ]
+              },
+              {
+                "group": "Agents",
+                "pages": [
+                  "guides/agents/crafting-effective-agents"
+                ]
+              },
+              {
+                "group": "Crews",
+                "pages": [
+                  "guides/crews/first-crew"
+                ]
+              },
+              {
+                "group": "Flows",
+                "pages": [
+                  "guides/flows/first-flow",
+                  "guides/flows/mastering-flow-state"
+                ]
+              },
+              {
+                "group": "Advanced",
+                "pages": [
+                  "guides/advanced/customizing-prompts",
+                  "guides/advanced/fingerprinting"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/agents",
+              "concepts/tasks",
+              "concepts/crews",
+              "concepts/flows",
+              "concepts/knowledge",
+              "concepts/llms",
+              "concepts/processes",
+              "concepts/collaboration",
+              "concepts/training",
+              "concepts/memory",
+              "concepts/planning",
+              "concepts/testing",
+              "concepts/cli",
+              "concepts/tools",
+              "concepts/event-listener"
+            ]
+          },
+          {
+            "group": "Tools",
+            "pages": [
+              "tools/aimindtool",
+              "tools/apifyactorstool",
+              "tools/bedrockinvokeagenttool",
+              "tools/bedrockkbretriever",
+              "tools/bravesearchtool",
+              "tools/browserbaseloadtool",
+              "tools/codedocssearchtool",
+              "tools/codeinterpretertool",
+              "tools/composiotool",
+              "tools/csvsearchtool",
+              "tools/dalletool",
+              "tools/directorysearchtool",
+              "tools/directoryreadtool",
+              "tools/docxsearchtool",
+              "tools/exasearchtool",
+              "tools/filereadtool",
+              "tools/filewritetool",
+              "tools/firecrawlcrawlwebsitetool",
+              "tools/firecrawlscrapewebsitetool",
+              "tools/firecrawlsearchtool",
+              "tools/githubsearchtool",
+              "tools/hyperbrowserloadtool",
+              "tools/linkupsearchtool",
+              "tools/llamaindextool",
+              "tools/langchaintool",
+              "tools/serperdevtool",
+              "tools/s3readertool",
+              "tools/s3writertool",
+              "tools/scrapegraphscrapetool",
+              "tools/scrapeelementfromwebsitetool",
+              "tools/jsonsearchtool",
+              "tools/mdxsearchtool",
+              "tools/mysqltool",
+              "tools/multiontool",
+              "tools/nl2sqltool",
+              "tools/patronustools",
+              "tools/pdfsearchtool",
+              "tools/pgsearchtool",
+              "tools/qdrantvectorsearchtool",
+              "tools/ragtool",
+              "tools/scrapewebsitetool",
+              "tools/scrapflyscrapetool",
+              "tools/seleniumscrapingtool",
+              "tools/snowflakesearchtool",
+              "tools/spidertool",
+              "tools/txtsearchtool",
+              "tools/visiontool",
+              "tools/weaviatevectorsearchtool",
+              "tools/websitesearchtool",
+              "tools/xmlsearchtool",
+              "tools/youtubechannelsearchtool",
+              "tools/youtubevideosearchtool"
+            ]
+          },
+          {
+            "group": "Agent Monitoring & Observability",
+            "pages": [
+              "how-to/agentops-observability",
+              "how-to/arize-phoenix-observability",
+              "how-to/langfuse-observability",
+              "how-to/langtrace-observability",
+              "how-to/mlflow-observability",
+              "how-to/openlit-observability",
+              "how-to/opik-observability",
+              "how-to/portkey-observability",
+              "how-to/weave-integration"
+            ]
+          },
+          {
+            "group": "Learn",
+            "pages": [
+              "how-to/conditional-tasks",
+              "how-to/coding-agents",
+              "how-to/create-custom-tools",
+              "how-to/custom-llm",
+              "how-to/custom-manager-agent",
+              "how-to/customizing-agents",
+              "how-to/force-tool-output-as-result",
+              "how-to/hierarchical-process",
+              "how-to/human-input-on-execution",
+              "how-to/kickoff-async",
+              "how-to/kickoff-for-each",
+              "how-to/llm-connections",
+              "how-to/multimodal-agents",
+              "how-to/replay-tasks-from-latest-crew-kickoff",
+              "how-to/sequential-process"
+            ]
+          },
+          {
+            "group": "Telemetry",
+            "pages": [
+              "telemetry"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Examples",
+        "groups": [
+          {
+            "group": "Examples",
+            "pages": [
+              "examples/example"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Releases",
+        "groups": [
+          {
+            "group": "Releases",
+            "pages": [
+              "changelog"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Website",
+          "href": "https://crewai.com",
+          "icon": "globe"
+        },
+        {
+          "anchor": "Forum",
+          "href": "https://community.crewai.com",
+          "icon": "discourse"
+        },
+        {
+          "anchor": "Get Help",
+          "href": "mailto:support@crewai.com",
+          "icon": "headset"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "crew_only_logo.png",
+    "dark": "crew_only_logo.png"
+  },
+  "appearance": {
+    "default": "dark",
+    "strict": false
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Start Free Trial",
+        "href": "https://app.crewai.com"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/crewAIInc/crewAI"
+    }
+  },
+  "search": {
+    "prompt": "Search CrewAI docs"
+  },
+  "seo": {
+    "indexing": "all"
+  },
+  "errors": {
+    "404": {
+      "redirect": true
+    }
+  },
+  "footer": {
+    "socials": {
+      "website": "https://crewai.com",
+      "x": "https://x.com/crewAIInc",
+      "github": "https://github.com/crewAIInc/crewAI",
+      "linkedin": "https://www.linkedin.com/company/crewai-inc",
+      "youtube": "https://youtube.com/@crewAIInc",
+      "reddit": "https://www.reddit.com/r/crewAIInc/"
+    }
+  }
+}
