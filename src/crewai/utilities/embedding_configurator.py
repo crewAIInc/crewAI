@@ -104,16 +104,22 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_vertexai(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleVertexEmbeddingFunction,
-        )
-
-        return GoogleVertexEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            project_id=config.get("project_id"),
-            region=config.get("region"),
-        )
+        try:
+            from chromadb.utils.embedding_functions.google_embedding_function import (
+                GoogleVertexEmbeddingFunction,
+            )
+            from crewai.utilities.embedding_functions import FixedGoogleVertexEmbeddingFunction
+            
+            return FixedGoogleVertexEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+                project_id=config.get("project_id"),
+                region=config.get("region"),
+            )
+        except ImportError as e:
+            raise ImportError(
+                "Google Vertex dependencies are not installed. Please install them to use Vertex embedding."
+            ) from e
 
     @staticmethod
     def _configure_google(config, model_name):
