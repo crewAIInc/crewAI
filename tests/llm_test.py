@@ -373,6 +373,44 @@ def get_weather_tool_schema():
         },
     }
 
+def test_context_window_exceeded_error_handling():
+    """Test that litellm.ContextWindowExceededError is converted to LLMContextLengthExceededException."""
+    from litellm.exceptions import ContextWindowExceededError
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMContextLengthExceededException,
+    )
+
+    llm = LLM(model="gpt-4")
+
+    # Test non-streaming response
+    with patch("litellm.completion") as mock_completion:
+        mock_completion.side_effect = ContextWindowExceededError(
+            "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
+            model="gpt-4",
+            llm_provider="openai"
+        )
+
+        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+            llm.call("This is a test message")
+
+        assert "context length exceeded" in str(excinfo.value).lower()
+        assert "8192 tokens" in str(excinfo.value)
+
+    # Test streaming response
+    llm = LLM(model="gpt-4", stream=True)
+    with patch("litellm.completion") as mock_completion:
+        mock_completion.side_effect = ContextWindowExceededError(
+            "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
+            model="gpt-4",
+            llm_provider="openai"
+        )
+
+        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+            llm.call("This is a test message")
+
+        assert "context length exceeded" in str(excinfo.value).lower()
+        assert "8192 tokens" in str(excinfo.value)
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.fixture

@@ -37,6 +37,7 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
     from litellm import Choices
+    from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
@@ -597,6 +598,11 @@ class LLM(BaseLLM):
             self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
             return full_response
 
+        except ContextWindowExceededError as e:
+            # Catch context window errors from litellm and convert them to our own exception type.
+            # This exception is handled by CrewAgentExecutor._invoke_loop() which can then
+            # decide whether to summarize the content or abort based on the respect_context_window flag.
+            raise LLMContextLengthExceededException(str(e))
         except Exception as e:
             logging.error(f"Error in streaming response: {str(e)}")
             if full_response.strip():
@@ -711,7 +717,16 @@ class LLM(BaseLLM):
             str: The response text
         """
         # --- 1) Make the completion call
-        response = litellm.completion(**params)
+        try:
+            # Attempt to make the completion call, but catch context window errors
+            # and convert them to our own exception type for consistent handling
+            # across the codebase. This allows CrewAgentExecutor to handle context
+            # length issues appropriately.
+            response = litellm.completion(**params)
+        except ContextWindowExceededError as e:
+            # Convert litellm's context window error to our own exception type
+            # for consistent handling in the rest of the codebase
+            raise LLMContextLengthExceededException(str(e))
 
         # --- 2) Extract response message and content
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
@@ -870,15 +885,17 @@ class LLM(BaseLLM):
                         params, callbacks, available_functions
                     )
 
+            except LLMContextLengthExceededException:
+                # Re-raise LLMContextLengthExceededException as it should be handled
+                # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                # whether to summarize the content or abort based on the respect_context_window flag
+                raise
             except Exception as e:
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=str(e)),
                 )
-                if not LLMContextLengthExceededException(
-                    str(e)
-                )._is_context_limit_error(str(e)):
-                    logging.error(f"LiteLLM call failed: {str(e)}")
+                logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
     def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):
