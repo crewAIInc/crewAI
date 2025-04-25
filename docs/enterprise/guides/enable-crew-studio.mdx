@@ -1,0 +1,166 @@
+---
+title: "Enable Crew Studio"
+description: "Enabling Crew Studio on CrewAI Enterprise"
+icon: "comments"
+---
+
+<Tip>
+Crew Studio is a powerful **no-code/low-code** tool that allows you to quickly scaffold or build Crews through a conversational interface. 
+</Tip>
+
+## What is Crew Studio?
+
+Crew Studio is an innovative way to create AI agent crews without writing code. 
+
+<Frame>
+  ![Crew Studio Interface](/images/enterprise/crew-studio-interface.png)
+</Frame>
+
+With Crew Studio, you can:
+
+- Chat with the Crew Assistant to describe your problem
+- Automatically generate agents and tasks
+- Select appropriate tools
+- Configure necessary inputs
+- Generate downloadable code for customization
+- Deploy directly to the CrewAI Enterprise platform
+
+## Configuration Steps
+
+Before you can start using Crew Studio, you need to configure your LLM connections:
+
+<Steps>
+  <Step title="Set Up LLM Connection">
+    Go to the **LLM Connections** tab in your CrewAI Enterprise dashboard and create a new LLM connection.
+
+    <Note>
+      Feel free to use any LLM provider you want that is supported by CrewAI.
+    </Note>
+    
+    Configure your LLM connection:
+    
+    - Enter a `Connection Name` (e.g., `OpenAI`)
+    - Select your model provider: `openai` or `azure`
+    - Select models you'd like to use in your Studio-generated Crews
+      - We recommend at least `gpt-4o`, `o1-mini`, and `gpt-4o-mini`
+    - Add your API key as an environment variable:
+      - For OpenAI: Add `OPENAI_API_KEY` with your API key
+      - For Azure OpenAI: Refer to [this article](https://blog.crewai.com/configuring-azure-openai-with-crewai-a-comprehensive-guide/) for configuration details
+    - Click `Add Connection` to save your configuration
+    
+    <Frame>
+      ![LLM Connection Configuration](/images/enterprise/llm-connection-config.png)
+    </Frame>
+  </Step>
+  
+  <Step title="Verify Connection Added">
+    Once you complete the setup, you'll see your new connection added to the list of available connections.
+    
+    <Frame>
+      ![Connection Added](/images/enterprise/connection-added.png)
+    </Frame>
+  </Step>
+  
+  <Step title="Configure LLM Defaults">
+    In the main menu, go to **Settings → Defaults** and configure the LLM Defaults settings:
+    
+    - Select default models for agents and other components
+    - Set default configurations for Crew Studio
+    
+    Click `Save Settings` to apply your changes.
+    
+    <Frame>
+      ![LLM Defaults Configuration](/images/enterprise/llm-defaults.png)
+    </Frame>
+  </Step>
+</Steps>
+
+## Using Crew Studio
+
+Now that you've configured your LLM connection and default settings, you're ready to start using Crew Studio!
+
+<Steps>
+  <Step title="Access Studio">
+    Navigate to the **Studio** section in your CrewAI Enterprise dashboard.
+  </Step>
+  
+  <Step title="Start a Conversation">
+    Start a conversation with the Crew Assistant by describing the problem you want to solve:
+    
+    ```md
+    I need a crew that can research the latest AI developments and create a summary report.
+    ```
+    
+    The Crew Assistant will ask clarifying questions to better understand your requirements.
+  </Step>
+  
+  <Step title="Review Generated Crew">
+    Review the generated crew configuration, including:
+    
+    - Agents and their roles
+    - Tasks to be performed
+    - Required inputs
+    - Tools to be used
+    
+    This is your opportunity to refine the configuration before proceeding.
+  </Step>
+  
+  <Step title="Deploy or Download">
+    Once you're satisfied with the configuration, you can:
+    
+    - Download the generated code for local customization
+    - Deploy the crew directly to the CrewAI Enterprise platform
+    - Modify the configuration and regenerate the crew
+  </Step>
+  
+  <Step title="Test Your Crew">
+    After deployment, test your crew with sample inputs to ensure it performs as expected.
+  </Step>
+</Steps>
+
+<Tip>
+For best results, provide clear, detailed descriptions of what you want your crew to accomplish. Include specific inputs and expected outputs in your description.
+</Tip>
+
+## Example Workflow
+
+Here's a typical workflow for creating a crew with Crew Studio:
+
+<Steps>
+  <Step title="Describe Your Problem">
+    Start by describing your problem:
+    
+    ```md
+    I need a crew that can analyze financial news and provide investment recommendations
+    ```
+  </Step>
+  
+  <Step title="Answer Questions">
+    Respond to clarifying questions from the Crew Assistant to refine your requirements.
+  </Step>
+  
+  <Step title="Review the Plan">
+    Review the generated crew plan, which might include:
+    
+    - A Research Agent to gather financial news
+    - An Analysis Agent to interpret the data
+    - A Recommendations Agent to provide investment advice
+  </Step>
+  
+  <Step title="Approve or Modify">
+    Approve the plan or request changes if necessary.
+  </Step>
+  
+  <Step title="Download or Deploy">
+    Download the code for customization or deploy directly to the platform.
+  </Step>
+  
+  <Step title="Test and Refine">
+    Test your crew with sample inputs and refine as needed.
+  </Step>
+</Steps>
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with Crew Studio or any other CrewAI Enterprise features.
+</Card>
+

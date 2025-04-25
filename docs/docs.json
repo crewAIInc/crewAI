@@ -181,6 +181,42 @@
         ]
       },
       {
+        "tab": "Enterprise",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "enterprise/introduction"
+            ]
+          },
+          {
+            "group": "How-To Guides",
+            "pages": [
+              "enterprise/guides/build-crew",
+              "enterprise/guides/deploy-crew",
+              "enterprise/guides/kickoff-crew",
+              "enterprise/guides/update-crew",
+              "enterprise/guides/use-crew-api",
+              "enterprise/guides/enable-crew-studio"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "enterprise/features/tool-repository",
+              "enterprise/features/webhook-streaming",
+              "enterprise/features/traces"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "enterprise/resources/frequently-asked-questions"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Examples",
         "groups": [
           {
