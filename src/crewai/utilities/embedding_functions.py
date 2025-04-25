@@ -20,7 +20,8 @@ class FixedGoogleVertexEmbeddingFunction(GoogleVertexEmbeddingFunction):
                 model_name: str = "textembedding-gecko", 
                 api_key: Optional[str] = None,
                 **kwargs: Any):
-        super().__init__(model_name=model_name, api_key=api_key, **kwargs)
+        api_key_str = "" if api_key is None else api_key
+        super().__init__(model_name=model_name, api_key=api_key_str, **kwargs)
         
         self._original_post = requests.post
         requests.post = self._patched_post

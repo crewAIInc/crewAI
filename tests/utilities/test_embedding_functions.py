@@ -45,8 +45,13 @@ class TestFixedGoogleVertexEmbeddingFunction:
     def test_embedding_call(self, embedding_function):
         function, mock_post = embedding_function
         
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"predictions": [[0.1, 0.2, 0.3]]}
+        mock_post.return_value = mock_response
+        
         embeddings = function(["test text"])
         
         mock_post.assert_called_once()
         
         assert isinstance(embeddings, list)
+        assert len(embeddings) > 0
