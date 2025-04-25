@@ -5,6 +5,7 @@ from .browserbase_load_tool.browserbase_load_tool import BrowserbaseLoadTool
 from .code_docs_search_tool.code_docs_search_tool import CodeDocsSearchTool
 from .code_interpreter_tool.code_interpreter_tool import CodeInterpreterTool
 from .composio_tool.composio_tool import ComposioTool
+from .crewai_enterprise_tools.crewai_enterprise_tools import CrewaiEnterpriseTools
 from .csv_search_tool.csv_search_tool import CSVSearchTool
 from .dalle_tool.dalle_tool import DallETool
 from .databricks_query_tool.databricks_query_tool import DatabricksQueryTool
