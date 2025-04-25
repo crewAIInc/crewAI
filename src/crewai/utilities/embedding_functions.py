@@ -1,11 +1,11 @@
 from typing import Any, List, Optional
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import requests
 from chromadb import Documents, Embeddings
 from chromadb.utils.embedding_functions.google_embedding_function import (
     GoogleVertexEmbeddingFunction,
 )
-from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 
 class FixedGoogleVertexEmbeddingFunction(GoogleVertexEmbeddingFunction):
