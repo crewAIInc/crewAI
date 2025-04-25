@@ -1,10 +1,11 @@
-from typing import List, Any
+from typing import Any, List, Optional
+
+import requests
 from chromadb import Documents, Embeddings
 from chromadb.utils.embedding_functions.google_embedding_function import (
     GoogleVertexEmbeddingFunction,
 )
-import requests
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 
 class FixedGoogleVertexEmbeddingFunction(GoogleVertexEmbeddingFunction):
@@ -17,7 +18,7 @@ class FixedGoogleVertexEmbeddingFunction(GoogleVertexEmbeddingFunction):
     
     def __init__(self, 
                 model_name: str = "textembedding-gecko", 
-                api_key: str = None,
+                api_key: Optional[str] = None,
                 **kwargs: Any):
         super().__init__(model_name=model_name, api_key=api_key, **kwargs)
         

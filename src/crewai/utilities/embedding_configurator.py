@@ -108,6 +108,7 @@ class EmbeddingConfigurator:
             from chromadb.utils.embedding_functions.google_embedding_function import (
                 GoogleVertexEmbeddingFunction,
             )
+            
             from crewai.utilities.embedding_functions import FixedGoogleVertexEmbeddingFunction
             
             return FixedGoogleVertexEmbeddingFunction(

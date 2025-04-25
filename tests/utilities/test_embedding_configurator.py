@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from crewai.utilities.embedding_configurator import EmbeddingConfigurator
 from crewai.utilities.embedding_functions import FixedGoogleVertexEmbeddingFunction
