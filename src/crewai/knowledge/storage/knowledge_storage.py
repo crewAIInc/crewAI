@@ -13,6 +13,10 @@ try:
     from chromadb.api.types import OneOrMany
     from chromadb.config import Settings
 except ImportError:
+    chromadb = None
+    ClientAPI = None
+    OneOrMany = None
+    Settings = None
     raise ImportError(
         "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
     )
