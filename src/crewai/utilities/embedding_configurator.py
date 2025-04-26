@@ -1,18 +1,30 @@
 import os
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Protocol, TypeVar, Union, cast
 
-Documents = Union[str, list[str]]
-Embeddings = list[list[float]]
+Documents = Union[str, List[str]]
+Embeddings = List[List[float]]
 
-try:
+class EmbeddingFunctionProtocol(Protocol):
+    """Protocol for EmbeddingFunction when chromadb is not installed."""
+    def __call__(self, input: Documents) -> Embeddings: ...
+
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
+
+if TYPE_CHECKING:
     from chromadb import EmbeddingFunction
     from chromadb.api.types import validate_embedding_function
-except ImportError:
-    class EmbeddingFunction:
-        def __call__(self, input: Documents) -> Embeddings:
-            raise ImportError(
-                "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
-            )
+else:
+    try:
+        from chromadb import EmbeddingFunction
+        from chromadb.api.types import validate_embedding_function
+    except ImportError:
+        class EmbeddingFunction(Protocol):
+            """Protocol for EmbeddingFunction when chromadb is not installed."""
+            def __call__(self, input: Any) -> Any: ...
+        
+        def validate_embedding_function(func: Any) -> None:
+            """Stub for validate_embedding_function when chromadb is not installed."""
+            pass
 
 
 class EmbeddingConfigurator:
@@ -237,7 +249,9 @@ class EmbeddingConfigurator:
             try:
                 import ibm_watsonx_ai.foundation_models as watson_models
                 from ibm_watsonx_ai import Credentials
-                from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames as EmbedParams
+                from ibm_watsonx_ai.metanames import (
+                    EmbedTextParamsMetaNames as EmbedParams,
+                )
             except ImportError as e:
                 raise ImportError(
                     "IBM Watson dependencies are not installed. Please install them to use Watson embedding."

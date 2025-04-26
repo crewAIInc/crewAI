@@ -1,8 +1,9 @@
-import unittest
-from unittest.mock import patch, MagicMock
 import sys
-import pytest
+import unittest
 from typing import Any, Dict, List, Optional
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestOptionalChromadb(unittest.TestCase):

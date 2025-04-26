@@ -4,20 +4,23 @@ import io
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-try:
+if TYPE_CHECKING:
     import chromadb
     import chromadb.errors
     from chromadb.api import ClientAPI
     from chromadb.api.types import OneOrMany
     from chromadb.config import Settings
-    Collection = chromadb.Collection
-except ImportError:
-    chromadb = None
-    ClientAPI = None
-    OneOrMany = Any
-    Collection = Any
+else:
+    try:
+        import chromadb
+        import chromadb.errors
+        from chromadb.api import ClientAPI
+        from chromadb.api.types import OneOrMany
+        from chromadb.config import Settings
+    except ImportError:
+        chromadb = None
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -50,9 +53,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[Collection] = None
+    collection: Optional[Any] = None
     collection_name: Optional[str] = "knowledge"
-    app: Optional[ClientAPI] = None
+    app: Optional[Any] = None
 
     def __init__(
         self,

@@ -4,15 +4,19 @@ import logging
 import os
 import shutil
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-try:
-    from chromadb.api import ClientAPI
+if TYPE_CHECKING:
     import chromadb
-    Collection = chromadb.Collection
-except ImportError:
-    ClientAPI = None
-    Collection = Any
+    from chromadb.api import ClientAPI
+    from chromadb.config import Settings
+else:
+    try:
+        import chromadb
+        from chromadb.api import ClientAPI
+        from chromadb.config import Settings
+    except ImportError:
+        chromadb = None
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -43,8 +47,8 @@ class RAGStorage(BaseRAGStorage):
     search efficiency.
     """
 
-    app: Optional[ClientAPI] = None
-    collection: Optional[Collection] = None
+    app: Optional[Any] = None
+    collection: Optional[Any] = None
 
     def __init__(
         self, type, allow_reset=True, embedder_config=None, crew=None, path=None
@@ -130,6 +134,9 @@ class RAGStorage(BaseRAGStorage):
         if not hasattr(self, "app"):
             self._initialize_app()
 
+        if not self.collection:
+            raise ValueError("Collection not initialized")
+
         try:
             with suppress_logging():
                 response = self.collection.query(query_texts=query, n_results=limit)
@@ -153,6 +160,9 @@ class RAGStorage(BaseRAGStorage):
     def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
+            
+        if not self.collection:
+            raise ValueError("Collection not initialized")
 
         self.collection.add(
             documents=[text],
