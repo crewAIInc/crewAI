@@ -88,7 +88,7 @@ class Mem0Storage(Storage):
             }
 
         if params:
-            if isinstance(self.memory, MemoryClient) or isinstance(self.memory, AsyncMemoryClient):
+            if isinstance(self.memory, MemoryClient):
                 params["output_format"] = "v1.1"
             self.memory.add(value, **params)
 
@@ -118,7 +118,7 @@ class Mem0Storage(Storage):
 
         # Discard the filters for now since we create the filters
         # automatically when the crew is created.
-        if isinstance(self.memory, Memory) or isinstance(self.memory, AsyncMemory):
+        if isinstance(self.memory, Memory):
             del params["metadata"], params["output_format"]
             
         results = self.memory.search(**params)
