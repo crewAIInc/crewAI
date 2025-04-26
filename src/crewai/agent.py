@@ -114,6 +114,14 @@ class Agent(BaseAgent):
         default=None,
         description="Embedder configuration for the agent.",
     )
+    agent_knowledge_context: Optional[str] = Field(
+        default=None,
+        description="Knowledge context for the agent.",
+    )
+    crew_knowledge_context: Optional[str] = Field(
+        default=None,
+        description="Knowledge context for the crew.",
+    )
 
     @model_validator(mode="after")
     def post_init_setup(self):
@@ -156,11 +164,28 @@ class Agent(BaseAgent):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
+    def _is_any_available_memory(self) -> bool:
+        """Check if any memory is available."""
+        if not self.crew:
+            return False
+
+        memory_attributes = [
+            "memory",
+            "memory_config",
+            "_short_term_memory",
+            "_long_term_memory",
+            "_entity_memory",
+            "_user_memory",
+            "_external_memory",
+        ]
+
+        return any(getattr(self.crew, attr) for attr in memory_attributes)
+
     def execute_task(
         self,
         task: Task,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        tools: Optional[List[BaseTool]] = None
     ) -> str:
         """Execute a task with the agent.
 
@@ -171,6 +196,11 @@ class Agent(BaseAgent):
 
         Returns:
             Output of the agent
+
+        Raises:
+            TimeoutError: If execution exceeds the maximum execution time.
+            ValueError: If the max execution time is not a positive integer.
+            RuntimeError: If the agent execution fails for other reasons.
         """
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
@@ -200,7 +230,7 @@ class Agent(BaseAgent):
                 task=task_prompt, context=context
             )
 
-        if self.crew and self.crew.memory:
+        if self._is_any_available_memory():
             contextual_memory = ContextualMemory(
                 self.crew.memory_config,
                 self.crew._short_term_memory,
@@ -212,22 +242,30 @@ class Agent(BaseAgent):
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
-
+        knowledge_config = (
+            self.knowledge_config.model_dump() if self.knowledge_config else {}
+        )
         if self.knowledge:
-            agent_knowledge_snippets = self.knowledge.query([task.prompt()])
+            agent_knowledge_snippets = self.knowledge.query(
+                [task.prompt()], **knowledge_config
+            )
             if agent_knowledge_snippets:
-                agent_knowledge_context = extract_knowledge_context(
+                self.agent_knowledge_context = extract_knowledge_context(
                     agent_knowledge_snippets
                 )
-                if agent_knowledge_context:
-                    task_prompt += agent_knowledge_context
+                if self.agent_knowledge_context:
+                    task_prompt += self.agent_knowledge_context
 
         if self.crew:
-            knowledge_snippets = self.crew.query_knowledge([task.prompt()])
+            knowledge_snippets = self.crew.query_knowledge(
+                [task.prompt()], **knowledge_config
+            )
             if knowledge_snippets:
-                crew_knowledge_context = extract_knowledge_context(knowledge_snippets)
-                if crew_knowledge_context:
-                    task_prompt += crew_knowledge_context
+                self.crew_knowledge_context = extract_knowledge_context(
+                    knowledge_snippets
+                )
+                if self.crew_knowledge_context:
+                    task_prompt += self.crew_knowledge_context
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)
@@ -247,14 +285,26 @@ class Agent(BaseAgent):
                     task=task,
                 ),
             )
-            result = self.agent_executor.invoke(
-                {
-                    "input": task_prompt,
-                    "tool_names": self.agent_executor.tools_names,
-                    "tools": self.agent_executor.tools_description,
-                    "ask_for_human_input": task.human_input,
-                }
-            )["output"]
+
+            # Determine execution method based on timeout setting
+            if self.max_execution_time is not None:
+                if not isinstance(self.max_execution_time, int) or self.max_execution_time <= 0:
+                    raise ValueError("Max Execution time must be a positive integer greater than zero")
+                result = self._execute_with_timeout(task_prompt, task, self.max_execution_time)
+            else:
+                result = self._execute_without_timeout(task_prompt, task)
+                
+        except TimeoutError as e:
+            # Propagate TimeoutError without retry
+            crewai_event_bus.emit(
+                self,
+                event=AgentExecutionErrorEvent(
+                    agent=self,
+                    task=task,
+                    error=str(e),
+                ),
+            )
+            raise e
         except Exception as e:
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
@@ -294,6 +344,66 @@ class Agent(BaseAgent):
             event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
         )
         return result
+
+    def _execute_with_timeout(
+        self,
+        task_prompt: str,
+        task: Task,
+        timeout: int
+    ) -> str:
+        """Execute a task with a timeout.
+        
+        Args:
+            task_prompt: The prompt to send to the agent.
+            task: The task being executed.
+            timeout: Maximum execution time in seconds.
+            
+        Returns:
+            The output of the agent.
+            
+        Raises:
+            TimeoutError: If execution exceeds the timeout.
+            RuntimeError: If execution fails for other reasons.
+        """
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(
+                self._execute_without_timeout,
+                task_prompt=task_prompt,
+                task=task
+            )
+            
+            try:
+                return future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                future.cancel()
+                raise TimeoutError(f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task.")
+            except Exception as e:
+                future.cancel()
+                raise RuntimeError(f"Task execution failed: {str(e)}")
+
+    def _execute_without_timeout(
+        self,
+        task_prompt: str,
+        task: Task
+    ) -> str:
+        """Execute a task without a timeout.
+        
+        Args:
+            task_prompt: The prompt to send to the agent.
+            task: The task being executed.
+            
+        Returns:
+            The output of the agent.
+        """
+        return self.agent_executor.invoke(
+            {
+                "input": task_prompt,
+                "tool_names": self.agent_executor.tools_names,
+                "tools": self.agent_executor.tools_description,
+                "ask_for_human_input": task.human_input,
+            }
+        )["output"]
 
     def create_agent_executor(
         self, tools: Optional[List[BaseTool]] = None, task=None
@@ -518,6 +628,7 @@ class Agent(BaseAgent):
             verbose=self.verbose,
             response_format=response_format,
             i18n=self.i18n,
+            original_agent=self,
         )
 
         return await lite_agent.kickoff_async(messages)

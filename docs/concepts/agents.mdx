@@ -118,7 +118,7 @@ class LatestAiDevelopmentCrew():
   @agent
   def researcher(self) -> Agent:
     return Agent(
-      config=self.agents_config['researcher'],
+      config=self.agents_config['researcher'], # type: ignore[index]
       verbose=True,
       tools=[SerperDevTool()]
     )
@@ -126,7 +126,7 @@ class LatestAiDevelopmentCrew():
   @agent
   def reporting_analyst(self) -> Agent:
     return Agent(
-      config=self.agents_config['reporting_analyst'],
+      config=self.agents_config['reporting_analyst'], # type: ignore[index]
       verbose=True
     )
 ```

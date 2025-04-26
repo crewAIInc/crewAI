@@ -43,7 +43,9 @@ class Knowledge(BaseModel):
         self.storage.initialize_knowledge_storage()
         self._add_sources()
 
-    def query(self, query: List[str], limit: int = 3) -> List[Dict[str, Any]]:
+    def query(
+        self, query: List[str], results_limit: int = 3, score_threshold: float = 0.35
+    ) -> List[Dict[str, Any]]:
         """
         Query across all knowledge sources to find the most relevant information.
         Returns the top_k most relevant chunks.
@@ -56,7 +58,8 @@ class Knowledge(BaseModel):
 
         results = self.storage.search(
             query,
-            limit,
+            limit=results_limit,
+            score_threshold=score_threshold,
         )
         return results
 

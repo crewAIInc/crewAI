@@ -4,9 +4,12 @@ import os
 import sys
 import threading
 import warnings
+from collections import defaultdict
 from contextlib import contextmanager
+from types import SimpleNamespace
 from typing import (
     Any,
+    DefaultDict,
     Dict,
     List,
     Literal,
@@ -18,7 +21,8 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from litellm.types.utils import ChatCompletionDeltaToolCall
+from pydantic import BaseModel, Field
 
 from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
@@ -33,6 +37,7 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
     from litellm import Choices
+    from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
@@ -77,14 +82,26 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4o": 128000,
     "gpt-4o-mini": 128000,
     "gpt-4-turbo": 128000,
+    "gpt-4.1": 1047576,  # Based on official docs
+    "gpt-4.1-mini-2025-04-14": 1047576,
+    "gpt-4.1-nano-2025-04-14": 1047576,
     "o1-preview": 128000,
     "o1-mini": 128000,
     "o3-mini": 200000,  # Based on official o3-mini specifications
     # gemini
     "gemini-2.0-flash": 1048576,
+    "gemini-2.0-flash-thinking-exp-01-21": 32768,
+    "gemini-2.0-flash-lite-001": 1048576,
+    "gemini-2.0-flash-001": 1048576,
+    "gemini-2.5-flash-preview-04-17": 1048576,
+    "gemini-2.5-pro-exp-03-25": 1048576,
     "gemini-1.5-pro": 2097152,
     "gemini-1.5-flash": 1048576,
     "gemini-1.5-flash-8b": 1048576,
+    "gemini/gemma-3-1b-it": 32000,
+    "gemini/gemma-3-4b-it": 128000,
+    "gemini/gemma-3-12b-it": 128000,
+    "gemini/gemma-3-27b-it": 128000,
     # deepseek
     "deepseek-chat": 128000,
     # groq
@@ -217,6 +234,15 @@ class StreamingChoices(TypedDict):
     delta: Delta
     index: int
     finish_reason: Optional[str]
+
+
+class FunctionArgs(BaseModel):
+    name: str = ""
+    arguments: str = ""
+
+
+class AccumulatedToolArgs(BaseModel):
+    function: FunctionArgs = Field(default_factory=FunctionArgs)
 
 
 class LLM(BaseLLM):
@@ -371,6 +397,11 @@ class LLM(BaseLLM):
         last_chunk = None
         chunk_count = 0
         usage_info = None
+        tool_calls = None
+
+        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs] = defaultdict(
+            AccumulatedToolArgs
+        )
 
         # --- 2) Make sure stream is set to True and include usage metrics
         params["stream"] = True
@@ -428,6 +459,20 @@ class LLM(BaseLLM):
                             if chunk_content is None and isinstance(delta, dict):
                                 # Some models might send empty content chunks
                                 chunk_content = ""
+
+                            # Enable tool calls using streaming
+                            if "tool_calls" in delta:
+                                tool_calls = delta["tool_calls"]
+
+                                if tool_calls:
+                                    result = self._handle_streaming_tool_calls(
+                                        tool_calls=tool_calls,
+                                        accumulated_tool_args=accumulated_tool_args,
+                                        available_functions=available_functions,
+                                    )
+                                    if result is not None:
+                                        chunk_content = result
+
                 except Exception as e:
                     logging.debug(f"Error extracting content from chunk: {e}")
                     logging.debug(f"Chunk format: {type(chunk)}, content: {chunk}")
@@ -442,7 +487,6 @@ class LLM(BaseLLM):
                         self,
                         event=LLMStreamChunkEvent(chunk=chunk_content),
                     )
-
             # --- 4) Fallback to non-streaming if no content received
             if not full_response.strip() and chunk_count == 0:
                 logging.warning(
@@ -501,7 +545,7 @@ class LLM(BaseLLM):
                         )
 
             # --- 6) If still empty, raise an error instead of using a default response
-            if not full_response.strip():
+            if not full_response.strip() and len(accumulated_tool_args) == 0:
                 raise Exception(
                     "No content received from streaming response. Received empty chunks or failed to extract content."
                 )
@@ -533,8 +577,8 @@ class LLM(BaseLLM):
                                 tool_calls = getattr(message, "tool_calls")
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
-
             # --- 8) If no tool calls or no available functions, return the text response directly
+
             if not tool_calls or not available_functions:
                 # Log token usage if available in streaming mode
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
@@ -554,6 +598,11 @@ class LLM(BaseLLM):
             self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
             return full_response
 
+        except ContextWindowExceededError as e:
+            # Catch context window errors from litellm and convert them to our own exception type.
+            # This exception is handled by CrewAgentExecutor._invoke_loop() which can then
+            # decide whether to summarize the content or abort based on the respect_context_window flag.
+            raise LLMContextLengthExceededException(str(e))
         except Exception as e:
             logging.error(f"Error in streaming response: {str(e)}")
             if full_response.strip():
@@ -567,6 +616,47 @@ class LLM(BaseLLM):
                 event=LLMCallFailedEvent(error=str(e)),
             )
             raise Exception(f"Failed to get streaming response: {str(e)}")
+
+    def _handle_streaming_tool_calls(
+        self,
+        tool_calls: List[ChatCompletionDeltaToolCall],
+        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs],
+        available_functions: Optional[Dict[str, Any]] = None,
+    ) -> None | str:
+        for tool_call in tool_calls:
+            current_tool_accumulator = accumulated_tool_args[tool_call.index]
+
+            if tool_call.function.name:
+                current_tool_accumulator.function.name = tool_call.function.name
+
+            if tool_call.function.arguments:
+                current_tool_accumulator.function.arguments += (
+                    tool_call.function.arguments
+                )
+
+            crewai_event_bus.emit(
+                self,
+                event=LLMStreamChunkEvent(
+                    tool_call=tool_call.to_dict(),
+                    chunk=tool_call.function.arguments,
+                ),
+            )
+
+            if (
+                current_tool_accumulator.function.name
+                and current_tool_accumulator.function.arguments
+                and available_functions
+            ):
+                try:
+                    json.loads(current_tool_accumulator.function.arguments)
+
+                    return self._handle_tool_call(
+                        [current_tool_accumulator],
+                        available_functions,
+                    )
+                except json.JSONDecodeError:
+                    continue
+        return None
 
     def _handle_streaming_callbacks(
         self,
@@ -627,7 +717,16 @@ class LLM(BaseLLM):
             str: The response text
         """
         # --- 1) Make the completion call
-        response = litellm.completion(**params)
+        try:
+            # Attempt to make the completion call, but catch context window errors
+            # and convert them to our own exception type for consistent handling
+            # across the codebase. This allows CrewAgentExecutor to handle context
+            # length issues appropriately.
+            response = litellm.completion(**params)
+        except ContextWindowExceededError as e:
+            # Convert litellm's context window error to our own exception type
+            # for consistent handling in the rest of the codebase
+            raise LLMContextLengthExceededException(str(e))
 
         # --- 2) Extract response message and content
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
@@ -786,15 +885,17 @@ class LLM(BaseLLM):
                         params, callbacks, available_functions
                     )
 
+            except LLMContextLengthExceededException:
+                # Re-raise LLMContextLengthExceededException as it should be handled
+                # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                # whether to summarize the content or abort based on the respect_context_window flag
+                raise
             except Exception as e:
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=str(e)),
                 )
-                if not LLMContextLengthExceededException(
-                    str(e)
-                )._is_context_limit_error(str(e)):
-                    logging.error(f"LiteLLM call failed: {str(e)}")
+                logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
     def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):

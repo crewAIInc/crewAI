@@ -438,7 +438,7 @@ In this section, you'll find detailed examples that help you select, configure, 
         @agent
         def researcher(self) -> Agent:
             return Agent(
-                config=self.agents_config['researcher'],
+                config=self.agents_config['researcher'], # type: ignore[index]
                 llm=local_nvidia_nim_llm
             )
         
@@ -535,14 +535,13 @@ In this section, you'll find detailed examples that help you select, configure, 
   <Accordion title="Hugging Face">
     Set the following environment variables in your `.env` file:
     ```toml Code
-    HUGGINGFACE_API_KEY=<your-api-key>
+    HF_TOKEN=<your-api-key>
     ```
 
     Example usage in your CrewAI project:
     ```python Code
     llm = LLM(
-        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
-        base_url="your_api_endpoint"
+        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
     )
     ```
   </Accordion>
