@@ -88,7 +88,7 @@ class Mem0Storage(Storage):
             }
 
         if params:
-            if not hasattr(self.memory, "llm"):
+            if isinstance(self.memory, MemoryClient) or isinstance(self.memory, AsyncMemoryClient):
                 params["output_format"] = "v1.1"
             self.memory.add(value, **params)
 
@@ -118,8 +118,9 @@ class Mem0Storage(Storage):
 
         # Discard the filters for now since we create the filters
         # automatically when the crew is created.
-        if hasattr(self.memory, "llm"):
+        if isinstance(self.memory, Memory) or isinstance(self.memory, AsyncMemory):
             del params["metadata"], params["output_format"]
+            
         results = self.memory.search(**params)
         return [r for r in results["results"] if r["score"] >= score_threshold]
 

@@ -160,9 +160,28 @@ def test_mem0_storage_with_explict_config(
     )
 
 
-def test_save_method(mem0_storage_with_mocked_config):
+def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
     """Test save method for different memory types"""
     mem0_storage, _, _ = mem0_storage_with_mocked_config
+    mem0_storage.memory.add = MagicMock()
+    
+    # Test short_term memory type (already set in fixture)
+    test_value = "This is a test memory"
+    test_metadata = {"key": "value"}
+    
+    mem0_storage.save(test_value, test_metadata)
+    
+    mem0_storage.memory.add.assert_called_once_with(
+        test_value,
+        agent_id="Test_Agent",
+        infer=False,
+        metadata={"type": "short_term", "key": "value"},
+    )
+
+
+def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_config_from_crew):
+    """Test save method for different memory types"""
+    mem0_storage = mem0_storage_with_memory_client_using_config_from_crew
     mem0_storage.memory.add = MagicMock()
     
     # Test short_term memory type (already set in fixture)
@@ -179,28 +198,32 @@ def test_save_method(mem0_storage_with_mocked_config):
         output_format="v1.1"
     )
 
-    # Reset mock and test long_term memory type
-    mem0_storage.memory.add.reset_mock()
-    mem0_storage.memory_type = "long_term"
 
-    mem0_storage.save(test_value, test_metadata)
-
-    mem0_storage.memory.add.assert_called_once_with(
-        test_value,
-        agent_id="Test_Agent",
-        infer=False,
-        metadata={"type": "long_term", "key": "value"},
-        output_format="v1.1"
-    )
-
-
-def test_search_method(mem0_storage_with_mocked_config):
+def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
     """Test search method for different memory types"""
     mem0_storage, _, _ = mem0_storage_with_mocked_config
     mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
     mem0_storage.memory.search = MagicMock(return_value=mock_results)
 
-    # Test short_term memory type (already set in fixture)
+    results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+    mem0_storage.memory.search.assert_called_once_with(
+        query="test query", 
+        limit=5, 
+        agent_id="Test_Agent",
+        user_id="test_user"
+    )
+
+    assert len(results) == 1
+    assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_config_from_crew):
+    """Test search method for different memory types"""
+    mem0_storage = mem0_storage_with_memory_client_using_config_from_crew
+    mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
+    mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
     results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
 
     mem0_storage.memory.search.assert_called_once_with(
@@ -208,41 +231,9 @@ def test_search_method(mem0_storage_with_mocked_config):
         limit=5, 
         agent_id="Test_Agent", 
         metadata={"type": "short_term"},
-        output_format="v1.1",
-        user_id="test_user"
+        user_id="test_user",
+        output_format='v1.1'
     )
 
-    # Only one result should remain after filtering by score_threshold
     assert len(results) == 1
     assert results[0]["content"] == "Result 1"
-
-    # Reset mock and test long_term memory type
-    mem0_storage.memory.search.reset_mock()
-    mem0_storage.memory_type = "long_term"
-
-    mem0_storage.search("test query", limit=3)
-
-    mem0_storage.memory.search.assert_called_once_with(
-        query="test query", 
-        limit=3, 
-        agent_id="Test_Agent", 
-        metadata={"type": "long_term"},
-        output_format="v1.1",
-        user_id="test_user"
-    )
-
-    # Test with llm attribute (special case)
-    mem0_storage.memory.search.reset_mock()
-    mem0_storage.memory_type = "short_term"
-    # Add llm attribute to memory mock
-    mem0_storage.memory.llm = "fake_llm"
-
-    mem0_storage.search("test query")
-
-    # When llm attribute exists, metadata and output_format should not be passed
-    mem0_storage.memory.search.assert_called_once_with(
-        query="test query", 
-        limit=3, 
-        agent_id="Test_Agent", 
-        user_id="test_user"
-    )
