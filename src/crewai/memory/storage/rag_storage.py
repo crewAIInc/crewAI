@@ -6,14 +6,22 @@ import shutil
 import uuid
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-try:
+if TYPE_CHECKING:
     import chromadb
     from chromadb.api import ClientAPI
     from chromadb.config import Settings
-except ImportError:
-    raise ImportError(
-        "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
-    )
+else:
+    try:
+        import chromadb
+        from chromadb.api import ClientAPI
+        from chromadb.config import Settings
+    except ImportError:
+        chromadb = None
+        ClientAPI = None
+        Settings = None
+        raise ImportError(
+            "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
+        )
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator

@@ -6,20 +6,27 @@ import os
 import shutil
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-try:
+if TYPE_CHECKING:
     import chromadb
     import chromadb.errors
     from chromadb.api import ClientAPI
     from chromadb.api.types import OneOrMany
     from chromadb.config import Settings
-except ImportError:
-    chromadb = None
-    ClientAPI = None
-    OneOrMany = None
-    Settings = None
-    raise ImportError(
-        "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
-    )
+else:
+    try:
+        import chromadb
+        import chromadb.errors
+        from chromadb.api import ClientAPI
+        from chromadb.api.types import OneOrMany
+        from chromadb.config import Settings
+    except ImportError:
+        chromadb = None
+        ClientAPI = None
+        OneOrMany = None
+        Settings = None
+        raise ImportError(
+            "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
+        )
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
