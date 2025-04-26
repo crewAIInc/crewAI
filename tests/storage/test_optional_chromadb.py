@@ -12,7 +12,6 @@ class TestOptionalChromadb(unittest.TestCase):
         with patch.dict(sys.modules, {"chromadb": None}):
             with pytest.raises(ImportError) as excinfo:
                 from crewai.memory.storage.rag_storage import RAGStorage
-                storage = RAGStorage(type="test")
             
             assert "ChromaDB is not installed" in str(excinfo.value)
 
@@ -21,6 +20,5 @@ class TestOptionalChromadb(unittest.TestCase):
         with patch.dict(sys.modules, {"chromadb": None}):
             with pytest.raises(ImportError) as excinfo:
                 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
-                storage = KnowledgeStorage()
             
             assert "ChromaDB is not installed" in str(excinfo.value)
