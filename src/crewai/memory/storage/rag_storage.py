@@ -6,7 +6,13 @@ import shutil
 import uuid
 from typing import Any, Dict, List, Optional
 
-from chromadb.api import ClientAPI
+try:
+    from chromadb.api import ClientAPI
+    import chromadb
+    Collection = chromadb.Collection
+except ImportError:
+    ClientAPI = None
+    Collection = Any
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -37,7 +43,8 @@ class RAGStorage(BaseRAGStorage):
     search efficiency.
     """
 
-    app: ClientAPI | None = None
+    app: Optional[ClientAPI] = None
+    collection: Optional[Collection] = None
 
     def __init__(
         self, type, allow_reset=True, embedder_config=None, crew=None, path=None
@@ -60,8 +67,13 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
-        import chromadb
-        from chromadb.config import Settings
+        try:
+            import chromadb
+            from chromadb.config import Settings
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
+            )
 
         self._set_embedder_config()
         chroma_client = chromadb.PersistentClient(

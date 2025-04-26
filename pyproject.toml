@@ -21,7 +21,6 @@ dependencies = [
     "opentelemetry-sdk>=1.30.0",
     "opentelemetry-exporter-otlp-proto-http>=1.30.0",
     # Data Handling
-    "chromadb>=0.5.23",
     "openpyxl>=3.1.5",
     "pyvis>=0.3.2",
     # Authentication and Security
@@ -66,6 +65,9 @@ docling = [
 ]
 aisuite = [
     "aisuite>=0.1.10",
+]
+chromadb = [
+    "chromadb>=0.5.23",
 ]
 
 [tool.uv]

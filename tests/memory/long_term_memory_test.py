@@ -1,5 +1,11 @@
 import pytest
 
+chromadb_not_installed = False
+try:
+    import chromadb
+except ImportError:
+    chromadb_not_installed = True
+
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 
@@ -10,6 +16,7 @@ def long_term_memory():
     return LongTermMemory()
 
 
+@pytest.mark.skipif(chromadb_not_installed, reason="ChromaDB is not installed")
 def test_save_and_search(long_term_memory):
     memory = LongTermMemoryItem(
         agent="test_agent",

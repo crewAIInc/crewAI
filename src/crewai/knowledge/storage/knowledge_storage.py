@@ -6,11 +6,18 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional, Union
 
-import chromadb
-import chromadb.errors
-from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
-from chromadb.config import Settings
+try:
+    import chromadb
+    import chromadb.errors
+    from chromadb.api import ClientAPI
+    from chromadb.api.types import OneOrMany
+    from chromadb.config import Settings
+    Collection = chromadb.Collection
+except ImportError:
+    chromadb = None
+    ClientAPI = None
+    OneOrMany = Any
+    Collection = Any
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -43,7 +50,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
+    collection: Optional[Collection] = None
     collection_name: Optional[str] = "knowledge"
     app: Optional[ClientAPI] = None
 
@@ -62,6 +69,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Dict[str, Any]]:
+        if not chromadb:
+            raise ImportError(
+                "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
+            )
+            
         with suppress_logging():
             if self.collection:
                 fetched = self.collection.query(
@@ -84,6 +96,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
+        if not chromadb:
+            raise ImportError(
+                "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
+            )
+            
         base_path = os.path.join(db_storage_path(), "knowledge")
         chroma_client = chromadb.PersistentClient(
             path=base_path,
@@ -109,6 +126,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise Exception("Failed to create or get collection")
 
     def reset(self):
+        if not chromadb:
+            raise ImportError(
+                "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
+            )
+            
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
         if not self.app:
             self.app = chromadb.PersistentClient(
@@ -126,6 +148,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         documents: List[str],
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
+        if not chromadb:
+            raise ImportError(
+                "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
+            )
+            
         if not self.collection:
             raise Exception("Collection not initialized")
 
@@ -181,13 +208,23 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise
 
     def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        if not chromadb:
+            raise ImportError(
+                "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is not installed. Please install it with `pip install crewai[chromadb]`."
+            )
 
     def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.

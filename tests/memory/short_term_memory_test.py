@@ -2,6 +2,12 @@ from unittest.mock import patch
 
 import pytest
 
+chromadb_not_installed = False
+try:
+    import chromadb
+except ImportError:
+    chromadb_not_installed = True
+
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
@@ -28,6 +34,7 @@ def short_term_memory():
     return ShortTermMemory(crew=Crew(agents=[agent], tasks=[task]))
 
 
+@pytest.mark.skipif(chromadb_not_installed, reason="ChromaDB is not installed")
 def test_save_and_search(short_term_memory):
     memory = ShortTermMemoryItem(
         data="""test value test value test value test value test value test value
