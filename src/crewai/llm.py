@@ -65,7 +65,7 @@ class FilteredStream:
             if (
                 "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
                 in s
-                or "LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()"
+                or "LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()`"
                 in s
             ):
                 return 0
