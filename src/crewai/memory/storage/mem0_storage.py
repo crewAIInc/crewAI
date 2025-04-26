@@ -118,7 +118,7 @@ class Mem0Storage(Storage):
 
         # Discard the filters for now since we create the filters
         # automatically when the crew is created.
-        if isinstance(self.memory,Memory):
+        if isinstance(self.memory, Memory) or isinstance(self.memory, AsyncMemory):
             del params["metadata"], params["output_format"]
             
         results = self.memory.search(**params)
