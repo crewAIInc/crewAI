@@ -88,7 +88,7 @@ class Mem0Storage(Storage):
             }
 
         if params:
-            if isinstance(self.memory, MemoryClient):
+            if isinstance(self.memory, MemoryClient) or isinstance(self.memory, AsyncMemoryClient):
                 params["output_format"] = "v1.1"
             self.memory.add(value, **params)
 
