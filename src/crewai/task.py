@@ -40,6 +40,7 @@ from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.events import (
@@ -72,7 +73,11 @@ class Task(BaseModel):
         security_config: Security configuration including fingerprinting.
         tools: List of tools/resources limited for task execution.
     """
-
+    
+    model_config = {
+        "arbitrary_types_allowed": True,
+    }
+    
     __hash__ = object.__hash__  # type: ignore
     logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
     used_tools: int = 0
@@ -118,7 +123,7 @@ class Task(BaseModel):
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
     )
-    tools: Optional[List[BaseTool]] = Field(
+    tools: Optional[List[Union[BaseTool, CrewStructuredTool]]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
     )

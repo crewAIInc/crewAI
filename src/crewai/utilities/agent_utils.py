@@ -21,15 +21,17 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 
 
-def parse_tools(tools: List[BaseTool]) -> List[CrewStructuredTool]:
+def parse_tools(tools: List[Union[BaseTool, CrewStructuredTool]]) -> List[CrewStructuredTool]:
     """Parse tools to be used for the task."""
     tools_list = []
 
     for tool in tools:
         if isinstance(tool, CrewAITool):
             tools_list.append(tool.to_structured_tool())
+        elif isinstance(tool, CrewStructuredTool):
+            tools_list.append(tool)
         else:
-            raise ValueError("Tool is not a CrewStructuredTool or BaseTool")
+            raise ValueError("Tool must be an instance of BaseTool or CrewStructuredTool")
 
     return tools_list
 
