@@ -27,7 +27,7 @@ class MCPToolConnector:
         self.timeout = timeout
         self.logger = logging.getLogger(__name__)
         self.token_manager = TokenManager()
-        self._sse_client = None
+        self._sse_client: Optional[SSEClient] = None
 
     def connect(self) -> None:
         """Connect to the MCP SSE server for tools."""
@@ -60,7 +60,8 @@ class MCPToolConnector:
         )
         
         try:
-            self._sse_client.connect()
+            if self._sse_client is not None:
+                self._sse_client.connect()
         except Exception as e:
             self.logger.error(f"Failed to connect to MCP SSE server: {str(e)}")
             raise
@@ -76,7 +77,11 @@ class MCPToolConnector:
         }
         
         try:
-            self._sse_client.listen(event_handlers)
+            if self._sse_client is not None:
+                self._sse_client.listen(event_handlers)
+            else:
+                self.logger.error("SSE client is not initialized")
+                raise ValueError("SSE client is not initialized")
         except Exception as e:
             self.logger.error(f"Error listening to MCP SSE events: {str(e)}")
             raise
