@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Mapping, Optional, Union
 from urllib.parse import urljoin
 
 import requests
@@ -55,8 +55,8 @@ class SSEClient:
         self.headers = headers or {}
         self.timeout = timeout
         self.logger = logging.getLogger(__name__)
-        self._client = None
-        self._response = None
+        self._client: Optional[sseclient.SSEClient] = None
+        self._response: Optional[requests.Response] = None
 
     def connect(self) -> None:
         """Establish a connection to the SSE server."""
@@ -93,7 +93,7 @@ class SSEClient:
             )
             raise
 
-    def listen(self, event_handlers: Optional[Dict[str, Callable[[Any], None]]] = None) -> None:
+    def listen(self, event_handlers: Optional[Mapping[str, Callable[[Any], None]]] = None) -> None:
         """Listen for SSE events and process them with registered handlers.
         
         Args:

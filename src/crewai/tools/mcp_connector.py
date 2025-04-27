@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Union
 
 from crewai.cli.authentication.utils import TokenManager
 from crewai.tools import BaseTool
