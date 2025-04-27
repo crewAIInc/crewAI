@@ -17,6 +17,7 @@ from crewai.security import Fingerprint
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.agent_utils import (
     get_tool_names,
@@ -185,7 +186,7 @@ class Agent(BaseAgent):
         self,
         task: Task,
         context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None
+        tools: Optional[List[Union[BaseTool, CrewStructuredTool]]] = None
     ) -> str:
         """Execute a task with the agent.
 
@@ -406,14 +407,14 @@ class Agent(BaseAgent):
         )["output"]
 
     def create_agent_executor(
-        self, tools: Optional[List[BaseTool]] = None, task=None
+        self, tools: Optional[List[Union[BaseTool, CrewStructuredTool]]] = None, task=None
     ) -> None:
         """Create an agent executor for the agent.
 
         Returns:
             An instance of the CrewAgentExecutor class.
         """
-        raw_tools: List[BaseTool] = tools or self.tools or []
+        raw_tools: List[Union[BaseTool, CrewStructuredTool]] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
         prompt = Prompts(
