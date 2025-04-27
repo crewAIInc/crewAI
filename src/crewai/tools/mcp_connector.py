@@ -31,7 +31,7 @@ class MCPToolConnector:
 
     def connect(self) -> None:
         """Connect to the MCP SSE server for tools."""
-        token = self.token_manager.get_access_token()
+        token = self.token_manager.get_token()
         if not token:
             self.logger.error("Authentication token not found. Please log in first.")
             raise ValueError("Authentication token not found. Please log in first.")
