@@ -688,6 +688,26 @@ A: Yes, CrewAI can integrate with custom-trained or fine-tuned models, allowing 
 ### Q: Can CrewAI agents interact with external tools and APIs?
 A: Absolutely! CrewAI agents can easily integrate with external tools, APIs, and databases, empowering them to leverage real-world data and resources.
 
+CrewAI also supports connecting your tools to the Management Control Plane (MCP) via Server-Sent Events (SSE), enabling real-time tool execution from the Crew Control Plane:
+
+```python
+from crewai.tools import MCPToolConnector, Tool
+
+# Define your tools
+search_tool = Tool(
+    name="search",
+    description="Search for information",
+    func=lambda query: f"Results for {query}"
+)
+
+# Connect tools to MCP
+connector = MCPToolConnector(tools=[search_tool])
+connector.connect()
+
+# Listen for tool events from MCP
+connector.listen()  # This will block until interrupted
+```
+
 ### Q: Is CrewAI suitable for production environments?
 A: Yes, CrewAI is explicitly designed with production-grade standards, ensuring reliability, stability, and scalability for enterprise deployments.
 
