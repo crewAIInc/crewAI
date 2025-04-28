@@ -1,0 +1,181 @@
+---
+title: FAQs
+description: "Frequently asked questions about CrewAI Enterprise"
+icon: "code"
+---
+
+<AccordionGroup>
+    <Accordion title="How is task execution handled in the hierarchical process?">
+        In the hierarchical process, a manager agent is automatically created and coordinates the workflow, delegating tasks and validating outcomes for
+        streamlined and effective execution. The manager agent utilizes tools to facilitate task delegation and execution by agents under the manager's guidance.
+        The manager LLM is crucial for the hierarchical process and must be set up correctly for proper function.
+    </Accordion>
+
+    <Accordion title="Where can I get the latest CrewAI documentation?">
+        The most up-to-date documentation for CrewAI is available on our official documentation website; https://docs.crewai.com/
+        <Card href="https://docs.crewai.com/" icon="books">CrewAI Docs</Card>
+    </Accordion>
+
+    <Accordion title="What are the key differences between Hierarchical and Sequential Processes in CrewAI?">
+        #### Hierarchical Process:
+        Tasks are delegated and executed based on a structured chain of command.
+        A manager language model (`manager_llm`) must be specified for the manager agent.
+        Manager agent oversees task execution, planning, delegation, and validation.
+        Tasks are not pre-assigned; the manager allocates tasks to agents based on their capabilities.
+
+        #### Sequential Process:
+        Tasks are executed one after another, ensuring tasks are completed in an orderly progression.
+        Output of one task serves as context for the next.
+        Task execution follows the predefined order in the task list.
+
+        #### Which Process is Better Suited for Complex Projects?
+
+        The hierarchical process is better suited for complex projects because it allows for:
+
+        - **Dynamic task allocation and delegation**: Manager agent can assign tasks based on agent capabilities, allowing for efficient resource utilization.
+        - **Structured validation and oversight**: Manager agent reviews task outputs and ensures task completion, increasing reliability and accuracy.
+        - **Complex task management**: Assigning tools at the agent level allows for precise control over tool availability, facilitating the execution of intricate tasks.
+    </Accordion>
+
+    <Accordion title="What are the benefits of using memory in the CrewAI framework?">
+        - **Adaptive Learning**: Crews become more efficient over time, adapting to new information and refining their approach to tasks.
+        - **Enhanced Personalization**: Memory enables agents to remember user preferences and historical interactions, leading to personalized experiences.
+        - **Improved Problem Solving**: Access to a rich memory store aids agents in making more informed decisions, drawing on past learnings and contextual insights.
+    </Accordion>
+
+    <Accordion title="What is the purpose of setting a maximum RPM limit for an agent?">
+        Setting a maximum RPM limit for an agent prevents the agent from making too many requests to external services, which can help to avoid rate limits and improve performance.
+    </Accordion>
+
+    <Accordion title="What role does human input play in the execution of tasks within a CrewAI crew?">
+        It allows agents to request additional information or clarification when necessary.
+        This feature is crucial in complex decision-making processes or when agents require more details to complete a task effectively.
+
+        To integrate human input into agent execution, set the `human_input` flag in the task definition. When enabled, the agent prompts the user for input before delivering its final answer. 
+        This input can provide extra context, clarify ambiguities, or validate the agent's output.
+    </Accordion>
+
+    <Accordion title="What advanced customization options are available for tailoring and enhancing agent behavior and capabilities in CrewAI?">
+        CrewAI provides a range of advanced customization options to tailor and enhance agent behavior and capabilities:
+        
+        - **Language Model Customization**: Agents can be customized with specific language models (`llm`) and function-calling language models (`function_calling_llm`), offering advanced control over their processing and decision-making abilities.
+
+        - **Performance and Debugging Settings**: Adjust an agent's performance and monitor its operations for efficient task execution.
+
+        - **Verbose Mode**: Enables detailed logging of an agent's actions, useful for debugging and optimization.
+
+        - **RPM Limit**: Sets the maximum number of requests per minute (`max_rpm`).
+
+        - **Maximum Iterations for Task Execution**: The `max_iter` attribute allows users to define the maximum number of iterations an agent can perform for a single task, preventing infinite loops or excessively long executions.
+
+        - **Delegation and Autonomy**: Control an agent's ability to delegate or ask questions, tailoring its autonomy and collaborative dynamics within the CrewAI framework. By default, the `allow_delegation` attribute is set to True, enabling agents to seek assistance or delegate tasks as needed. This default behavior promotes collaborative problem-solving and efficiency within the CrewAI ecosystem. If needed, delegation can be disabled to suit specific operational requirements.
+
+        - **Human Input in Agent Execution**: Human input is critical in several agent execution scenarios, allowing agents to request additional information or clarification when necessary. This feature is especially useful in complex decision-making processes or when agents require more details to complete a task effectively.
+    </Accordion>
+
+    <Accordion title="In what scenarios is human input particularly useful in agent execution?">
+        Human input is particularly useful in agent execution when:
+        - **Agents require additional information or clarification**: When agents encounter ambiguity or incomplete data, human input can provide the necessary context to complete the task effectively.
+        - **Agents need to make complex or sensitive decisions**: Human input can assist agents in ethical or nuanced decision-making, ensuring responsible and informed outcomes.
+        - **Oversight and validation of agent output**: Human input can help validate the results generated by agents, ensuring accuracy and preventing any misinterpretation or errors.
+        - **Customizing agent behavior**: Human input can provide feedback on agent responses, allowing users to refine the agent's behavior and responses over time.
+        - **Identifying and resolving errors or limitations**: Human input can help identify and address any errors or limitations in the agent's capabilities, enabling continuous improvement and optimization.
+    </Accordion>
+
+    <Accordion title="What are the different types of memory that are available in crewAI?">
+        The different types of memory available in CrewAI are:
+        - `short-term memory`
+        - `long-term memory`
+        - `entity memory`
+        - `contextual memory`
+
+        Learn more about the different types of memory here:
+        <Card href="https://docs.crewai.com/concepts/memory" icon="brain">CrewAI Memory</Card>
+    </Accordion>
+
+    <Accordion title="How can I create custom tools for my CrewAI agents?">
+        You can create custom tools by subclassing the `BaseTool` class provided by CrewAI or by using the tool decorator. Subclassing involves defining a new class that inherits from `BaseTool`, specifying the name, description, and the `_run` method for operational logic. The tool decorator allows you to create a `Tool` object directly with the required attributes and a functional logic.
+        Click here for more details:
+        <Card href="https://docs.crewai.com/how-to/create-custom-tools" icon="code">CrewAI Tools</Card>
+    </Accordion>
+
+    <Accordion title="How do I use Output Pydantic in a Task?">
+        To use Output Pydantic in a task, you need to define the expected output of the task as a Pydantic model. Here's an example:
+        <Steps>
+            <Step title="Define a Pydantic model">
+                First, you need to define a Pydantic model. For instance, let's create a simple model for a user:
+
+                ```python
+                from pydantic import BaseModel
+
+                class User(BaseModel):
+                    name: str
+                    age: int
+                ```
+            </Step>
+
+            <Step title="Then, when creating a task, specify the expected output as this Pydantic model:">
+
+                ```python
+                from crewai import Task, Crew, Agent
+
+                # Import the User model
+                from my_models import User
+
+                # Create a task with Output Pydantic
+                task = Task(
+                    description="Create a user with the provided name and age",
+                    expected_output=User,  # This is the Pydantic model
+                    agent=agent,
+                    tools=[tool1, tool2]
+                )
+                ```
+            </Step>
+
+            <Step title="In your agent, make sure to set the output_pydantic attribute to the Pydantic model you're using:">
+
+                ```python
+                from crewai import Agent
+
+                # Import the User model
+                from my_models import User
+
+                # Create an agent with Output Pydantic
+                agent = Agent(
+                    role='User Creator',
+                    goal='Create users',
+                    backstory='I am skilled in creating user accounts',
+                    tools=[tool1, tool2],
+                    output_pydantic=User
+                )
+                ```
+            </Step>
+
+            <Step title="When executing the crew, the output of the task will be a User object:">
+
+                ```python
+                from crewai import Crew
+
+                # Create a crew with the agent and task
+                crew = Crew(agents=[agent], tasks=[task])
+
+                # Kick off the crew
+                result = crew.kickoff()
+
+                # The output of the task will be a User object
+                print(result.tasks[0].output)
+                ``` 
+            </Step>
+        </Steps>
+        Here's a tutorial on how to consistently get structured outputs from your agents:
+            <Frame>
+                <iframe 
+                height="400"
+                width="100%"
+                src="https://www.youtube.com/embed/dNpKQk5uxHw" 
+                title="YouTube video player" frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen></iframe>
+            </Frame>
+    </Accordion>
+</AccordionGroup>

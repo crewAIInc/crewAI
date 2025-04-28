@@ -37,6 +37,7 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
     from litellm import Choices
+    from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
@@ -64,7 +65,7 @@ class FilteredStream:
             if (
                 "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
                 in s
-                or "LiteLLM.Info: If you need to debug this error, use `litellm.set_verbose=True`"
+                or "LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()`"
                 in s
             ):
                 return 0
@@ -81,14 +82,26 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4o": 128000,
     "gpt-4o-mini": 128000,
     "gpt-4-turbo": 128000,
+    "gpt-4.1": 1047576,  # Based on official docs
+    "gpt-4.1-mini-2025-04-14": 1047576,
+    "gpt-4.1-nano-2025-04-14": 1047576,
     "o1-preview": 128000,
     "o1-mini": 128000,
     "o3-mini": 200000,  # Based on official o3-mini specifications
     # gemini
     "gemini-2.0-flash": 1048576,
+    "gemini-2.0-flash-thinking-exp-01-21": 32768,
+    "gemini-2.0-flash-lite-001": 1048576,
+    "gemini-2.0-flash-001": 1048576,
+    "gemini-2.5-flash-preview-04-17": 1048576,
+    "gemini-2.5-pro-exp-03-25": 1048576,
     "gemini-1.5-pro": 2097152,
     "gemini-1.5-flash": 1048576,
     "gemini-1.5-flash-8b": 1048576,
+    "gemini/gemma-3-1b-it": 32000,
+    "gemini/gemma-3-4b-it": 128000,
+    "gemini/gemma-3-12b-it": 128000,
+    "gemini/gemma-3-27b-it": 128000,
     # deepseek
     "deepseek-chat": 128000,
     # groq
@@ -585,6 +598,11 @@ class LLM(BaseLLM):
             self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
             return full_response
 
+        except ContextWindowExceededError as e:
+            # Catch context window errors from litellm and convert them to our own exception type.
+            # This exception is handled by CrewAgentExecutor._invoke_loop() which can then
+            # decide whether to summarize the content or abort based on the respect_context_window flag.
+            raise LLMContextLengthExceededException(str(e))
         except Exception as e:
             logging.error(f"Error in streaming response: {str(e)}")
             if full_response.strip():
@@ -699,7 +717,16 @@ class LLM(BaseLLM):
             str: The response text
         """
         # --- 1) Make the completion call
-        response = litellm.completion(**params)
+        try:
+            # Attempt to make the completion call, but catch context window errors
+            # and convert them to our own exception type for consistent handling
+            # across the codebase. This allows CrewAgentExecutor to handle context
+            # length issues appropriately.
+            response = litellm.completion(**params)
+        except ContextWindowExceededError as e:
+            # Convert litellm's context window error to our own exception type
+            # for consistent handling in the rest of the codebase
+            raise LLMContextLengthExceededException(str(e))
 
         # --- 2) Extract response message and content
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
@@ -858,15 +885,17 @@ class LLM(BaseLLM):
                         params, callbacks, available_functions
                     )
 
+            except LLMContextLengthExceededException:
+                # Re-raise LLMContextLengthExceededException as it should be handled
+                # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                # whether to summarize the content or abort based on the respect_context_window flag
+                raise
             except Exception as e:
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=str(e)),
                 )
-                if not LLMContextLengthExceededException(
-                    str(e)
-                )._is_context_limit_error(str(e)):
-                    logging.error(f"LiteLLM call failed: {str(e)}")
+                logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
     def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):

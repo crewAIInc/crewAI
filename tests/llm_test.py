@@ -256,6 +256,52 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
+@pytest.mark.parametrize(
+    "model",
+    [
+        "gemini/gemini-2.0-flash-thinking-exp-01-21",
+        "gemini/gemini-2.0-flash-001",
+        "gemini/gemini-2.0-flash-lite-001",
+        "gemini/gemini-2.5-flash-preview-04-17",
+        "gemini/gemini-2.5-pro-exp-03-25",
+    ],
+)
+def test_gemini_models(model):
+    llm = LLM(model=model)
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
+@pytest.mark.parametrize(
+    "model",
+    [
+        "gemini/gemma-3-1b-it",
+        "gemini/gemma-3-4b-it",
+        "gemini/gemma-3-12b-it",
+        "gemini/gemma-3-27b-it",
+    ],
+)
+def test_gemma3(model):
+    llm = LLM(model=model)
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.parametrize(
+    "model", ["gpt-4.1", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"]
+)
+def test_gpt_4_1(model):
+    llm = LLM(model=model)
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_o3_mini_reasoning_effort_high():
     llm = LLM(
@@ -326,6 +372,45 @@ def get_weather_tool_schema():
             },
         },
     }
+
+def test_context_window_exceeded_error_handling():
+    """Test that litellm.ContextWindowExceededError is converted to LLMContextLengthExceededException."""
+    from litellm.exceptions import ContextWindowExceededError
+
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMContextLengthExceededException,
+    )
+
+    llm = LLM(model="gpt-4")
+
+    # Test non-streaming response
+    with patch("litellm.completion") as mock_completion:
+        mock_completion.side_effect = ContextWindowExceededError(
+            "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
+            model="gpt-4",
+            llm_provider="openai"
+        )
+
+        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+            llm.call("This is a test message")
+
+        assert "context length exceeded" in str(excinfo.value).lower()
+        assert "8192 tokens" in str(excinfo.value)
+
+    # Test streaming response
+    llm = LLM(model="gpt-4", stream=True)
+    with patch("litellm.completion") as mock_completion:
+        mock_completion.side_effect = ContextWindowExceededError(
+            "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
+            model="gpt-4",
+            llm_provider="openai"
+        )
+
+        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+            llm.call("This is a test message")
+
+        assert "context length exceeded" in str(excinfo.value).lower()
+        assert "8192 tokens" in str(excinfo.value)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
