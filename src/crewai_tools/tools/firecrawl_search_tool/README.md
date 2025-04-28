@@ -20,16 +20,25 @@ Utilize the FirecrawlSearchTool as follows to allow your agent to load websites:
 ```python
 from crewai_tools import FirecrawlSearchTool
 
-tool = FirecrawlSearchTool(query='what is firecrawl?')
+tool = FirecrawlSearchTool(config={"limit": 5})
+tool.run(query="firecrawl web scraping")
 ```
 
 ## Arguments
 
 - `api_key`: Optional. Specifies Firecrawl API key. Defaults is the `FIRECRAWL_API_KEY` environment variable.
-- `query`: The search query string to be used for searching.
-- `page_options`: Optional. Options for result formatting.
-  - `onlyMainContent`: Optional. Only return the main content of the page excluding headers, navs, footers, etc.
-  - `includeHtml`: Optional. Include the raw HTML content of the page. Will output a html key in the response.
-  - `fetchPageContent`: Optional. Fetch the full content of the page.
-- `search_options`: Optional. Options for controlling the crawling behavior.
-  - `limit`: Optional. Maximum number of pages to crawl.
+- `config`: Optional. It contains Firecrawl API parameters.
+
+
+This is the default configuration
+
+```python
+{
+    "limit": 5,
+    "tbs": None,
+    "lang": "en",
+    "country": "us",
+    "location": None,
+    "timeout": 60000,
+}
+```

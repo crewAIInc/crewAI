@@ -3,37 +3,36 @@ from typing import Any, Optional, Type
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-
 try:
-    from firecrawl import FirecrawlApp
+    from firecrawl import FirecrawlApp, ScrapeOptions
 except ImportError:
     FirecrawlApp = Any
 
 
 class FirecrawlCrawlWebsiteToolSchema(BaseModel):
     url: str = Field(description="Website URL")
-    maxDepth: Optional[int] = Field(
-        default=2,
-        description="Maximum depth to crawl. Depth 1 is the base URL, depth 2 includes the base URL and its direct children and so on.",
-    )
-    limit: Optional[int] = Field(
-        default=100, description="Maximum number of pages to crawl."
-    )
-    allowExternalLinks: Optional[bool] = Field(
-        default=False,
-        description="Allows the crawler to follow links that point to external domains.",
-    )
-    formats: Optional[list[str]] = Field(
-        default=["markdown", "screenshot", "links"],
-        description="Formats for the page's content to be returned (eg. markdown, html, screenshot, links).",
-    )
-    timeout: Optional[int] = Field(
-        default=30000,
-        description="Timeout in milliseconds for the crawling operation. The default value is 30000.",
-    )
 
 
 class FirecrawlCrawlWebsiteTool(BaseTool):
+    """
+    Tool for crawling websites using Firecrawl. To run this tool, you need to have a Firecrawl API key.
+
+    Args:
+        api_key (str): Your Firecrawl API key.
+        config (dict): Optional. It contains Firecrawl API parameters.
+
+    Default configuration options:
+        max_depth (int): Maximum depth to crawl. Default: 2
+        ignore_sitemap (bool): Whether to ignore sitemap. Default: True
+        limit (int): Maximum number of pages to crawl. Default: 100
+        allow_backward_links (bool): Allow crawling backward links. Default: False
+        allow_external_links (bool): Allow crawling external links. Default: False
+        scrape_options (ScrapeOptions): Options for scraping content
+            - formats (list[str]): Content formats to return. Default: ["markdown", "screenshot", "links"]
+            - only_main_content (bool): Only return main content. Default: True
+            - timeout (int): Timeout in milliseconds. Default: 30000
+    """
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True, validate_assignment=True, frozen=False
     )
@@ -41,6 +40,20 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
     description: str = "Crawl webpages using Firecrawl and return the contents"
     args_schema: Type[BaseModel] = FirecrawlCrawlWebsiteToolSchema
     api_key: Optional[str] = None
+    config: Optional[dict[str, Any]] = Field(
+        default_factory=lambda: {
+            "max_depth": 2,
+            "ignore_sitemap": True,
+            "limit": 100,
+            "allow_backward_links": False,
+            "allow_external_links": False,
+            "scrape_options": ScrapeOptions(
+                formats=["markdown", "screenshot", "links"],
+                only_main_content=True,
+                timeout=30000,
+            ),
+        }
+    )
     _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -73,41 +86,8 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
                     "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
                 )
 
-    def _run(
-        self,
-        url: str,
-        maxDepth: Optional[int] = 2,
-        limit: Optional[int] = 100,
-        allowExternalLinks: Optional[bool] = False,
-        formats: Optional[list[str]] = ["markdown", "screenshot", "links"],
-        timeout: Optional[int] = 30000,
-    ):
-        # Default options for timeout and crawling
-        DEFAULT_TIMEOUT = 30000
-        DEFAULT_CRAWLING_OPTIONS = {
-            "maxDepth": 2,
-            "ignoreSitemap": True,
-            "limit": 100,
-            "allowBackwardLinks": False,
-            "allowExternalLinks": False,
-            "scrapeOptions": {
-                "formats": ["markdown", "screenshot", "links"],
-                "onlyMainContent": True,
-                "timeout": DEFAULT_TIMEOUT,
-            },
-        }
-
-        # Add default options not present as parameters
-        crawling_options = DEFAULT_CRAWLING_OPTIONS
-
-        # Update the values of parameters present
-        crawling_options["maxDepth"] = maxDepth
-        crawling_options["limit"] = limit
-        crawling_options["allowExternalLinks"] = allowExternalLinks
-        crawling_options["scrapeOptions"]["formats"] = formats
-        crawling_options["scrapeOptions"]["timeout"] = timeout
-
-        return self._firecrawl.crawl_url(url, crawling_options)
+    def _run(self, url: str):
+        return self._firecrawl.crawl_url(url, **self.config)
 
 
 try:

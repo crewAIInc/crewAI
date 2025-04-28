@@ -23,35 +23,38 @@ Utilize the FirecrawlScrapeFromWebsiteTool as follows to allow your agent to loa
 
 ```python
 from crewai_tools import FirecrawlCrawlWebsiteTool
+from firecrawl import ScrapeOptions
 
-tool = FirecrawlCrawlWebsiteTool(url='firecrawl.dev')
+tool = FirecrawlCrawlWebsiteTool(
+    config={
+        "limit": 100,
+        "scrape_options": ScrapeOptions(formats=["markdown", "html"]),
+        "poll_interval": 30,
+    }
+)
+tool.run(url="firecrawl.dev")
 ```
 
 ## Arguments
 
 - `api_key`: Optional. Specifies Firecrawl API key. Defaults is the `FIRECRAWL_API_KEY` environment variable.
-- `url`: The base URL to start crawling from.
-- `maxDepth`: Optional. Maximum depth to crawl. Depth 1 is the base URL, depth 2 includes the base URL and its direct children and so on.  
-- `limit`: Optional. Maximum number of pages to crawl.  
-- `allowExternalLinks`: Allows the crawler to follow links that point to external domains.  
-- `formats`: Optional. Formats for the page's content to be returned (eg. markdown, html, screenshot, links).  
-- `timeout`: Optional. Timeout in milliseconds for the crawling operation.  
-
-## Configurations Example
+- `config`: Optional. It contains Firecrawl API parameters.
 
 This is the default configuration
 
 ```python
-    DEFAULT_CRAWLING_OPTIONS = {
-        "maxDepth": 2,
-        "ignoreSitemap": True,
-        "limit": 100,
-        "allowBackwardLinks": False, 
-        "allowExternalLinks": False,
-        "scrapeOptions": {
-            "formats": ["markdown", "screenshot", "links"],
-            "onlyMainContent": True,
-            "timeout": 30000
-        }
-    }
+from firecrawl import ScrapeOptions
+
+{
+    "max_depth": 2,
+    "ignore_sitemap": True,
+    "limit": 100,
+    "allow_backward_links": False,
+    "allow_external_links": False,
+    "scrape_options": ScrapeOptions(
+        formats=["markdown", "screenshot", "links"],
+        only_main_content=True,
+        timeout=30000,
+    ),
+}
 ```

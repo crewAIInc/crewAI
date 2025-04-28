@@ -20,19 +20,27 @@ Utilize the FirecrawlScrapeWebsiteTool as follows to allow your agent to load we
 ```python
 from crewai_tools import FirecrawlScrapeWebsiteTool
 
-tool = FirecrawlScrapeWebsiteTool(url='firecrawl.dev')
+tool = FirecrawlScrapeWebsiteTool(config={"formats": ['html']})
+tool.run(url="firecrawl.dev")
 ```
 
 ## Arguments
 
 - `api_key`: Optional. Specifies Firecrawl API key. Defaults is the `FIRECRAWL_API_KEY` environment variable.
-- `url`: The URL to scrape.
-- `page_options`: Optional. 
-  - `onlyMainContent`: Optional. Only return the main content of the page excluding headers, navs, footers, etc.
-  - `includeHtml`: Optional. Include the raw HTML content of the page. Will output a html key in the response.
-- `extractor_options`: Optional. Options for LLM-based extraction of structured information from the page content
-  - `mode`: The extraction mode to use, currently supports 'llm-extraction'
-  - `extractionPrompt`: Optional. A prompt describing what information to extract from the page
-  - `extractionSchema`: Optional. The schema for the data to be extracted
-- `timeout`: Optional. Timeout in milliseconds for the request
+- `config`: Optional. It contains Firecrawl API parameters.
+
+
+This is the default configuration
+
+```python
+{
+    "formats": ["markdown"],
+    "only_main_content": True,
+    "include_tags": [],
+    "exclude_tags": [],
+    "headers": {},
+    "wait_for": 0,
+}
+```
+
 

@@ -18,6 +18,21 @@ class FirecrawlScrapeWebsiteToolSchema(BaseModel):
 
 
 class FirecrawlScrapeWebsiteTool(BaseTool):
+    """
+    Tool for scraping webpages using Firecrawl. To run this tool, you need to have a Firecrawl API key.
+
+    Args:
+        api_key (str): Your Firecrawl API key.
+        config (dict): Optional. It contains Firecrawl API parameters.
+
+    Default configuration options:
+        formats (list[str]): Content formats to return. Default: ["markdown"]
+        only_main_content (bool): Only return main content. Default: True
+        include_tags (list[str]): Tags to include. Default: []
+        exclude_tags (list[str]): Tags to exclude. Default: []
+        headers (dict): Headers to include. Default: {}
+    """
+
     model_config = ConfigDict(
         arbitrary_types_allowed=True, validate_assignment=True, frozen=False
     )
@@ -25,6 +40,17 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
     description: str = "Scrape webpages using Firecrawl and return the contents"
     args_schema: Type[BaseModel] = FirecrawlScrapeWebsiteToolSchema
     api_key: Optional[str] = None
+    config: Optional[dict[str, Any]] = Field(
+        default_factory=lambda: {
+            "formats": ["markdown"],
+            "only_main_content": True,
+            "include_tags": [],
+            "exclude_tags": [],
+            "headers": {},
+            "wait_for": 0,
+        }
+    )
+
     _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -50,21 +76,8 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
 
         self._firecrawl = FirecrawlApp(api_key=api_key)
 
-    def _run(
-        self,
-        url: str,
-        timeout: Optional[int] = 30000,
-    ):
-        options = {
-            "formats": ["markdown"],
-            "onlyMainContent": True,
-            "includeTags": [],
-            "excludeTags": [],
-            "headers": {},
-            "waitFor": 0,
-            "timeout": timeout,
-        }
-        return self._firecrawl.scrape_url(url, options)
+    def _run(self, url: str):
+        return self._firecrawl.scrape_url(url, **self.config)
 
 
 try:
