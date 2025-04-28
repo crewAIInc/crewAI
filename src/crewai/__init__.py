@@ -1,5 +1,8 @@
 import warnings
 
+from crewai.patches.litellm_patch import apply_patches
+apply_patches()
+
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
