@@ -1,6 +1,7 @@
 import inspect
+import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, Callable, Dict, List, TypeVar, Union, cast
 
 import yaml
 from dotenv import load_dotenv
@@ -25,18 +26,8 @@ def CrewBase(cls: T) -> T:
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-            agents_config_paths = []
-            tasks_config_paths = []
-            
-            if isinstance(self.original_agents_config_path, list):
-                agents_config_paths = [self.base_directory / path for path in self.original_agents_config_path]
-            else:
-                agents_config_paths = self.base_directory / self.original_agents_config_path
-                
-            if isinstance(self.original_tasks_config_path, list):
-                tasks_config_paths = [self.base_directory / path for path in self.original_tasks_config_path]
-            else:
-                tasks_config_paths = self.base_directory / self.original_tasks_config_path
+            agents_config_paths = self._normalize_to_path_list(self.original_agents_config_path)
+            tasks_config_paths = self._normalize_to_path_list(self.original_tasks_config_path)
 
             # Load and merge configurations
             self.agents_config = self.load_and_merge_yaml_configs(agents_config_paths)
@@ -78,38 +69,74 @@ def CrewBase(cls: T) -> T:
                 self._original_functions, "is_kickoff"
             )
 
+        def _normalize_to_path_list(self, paths) -> List[Path]:
+            """
+            Normalize input paths to always be a list of Path objects.
+            
+            Args:
+                paths: A string path, Path object, or list of paths
+                
+            Returns:
+                A list of Path objects
+            """
+            if isinstance(paths, (list, tuple)):
+                return [self.base_directory / p for p in paths]
+            else:
+                return [self.base_directory / paths]
+                
         @staticmethod
         def load_yaml(config_path: Path):
             try:
                 with open(config_path, "r", encoding="utf-8") as file:
                     return yaml.safe_load(file)
             except FileNotFoundError:
-                print(f"File not found: {config_path}")
+                logging.error(f"Configuration YAML file not found: {config_path}")
                 raise
                 
-        def load_and_merge_yaml_configs(self, config_paths: list[Path] | Path) -> dict:
+        def deep_merge(self, dict1: dict, dict2: dict) -> dict:
             """
-            Load and merge configurations from multiple YAML files or a single file.
-            Later files in the list will override earlier ones for duplicate keys.
+            Recursively merge two dictionaries, with values from dict2 taking precedence.
             
             Args:
-                config_paths: A Path object or list of Path objects pointing to YAML files
+                dict1: First dictionary
+                dict2: Second dictionary with values that will override dict1 for duplicate keys
+                
+            Returns:
+                A new dictionary with merged values
+            """
+            result = dict1.copy()
+            for key, value in dict2.items():
+                if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                    result[key] = self.deep_merge(result[key], value)
+                else:
+                    result[key] = value
+            return result
+            
+        def load_and_merge_yaml_configs(self, config_paths: List[Path]) -> dict:
+            """
+            Load and merge configurations from multiple YAML files.
+            
+            This function loads each YAML file in the provided list and merges their
+            configurations. For duplicate keys, later files in the list will override
+            earlier ones. For nested dictionaries, a deep merge is performed, meaning
+            that nested keys are preserved unless explicitly overridden.
+            
+            Example:
+                If file1.yaml contains: {"agent1": {"role": "researcher", "goal": "find info"}}
+                And file2.yaml contains: {"agent1": {"role": "analyst"}}
+                The result will be: {"agent1": {"role": "analyst", "goal": "find info"}}
+            
+            Args:
+                config_paths: A list of Path objects pointing to YAML files
                 
             Returns:
                 A dictionary with merged configurations
             """
-            if isinstance(config_paths, Path):
-                return self.load_yaml(config_paths)
-                
             result = {}
             for path in config_paths:
                 config = self.load_yaml(path)
                 if config:
-                    for key, value in config.items():
-                        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                            result[key].update(value)
-                        else:
-                            result[key] = value
+                    result = self.deep_merge(result, config)
             return result
 
         def _get_all_functions(self):
