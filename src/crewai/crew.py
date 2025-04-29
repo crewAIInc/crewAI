@@ -8,7 +8,6 @@ from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -36,6 +35,7 @@ from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
+from crewai.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM, BaseLLM
@@ -77,9 +77,6 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
-
-if TYPE_CHECKING:
-    from crewai.flow import Flow
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -248,7 +245,7 @@ class Crew(BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
     )
-    parent_flow: Optional["InstanceOf[Flow]"] = Field(
+    parent_flow: Optional[InstanceOf[Flow]] = Field(
         default=None,
         description="The parent flow of the crew, if the crew was created inside a flow.",
     )
@@ -304,8 +301,6 @@ class Crew(BaseModel):
         Returns:
             The first Flow instance found in the call stack, or None.
         """
-        from crewai.flow import Flow
-
         stack = inspect.stack(context=0)[1 : max_depth + 1]
         try:
             for frame_info in stack:
