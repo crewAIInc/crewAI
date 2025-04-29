@@ -1,0 +1,319 @@
+---
+title: "Trigger Deployed Crew API"
+description: "Using your deployed crew's API on CrewAI Enterprise"
+icon: "arrow-up-right-from-square"
+---
+
+Once you have deployed your crew to CrewAI Enterprise, it automatically becomes available as a REST API. This guide explains how to interact with your crew programmatically.
+
+## API Basics
+
+Your deployed crew exposes several endpoints that allow you to:
+1. Discover required inputs
+2. Start crew executions
+3. Monitor execution status
+4. Receive results
+
+### Authentication
+
+All API requests require a bearer token for authentication, which is generated when you deploy your crew:
+
+```bash
+curl -H "Authorization: Bearer YOUR_CREW_TOKEN" https://your-crew-url.crewai.com/...
+```
+
+<Tip>
+You can find your bearer token in the Status tab of your crew's detail page in the CrewAI Enterprise dashboard.
+</Tip>
+
+<Frame>
+  ![Bearer Token](/images/enterprise/bearer-token.png)
+</Frame>
+
+## Available Endpoints
+
+Your crew API provides three main endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/inputs` | GET | Lists all required inputs for crew execution |
+| `/kickoff` | POST | Starts a crew execution with provided inputs |
+| `/status/{kickoff_id}` | GET | Retrieves the status and results of an execution |
+
+## GET /inputs
+
+The inputs endpoint allows you to discover what parameters your crew requires:
+
+```bash
+curl -X GET \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  https://your-crew-url.crewai.com/inputs
+```
+
+### Response
+
+```json
+{
+  "inputs": ["budget", "interests", "duration", "age"]
+}
+```
+
+This response indicates that your crew expects four input parameters: `budget`, `interests`, `duration`, and `age`.
+
+## POST /kickoff
+
+The kickoff endpoint starts a new crew execution:
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  -d '{
+    "inputs": {
+      "budget": "1000 USD",
+      "interests": "games, tech, ai, relaxing hikes, amazing food",
+      "duration": "7 days",
+      "age": "35"
+    }
+  }' \
+  https://your-crew-url.crewai.com/kickoff
+```
+
+### Request Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `inputs` | Object | Yes | Key-value pairs of all required inputs |
+| `meta` | Object | No | Additional metadata to pass to the crew |
+| `taskWebhookUrl` | String | No | Callback URL executed after each task |
+| `stepWebhookUrl` | String | No | Callback URL executed after each agent thought |
+| `crewWebhookUrl` | String | No | Callback URL executed when the crew finishes |
+
+### Example with Webhooks
+
+```json
+{
+  "inputs": {
+    "budget": "1000 USD",
+    "interests": "games, tech, ai, relaxing hikes, amazing food",
+    "duration": "7 days",
+    "age": "35"
+  },
+  "meta": {
+    "requestId": "user-request-12345",
+    "source": "mobile-app"
+  },
+  "taskWebhookUrl": "https://your-server.com/webhooks/task",
+  "stepWebhookUrl": "https://your-server.com/webhooks/step",
+  "crewWebhookUrl": "https://your-server.com/webhooks/crew"
+}
+```
+
+### Response
+
+```json
+{
+  "kickoff_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv"
+}
+```
+
+The `kickoff_id` is used to track and retrieve the execution results.
+
+## GET /status/{kickoff_id}
+
+The status endpoint allows you to check the progress and results of a crew execution:
+
+```bash
+curl -X GET \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  https://your-crew-url.crewai.com/status/abcd1234-5678-90ef-ghij-klmnopqrstuv
+```
+
+### Response Structure
+
+The response structure will vary depending on the execution state:
+
+#### In Progress
+
+```json
+{
+  "status": "running",
+  "current_task": "research_task",
+  "progress": {
+    "completed_tasks": 0,
+    "total_tasks": 2
+  }
+}
+```
+
+#### Completed
+
+```json
+{
+  "status": "completed",
+  "result": {
+    "output": "Comprehensive travel itinerary...",
+    "tasks": [
+      {
+        "task_id": "research_task",
+        "output": "Research findings...",
+        "agent": "Researcher",
+        "execution_time": 45.2
+      },
+      {
+        "task_id": "planning_task",
+        "output": "7-day itinerary plan...",
+        "agent": "Trip Planner",
+        "execution_time": 62.8
+      }
+    ]
+  },
+  "execution_time": 108.5
+}
+```
+
+## Webhook Integration
+
+When you provide webhook URLs in your kickoff request, the system will make POST requests to those URLs at specific points in the execution:
+
+### taskWebhookUrl
+
+Called when each task completes:
+
+```json
+{
+  "kickoff_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv",
+  "task_id": "research_task",
+  "status": "completed",
+  "output": "Research findings...",
+  "agent": "Researcher",
+  "execution_time": 45.2
+}
+```
+
+### stepWebhookUrl
+
+Called after each agent thought or action:
+
+```json
+{
+  "kickoff_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv",
+  "task_id": "research_task",
+  "agent": "Researcher",
+  "step_type": "thought",
+  "content": "I should first search for popular destinations that match these interests..."
+}
+```
+
+### crewWebhookUrl
+
+Called when the entire crew execution completes:
+
+```json
+{
+  "kickoff_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv",
+  "status": "completed",
+  "result": {
+    "output": "Comprehensive travel itinerary...",
+    "tasks": [
+      {
+        "task_id": "research_task",
+        "output": "Research findings...",
+        "agent": "Researcher",
+        "execution_time": 45.2
+      },
+      {
+        "task_id": "planning_task",
+        "output": "7-day itinerary plan...",
+        "agent": "Trip Planner",
+        "execution_time": 62.8
+      }
+    ]
+  },
+  "execution_time": 108.5,
+  "meta": {
+    "requestId": "user-request-12345",
+    "source": "mobile-app"
+  }
+}
+```
+
+## Best Practices
+
+### Handling Long-Running Executions
+
+Crew executions can take anywhere from seconds to minutes depending on their complexity. Consider these approaches:
+
+1. **Webhooks (Recommended)**: Set up webhook endpoints to receive notifications when the execution completes
+2. **Polling**: Implement a polling mechanism with exponential backoff
+3. **Client-Side Timeout**: Set appropriate timeouts for your API requests
+
+### Error Handling
+
+The API may return various error codes:
+
+| Code | Description | Recommended Action |
+|------|-------------|-------------------|
+| 401 | Unauthorized | Check your bearer token |
+| 404 | Not Found | Verify your crew URL and kickoff_id |
+| 422 | Validation Error | Ensure all required inputs are provided |
+| 500 | Server Error | Contact support with the error details |
+
+### Sample Code
+
+Here's a complete Python example for interacting with your crew API:
+
+```python
+import requests
+import time
+
+# Configuration
+CREW_URL = "https://your-crew-url.crewai.com"
+BEARER_TOKEN = "your-crew-token"
+HEADERS = {
+    "Authorization": f"Bearer {BEARER_TOKEN}",
+    "Content-Type": "application/json"
+}
+
+# 1. Get required inputs
+response = requests.get(f"{CREW_URL}/inputs", headers=HEADERS)
+required_inputs = response.json()["inputs"]
+print(f"Required inputs: {required_inputs}")
+
+# 2. Start crew execution
+payload = {
+    "inputs": {
+        "budget": "1000 USD",
+        "interests": "games, tech, ai, relaxing hikes, amazing food",
+        "duration": "7 days",
+        "age": "35"
+    }
+}
+
+response = requests.post(f"{CREW_URL}/kickoff", headers=HEADERS, json=payload)
+kickoff_id = response.json()["kickoff_id"]
+print(f"Execution started with ID: {kickoff_id}")
+
+# 3. Poll for results
+MAX_RETRIES = 30
+POLL_INTERVAL = 10  # seconds
+for i in range(MAX_RETRIES):
+    print(f"Checking status (attempt {i+1}/{MAX_RETRIES})...")
+    response = requests.get(f"{CREW_URL}/status/{kickoff_id}", headers=HEADERS)
+    data = response.json()
+    
+    if data["status"] == "completed":
+        print("Execution completed!")
+        print(f"Result: {data['result']['output']}")
+        break
+    elif data["status"] == "error":
+        print(f"Execution failed: {data.get('error', 'Unknown error')}")
+        break
+    else:
+        print(f"Status: {data['status']}, waiting {POLL_INTERVAL} seconds...")
+        time.sleep(POLL_INTERVAL)
+```
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with API integration or troubleshooting.
+</Card>
