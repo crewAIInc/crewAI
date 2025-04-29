@@ -23,7 +23,8 @@ def run():
     }
     
     try:
-        {{crew_name}}().crew().kickoff(inputs=inputs)
+        filename = sys.argv[1] if len(sys.argv) > 1 else "trained_agents_data.pkl"
+        {{crew_name}}().crew(trained_data_file=filename).kickoff(inputs=inputs)
     except Exception as e:
         raise Exception(f"An error occurred while running the crew: {e}")
 

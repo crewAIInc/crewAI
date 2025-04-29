@@ -118,6 +118,10 @@ class Agent(BaseAgent):
         default=None,
         description="Knowledge context for the agent.",
     )
+    trained_data_file: str = Field(
+        default=TRAINED_AGENTS_DATA_FILE,
+        description="Path to the trained data file to use for task prompts.",
+    )
     crew_knowledge_context: Optional[str] = Field(
         default=None,
         description="Knowledge context for the crew.",
@@ -498,7 +502,7 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+        if data := CrewTrainingHandler(self.trained_data_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "

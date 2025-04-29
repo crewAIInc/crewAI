@@ -201,9 +201,17 @@ def install(context):
 
 
 @crewai.command()
-def run():
+@click.option(
+    "-f",
+    "--filename",
+    type=str,
+    default="trained_agents_data.pkl",
+    help="Path to a trained data file to use",
+)
+def run(filename: str):
     """Run the Crew."""
-    run_crew()
+    click.echo(f"Running the Crew with trained data from {filename}")
+    run_crew(trained_data_file=filename)
 
 
 @crewai.command()

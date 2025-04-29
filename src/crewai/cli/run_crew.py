@@ -14,13 +14,16 @@ class CrewType(Enum):
     FLOW = "flow"
 
 
-def run_crew() -> None:
+def run_crew(trained_data_file: Optional[str] = None) -> None:
     """
     Run the crew or flow by running a command in the UV environment.
 
     Starting from version 0.103.0, this command can be used to run both
     standard crews and flows. For flows, it detects the type from pyproject.toml
     and automatically runs the appropriate command.
+
+    Args:
+        trained_data_file: Optional path to a trained data file to use
     """
     crewai_version = get_crewai_version()
     min_required_version = "0.71.0"
@@ -44,17 +47,21 @@ def run_crew() -> None:
     click.echo(f"Running the {'Flow' if is_flow else 'Crew'}")
 
     # Execute the appropriate command
-    execute_command(crew_type)
+    execute_command(crew_type, trained_data_file)
 
 
-def execute_command(crew_type: CrewType) -> None:
+def execute_command(crew_type: CrewType, trained_data_file: Optional[str] = None) -> None:
     """
     Execute the appropriate command based on crew type.
 
     Args:
         crew_type: The type of crew to run
+        trained_data_file: Optional path to a trained data file to use
     """
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
+    
+    if trained_data_file and crew_type == CrewType.STANDARD:
+        command.extend(["--trained-data-file", trained_data_file])
 
     try:
         subprocess.run(command, capture_output=False, text=True, check=True)

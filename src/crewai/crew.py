@@ -122,6 +122,10 @@ class Crew(BaseModel):
     tasks: List[Task] = Field(default_factory=list)
     agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
+    trained_data_file: Optional[str] = Field(
+        default=None,
+        description="Path to the trained data file to use for agent task prompts.",
+    )
     verbose: bool = Field(default=False)
     memory: bool = Field(
         default=False,
@@ -1196,7 +1200,12 @@ class Crew(BaseModel):
             "manager_llm",
         }
 
-        cloned_agents = [agent.copy() for agent in self.agents]
+        cloned_agents = []
+        for agent in self.agents:
+            cloned_agent = agent.copy()
+            if self.trained_data_file:
+                cloned_agent.trained_data_file = self.trained_data_file
+            cloned_agents.append(cloned_agent)
         manager_agent = self.manager_agent.copy() if self.manager_agent else None
         manager_llm = shallow_copy(self.manager_llm) if self.manager_llm else None
 
