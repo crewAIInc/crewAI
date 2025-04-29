@@ -5,12 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from crewai.cli.provider import fetch_provider_data, read_cache_file
-from crewai.cli.utils import (
-    copy_template,
-    load_env_vars,
-    tree_find_and_replace,
-    write_env_file,
-)
+from crewai.cli.utils import copy_template, load_env_vars, tree_find_and_replace, write_env_file
 
 
 class TestEncoding(unittest.TestCase):
