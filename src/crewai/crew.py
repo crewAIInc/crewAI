@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 import re
 import uuid
@@ -6,7 +7,18 @@ import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from pydantic import (
     UUID4,
@@ -65,6 +77,9 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+
+if TYPE_CHECKING:
+    from crewai.flow import Flow
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -233,6 +248,10 @@ class Crew(BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
     )
+    parent_flow: Optional["InstanceOf[Flow]"] = Field(
+        default=None,
+        description="The parent flow of the crew, if the crew was created inside a flow.",
+    )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -274,6 +293,31 @@ class Crew(BaseModel):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
         return self
+
+    @model_validator(mode="after")
+    def set_parent_flow(self, max_depth: int = 5) -> Optional["Crew"]:
+        """Find the nearest Flow instance in the call stack.
+
+        Args:
+            max_depth: Maximum frames to traverse up the call stack.
+
+        Returns:
+            The first Flow instance found in the call stack, or None.
+        """
+        from crewai.flow import Flow
+
+        stack = inspect.stack(context=0)[1 : max_depth + 1]
+        try:
+            for frame_info in stack:
+                candidate = frame_info.frame.f_locals.get("self")
+                if isinstance(candidate, Flow):
+                    self.parent_flow = candidate
+                    break
+            else:
+                self.parent_flow = None
+        finally:
+            del stack
+            return self
 
     def _initialize_user_memory(self):
         if (

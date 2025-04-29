@@ -17,6 +17,7 @@ from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.flow import Flow, listen, start
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
@@ -2164,7 +2165,6 @@ def test_tools_with_custom_caching():
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
     ) as add_to_cache:
-
         result = crew.kickoff()
 
         # Check that add_to_cache was called exactly twice
@@ -4351,3 +4351,35 @@ def test_crew_copy_with_memory():
             raise e  # Re-raise other validation errors
     except Exception as e:
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
+
+
+def test_sets_parent_flow_when_outside_flow():
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+    )
+    assert crew.parent_flow is None
+
+
+def test_sets_parent_flow_when_inside_flow():
+    class MyFlow(Flow):
+        @start()
+        def start(self):
+            return Crew(
+                agents=[researcher, writer],
+                process=Process.sequential,
+                tasks=[
+                    Task(
+                        description="Task 1", expected_output="output", agent=researcher
+                    ),
+                    Task(description="Task 2", expected_output="output", agent=writer),
+                ],
+            )
+
+    flow = MyFlow()
+    result = flow.kickoff()
+    assert result.parent_flow is flow
