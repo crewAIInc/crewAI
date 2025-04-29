@@ -153,14 +153,18 @@ def task_output():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_guardrail_process_output(task_output):
-    guardrail = TaskGuardrail(description="Ensure the result has less than 10 words")
+    guardrail = TaskGuardrail(
+        description="Ensure the result has less than 10 words", llm=LLM(model="gpt-4o")
+    )
 
     result = guardrail(task_output)
     assert result[0] is False
 
     assert "exceeding the guardrail limit of fewer than" in result[1].lower()
 
-    guardrail = TaskGuardrail(description="Ensure the result has less than 500 words")
+    guardrail = TaskGuardrail(
+        description="Ensure the result has less than 500 words", llm=LLM(model="gpt-4o")
+    )
 
     result = guardrail(task_output)
     assert result[0] is True

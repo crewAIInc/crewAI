@@ -33,20 +33,11 @@ class TaskGuardrail:
     def __init__(
         self,
         description: str,
-        task: Task | None = None,
-        llm: LLM | None = None,
+        llm: LLM,
     ):
         self.description = description
 
-        fallback_llm: LLM | None = (
-            task.agent.llm
-            if task is not None
-            and hasattr(task, "agent")
-            and task.agent is not None
-            and hasattr(task.agent, "llm")
-            else None
-        )
-        self.llm: LLM | None = llm or fallback_llm
+        self.llm: LLM = llm
 
     def _validate_output(self, task_output: TaskOutput) -> LiteAgentOutput:
         agent = Agent(

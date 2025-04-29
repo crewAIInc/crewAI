@@ -243,7 +243,10 @@ class Task(BaseModel):
         elif isinstance(self.guardrail, str):
             from crewai.tasks.task_guardrail import TaskGuardrail
 
-            self._guardrail = TaskGuardrail(description=self.guardrail, task=self)
+            assert self.agent is not None
+            self._guardrail = TaskGuardrail(
+                description=self.guardrail, llm=self.agent.llm
+            )
 
         return self
 
