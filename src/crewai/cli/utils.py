@@ -18,19 +18,24 @@ console = Console()
 
 def copy_template(src, dst, name, class_name, folder_name):
     """Copy a file from src to dst."""
-    with open(src, "r", encoding="utf-8") as file:
-        content = file.read()
+    try:
+        with open(src, "r", encoding="utf-8") as file:
+            content = file.read()
 
-    # Interpolate the content
-    content = content.replace("{{name}}", name)
-    content = content.replace("{{crew_name}}", class_name)
-    content = content.replace("{{folder_name}}", folder_name)
+        # Interpolate the content
+        content = content.replace("{{name}}", name)
+        content = content.replace("{{crew_name}}", class_name)
+        content = content.replace("{{folder_name}}", folder_name)
 
-    # Write the interpolated content to the new file
-    with open(dst, "w", encoding="utf-8") as file:
-        file.write(content)
+        # Write the interpolated content to the new file
+        with open(dst, "w", encoding="utf-8", newline="\n") as file:
+            file.write(content)
 
-    click.secho(f"  - Created {dst}", fg="green")
+        click.secho(f"  - Created {dst}", fg="green")
+    except UnicodeDecodeError as e:
+        click.secho(f"Error reading template file {src}: Unicode decode error - {e}", fg="red")
+        click.secho("This may be due to file encoding issues. Please ensure all template files use UTF-8 encoding.", fg="yellow")
+        raise
 
 
 def read_toml(file_path: str = "pyproject.toml"):
@@ -133,6 +138,9 @@ def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
 
     except FileNotFoundError:
         print(f"Error: {env_file_path} not found.")
+    except UnicodeDecodeError as e:
+        click.secho(f"Error reading .env file: Unicode decode error - {e}", fg="red")
+        click.secho("This may be due to file encoding issues. Please ensure the .env file uses UTF-8 encoding.", fg="yellow")
     except Exception as e:
         print(f"Error reading the .env file: {e}")
 
@@ -158,10 +166,15 @@ def tree_find_and_replace(directory, find, replace):
         for filename in files:
             filepath = os.path.join(path, filename)
 
-            with open(filepath, "r", encoding="utf-8") as file:
-                contents = file.read()
-            with open(filepath, "w", encoding="utf-8") as file:
-                file.write(contents.replace(find, replace))
+            try:
+                with open(filepath, "r", encoding="utf-8") as file:
+                    contents = file.read()
+                with open(filepath, "w", encoding="utf-8", newline="\n") as file:
+                    file.write(contents.replace(find, replace))
+            except UnicodeDecodeError as e:
+                click.secho(f"Error processing file {filepath}: Unicode decode error - {e}", fg="red")
+                click.secho("This may be due to file encoding issues. Skipping this file.", fg="yellow")
+                continue
 
             if find in filename:
                 new_filename = filename.replace(find, replace)
@@ -189,11 +202,15 @@ def load_env_vars(folder_path):
     env_file_path = folder_path / ".env"
     env_vars = {}
     if env_file_path.exists():
-        with open(env_file_path, "r", encoding="utf-8") as file:
-            for line in file:
-                key, _, value = line.strip().partition("=")
-                if key and value:
-                    env_vars[key] = value
+        try:
+            with open(env_file_path, "r", encoding="utf-8") as file:
+                for line in file:
+                    key, _, value = line.strip().partition("=")
+                    if key and value:
+                        env_vars[key] = value
+        except UnicodeDecodeError as e:
+            click.secho(f"Error reading .env file: Unicode decode error - {e}", fg="red")
+            click.secho("This may be due to file encoding issues. Please ensure the .env file uses UTF-8 encoding.", fg="yellow")
     return env_vars
 
 
@@ -244,6 +261,11 @@ def write_env_file(folder_path, env_vars):
     - env_vars (dict): A dictionary of environment variables to write.
     """
     env_file_path = folder_path / ".env"
-    with open(env_file_path, "w", encoding="utf-8") as file:
-        for key, value in env_vars.items():
-            file.write(f"{key}={value}\n")
+    try:
+        with open(env_file_path, "w", encoding="utf-8", newline="\n") as file:
+            for key, value in env_vars.items():
+                file.write(f"{key}={value}\n")
+    except Exception as e:
+        click.secho(f"Error writing .env file: {e}", fg="red")
+        click.secho("This may be due to file system permissions or other issues.", fg="yellow")
+        raise

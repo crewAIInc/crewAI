@@ -138,17 +138,22 @@ def load_provider_data(cache_file, cache_expiry):
 
 def read_cache_file(cache_file):
     """
-    Reads and returns the JSON content from a cache file. Returns None if the file contains invalid JSON.
+    Reads and returns the JSON content from a cache file. Returns None if the file contains invalid JSON
+    or if there's an encoding error.
 
     Args:
     - cache_file (Path): The path to the cache file.
 
     Returns:
-    - dict or None: The JSON content of the cache file or None if the JSON is invalid.
+    - dict or None: The JSON content of the cache file or None if the JSON is invalid or there's an encoding error.
     """
     try:
         with open(cache_file, "r", encoding="utf-8") as f:
             return json.load(f)
+    except UnicodeDecodeError as e:
+        click.secho(f"Error reading cache file: Unicode decode error - {e}", fg="red")
+        click.secho("This may be due to file encoding issues. Try deleting the cache file and trying again.", fg="yellow")
+        return None
     except json.JSONDecodeError:
         return None
 
@@ -167,13 +172,16 @@ def fetch_provider_data(cache_file):
         response = requests.get(JSON_URL, stream=True, timeout=60)
         response.raise_for_status()
         data = download_data(response)
-        with open(cache_file, "w", encoding="utf-8") as f:
+        with open(cache_file, "w", encoding="utf-8", newline="\n") as f:
             json.dump(data, f)
         return data
     except requests.RequestException as e:
         click.secho(f"Error fetching provider data: {e}", fg="red")
     except json.JSONDecodeError:
         click.secho("Error parsing provider data. Invalid JSON format.", fg="red")
+    except UnicodeDecodeError as e:
+        click.secho(f"Unicode decode error when processing provider data: {e}", fg="red")
+        click.secho("This may be due to encoding issues with the downloaded data.", fg="yellow")
     return None
 
 
