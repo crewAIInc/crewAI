@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(level=logging.WARNING)
-
 T = TypeVar("T", bound=type)
 
 """Base decorator for creating crew classes with configuration and function management."""
