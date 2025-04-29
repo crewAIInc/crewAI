@@ -814,6 +814,7 @@ dev = [
     { name = "pytest-randomly" },
     { name = "pytest-recording" },
     { name = "pytest-subprocess" },
+    { name = "pytest-timeout" },
     { name = "python-dotenv" },
     { name = "ruff" },
 ]
@@ -871,6 +872,7 @@ dev = [
     { name = "pytest-randomly", specifier = ">=3.16.0" },
     { name = "pytest-recording", specifier = ">=0.13.2" },
     { name = "pytest-subprocess", specifier = ">=1.5.2" },
+    { name = "pytest-timeout", specifier = ">=2.3.1" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "ruff", specifier = ">=0.8.2" },
 ]
@@ -4266,6 +4268,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/3d/02/0c8323e6013ea967f0461ef5653bd129b2d673d74f070c681c7a8663285c/pytest_subprocess-1.5.2.tar.gz", hash = "sha256:ad3ca8a35e798bf9c82d9f16d88700b30d98c5a28236117b86c5d6e581a8ed97", size = 40468 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/10/77/a80e8f9126b95ffd5ad4d04bd14005c68dcbf0d88f53b2b14893f6cc7232/pytest_subprocess-1.5.2-py3-none-any.whl", hash = "sha256:23ac7732aa8bd45f1757265b1316eb72a7f55b41fb21e2ca22e149ba3629fa46", size = 20886 },
+]
+
+[[package]]
+name = "pytest-timeout"
+version = "2.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/93/0d/04719abc7a4bdb3a7a1f968f24b0f5253d698c9cc94975330e9d3145befb/pytest-timeout-2.3.1.tar.gz", hash = "sha256:12397729125c6ecbdaca01035b9e5239d4db97352320af155b3f5de1ba5165d9", size = 17697 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/03/27/14af9ef8321f5edc7527e47def2a21d8118c6f329a9342cc61387a0c0599/pytest_timeout-2.3.1-py3-none-any.whl", hash = "sha256:68188cb703edfc6a18fad98dc25a3c61e9f24d644b0b70f33af545219fc7813e", size = 14148 },
 ]
 
 [[package]]
