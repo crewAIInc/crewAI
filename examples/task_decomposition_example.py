@@ -3,6 +3,8 @@ Example of using task decomposition in CrewAI.
 
 This example demonstrates how to use the task decomposition feature
 to break down complex tasks into simpler sub-tasks.
+
+Feature introduced in CrewAI v1.x.x
 """
 
 from crewai import Agent, Task, Crew
@@ -39,10 +41,7 @@ crew = Crew(
 )
 
 result = crew.kickoff()
-print(result)
+print("Final result:", result)
 
-
-# 
-#     
-#     
-# 
+for i, sub_task in enumerate(research_task.sub_tasks):
+    print(f"Sub-task {i+1} result: {sub_task.output.raw if hasattr(sub_task, 'output') and sub_task.output else 'No output'}")

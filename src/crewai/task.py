@@ -273,15 +273,28 @@ class Task(BaseModel):
             
         Returns:
             List of created sub-tasks.
+            
+        Raises:
+            ValueError: If descriptions is empty, or if expected_outputs or names
+                       have different lengths than descriptions.
+                       
+        Side Effects:
+            Modifies self.sub_tasks by adding newly created sub-tasks.
         """
         if not descriptions:
             raise ValueError("At least one sub-task description is required.")
             
         if expected_outputs and len(expected_outputs) != len(descriptions):
-            raise ValueError("If provided, expected_outputs must have the same length as descriptions.")
+            raise ValueError(
+                f"If provided, expected_outputs must have the same length as descriptions. "
+                f"Got {len(expected_outputs)} expected outputs and {len(descriptions)} descriptions."
+            )
             
         if names and len(names) != len(descriptions):
-            raise ValueError("If provided, names must have the same length as descriptions.")
+            raise ValueError(
+                f"If provided, names must have the same length as descriptions. "
+                f"Got {len(names)} names and {len(descriptions)} descriptions."
+            )
             
         for i, description in enumerate(descriptions):
             sub_task = Task(
@@ -301,8 +314,18 @@ class Task(BaseModel):
         """
         Combine the results from all sub-tasks into a single result for this task.
         
+        This method uses the task's agent to intelligently combine the results from
+        all sub-tasks. It requires an agent capable of coherent text summarization
+        and is designed for stateless prompt execution.
+        
         Returns:
             The combined result as a string.
+            
+        Raises:
+            ValueError: If the task has no sub-tasks or no agent assigned.
+            
+        Side Effects:
+            None. This method does not modify the task's state.
         """
         if not self.sub_tasks:
             raise ValueError("Task has no sub-tasks to combine results from.")
@@ -338,7 +361,25 @@ class Task(BaseModel):
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
     ) -> TaskOutput:
-        """Execute the task synchronously."""
+        """
+        Execute the task synchronously.
+        
+        If the task has sub-tasks and no output yet, this method will:
+        1. Execute all sub-tasks first
+        2. Combine their results using the agent
+        3. Set the combined result as this task's output
+        
+        Args:
+            agent: Optional agent to execute the task with.
+            context: Optional context to pass to the task.
+            tools: Optional tools to pass to the task.
+            
+        Returns:
+            TaskOutput: The result of the task execution.
+            
+        Side Effects:
+            Sets self.output with the execution result.
+        """
         if self.sub_tasks and not self.output:
             for sub_task in self.sub_tasks:
                 sub_task.execute_sync(
@@ -347,8 +388,19 @@ class Task(BaseModel):
                     tools=sub_task.tools or tools or [],
                 )
             
+            # Combine the results from sub-tasks
             result = self.combine_sub_task_results()
-            return self._execute_core(agent, context, tools)
+            
+            self.output = TaskOutput(
+                description=self.description,
+                name=self.name,
+                expected_output=self.expected_output,
+                raw=result,
+                agent=self.agent.role if self.agent else None,
+                output_format=self.output_format,
+            )
+            
+            return self.output
         
         return self._execute_core(agent, context, tools)
 
@@ -381,7 +433,23 @@ class Task(BaseModel):
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
     ) -> List[Future[TaskOutput]]:
-        """Execute all sub-tasks asynchronously.
+        """
+        Execute all sub-tasks asynchronously.
+        
+        This method starts the execution of all sub-tasks in parallel and returns
+        futures that can be awaited. After all futures are complete, you should call
+        combine_sub_task_results() to aggregate the results.
+        
+        Example:
+            ```python
+            futures = task.execute_sub_tasks_async()
+            
+            for future in futures:
+                future.result()
+                
+            # Combine the results
+            result = task.combine_sub_task_results()
+            ```
         
         Args:
             agent: Optional agent to execute the sub-tasks with.
@@ -390,6 +458,9 @@ class Task(BaseModel):
             
         Returns:
             List of futures for the sub-task executions.
+            
+        Raises:
+            ValueError: If the task has no sub-tasks.
         """
         if not self.sub_tasks:
             return []
@@ -656,3 +727,6 @@ class Task(BaseModel):
 
     def __repr__(self):
         return f"Task(description={self.description}, expected_output={self.expected_output})"
+
+
+Task.model_rebuild()
