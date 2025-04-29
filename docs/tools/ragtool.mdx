@@ -143,11 +143,29 @@ config = {
         "config": {
             "model": "text-embedding-ada-002"
         }
+    },
+    "vectordb": {
+        "provider": "elasticsearch",
+        "config": {
+            "collection_name": "my-collection",
+            "cloud_id": "deployment-name:xxxx",
+            "api_key": "your-key",
+            "verify_certs": False
+        }
+    },
+    "chunker": {
+        "chunk_size": 400,
+        "chunk_overlap": 100,
+        "length_function": "len",
+        "min_chunk_size": 0
     }
 }
 
 rag_tool = RagTool(config=config, summarize=True)
 ```
+The internal RAG tool utilizes the Embedchain adapter, allowing you to pass any configuration options that are supported by Embedchain.
+You can refer to the [Embedchain documentation](https://docs.embedchain.ai/components/introduction) for details.
+Make sure to review the configuration options available in the .yaml file.
 
 ## Conclusion
 
