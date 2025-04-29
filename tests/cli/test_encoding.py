@@ -29,7 +29,7 @@ class TestEncoding(unittest.TestCase):
         self.temp_dir.cleanup()
         
     def test_copy_template_handles_unicode(self):
-        """Test that copy_template handles Unicode characters properly."""
+        """Test that copy_template handles Unicode characters properly in all environments."""
         copy_template(
             self.src_file, 
             self.dst_file, 
