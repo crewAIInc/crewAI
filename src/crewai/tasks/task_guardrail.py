@@ -19,7 +19,7 @@ class TaskGuardrailResult(BaseModel):
 
 
 class TaskGuardrail:
-    """A task that validates the output of another task using generated Python code.
+    """It validates the output of another task using an LLM.
 
     This class is used to validate the output from a Task based on specified criteria.
     It uses an LLM to validate the output and provides a feedback if the output is not valid.
