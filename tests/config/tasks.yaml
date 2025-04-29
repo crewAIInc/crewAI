@@ -6,7 +6,7 @@ research_task:
   expected_output: >
     A list with 10 bullet points of the most relevant information about {topic}
   agent: researcher
-  guardrail: make sure each bullet contains a minimum of 100 words
+  guardrail: ensure each bullet contains its source
 
 reporting_task:
   description: >

@@ -143,31 +143,17 @@ def test_agent_function_calling_llm():
     ), "agent's function_calling_llm is incorrect"
 
 
-# VCR could not record the request to localhost from Docker to get it version, so we need to mock the tool.
-# TODO: We can remove this mock after some issue such as https://github.com/kevin1024/vcrpy/issues/519 been addressed
-@pytest.fixture
-def code_interpreter_tool_mock():
-    with patch(
-        "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.CodeInterpreterTool._run",
-        return_value="(True, 'good result')",
-    ):
-        yield
-
-
-def test_task_guardrail(code_interpreter_tool_mock):
+def test_task_guardrail():
     crew = InternalCrew()
     research_task = crew.research_task()
-    assert (
-        research_task.guardrail
-        == "make sure each bullet contains a minimum of 100 words"
-    )
+    assert research_task.guardrail == "ensure each bullet contains its source"
 
     reporting_task = crew.reporting_task()
     assert reporting_task.guardrail is None
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_before_kickoff_modification(code_interpreter_tool_mock):
+def test_before_kickoff_modification():
     crew = InternalCrew()
     inputs = {"topic": "LLMs"}
     result = crew.crew().kickoff(inputs=inputs)
@@ -175,7 +161,7 @@ def test_before_kickoff_modification(code_interpreter_tool_mock):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_after_kickoff_modification(code_interpreter_tool_mock):
+def test_after_kickoff_modification():
     crew = InternalCrew()
     # Assuming the crew execution returns a dict
     result = crew.crew().kickoff({"topic": "LLMs"})
@@ -186,14 +172,14 @@ def test_after_kickoff_modification(code_interpreter_tool_mock):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_before_kickoff_with_none_input(code_interpreter_tool_mock):
+def test_before_kickoff_with_none_input():
     crew = InternalCrew()
     crew.crew().kickoff(None)
     # Test should pass without raising exceptions
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_before_after_kickoff(code_interpreter_tool_mock):
+def test_multiple_before_after_kickoff():
     @CrewBase
     class MultipleHooksCrew:
         agents: List[BaseAgent]

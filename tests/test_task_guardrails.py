@@ -139,127 +139,32 @@ def sample_agent():
     return Agent(role="Test Agent", goal="Test Goal", backstory="Test Backstory")
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_guardrail_using_llm(sample_agent):
-    task = Task(
-        description="Test task",
-        expected_output="Output",
-        guardrail="Ensure the output is equal to 'good result'",
-    )
-
-    with patch(
-        "crewai.tasks.task_guardrail.TaskGuardrail.__call__",
-        side_effect=[(False, "bad result"), (True, "good result")],
-    ) as mock_guardrail:
-        task.execute_sync(agent=sample_agent)
-
-    assert mock_guardrail.call_count == 2
-
-    task.guardrail = TaskGuardrail(
-        description="Ensure the output is equal to 'good result'",
-        llm=LLM(model="gpt-4o-mini"),
-    )
-
-    with patch(
-        "crewai.tasks.task_guardrail.TaskGuardrail.__call__",
-        side_effect=[(False, "bad result"), (True, "good result")],
-    ) as mock_guardrail:
-        task.execute_sync(agent=sample_agent)
-
-    assert mock_guardrail.call_count == 2
-
-
 @pytest.fixture
 def task_output():
     return TaskOutput(
-        raw="Test output",
+        raw="""
+        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever
+        """,
         description="Test task",
         expected_output="Output",
         agent="Test Agent",
     )
 
 
-def test_task_guardrail_initialization_no_llm(task_output):
-    """Test TaskGuardrail initialization fails without LLM"""
-    with pytest.raises(ValueError, match="Provide a valid LLM to the TaskGuardrail"):
-        TaskGuardrail(description="Test")(task_output)
-
-
-@pytest.fixture
-def mock_llm():
-    llm = Mock(spec=LLM)
-    llm.call.return_value = """
-output = 'Sample book data'
-if isinstance(output, str):
-    result = (True, output)
-else:
-    result = (False, 'Invalid output format')
-print(result)
-"""
-    return llm
-
-
-@pytest.mark.parametrize(
-    "tool_run_output",
-    [
-        {
-            "output": "(True, 'Valid output')",
-            "expected_result": True,
-            "expected_output": "Valid output",
-        },
-        {
-            "output": "(False, 'Invalid output format')",
-            "expected_result": False,
-            "expected_output": "Invalid output format",
-        },
-        {
-            "output": "Something went wrong while running the code, Invalid output format",
-            "expected_result": False,
-            "expected_output": "Something went wrong while running the code, Invalid output format",
-        },
-        {
-            "output": "No result variable found",
-            "expected_result": False,
-            "expected_output": "No result variable found",
-        },
-        {
-            "output": (False, "Invalid output format"),
-            "expected_result": False,
-            "expected_output": "Invalid output format",
-        },
-        {
-            "output": "bla-bla-bla",
-            "expected_result": False,
-            "expected_output": "Error parsing result: malformed node or string on line 1",
-        },
-    ],
-)
-@patch("crewai_tools.CodeInterpreterTool.run")
-def test_task_guardrail_execute_code(mock_run, mock_llm, tool_run_output, task_output):
-    mock_run.return_value = tool_run_output["output"]
-
-    guardrail = TaskGuardrail(description="Test validation", llm=mock_llm)
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_guardrail_process_output(task_output):
+    guardrail = TaskGuardrail(description="Ensure the result has less than 10 words")
 
     result = guardrail(task_output)
-    assert result[0] == tool_run_output["expected_result"]
-    assert tool_run_output["expected_output"] in result[1]
+    assert result[0] is False
 
+    assert "exceeding the guardrail limit of fewer than" in result[1].lower()
 
-@patch("crewai_tools.CodeInterpreterTool.run")
-def test_guardrail_using_additional_instructions(mock_run, mock_llm, task_output):
-    mock_run.return_value = "(True, 'Valid output')"
-    additional_instructions = (
-        "This is an additional instruction created by the user follow it strictly"
-    )
-    guardrail = TaskGuardrail(
-        description="Test validation",
-        llm=mock_llm,
-        additional_instructions=additional_instructions,
-    )
+    guardrail = TaskGuardrail(description="Ensure the result has less than 500 words")
 
-    guardrail(task_output)
-
-    assert additional_instructions in str(mock_llm.call.call_args)
+    result = guardrail(task_output)
+    assert result[0] is True
+    assert result[1] == task_output.raw
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -287,26 +192,13 @@ def test_guardrail_emits_events(sample_agent):
             )
 
         task = Task(
-            description="Test task",
-            expected_output="Output",
-            guardrail="Ensure the output is equal to 'good result'",
+            description="Gather information about available books on the First World War",
+            agent=sample_agent,
+            expected_output="A list of available books on the First World War",
+            guardrail="Ensure the authors are from Italy",
         )
 
-        with (
-            patch(
-                "crewai_tools.CodeInterpreterTool.run",
-                side_effect=[
-                    "Something went wrong while running the code",
-                    (True, "good result"),
-                ],
-            ),
-            patch(
-                "crewai.tasks.task_guardrail.TaskGuardrail.generate_code",
-                return_value="""def guardrail(result: TaskOutput):
-    return (True, result.raw.upper())""",
-            ),
-        ):
-            task.execute_sync(agent=sample_agent)
+        result = task.execute_sync(agent=sample_agent)
 
         def custom_guardrail(result: TaskOutput):
             return (True, "good result from callable function")
@@ -320,35 +212,26 @@ def test_guardrail_emits_events(sample_agent):
         task.execute_sync(agent=sample_agent)
 
         expected_started_events = [
-            {
-                "guardrail": """def guardrail(result: TaskOutput):
-    return (True, result.raw.upper())""",
-                "retry_count": 0,
-            },
-            {
-                "guardrail": """def guardrail(result: TaskOutput):
-    return (True, result.raw.upper())""",
-                "retry_count": 1,
-            },
+            {"guardrail": "Ensure the authors are from Italy", "retry_count": 0},
+            {"guardrail": "Ensure the authors are from Italy", "retry_count": 1},
             {
                 "guardrail": """def custom_guardrail(result: TaskOutput):
             return (True, "good result from callable function")""",
                 "retry_count": 0,
             },
         ]
+
         expected_completed_events = [
             {
                 "success": False,
                 "result": None,
-                "error": "Something went wrong while running the code",
+                "error": "The task result does not comply with the guardrail because none of "
+                "the listed authors are from Italy. All authors mentioned are from "
+                "different countries, including Germany, the UK, the USA, and others, "
+                "which violates the requirement that authors must be Italian.",
                 "retry_count": 0,
             },
-            {
-                "success": True,
-                "result": "good result",
-                "error": None,
-                "retry_count": 1,
-            },
+            {"success": True, "result": result.raw, "error": None, "retry_count": 1},
             {
                 "success": True,
                 "result": "good result from callable function",
@@ -360,20 +243,23 @@ def test_guardrail_emits_events(sample_agent):
         assert completed_guardrail == expected_completed_events
 
 
-@pytest.mark.parametrize("unsafe_mode", [True, False])
-def test_task_guardrail_force_code_tool_unsafe_mode(mock_llm, task_output, unsafe_mode):
-    guardrail = TaskGuardrail(
-        description="Test validation", llm=mock_llm, unsafe_mode=unsafe_mode
-    )
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_guardrail_when_an_error_occurs(sample_agent, task_output):
     with (
         patch(
-            "crewai_tools.CodeInterpreterTool.__init__", return_value=None
-        ) as mock_init,
-        patch(
-            "crewai_tools.CodeInterpreterTool.run", return_value=(True, "Valid output")
+            "crewai.Agent.kickoff",
+            side_effect=Exception("Unexpected error"),
+        ),
+        pytest.raises(
+            Exception,
+            match="Error while validating the task output: Unexpected error",
         ),
     ):
-        result = guardrail(task_output)
-
-    mock_init.assert_called_once_with(code=ANY, unsafe_mode=unsafe_mode)
-    assert result == (True, "Valid output")
+        task = Task(
+            description="Gather information about available books on the First World War",
+            agent=sample_agent,
+            expected_output="A list of available books on the First World War",
+            guardrail="Ensure the authors are from Italy",
+            max_retries=0,
+        )
+        task.execute_sync(agent=sample_agent)

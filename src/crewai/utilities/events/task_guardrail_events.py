@@ -7,8 +7,8 @@ class TaskGuardrailStartedEvent(BaseEvent):
     """Event emitted when a guardrail task starts
 
     Attributes:
-        messages: Content can be either a string or a list of dictionaries that support
-            multimodal content (text, images, etc.)
+        guardrail: The guardrail callable or TaskGuardrail instance
+        retry_count: The number of times the guardrail has been retried
     """
 
     type: str = "task_guardrail_started"
@@ -23,8 +23,7 @@ class TaskGuardrailStartedEvent(BaseEvent):
         super().__init__(**data)
 
         if isinstance(self.guardrail, TaskGuardrail):
-            assert self.guardrail.generated_code is not None
-            self.guardrail = self.guardrail.generated_code.strip()
+            self.guardrail = self.guardrail.description.strip()
         elif isinstance(self.guardrail, Callable):
             self.guardrail = getsource(self.guardrail).strip()
 
