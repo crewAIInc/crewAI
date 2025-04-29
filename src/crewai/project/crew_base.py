@@ -25,11 +25,22 @@ def CrewBase(cls: T) -> T:
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-            agents_config_path = self.base_directory / self.original_agents_config_path
-            tasks_config_path = self.base_directory / self.original_tasks_config_path
+            agents_config_paths = []
+            tasks_config_paths = []
+            
+            if isinstance(self.original_agents_config_path, list):
+                agents_config_paths = [self.base_directory / path for path in self.original_agents_config_path]
+            else:
+                agents_config_paths = self.base_directory / self.original_agents_config_path
+                
+            if isinstance(self.original_tasks_config_path, list):
+                tasks_config_paths = [self.base_directory / path for path in self.original_tasks_config_path]
+            else:
+                tasks_config_paths = self.base_directory / self.original_tasks_config_path
 
-            self.agents_config = self.load_yaml(agents_config_path)
-            self.tasks_config = self.load_yaml(tasks_config_path)
+            # Load and merge configurations
+            self.agents_config = self.load_and_merge_yaml_configs(agents_config_paths)
+            self.tasks_config = self.load_and_merge_yaml_configs(tasks_config_paths)
 
             self.map_all_agent_variables()
             self.map_all_task_variables()
@@ -75,6 +86,31 @@ def CrewBase(cls: T) -> T:
             except FileNotFoundError:
                 print(f"File not found: {config_path}")
                 raise
+                
+        def load_and_merge_yaml_configs(self, config_paths: list[Path] | Path) -> dict:
+            """
+            Load and merge configurations from multiple YAML files or a single file.
+            Later files in the list will override earlier ones for duplicate keys.
+            
+            Args:
+                config_paths: A Path object or list of Path objects pointing to YAML files
+                
+            Returns:
+                A dictionary with merged configurations
+            """
+            if isinstance(config_paths, Path):
+                return self.load_yaml(config_paths)
+                
+            result = {}
+            for path in config_paths:
+                config = self.load_yaml(path)
+                if config:
+                    for key, value in config.items():
+                        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                            result[key].update(value)
+                        else:
+                            result[key] = value
+            return result
 
         def _get_all_functions(self):
             return {

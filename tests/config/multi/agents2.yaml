@@ -1,0 +1,8 @@
+test_agent1:
+  role: Updated Test Agent 1
+  goal: Updated Test Goal 1
+test_agent2:
+  role: Test Agent 2
+  goal: Test Goal 2
+  backstory: Test Backstory 2
+  verbose: true
