@@ -18,7 +18,7 @@ console = Console()
 
 def copy_template(src, dst, name, class_name, folder_name):
     """Copy a file from src to dst."""
-    with open(src, "r") as file:
+    with open(src, "r", encoding="utf-8") as file:
         content = file.read()
 
     # Interpolate the content
@@ -27,7 +27,7 @@ def copy_template(src, dst, name, class_name, folder_name):
     content = content.replace("{{folder_name}}", folder_name)
 
     # Write the interpolated content to the new file
-    with open(dst, "w") as file:
+    with open(dst, "w", encoding="utf-8") as file:
         file.write(content)
 
     click.secho(f"  - Created {dst}", fg="green")
@@ -78,7 +78,7 @@ def _get_project_attribute(
     attribute = None
 
     try:
-        with open(pyproject_path, "r") as f:
+        with open(pyproject_path, "r", encoding="utf-8") as f:
             pyproject_content = parse_toml(f.read())
 
         dependencies = (
@@ -119,7 +119,7 @@ def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
     """Fetch the environment variables from a .env file and return them as a dictionary."""
     try:
         # Read the .env file
-        with open(env_file_path, "r") as f:
+        with open(env_file_path, "r", encoding="utf-8") as f:
             env_content = f.read()
 
         # Parse the .env file content to a dictionary
@@ -158,9 +158,9 @@ def tree_find_and_replace(directory, find, replace):
         for filename in files:
             filepath = os.path.join(path, filename)
 
-            with open(filepath, "r") as file:
+            with open(filepath, "r", encoding="utf-8") as file:
                 contents = file.read()
-            with open(filepath, "w") as file:
+            with open(filepath, "w", encoding="utf-8") as file:
                 file.write(contents.replace(find, replace))
 
             if find in filename:
@@ -189,7 +189,7 @@ def load_env_vars(folder_path):
     env_file_path = folder_path / ".env"
     env_vars = {}
     if env_file_path.exists():
-        with open(env_file_path, "r") as file:
+        with open(env_file_path, "r", encoding="utf-8") as file:
             for line in file:
                 key, _, value = line.strip().partition("=")
                 if key and value:
@@ -244,6 +244,6 @@ def write_env_file(folder_path, env_vars):
     - env_vars (dict): A dictionary of environment variables to write.
     """
     env_file_path = folder_path / ".env"
-    with open(env_file_path, "w") as file:
+    with open(env_file_path, "w", encoding="utf-8") as file:
         for key, value in env_vars.items():
             file.write(f"{key}={value}\n")

@@ -147,7 +147,7 @@ def read_cache_file(cache_file):
     - dict or None: The JSON content of the cache file or None if the JSON is invalid.
     """
     try:
-        with open(cache_file, "r") as f:
+        with open(cache_file, "r", encoding="utf-8") as f:
             return json.load(f)
     except json.JSONDecodeError:
         return None
@@ -167,7 +167,7 @@ def fetch_provider_data(cache_file):
         response = requests.get(JSON_URL, stream=True, timeout=60)
         response.raise_for_status()
         data = download_data(response)
-        with open(cache_file, "w") as f:
+        with open(cache_file, "w", encoding="utf-8") as f:
             json.dump(data, f)
         return data
     except requests.RequestException as e:
