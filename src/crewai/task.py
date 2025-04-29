@@ -19,6 +19,7 @@ from typing import (
     Tuple,
     Type,
     Union,
+    ForwardRef,
 )
 
 from opentelemetry.trace import Span
@@ -137,6 +138,16 @@ class Task(BaseModel):
         default=0,
         description="Current number of retries"
     )
+    parent_task: Optional['Task'] = Field(
+        default=None,
+        description="Parent task that this task was decomposed from.",
+        exclude=True,
+    )
+    sub_tasks: List['Task'] = Field(
+        default_factory=list,
+        description="Sub-tasks that this task was decomposed into.",
+        exclude=True,
+    )
 
     @field_validator("guardrail")
     @classmethod
@@ -246,6 +257,81 @@ class Task(BaseModel):
             )
         return self
 
+    def decompose(
+        self,
+        descriptions: List[str],
+        expected_outputs: Optional[List[str]] = None,
+        names: Optional[List[str]] = None
+    ) -> List['Task']:
+        """
+        Decompose a complex task into simpler sub-tasks.
+        
+        Args:
+            descriptions: List of descriptions for each sub-task.
+            expected_outputs: Optional list of expected outputs for each sub-task.
+            names: Optional list of names for each sub-task.
+            
+        Returns:
+            List of created sub-tasks.
+        """
+        if not descriptions:
+            raise ValueError("At least one sub-task description is required.")
+            
+        if expected_outputs and len(expected_outputs) != len(descriptions):
+            raise ValueError("If provided, expected_outputs must have the same length as descriptions.")
+            
+        if names and len(names) != len(descriptions):
+            raise ValueError("If provided, names must have the same length as descriptions.")
+            
+        for i, description in enumerate(descriptions):
+            sub_task = Task(
+                description=description,
+                expected_output=expected_outputs[i] if expected_outputs else self.expected_output,
+                name=names[i] if names else None,
+                agent=self.agent,  # Inherit the agent from the parent task
+                tools=self.tools,  # Inherit the tools from the parent task
+                context=[self],    # Set the parent task as context for the sub-task
+                parent_task=self,  # Reference back to the parent task
+            )
+            self.sub_tasks.append(sub_task)
+            
+        return self.sub_tasks
+        
+    def combine_sub_task_results(self) -> str:
+        """
+        Combine the results from all sub-tasks into a single result for this task.
+        
+        Returns:
+            The combined result as a string.
+        """
+        if not self.sub_tasks:
+            raise ValueError("Task has no sub-tasks to combine results from.")
+            
+        if not self.agent:
+            raise ValueError("Task has no agent to combine sub-task results.")
+            
+        sub_task_results = "\n\n".join([
+            f"Sub-task: {sub_task.description}\nResult: {sub_task.output.raw if sub_task.output else 'No result'}"
+            for sub_task in self.sub_tasks
+        ])
+        
+        combine_prompt = f"""
+        You have completed the following sub-tasks for the main task: "{self.description}"
+        
+        {sub_task_results}
+        
+        Based on all these sub-tasks, please provide a consolidated final answer for the main task.
+        Expected output format: {self.expected_output if self.expected_output else 'Not specified'}
+        """
+        
+        result = self.agent.execute_task(
+            task=self,
+            context=combine_prompt,
+            tools=self.tools or []
+        )
+        
+        return result
+    
     def execute_sync(
         self,
         agent: Optional[BaseAgent] = None,
@@ -253,6 +339,17 @@ class Task(BaseModel):
         tools: Optional[List[BaseTool]] = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
+        if self.sub_tasks and not self.output:
+            for sub_task in self.sub_tasks:
+                sub_task.execute_sync(
+                    agent=sub_task.agent or agent,
+                    context=context,
+                    tools=sub_task.tools or tools or [],
+                )
+            
+            result = self.combine_sub_task_results()
+            return self._execute_core(agent, context, tools)
+        
         return self._execute_core(agent, context, tools)
 
     @property
@@ -278,6 +375,36 @@ class Task(BaseModel):
         ).start()
         return future
 
+    def execute_sub_tasks_async(
+        self,
+        agent: Optional[BaseAgent] = None,
+        context: Optional[str] = None,
+        tools: Optional[List[BaseTool]] = None,
+    ) -> List[Future[TaskOutput]]:
+        """Execute all sub-tasks asynchronously.
+        
+        Args:
+            agent: Optional agent to execute the sub-tasks with.
+            context: Optional context to pass to the sub-tasks.
+            tools: Optional tools to pass to the sub-tasks.
+            
+        Returns:
+            List of futures for the sub-task executions.
+        """
+        if not self.sub_tasks:
+            return []
+            
+        futures = []
+        for sub_task in self.sub_tasks:
+            future = sub_task.execute_async(
+                agent=sub_task.agent or agent,
+                context=context,
+                tools=sub_task.tools or tools or [],
+            )
+            futures.append(future)
+            
+        return futures
+        
     def _execute_task_async(
         self,
         agent: Optional[BaseAgent],
@@ -434,6 +561,8 @@ class Task(BaseModel):
             "agent",
             "context",
             "tools",
+            "parent_task",
+            "sub_tasks",
         }
 
         copied_data = self.model_dump(exclude=exclude)
@@ -457,6 +586,7 @@ class Task(BaseModel):
             agent=cloned_agent,
             tools=cloned_tools,
         )
+        
 
         return copied_task
 
