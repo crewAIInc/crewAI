@@ -1,3 +1,4 @@
+import os
 import subprocess
 from enum import Enum
 from typing import List, Optional
@@ -61,6 +62,20 @@ def execute_command(crew_type: CrewType, trained_data_file: Optional[str] = None
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
     
     if trained_data_file and crew_type == CrewType.STANDARD:
+        if not trained_data_file.endswith('.pkl'):
+            click.secho(
+                f"Error: Trained data file '{trained_data_file}' must have a .pkl extension.",
+                fg="red",
+            )
+            return
+            
+        if not os.path.exists(trained_data_file):
+            click.secho(
+                f"Error: Trained data file '{trained_data_file}' does not exist.",
+                fg="red",
+            )
+            return
+            
         command.extend(["--trained-data-file", trained_data_file])
 
     try:

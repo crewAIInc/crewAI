@@ -1227,6 +1227,71 @@ def test_agent_use_custom_trained_data_file(crew_training_handler):
     )
 
 
+@patch("crewai.agent.CrewTrainingHandler")
+def test_agent_with_none_trained_data_file(crew_training_handler):
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+        trained_data_file=None
+    )
+    
+    result = agent._use_trained_data(task_prompt=task_prompt)
+    
+    assert result == task_prompt
+    crew_training_handler.assert_not_called()
+
+
+@patch("crewai.agent.CrewTrainingHandler")
+def test_agent_with_missing_role_in_trained_data(crew_training_handler):
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+        trained_data_file="trained_agents_data.pkl"
+    )
+    crew_training_handler().load.return_value = {
+        "other_role": {
+            "suggestions": ["This should not be used."]
+        }
+    }
+    
+    result = agent._use_trained_data(task_prompt=task_prompt)
+    
+    assert result == task_prompt
+    crew_training_handler.assert_has_calls(
+        [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
+    )
+
+
+@patch("crewai.agent.CrewTrainingHandler")
+def test_agent_with_missing_suggestions_in_trained_data(crew_training_handler):
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+        trained_data_file="trained_agents_data.pkl"
+    )
+    crew_training_handler().load.return_value = {
+        "researcher": {
+            "other_key": ["This should not be used."]
+        }
+    }
+    
+    result = agent._use_trained_data(task_prompt=task_prompt)
+    
+    assert result == task_prompt
+    crew_training_handler.assert_has_calls(
+        [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
+    )
+
+
 def test_agent_max_retry_limit():
     agent = Agent(
         role="test role",

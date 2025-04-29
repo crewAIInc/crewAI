@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import sys
 import warnings
 
@@ -17,14 +18,23 @@ def run():
     """
     Run the crew.
     """
+    parser = argparse.ArgumentParser(description="Run the crew")
+    parser.add_argument(
+        "--trained-data-file", 
+        "-f", 
+        type=str, 
+        default="trained_agents_data.pkl",
+        help="Path to a trained data file to use for agent task prompts"
+    )
+    args, _ = parser.parse_known_args()
+    
     inputs = {
         'topic': 'AI LLMs',
         'current_year': str(datetime.now().year)
     }
     
     try:
-        filename = sys.argv[1] if len(sys.argv) > 1 else "trained_agents_data.pkl"
-        {{crew_name}}().crew(trained_data_file=filename).kickoff(inputs=inputs)
+        {{crew_name}}().crew(trained_data_file=args.trained_data_file).kickoff(inputs=inputs)
     except Exception as e:
         raise Exception(f"An error occurred while running the crew: {e}")
 
