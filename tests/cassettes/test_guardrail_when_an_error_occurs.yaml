@@ -1,0 +1,288 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Gather information
+      about available books on the First World War\n\nThis is the expected criteria
+      for your final answer: A list of available books on the First World War\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '903'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        AAA=
+    headers:
+      CF-RAY:
+      - 937ed42dee2e621f-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Apr 2025 12:33:48 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=mLRCnpdB3n_6medIZWHnUu8MNRGZsD6riaRhN47PK74-1745930028-1.0.1.1-M2lDM1_V9hNCK0MZrBnFalF3lndC3JkS8zhDOGww_LmOrgdpU9fZLpNZUmyinCQOnlCjDjDYJUECM82ffT1anqBiO1NoDeNp91EPKiK7s.8;
+        path=/; expires=Tue, 29-Apr-25 13:03:48 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=eTrj_ZhCx2XuylS5vYROwUlPrJBwOyrbS2Ki.msl45E-1745930028010-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '10856'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999807'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_bc2d62d8325b2bdd3e98544a66389132
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Guardrail Agent. You
+      are a expert at validating the output of a task. By providing effective feedback
+      if the output is not valid.\nYour personal goal is: Validate the output of the
+      task\n\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!\nIMPORTANT:
+      Your final answer MUST contain all the information requested in the following
+      format: {\n  \"valid\": bool,\n  \"feedback\": str | None\n}\n\nIMPORTANT: Ensure
+      the final output does not include any code block markers like ```json or ```python."},
+      {"role": "user", "content": "\n        Ensure the following task result complies
+      with the given guardrail.\n\n        Task result:\n        Here is a comprehensive
+      list of available books on the First World War:\n\n1. **\"The Sleepwalkers:
+      How Europe Went to War in 1914\" by Christopher Clark**  \n   This book delves
+      into the complex factors that led to the outbreak of the war, offering insights
+      into the political and social dynamics of early 20th century Europe.\n\n2. **\"A
+      World Undone: The Story of the Great War, 1914 to 1918\" by G.J. Meyer**  \n   Meyer''s
+      expansive narrative covers the entire war with a focus on both military strategies
+      and the human experiences endured by soldiers and civilians alike.\n\n3. **\"All
+      Quiet on the Western Front\" by Erich Maria Remarque**  \n   A poignant novel
+      that captures the resilience and trauma experienced by German soldiers during
+      World War I, based on the author''s own experiences.\n\n4. **\"The First World
+      War\" by John Keegan**  \n   Keegan provides a detailed military history of
+      the war, featuring insights on battles, strategies, and the overall impact on
+      global affairs.\n\n5. **\"Goodbye to All That\" by Robert Graves**  \n   This
+      autobiography recounts the author''s experiences as a soldier during the war,
+      offering a personal and critical perspective on the conflicts and the post-war
+      era.\n\n6. **\"Catastrophe 1914: Europe Goes to War\" by Max Hastings**  \n   Hastings
+      chronicles the events leading up to World War I and the early battles, detailing
+      the war''s initial impact on European societies.\n\n7. **\"The War That Ended
+      Peace: The Road to 1914\" by Margaret MacMillan**  \n   MacMillan explores the
+      political and historical factors that contributed to the outbreak of war, emphasizing
+      the decisions made by leaders across Europe.\n\n8. **\"The First World War:
+      A Complete History\" by Martin Gilbert**  \n   This complete history takes readers
+      through the entirety of the war, from its causes to its aftermath, using a wide
+      range of sources.\n\n9. **\"1914: The Year the World Ended\" by Paul Ham**  \n   Ham
+      focuses on the pivotal year of 1914 and the early war''s devastation, analyzing
+      its long-lasting effects on the world.\n\n10. **\"War Horse\" by Michael Morpurgo**  \n    This
+      children''s novel tells the story of a horse and his experiences during the
+      war, highlighting the bond between animals and humans amidst the chaos.\n\nEach
+      of these books offers unique perspectives and rich details about the First World
+      War, making them valuable resources for anyone interested in this pivotal period
+      in history.\n\n        Guardrail:\n        Ensure the authors are from Italy\n        \n        Your
+      task:\n        - Confirm if the Task result complies with the guardrail.\n        -
+      If not, provide clear feedback explaining what is wrong (e.g., by how much it
+      violates the rule, or what specific part fails).\n        - Focus only on identifying
+      issues \u2014 do not propose corrections.\n        - If the Task result complies
+      with the guardrail, saying that is valid\n        "}], "model": "gpt-4o-mini",
+      "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3917'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=mLRCnpdB3n_6medIZWHnUu8MNRGZsD6riaRhN47PK74-1745930028-1.0.1.1-M2lDM1_V9hNCK0MZrBnFalF3lndC3JkS8zhDOGww_LmOrgdpU9fZLpNZUmyinCQOnlCjDjDYJUECM82ffT1anqBiO1NoDeNp91EPKiK7s.8;
+        _cfuvid=eTrj_ZhCx2XuylS5vYROwUlPrJBwOyrbS2Ki.msl45E-1745930028010-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELz7KxY8y4HsJHWsW9wiQVq0hzx6aBUIa3IlMaFIlVw5NQL/
+        e0Epiew+gF4EamZnuC8+TwCEViIDIWtk2bRmurqm29X1+/PNzYfL06+fFV8svz2sttuF+XHzUSRR
+        4dYPJPlVdSRd0xpi7exAS0/IFF1ni5PT5XE6m896onGKTJRVLU9P3LTRVk/n6fxkmi6ms7MXde20
+        pCAy+D4BAHjuvzFPq+inyCBNXpGGQsCKRPYWBCC8MxERGIIOjJZFMpLSWSbbp35bu66qOYMrsO4J
+        JFqo9IYAoYr5A9rwRB4gtxfaooHz/j+D59wC5GKDRqtcZFCiCZQMYEmk1igfI56LL84SuBK4JsCO
+        a+cDGB2YFGjbo4zhETyFzjCgJyi9a+CK0WyP4NyYA2VDNraY1BjpuCYP0nWWvaaQQOhkDRjgknyD
+        dpv0BnefEkCrhvPNUS5yu9vviaeyCxjnYjtj9gi01jHGS/tp3L8wu7f+G1e13q3Db1JRaqtDXXjC
+        4GzsdWDXip7dTQDu+zl3B6MTrXdNywW7R+qvWywXg58Y12tk370sgWDHaEb87PRVdeBXKGLUJuxt
+        ipAoa1KjdFwr7JR2e8Rkr+o/s/mb91C5ttX/2I+ElNQyqaL1pLQ8rHgM8xRf37/C3rrcJywC+Y2W
+        VLAmHyehqMTODG9ChG1gaopS24p86/XwMMq2SI+X87P5PF2mYrKb/AIAAP//AwD77a3iJgQAAA==
+    headers:
+      CF-RAY:
+      - 937ed6bd68faa435-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 29 Apr 2025 12:35:23 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1138'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999072'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_2ba1be014a5974ba354aff564e26516a
+    status:
+      code: 200
+      message: OK
+version: 1

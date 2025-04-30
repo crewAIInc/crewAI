@@ -4,11 +4,68 @@ description: View the latest updates and changes to CrewAI
 icon: timeline
 ---
 
+<Update label="2025-04-30" description="v0.117.1">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01171.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.117.1">View on GitHub</a>
+  </div>
+
+  **Core Improvements & Fixes**
+  - Upgraded **crewai-tools** to latest version
+  - Upgraded **liteLLM** to latest version
+  - Fixed **Mem0 OSS**
+</Update>
+
+<Update label="2025-04-28" description="v0.117.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01170.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.117.0">View on GitHub</a>
+  </div>
+
+  **New Features & Enhancements**
+  - Added `result_as_answer` parameter support in `@tool` decorator.
+  - Introduced support for new language models: GPT-4.1, Gemini-2.0, and Gemini-2.5 Pro.
+  - Enhanced knowledge management capabilities.
+  - Added Huggingface provider option in CLI.
+  - Improved compatibility and CI support for Python 3.10+.
+
+  **Core Improvements & Fixes**
+  - Fixed issues with incorrect template parameters and missing inputs.
+  - Improved asynchronous flow handling with coroutine condition checks.
+  - Enhanced memory management with isolated configuration and correct memory object copying.
+  - Fixed initialization of lite agents with correct references.
+  - Addressed Python type hint issues and removed redundant imports.
+  - Updated event placement for improved tool usage tracking.
+  - Raised explicit exceptions when flows fail.
+  - Removed unused code and redundant comments from various modules.
+  - Updated GitHub App token action to v2.
+
+  **Documentation & Guides**
+  - Enhanced documentation structure, including enterprise deployment instructions.
+  - Automatically create output folders for documentation generation.
+  - Fixed broken link in WeaviateVectorSearchTool documentation.
+  - Fixed guardrail documentation usage and import paths for JSON search tools.
+  - Updated documentation for CodeInterpreterTool.
+  - Improved SEO, contextual navigation, and error handling for documentation pages.
+</Update>
+
 <Update label="2025-04-07" description="v0.114.0">
   ## Release Highlights
   <Frame>
-    <img src="/images/v01140.png" />
+    <img src="/images/releases/v01140.png" />
   </Frame>
+
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.114.0">View on GitHub</a>
+  </div>
 
   **New Features & Enhancements**
   - Agents as an atomic unit. (`Agent(...).kickoff()`)
@@ -35,7 +92,16 @@ icon: timeline
 </Update>
 
 <Update label="2025-03-17" description="v0.108.0">
-  **Features**
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01080.png" />
+  </Frame>
+
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.108.0">View on GitHub</a>
+  </div>
+
+  **New Features & Enhancements**
   - Converted tabs to spaces in `crew.py` template
   - Enhanced LLM Streaming Response Handling and Event System
   - Included `model_name`
