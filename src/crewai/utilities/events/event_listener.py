@@ -8,6 +8,14 @@ from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
 from crewai.utilities.constants import EMITTER_COLOR
 from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.utilities.events.knowledge_events import (
+    KnowledgeQueryCompletedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeQueryGeneratedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeSearchQueryFailedEvent,
+)
 from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
@@ -341,6 +349,57 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(CrewTestFailedEvent)
         def on_crew_test_failed(source, event: CrewTestFailedEvent):
             self.formatter.handle_crew_test_failed(event.crew_name or "Crew")
+
+        @crewai_event_bus.on(KnowledgeRetrievalStartedEvent)
+        def on_knowledge_retrieval_started(
+            source, event: KnowledgeRetrievalStartedEvent
+        ):
+            self.formatter.handle_knowledge_retrieval_started(
+                self.formatter.current_agent_branch,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(KnowledgeRetrievalCompletedEvent)
+        def on_knowledge_retrieval_completed(
+            source, event: KnowledgeRetrievalCompletedEvent
+        ):
+            self.formatter.handle_knowledge_retrieval_completed(
+                self.formatter.current_agent_branch,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(KnowledgeQueryGeneratedEvent)
+        def on_knowledge_query_generated(source, event: KnowledgeQueryGeneratedEvent):
+            self.formatter.handle_knowledge_query_generated(
+                self.formatter.current_agent_branch,
+                event.task_prompt,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(KnowledgeQueryFailedEvent)
+        def on_knowledge_query_failed(source, event: KnowledgeQueryFailedEvent):
+            self.formatter.handle_knowledge_query_failed(
+                self.formatter.current_agent_branch,
+                event.error,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(KnowledgeQueryCompletedEvent)
+        def on_knowledge_query_completed(source, event: KnowledgeQueryCompletedEvent):
+            self.formatter.handle_knowledge_query_completed(
+                self.formatter.current_agent_branch,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(KnowledgeSearchQueryFailedEvent)
+        def on_knowledge_search_query_failed(
+            source, event: KnowledgeSearchQueryFailedEvent
+        ):
+            self.formatter.handle_knowledge_search_query_failed(
+                self.formatter.current_agent_branch,
+                event.error,
+                self.formatter.current_crew_tree,
+            )
 
 
 event_listener = EventListener()

@@ -783,3 +783,147 @@ class ConsoleFormatter:
             self.update_lite_agent_status(
                 self.current_lite_agent_branch, lite_agent_role, status, **fields
             )
+
+    def handle_knowledge_retrieval_started(
+        self,
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree],
+    ) -> Optional[Tree]:
+        """Handle knowledge retrieval started event."""
+        if not self.verbose:
+            return None
+
+        branch_to_use = agent_branch or self.current_lite_agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None or tree_to_use is None:
+            # If we don't have a valid branch, use crew_tree as the branch if available
+            if crew_tree is not None:
+                branch_to_use = tree_to_use = crew_tree
+            else:
+                return None
+
+        knowledge_branch = branch_to_use.add("")
+        self.update_tree_label(
+            knowledge_branch, "🔍", "Knowledge Retrieval Started", "blue"
+        )
+
+        self.print(tree_to_use)
+        self.print()
+        return knowledge_branch
+
+    def handle_knowledge_retrieval_completed(
+        self,
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree],
+    ) -> None:
+        """Handle knowledge retrieval completed event."""
+        if not self.verbose:
+            return None
+
+        branch_to_use = self.current_lite_agent_branch or agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None or tree_to_use is None:
+            return None
+
+        knowledge_branch = branch_to_use.add("")
+        self.update_tree_label(
+            knowledge_branch, "✅", "Knowledge Retrieval Completed", "green"
+        )
+
+        self.print(tree_to_use)
+        self.print()
+
+    def handle_knowledge_query_generated(
+        self,
+        agent_branch: Optional[Tree],
+        query: str,
+        crew_tree: Optional[Tree],
+    ) -> None:
+        """Handle knowledge query generated event."""
+        if not self.verbose:
+            return None
+
+        branch_to_use = self.current_lite_agent_branch or agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None or tree_to_use is None:
+            return None
+
+        query_branch = branch_to_use.add("")
+        self.update_tree_label(query_branch, "🔎", f"Query: {query[:50]}...", "yellow")
+
+        self.print(tree_to_use)
+        self.print()
+
+    def handle_knowledge_query_failed(
+        self,
+        agent_branch: Optional[Tree],
+        error: str,
+        crew_tree: Optional[Tree],
+    ) -> None:
+        """Handle knowledge query failed event."""
+        if not self.verbose:
+            return
+
+        tree_to_use = self.current_lite_agent_branch or crew_tree
+        branch_to_use = self.current_lite_agent_branch or agent_branch
+
+        if branch_to_use and tree_to_use:
+            query_branch = branch_to_use.add("")
+            self.update_tree_label(query_branch, "❌", "Knowledge Query Failed", "red")
+            self.print(tree_to_use)
+            self.print()
+
+        # Show error panel
+        error_content = self.create_status_content(
+            "Knowledge Query Failed", "Query Error", "red", Error=error
+        )
+        self.print_panel(error_content, "Knowledge Error", "red")
+
+    def handle_knowledge_query_completed(
+        self,
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree],
+    ) -> None:
+        """Handle knowledge query completed event."""
+        if not self.verbose:
+            return None
+
+        branch_to_use = self.current_lite_agent_branch or agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None or tree_to_use is None:
+            return None
+
+        query_branch = branch_to_use.add("")
+        self.update_tree_label(query_branch, "✅", "Knowledge Query Completed", "green")
+
+        self.print(tree_to_use)
+        self.print()
+
+    def handle_knowledge_search_query_failed(
+        self,
+        agent_branch: Optional[Tree],
+        error: str,
+        crew_tree: Optional[Tree],
+    ) -> None:
+        """Handle knowledge search query failed event."""
+        if not self.verbose:
+            return
+
+        tree_to_use = self.current_lite_agent_branch or crew_tree
+        branch_to_use = self.current_lite_agent_branch or agent_branch
+
+        if branch_to_use and tree_to_use:
+            query_branch = branch_to_use.add("")
+            self.update_tree_label(query_branch, "❌", "Knowledge Search Failed", "red")
+            self.print(tree_to_use)
+            self.print()
+
+        # Show error panel
+        error_content = self.create_status_content(
+            "Knowledge Search Failed", "Search Error", "red", Error=error
+        )
+        self.print_panel(error_content, "Search Error", "red")

@@ -9,7 +9,6 @@ import pytest
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
-from crewai.agents.parser import CrewAgentParser, OutputParserException
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -73,6 +72,7 @@ def test_agent_creation():
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
 
+
 def test_agent_with_only_system_template():
     """Test that an agent with only system_template works without errors."""
     agent = Agent(
@@ -87,6 +87,7 @@ def test_agent_with_only_system_template():
     assert agent.role == "Test Role"
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
+
 
 def test_agent_with_only_prompt_template():
     """Test that an agent with only system_template works without errors."""
@@ -119,7 +120,8 @@ def test_agent_with_missing_response_template():
     assert agent.role == "Test Role"
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
-    
+
+
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
     assert agent.llm.model == "gpt-4o-mini"
@@ -1801,6 +1803,42 @@ def test_agent_with_knowledge_sources_works_with_copy():
             assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
             assert agent_copy.knowledge_sources[0].content == content
             assert isinstance(agent_copy.llm, LLM)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_generate_search_query():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    with patch(
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+    ) as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+
+        agent = Agent(
+            role="Information Agent with extensive role description that is longer than 80 characters",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
+
+        task = Task(
+            description="What is Brandon's favorite color?",
+            expected_output="The answer to the question, in a format like this: `{{name: str, favorite_color: str}}`",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        # Updated assertion to check the JSON content
+        assert "Brandon" in str(agent.knowledge_search_query)
+        assert "favorite_color" in str(agent.knowledge_search_query)
+
+        assert "red" in result.raw.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
