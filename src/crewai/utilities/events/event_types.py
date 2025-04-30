@@ -29,14 +29,14 @@ from .llm_events import (
     LLMCallStartedEvent,
     LLMStreamChunkEvent,
 )
+from .llm_guardrail_events import (
+    LLMGuardrailCompletedEvent,
+    LLMGuardrailStartedEvent,
+)
 from .task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
-)
-from .task_guardrail_events import (
-    TaskGuardrailCompletedEvent,
-    TaskGuardrailStartedEvent,
 )
 from .tool_usage_events import (
     ToolUsageErrorEvent,
@@ -72,6 +72,6 @@ EventTypes = Union[
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMStreamChunkEvent,
-    TaskGuardrailStartedEvent,
-    TaskGuardrailCompletedEvent,
+    LLMGuardrailStartedEvent,
+    LLMGuardrailCompletedEvent,
 ]
