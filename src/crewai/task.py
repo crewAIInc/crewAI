@@ -241,10 +241,10 @@ class Task(BaseModel):
         if callable(self.guardrail):
             self._guardrail = self.guardrail
         elif isinstance(self.guardrail, str):
-            from crewai.tasks.task_guardrail import TaskGuardrail
+            from crewai.tasks.llm_guardrail import LLMGuardrail
 
             assert self.agent is not None
-            self._guardrail = TaskGuardrail(
+            self._guardrail = LLMGuardrail(
                 description=self.guardrail, llm=self.agent.llm
             )
 
@@ -494,8 +494,8 @@ class Task(BaseModel):
         assert self._guardrail is not None
 
         from crewai.utilities.events import (
-            TaskGuardrailCompletedEvent,
-            TaskGuardrailStartedEvent,
+            LLMGuardrailCompletedEvent,
+            LLMGuardrailStartedEvent,
         )
         from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
@@ -503,7 +503,7 @@ class Task(BaseModel):
 
         crewai_event_bus.emit(
             self,
-            TaskGuardrailStartedEvent(
+            LLMGuardrailStartedEvent(
                 guardrail=self._guardrail, retry_count=self.retry_count
             ),
         )
@@ -512,7 +512,7 @@ class Task(BaseModel):
 
         crewai_event_bus.emit(
             self,
-            TaskGuardrailCompletedEvent(
+            LLMGuardrailCompletedEvent(
                 success=guardrail_result.success,
                 result=guardrail_result.result,
                 error=guardrail_result.error,
