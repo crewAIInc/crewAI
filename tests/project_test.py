@@ -1,4 +1,5 @@
 from typing import List
+from unittest.mock import patch
 
 import pytest
 
@@ -140,6 +141,15 @@ def test_agent_function_calling_llm():
     assert (
         str_llm_agent.function_calling_llm.model == "online_llm"
     ), "agent's function_calling_llm is incorrect"
+
+
+def test_task_guardrail():
+    crew = InternalCrew()
+    research_task = crew.research_task()
+    assert research_task.guardrail == "ensure each bullet contains its source"
+
+    reporting_task = crew.reporting_task()
+    assert reporting_task.guardrail is None
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
