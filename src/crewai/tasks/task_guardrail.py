@@ -26,7 +26,6 @@ class TaskGuardrail:
 
     Args:
         description (str): The description of the validation criteria.
-        task (Task, optional): The task whose output needs validation.
         llm (LLM, optional): The language model to use for code generation.
     """
 
