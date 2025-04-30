@@ -1031,24 +1031,22 @@ class LLM(BaseLLM):
             return
             
         provider = self._get_custom_llm_provider()
-        provider_lower = provider.lower() if provider else ""
         
         # Check if we're bypassing validation for OpenRouter
-        is_openrouter_bypass = (
-            provider_lower == OPENROUTER_PROVIDER.lower() and self.force_structured_output
-        )
+        is_openrouter = provider and provider.lower() == OPENROUTER_PROVIDER.lower()
+        is_openrouter_bypass = is_openrouter and self.force_structured_output
         
-        if is_openrouter_bypass:
-            logging.warning(
-                f"Forcing structured output for OpenRouter model {self.model}. "
-                "Please ensure the model supports the expected response format."
-            )
-            
         # Check if the model supports response schema
         is_schema_supported = supports_response_schema(
             model=self.model,
             custom_llm_provider=provider,
         )
+        
+        if is_openrouter_bypass:
+            print(
+                f"Warning: Forcing structured output for OpenRouter model {self.model}. "
+                "Please ensure the model supports the expected response format."
+            )
         
         if not (is_schema_supported or is_openrouter_bypass):
             raise ValueError(
