@@ -270,6 +270,7 @@ class LLM(BaseLLM):
         callbacks: List[Any] = [],
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
+        force_structured_output: bool = False,
         **kwargs,
     ):
         self.model = model
@@ -296,6 +297,7 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+        self.force_structured_output = force_structured_output
 
         litellm.drop_params = True
 
@@ -992,9 +994,11 @@ class LLM(BaseLLM):
           - If no slash is present, "openai" is assumed.
         """
         provider = self._get_custom_llm_provider()
-        if self.response_format is not None and not supports_response_schema(
-            model=self.model,
-            custom_llm_provider=provider,
+        if self.response_format is not None and not (
+            supports_response_schema(
+                model=self.model,
+                custom_llm_provider=provider,
+            ) or (provider == "openrouter" and self.force_structured_output)
         ):
             raise ValueError(
                 f"The model {self.model} does not support response_format for provider '{provider}'. "

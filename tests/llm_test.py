@@ -256,6 +256,32 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
+def test_validate_call_params_openrouter_force_structured_output():
+    class DummyResponse(BaseModel):
+        a: int
+
+    # Test with OpenRouter and force_structured_output=True
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-chat",
+        response_format=DummyResponse,
+        force_structured_output=True
+    )
+    # Should not raise any error with force_structured_output=True
+    llm._validate_call_params()
+
+    # Test with OpenRouter and force_structured_output=False (default)
+    # Patch supports_response_schema to simulate an unsupported model.
+    with patch("crewai.llm.supports_response_schema", return_value=False):
+        llm = LLM(
+            model="openrouter/deepseek/deepseek-chat",
+            response_format=DummyResponse,
+            force_structured_output=False
+        )
+        with pytest.raises(ValueError) as excinfo:
+            llm._validate_call_params()
+        assert "does not support response_format" in str(excinfo.value)
+
+
 @pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
 @pytest.mark.parametrize(
     "model",
