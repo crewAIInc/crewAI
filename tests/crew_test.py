@@ -4353,7 +4353,7 @@ def test_crew_copy_with_memory():
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
 
 
-def test_sets_parent_flow_when_outside_flow():
+def test_sets_parent_flow_when_outside_flow(researcher, writer):
     crew = Crew(
         agents=[researcher, writer],
         process=Process.sequential,
@@ -4365,7 +4365,7 @@ def test_sets_parent_flow_when_outside_flow():
     assert crew.parent_flow is None
 
 
-def test_sets_parent_flow_when_inside_flow():
+def test_sets_parent_flow_when_inside_flow(researcher, writer):
     class MyFlow(Flow):
         @start()
         def start(self):

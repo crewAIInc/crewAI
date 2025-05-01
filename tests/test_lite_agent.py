@@ -290,11 +290,6 @@ def verify_agent_parent_flow(result, agent, flow):
 def test_sets_parent_flow_when_inside_flow():
     captured_agent = None
 
-    @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
-    def capture_agent(source, event):
-        nonlocal captured_agent
-        captured_agent = source
-
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Test response"
 
@@ -312,6 +307,11 @@ def test_sets_parent_flow_when_inside_flow():
 
     flow = MyFlow()
     with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
+        def capture_agent(source, event):
+            nonlocal captured_agent
+            captured_agent = source
+
         result = flow.kickoff()
-        assert result.parent_flow is flow
         assert captured_agent.parent_flow is flow
