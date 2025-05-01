@@ -107,11 +107,13 @@ ENV_VARS = {
         {
             "prompt": "Enter your LLAMA API key (press Enter to skip)",
             "key_name": "LLAMA_API_KEY",
+            "description": "API key for Meta's Llama API authentication",
         },
         {
             "prompt": "Enter your LLAMA API base URL (press Enter to skip)",
             "key_name": "LLAMA_API_BASE",
             "default": "https://api.llama.com/compat/v1",
+            "description": "Base URL for Meta's Llama API with OpenAI compatibility",
         },
     ],
 }
@@ -327,8 +329,8 @@ MODELS = {
         "sambanova/Meta-Llama-3.2-1B-Instruct",
     ],
     "meta-llama": [
-        "meta-llama/llama-4-scout-17b-16e-instruct-fp8",
-        "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
+        "meta-llama/llama-4-scout-17b",
+        "meta-llama/llama-4-maverick-17b",
         "meta-llama/llama-3.3-70b-instruct",
         "meta-llama/llama-3.3-8b-instruct",
     ],
