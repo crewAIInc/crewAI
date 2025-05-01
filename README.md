@@ -553,6 +553,8 @@ pre-commit install
 uv run pytest .
 ```
 
+In addition to **OPENAI_API_KEY** and **SERPER_API_KEY**, you may also want to set **CI=1** in your `.env` file to skip tests that require a local Ollama setup.
+
 ### Running static type checks
 
 ```bash
