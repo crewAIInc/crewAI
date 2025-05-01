@@ -120,6 +120,9 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "mixtral-8x7b-32768": 32768,
     "llama-3.3-70b-versatile": 128000,
     "llama-3.3-70b-instruct": 128000,
+    "llama-4-scout-17b-16e-instruct-fp8": 128000,
+    "llama-4-maverick-17b-128e-instruct-fp8": 128000,
+    "llama-3.3-8b-instruct": 128000,
     # sambanova
     "Meta-Llama-3.3-70B-Instruct": 131072,
     "QwQ-32B-Preview": 8192,

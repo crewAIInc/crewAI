@@ -618,3 +618,26 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
         expected_completed_llm_call=1,
         expected_final_chunk_result=response,
     )
+
+
+def test_llama_api_support():
+    """Test that Llama API models are correctly configured."""
+    from crewai.cli.constants import MODELS, PROVIDERS, ENV_VARS, LITELLM_PARAMS
+    from crewai.llm import LLM_CONTEXT_WINDOW_SIZES
+    
+    assert "meta-llama" in PROVIDERS
+    
+    assert "meta-llama" in MODELS
+    assert len(MODELS["meta-llama"]) > 0
+    
+    assert "meta-llama" in ENV_VARS
+    assert any(env_var["key_name"] == "LLAMA_API_KEY" for env_var in ENV_VARS["meta-llama"])
+    assert any(env_var["key_name"] == "LLAMA_API_BASE" for env_var in ENV_VARS["meta-llama"])
+    
+    assert "llama_api_key" in LITELLM_PARAMS
+    assert "llama_api_base" in LITELLM_PARAMS
+    
+    for model in MODELS["meta-llama"]:
+        model_name = model.split("/")[-1]
+        assert any(model_name in key or key in model_name 
+                  for key in LLM_CONTEXT_WINDOW_SIZES.keys()), f"Context window size for {model} not found"

@@ -103,6 +103,17 @@ ENV_VARS = {
             "key_name": "SAMBANOVA_API_KEY",
         }
     ],
+    "meta-llama": [
+        {
+            "prompt": "Enter your LLAMA API key (press Enter to skip)",
+            "key_name": "LLAMA_API_KEY",
+        },
+        {
+            "prompt": "Enter your LLAMA API base URL (press Enter to skip)",
+            "key_name": "LLAMA_API_BASE",
+            "default": "https://api.llama.com/compat/v1",
+        },
+    ],
 }
 
 
@@ -119,6 +130,7 @@ PROVIDERS = [
     "azure",
     "cerebras",
     "sambanova",
+    "meta-llama",
 ]
 
 MODELS = {
@@ -314,6 +326,12 @@ MODELS = {
         "sambanova/Meta-Llama-3.2-3B-Instruct",
         "sambanova/Meta-Llama-3.2-1B-Instruct",
     ],
+    "meta-llama": [
+        "meta-llama/llama-4-scout-17b-16e-instruct-fp8",
+        "meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
+        "meta-llama/llama-3.3-70b-instruct",
+        "meta-llama/llama-3.3-8b-instruct",
+    ],
 }
 
 DEFAULT_LLM_MODEL = "gpt-4o-mini"
@@ -321,4 +339,4 @@ DEFAULT_LLM_MODEL = "gpt-4o-mini"
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 
 
-LITELLM_PARAMS = ["api_key", "api_base", "api_version"]
+LITELLM_PARAMS = ["api_key", "api_base", "api_version", "llama_api_key", "llama_api_base"]
