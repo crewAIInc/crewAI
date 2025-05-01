@@ -322,9 +322,9 @@ blog_task = Task(
    - On success: it returns a tuple of `(bool, Any)`. For example: `(True, validated_result)` 
    - On Failure: it returns a tuple of `(bool, str)`. For example: `(False, "Error message explain the failure")`
 
-### TaskGuardrail
+### LLMGuardrail
 
-The `TaskGuardrail` class offers a robust mechanism for validating task outputs
+The `LLMGuardrail` class offers a robust mechanism for validating task outputs.
 
 ### Error Handling Best Practices
 
@@ -819,7 +819,7 @@ from crewai.llm import LLM
 task = Task(
     description="Generate JSON data",
     expected_output="Valid JSON object",
-    guardrail=TaskGuardrail(
+    guardrail=LLMGuardrail(
         description="Ensure the response is a valid JSON object",
         llm=LLM(model="gpt-4o-mini"),
     )

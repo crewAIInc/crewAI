@@ -8,7 +8,7 @@ from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 
 
-class TaskGuardrailResult(BaseModel):
+class LLMGuardrailResult(BaseModel):
     valid: bool = Field(
         description="Whether the task output complies with the guardrail"
     )
@@ -18,7 +18,7 @@ class TaskGuardrailResult(BaseModel):
     )
 
 
-class TaskGuardrail:
+class LLMGuardrail:
     """It validates the output of another task using an LLM.
 
     This class is used to validate the output from a Task based on specified criteria.
@@ -62,7 +62,7 @@ class TaskGuardrail:
         - If the Task result complies with the guardrail, saying that is valid
         """
 
-        result = agent.kickoff(query, response_format=TaskGuardrailResult)
+        result = agent.kickoff(query, response_format=LLMGuardrailResult)
 
         return result
 
@@ -81,7 +81,7 @@ class TaskGuardrail:
         try:
             result = self._validate_output(task_output)
             assert isinstance(
-                result.pydantic, TaskGuardrailResult
+                result.pydantic, LLMGuardrailResult
             ), "The guardrail result is not a valid pydantic model"
 
             if result.pydantic.valid:

@@ -4,11 +4,11 @@ import pytest
 
 from crewai import Agent, Task
 from crewai.llm import LLM
-from crewai.tasks.task_guardrail import TaskGuardrail
+from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.events import (
-    TaskGuardrailCompletedEvent,
-    TaskGuardrailStartedEvent,
+    LLMGuardrailCompletedEvent,
+    LLMGuardrailStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
@@ -153,7 +153,7 @@ def task_output():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_guardrail_process_output(task_output):
-    guardrail = TaskGuardrail(
+    guardrail = LLMGuardrail(
         description="Ensure the result has less than 10 words", llm=LLM(model="gpt-4o")
     )
 
@@ -162,7 +162,7 @@ def test_task_guardrail_process_output(task_output):
 
     assert "exceeding the guardrail limit of fewer than" in result[1].lower()
 
-    guardrail = TaskGuardrail(
+    guardrail = LLMGuardrail(
         description="Ensure the result has less than 500 words", llm=LLM(model="gpt-4o")
     )
 
@@ -178,13 +178,13 @@ def test_guardrail_emits_events(sample_agent):
 
     with crewai_event_bus.scoped_handlers():
 
-        @crewai_event_bus.on(TaskGuardrailStartedEvent)
+        @crewai_event_bus.on(LLMGuardrailStartedEvent)
         def handle_guardrail_started(source, event):
             started_guardrail.append(
                 {"guardrail": event.guardrail, "retry_count": event.retry_count}
             )
 
-        @crewai_event_bus.on(TaskGuardrailCompletedEvent)
+        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
         def handle_guardrail_completed(source, event):
             completed_guardrail.append(
                 {
