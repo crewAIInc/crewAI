@@ -351,7 +351,6 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": self.stop,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -369,6 +368,9 @@ class LLM(BaseLLM):
             "reasoning_effort": self.reasoning_effort,
             **self.additional_params,
         }
+        
+        if self.stop and self.supports_stop_words():
+            params["stop"] = self.stop
 
         # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}
