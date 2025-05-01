@@ -335,7 +335,7 @@ class Crew(BaseModel):
                         embedder=self.embedder,
                         collection_name="crew",
                     )
-                    self.knowledge._add_sources()
+                    self.knowledge.add_sources()
 
             except Exception as e:
                 self._logger.log(

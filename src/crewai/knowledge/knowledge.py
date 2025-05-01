@@ -62,7 +62,7 @@ class Knowledge(BaseModel):
         )
         return results
 
-    def _add_sources(self):
+    def add_sources(self):
         try:
             for source in self.sources:
                 source.storage = self.storage
