@@ -62,7 +62,7 @@ def test_reset_all_memories(mock_get_crew, runner):
     result = runner.invoke(reset_memories, ["-a"])
 
     mock_crew.reset_memories.assert_called_once_with(command_type="all")
-    assert result.output == "All memories have been reset.\n"
+    assert result.output == "Reset memories command has been completed.\n"
 
 
 @mock.patch("crewai.cli.reset_memories_command.get_crew")

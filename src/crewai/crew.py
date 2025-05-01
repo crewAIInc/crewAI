@@ -1372,8 +1372,6 @@ class Crew(BaseModel):
             else:
                 self._reset_specific_memory(command_type)
 
-            self._logger.log("info", f"{command_type} memory has been reset")
-
         except Exception as e:
             error_msg = f"Failed to reset {command_type} memory: {str(e)}"
             self._logger.log("error", error_msg)
@@ -1394,6 +1392,7 @@ class Crew(BaseModel):
             if system is not None:
                 try:
                     system.reset()
+                    self._logger.log("info", f"{name} memory has been reset")
                 except Exception as e:
                     raise RuntimeError(f"Failed to reset {name} memory") from e
 
@@ -1424,5 +1423,6 @@ class Crew(BaseModel):
 
         try:
             memory_system.reset()
+            self._logger.log("info", f"{name} memory has been reset")
         except Exception as e:
             raise RuntimeError(f"Failed to reset {name} memory") from e

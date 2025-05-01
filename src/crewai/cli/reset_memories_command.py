@@ -31,7 +31,7 @@ def reset_memories_command(
             raise ValueError("No crew found.")
         if all:
             crew.reset_memories(command_type="all")
-            click.echo("All memories have been reset.")
+            click.echo("Reset memories command has been completed.")
             return
 
         if not any([long, short, entity, kickoff_outputs, knowledge]):
