@@ -304,7 +304,9 @@ class Crew(BaseModel):
         """Initialize private memory attributes."""
         self._external_memory = (
             # External memory doesn’t support a default value since it was designed to be managed entirely externally
-            self.external_memory.set_crew(self) if self.external_memory else None
+            self.external_memory.set_crew(self)
+            if self.external_memory
+            else None
         )
 
         self._long_term_memory = self.long_term_memory
@@ -333,6 +335,7 @@ class Crew(BaseModel):
                         embedder=self.embedder,
                         collection_name="crew",
                     )
+                    self.knowledge._add_sources()
 
             except Exception as e:
                 self._logger.log(

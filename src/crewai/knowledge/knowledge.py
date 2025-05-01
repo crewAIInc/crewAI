@@ -41,7 +41,6 @@ class Knowledge(BaseModel):
             )
         self.sources = sources
         self.storage.initialize_knowledge_storage()
-        self._add_sources()
 
     def query(
         self, query: List[str], results_limit: int = 3, score_threshold: float = 0.35
