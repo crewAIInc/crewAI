@@ -2,7 +2,7 @@ import subprocess
 
 import click
 
-from crewai.cli.utils import get_crew
+from crewai.cli.utils import get_crews
 
 
 def reset_memories_command(
@@ -26,35 +26,47 @@ def reset_memories_command(
     """
 
     try:
-        crew = get_crew()
-        if not crew:
-            raise ValueError("No crew found.")
-        if all:
-            crew.reset_memories(command_type="all")
-            click.echo("Reset memories command has been completed.")
-            return
-
-        if not any([long, short, entity, kickoff_outputs, knowledge]):
+        if not any([long, short, entity, kickoff_outputs, knowledge, all]):
             click.echo(
                 "No memory type specified. Please specify at least one type to reset."
             )
             return
 
-        if long:
-            crew.reset_memories(command_type="long")
-            click.echo("Long term memory has been reset.")
-        if short:
-            crew.reset_memories(command_type="short")
-            click.echo("Short term memory has been reset.")
-        if entity:
-            crew.reset_memories(command_type="entity")
-            click.echo("Entity memory has been reset.")
-        if kickoff_outputs:
-            crew.reset_memories(command_type="kickoff_outputs")
-            click.echo("Latest Kickoff outputs stored has been reset.")
-        if knowledge:
-            crew.reset_memories(command_type="knowledge")
-            click.echo("Knowledge has been reset.")
+        crews = get_crews()
+        if not crews:
+            raise ValueError("No crew found.")
+        for crew in crews:
+            if all:
+                crew.reset_memories(command_type="all")
+                click.echo(
+                    f"[Crew ({crew.name if crew.name else crew.id})] Reset memories command has been completed."
+                )
+                continue
+            if long:
+                crew.reset_memories(command_type="long")
+                click.echo(
+                    f"[Crew ({crew.name if crew.name else crew.id})] Long term memory has been reset."
+                )
+            if short:
+                crew.reset_memories(command_type="short")
+                click.echo(
+                    f"[Crew ({crew.name if crew.name else crew.id})] Short term memory has been reset."
+                )
+            if entity:
+                crew.reset_memories(command_type="entity")
+                click.echo(
+                    f"[Crew ({crew.name if crew.name else crew.id})] Entity memory has been reset."
+                )
+            if kickoff_outputs:
+                crew.reset_memories(command_type="kickoff_outputs")
+                click.echo(
+                    f"[Crew ({crew.name if crew.name else crew.id})] Latest Kickoff outputs stored has been reset."
+                )
+            if knowledge:
+                crew.reset_memories(command_type="knowledge")
+                click.echo(
+                    f"[Crew ({crew.name if crew.name else crew.id})] Knowledge has been reset."
+                )
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while resetting the memories: {e}", err=True)

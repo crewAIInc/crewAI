@@ -1392,9 +1392,14 @@ class Crew(BaseModel):
             if system is not None:
                 try:
                     system.reset()
-                    self._logger.log("info", f"{name} memory has been reset")
+                    self._logger.log(
+                        "info",
+                        f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
+                    )
                 except Exception as e:
-                    raise RuntimeError(f"Failed to reset {name} memory") from e
+                    raise RuntimeError(
+                        f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
+                    ) from e
 
     def _reset_specific_memory(self, memory_type: str) -> None:
         """Reset a specific memory system.
@@ -1423,6 +1428,11 @@ class Crew(BaseModel):
 
         try:
             memory_system.reset()
-            self._logger.log("info", f"{name} memory has been reset")
+            self._logger.log(
+                "info",
+                f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
+            )
         except Exception as e:
-            raise RuntimeError(f"Failed to reset {name} memory") from e
+            raise RuntimeError(
+                f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
+            ) from e
