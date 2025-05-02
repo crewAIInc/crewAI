@@ -20,7 +20,7 @@ class PlusAPIMixin:
         try:
             telemetry.set_tracer()
             self.plus_api_client = PlusAPI(api_key=get_auth_token())
-        except Exception as e:
+        except Exception:
             self._deploy_signup_error_span = telemetry.deploy_signup_error_span()
             console.print(
                 "Please sign up/login to CrewAI+ before using the CLI.",
