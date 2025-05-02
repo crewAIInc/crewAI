@@ -44,7 +44,7 @@ def render_text_description_and_args(
     tools: Sequence[Union[CrewStructuredTool, BaseTool]],
 ) -> str:
     """Render the tool name, description, and args in plain text.
-    
+
         search: This tool is used for search, args: {"query": {"type": "string"}}
         calculator: This tool is used for math, \
         args: {"expression": {"type": "string"}}
@@ -467,3 +467,9 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
             else:
                 attributes[key] = value
     return attributes
+
+def show_agent_llm_model(self):
+    if hasattr(self, "llm") and getattr(self.llm, "model", None):
+        self._printer.print(
+            content=f"\033[95m## LLM:\033[00m \033[92m{self.llm.model}\033[00m"
+        )
