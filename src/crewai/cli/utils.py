@@ -328,16 +328,14 @@ def get_crew_instance(module_attr) -> Crew | None:
 
 def fetch_crews(module_attr) -> list[Crew]:
     crew_instances: list[Crew] = []
-    crew_instance = get_crew_instance(module_attr)
 
-    if crew_instance:
+    if crew_instance := get_crew_instance(module_attr):
         crew_instances.append(crew_instance)
 
     if isinstance(module_attr, type) and issubclass(module_attr, Flow):
         instance = module_attr()
         for attr_name in dir(instance):
             attr = getattr(instance, attr_name)
-            crew_instance = get_crew_instance(attr)
-            if crew_instance:
+            if crew_instance := get_crew_instance(attr):
                 crew_instances.append(crew_instance)
     return crew_instances
