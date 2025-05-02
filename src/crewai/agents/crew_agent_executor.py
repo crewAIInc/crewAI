@@ -289,6 +289,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
         )
         show_agent_llm_model(self)
+
     def _summarize_messages(self) -> None:
         messages_groups = []
         for message in self.messages:
