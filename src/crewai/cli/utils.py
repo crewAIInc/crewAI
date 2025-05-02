@@ -309,35 +309,35 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
     return crew_instances
 
 
-def get_crew_instance(module_attr) -> tuple[bool, Crew | None]:
+def get_crew_instance(module_attr) -> Crew | None:
     if (
         callable(module_attr)
         and hasattr(module_attr, "is_crew_class")
         and module_attr.is_crew_class
     ):
-        return True, module_attr().crew()
+        return module_attr().crew()
     if (ismethod(module_attr) or isfunction(module_attr)) and get_type_hints(
         module_attr
     ).get("return") is Crew:
-        return True, module_attr()
+        return module_attr()
     elif isinstance(module_attr, Crew):
-        return True, module_attr
+        return module_attr
     else:
-        return False, None
+        return None
 
 
 def fetch_crews(module_attr) -> list[Crew]:
     crew_instances: list[Crew] = []
-    is_crew, crew_instance = get_crew_instance(module_attr)
+    crew_instance = get_crew_instance(module_attr)
 
-    if is_crew and crew_instance:
+    if crew_instance:
         crew_instances.append(crew_instance)
 
     if isinstance(module_attr, type) and issubclass(module_attr, Flow):
         instance = module_attr()
         for attr_name in dir(instance):
             attr = getattr(instance, attr_name)
-            is_crew, crew_instance = get_crew_instance(attr)
-            if is_crew and crew_instance:
+            crew_instance = get_crew_instance(attr)
+            if crew_instance:
                 crew_instances.append(crew_instance)
     return crew_instances
