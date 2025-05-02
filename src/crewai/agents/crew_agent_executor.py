@@ -28,6 +28,7 @@ from crewai.utilities.agent_utils import (
     is_context_length_exceeded,
     process_llm_response,
     show_agent_logs,
+    show_agent_llm_model,
 )
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
 from crewai.utilities.logger import Logger
@@ -274,6 +275,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             verbose=self.agent.verbose
             or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
         )
+        show_agent_llm_model(self)
 
     def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
         """Show logs for the agent's execution."""
@@ -286,7 +288,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             verbose=self.agent.verbose
             or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
         )
-
+        show_agent_llm_model(self)
     def _summarize_messages(self) -> None:
         messages_groups = []
         for message in self.messages:
