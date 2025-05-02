@@ -6,7 +6,17 @@ import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from pydantic import (
     UUID4,
@@ -24,6 +34,7 @@ from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
+from crewai.flow.flow_trackable import FlowTrackable
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM, BaseLLM
@@ -69,7 +80,7 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 
-class Crew(BaseModel):
+class Crew(FlowTrackable, BaseModel):
     """
     Represents a group of agents, defining how they should collaborate and the tasks they should perform.
 
