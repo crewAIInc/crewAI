@@ -3,7 +3,6 @@ import tempfile
 import unittest
 import unittest.mock
 from contextlib import contextmanager
-from io import StringIO
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
@@ -24,16 +23,13 @@ def in_temp_dir():
 
 
 @patch("crewai.cli.tools.main.subprocess.run")
-def test_create_success(mock_subprocess):
+def test_create_success(mock_subprocess, capsys):
     with in_temp_dir():
         tool_command = ToolCommand()
 
-        with (
-            patch.object(tool_command, "login") as mock_login,
-            patch("sys.stdout", new=StringIO()) as fake_out,
-        ):
+        with patch.object(tool_command, "login") as mock_login:
             tool_command.create("test-tool")
-            output = fake_out.getvalue()
+            output = capsys.readouterr().out
 
         assert os.path.isdir("test_tool")
         assert os.path.isfile(os.path.join("test_tool", "README.md"))
@@ -55,7 +51,7 @@ def test_create_success(mock_subprocess):
 
 @patch("crewai.cli.tools.main.subprocess.run")
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_success(mock_get, mock_subprocess_run):
+def test_install_success(mock_get, mock_subprocess_run, capsys):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
     mock_get_response.json.return_value = {
@@ -66,10 +62,8 @@ def test_install_success(mock_get, mock_subprocess_run):
     mock_subprocess_run.return_value = MagicMock(stderr=None)
 
     tool_command = ToolCommand()
-
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        tool_command.install("sample-tool")
-        output = fake_out.getvalue()
+    tool_command.install("sample-tool")
+    output = capsys.readouterr().out
 
     mock_get.assert_has_calls([mock.call("sample-tool"), mock.call().json()])
     mock_subprocess_run.assert_any_call(
@@ -90,50 +84,49 @@ def test_install_success(mock_get, mock_subprocess_run):
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_tool_not_found(mock_get):
+def test_install_tool_not_found(mock_get, capsys):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 404
     mock_get.return_value = mock_get_response
 
     tool_command = ToolCommand()
 
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        try:
-            tool_command.install("non-existent-tool")
-        except SystemExit:
-            pass
-        output = fake_out.getvalue()
+    try:
+        tool_command.install("non-existent-tool")
+    except SystemExit:
+        pass
+    output = capsys.readouterr().out
 
     mock_get.assert_called_once_with("non-existent-tool")
     assert "No tool found with this name" in output
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_api_error(mock_get):
+def test_install_api_error(mock_get, capsys):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 500
     mock_get.return_value = mock_get_response
 
     tool_command = ToolCommand()
 
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        try:
-            tool_command.install("error-tool")
-        except SystemExit:
-            pass
-        output = fake_out.getvalue()
+    try:
+        tool_command.install("error-tool")
+    except SystemExit:
+        pass
+    output = capsys.readouterr().out
 
     mock_get.assert_called_once_with("error-tool")
     assert "Failed to get tool details" in output
 
 
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
-def test_publish_when_not_in_sync(mock_is_synced):
-    with patch("sys.stdout", new=StringIO()) as fake_out, raises(SystemExit):
+def test_publish_when_not_in_sync(mock_is_synced, capsys):
+    with raises(SystemExit):
         tool_command = ToolCommand()
         tool_command.publish(is_public=True)
 
-    assert "Local changes need to be resolved before publishing" in fake_out.getvalue()
+    output = capsys.readouterr().out
+    assert "Local changes need to be resolved before publishing" in output
 
 
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
@@ -251,6 +244,7 @@ def test_publish_failure(
     mock_get_project_description,
     mock_get_project_version,
     mock_get_project_name,
+    capsys,
 ):
     mock_publish_response = MagicMock()
     mock_publish_response.status_code = 422
@@ -259,12 +253,11 @@ def test_publish_failure(
 
     tool_command = ToolCommand()
 
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        try:
-            tool_command.publish(is_public=True)
-        except SystemExit:
-            pass
-        output = fake_out.getvalue()
+    try:
+        tool_command.publish(is_public=True)
+    except SystemExit:
+        pass
+    output = capsys.readouterr().out
 
     mock_publish.assert_called_once()
     assert "Failed to complete operation" in output
@@ -290,6 +283,7 @@ def test_publish_api_error(
     mock_get_project_description,
     mock_get_project_version,
     mock_get_project_name,
+    capsys,
 ):
     mock_response = MagicMock()
     mock_response.status_code = 500
@@ -299,12 +293,11 @@ def test_publish_api_error(
 
     tool_command = ToolCommand()
 
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        try:
-            tool_command.publish(is_public=True)
-        except SystemExit:
-            pass
-        output = fake_out.getvalue()
+    try:
+        tool_command.publish(is_public=True)
+    except SystemExit:
+        pass
+    output = capsys.readouterr().out
 
     mock_publish.assert_called_once()
     assert "Request to Enterprise API failed" in output
