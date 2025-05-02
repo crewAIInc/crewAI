@@ -338,7 +338,13 @@ class LLM(BaseLLM):
         Returns:
             Dict[str, Any]: Parameters for the completion call
         """
-        # --- 1) Format messages according to provider requirements
+        # --- 1) Ensure messages list is not None or empty (additional safeguard)
+        if messages is None:
+            raise ValueError("Messages list cannot be empty. At least one message is required.")
+        if isinstance(messages, list) and len(messages) == 0:
+            raise ValueError("Messages list cannot be empty. At least one message is required.")
+            
+        # --- 2) Format messages according to provider requirements
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
         formatted_messages = self._format_messages_for_provider(messages)
@@ -845,7 +851,13 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededException: If input exceeds model's context limit
         """
-        # --- 1) Emit call started event
+        # --- 1) Validate messages is not None or empty to prevent IndexError in LiteLLM's ollama_pt()
+        if messages is None:
+            raise ValueError("Messages list cannot be empty. At least one message is required.")
+        if isinstance(messages, list) and len(messages) == 0:
+            raise ValueError("Messages list cannot be empty. At least one message is required.")
+
+        # --- 2) Emit call started event
         assert hasattr(crewai_event_bus, "emit")
         crewai_event_bus.emit(
             self,
@@ -857,10 +869,10 @@ class LLM(BaseLLM):
             ),
         )
 
-        # --- 2) Validate parameters before proceeding with the call
+        # --- 3) Validate parameters before proceeding with the call
         self._validate_call_params()
 
-        # --- 3) Convert string messages to proper format if needed
+        # --- 4) Convert string messages to proper format if needed
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
