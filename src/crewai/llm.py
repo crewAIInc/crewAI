@@ -322,6 +322,23 @@ class LLM(BaseLLM):
         ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
         return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
 
+    def _validate_messages(
+        self,
+        messages: Union[str, List[Dict[str, str]], None]
+    ) -> None:
+        """Validate that messages list is not empty or None.
+        
+        Args:
+            messages: Input messages for the LLM
+            
+        Raises:
+            ValueError: If messages is None or an empty list
+        """
+        if messages is None:
+            raise ValueError("Messages list cannot be empty. At least one message is required.")
+        if isinstance(messages, list) and len(messages) == 0:
+            raise ValueError("Messages list cannot be empty. At least one message is required.")
+    
     def _prepare_completion_params(
         self,
         messages: Union[str, List[Dict[str, str]]],
@@ -337,12 +354,12 @@ class LLM(BaseLLM):
 
         Returns:
             Dict[str, Any]: Parameters for the completion call
+            
+        Raises:
+            ValueError: If messages is None or an empty list
         """
-        # --- 1) Ensure messages list is not None or empty (additional safeguard)
-        if messages is None:
-            raise ValueError("Messages list cannot be empty. At least one message is required.")
-        if isinstance(messages, list) and len(messages) == 0:
-            raise ValueError("Messages list cannot be empty. At least one message is required.")
+        # --- 1) Ensure messages list is not empty
+        self._validate_messages(messages)
             
         # --- 2) Format messages according to provider requirements
         if isinstance(messages, str):
@@ -848,14 +865,11 @@ class LLM(BaseLLM):
 
         Raises:
             TypeError: If messages format is invalid
-            ValueError: If response format is not supported
+            ValueError: If messages is None or an empty list, or if response format is not supported
             LLMContextLengthExceededException: If input exceeds model's context limit
         """
         # --- 1) Validate messages is not None or empty to prevent IndexError in LiteLLM's ollama_pt()
-        if messages is None:
-            raise ValueError("Messages list cannot be empty. At least one message is required.")
-        if isinstance(messages, list) and len(messages) == 0:
-            raise ValueError("Messages list cannot be empty. At least one message is required.")
+        self._validate_messages(messages)
 
         # --- 2) Emit call started event
         assert hasattr(crewai_event_bus, "emit")
