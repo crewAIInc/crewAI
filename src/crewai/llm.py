@@ -245,6 +245,9 @@ class AccumulatedToolArgs(BaseModel):
     function: FunctionArgs = Field(default_factory=FunctionArgs)
 
 
+EMPTY = object()
+
+
 class LLM(BaseLLM):
     def __init__(
         self,
@@ -253,7 +256,7 @@ class LLM(BaseLLM):
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
         n: Optional[int] = None,
-        stop: Optional[Union[str, List[str]]] = None,
+        stop: Optional[Union[str, List[str], object, None]] = EMPTY,
         max_completion_tokens: Optional[int] = None,
         max_tokens: Optional[int] = None,
         presence_penalty: Optional[float] = None,
@@ -296,15 +299,16 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
-
         litellm.drop_params = True
 
         # Normalize self.stop to always be a List[str]
-        if stop is None:
-            self.stop: List[str] = []
+        if stop is EMPTY:
+            self.stop = []
+        elif stop is None:
+            self.stop = None
         elif isinstance(stop, str):
             self.stop = [stop]
-        else:
+        elif isinstance(stop, list):
             self.stop = stop
 
         self.set_callbacks(callbacks)

@@ -373,6 +373,7 @@ def get_weather_tool_schema():
         },
     }
 
+
 def test_context_window_exceeded_error_handling():
     """Test that litellm.ContextWindowExceededError is converted to LLMContextLengthExceededException."""
     from litellm.exceptions import ContextWindowExceededError
@@ -388,7 +389,7 @@ def test_context_window_exceeded_error_handling():
         mock_completion.side_effect = ContextWindowExceededError(
             "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
             model="gpt-4",
-            llm_provider="openai"
+            llm_provider="openai",
         )
 
         with pytest.raises(LLMContextLengthExceededException) as excinfo:
@@ -403,7 +404,7 @@ def test_context_window_exceeded_error_handling():
         mock_completion.side_effect = ContextWindowExceededError(
             "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
             model="gpt-4",
-            llm_provider="openai"
+            llm_provider="openai",
         )
 
         with pytest.raises(LLMContextLengthExceededException) as excinfo:
@@ -618,3 +619,53 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
         expected_completed_llm_call=1,
         expected_final_chunk_result=response,
     )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_testing_removing_stop_parameter():
+    from litellm.exceptions import BadRequestError
+
+    # currently o3 does not support stop
+    llm = LLM(model="o3", temperature=0.5)
+    with pytest.raises(
+        BadRequestError,
+        match="parameter: 'stop' is not supported with this model",
+    ):
+        llm.call(
+            messages=[
+                {"role": "user", "content": "What is the weather in San Francisco?"},
+            ],
+        )
+
+    llm = LLM(model="o3", temperature=0.5, stop=None)
+    response = llm.call(
+        messages=[
+            {"role": "user", "content": "What is the weather in San Francisco?"},
+        ],
+    )
+    assert isinstance(response, str)
+
+    # testing another model that supports stop
+    llm = LLM(model="o3-mini", temperature=0.5)
+    response = llm.call(
+        messages=[
+            {"role": "user", "content": "What is the weather in San Francisco?"},
+        ],
+    )
+    assert isinstance(response, str)
+
+    llm = LLM(model="o3-mini", temperature=0.5, stop=None)
+    response = llm.call(
+        messages=[
+            {"role": "user", "content": "What is the weather in San Francisco?"},
+        ],
+    )
+    assert isinstance(response, str)
+
+    llm = LLM(model="o3-mini", temperature=0.5, stop=["\n"])
+    response = llm.call(
+        messages=[
+            {"role": "user", "content": "What is the weather in San Francisco?"},
+        ],
+    )
+    assert isinstance(response, str)
