@@ -430,6 +430,12 @@ def show_agent_logs(
             )
 
 def show_agent_llm_model(self):
+    """
+    Displays the LLM model information for the agent executor.
+
+    Args:
+        self: the agent executor instance
+    """
     if hasattr(self, "llm") and getattr(self.llm, "model", None):
         self._printer.print(
             content=f"\033[95m## LLM:\033[00m \033[92m{self.llm.model}\033[00m"
