@@ -140,8 +140,15 @@ class EmbeddingConfigurator:
             HuggingFaceEmbeddingServer,
         )
 
+        api_url = config.get("api_url")
+        if api_url:
+            if not (api_url.startswith("http://") or api_url.startswith("https://")):
+                api_url = f"http://{api_url}"
+        else:
+            api_url = None
+
         return HuggingFaceEmbeddingServer(
-            url=config.get("api_url"),
+            url=api_url,
         )
 
     @staticmethod

@@ -1,0 +1,6 @@
+{
+  "test": "data",
+  "nested": {
+    "value": 123
+  }
+}

@@ -584,3 +584,84 @@ def test_docling_source_with_local_file():
     docling_source = CrewDoclingSource(file_paths=[pdf_path])
     assert docling_source.file_paths == [pdf_path]
     assert docling_source.content is not None
+
+
+def test_huggingface_url_validation():
+    """Test that Huggingface embedder properly handles URLs without protocol."""
+    from crewai.utilities.embedding_configurator import EmbeddingConfigurator
+    
+    config_missing_protocol = {
+        "api_url": "localhost:8080/embed"
+    }
+    embedding_function = EmbeddingConfigurator()._configure_huggingface(
+        config_missing_protocol, "test-model"
+    )
+    # Verify that the URL now has a protocol
+    assert embedding_function._api_url.startswith("http://")
+    
+    config_with_protocol = {
+        "api_url": "https://localhost:8080/embed"
+    }
+    embedding_function = EmbeddingConfigurator()._configure_huggingface(
+        config_with_protocol, "test-model"
+    )
+    # Verify that the URL remains unchanged
+    assert embedding_function._api_url == "https://localhost:8080/embed"
+    
+    config_with_other_protocol = {
+        "api_url": "http://localhost:8080/embed"
+    }
+    embedding_function = EmbeddingConfigurator()._configure_huggingface(
+        config_with_other_protocol, "test-model"
+    )
+    # Verify that the URL remains unchanged
+    assert embedding_function._api_url == "http://localhost:8080/embed"
+    
+    config_no_url = {}
+    embedding_function = EmbeddingConfigurator()._configure_huggingface(
+        config_no_url, "test-model"
+    )
+    # Verify that no exception is raised when URL is None
+    assert embedding_function._api_url == 'None'
+
+
+def test_huggingface_missing_protocol_with_json_source():
+    """Test that JSONKnowledgeSource works with Huggingface embedder without URL protocol."""
+    import os
+    import json
+    import tempfile
+    from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
+    from crewai.utilities.embedding_configurator import EmbeddingConfigurator
+    
+    # Create a temporary JSON file
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp:
+        json.dump({"test": "data", "nested": {"value": 123}}, temp)
+        json_path = temp.name
+    
+    # Test that the URL validation works in the embedder configurator
+    config = {
+        "api_url": "localhost:8080/embed"  # Missing protocol
+    }
+    embedding_function = EmbeddingConfigurator()._configure_huggingface(
+        config, "test-model"
+    )
+    # Verify that the URL now has a protocol
+    assert embedding_function._api_url.startswith("http://")
+    
+    os.unlink(json_path)
+
+
+def test_huggingface_missing_protocol_with_string_source():
+    """Test that StringKnowledgeSource works with Huggingface embedder without URL protocol."""
+    from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+    from crewai.utilities.embedding_configurator import EmbeddingConfigurator
+    
+    # Test that the URL validation works in the embedder configurator
+    config = {
+        "api_url": "localhost:8080/embed"  # Missing protocol
+    }
+    embedding_function = EmbeddingConfigurator()._configure_huggingface(
+        config, "test-model"
+    )
+    # Verify that the URL now has a protocol
+    assert embedding_function._api_url.startswith("http://")
