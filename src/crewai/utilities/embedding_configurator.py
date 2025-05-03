@@ -135,17 +135,39 @@ class EmbeddingConfigurator:
         )
 
     @staticmethod
-    def _configure_huggingface(config, model_name):
+    def _normalize_api_url(api_url: str) -> str:
+        """
+        Normalize API URL by ensuring it has a protocol.
+        
+        Args:
+            api_url: The API URL to normalize
+            
+        Returns:
+            Normalized URL with protocol (defaults to http:// if missing)
+        """
+        if not (api_url.startswith("http://") or api_url.startswith("https://")):
+            return f"http://{api_url}"
+        return api_url
+
+    @staticmethod
+    def _configure_huggingface(config: dict, model_name: str):
+        """
+        Configure Huggingface embedding function with the provided config.
+        
+        Args:
+            config: Configuration dictionary for the Huggingface embedder
+            model_name: Name of the model to use
+            
+        Returns:
+            Configured HuggingFaceEmbeddingServer instance
+        """
         from chromadb.utils.embedding_functions.huggingface_embedding_function import (
             HuggingFaceEmbeddingServer,
         )
 
         api_url = config.get("api_url")
         if api_url:
-            if not (api_url.startswith("http://") or api_url.startswith("https://")):
-                api_url = f"http://{api_url}"
-        else:
-            api_url = None
+            api_url = EmbeddingConfigurator._normalize_api_url(api_url)
 
         return HuggingFaceEmbeddingServer(
             url=api_url,
