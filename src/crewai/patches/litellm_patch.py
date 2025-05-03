@@ -9,7 +9,7 @@ Version: 1.0.0
 
 import json
 import logging
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional, Tuple
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -23,14 +23,19 @@ class PatchApplicationError(Exception):
     pass
 
 
-def apply_patches():
-    """Apply all patches to fix known issues with dependencies."""
+def apply_patches() -> bool:
+    """
+    Apply all patches to fix known issues with dependencies.
+    
+    Returns:
+        bool: True if all patches were applied successfully, False otherwise.
+    """
     success = patch_litellm_ollama_pt()
     logger.info(f"LiteLLM ollama_pt patch applied: {success}")
     return success
 
 
-def patch_litellm_ollama_pt():
+def patch_litellm_ollama_pt() -> bool:
     """
     Patch the ollama_pt function in litellm to fix IndexError.
     
@@ -167,7 +172,7 @@ def patch_litellm_ollama_pt():
 
 
 # For backwards compatibility
-def patch_litellm():
+def patch_litellm() -> bool:
     """
     Legacy function for backwards compatibility.
     
