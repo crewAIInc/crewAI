@@ -65,7 +65,7 @@ def patch_litellm_ollama_pt():
             """
             user_message_types = {"user", "tool", "function"}
             msg_i = 0
-            images = []
+            images: List[str] = []
             prompt = ""
             
             # Handle empty messages list
