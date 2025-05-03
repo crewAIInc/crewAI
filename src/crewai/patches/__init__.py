@@ -1,11 +1,11 @@
 """
 Patches module for CrewAI.
 
-This module contains patches for dependencies that need to be fixed
-without waiting for upstream changes.
+This module contains patches for external dependencies to fix known issues.
+
+Version: 1.0.0
 """
 
-from crewai.patches.litellm_patch import apply_patches
+from crewai.patches.litellm_patch import apply_patches, patch_litellm_ollama_pt
 
-# Apply all patches when the module is imported
-apply_patches()
+__all__ = ["apply_patches", "patch_litellm_ollama_pt"]
