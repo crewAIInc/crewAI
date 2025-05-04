@@ -475,9 +475,8 @@ def show_agent_llm_model(self):
     Args:
         self: the agent executor instance
     """
-    if not self.agent.verbose:
-        return
-    if hasattr(self, "llm") and getattr(self.llm, "model", None):
-        self._printer.print(
-            content=f"\033[95m## LLM:\033[00m \033[92m{self.llm.model}\033[00m"
+    if (hasattr(self, "agent") and getattr(self.crew, "verbose", False)) or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)):
+      if hasattr(self, "llm") and getattr(self.llm, "model", None):
+          self._printer.print(
+              content=f"\033[95m## LLM:\033[00m \033[92m{self.llm.model}\033[00m"
         )
