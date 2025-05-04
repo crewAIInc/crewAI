@@ -10,7 +10,9 @@ from crewai_tools.adapters.enterprise_adapter import EnterpriseActionKitToolAdap
 
 def CrewaiEnterpriseTools(
     enterprise_token: t.Optional[str] = None,
-    actions_list: t.Optional[t.List[str]] = None
+    actions_list: t.Optional[t.List[str]] = None,
+    enterprise_action_kit_project_id: t.Optional[str] = None,
+    enterprise_action_kit_project_url: t.Optional[str] = None,
 ) -> t.List[BaseTool]:
     """Factory function that returns crewai enterprise tools.
 
@@ -30,7 +32,18 @@ def CrewaiEnterpriseTools(
                 "No enterprise token provided. Please provide a token or set the CREWAI_ENTEPRISE_TOOLS_TOKEN environment variable."
             )
 
-    adapter = EnterpriseActionKitToolAdapter(enterprise_token)
+    adapter_kwargs = {"enterprise_action_token": enterprise_token}
+
+    if enterprise_action_kit_project_id is not None:
+        adapter_kwargs["enterprise_action_kit_project_id"] = (
+            enterprise_action_kit_project_id
+        )
+    if enterprise_action_kit_project_url is not None:
+        adapter_kwargs["enterprise_action_kit_project_url"] = (
+            enterprise_action_kit_project_url
+        )
+
+    adapter = EnterpriseActionKitToolAdapter(**adapter_kwargs)
     all_tools = adapter.tools()
 
     if actions_list is None:
