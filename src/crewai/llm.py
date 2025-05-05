@@ -87,8 +87,8 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4.1-nano-2025-04-14": 1047576,
     "o1-preview": 128000,
     "o1-mini": 128000,
-    "o4-mini": 200000,  # Based on o3-mini specifications
     "o3-mini": 200000,  # Based on official o3-mini specifications
+    "o4-mini": 200000,  # Token limit based on OpenAI's official specifications
     # gemini
     "gemini-2.0-flash": 1048576,
     "gemini-2.0-flash-thinking-exp-01-21": 32768,

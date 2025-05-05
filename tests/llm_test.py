@@ -335,16 +335,15 @@ def test_o3_mini_reasoning_effort_medium():
     assert "Paris" in result
 
 
-def test_context_window_validation():
-    """Test that context window validation works correctly."""
-    # Test valid window size for o3-mini
-    llm = LLM(model="o3-mini")
-    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
-    
-    # Test valid window size for o4-mini
-    llm = LLM(model="o4-mini")
+@pytest.mark.parametrize("model", ["o3-mini", "o4-mini"])
+def test_context_window_validation_for_o_models(model):
+    """Test that context window validation works correctly for o-series models."""
+    # Test valid window size for o-series models
+    llm = LLM(model=model)
     assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
+def test_context_window_validation():
+    """Test that context window validation works correctly."""
     # Test invalid window size
     with pytest.raises(ValueError) as excinfo:
         with patch.dict(

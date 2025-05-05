@@ -37,11 +37,11 @@ OPENAI_BIGGER_MODELS = [
     "gpt-4",
     "gpt-4o",
     "o1-preview",
-    "o1-mini",
     "o1",
+    "o1-mini",
     "o3",
-    "o4-mini",
     "o3-mini",
+    "o4-mini",  # Maintain alphabetical order for clarity
 ]
 
 
