@@ -6,11 +6,12 @@ import shutil
 import uuid
 from typing import Any, Dict, List, Optional
 
+import numpy as np
 from chromadb.api import ClientAPI
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
-from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
+from crewai.utilities.constants import MAX_FILE_NAME_LENGTH, MEMORY_CHUNK_SIZE, MEMORY_CHUNK_OVERLAP
 from crewai.utilities.paths import db_storage_path
 
 
@@ -138,15 +139,45 @@ class RAGStorage(BaseRAGStorage):
             logging.error(f"Error during {self.type} search: {str(e)}")
             return []
 
+    def _chunk_text(self, text: str) -> List[str]:
+        """
+        Split text into chunks to avoid token limits.
+        
+        Args:
+            text: Text to chunk
+            
+        Returns:
+            List of text chunks
+        """
+        if not text:
+            return []
+        
+        if len(text) <= MEMORY_CHUNK_SIZE:
+            return [text]
+            
+        chunks = []
+        for i in range(0, len(text), MEMORY_CHUNK_SIZE - MEMORY_CHUNK_OVERLAP):
+            chunk = text[i:i + MEMORY_CHUNK_SIZE]
+            if chunk:  # Only add non-empty chunks
+                chunks.append(chunk)
+                
+        return chunks
+
     def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 
-        self.collection.add(
-            documents=[text],
-            metadatas=[metadata or {}],
-            ids=[str(uuid.uuid4())],
-        )
+        chunks = self._chunk_text(text)
+        
+        if not chunks:
+            return None
+            
+        for chunk in chunks:
+            self.collection.add(
+                documents=[chunk],
+                metadatas=[metadata or {}],
+                ids=[str(uuid.uuid4())],
+            )
 
     def reset(self) -> None:
         try:
