@@ -10,10 +10,11 @@ env:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ['3.10', '3.11', '3.12']
     steps:
       - name: Checkout code
