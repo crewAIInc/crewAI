@@ -1,7 +1,10 @@
 """Test CustomStorageKnowledgeSource functionality."""
 
+import os
+import shutil
+import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -19,6 +22,15 @@ def custom_storage():
     return storage
 
 
+@pytest.fixture
+def temp_dir():
+    """Create a temporary directory for test files."""
+    temp_dir = tempfile.mkdtemp()
+    yield temp_dir
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+
+
 def test_custom_storage_knowledge_source(custom_storage):
     """Test that a CustomStorageKnowledgeSource can be created with a pre-existing storage."""
     source = CustomStorageKnowledgeSource(collection_name="test_collection")
@@ -27,9 +39,20 @@ def test_custom_storage_knowledge_source(custom_storage):
     assert source.collection_name == "test_collection"
 
 
+def test_custom_storage_knowledge_source_validation():
+    """Test that validation fails when storage is not properly initialized."""
+    source = CustomStorageKnowledgeSource(collection_name="test_collection")
+    
+    source.storage = None
+    
+    with pytest.raises(ValueError, match="Storage not initialized"):
+        source.validate_content()
+
+
 def test_custom_storage_knowledge_source_with_knowledge(custom_storage):
     """Test that a CustomStorageKnowledgeSource can be used with Knowledge."""
     source = CustomStorageKnowledgeSource(collection_name="test_collection")
+    source.storage = custom_storage
     
     with patch.object(KnowledgeStorage, 'initialize_knowledge_storage'):
         with patch.object(CustomStorageKnowledgeSource, 'add'):
@@ -68,3 +91,35 @@ def test_custom_storage_knowledge_source_with_crew():
     
     assert crew is not None
     assert crew.knowledge_sources[0] == source
+
+
+def test_custom_storage_knowledge_source_add_method():
+    """Test that the add method doesn't modify the storage."""
+    source = CustomStorageKnowledgeSource(collection_name="test_collection")
+    storage = MagicMock(spec=KnowledgeStorage)
+    source.storage = storage
+    
+    source.add()
+    
+    storage.assert_not_called()
+
+
+def test_integration_with_existing_storage(temp_dir):
+    """Test integration with an existing storage directory."""
+    storage_path = os.path.join(temp_dir, "test_storage")
+    os.makedirs(storage_path, exist_ok=True)
+    
+    class MockStorage(KnowledgeStorage):
+        def initialize_knowledge_storage(self):
+            self.initialized = True
+    
+    storage = MockStorage(collection_name="test_integration")
+    storage.initialize_knowledge_storage()
+    
+    source = CustomStorageKnowledgeSource(collection_name="test_integration")
+    source.storage = storage
+    
+    source.validate_content()
+    
+    assert hasattr(storage, "initialized")
+    assert storage.initialized is True
