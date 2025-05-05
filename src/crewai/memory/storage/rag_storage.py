@@ -144,10 +144,11 @@ class RAGStorage(BaseRAGStorage):
         Split text into chunks to avoid token limits.
         
         Args:
-            text: Text to chunk
+            text: Input text to chunk.
             
         Returns:
-            List of text chunks
+            List[str]: A list of chunked text segments, adhering to defined size and overlap.
+                       Empty list if input text is empty.
         """
         if not text:
             return []
@@ -156,14 +157,25 @@ class RAGStorage(BaseRAGStorage):
             return [text]
             
         chunks = []
-        for i in range(0, len(text), MEMORY_CHUNK_SIZE - MEMORY_CHUNK_OVERLAP):
+        start_indices = range(0, len(text), MEMORY_CHUNK_SIZE - MEMORY_CHUNK_OVERLAP)
+        for i in start_indices:
             chunk = text[i:i + MEMORY_CHUNK_SIZE]
             if chunk:  # Only add non-empty chunks
                 chunks.append(chunk)
                 
         return chunks
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
+    def _generate_embedding(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> Optional[None]:
+        """
+        Generate embeddings for text and add to collection.
+        
+        Args:
+            text: Input text to generate embeddings for.
+            metadata: Optional metadata to associate with the embeddings.
+            
+        Returns:
+            None if successful, None if text is empty.
+        """
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 
