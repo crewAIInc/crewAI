@@ -201,9 +201,20 @@ def install(context):
 
 
 @crewai.command()
-def run():
+@click.option(
+    "--record",
+    is_flag=True,
+    help="Record LLM responses for later replay",
+)
+@click.option(
+    "--replay",
+    is_flag=True,
+    help="Replay from recorded LLM responses without making network calls",
+)
+def run(record: bool = False, replay: bool = False):
     """Run the Crew."""
-    run_crew()
+    click.echo("Running the Crew")
+    run_crew(record=record, replay=replay)
 
 
 @crewai.command()

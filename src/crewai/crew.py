@@ -244,6 +244,15 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=SecurityConfig,
         description="Security configuration for the crew, including fingerprinting.",
     )
+    record_mode: bool = Field(
+        default=False,
+        description="Whether to record LLM responses for later replay.",
+    )
+    replay_mode: bool = Field(
+        default=False,
+        description="Whether to replay from recorded LLM responses without making network calls.",
+    )
+    _llm_response_cache_handler: Optional[Any] = PrivateAttr(default=None)
 
     @field_validator("id", mode="before")
     @classmethod
@@ -633,6 +642,17 @@ class Crew(FlowTrackable, BaseModel):
             self._task_output_handler.reset()
             self._logging_color = "bold_purple"
 
+            if self.record_mode and self.replay_mode:
+                raise ValueError("Cannot use both record_mode and replay_mode at the same time")
+                
+            if self.record_mode or self.replay_mode:
+                from crewai.utilities.llm_response_cache_handler import LLMResponseCacheHandler
+                self._llm_response_cache_handler = LLMResponseCacheHandler()
+                if self.record_mode:
+                    self._llm_response_cache_handler.start_recording()
+                elif self.replay_mode:
+                    self._llm_response_cache_handler.start_replaying()
+
             if inputs is not None:
                 self._inputs = inputs
                 self._interpolate_inputs(inputs)
@@ -651,6 +671,12 @@ class Crew(FlowTrackable, BaseModel):
 
                 if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
                     agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
+                    
+                if self._llm_response_cache_handler:
+                    if hasattr(agent, "llm") and agent.llm:
+                        agent.llm.set_response_cache_handler(self._llm_response_cache_handler)
+                    if hasattr(agent, "function_calling_llm") and agent.function_calling_llm:
+                        agent.function_calling_llm.set_response_cache_handler(self._llm_response_cache_handler)
 
                 agent.create_agent_executor()
 
@@ -1287,6 +1313,9 @@ class Crew(FlowTrackable, BaseModel):
     def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
+            
+        if self._llm_response_cache_handler:
+            self._llm_response_cache_handler.stop()
 
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
