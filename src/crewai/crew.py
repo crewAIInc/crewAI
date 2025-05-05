@@ -646,7 +646,9 @@ class Crew(FlowTrackable, BaseModel):
                 raise ValueError("Cannot use both record_mode and replay_mode at the same time")
                 
             if self.record_mode or self.replay_mode:
-                from crewai.utilities.llm_response_cache_handler import LLMResponseCacheHandler
+                from crewai.utilities.llm_response_cache_handler import (
+                    LLMResponseCacheHandler,
+                )
                 self._llm_response_cache_handler = LLMResponseCacheHandler()
                 if self.record_mode:
                     self._llm_response_cache_handler.start_recording()
