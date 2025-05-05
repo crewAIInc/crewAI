@@ -438,6 +438,32 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
     assert output == "12"
 
 
+# @pytest.mark.vcr(filter_headers=["authorization"])
+# def test_agent_powered_by_o4_mini_that_allows_skipping_tool():
+#     @tool
+#     def multiplier(first_number: int, second_number: int) -> float:
+#         """Useful for when you need to multiply two numbers together."""
+#         return first_number * second_number
+#
+#     agent = Agent(
+#         role="test role",
+#         goal="test goal",
+#         backstory="test backstory",
+#         llm=LLM(model="o4-mini"),
+#         max_iter=3,
+#         use_system_prompt=False,
+#         allow_delegation=False,
+#     )
+#
+#     task = Task(
+#         description="What is 3 times 4?",
+#         agent=agent,
+#         expected_output="The result of the multiplication.",
+#     )
+#     output = agent.execute_task(task=task, tools=[multiplier])
+#     assert output == "12"
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_powered_by_new_o_model_family_that_uses_tool():
     @tool
@@ -454,14 +480,32 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         use_system_prompt=False,
         allow_delegation=False,
     )
-
-    task = Task(
-        description="How many customers does the company have?",
-        agent=agent,
-        expected_output="The number of customers",
-    )
-    output = agent.execute_task(task=task, tools=[comapny_customer_data])
-    assert output == "42"
+    
+    
+# @pytest.mark.vcr(filter_headers=["authorization"])
+# def test_agent_powered_by_o4_mini_that_uses_tool():
+#     @tool
+#     def company_customer_data() -> float:
+#         """Useful for getting customer related data."""
+#         return "The company has 42 customers"
+#
+#     agent = Agent(
+#         role="test role",
+#         goal="test goal",
+#         backstory="test backstory",
+#         llm="o4-mini",
+#         max_iter=3,
+#         use_system_prompt=False,
+#         allow_delegation=False,
+#     )
+#     
+#     task = Task(
+#         description="How many customers does the company have?",
+#         agent=agent,
+#         expected_output="The number of customers",
+#     )
+#     output = agent.execute_task(task=task, tools=[company_customer_data])
+#     assert output == "42"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

@@ -337,8 +337,12 @@ def test_o3_mini_reasoning_effort_medium():
 
 def test_context_window_validation():
     """Test that context window validation works correctly."""
-    # Test valid window size
+    # Test valid window size for o3-mini
     llm = LLM(model="o3-mini")
+    assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+    
+    # Test valid window size for o4-mini
+    llm = LLM(model="o4-mini")
     assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
     # Test invalid window size
