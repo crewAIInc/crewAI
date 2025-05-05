@@ -59,11 +59,5 @@ class RagTool(BaseTool):
     def _run(
         self,
         query: str,
-        **kwargs: Any,
-    ) -> Any:
-        self._before_run(query, **kwargs)
-
+    ) -> str:
         return f"Relevant Content:\n{self.adapter.query(query)}"
-
-    def _before_run(self, query, **kwargs):
-        pass

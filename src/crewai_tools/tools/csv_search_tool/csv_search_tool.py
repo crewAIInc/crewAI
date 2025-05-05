@@ -31,30 +31,19 @@ class CSVSearchTool(RagTool):
     def __init__(self, csv: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         if csv is not None:
-            kwargs["data_type"] = DataType.CSV
             self.add(csv)
             self.description = f"A tool that can be used to semantic search a query the {csv} CSV's content."
             self.args_schema = FixedCSVSearchToolSchema
             self._generate_description()
 
-    def add(
-        self,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().add(*args, **kwargs)
-
-    def _before_run(
-        self,
-        query: str,
-        **kwargs: Any,
-    ) -> Any:
-        if "csv" in kwargs:
-            self.add(kwargs["csv"])
+    def add(self, csv: str) -> None:
+        super().add(csv, data_type=DataType.CSV)
 
     def _run(
         self,
         search_query: str,
-        **kwargs: Any,
-    ) -> Any:
-        return super()._run(query=search_query, **kwargs)
+        csv: Optional[str] = None,
+    ) -> str:
+        if csv is not None:
+            self.add(csv)
+        return super()._run(query=search_query)

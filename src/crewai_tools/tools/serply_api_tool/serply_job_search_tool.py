@@ -41,14 +41,15 @@ class SerplyJobSearchTool(RagTool):
 
     def _run(
         self,
-        **kwargs: Any,
-    ) -> Any:
+        query: Optional[str] = None,
+        search_query: Optional[str] = None,
+    ) -> str:
         query_payload = {}
 
-        if "query" in kwargs:
-            query_payload["q"] = kwargs["query"]
-        elif "search_query" in kwargs:
-            query_payload["q"] = kwargs["search_query"]
+        if query is not None:
+            query_payload["q"] = query
+        elif search_query is not None:
+            query_payload["q"] = search_query
 
         # build the url
         url = f"{self.request_url}{urlencode(query_payload)}"

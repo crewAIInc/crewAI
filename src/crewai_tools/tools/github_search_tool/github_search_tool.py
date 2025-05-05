@@ -1,7 +1,7 @@
-from typing import Any, List, Optional, Type
+from typing import List, Optional, Type
 
 from embedchain.loaders.github import GithubLoader
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from ..rag.rag_tool import RagTool
 
@@ -27,19 +27,29 @@ class GithubSearchToolSchema(FixedGithubSearchToolSchema):
 
 class GithubSearchTool(RagTool):
     name: str = "Search a github repo's content"
-    description: str = "A tool that can be used to semantic search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
+    description: str = (
+        "A tool that can be used to semantic search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
+    )
     summarize: bool = False
     gh_token: str
     args_schema: Type[BaseModel] = GithubSearchToolSchema
-    content_types: List[str]
+    content_types: List[str] = Field(
+        default_factory=lambda: ["code", "repo", "pr", "issue"],
+        description="Content types you want to be included search, options: [code, repo, pr, issue]",
+    )
+    _loader: GithubLoader | None = PrivateAttr(default=None)
 
-    def __init__(self, github_repo: Optional[str] = None, **kwargs):
+    def __init__(
+        self,
+        github_repo: Optional[str] = None,
+        content_types: Optional[List[str]] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
-        if github_repo is not None:
-            kwargs["data_type"] = "github"
-            kwargs["loader"] = GithubLoader(config={"token": self.gh_token})
+        self._loader = GithubLoader(config={"token": self.gh_token})
 
-            self.add(repo=github_repo)
+        if github_repo and content_types:
+            self.add(repo=github_repo, content_types=content_types)
             self.description = f"A tool that can be used to semantic search a query the {github_repo} github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
             self.args_schema = FixedGithubSearchToolSchema
             self._generate_description()
@@ -47,26 +57,25 @@ class GithubSearchTool(RagTool):
     def add(
         self,
         repo: str,
-        content_types: List[str] | None = None,
-        **kwargs: Any,
+        content_types: Optional[List[str]] = None,
     ) -> None:
         content_types = content_types or self.content_types
 
-        super().add(f"repo:{repo} type:{','.join(content_types)}", **kwargs)
-
-    def _before_run(
-        self,
-        query: str,
-        **kwargs: Any,
-    ) -> Any:
-        if "github_repo" in kwargs:
-            self.add(
-                repo=kwargs["github_repo"], content_types=kwargs.get("content_types")
-            )
+        super().add(
+            f"repo:{repo} type:{','.join(content_types)}",
+            data_type="github",
+            loader=self._loader,
+        )
 
     def _run(
         self,
         search_query: str,
-        **kwargs: Any,
-    ) -> Any:
-        return super()._run(query=search_query, **kwargs)
+        github_repo: Optional[str] = None,
+        content_types: Optional[List[str]] = None,
+    ) -> str:
+        if github_repo:
+            self.add(
+                repo=github_repo,
+                content_types=content_types,
+            )
+        return super()._run(query=search_query)

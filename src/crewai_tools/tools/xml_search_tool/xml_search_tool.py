@@ -31,30 +31,16 @@ class XMLSearchTool(RagTool):
     def __init__(self, xml: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         if xml is not None:
-            kwargs["data_type"] = DataType.XML
             self.add(xml)
             self.description = f"A tool that can be used to semantic search a query the {xml} XML's content."
             self.args_schema = FixedXMLSearchToolSchema
             self._generate_description()
 
-    def add(
-        self,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().add(*args, **kwargs)
-
-    def _before_run(
-        self,
-        query: str,
-        **kwargs: Any,
-    ) -> Any:
-        if "xml" in kwargs:
-            self.add(kwargs["xml"])
-
     def _run(
         self,
         search_query: str,
-        **kwargs: Any,
-    ) -> Any:
-        return super()._run(query=search_query, **kwargs)
+        xml: Optional[str] = None,
+    ) -> str:
+        if xml is not None:
+            self.add(xml)
+        return super()._run(query=search_query)

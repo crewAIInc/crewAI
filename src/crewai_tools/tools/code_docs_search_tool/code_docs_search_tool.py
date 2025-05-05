@@ -31,30 +31,19 @@ class CodeDocsSearchTool(RagTool):
     def __init__(self, docs_url: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         if docs_url is not None:
-            kwargs["data_type"] = DataType.DOCS_SITE
             self.add(docs_url)
             self.description = f"A tool that can be used to semantic search a query the {docs_url} Code Docs content."
             self.args_schema = FixedCodeDocsSearchToolSchema
             self._generate_description()
 
-    def add(
-        self,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().add(*args, **kwargs)
-
-    def _before_run(
-        self,
-        query: str,
-        **kwargs: Any,
-    ) -> Any:
-        if "docs_url" in kwargs:
-            self.add(kwargs["docs_url"])
+    def add(self, docs_url: str) -> None:
+        super().add(docs_url, data_type=DataType.DOCS_SITE)
 
     def _run(
         self,
         search_query: str,
-        **kwargs: Any,
-    ) -> Any:
-        return super()._run(query=search_query, **kwargs)
+        docs_url: Optional[str] = None,
+    ) -> str:
+        if docs_url is not None:
+            self.add(docs_url)
+        return super()._run(query=search_query)

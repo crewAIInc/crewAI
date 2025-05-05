@@ -32,7 +32,9 @@ class PDFTextWritingTool(RagTool):
     """A tool to add text to specific positions in a PDF, with custom font support."""
 
     name: str = "PDF Text Writing Tool"
-    description: str = "A tool that can write text to a specific position in a PDF document, with optional custom font embedding."
+    description: str = (
+        "A tool that can write text to a specific position in a PDF document, with optional custom font embedding."
+    )
     args_schema: Type[BaseModel] = PDFTextWritingToolSchema
 
     def run(
@@ -45,7 +47,6 @@ class PDFTextWritingTool(RagTool):
         font_name: str = "F1",
         font_file: Optional[str] = None,
         page_number: int = 0,
-        **kwargs,
     ) -> str:
         reader = PdfReader(pdf_path)
         writer = PdfWriter()

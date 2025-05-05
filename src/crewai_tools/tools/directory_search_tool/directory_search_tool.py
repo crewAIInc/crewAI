@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type
+from typing import Optional, Type
 
 from embedchain.loaders.directory_loader import DirectoryLoader
 from pydantic import BaseModel, Field
@@ -31,30 +31,22 @@ class DirectorySearchTool(RagTool):
     def __init__(self, directory: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         if directory is not None:
-            kwargs["loader"] = DirectoryLoader(config=dict(recursive=True))
             self.add(directory)
             self.description = f"A tool that can be used to semantic search a query the {directory} directory's content."
             self.args_schema = FixedDirectorySearchToolSchema
             self._generate_description()
 
-    def add(
-        self,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
-        super().add(*args, **kwargs)
-
-    def _before_run(
-        self,
-        query: str,
-        **kwargs: Any,
-    ) -> Any:
-        if "directory" in kwargs:
-            self.add(kwargs["directory"])
+    def add(self, directory: str) -> None:
+        super().add(
+            directory,
+            loader=DirectoryLoader(config=dict(recursive=True)),
+        )
 
     def _run(
         self,
         search_query: str,
-        **kwargs: Any,
-    ) -> Any:
-        return super()._run(query=search_query, **kwargs)
+        directory: Optional[str] = None,
+    ) -> str:
+        if directory is not None:
+            self.add(directory)
+        return super()._run(query=search_query)
