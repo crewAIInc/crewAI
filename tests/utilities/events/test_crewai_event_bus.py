@@ -32,3 +32,16 @@ def test_wildcard_event_handler():
     crewai_event_bus.emit("source_object", event)
 
     mock_handler.assert_called_once_with("source_object", event)
+
+
+def test_event_bus_error_handling(capfd):
+    @crewai_event_bus.on(BaseEvent)
+    def broken_handler(source, event):
+        raise ValueError("Simulated handler failure")
+
+    event = TestEvent(type="test_event")
+    crewai_event_bus.emit("source_object", event)
+
+    out, err = capfd.readouterr()
+    assert "Simulated handler failure" in out
+    assert "Handler 'broken_handler' failed" in out

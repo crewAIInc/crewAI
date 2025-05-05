@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(level=logging.WARNING)
-
 T = TypeVar("T", bound=type)
 
 """Base decorator for creating crew classes with configuration and function management."""
@@ -247,6 +245,9 @@ def CrewBase(cls: T) -> T:
                 self.tasks_config[task_name]["callbacks"] = [
                     callback_functions[callback]() for callback in callbacks
                 ]
+
+            if guardrail := task_info.get("guardrail"):
+                self.tasks_config[task_name]["guardrail"] = guardrail
 
     # Include base class (qual)name in the wrapper class (qual)name.
     WrappedClass.__name__ = CrewBase.__name__ + "(" + cls.__name__ + ")"
