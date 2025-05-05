@@ -228,10 +228,11 @@ class LLMResponseCacheStorage:
                 logger.info("Deleting all cache entries (max_age_days <= 0)")
             else:
                 cursor.execute(
-                    f"""
-                    DELETE FROM llm_response_cache
-                    WHERE timestamp < datetime('now', '-{max_age_days} days')
                     """
+                    DELETE FROM llm_response_cache
+                    WHERE timestamp < datetime('now', ? || ' days')
+                    """,
+                    (f"-{max_age_days}",)
                 )
                 deleted_count = cursor.rowcount
                 
