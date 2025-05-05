@@ -23,7 +23,7 @@ class LLMResponseCacheStorage:
     ) -> None:
         self.db_path = db_path
         self._printer: Printer = Printer()
-        self._connection_pool = {}
+        self._connection_pool: Dict[int, sqlite3.Connection] = {}
         self._initialize_db()
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -214,10 +214,27 @@ class LLMResponseCacheStorage:
         """
         Removes cache entries older than the specified number of days.
         
+        This method helps maintain the cache size and ensures that only recent
+        responses are kept, which is important for keeping the cache relevant
+        and preventing it from growing too large over time.
+        
         Args:
             max_age_days: Maximum age of cache entries in days. Defaults to 7.
                           If set to 0, all entries will be deleted.
+                          Must be a non-negative integer.
+                          
+        Raises:
+            ValueError: If max_age_days is not a non-negative integer.
         """
+        if not isinstance(max_age_days, int) or max_age_days < 0:
+            error_msg = "max_age_days must be a non-negative integer"
+            self._printer.print(
+                content=f"LLM RESPONSE CACHE ERROR: {error_msg}",
+                color="red",
+            )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+            
         try:
             conn = self._get_connection()
             cursor = conn.cursor()
@@ -228,10 +245,11 @@ class LLMResponseCacheStorage:
                 logger.info("Deleting all cache entries (max_age_days <= 0)")
             else:
                 cursor.execute(
-                    f"""
-                    DELETE FROM llm_response_cache
-                    WHERE timestamp < datetime('now', '-{max_age_days} days')
                     """
+                    DELETE FROM llm_response_cache
+                    WHERE timestamp < datetime('now', ? || ' days')
+                    """,
+                    (f"-{max_age_days}",)
                 )
                 deleted_count = cursor.rowcount
                 
