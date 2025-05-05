@@ -1,13 +1,14 @@
 """Test CustomStorageKnowledgeSource functionality."""
 
-import os
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from crewai.knowledge.knowledge import Knowledge
-from crewai.knowledge.source.custom_storage_knowledge_source import CustomStorageKnowledgeSource
+from crewai.knowledge.source.custom_storage_knowledge_source import (
+    CustomStorageKnowledgeSource,
+)
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
 

@@ -1,10 +1,14 @@
 """Example of using a custom storage with CrewAI."""
 
+from pathlib import Path
+
 import chromadb
 from chromadb.config import Settings
 
 from crewai import Agent, Crew, Task
-from crewai.knowledge.source.custom_storage_knowledge_source import CustomStorageKnowledgeSource
+from crewai.knowledge.source.custom_storage_knowledge_source import (
+    CustomStorageKnowledgeSource,
+)
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
 
