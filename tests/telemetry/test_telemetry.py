@@ -42,24 +42,25 @@ from opentelemetry import trace
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",
     side_effect=Exception("Test exception"),
 )
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
     error = Exception("Test exception")
     export_mock.side_effect = error
 
     tracer = trace.get_tracer(__name__)
     with tracer.start_as_current_span("test-span"):
-        base_agent = Agent(
-            role="base_agent",
+        agent = Agent(
+            role="agent",
             llm="gpt-4o-mini",
             goal="Just say hi",
             backstory="You are a helpful assistant that just says hi",
         )
-        base_task = Task(
+        task = Task(
             description="Just say hi",
             expected_output="hi",
-            agent=base_agent,
+            agent=agent,
         )
-        crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
+        crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
         crew.kickoff()
 
     trace.get_tracer_provider().force_flush()
