@@ -213,6 +213,8 @@ def install(context):
 )
 def run(record: bool = False, replay: bool = False):
     """Run the Crew."""
+    if record and replay:
+        raise click.UsageError("Cannot use --record and --replay simultaneously")
     click.echo("Running the Crew")
     run_crew(record=record, replay=replay)
 
