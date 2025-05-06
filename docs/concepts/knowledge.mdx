@@ -450,6 +450,13 @@ crew = Crew(
 result = crew.kickoff(
     inputs={"question": "What is the storage capacity of the XPS 13?"}
 )
+
+# Reseting the agent specific knowledge
+crew.reset_memories(command_type = 'agent_knowledge')
+
+# Reseting the agent specific knowledge via CLI
+crewai reset-memories --agent-knowledge 
+crewai reset-memories --akn
 ```
 
 <Info>
@@ -623,7 +630,7 @@ The example uses the [Spaceflight News API](https://api.spaceflightnewsapi.net/v
 - Returns structured data about space news
 - Supports pagination and filtering
 
-You can customize the API query by modifying the endpoint URL:
+You can customize the API query by modifyinga the endpoint URL:
 
 ```python
 # Fetch more articles
