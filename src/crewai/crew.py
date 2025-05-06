@@ -1455,6 +1455,5 @@ class Crew(FlowTrackable, BaseModel):
     def _reset_agent_knowledge(self) -> None:
         """Reset agent knowledge storage."""
         for agent in self.agents:
-            knowledge_storage = getattr(agent, "knowledge", None)
-            if knowledge_storage is not None:
+            if (knowledge_storage := getattr(agent, "knowledge", None)) is not None:
                 knowledge_storage.reset()
