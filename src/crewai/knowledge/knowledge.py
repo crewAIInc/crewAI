@@ -83,23 +83,56 @@ class Knowledge(BaseModel):
         with previously recorded values. When changes are detected, the source is reloaded and
         the storage is updated with the new content.
         
-        Handles specific exceptions for file operations to provide better error reporting.
+        The method handles various file-related exceptions with specific error messages:
+        - FileNotFoundError: When a source file no longer exists
+        - PermissionError: When there are permission issues accessing a file
+        - IOError: When there are I/O errors reading a file
+        - ValueError: When there are issues with file content format
+        - Other unexpected exceptions are also caught and logged
+        
+        Each exception is logged with appropriate context to aid in troubleshooting.
         """
         for source in self.sources:
+            source_name = source.__class__.__name__
             try:
                 if hasattr(source, 'files_have_changed') and source.files_have_changed():
-                    self._logger.log("info", f"Reloading modified source: {source.__class__.__name__}")
-                    source._record_file_mtimes()  # Update timestamps
-                    source.content = source.load_content()
-                    source.add()  # Reload and update storage
+                    self._logger.log("info", f"Reloading modified source: {source_name}")
+                    
+                    # Update file modification timestamps
+                    try:
+                        source._record_file_mtimes()
+                    except (PermissionError, IOError) as e:
+                        self._logger.log("warning", f"Could not record file timestamps for {source_name}: {str(e)}")
+                    
+                    try:
+                        source.content = source.load_content()
+                    except FileNotFoundError as e:
+                        self._logger.log("error", f"File not found when loading content for {source_name}: {str(e)}")
+                        continue
+                    except PermissionError as e:
+                        self._logger.log("error", f"Permission error when loading content for {source_name}: {str(e)}")
+                        continue
+                    except IOError as e:
+                        self._logger.log("error", f"IO error when loading content for {source_name}: {str(e)}")
+                        continue
+                    except ValueError as e:
+                        self._logger.log("error", f"Invalid content format in {source_name}: {str(e)}")
+                        continue
+                    
+                    try:
+                        source.add()
+                        self._logger.log("info", f"Successfully reloaded and updated {source_name}")
+                    except Exception as e:
+                        self._logger.log("error", f"Failed to update storage for {source_name}: {str(e)}")
+                        
             except FileNotFoundError as e:
-                self._logger.log("error", f"File not found when checking for updates: {str(e)}")
+                self._logger.log("error", f"File not found when checking for updates in {source_name}: {str(e)}")
             except PermissionError as e:
-                self._logger.log("error", f"Permission error when checking for updates: {str(e)}")
+                self._logger.log("error", f"Permission error when checking for updates in {source_name}: {str(e)}")
             except IOError as e:
-                self._logger.log("error", f"IO error when checking for updates: {str(e)}")
+                self._logger.log("error", f"IO error when checking for updates in {source_name}: {str(e)}")
             except Exception as e:
-                self._logger.log("error", f"Unexpected error when checking for updates: {str(e)}")
+                self._logger.log("error", f"Unexpected error when checking for updates in {source_name}: {str(e)}")
 
     def add_sources(self):
         try:
