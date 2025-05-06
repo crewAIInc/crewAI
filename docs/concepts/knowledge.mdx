@@ -451,7 +451,7 @@ result = crew.kickoff(
     inputs={"question": "What is the storage capacity of the XPS 13?"}
 )
 
-# Reseting the agent specific knowledge
+# Reseting the agent specific knowledge via crew object
 crew.reset_memories(command_type = 'agent_knowledge')
 
 # Reseting the agent specific knowledge via CLI
