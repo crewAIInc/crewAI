@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import platform
 import warnings
@@ -13,6 +14,8 @@ from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
     CREWAI_TELEMETRY_SERVICE_NAME,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -28,12 +31,24 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
 )
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
 from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
-from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
+from opentelemetry.sdk.trace.export import (  # noqa: E402
+    BatchSpanProcessor,
+    SpanExportResult,
+)
 from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
     from crewai.task import Task
+
+
+class SafeOTLPSpanExporter(OTLPSpanExporter):
+    def export(self, spans) -> SpanExportResult:
+        try:
+            return super().export(spans)
+        except Exception as e:
+            logger.error(e)
+            return SpanExportResult.FAILURE
 
 
 class Telemetry:
@@ -64,7 +79,7 @@ class Telemetry:
                 self.provider = TracerProvider(resource=self.resource)
 
             processor = BatchSpanProcessor(
-                OTLPSpanExporter(
+                SafeOTLPSpanExporter(
                     endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
                     timeout=30,
                 )

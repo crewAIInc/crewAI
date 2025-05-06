@@ -4,12 +4,12 @@ description: "Deploy your local CrewAI project to the Enterprise platform"
 icon: "cloud-arrow-up"
 ---
 
-## Option 1: CLI Deployment
+## Overview
 
-<Tip>
-This video tutorial walks you through the process of deploying your locally developed CrewAI project to the CrewAI Enterprise platform, 
+This guide will walk you through the process of deploying your locally developed CrewAI project to the CrewAI Enterprise platform, 
 transforming it into a production-ready API endpoint.
-</Tip>
+
+## Option 1: CLI Deployment
 
 <iframe 
     width="100%"
@@ -22,7 +22,7 @@ transforming it into a production-ready API endpoint.
     allowfullscreen
 ></iframe>
 
-## Prerequisites
+### Prerequisites
 
 Before starting the deployment process, make sure you have:
 
@@ -35,138 +35,159 @@ For a quick reference project, you can clone our example repository at [github.c
 </Note>
 
 
+<Steps>
 
-### Step 1: Authenticate with the Enterprise Platform
+  <Step title="Authenticate with the Enterprise Platform">
+    First, you need to authenticate your CLI with the CrewAI Enterprise platform:
 
-First, you need to authenticate your CLI with the CrewAI Enterprise platform:
+    ```bash
+    # If you already have a CrewAI Enterprise account
+    crewai login
 
-```bash
-# If you already have a CrewAI Enterprise account
-crewai login
+    # If you're creating a new account
+    crewai signup
+    ```
 
-# If you're creating a new account
-crewai signup
-```
+    When you run either command, the CLI will:
+    1. Display a URL and a unique device code
+    2. Open your browser to the authentication page
+    3. Prompt you to confirm the device
+    4. Complete the authentication process
 
-When you run either command, the CLI will:
-1. Display a URL and a unique device code
-2. Open your browser to the authentication page
-3. Prompt you to confirm the device
-4. Complete the authentication process
+    Upon successful authentication, you'll see a confirmation message in your terminal!
 
-Upon successful authentication, you'll see a confirmation message in your terminal!
+  </Step>
 
-### Step 2: Create a Deployment
+  <Step title="Create a Deployment">
 
-From your project directory, run:
+    From your project directory, run:
 
-```bash
-crewai deploy create
-```
+    ```bash
+    crewai deploy create
+    ```
 
-This command will:
-1. Detect your GitHub repository information
-2. Identify environment variables in your local `.env` file
-3. Securely transfer these variables to the Enterprise platform
-4. Create a new deployment with a unique identifier
+    This command will:
+    1. Detect your GitHub repository information
+    2. Identify environment variables in your local `.env` file
+    3. Securely transfer these variables to the Enterprise platform
+    4. Create a new deployment with a unique identifier
 
-On successful creation, you'll see a message like:
-```shell
-Deployment created successfully!
-Name: your_project_name
-Deployment ID: 01234567-89ab-cdef-0123-456789abcdef
-Current Status: Deploy Enqueued
-```
+    On successful creation, you'll see a message like:
+    ```shell
+    Deployment created successfully!
+    Name: your_project_name
+    Deployment ID: 01234567-89ab-cdef-0123-456789abcdef
+    Current Status: Deploy Enqueued
+    ```
 
-### Step 3: Monitor Deployment Progress
+  </Step>
 
-Track the deployment status with:
+  <Step title="Monitor Deployment Progress">
 
-```bash
-crewai deploy status
-```
+    Track the deployment status with:
 
-For detailed logs of the build process:
+    ```bash
+    crewai deploy status
+    ```
 
-```bash
-crewai deploy logs
-```
+    For detailed logs of the build process:
 
-<Tip>
-The first deployment typically takes 10-15 minutes as it builds the container images. Subsequent deployments are much faster.
-</Tip>
+    ```bash
+    crewai deploy logs
+    ```
 
-### Additional CLI Commands
+    <Tip>
+    The first deployment typically takes 10-15 minutes as it builds the container images. Subsequent deployments are much faster.
+    </Tip>
+
+  </Step>
+</Steps>
+
+## Additional CLI Commands
 
 The CrewAI CLI offers several commands to manage your deployments:
 
-```bash
-# List all your deployments
-crewai deploy list
+  ```bash
+  # List all your deployments
+  crewai deploy list
 
-# Get the status of your deployment
-crewai deploy status
+  # Get the status of your deployment
+  crewai deploy status
 
-# View the logs of your deployment
-crewai deploy logs
+  # View the logs of your deployment
+  crewai deploy logs
 
-# Push updates after code changes
-crewai deploy push
+  # Push updates after code changes
+  crewai deploy push
 
-# Remove a deployment
-crewai deploy remove <deployment_id>
-```
+  # Remove a deployment
+  crewai deploy remove <deployment_id>
+  ``` 
 
 ## Option 2: Deploy Directly via Web Interface
 
 You can also deploy your crews directly through the CrewAI Enterprise web interface by connecting your GitHub account. This approach doesn't require using the CLI on your local machine.
 
-### Step 1: Pushing to GitHub
+<Steps>
 
-First, you need to push your crew to a GitHub repository. If you haven't created a crew yet, you can [follow this tutorial](/quickstart).
+  <Step title="Pushing to GitHub">
 
-### Step 2: Connecting GitHub to CrewAI Enterprise
+  You need to push your crew to a GitHub repository. If you haven't created a crew yet, you can [follow this tutorial](/quickstart).
 
-1. Log in to [CrewAI Enterprise](https://app.crewai.com)
-2. Click on the button "Connect GitHub" 
+  </Step>
 
-<Frame>
-  ![Connect GitHub Button](/images/enterprise/connect-github.png)
-</Frame>
+  <Step title="Connecting GitHub to CrewAI Enterprise">
 
-### Step 3: Select the Repository
+    1. Log in to [CrewAI Enterprise](https://app.crewai.com)
+    2. Click on the button "Connect GitHub" 
 
-After connecting your GitHub account, you'll be able to select which repository to deploy:
+    <Frame>
+      ![Connect GitHub Button](/images/enterprise/connect-github.png)
+    </Frame>
 
-<Frame>
-  ![Select Repository](/images/enterprise/select-repo.png)
-</Frame>
+  </Step>
 
-### Step 4: Set Environment Variables
+  <Step title="Select the Repository">
 
-Before deploying, you'll need to set up your environment variables to connect to your LLM provider or other services:
+    After connecting your GitHub account, you'll be able to select which repository to deploy:
 
-1. You can add variables individually or in bulk
-2. Enter your environment variables in `KEY=VALUE` format (one per line)
+    <Frame>
+      ![Select Repository](/images/enterprise/select-repo.png)
+    </Frame>
 
-<Frame>
-  ![Set Environment Variables](/images/enterprise/set-env-variables.png)
-</Frame>
+  </Step>
 
-### Step 5: Deploy Your Crew
+  <Step title="Set Environment Variables">
 
-1. Click the "Deploy" button to start the deployment process
-2. You can monitor the progress through the progress bar
-3. The first deployment typically takes around 10-15 minutes; subsequent deployments will be faster
+    Before deploying, you'll need to set up your environment variables to connect to your LLM provider or other services:
 
-<Frame>
-  ![Deploy Progress](/images/enterprise/deploy-progress.png)
-</Frame>
+    1. You can add variables individually or in bulk
+    2. Enter your environment variables in `KEY=VALUE` format (one per line)
 
-Once deployment is complete, you'll see:
-- Your crew's unique URL
-- A Bearer token to protect your crew API
-- A "Delete" button if you need to remove the deployment
+    <Frame>
+      ![Set Environment Variables](/images/enterprise/set-env-variables.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="Deploy Your Crew">
+
+    1. Click the "Deploy" button to start the deployment process
+    2. You can monitor the progress through the progress bar
+    3. The first deployment typically takes around 10-15 minutes; subsequent deployments will be faster
+
+    <Frame>
+      ![Deploy Progress](/images/enterprise/deploy-progress.png)
+    </Frame>
+
+    Once deployment is complete, you'll see:
+    - Your crew's unique URL
+    - A Bearer token to protect your crew API
+    - A "Delete" button if you need to remove the deployment
+
+  </Step>
+
+</Steps>
 
 ### Interact with Your Deployed Crew
 
@@ -193,7 +214,7 @@ From the Enterprise dashboard, you can:
 3. Enter the required inputs in the modal that appears
 4. Monitor progress as the execution moves through the pipeline
 
-## Monitoring and Analytics
+### Monitoring and Analytics
 
 The Enterprise platform provides comprehensive observability features:
 
@@ -202,7 +223,7 @@ The Enterprise platform provides comprehensive observability features:
 - **Metrics**: Token usage, execution times, and costs
 - **Timeline View**: Visual representation of task sequences
 
-## Advanced Features
+### Advanced Features
 
 The Enterprise platform also offers:
 
