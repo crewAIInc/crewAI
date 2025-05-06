@@ -54,6 +54,8 @@ class Knowledge(BaseModel):
         """
         if self.storage is None:
             raise ValueError("Storage is not initialized.")
+            
+        self._check_and_reload_sources()
 
         results = self.storage.search(
             query,
@@ -61,6 +63,14 @@ class Knowledge(BaseModel):
             score_threshold=score_threshold,
         )
         return results
+        
+    def _check_and_reload_sources(self):
+        """Check if any sources have changed and reload them if necessary."""
+        for source in self.sources:
+            if hasattr(source, 'files_have_changed') and source.files_have_changed():
+                source._record_file_mtimes()  # Update timestamps
+                source.content = source.load_content()
+                source.add()  # Reload and update storage
 
     def add_sources(self):
         try:
