@@ -27,23 +27,19 @@ Large Language Models (LLMs) are the core intelligence behind CrewAI agents. The
   </Card>
 </CardGroup>
 
-## Setting Up Your LLM
+## Setting up your LLM
 
-There are three ways to configure LLMs in CrewAI. Choose the method that best fits your workflow:
+There are different places in CrewAI code where you can specify the model to use. Once you specify the model you are using, you will need to provide the configuration (like an API key) for each of the model providers you use. See the [provider configuration examples](#provider-configuration-examples) section for your provider.
 
 <Tabs>
   <Tab title="1. Environment Variables">
-    The simplest way to get started. Set these variables in your environment:
+    The simplest way to get started. Set the model in your environment directly, through an `.env` file or in your app code. If you used `crewai create` to bootstrap your project, it will be set already.
 
-    ```bash
-    # Required: Your API key for authentication
-    OPENAI_API_KEY=<your-api-key>
+    ```bash .env
+    MODEL=model-id  # e.g. gpt-4o, gemini-2.0-flash, claude-3-sonnet-...
 
-    # Optional: Default model selection
-    OPENAI_MODEL_NAME=gpt-4o-mini  # Default if not set
-
-    # Optional: Organization ID (if applicable)
-    OPENAI_ORGANIZATION_ID=<your-org-id>
+    # Be sure to set your API keys here too. See the Provider
+    # section below.
     ```
 
     <Warning>
@@ -53,13 +49,13 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
   <Tab title="2. YAML Configuration">
     Create a YAML file to define your agent configurations. This method is great for version control and team collaboration:
 
-    ```yaml
+    ```yaml agents.yaml {6}
     researcher:
         role: Research Specialist
         goal: Conduct comprehensive research and analysis
         backstory: A dedicated research professional with years of experience
         verbose: true
-        llm: openai/gpt-4o-mini # your model here
+        llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
         # (see provider configuration examples below for more)
     ```
 
@@ -74,23 +70,23 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
   <Tab title="3. Direct Code">
     For maximum flexibility, configure LLMs directly in your Python code:
 
-    ```python
+    ```python {4,8}
     from crewai import LLM
 
     # Basic configuration
-    llm = LLM(model="gpt-4")
+    llm = LLM(model="model-id-here")  # gpt-4o, gemini-2.0-flash, anthropic/claude...
 
     # Advanced configuration with detailed parameters
     llm = LLM(
-        model="gpt-4o-mini",
+        model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
         temperature=0.7,        # Higher for more creative outputs
-        timeout=120,           # Seconds to wait for response
-        max_tokens=4000,       # Maximum length of response
-        top_p=0.9,            # Nucleus sampling parameter
-        frequency_penalty=0.1, # Reduce repetition
-        presence_penalty=0.1,  # Encourage topic diversity
+        timeout=120,            # Seconds to wait for response
+        max_tokens=4000,        # Maximum length of response
+        top_p=0.9,              # Nucleus sampling parameter
+        frequency_penalty=0.1 , # Reduce repetition
+        presence_penalty=0.1,   # Encourage topic diversity
         response_format={"type": "json"},  # For structured outputs
-        seed=42               # For reproducible results
+        seed=42                 # For reproducible results
     )
     ```
 
@@ -109,7 +105,6 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
 </Tabs>
 
 ## Provider Configuration Examples
-
 
 CrewAI supports a multitude of LLM providers, each offering unique features, authentication methods, and model capabilities.
 In this section, you'll find detailed examples that help you select, configure, and optimize the LLM that best fits your project's needs.
@@ -407,19 +402,19 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 
   <Accordion title="Local NVIDIA NIM Deployed using WSL2">
-    
-    NVIDIA NIM enables you to run powerful LLMs locally on your Windows machine using WSL2 (Windows Subsystem for Linux). 
-    This approach allows you to leverage your NVIDIA GPU for private, secure, and cost-effective AI inference without relying on cloud services. 
+
+    NVIDIA NIM enables you to run powerful LLMs locally on your Windows machine using WSL2 (Windows Subsystem for Linux).
+    This approach allows you to leverage your NVIDIA GPU for private, secure, and cost-effective AI inference without relying on cloud services.
     Perfect for development, testing, or production scenarios where data privacy or offline capabilities are required.
-    
+
     Here is a step-by-step guide to setting up a local NVIDIA NIM model:
-    
+
     1. Follow installation instructions from [NVIDIA Website](https://docs.nvidia.com/nim/wsl2/latest/getting-started.html)
 
     2. Install the local model. For Llama 3.1-8b follow [instructions](https://build.nvidia.com/meta/llama-3_1-8b-instruct/deploy)
 
     3. Configure your crewai local models:
-  
+
     ```python Code
     from crewai.llm import LLM
 
@@ -441,7 +436,7 @@ In this section, you'll find detailed examples that help you select, configure, 
                 config=self.agents_config['researcher'], # type: ignore[index]
                 llm=local_nvidia_nim_llm
             )
-        
+
         # ...
     ```
   </Accordion>
@@ -637,19 +632,19 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
     When streaming is enabled, responses are delivered in chunks as they're generated, creating a more responsive user experience.
   </Tab>
-  
+
   <Tab title="Event Handling">
     CrewAI emits events for each chunk received during streaming:
-    
+
     ```python
     from crewai import LLM
     from crewai.utilities.events import EventHandler, LLMStreamChunkEvent
-    
+
     class MyEventHandler(EventHandler):
         def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
             # Process each chunk as it arrives
             print(f"Received chunk: {event.chunk}")
-    
+
     # Register the event handler
     from crewai.utilities.events import crewai_event_bus
     crewai_event_bus.register_handler(MyEventHandler())
@@ -785,7 +780,7 @@ Learn how to get the most out of your LLM configuration:
     <Tip>
       Use larger context models for extensive tasks
     </Tip>
-    
+
     ```python
     # Large context model
     llm = LLM(model="openai/gpt-4o")  # 128K tokens
