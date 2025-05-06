@@ -16,7 +16,7 @@ interactions:
       answer MUST contain all the information requested in the following format: {\n  \"summary\":
       str,\n  \"confidence\": int\n}\n\nIMPORTANT: Ensure the final output does not
       include any code block markers like ```json or ```python."}, {"role": "user",
-      "content": "What is the population of Tokyo? Return your strucutred output in
+      "content": "What is the population of Tokyo? Return your structured output in
       JSON format with the following fields: summary, confidence"}], "model": "gpt-4o-mini",
       "stop": []}'
     headers:
