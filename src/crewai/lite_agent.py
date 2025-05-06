@@ -13,6 +13,7 @@ from crewai.agents.parser import (
     AgentFinish,
     OutputParserException,
 )
+from crewai.flow.flow_trackable import FlowTrackable
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -80,7 +81,7 @@ class LiteAgentOutput(BaseModel):
         return self.raw
 
 
-class LiteAgent(BaseModel):
+class LiteAgent(FlowTrackable, BaseModel):
     """
     A lightweight agent that can process messages and use tools.
 
@@ -162,7 +163,7 @@ class LiteAgent(BaseModel):
     _messages: List[Dict[str, str]] = PrivateAttr(default_factory=list)
     _iterations: int = PrivateAttr(default=0)
     _printer: Printer = PrivateAttr(default_factory=Printer)
-    
+
     @model_validator(mode="after")
     def setup_llm(self):
         """Set up the LLM and other components after initialization."""
