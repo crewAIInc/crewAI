@@ -1,5 +1,4 @@
 import os
-import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -30,7 +29,6 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     """
 
     _logger: Logger = Logger(verbose=True)
-    _lock = threading.Lock()  # Thread-safe lock for file operations
     
     file_path: Optional[Union[Path, List[Path], str, List[str]]] = Field(
         default=None,
@@ -161,35 +159,32 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         previously recorded timestamps to detect changes. When a file has been modified,
         it logs the change and returns True to trigger a reload.
         
-        Thread-safe: Uses a lock to prevent concurrent modifications.
-        
         Returns:
             bool: True if any file has been modified, False otherwise.
         """
-        with self._lock:
-            for path in self.safe_file_paths:
-                try:
-                    if not path.exists():
-                        self._logger.log("warning", f"File {path} no longer exists.")
-                        continue
-                        
-                    if not path.is_file():
-                        self._logger.log("warning", f"Path {path} is not a file.")
-                        continue
-                        
-                    if not os.access(path, os.R_OK):
-                        self._logger.log("warning", f"File {path} is not readable.")
-                        continue
-                        
-                    current_mtime = path.stat().st_mtime
-                    if path not in self._file_mtimes or current_mtime > self._file_mtimes[path]:
-                        self._logger.log("info", f"File {path} has been modified. Reloading data.")
-                        return True
-                except PermissionError as e:
-                    self._logger.log("error", f"Permission error when checking file {path}: {str(e)}")
-                except IOError as e:
-                    self._logger.log("error", f"IO error when checking file {path}: {str(e)}")
-                except Exception as e:
-                    self._logger.log("error", f"Unexpected error when checking file {path}: {str(e)}")
+        for path in self.safe_file_paths:
+            try:
+                if not path.exists():
+                    self._logger.log("warning", f"File {path} no longer exists.")
+                    continue
                     
-            return False
+                if not path.is_file():
+                    self._logger.log("warning", f"Path {path} is not a file.")
+                    continue
+                    
+                if not os.access(path, os.R_OK):
+                    self._logger.log("warning", f"File {path} is not readable.")
+                    continue
+                    
+                current_mtime = path.stat().st_mtime
+                if path not in self._file_mtimes or current_mtime > self._file_mtimes[path]:
+                    self._logger.log("info", f"File {path} has been modified. Reloading data.")
+                    return True
+            except PermissionError as e:
+                self._logger.log("error", f"Permission error when checking file {path}: {str(e)}")
+            except IOError as e:
+                self._logger.log("error", f"IO error when checking file {path}: {str(e)}")
+            except Exception as e:
+                self._logger.log("error", f"Unexpected error when checking file {path}: {str(e)}")
+                
+        return False
