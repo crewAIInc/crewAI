@@ -1353,7 +1353,7 @@ class Crew(FlowTrackable, BaseModel):
 
         Args:
             command_type: Type of memory to reset.
-                Valid options: 'long', 'short', 'entity', 'knowledge',
+                Valid options: 'long', 'short', 'entity', 'knowledge', 'agent_knowledge'
                 'kickoff_outputs', or 'all'
 
         Raises:
@@ -1366,6 +1366,7 @@ class Crew(FlowTrackable, BaseModel):
                 "short",
                 "entity",
                 "knowledge",
+                "agent_knowledge",
                 "kickoff_outputs",
                 "all",
                 "external",
@@ -1390,6 +1391,7 @@ class Crew(FlowTrackable, BaseModel):
 
     def _reset_all_memories(self) -> None:
         """Reset all available memory systems."""
+
         memory_systems = [
             ("short term", getattr(self, "_short_term_memory", None)),
             ("entity", getattr(self, "_entity_memory", None)),
@@ -1397,6 +1399,7 @@ class Crew(FlowTrackable, BaseModel):
             ("long term", getattr(self, "_long_term_memory", None)),
             ("task output", getattr(self, "_task_output_handler", None)),
             ("knowledge", getattr(self, "knowledge", None)),
+            ("agent knowledge", getattr(self, "knowledge_sources", None)),
         ]
 
         for name, system in memory_systems:
@@ -1447,3 +1450,10 @@ class Crew(FlowTrackable, BaseModel):
             raise RuntimeError(
                 f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
             ) from e
+
+    def _reset_agent_knowledge(self) -> None:
+        """Reset agent knowledge storage."""
+        for agent in self.agents:
+            knowledge_storage = getattr(agent, "knowledge", None)
+            if knowledge_storage is not None:
+                knowledge_storage.reset()
