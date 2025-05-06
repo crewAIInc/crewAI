@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.utilities.logger import Logger
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
@@ -12,10 +13,19 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 class Knowledge(BaseModel):
     """
     Knowledge is a collection of sources and setup for the vector store to save and query relevant context.
+    
+    This class manages knowledge sources and provides methods to query them for relevant information.
+    It automatically detects and reloads file-based knowledge sources when their underlying files change.
+    
     Args:
         sources: List[BaseKnowledgeSource] = Field(default_factory=list)
+            The knowledge sources to use for querying.
         storage: Optional[KnowledgeStorage] = Field(default=None)
+            The storage backend for knowledge embeddings.
         embedder: Optional[Dict[str, Any]] = None
+            Configuration for the embedding model.
+        collection_name: Optional[str] = None
+            Name of the collection to use for storage.
     """
 
     sources: List[BaseKnowledgeSource] = Field(default_factory=list)
@@ -23,6 +33,7 @@ class Knowledge(BaseModel):
     storage: Optional[KnowledgeStorage] = Field(default=None)
     embedder: Optional[Dict[str, Any]] = None
     collection_name: Optional[str] = None
+    _logger: Logger = Logger(verbose=True)
 
     def __init__(
         self,
@@ -65,12 +76,30 @@ class Knowledge(BaseModel):
         return results
         
     def _check_and_reload_sources(self):
-        """Check if any sources have changed and reload them if necessary."""
+        """
+        Check if any file-based knowledge sources have changed and reload them if necessary.
+        
+        This method detects modifications to source files by comparing their modification timestamps
+        with previously recorded values. When changes are detected, the source is reloaded and
+        the storage is updated with the new content.
+        
+        Handles specific exceptions for file operations to provide better error reporting.
+        """
         for source in self.sources:
-            if hasattr(source, 'files_have_changed') and source.files_have_changed():
-                source._record_file_mtimes()  # Update timestamps
-                source.content = source.load_content()
-                source.add()  # Reload and update storage
+            try:
+                if hasattr(source, 'files_have_changed') and source.files_have_changed():
+                    self._logger.log("info", f"Reloading modified source: {source.__class__.__name__}")
+                    source._record_file_mtimes()  # Update timestamps
+                    source.content = source.load_content()
+                    source.add()  # Reload and update storage
+            except FileNotFoundError as e:
+                self._logger.log("error", f"File not found when checking for updates: {str(e)}")
+            except PermissionError as e:
+                self._logger.log("error", f"Permission error when checking for updates: {str(e)}")
+            except IOError as e:
+                self._logger.log("error", f"IO error when checking for updates: {str(e)}")
+            except Exception as e:
+                self._logger.log("error", f"Unexpected error when checking for updates: {str(e)}")
 
     def add_sources(self):
         try:

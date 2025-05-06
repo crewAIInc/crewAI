@@ -20,7 +20,7 @@ def test_csv_knowledge_source_updates(mock_add, mock_search, tmpdir):
         [{"context": "name,age,city\nJohn,30,Boston\nAlice,25,San Francisco\nBob,28,Chicago\nEve,22,Miami"}]
     ]
     
-    csv_path = tmpdir / "test_updates.csv"
+    csv_path = str(tmpdir / "test_updates.csv")
     
     initial_csv_content = [
         ["name", "age", "city"],
@@ -33,7 +33,7 @@ def test_csv_knowledge_source_updates(mock_add, mock_search, tmpdir):
         for row in initial_csv_content:
             f.write(",".join(row) + "\n")
     
-    csv_source = CSVKnowledgeSource(file_paths=[csv_path])
+    csv_source = CSVKnowledgeSource(file_paths=csv_path)
     
     original_files_have_changed = csv_source.files_have_changed
     files_changed_called = [False]
