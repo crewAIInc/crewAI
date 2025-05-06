@@ -611,25 +611,16 @@ class Agent(BaseAgent):
         query = self.i18n.slice("knowledge_search_query").format(
             task_prompt=task_prompt
         )
-        system_prompt = self.i18n.slice("knowledge_search_query_system_prompt")
+        rewriter_prompt = self.i18n.slice("knowledge_search_query_system_prompt")
         if isinstance(self.llm, BaseLLM):
             try:
-                query_converted = self.llm.call(
+                rewritten_query = self.llm.call(
                     [
                         {
                             "role": "system",
-                            "content": system_prompt,
+                            "content": rewriter_prompt,
                         },
                         {"role": "user", "content": query},
-                    ]
-                )
-                query_rewritten = self.llm.call(
-                    [
-                        {
-                            "role": "system",
-                            "content": system_prompt,
-                        },
-                        {"role": "user", "content": query_converted},
                     ]
                 )
                 crewai_event_bus.emit(
@@ -639,7 +630,7 @@ class Agent(BaseAgent):
                         agent=self,
                     ),
                 )
-                return query_rewritten
+                return rewritten_query
             except Exception as e:
                 crewai_event_bus.emit(
                     self,
