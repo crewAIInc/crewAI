@@ -1457,4 +1457,4 @@ class Crew(FlowTrackable, BaseModel):
         for agent in self.agents:
             if (knowledge_storage := getattr(agent, "knowledge", None)) is not None:
                 knowledge_storage.reset()
-                
+#
