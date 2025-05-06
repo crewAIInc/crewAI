@@ -18,6 +18,7 @@ class DelegateWorkTool(BaseAgentTool):
 
     name: str = "Delegate work to coworker"
     args_schema: type[BaseModel] = DelegateWorkToolSchema
+    result_as_answer: bool = True
 
     def _run(
         self,
