@@ -4383,3 +4383,19 @@ def test_sets_parent_flow_when_inside_flow(researcher, writer):
     flow = MyFlow()
     result = flow.kickoff()
     assert result.parent_flow is flow
+
+
+def test_reset_agent_knowledge(researcher,writer):
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+    )
+
+    with patch.object(Crew,'_reset_agent_knowledge') as mock_reset_agent_knowledge:
+        crew.reset_memories(command_type='agent_knowledge')
+        mock_reset_agent_knowledge.assert_called_once()
+    
