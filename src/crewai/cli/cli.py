@@ -154,7 +154,8 @@ def reset_memories(
     Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs, knowledge, agent_knowledge). This will delete all the data saved.
     """
     try:
-        if not any([long, short, entities, kickoff_outputs, knowledge, agent_knowledge, all]):
+        memory_types = [long, short, entities, knowledge, agent_knowledge, kickoff_outputs, all]
+        if not any(memory_types):
             click.echo(
                 "Please specify at least one memory type to reset using the appropriate flags."
             )

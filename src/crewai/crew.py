@@ -1405,10 +1405,7 @@ class Crew(FlowTrackable, BaseModel):
         for name, system in memory_systems:
             if system is not None:
                 try:
-                    if name == "agent knowledge":
-                        self._reset_agent_knowledge()
-                    else:
-                        system.reset()
+                    self._reset_agent_knowledge() if name == "agent knowledge" else system.reset()
                     self._logger.log(
                         "info",
                         f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
@@ -1445,10 +1442,7 @@ class Crew(FlowTrackable, BaseModel):
             raise RuntimeError(f"{name} memory system is not initialized")
 
         try:
-            if memory_type == "agent_knowledge":
-                self._reset_agent_knowledge()
-            else:
-                memory_system.reset()
+            self._reset_agent_knowledge() if memory_type == "agent_knowledge" else memory_system.reset()
             self._logger.log(
                 "info",
                 f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
