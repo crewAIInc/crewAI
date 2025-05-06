@@ -1,7 +1,7 @@
 import os
+import threading
 from abc import ABC, abstractmethod
 from pathlib import Path
-from threading import RLock
 from typing import Dict, List, Optional, Union
 
 from pydantic import Field, field_validator
@@ -30,7 +30,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     """
 
     _logger: Logger = Logger(verbose=True)
-    _lock = RLock()  # Thread-safe lock for file operations
+    _lock = threading.Lock()  # Thread-safe lock for file operations
     
     file_path: Optional[Union[Path, List[Path], str, List[str]]] = Field(
         default=None,
