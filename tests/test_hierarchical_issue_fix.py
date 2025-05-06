@@ -1,6 +1,7 @@
 """Test to ensure hierarchical process mode returns complete final answers."""
 
 import pytest
+
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.process import Process
@@ -9,7 +10,14 @@ from crewai.task import Task
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_process_delegation_result():
-    """Test that the hierarchical process returns the delegated agent's result, not just the manager's delegation thought."""
+    """Tests hierarchical process delegation result handling.
+    
+    Ensures that:
+    1. The output is derived from the delegated agent's actual work.
+    2. The response does not contain delegation-related metadata.
+    3. The content meets minimum length requirements.
+    4. Expected topic-related keywords are present in the output.
+    """
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -40,6 +48,7 @@ def test_hierarchical_process_delegation_result():
 
     assert "idea" in result.raw.lower() or "article" in result.raw.lower()
     assert len(result.raw) > 100  # Ensure we have substantial content
+    assert result.raw.count('\n') >= 6  # At least 3 ideas with paragraphs
     
     assert "delegate" not in result.raw.lower()
     assert "delegating" not in result.raw.lower()
