@@ -1399,13 +1399,16 @@ class Crew(FlowTrackable, BaseModel):
             ("long term", getattr(self, "_long_term_memory", None)),
             ("task output", getattr(self, "_task_output_handler", None)),
             ("knowledge", getattr(self, "knowledge", None)),
-            ("agent knowledge", getattr(self, "knowledge_sources", None)),
+            ("agent knowledge", self)
         ]
 
         for name, system in memory_systems:
             if system is not None:
                 try:
-                    system.reset()
+                    if name == "agent knowledge":
+                        self._reset_agent_knowledge()
+                    else:
+                        system.reset()
                     self._logger.log(
                         "info",
                         f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
@@ -1434,6 +1437,7 @@ class Crew(FlowTrackable, BaseModel):
                 "task output",
             ),
             "external": (getattr(self, "_external_memory", None), "external"),
+            "agent_knowledge": (self, "agent knowledge")
         }
 
         memory_system, name = reset_functions[memory_type]
@@ -1441,7 +1445,10 @@ class Crew(FlowTrackable, BaseModel):
             raise RuntimeError(f"{name} memory system is not initialized")
 
         try:
-            memory_system.reset()
+            if memory_type == "agent_knowledge":
+                self._reset_agent_knowledge()
+            else:
+                memory_system.reset()
             self._logger.log(
                 "info",
                 f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
