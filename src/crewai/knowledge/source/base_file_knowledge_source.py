@@ -30,7 +30,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     """
 
     _logger: Logger = Logger(verbose=True)
-    _lock: RLock = RLock()  # Thread-safe lock for file operations
+    _lock = RLock()  # Thread-safe lock for file operations
     
     file_path: Optional[Union[Path, List[Path], str, List[str]]] = Field(
         default=None,
