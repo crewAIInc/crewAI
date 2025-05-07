@@ -6,7 +6,17 @@ import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from pydantic import (
     UUID4,
@@ -24,6 +34,7 @@ from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
+from crewai.flow.flow_trackable import FlowTrackable
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM, BaseLLM
@@ -69,7 +80,7 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 
-class Crew(BaseModel):
+class Crew(FlowTrackable, BaseModel):
     """
     Represents a group of agents, defining how they should collaborate and the tasks they should perform.
 
@@ -335,6 +346,7 @@ class Crew(BaseModel):
                         embedder=self.embedder,
                         collection_name="crew",
                     )
+                    self.knowledge.add_sources()
 
             except Exception as e:
                 self._logger.log(
@@ -1136,9 +1148,13 @@ class Crew(BaseModel):
         result = self._execute_tasks(self.tasks, start_index, True)
         return result
 
-    def query_knowledge(self, query: List[str]) -> Union[List[Dict[str, Any]], None]:
+    def query_knowledge(
+        self, query: List[str], results_limit: int = 3, score_threshold: float = 0.35
+    ) -> Union[List[Dict[str, Any]], None]:
         if self.knowledge:
-            return self.knowledge.query(query)
+            return self.knowledge.query(
+                query, results_limit=results_limit, score_threshold=score_threshold
+            )
         return None
 
     def fetch_inputs(self) -> Set[str]:
@@ -1220,16 +1236,19 @@ class Crew(BaseModel):
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
         if self.short_term_memory:
-            copied_data["short_term_memory"] = self.short_term_memory.model_copy(deep=True)
+            copied_data["short_term_memory"] = self.short_term_memory.model_copy(
+                deep=True
+            )
         if self.long_term_memory:
-            copied_data["long_term_memory"] = self.long_term_memory.model_copy(deep=True)
+            copied_data["long_term_memory"] = self.long_term_memory.model_copy(
+                deep=True
+            )
         if self.entity_memory:
             copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
         if self.external_memory:
             copied_data["external_memory"] = self.external_memory.model_copy(deep=True)
         if self.user_memory:
             copied_data["user_memory"] = self.user_memory.model_copy(deep=True)
-
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
@@ -1364,8 +1383,6 @@ class Crew(BaseModel):
             else:
                 self._reset_specific_memory(command_type)
 
-            self._logger.log("info", f"{command_type} memory has been reset")
-
         except Exception as e:
             error_msg = f"Failed to reset {command_type} memory: {str(e)}"
             self._logger.log("error", error_msg)
@@ -1386,8 +1403,14 @@ class Crew(BaseModel):
             if system is not None:
                 try:
                     system.reset()
+                    self._logger.log(
+                        "info",
+                        f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
+                    )
                 except Exception as e:
-                    raise RuntimeError(f"Failed to reset {name} memory") from e
+                    raise RuntimeError(
+                        f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
+                    ) from e
 
     def _reset_specific_memory(self, memory_type: str) -> None:
         """Reset a specific memory system.
@@ -1399,12 +1422,15 @@ class Crew(BaseModel):
             RuntimeError: If the specified memory system fails to reset
         """
         reset_functions = {
-            "long": (self._long_term_memory, "long term"),
-            "short": (self._short_term_memory, "short term"),
-            "entity": (self._entity_memory, "entity"),
-            "knowledge": (self.knowledge, "knowledge"),
-            "kickoff_outputs": (self._task_output_handler, "task output"),
-            "external": (self._external_memory, "external"),
+            "long": (getattr(self, "_long_term_memory", None), "long term"),
+            "short": (getattr(self, "_short_term_memory", None), "short term"),
+            "entity": (getattr(self, "_entity_memory", None), "entity"),
+            "knowledge": (getattr(self, "knowledge", None), "knowledge"),
+            "kickoff_outputs": (
+                getattr(self, "_task_output_handler", None),
+                "task output",
+            ),
+            "external": (getattr(self, "_external_memory", None), "external"),
         }
 
         memory_system, name = reset_functions[memory_type]
@@ -1413,5 +1439,11 @@ class Crew(BaseModel):
 
         try:
             memory_system.reset()
+            self._logger.log(
+                "info",
+                f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
+            )
         except Exception as e:
-            raise RuntimeError(f"Failed to reset {name} memory") from e
+            raise RuntimeError(
+                f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
+            ) from e

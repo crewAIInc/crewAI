@@ -19,6 +19,7 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
@@ -62,8 +63,6 @@ class BaseAgent(ABC, BaseModel):
             Abstract method to execute a task.
         create_agent_executor(tools=None) -> None:
             Abstract method to create an agent executor.
-        _parse_tools(tools: List[BaseTool]) -> List[Any]:
-            Abstract method to parse tools.
         get_delegation_tools(agents: List["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
         get_output_converter(llm, model, instructions):
@@ -154,6 +153,13 @@ class BaseAgent(ABC, BaseModel):
     callbacks: List[Callable] = Field(
         default=[], description="Callbacks to be used for the agent"
     )
+    adapted_agent: bool = Field(
+        default=False, description="Whether the agent is adapted"
+    )
+    knowledge_config: Optional[KnowledgeConfig] = Field(
+        default=None,
+        description="Knowledge configuration for the agent such as limits and threshold",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -170,15 +176,15 @@ class BaseAgent(ABC, BaseModel):
         tool meets these criteria, it is processed and added to the list of
         tools. Otherwise, a ValueError is raised.
         """
+        if not tools:
+            return []
+
         processed_tools = []
+        required_attrs = ["name", "func", "description"]
         for tool in tools:
             if isinstance(tool, BaseTool):
                 processed_tools.append(tool)
-            elif (
-                hasattr(tool, "name")
-                and hasattr(tool, "func")
-                and hasattr(tool, "description")
-            ):
+            elif all(hasattr(tool, attr) for attr in required_attrs):
                 # Tool has the required attributes, create a Tool instance
                 processed_tools.append(Tool.from_langchain(tool))
             else:
@@ -258,13 +264,6 @@ class BaseAgent(ABC, BaseModel):
     @abstractmethod
     def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
-        pass
-
-    @abstractmethod
-    def get_output_converter(
-        self, llm: Any, text: str, model: type[BaseModel] | None, instructions: str
-    ) -> Converter:
-        """Get the converter class for the agent to create json/pydantic outputs."""
         pass
 
     def copy(self: T) -> T:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"

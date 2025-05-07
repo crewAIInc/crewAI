@@ -288,26 +288,20 @@ To add a guardrail to a task, provide a validation function through the `guardra
 
 ```python Code
 from typing import Tuple, Union, Dict, Any
+from crewai import TaskOutput
 
-def validate_blog_content(result: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+def validate_blog_content(result: TaskOutput) -> Tuple[bool, Any]:
     """Validate blog content meets requirements."""
     try:
         # Check word count
         word_count = len(result.split())
         if word_count > 200:
-            return (False, {
-                "error": "Blog content exceeds 200 words",
-                "code": "WORD_COUNT_ERROR",
-                "context": {"word_count": word_count}
-            })
+            return (False, "Blog content exceeds 200 words")
 
         # Additional validation logic here
         return (True, result.strip())
     except Exception as e:
-        return (False, {
-            "error": "Unexpected error during validation",
-            "code": "SYSTEM_ERROR"
-        })
+        return (False, "Unexpected error during validation")
 
 blog_task = Task(
     description="Write a blog post about AI",
@@ -325,29 +319,28 @@ blog_task = Task(
    - Type hints are recommended but optional
 
 2. **Return Values**:
-   - Success: Return `(True, validated_result)`
-   - Failure: Return `(False, error_details)`
+   - On success: it returns a tuple of `(bool, Any)`. For example: `(True, validated_result)` 
+   - On Failure: it returns a tuple of `(bool, str)`. For example: `(False, "Error message explain the failure")`
+
+### LLMGuardrail
+
+The `LLMGuardrail` class offers a robust mechanism for validating task outputs.
 
 ### Error Handling Best Practices
 
 1. **Structured Error Responses**:
 ```python Code
-def validate_with_context(result: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+from crewai import TaskOutput
+
+def validate_with_context(result: TaskOutput) -> Tuple[bool, Any]:
     try:
         # Main validation logic
         validated_data = perform_validation(result)
         return (True, validated_data)
     except ValidationError as e:
-        return (False, {
-            "error": str(e),
-            "code": "VALIDATION_ERROR",
-            "context": {"input": result}
-        })
+        return (False, f"VALIDATION_ERROR: {str(e)}")
     except Exception as e:
-        return (False, {
-            "error": "Unexpected error",
-            "code": "SYSTEM_ERROR"
-        })
+        return (False, str(e))
 ```
 
 2. **Error Categories**:
@@ -358,28 +351,25 @@ def validate_with_context(result: str) -> Tuple[bool, Union[Dict[str, Any], str]
 3. **Validation Chain**:
 ```python Code
 from typing import Any, Dict, List, Tuple, Union
+from crewai import TaskOutput
 
-def complex_validation(result: str) -> Tuple[bool, Union[str, Dict[str, Any]]]:
+def complex_validation(result: TaskOutput) -> Tuple[bool, Any]:
     """Chain multiple validation steps."""
     # Step 1: Basic validation
     if not result:
-        return (False, {"error": "Empty result", "code": "EMPTY_INPUT"})
+        return (False, "Empty result")
 
     # Step 2: Content validation
     try:
         validated = validate_content(result)
         if not validated:
-            return (False, {"error": "Invalid content", "code": "CONTENT_ERROR"})
+            return (False, "Invalid content")
 
         # Step 3: Format validation
         formatted = format_output(validated)
         return (True, formatted)
     except Exception as e:
-        return (False, {
-            "error": str(e),
-            "code": "VALIDATION_ERROR",
-            "context": {"step": "content_validation"}
-        })
+        return (False, str(e))
 ```
 
 ### Handling Guardrail Results
@@ -394,19 +384,16 @@ When a guardrail returns `(False, error)`:
 Example with retry handling:
 ```python Code
 from typing import Optional, Tuple, Union
+from crewai import TaskOutput, Task
 
-def validate_json_output(result: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+def validate_json_output(result: TaskOutput) -> Tuple[bool, Any]:
     """Validate and parse JSON output."""
     try:
         # Try to parse as JSON
         data = json.loads(result)
         return (True, data)
     except json.JSONDecodeError as e:
-        return (False, {
-            "error": "Invalid JSON format",
-            "code": "JSON_ERROR",
-            "context": {"line": e.lineno, "column": e.colno}
-        })
+        return (False, "Invalid JSON format")
 
 task = Task(
     description="Generate a JSON report",
@@ -767,6 +754,8 @@ Task guardrails provide a powerful way to validate, transform, or filter task ou
 
 ### Basic Usage
 
+#### Define your own logic to validate
+
 ```python Code
 from typing import Tuple, Union
 from crewai import Task
@@ -783,6 +772,57 @@ task = Task(
     description="Generate JSON data",
     expected_output="Valid JSON object",
     guardrail=validate_json_output
+)
+```
+
+#### Leverage a no-code approach for validation
+
+```python Code
+from crewai import Task
+
+task = Task(
+    description="Generate JSON data",
+    expected_output="Valid JSON object",
+    guardrail="Ensure the response is a valid JSON object"
+)
+```
+
+#### Using YAML
+
+```yaml
+research_task:
+  ...
+  guardrail: make sure each bullet contains a minimum of 100 words
+  ...
+```
+
+```python Code
+@CrewBase
+class InternalCrew:
+    agents_config = "config/agents.yaml"
+    tasks_config = "config/tasks.yaml"
+
+    ...
+    @task
+    def research_task(self):
+        return Task(config=self.tasks_config["research_task"])  # type: ignore[index]
+    ...
+```
+
+
+#### Use custom models for code generation
+
+```python Code
+from crewai import Task
+from crewai.llm import LLM
+
+task = Task(
+    description="Generate JSON data",
+    expected_output="Valid JSON object",
+    guardrail=LLMGuardrail(
+        description="Ensure the response is a valid JSON object",
+        llm=LLM(model="gpt-4o-mini"),
+    )
 )
 ```
 

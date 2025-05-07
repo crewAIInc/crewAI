@@ -17,6 +17,7 @@ from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.flow import Flow, listen, start
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
@@ -42,34 +43,38 @@ from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
-# Skip streaming tests when running in CI/CD environments
-skip_streaming_in_ci = pytest.mark.skipif(
-    os.getenv("CI") is not None, reason="Skipping streaming tests in CI/CD environments"
-)
 
-ceo = Agent(
-    role="CEO",
-    goal="Make sure the writers in your company produce amazing content.",
-    backstory="You're an long time CEO of a content creation agency with a Senior Writer on the team. You're now working on a new project and want to make sure the content produced is amazing.",
-    allow_delegation=True,
-)
-
-researcher = Agent(
-    role="Researcher",
-    goal="Make the best research and analysis on content about AI and AI agents",
-    backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
-    allow_delegation=False,
-)
-
-writer = Agent(
-    role="Senior Writer",
-    goal="Write the best content about AI and AI agents.",
-    backstory="You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
-    allow_delegation=False,
-)
+@pytest.fixture
+def ceo():
+    return Agent(
+        role="CEO",
+        goal="Make sure the writers in your company produce amazing content.",
+        backstory="You're an long time CEO of a content creation agency with a Senior Writer on the team. You're now working on a new project and want to make sure the content produced is amazing.",
+        allow_delegation=True,
+    )
 
 
-def test_crew_with_only_conditional_tasks_raises_error():
+@pytest.fixture
+def researcher():
+    return Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+
+@pytest.fixture
+def writer():
+    return Agent(
+        role="Senior Writer",
+        goal="Write the best content about AI and AI agents.",
+        backstory="You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
+        allow_delegation=False,
+    )
+
+
+def test_crew_with_only_conditional_tasks_raises_error(researcher):
     """Test that creating a crew with only conditional tasks raises an error."""
 
     def condition_func(task_output: TaskOutput) -> bool:
@@ -151,7 +156,9 @@ def test_crew_config_conditional_requirement():
     ]
 
 
-def test_async_task_cannot_include_sequential_async_tasks_in_context():
+def test_async_task_cannot_include_sequential_async_tasks_in_context(
+    researcher, writer
+):
     task1 = Task(
         description="Task 1",
         async_execution=True,
@@ -199,7 +206,7 @@ def test_async_task_cannot_include_sequential_async_tasks_in_context():
         pytest.fail("Unexpected ValidationError raised")
 
 
-def test_context_no_future_tasks():
+def test_context_no_future_tasks(researcher, writer):
     task2 = Task(
         description="Task 2",
         expected_output="output",
@@ -263,7 +270,7 @@ def test_crew_config_with_wrong_keys():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_creation():
+def test_crew_creation(researcher, writer):
     tasks = [
         Task(
             description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
@@ -295,7 +302,7 @@ def test_crew_creation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_sync_task_execution():
+def test_sync_task_execution(researcher, writer):
     from unittest.mock import patch
 
     tasks = [
@@ -336,7 +343,7 @@ def test_sync_task_execution():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_process():
+def test_hierarchical_process(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -357,7 +364,7 @@ def test_hierarchical_process():
     )
 
 
-def test_manager_llm_requirement_for_hierarchical_process():
+def test_manager_llm_requirement_for_hierarchical_process(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -372,7 +379,7 @@ def test_manager_llm_requirement_for_hierarchical_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_manager_agent_delegating_to_assigned_task_agent():
+def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
     """
     Test that the manager agent delegates to the assigned task agent.
     """
@@ -424,7 +431,7 @@ def test_manager_agent_delegating_to_assigned_task_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_manager_agent_delegating_to_all_agents():
+def test_manager_agent_delegating_to_all_agents(researcher, writer):
     """
     Test that the manager agent delegates to all agents when none are specified.
     """
@@ -534,7 +541,7 @@ def test_manager_agent_delegates_with_varied_role_cases():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_with_delegating_agents():
+def test_crew_with_delegating_agents(ceo, writer):
     tasks = [
         Task(
             description="Produce and amazing 1 paragraph draft of an article about AI Agents.",
@@ -558,7 +565,7 @@ def test_crew_with_delegating_agents():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_with_delegating_agents_should_not_override_task_tools():
+def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer):
     from typing import Type
 
     from pydantic import BaseModel, Field
@@ -620,7 +627,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_with_delegating_agents_should_not_override_agent_tools():
+def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer):
     from typing import Type
 
     from pydantic import BaseModel, Field
@@ -684,7 +691,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_tools_override_agent_tools():
+def test_task_tools_override_agent_tools(researcher):
     from typing import Type
 
     from pydantic import BaseModel, Field
@@ -739,7 +746,7 @@ def test_task_tools_override_agent_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_tools_override_agent_tools_with_allow_delegation():
+def test_task_tools_override_agent_tools_with_allow_delegation(researcher, writer):
     """
     Test that task tools override agent tools while preserving delegation tools when allow_delegation=True
     """
@@ -822,7 +829,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_verbose_output(capsys):
+def test_crew_verbose_output(researcher, writer, capsys):
     tasks = [
         Task(
             description="Research AI advancements.",
@@ -882,7 +889,7 @@ def test_crew_verbose_output(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_cache_hitting_between_agents():
+def test_cache_hitting_between_agents(researcher, writer, ceo):
     from unittest.mock import call, patch
 
     from crewai.tools import tool
@@ -963,7 +970,6 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
-@skip_streaming_in_ci
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_kickoff_usage_metrics():
     inputs = [
@@ -999,7 +1005,6 @@ def test_crew_kickoff_usage_metrics():
         assert result.token_usage.cached_prompt_tokens == 0
 
 
-@skip_streaming_in_ci
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_kickoff_streaming_usage_metrics():
     inputs = [
@@ -1057,7 +1062,7 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_sequential_async_task_execution_completion():
+def test_sequential_async_task_execution_completion(researcher, writer):
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
@@ -1211,7 +1216,7 @@ async def test_crew_async_kickoff():
 
 @pytest.mark.asyncio
 @pytest.mark.vcr(filter_headers=["authorization"])
-async def test_async_task_execution_call_count():
+async def test_async_task_execution_call_count(researcher, writer):
     from unittest.mock import MagicMock, patch
 
     list_ideas = Task(
@@ -1714,7 +1719,7 @@ def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_sequential_crew_creation_tasks_without_agents():
+def test_sequential_crew_creation_tasks_without_agents(researcher):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -1764,7 +1769,7 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_crew_creation_tasks_with_agents():
+def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
     """
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
     This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
@@ -1817,7 +1822,7 @@ def test_hierarchical_crew_creation_tasks_with_agents():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_crew_creation_tasks_with_async_execution():
+def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, writer, ceo):
     """
     Tests that async tasks in hierarchical crews are handled correctly with proper delegation tools
     """
@@ -1874,7 +1879,7 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_crew_creation_tasks_with_sync_last():
+def test_hierarchical_crew_creation_tasks_with_sync_last(researcher, writer, ceo):
     """
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
     This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
@@ -2160,7 +2165,6 @@ def test_tools_with_custom_caching():
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
     ) as add_to_cache:
-
         result = crew.kickoff()
 
         # Check that add_to_cache was called exactly twice
@@ -2177,7 +2181,7 @@ def test_tools_with_custom_caching():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_task_uses_last_output():
+def test_conditional_task_uses_last_output(researcher, writer):
     """Test that conditional tasks use the last task output for condition evaluation."""
     task1 = Task(
         description="First task",
@@ -2251,7 +2255,7 @@ def test_conditional_task_uses_last_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_tasks_result_collection():
+def test_conditional_tasks_result_collection(researcher, writer):
     """Test that task outputs are properly collected based on execution status."""
     task1 = Task(
         description="Normal task that always executes",
@@ -2332,7 +2336,7 @@ def test_conditional_tasks_result_collection():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_conditional_tasks():
+def test_multiple_conditional_tasks(researcher, writer):
     """Test that having multiple conditional tasks in sequence works correctly."""
     task1 = Task(
         description="Initial research task",
@@ -2567,7 +2571,7 @@ def test_disabled_memory_using_contextual_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_log_file_output(tmp_path):
+def test_crew_log_file_output(tmp_path, researcher):
     test_file = tmp_path / "logs.txt"
     tasks = [
         Task(
@@ -2665,7 +2669,7 @@ def test_crew_output_file_validation_failures():
         Crew(agents=[agent], tasks=[task]).kickoff()
 
 
-def test_manager_agent():
+def test_manager_agent(researcher, writer):
     from unittest.mock import patch
 
     task = Task(
@@ -2703,7 +2707,7 @@ def test_manager_agent():
         mock_execute_sync.assert_called()
 
 
-def test_manager_agent_in_agents_raises_exception():
+def test_manager_agent_in_agents_raises_exception(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2725,7 +2729,7 @@ def test_manager_agent_in_agents_raises_exception():
         )
 
 
-def test_manager_agent_with_tools_raises_exception():
+def test_manager_agent_with_tools_raises_exception(researcher, writer):
     from crewai.tools import tool
 
     @tool
@@ -2762,7 +2766,7 @@ def test_manager_agent_with_tools_raises_exception():
 @patch("crewai.crew.TaskEvaluator")
 @patch("crewai.crew.Crew.copy")
 def test_crew_train_success(
-    copy_mock, task_evaluator, crew_training_handler, kickoff_mock
+    copy_mock, task_evaluator, crew_training_handler, kickoff_mock, researcher, writer
 ):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -2838,7 +2842,7 @@ def test_crew_train_success(
     assert isinstance(received_events[1], CrewTrainCompletedEvent)
 
 
-def test_crew_train_error():
+def test_crew_train_error(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2857,7 +2861,7 @@ def test_crew_train_error():
         )
 
 
-def test__setup_for_training():
+def test__setup_for_training(researcher, writer):
     researcher.allow_delegation = True
     writer.allow_delegation = True
     agents = [researcher, writer]
@@ -2888,7 +2892,7 @@ def test__setup_for_training():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_feature():
+def test_replay_feature(researcher, writer):
     list_ideas = Task(
         description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
         expected_output="Bullet point list of 5 important events. No additional commentary.",
@@ -2925,7 +2929,7 @@ def test_replay_feature():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_replay_error():
+def test_crew_replay_error(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -3321,7 +3325,7 @@ def test_replay_setup_context():
         assert crew.tasks[1].prompt_context == "context raw output"
 
 
-def test_key():
+def test_key(researcher, writer):
     tasks = [
         Task(
             description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
@@ -3390,7 +3394,9 @@ def test_key_with_interpolated_inputs():
     assert crew.key == curr_key
 
 
-def test_conditional_task_requirement_breaks_when_singular_conditional_task():
+def test_conditional_task_requirement_breaks_when_singular_conditional_task(
+    researcher, writer
+):
     def condition_fn(output) -> bool:
         return output.raw.startswith("Andrew Ng has!!")
 
@@ -3408,7 +3414,7 @@ def test_conditional_task_requirement_breaks_when_singular_conditional_task():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_task_last_task_when_conditional_is_true():
+def test_conditional_task_last_task_when_conditional_is_true(researcher, writer):
     def condition_fn(output) -> bool:
         return True
 
@@ -3435,7 +3441,7 @@ def test_conditional_task_last_task_when_conditional_is_true():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_task_last_task_when_conditional_is_false():
+def test_conditional_task_last_task_when_conditional_is_false(researcher, writer):
     def condition_fn(output) -> bool:
         return False
 
@@ -3459,7 +3465,7 @@ def test_conditional_task_last_task_when_conditional_is_false():
     assert result.raw == "Hi"
 
 
-def test_conditional_task_requirement_breaks_when_task_async():
+def test_conditional_task_requirement_breaks_when_task_async(researcher, writer):
     def my_condition(context):
         return context.get("some_value") > 10
 
@@ -3484,7 +3490,7 @@ def test_conditional_task_requirement_breaks_when_task_async():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_should_skip():
+def test_conditional_should_skip(researcher, writer):
     task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
 
     condition_mock = MagicMock(return_value=False)
@@ -3516,7 +3522,7 @@ def test_conditional_should_skip():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_should_execute():
+def test_conditional_should_execute(researcher, writer):
     task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
 
     condition_mock = MagicMock(
@@ -3549,7 +3555,7 @@ def test_conditional_should_execute():
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch("crewai.crew.Crew.copy")
 @mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
+def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator, researcher):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -3599,7 +3605,7 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_verbose_manager_agent():
+def test_hierarchical_verbose_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -3620,7 +3626,7 @@ def test_hierarchical_verbose_manager_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_verbose_false_manager_agent():
+def test_hierarchical_verbose_false_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -4193,7 +4199,7 @@ def test_before_kickoff_without_inputs():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_with_knowledge_sources_works_with_copy():
+def test_crew_with_knowledge_sources_works_with_copy(researcher, writer):
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
@@ -4202,7 +4208,6 @@ def test_crew_with_knowledge_sources_works_with_copy():
         tasks=[Task(description="test", expected_output="test", agent=researcher)],
         knowledge_sources=[string_source],
     )
-
     crew_copy = crew.copy()
 
     assert crew_copy.knowledge_sources == crew.knowledge_sources
@@ -4256,53 +4261,125 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
     assert crew_copy.manager_agent.role == crew.manager_agent.role
     assert crew_copy.manager_agent.goal == crew.manager_agent.goal
 
+
 def test_crew_copy_with_memory():
     """Test that copying a crew with memory enabled does not raise validation errors and copies memory correctly."""
     agent = Agent(role="Test Agent", goal="Test Goal", backstory="Test Backstory")
     task = Task(description="Test Task", expected_output="Test Output", agent=agent)
     crew = Crew(agents=[agent], tasks=[task], memory=True)
 
-    original_short_term_id = id(crew._short_term_memory) if crew._short_term_memory else None
-    original_long_term_id = id(crew._long_term_memory) if crew._long_term_memory else None
+    original_short_term_id = (
+        id(crew._short_term_memory) if crew._short_term_memory else None
+    )
+    original_long_term_id = (
+        id(crew._long_term_memory) if crew._long_term_memory else None
+    )
     original_entity_id = id(crew._entity_memory) if crew._entity_memory else None
     original_external_id = id(crew._external_memory) if crew._external_memory else None
     original_user_id = id(crew._user_memory) if crew._user_memory else None
 
-
     try:
         crew_copy = crew.copy()
 
-        assert hasattr(crew_copy, "_short_term_memory"), "Copied crew should have _short_term_memory"
-        assert crew_copy._short_term_memory is not None, "Copied _short_term_memory should not be None"
-        assert id(crew_copy._short_term_memory) != original_short_term_id, "Copied _short_term_memory should be a new object"
+        assert hasattr(
+            crew_copy, "_short_term_memory"
+        ), "Copied crew should have _short_term_memory"
+        assert (
+            crew_copy._short_term_memory is not None
+        ), "Copied _short_term_memory should not be None"
+        assert (
+            id(crew_copy._short_term_memory) != original_short_term_id
+        ), "Copied _short_term_memory should be a new object"
 
-        assert hasattr(crew_copy, "_long_term_memory"), "Copied crew should have _long_term_memory"
-        assert crew_copy._long_term_memory is not None, "Copied _long_term_memory should not be None"
-        assert id(crew_copy._long_term_memory) != original_long_term_id, "Copied _long_term_memory should be a new object"
+        assert hasattr(
+            crew_copy, "_long_term_memory"
+        ), "Copied crew should have _long_term_memory"
+        assert (
+            crew_copy._long_term_memory is not None
+        ), "Copied _long_term_memory should not be None"
+        assert (
+            id(crew_copy._long_term_memory) != original_long_term_id
+        ), "Copied _long_term_memory should be a new object"
 
-        assert hasattr(crew_copy, "_entity_memory"), "Copied crew should have _entity_memory"
-        assert crew_copy._entity_memory is not None, "Copied _entity_memory should not be None"
-        assert id(crew_copy._entity_memory) != original_entity_id, "Copied _entity_memory should be a new object"
+        assert hasattr(
+            crew_copy, "_entity_memory"
+        ), "Copied crew should have _entity_memory"
+        assert (
+            crew_copy._entity_memory is not None
+        ), "Copied _entity_memory should not be None"
+        assert (
+            id(crew_copy._entity_memory) != original_entity_id
+        ), "Copied _entity_memory should be a new object"
 
         if original_external_id:
-             assert hasattr(crew_copy, "_external_memory"), "Copied crew should have _external_memory"
-             assert crew_copy._external_memory is not None, "Copied _external_memory should not be None"
-             assert id(crew_copy._external_memory) != original_external_id, "Copied _external_memory should be a new object"
+            assert hasattr(
+                crew_copy, "_external_memory"
+            ), "Copied crew should have _external_memory"
+            assert (
+                crew_copy._external_memory is not None
+            ), "Copied _external_memory should not be None"
+            assert (
+                id(crew_copy._external_memory) != original_external_id
+            ), "Copied _external_memory should be a new object"
         else:
-             assert not hasattr(crew_copy, "_external_memory") or crew_copy._external_memory is None, "Copied _external_memory should be None if not originally present"
+            assert (
+                not hasattr(crew_copy, "_external_memory")
+                or crew_copy._external_memory is None
+            ), "Copied _external_memory should be None if not originally present"
 
         if original_user_id:
-             assert hasattr(crew_copy, "_user_memory"), "Copied crew should have _user_memory"
-             assert crew_copy._user_memory is not None, "Copied _user_memory should not be None"
-             assert id(crew_copy._user_memory) != original_user_id, "Copied _user_memory should be a new object"
+            assert hasattr(
+                crew_copy, "_user_memory"
+            ), "Copied crew should have _user_memory"
+            assert (
+                crew_copy._user_memory is not None
+            ), "Copied _user_memory should not be None"
+            assert (
+                id(crew_copy._user_memory) != original_user_id
+            ), "Copied _user_memory should be a new object"
         else:
-             assert not hasattr(crew_copy, "_user_memory") or crew_copy._user_memory is None, "Copied _user_memory should be None if not originally present"
-
+            assert (
+                not hasattr(crew_copy, "_user_memory") or crew_copy._user_memory is None
+            ), "Copied _user_memory should be None if not originally present"
 
     except pydantic_core.ValidationError as e:
-         if "Input should be an instance of" in str(e) and ("Memory" in str(e)):
-              pytest.fail(f"Copying with memory raised Pydantic ValidationError, likely due to incorrect memory copy: {e}")
-         else:
-              raise e # Re-raise other validation errors
+        if "Input should be an instance of" in str(e) and ("Memory" in str(e)):
+            pytest.fail(
+                f"Copying with memory raised Pydantic ValidationError, likely due to incorrect memory copy: {e}"
+            )
+        else:
+            raise e  # Re-raise other validation errors
     except Exception as e:
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
+
+
+def test_sets_parent_flow_when_outside_flow(researcher, writer):
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+    )
+    assert crew.parent_flow is None
+
+
+def test_sets_parent_flow_when_inside_flow(researcher, writer):
+    class MyFlow(Flow):
+        @start()
+        def start(self):
+            return Crew(
+                agents=[researcher, writer],
+                process=Process.sequential,
+                tasks=[
+                    Task(
+                        description="Task 1", expected_output="output", agent=researcher
+                    ),
+                    Task(description="Task 2", expected_output="output", agent=writer),
+                ],
+            )
+
+    flow = MyFlow()
+    result = flow.kickoff()
+    assert result.parent_flow is flow

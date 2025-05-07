@@ -1,0 +1,33 @@
+name: Notify Downstream
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  notify-downstream:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.OSS_SYNC_APP_ID }}
+          private_key: ${{ secrets.OSS_SYNC_APP_PRIVATE_KEY }}
+
+      - name: Notify Repo B
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          repository: ${{ secrets.OSS_SYNC_DOWNSTREAM_REPO }}
+          event-type: upstream-commit
+          client-payload: |
+            {
+              "commit_sha": "${{ github.sha }}"
+            }
+
