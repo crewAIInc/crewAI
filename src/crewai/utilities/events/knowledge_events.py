@@ -34,7 +34,6 @@ class KnowledgeQueryStartedEvent(BaseEvent):
 class KnowledgeQueryFailedEvent(BaseEvent):
     """Event emitted when a knowledge query fails."""
 
-    task_prompt: str
     type: str = "knowledge_query_failed"
     agent: BaseAgent
     error: str

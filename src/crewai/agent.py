@@ -622,36 +622,46 @@ class Agent(BaseAgent):
             task_prompt=task_prompt
         )
         rewriter_prompt = self.i18n.slice("knowledge_search_query_system_prompt")
-        if isinstance(self.llm, BaseLLM):
-            try:
-                rewritten_query = self.llm.call(
-                    [
-                        {
-                            "role": "system",
-                            "content": rewriter_prompt,
-                        },
-                        {"role": "user", "content": query},
-                    ]
-                )
-                crewai_event_bus.emit(
-                    self,
-                    event=KnowledgeQueryCompletedEvent(
-                        query=query,
-                        agent=self,
-                    ),
-                )
-                return rewritten_query
-            except Exception as e:
-                crewai_event_bus.emit(
-                    self,
-                    event=KnowledgeQueryFailedEvent(
-                        task_prompt=task_prompt,
-                        agent=self,
-                        error=str(e),
-                    ),
-                )
-                return None
-        else:
+        if not isinstance(self.llm, BaseLLM):
+            self._logger.log(
+                "warning",
+                f"Knowledge search query failed: LLM for agent '{self.role}' is not an instance of BaseLLM",
+            )
+            crewai_event_bus.emit(
+                self,
+                event=KnowledgeQueryFailedEvent(
+                    agent=self,
+                    error="LLM is not compatible with knowledge search queries",
+                ),
+            )
+            return None
+
+        try:
+            rewritten_query = self.llm.call(
+                [
+                    {
+                        "role": "system",
+                        "content": rewriter_prompt,
+                    },
+                    {"role": "user", "content": query},
+                ]
+            )
+            crewai_event_bus.emit(
+                self,
+                event=KnowledgeQueryCompletedEvent(
+                    query=query,
+                    agent=self,
+                ),
+            )
+            return rewritten_query
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=KnowledgeQueryFailedEvent(
+                    agent=self,
+                    error=str(e),
+                ),
+            )
             return None
 
     def kickoff(
