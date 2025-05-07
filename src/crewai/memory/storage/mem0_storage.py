@@ -9,6 +9,9 @@ from crewai.memory.storage.interface import Storage
 class Mem0Storage(Storage):
     """
     Extends Storage to handle embedding and searching across entities using Mem0.
+    
+    Supports Mem0 v2 API with run_id for associating memories with specific conversation
+    sessions. By default, uses v2 API which is recommended for better context management.
     """
 
     def __init__(self, type, crew=None, config=None):
@@ -25,6 +28,11 @@ class Mem0Storage(Storage):
         self.config = config or {}
         # TODO: Memory config will be removed in the future the config will be passed as a parameter
         self.memory_config = self.config or getattr(crew, "memory_config", {}) or {}
+        
+        config = self._get_config()
+        self.version = config.get("version", "v2")
+        
+        self.run_id = config.get("run_id")
 
         # User ID is required for user memory type "user" since it's used as a unique identifier for the user.
         user_id = self._get_user_id()
@@ -89,7 +97,11 @@ class Mem0Storage(Storage):
 
         if params:
             if isinstance(self.memory, MemoryClient):
-                params["output_format"] = "v1.1"
+                params["version"] = self.version
+                
+                if self.run_id:
+                    params["run_id"] = self.run_id
+            
             self.memory.add(value, **params)
 
     def search(
@@ -98,7 +110,7 @@ class Mem0Storage(Storage):
         limit: int = 3,
         score_threshold: float = 0.35,
     ) -> List[Any]:
-        params = {"query": query, "limit": limit, "output_format": "v1.1"}
+        params = {"query": query, "limit": limit}
         if user_id := self._get_user_id():
             params["user_id"] = user_id
 
@@ -116,10 +128,16 @@ class Mem0Storage(Storage):
             params["agent_id"] = agent_name
             params["metadata"] = {"type": "external"}
 
-        # Discard the filters for now since we create the filters
-        # automatically when the crew is created.
-        if isinstance(self.memory, Memory):
-            del params["metadata"], params["output_format"]
+        # Add version and run_id for MemoryClient
+        if isinstance(self.memory, MemoryClient):
+            params["version"] = self.version
+            
+            if self.run_id:
+                params["run_id"] = self.run_id
+        # Discard the filters for Memory (OSS version)
+        elif isinstance(self.memory, Memory):
+            if "metadata" in params:
+                del params["metadata"]
             
         results = self.memory.search(**params)
         return [r for r in results["results"] if r["score"] >= score_threshold]
