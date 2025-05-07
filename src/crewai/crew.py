@@ -1395,15 +1395,9 @@ class Crew(FlowTrackable, BaseModel):
         default_reset = lambda memory: memory.reset()
         knowledge_reset = lambda memory: self.reset_knowledge(memory)
 
-        agent_knowledge_storages: Optional[List[Any]] = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
-        crew_and_agent_knowledge_storages: Optional[List[Any]] = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
+        agent_knowledge_storages: List[Knowledge] = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
+        crew_and_agent_knowledge_storages: List[Knowledge] = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
         crew_and_agent_knowledge_storages.extend(agent_knowledge_storages)
-
-        if not agent_knowledge_storages:
-            agent_knowledge_storages = None
-
-        if not crew_and_agent_knowledge_storages:
-            crew_and_agent_knowledge_storages = None
 
         memory_systems = {
             'short term': {
@@ -1422,11 +1416,11 @@ class Crew(FlowTrackable, BaseModel):
                 'system': getattr(self, "_task_output_handler", None)
             },
             'knowledge': {
-                'system': crew_and_agent_knowledge_storages,
+                'system': crew_and_agent_knowledge_storages if crew_and_agent_knowledge_storages else None,
                 'reset': knowledge_reset
             },
             'agent knowledge': {
-                'system': agent_knowledge_storages,
+                'system': agent_knowledge_storages if agent_knowledge_storages else None,
                 'reset': knowledge_reset
             }
         }
@@ -1458,15 +1452,9 @@ class Crew(FlowTrackable, BaseModel):
         default_reset = lambda memory: memory.reset()
         knowledge_reset = lambda memory: self.reset_knowledge(memory)
 
-        agent_knowledge_storages = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
-        crew_and_agent_knowledge_storages = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
+        agent_knowledge_storages: List[Knowledge] = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
+        crew_and_agent_knowledge_storages: List[Knowledge] = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
         crew_and_agent_knowledge_storages.extend(agent_knowledge_storages)
-
-        if not agent_knowledge_storages:
-            agent_knowledge_storages = None
-
-        if not crew_and_agent_knowledge_storages:
-            crew_and_agent_knowledge_storages = None
 
         reset_functions = {
             'short': {
@@ -1490,12 +1478,12 @@ class Crew(FlowTrackable, BaseModel):
                 'name': 'Task Output'
             },
             'knowledge': {
-                'system': crew_and_agent_knowledge_storages,
+                'system': crew_and_agent_knowledge_storages if crew_and_agent_knowledge_storages else None,
                 'reset': knowledge_reset,
                 'name': 'Crew Knowledge and Agent Knowledge'
             },
             'agent_knowledge': {
-                'system': agent_knowledge_storages,
+                'system': agent_knowledge_storages if agent_knowledge_storages else None,
                 'reset': knowledge_reset,
                 'name': 'Agent Knowledge'
             }
