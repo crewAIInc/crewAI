@@ -1428,7 +1428,7 @@ class Crew(FlowTrackable, BaseModel):
         for name, config in memory_systems.items():
             if (system := config.get('system')) is not None:
                 try:
-                    reset_fn: Callable = config.get('reset', default_reset)
+                    reset_fn: Callable = cast(Callable, config.get('reset', default_reset))
                     reset_fn(system)
                     self._logger.log(
                         "info",
@@ -1497,7 +1497,7 @@ class Crew(FlowTrackable, BaseModel):
             raise RuntimeError(f"{name} memory system is not initialized")
         
         try:
-            reset_fn: Callable = config.get('reset', default_reset)
+            reset_fn: Callable = cast(Callable, config.get('reset', default_reset))
             reset_fn(system)
             self._logger.log(
                 "info",
