@@ -12,7 +12,25 @@ class Mem0Storage(Storage):
     
     Supports Mem0 v2 API with run_id for associating memories with specific conversation
     sessions. By default, uses v2 API which is recommended for better context management.
+    
+    Args:
+        type: The type of memory storage ("user", "short_term", "long_term", "entities", "external")
+        crew: The crew instance this storage is associated with
+        config: Optional configuration dictionary that overrides crew.memory_config
+        
+    Configuration options:
+        version: API version to use ("v1.1" or "v2", defaults to "v2")
+        run_id: Optional session identifier for associating memories with specific conversations
+        api_key: Mem0 API key (defaults to MEM0_API_KEY environment variable)
+        user_id: User identifier (required for "user" memory type)
+        org_id: Optional organization ID for Mem0 API
+        project_id: Optional project ID for Mem0 API
+        local_mem0_config: Optional configuration for local Mem0 instance
     """
+
+    SUPPORTED_VERSIONS = ["v1.1", "v2"]
+    
+    DEFAULT_VERSION = "v2"
 
     def __init__(self, type, crew=None, config=None):
         super().__init__()
@@ -30,9 +48,10 @@ class Mem0Storage(Storage):
         self.memory_config = self.config or getattr(crew, "memory_config", {}) or {}
         
         config = self._get_config()
-        self.version = config.get("version", "v2")
-        
+        self.version = config.get("version", self.DEFAULT_VERSION)
         self.run_id = config.get("run_id")
+        
+        self._validate_config()
 
         # User ID is required for user memory type "user" since it's used as a unique identifier for the user.
         user_id = self._get_user_id()
@@ -60,16 +79,70 @@ class Mem0Storage(Storage):
             else:
                 self.memory = Memory()
 
+    def _validate_config(self) -> None:
+        """
+        Validate configuration parameters.
+        
+        Raises:
+            ValueError: If the version is not supported
+        """
+        if self.version not in self.SUPPORTED_VERSIONS:
+            raise ValueError(
+                f"Unsupported version: {self.version}. "
+                f"Please use one of: {', '.join(self.SUPPORTED_VERSIONS)}"
+            )
+        
+        if self.run_id is not None and not isinstance(self.run_id, str):
+            raise ValueError("run_id must be a string")
+
+    def _build_params(self, base_params: Dict[str, Any], method: str = "add") -> Dict[str, Any]:
+        """
+        Centralize parameter building for API calls.
+        
+        Args:
+            base_params: Base parameters to build upon
+            method: The method being called ("add" or "search")
+            
+        Returns:
+            Dict[str, Any]: Complete parameters for API call
+        """
+        params = base_params.copy()
+        
+        # Add version and run_id for MemoryClient
+        if isinstance(self.memory, MemoryClient):
+            params["version"] = self.version
+            
+            if self.run_id:
+                params["run_id"] = self.run_id
+        elif isinstance(self.memory, Memory) and method == "search" and "metadata" in params:
+            del params["metadata"]
+            
+        return params
+
     def _sanitize_role(self, role: str) -> str:
         """
         Sanitizes agent roles to ensure valid directory names.
+        
+        Args:
+            role: The role name to sanitize
+            
+        Returns:
+            str: Sanitized role name
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+        """
+        Save a memory item.
+        
+        Args:
+            value: The memory content to save
+            metadata: Additional metadata for the memory
+        """
         user_id = self._get_user_id()
         agent_name = self._get_agent_name()
         params = None
+        
         if self.memory_type == "short_term":
             params = {
                 "agent_id": agent_name,
@@ -96,12 +169,7 @@ class Mem0Storage(Storage):
             }
 
         if params:
-            if isinstance(self.memory, MemoryClient):
-                params["version"] = self.version
-                
-                if self.run_id:
-                    params["run_id"] = self.run_id
-            
+            params = self._build_params(params, method="add")
             self.memory.add(value, **params)
 
     def search(
@@ -110,42 +178,61 @@ class Mem0Storage(Storage):
         limit: int = 3,
         score_threshold: float = 0.35,
     ) -> List[Any]:
-        params = {"query": query, "limit": limit}
+        """
+        Search for memories.
+        
+        Args:
+            query: The search query
+            limit: Maximum number of results to return
+            score_threshold: Minimum score for results to be included
+            
+        Returns:
+            List[Any]: List of memory items that match the query
+        """
+        base_params = {"query": query, "limit": limit}
         if user_id := self._get_user_id():
-            params["user_id"] = user_id
+            base_params["user_id"] = user_id
 
         agent_name = self._get_agent_name()
         if self.memory_type == "short_term":
-            params["agent_id"] = agent_name
-            params["metadata"] = {"type": "short_term"}
+            base_params["agent_id"] = agent_name
+            base_params["metadata"] = {"type": "short_term"}
         elif self.memory_type == "long_term":
-            params["agent_id"] = agent_name
-            params["metadata"] = {"type": "long_term"}
+            base_params["agent_id"] = agent_name
+            base_params["metadata"] = {"type": "long_term"}
         elif self.memory_type == "entities":
-            params["agent_id"] = agent_name
-            params["metadata"] = {"type": "entity"}
+            base_params["agent_id"] = agent_name
+            base_params["metadata"] = {"type": "entity"}
         elif self.memory_type == "external":
-            params["agent_id"] = agent_name
-            params["metadata"] = {"type": "external"}
+            base_params["agent_id"] = agent_name
+            base_params["metadata"] = {"type": "external"}
 
-        # Add version and run_id for MemoryClient
-        if isinstance(self.memory, MemoryClient):
-            params["version"] = self.version
-            
-            if self.run_id:
-                params["run_id"] = self.run_id
-        # Discard the filters for Memory (OSS version)
-        elif isinstance(self.memory, Memory):
-            if "metadata" in params:
-                del params["metadata"]
-            
+        params = self._build_params(base_params, method="search")
         results = self.memory.search(**params)
-        return [r for r in results["results"] if r["score"] >= score_threshold]
+        
+        if isinstance(results, dict) and "results" in results:
+            return [r for r in results["results"] if r["score"] >= score_threshold]
+        elif isinstance(results, list):
+            return [r for r in results if r["score"] >= score_threshold]
+        else:
+            return []
 
     def _get_user_id(self) -> str:
+        """
+        Get the user ID from configuration.
+        
+        Returns:
+            str: User ID or empty string if not found
+        """
         return self._get_config().get("user_id", "")
 
     def _get_agent_name(self) -> str:
+        """
+        Get the agent name from the crew.
+        
+        Returns:
+            str: Agent name or empty string if not found
+        """
         if not self.crew:
             return ""
 
@@ -155,8 +242,17 @@ class Mem0Storage(Storage):
         return agents
 
     def _get_config(self) -> Dict[str, Any]:
+        """
+        Get the configuration from either config or memory_config.
+        
+        Returns:
+            Dict[str, Any]: Configuration dictionary
+        """
         return self.config or getattr(self, "memory_config", {}).get("config", {}) or {}
 
-    def reset(self):
+    def reset(self) -> None:
+        """
+        Reset the memory.
+        """
         if self.memory:
             self.memory.reset()
