@@ -34,7 +34,7 @@ from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
-    KnowledgeQueryGeneratedEvent,
+    KnowledgeQueryStartedEvent,
     KnowledgeRetrievalCompletedEvent,
     KnowledgeRetrievalStartedEvent,
     KnowledgeSearchQueryFailedEvent,
@@ -295,6 +295,16 @@ class Agent(BaseAgent):
                         event=KnowledgeRetrievalCompletedEvent(
                             query=self.knowledge_search_query,
                             agent=self,
+                            retrieved_knowledge=(
+                                (self.agent_knowledge_context or "")
+                                + (
+                                    "\n"
+                                    if self.agent_knowledge_context
+                                    and self.crew_knowledge_context
+                                    else ""
+                                )
+                                + (self.crew_knowledge_context or "")
+                            ),
                         ),
                     )
             except Exception as e:
@@ -603,7 +613,7 @@ class Agent(BaseAgent):
         """Generate a search query for the knowledge base based on the task description."""
         crewai_event_bus.emit(
             self,
-            event=KnowledgeQueryGeneratedEvent(
+            event=KnowledgeQueryStartedEvent(
                 task_prompt=task_prompt,
                 agent=self,
             ),
@@ -635,7 +645,7 @@ class Agent(BaseAgent):
                 crewai_event_bus.emit(
                     self,
                     event=KnowledgeQueryFailedEvent(
-                        query=query,
+                        task_prompt=task_prompt,
                         agent=self,
                         error=str(e),
                     ),

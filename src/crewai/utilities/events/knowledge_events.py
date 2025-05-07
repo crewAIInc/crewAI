@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.utilities.events.base_events import BaseEvent
@@ -20,20 +20,21 @@ class KnowledgeRetrievalCompletedEvent(BaseEvent):
     query: str
     type: str = "knowledge_search_query_completed"
     agent: BaseAgent
+    retrieved_knowledge: Any
 
 
-class KnowledgeQueryGeneratedEvent(BaseEvent):
-    """Event emitted when a knowledge query is generated."""
+class KnowledgeQueryStartedEvent(BaseEvent):
+    """Event emitted when a knowledge query is started."""
 
     task_prompt: str
-    type: str = "knowledge_query_generated"
+    type: str = "knowledge_query_started"
     agent: BaseAgent
 
 
 class KnowledgeQueryFailedEvent(BaseEvent):
     """Event emitted when a knowledge query fails."""
 
-    query: str
+    task_prompt: str
     type: str = "knowledge_query_failed"
     agent: BaseAgent
     error: str

@@ -11,7 +11,7 @@ from crewai.utilities.events.base_event_listener import BaseEventListener
 from crewai.utilities.events.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
-    KnowledgeQueryGeneratedEvent,
+    KnowledgeQueryStartedEvent,
     KnowledgeRetrievalCompletedEvent,
     KnowledgeRetrievalStartedEvent,
     KnowledgeSearchQueryFailedEvent,
@@ -65,6 +65,8 @@ class EventListener(BaseEventListener):
     execution_spans: Dict[Task, Any] = Field(default_factory=dict)
     next_chunk = 0
     text_stream = StringIO()
+    knowledge_retrieval_in_progress = False
+    knowledge_query_in_progress = False
 
     def __new__(cls):
         if cls._instance is None:
@@ -354,6 +356,11 @@ class EventListener(BaseEventListener):
         def on_knowledge_retrieval_started(
             source, event: KnowledgeRetrievalStartedEvent
         ):
+            if self.knowledge_retrieval_in_progress:
+                return
+
+            self.knowledge_retrieval_in_progress = True
+
             self.formatter.handle_knowledge_retrieval_started(
                 self.formatter.current_agent_branch,
                 self.formatter.current_crew_tree,
@@ -363,18 +370,19 @@ class EventListener(BaseEventListener):
         def on_knowledge_retrieval_completed(
             source, event: KnowledgeRetrievalCompletedEvent
         ):
+            if not self.knowledge_retrieval_in_progress:
+                return
+
+            self.knowledge_retrieval_in_progress = False
             self.formatter.handle_knowledge_retrieval_completed(
                 self.formatter.current_agent_branch,
                 self.formatter.current_crew_tree,
+                event.retrieved_knowledge,
             )
 
-        @crewai_event_bus.on(KnowledgeQueryGeneratedEvent)
-        def on_knowledge_query_generated(source, event: KnowledgeQueryGeneratedEvent):
-            self.formatter.handle_knowledge_query_generated(
-                self.formatter.current_agent_branch,
-                event.task_prompt,
-                self.formatter.current_crew_tree,
-            )
+        @crewai_event_bus.on(KnowledgeQueryStartedEvent)
+        def on_knowledge_query_started(source, event: KnowledgeQueryStartedEvent):
+            pass
 
         @crewai_event_bus.on(KnowledgeQueryFailedEvent)
         def on_knowledge_query_failed(source, event: KnowledgeQueryFailedEvent):
@@ -386,10 +394,7 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(KnowledgeQueryCompletedEvent)
         def on_knowledge_query_completed(source, event: KnowledgeQueryCompletedEvent):
-            self.formatter.handle_knowledge_query_completed(
-                self.formatter.current_agent_branch,
-                self.formatter.current_crew_tree,
-            )
+            pass
 
         @crewai_event_bus.on(KnowledgeSearchQueryFailedEvent)
         def on_knowledge_search_query_failed(

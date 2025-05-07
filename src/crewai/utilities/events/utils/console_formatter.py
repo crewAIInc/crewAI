@@ -816,6 +816,7 @@ class ConsoleFormatter:
         self,
         agent_branch: Optional[Tree],
         crew_tree: Optional[Tree],
+        retrieved_knowledge: Any,
     ) -> None:
         """Handle knowledge retrieval completed event."""
         if not self.verbose:
@@ -824,21 +825,74 @@ class ConsoleFormatter:
         branch_to_use = self.current_lite_agent_branch or agent_branch
         tree_to_use = branch_to_use or crew_tree
 
+        if branch_to_use is None and tree_to_use is not None:
+            branch_to_use = tree_to_use
+
         if branch_to_use is None or tree_to_use is None:
+            if retrieved_knowledge:
+                knowledge_text = str(retrieved_knowledge)
+                if len(knowledge_text) > 500:
+                    knowledge_text = knowledge_text[:497] + "..."
+
+                knowledge_panel = Panel(
+                    Text(knowledge_text, style="white"),
+                    title="📚 Retrieved Knowledge",
+                    border_style="green",
+                    padding=(1, 2),
+                )
+                self.print(knowledge_panel)
+                self.print()
             return None
 
-        knowledge_branch = branch_to_use.add("")
-        self.update_tree_label(
-            knowledge_branch, "✅", "Knowledge Retrieval Completed", "green"
-        )
+        knowledge_branch_found = False
+        for child in branch_to_use.children:
+            if "Knowledge Retrieval Started" in str(child.label):
+                self.update_tree_label(
+                    child, "✅", "Knowledge Retrieval Completed", "green"
+                )
+                knowledge_branch_found = True
+                break
+
+        if not knowledge_branch_found:
+            for child in branch_to_use.children:
+                if (
+                    "Knowledge Retrieval" in str(child.label)
+                    and "Started" not in str(child.label)
+                    and "Completed" not in str(child.label)
+                ):
+                    self.update_tree_label(
+                        child, "✅", "Knowledge Retrieval Completed", "green"
+                    )
+                    knowledge_branch_found = True
+                    break
+
+        if not knowledge_branch_found:
+            knowledge_branch = branch_to_use.add("")
+            self.update_tree_label(
+                knowledge_branch, "✅", "Knowledge Retrieval Completed", "green"
+            )
 
         self.print(tree_to_use)
+
+        if retrieved_knowledge:
+            knowledge_text = str(retrieved_knowledge)
+            if len(knowledge_text) > 500:
+                knowledge_text = knowledge_text[:497] + "..."
+
+            knowledge_panel = Panel(
+                Text(knowledge_text, style="white"),
+                title="📚 Retrieved Knowledge",
+                border_style="green",
+                padding=(1, 2),
+            )
+            self.print(knowledge_panel)
+
         self.print()
 
-    def handle_knowledge_query_generated(
+    def handle_knowledge_query_started(
         self,
         agent_branch: Optional[Tree],
-        query: str,
+        task_prompt: str,
         crew_tree: Optional[Tree],
     ) -> None:
         """Handle knowledge query generated event."""
@@ -847,12 +901,13 @@ class ConsoleFormatter:
 
         branch_to_use = self.current_lite_agent_branch or agent_branch
         tree_to_use = branch_to_use or crew_tree
-
         if branch_to_use is None or tree_to_use is None:
             return None
 
         query_branch = branch_to_use.add("")
-        self.update_tree_label(query_branch, "🔎", f"Query: {query[:50]}...", "yellow")
+        self.update_tree_label(
+            query_branch, "🔎", f"Query: {task_prompt[:50]}...", "yellow"
+        )
 
         self.print(tree_to_use)
         self.print()
