@@ -1971,3 +1971,57 @@ def test_litellm_anthropic_error_handling():
 
     # Verify the LLM call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_get_knowledge_search_query():
+    """Test that _get_knowledge_search_query calls the LLM with the correct prompts."""
+    from crewai.utilities.i18n import I18N
+
+    content = "The capital of France is Paris."
+    string_source = StringKnowledgeSource(content=content)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="I have access to knowledge sources",
+        llm=LLM(model="gpt-4"),
+        knowledge_sources=[string_source],
+    )
+
+    task = Task(
+        description="What is the capital of France?",
+        expected_output="The capital of France is Paris.",
+        agent=agent,
+    )
+
+    i18n = I18N()
+    task_prompt = task.prompt()
+
+    with patch.object(agent, "_get_knowledge_search_query") as mock_get_query:
+        mock_get_query.return_value = "Capital of France"
+
+        crew = Crew(agents=[agent], tasks=[task])
+        crew.kickoff()
+
+        mock_get_query.assert_called_once_with(task_prompt)
+
+    with patch.object(agent.llm, "call") as mock_llm_call:
+        agent._get_knowledge_search_query(task_prompt)
+
+        mock_llm_call.assert_called_once_with(
+            [
+                {
+                    "role": "system",
+                    "content": i18n.slice(
+                        "knowledge_search_query_system_prompt"
+                    ).format(task_prompt=task.description),
+                },
+                {
+                    "role": "user",
+                    "content": i18n.slice("knowledge_search_query").format(
+                        task_prompt=task_prompt
+                    ),
+                },
+            ]
+        )
