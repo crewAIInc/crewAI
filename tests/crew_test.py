@@ -18,6 +18,7 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow import Flow, listen, start
+from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
@@ -42,7 +43,6 @@ from crewai.utilities.events.crew_events import (
 from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from crewai.knowledge.knowledge import Knowledge
 
 
 @pytest.fixture

@@ -1392,16 +1392,6 @@ class Crew(FlowTrackable, BaseModel):
     def _reset_all_memories(self) -> None:
         """Reset all available memory systems."""
 
-        memory_systems = [
-            ("short term", getattr(self, "_short_term_memory", None)),
-            ("entity", getattr(self, "_entity_memory", None)),
-            ("external", getattr(self, "_external_memory", None)),
-            ("long term", getattr(self, "_long_term_memory", None)),
-            ("task output", getattr(self, "_task_output_handler", None)),
-            ("knowledge", getattr(self, "knowledge", None)),
-            ("agent knowledge", self)
-        ]
-
         default_reset = lambda memory: memory.reset()
         knowledge_reset = lambda memory: self.reset_knowledge(memory)
 
