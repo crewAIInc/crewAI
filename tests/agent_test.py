@@ -1632,13 +1632,10 @@ def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
-
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
+    with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [{"content": content}]
+        mock_knowledge_instance.search.return_value = [{"content": content}]
 
         agent = Agent(
             role="Information Agent",
@@ -1692,7 +1689,7 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
 
             assert agent.knowledge is not None
             mock_knowledge_query.assert_called_once_with(
-                [task.prompt()],
+                ["Brandon's favorite color"],
                 **knowledge_config.model_dump(),
             )
 
@@ -1729,7 +1726,7 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_defau
 
             assert agent.knowledge is not None
             mock_knowledge_query.assert_called_once_with(
-                [task.prompt()],
+                ["Brandon's favorite color"],
                 **knowledge_config.model_dump(),
             )
 
@@ -1739,9 +1736,7 @@ def test_agent_with_knowledge_sources_extensive_role():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
+    with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
@@ -1810,9 +1805,7 @@ def test_agent_with_knowledge_sources_generate_search_query():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
+    with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
@@ -1836,7 +1829,7 @@ def test_agent_with_knowledge_sources_generate_search_query():
 
         # Updated assertion to check the JSON content
         assert "Brandon" in str(agent.knowledge_search_query)
-        assert "favorite_color" in str(agent.knowledge_search_query)
+        assert "favorite color" in str(agent.knowledge_search_query)
 
         assert "red" in result.raw.lower()
 
