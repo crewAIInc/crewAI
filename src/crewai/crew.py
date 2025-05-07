@@ -1395,8 +1395,8 @@ class Crew(FlowTrackable, BaseModel):
         default_reset = lambda memory: memory.reset()
         knowledge_reset = lambda memory: self.reset_knowledge(memory)
 
-        agent_knowledge_storages: List[Knowledge] = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
-        crew_and_agent_knowledge_storages: List[Knowledge] = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
+        agent_knowledge_storages = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
+        crew_and_agent_knowledge_storages = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
         crew_and_agent_knowledge_storages.extend(agent_knowledge_storages)
 
         memory_systems = {
@@ -1452,8 +1452,8 @@ class Crew(FlowTrackable, BaseModel):
         default_reset = lambda memory: memory.reset()
         knowledge_reset = lambda memory: self.reset_knowledge(memory)
 
-        agent_knowledge_storages: List[Knowledge] = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
-        crew_and_agent_knowledge_storages: List[Knowledge] = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
+        agent_knowledge_storages =  [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
+        crew_and_agent_knowledge_storages = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
         crew_and_agent_knowledge_storages.extend(agent_knowledge_storages)
 
         reset_functions = {
