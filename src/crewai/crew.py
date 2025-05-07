@@ -1395,8 +1395,8 @@ class Crew(FlowTrackable, BaseModel):
         default_reset = lambda memory: memory.reset()
         knowledge_reset = lambda memory: self.reset_knowledge(memory)
 
-        agent_knowledge_storages = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
-        crew_and_agent_knowledge_storages = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
+        agent_knowledge_storages: Optional[List[Any]] = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
+        crew_and_agent_knowledge_storages: Optional[List[Any]] = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
         crew_and_agent_knowledge_storages.extend(agent_knowledge_storages)
 
         if not agent_knowledge_storages:
@@ -1431,7 +1431,7 @@ class Crew(FlowTrackable, BaseModel):
             }
         }
 
-        for name, config in memory_systems:
+        for name, config in memory_systems.items():
             if (system := config.get('system')) is not None:
                 try:
                     reset_fn: Callable = config.get('reset', default_reset)
