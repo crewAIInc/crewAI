@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, Dict
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
@@ -8,14 +8,8 @@ try:
 except ImportError:
     FirecrawlApp = Any
 
-
 class FirecrawlScrapeWebsiteToolSchema(BaseModel):
     url: str = Field(description="Website URL")
-    timeout: Optional[int] = Field(
-        default=30000,
-        description="Timeout in milliseconds for the scraping operation. The default value is 30000.",
-    )
-
 
 class FirecrawlScrapeWebsiteTool(BaseTool):
     """
@@ -31,6 +25,8 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
         include_tags (list[str]): Tags to include. Default: []
         exclude_tags (list[str]): Tags to exclude. Default: []
         headers (dict): Headers to include. Default: {}
+        wait_for (int): Time to wait for page to load in ms. Default: 0
+        json_options (dict): Options for JSON extraction. Default: None
     """
 
     model_config = ConfigDict(
@@ -40,7 +36,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
     description: str = "Scrape webpages using Firecrawl and return the contents"
     args_schema: Type[BaseModel] = FirecrawlScrapeWebsiteToolSchema
     api_key: Optional[str] = None
-    config: Optional[dict[str, Any]] = Field(
+    config: Dict[str, Any] = Field(
         default_factory=lambda: {
             "formats": ["markdown"],
             "only_main_content": True,
