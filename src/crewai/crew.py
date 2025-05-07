@@ -1511,8 +1511,5 @@ class Crew(FlowTrackable, BaseModel):
 
     def reset_knowledge(self, knowledge_storage: List[Knowledge]) -> None:
         """Reset crew and agent knowledge storage."""
-        if isinstance(knowledge_storage, Knowledge):
-            knowledge_storage.reset()
-        elif isinstance(knowledge_storage, list):
-            for ks in knowledge_storage:
-                ks.reset()
+        for ks in knowledge_storage:
+            ks.reset()
