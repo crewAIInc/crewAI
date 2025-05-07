@@ -15,6 +15,7 @@ class BackwardCompatibilityTest(unittest.TestCase):
             warnings.simplefilter("always", DeprecationWarning)
             
             import importlib
+
             import crewai.telemtry
             importlib.reload(crewai.telemtry)
             
