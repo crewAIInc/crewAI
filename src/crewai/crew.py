@@ -873,7 +873,19 @@ class Crew(BaseModel):
                 tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents)
         return tools
 
-    def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
+    def _get_context(self, task: Task, task_outputs: List[TaskOutput]) -> str:
+        """Get context for task execution.
+        
+        Determines whether to use the task's explicit context or aggregate outputs from previous tasks.
+        When task.context is an empty list, it will use the task_outputs instead.
+        
+        Args:
+            task: The task to get context for
+            task_outputs: List of previous task outputs
+            
+        Returns:
+            String containing the aggregated context
+        """
         context = (
             aggregate_raw_outputs_from_tasks(task.context)
             if task.context and len(task.context) > 0
