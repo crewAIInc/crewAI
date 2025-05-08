@@ -213,6 +213,87 @@ def CrewBase(cls: T) -> T:
                     callback_functions[callback]() for callback in callbacks
                 ]
 
+        def kickoff(self, inputs=None):
+            """Starts the crew to work on its assigned tasks.
+            
+            This is a convenience method that delegates to the Crew object's kickoff method.
+            It allows calling kickoff() directly on the CrewBase instance.
+            
+            Args:
+                inputs (Optional[Dict[str, Any]]): Optional inputs for the crew execution.
+                
+            Returns:
+                CrewOutput: The output of the crew execution.
+            """
+            if not hasattr(self, "_kickoff") or not self._kickoff:
+                raise AttributeError("No method with @crew decorator found. Add a method with @crew decorator to your class.")
+                
+            # Get the crew instance
+            crew_method_name = list(self._kickoff.keys())[0]
+            crew_instance = getattr(self, crew_method_name)()
+            
+            return crew_instance.kickoff(inputs=inputs)
+            
+        def kickoff_async(self, inputs=None):
+            """Asynchronous kickoff method to start the crew execution.
+            
+            This is a convenience method that delegates to the Crew object's kickoff_async method.
+            
+            Args:
+                inputs (Optional[Dict[str, Any]]): Optional inputs for the crew execution.
+                
+            Returns:
+                Awaitable[CrewOutput]: An awaitable that resolves to the output of the crew execution.
+            """
+            if not hasattr(self, "_kickoff") or not self._kickoff:
+                raise AttributeError("No method with @crew decorator found. Add a method with @crew decorator to your class.")
+                
+            # Get the crew instance
+            crew_method_name = list(self._kickoff.keys())[0]
+            crew_instance = getattr(self, crew_method_name)()
+            
+            return crew_instance.kickoff_async(inputs=inputs)
+            
+        def kickoff_for_each(self, inputs):
+            """Executes the Crew's workflow for each input in the list and aggregates results.
+            
+            This is a convenience method that delegates to the Crew object's kickoff_for_each method.
+            
+            Args:
+                inputs (List[Dict[str, Any]]): List of input dictionaries for the crew execution.
+                
+            Returns:
+                List[CrewOutput]: List of outputs from the crew execution.
+            """
+            if not hasattr(self, "_kickoff") or not self._kickoff:
+                raise AttributeError("No method with @crew decorator found. Add a method with @crew decorator to your class.")
+                
+            # Get the crew instance
+            crew_method_name = list(self._kickoff.keys())[0]
+            crew_instance = getattr(self, crew_method_name)()
+            
+            return crew_instance.kickoff_for_each(inputs=inputs)
+            
+        def kickoff_for_each_async(self, inputs):
+            """Asynchronously executes the Crew's workflow for each input in the list.
+            
+            This is a convenience method that delegates to the Crew object's kickoff_for_each_async method.
+            
+            Args:
+                inputs (List[Dict[str, Any]]): List of input dictionaries for the crew execution.
+                
+            Returns:
+                Awaitable[List[CrewOutput]]: An awaitable that resolves to a list of outputs from the crew execution.
+            """
+            if not hasattr(self, "_kickoff") or not self._kickoff:
+                raise AttributeError("No method with @crew decorator found. Add a method with @crew decorator to your class.")
+                
+            # Get the crew instance
+            crew_method_name = list(self._kickoff.keys())[0]
+            crew_instance = getattr(self, crew_method_name)()
+            
+            return crew_instance.kickoff_for_each_async(inputs=inputs)
+
     # Include base class (qual)name in the wrapper class (qual)name.
     WrappedClass.__name__ = CrewBase.__name__ + "(" + cls.__name__ + ")"
     WrappedClass.__qualname__ = CrewBase.__qualname__ + "(" + cls.__name__ + ")"

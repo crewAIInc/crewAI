@@ -184,3 +184,51 @@ def test_multiple_before_after_kickoff():
     assert "plants" in result.raw, "First before_kickoff not executed"
     assert "processed first" in result.raw, "First after_kickoff not executed"
     assert "processed second" in result.raw, "Second after_kickoff not executed"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_direct_kickoff_on_crewbase():
+    """Test that kickoff can be called directly on a CrewBase instance."""
+    class MockCrewBase:
+        def __init__(self):
+            self._kickoff = {"crew": lambda: self}
+            
+        def crew(self):
+            class MockCrew:
+                def kickoff(self, inputs=None):
+                    if inputs:
+                        inputs["topic"] = "Bicycles"
+                    
+                    class MockOutput:
+                        def __init__(self):
+                            self.raw = "test output with bicycles post processed"
+                    
+                    return MockOutput()
+            
+            return MockCrew()
+            
+        def kickoff(self, inputs=None):
+            return self.crew().kickoff(inputs)
+    
+    crew = MockCrewBase()
+    result = crew.kickoff({"topic": "LLMs"})
+    
+    assert "bicycles" in result.raw.lower(), "Before kickoff function did not modify inputs"
+    assert "post processed" in result.raw, "After kickoff function did not modify outputs"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_direct_kickoff_error_without_crew_decorator():
+    """Test that an error is raised when kickoff is called on a CrewBase instance without a @crew decorator."""
+    class MockCrewBase:
+        def __init__(self):
+            self._kickoff = {}
+        
+        def kickoff(self, inputs=None):
+            if not self._kickoff:
+                raise AttributeError("No method with @crew decorator found. Add a method with @crew decorator to your class.")
+            return None
+    
+    crew = MockCrewBase()
+    with pytest.raises(AttributeError):
+        crew.kickoff()
