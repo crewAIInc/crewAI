@@ -296,6 +296,7 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+        self._response_cache_handler = None
 
         litellm.drop_params = True
 
@@ -869,25 +870,43 @@ class LLM(BaseLLM):
             for message in messages:
                 if message.get("role") == "system":
                     message["role"] = "assistant"
+                    
+        if self._response_cache_handler and self._response_cache_handler.is_replaying():
+            cached_response = self._response_cache_handler.get_cached_response(
+                self.model, messages
+            )
+            if cached_response:
+                # Emit completion event for the cached response
+                self._handle_emit_call_events(cached_response, LLMCallType.LLM_CALL)
+                return cached_response
 
-        # --- 5) Set up callbacks if provided
+        # --- 6) Set up callbacks if provided
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
 
             try:
-                # --- 6) Prepare parameters for the completion call
+                # --- 7) Prepare parameters for the completion call
                 params = self._prepare_completion_params(messages, tools)
 
-                # --- 7) Make the completion call and handle response
+                # --- 8) Make the completion call and handle response
                 if self.stream:
-                    return self._handle_streaming_response(
+                    response = self._handle_streaming_response(
                         params, callbacks, available_functions
                     )
                 else:
-                    return self._handle_non_streaming_response(
+                    response = self._handle_non_streaming_response(
                         params, callbacks, available_functions
                     )
+                    
+                if (self._response_cache_handler and 
+                    self._response_cache_handler.is_recording() and 
+                    isinstance(response, str)):
+                    self._response_cache_handler.cache_response(
+                        self.model, messages, response
+                    )
+                    
+                return response
 
             except LLMContextLengthExceededException:
                 # Re-raise LLMContextLengthExceededException as it should be handled
@@ -1107,3 +1126,18 @@ class LLM(BaseLLM):
 
                 litellm.success_callback = success_callbacks
                 litellm.failure_callback = failure_callbacks
+                
+    def set_response_cache_handler(self, handler):
+        """
+        Sets the response cache handler for record/replay functionality.
+        
+        Args:
+            handler: An instance of LLMResponseCacheHandler.
+        """
+        self._response_cache_handler = handler
+        
+    def clear_response_cache_handler(self):
+        """
+        Clears the response cache handler.
+        """
+        self._response_cache_handler = None
