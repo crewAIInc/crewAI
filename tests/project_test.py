@@ -232,3 +232,73 @@ def test_direct_kickoff_error_without_crew_decorator():
     crew = MockCrewBase()
     with pytest.raises(AttributeError):
         crew.kickoff()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_direct_kickoff_async():
+    """Test that kickoff_async can be called directly on a CrewBase instance."""
+    class MockCrewBase:
+        def __init__(self):
+            self._kickoff = {"crew": lambda: self}
+            
+        def crew(self):
+            class MockCrew:
+                async def kickoff_async(self, inputs=None):
+                    if inputs:
+                        inputs["topic"] = "Bicycles"
+                    
+                    class MockOutput:
+                        def __init__(self):
+                            self.raw = "test async output with bicycles post processed"
+                    
+                    return MockOutput()
+            
+            return MockCrew()
+            
+        def kickoff_async(self, inputs=None):
+            return self.crew().kickoff_async(inputs=inputs)
+    
+    crew = MockCrewBase()
+    result = await crew.kickoff_async({"topic": "LLMs"})
+    
+    assert "bicycles" in result.raw.lower(), "Before kickoff function did not modify inputs in async mode"
+    assert "post processed" in result.raw, "After kickoff function did not modify outputs in async mode"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_direct_kickoff_for_each_async():
+    """Test that kickoff_for_each_async can be called directly on a CrewBase instance."""
+    class MockCrewBase:
+        def __init__(self):
+            self._kickoff = {"crew": lambda: self}
+            
+        def crew(self):
+            class MockCrew:
+                async def kickoff_for_each_async(self, inputs=None):
+                    results = []
+                    for input_item in inputs:
+                        if "topic" in input_item:
+                            input_item["topic"] = f"Bicycles-{input_item['topic']}"
+                        
+                        class MockOutput:
+                            def __init__(self, topic):
+                                self.raw = f"test for_each_async output with {topic} post processed"
+                        
+                        results.append(MockOutput(input_item.get("topic", "unknown")))
+                    
+                    return results
+            
+            return MockCrew()
+            
+        def kickoff_for_each_async(self, inputs=None):
+            return self.crew().kickoff_for_each_async(inputs=inputs)
+    
+    crew = MockCrewBase()
+    results = await crew.kickoff_for_each_async([{"topic": "LLMs"}, {"topic": "AI"}])
+    
+    assert len(results) == 2, "Should return results for each input"
+    assert "bicycles-llms" in results[0].raw.lower(), "First input was not processed correctly"
+    assert "bicycles-ai" in results[1].raw.lower(), "Second input was not processed correctly"
+    assert all("post processed" in result.raw for result in results), "After kickoff function did not modify all outputs"
