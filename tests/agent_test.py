@@ -9,7 +9,6 @@ import pytest
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
-from crewai.agents.parser import CrewAgentParser, OutputParserException
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -73,6 +72,7 @@ def test_agent_creation():
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
 
+
 def test_agent_with_only_system_template():
     """Test that an agent with only system_template works without errors."""
     agent = Agent(
@@ -87,6 +87,7 @@ def test_agent_with_only_system_template():
     assert agent.role == "Test Role"
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
+
 
 def test_agent_with_only_prompt_template():
     """Test that an agent with only system_template works without errors."""
@@ -119,7 +120,8 @@ def test_agent_with_missing_response_template():
     assert agent.role == "Test Role"
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
-    
+
+
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
     assert agent.llm.model == "gpt-4o-mini"
@@ -1630,13 +1632,10 @@ def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
-
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
+    with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [{"content": content}]
+        mock_knowledge_instance.search.return_value = [{"content": content}]
 
         agent = Agent(
             role="Information Agent",
@@ -1690,7 +1689,7 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
 
             assert agent.knowledge is not None
             mock_knowledge_query.assert_called_once_with(
-                [task.prompt()],
+                ["Brandon's favorite color"],
                 **knowledge_config.model_dump(),
             )
 
@@ -1727,7 +1726,7 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_defau
 
             assert agent.knowledge is not None
             mock_knowledge_query.assert_called_once_with(
-                [task.prompt()],
+                ["Brandon's favorite color"],
                 **knowledge_config.model_dump(),
             )
 
@@ -1737,9 +1736,7 @@ def test_agent_with_knowledge_sources_extensive_role():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
+    with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
@@ -1801,6 +1798,40 @@ def test_agent_with_knowledge_sources_works_with_copy():
             assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
             assert agent_copy.knowledge_sources[0].content == content
             assert isinstance(agent_copy.llm, LLM)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_generate_search_query():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    with patch("crewai.knowledge") as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+
+        agent = Agent(
+            role="Information Agent with extensive role description that is longer than 80 characters",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
+
+        task = Task(
+            description="What is Brandon's favorite color?",
+            expected_output="The answer to the question, in a format like this: `{{name: str, favorite_color: str}}`",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        # Updated assertion to check the JSON content
+        assert "Brandon" in str(agent.knowledge_search_query)
+        assert "favorite color" in str(agent.knowledge_search_query)
+
+        assert "red" in result.raw.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1940,3 +1971,57 @@ def test_litellm_anthropic_error_handling():
 
     # Verify the LLM call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_get_knowledge_search_query():
+    """Test that _get_knowledge_search_query calls the LLM with the correct prompts."""
+    from crewai.utilities.i18n import I18N
+
+    content = "The capital of France is Paris."
+    string_source = StringKnowledgeSource(content=content)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="I have access to knowledge sources",
+        llm=LLM(model="gpt-4"),
+        knowledge_sources=[string_source],
+    )
+
+    task = Task(
+        description="What is the capital of France?",
+        expected_output="The capital of France is Paris.",
+        agent=agent,
+    )
+
+    i18n = I18N()
+    task_prompt = task.prompt()
+
+    with patch.object(agent, "_get_knowledge_search_query") as mock_get_query:
+        mock_get_query.return_value = "Capital of France"
+
+        crew = Crew(agents=[agent], tasks=[task])
+        crew.kickoff()
+
+        mock_get_query.assert_called_once_with(task_prompt)
+
+    with patch.object(agent.llm, "call") as mock_llm_call:
+        agent._get_knowledge_search_query(task_prompt)
+
+        mock_llm_call.assert_called_once_with(
+            [
+                {
+                    "role": "system",
+                    "content": i18n.slice(
+                        "knowledge_search_query_system_prompt"
+                    ).format(task_prompt=task.description),
+                },
+                {
+                    "role": "user",
+                    "content": i18n.slice("knowledge_search_query").format(
+                        task_prompt=task_prompt
+                    ),
+                },
+            ]
+        )
