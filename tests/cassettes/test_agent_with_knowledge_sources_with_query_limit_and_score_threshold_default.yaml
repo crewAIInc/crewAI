@@ -6,7 +6,7 @@ interactions:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
@@ -150,8 +150,10 @@ interactions:
         Mj9mH/7zuxXwX//68+d//G4YtN0jf30vBkz5Mv3H/7kq8B/if4xt+nr9vYZAxrTI//n3/76B8M9n
         6NrP9D+nrsnf4z///rMV/t41+GfqpvT1/z7/1/dV//Wv/wUAAP//AwBcfFVx4CAAAA==
     headers:
+      CF-Cache-Status:
+      - DYNAMIC
       CF-RAY:
-      - 931fceef786ded38-SJC
+      - 93bd57189acf15be-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -159,14 +161,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 17 Apr 2025 23:47:35 GMT
+      - Wed, 07 May 2025 02:38:16 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=fj4RMXSXRDQjE2CFC6CGC3dVcJ8cl2Cbu8alijwMHA8-1744933655-1.0.1.1-M3c3AI4XQa.0GJoanNACuOm2aEL4xjqHR1grxIP3olFvq3e0eFHwQTvCF20YwR_OLiMJUH87eNUwgziawMccsxjR9OVZyDr5._5Wts6CrqA;
-        path=/; expires=Fri, 18-Apr-25 00:17:35 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=VGdrMAj2834vuX5RC6lPbHVNwWHXnBmqLb0kAhiGO4g-1746585496-1.0.1.1-kvgkEGO9fI9sasCfJjizGBG4k82_KhCRbH8CEyFrjJatzMoxhM0Z3suJO_hFFH13Wyi2wThiM9QSPvH3dddjfC7hC_tscxijZwiGqtCVnnE;
+        path=/; expires=Wed, 07-May-25 03:08:16 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=MSkpJsQZtdyIGvrl2mIwy0a_We8H6CIrS7etFgRBl2Y-1744933655703-0.0.1.1-604800000;
+      - _cfuvid=sAoMYVxAaEFBkQttcKO7GlBZ5NlUNUIaJomZ05pGlCs-1746585496569-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -178,22 +180,20 @@ interactions:
       - X-Request-ID
       alt-svc:
       - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
       openai-model:
       - text-embedding-3-small
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '140'
+      - '69'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       via:
-      - envoy-router-84959bbcd5-rzqvq
+      - envoy-router-7d545f8f56-jx5wk
       x-envoy-upstream-service-time:
-      - '110'
+      - '52'
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -207,32 +207,33 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_dd3ef61c4765b46ed7db80ddfe261f41
+      - req_73f3f0d371e3c19b16c7a6d7cc45d3ee
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Information Agent.
-      You have access to specific knowledge sources.\nYour personal goal is: Provide
-      information based on knowledge sources\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
-      What is Brandon''s favorite color?\n\nThis is the expected criteria for your
-      final answer: Brandon''s favorite color.\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    body: '{"messages": [{"role": "system", "content": "Your goal is to rewrite the
+      user query so that it is optimized for retrieval from a vector database. Consider
+      how the query will be used to find relevant documents, and aim to make it more
+      specific and context-aware. \n\n Do not include any other text than the rewritten
+      query, especially any preamble or postamble and only add expected output format
+      if its relevant to the rewritten query. \n\n Focus on the key words of the intended
+      task and to retrieve the most relevant information. \n\n There will be some
+      extra context provided that might need to be removed such as expected_output
+      formats structured_outputs and other instructions."}, {"role": "user", "content":
+      "The original query is: What is Brandon''s favorite color?\n\nThis is the expected
+      criteria for your final answer: Brandon''s favorite color.\nyou MUST return
+      the actual complete content as the final answer, not a summary.."}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
-      - '926'
+      - '992'
       content-type:
       - application/json
       host:
@@ -264,20 +265,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37KwhdeokLx0mbOLd2WIAC63YZdthWGIpMO9xkUZDkpEWR
-        fx/kpLG7dUAvBszHR733yOcEQFAlViDUVgbVWp3efv66LvKPRd7Q/f57vtaf7m6ePjze774sv23E
-        JDJ48wtVeGFdKm6txkBsjrByKAPGqdPFfF7MZtdXVz3QcoU60hob0jmnLRlK8yyfp9kinS5P7C2T
-        Qi9W8CMBAHjuv1GnqfBRrCCbvFRa9F42KFbnJgDhWMeKkN6TD9IEMRlAxSag6aXfgeE9KGmgoR2C
-        hCbKBmn8Hh3AT7MmIzXc9P8ruHXSVGwuPNRyx44CgmLNDsjDRnd4OX7GYd15Ga2aTusRII3hIGNU
-        vcGHE3I4W9LcWMcb/xdV1GTIb0uH0rOJ8n1gK3r0kAA89NF1r9IQ1nFrQxn4N/bPTa+Xx3li2NgI
-        LU5g4CD1qL5cTN6YV1YYJGk/Cl8oqbZYDdRhU7KriEdAMnL9r5q3Zh+dk2neM34AlEIbsCqtw4rU
-        a8dDm8N40P9rO6fcCxYe3Y4UloHQxU1UWMtOH89M+CcfsC1rMg066+h4a7Uts1mRL/M8KzKRHJI/
-        AAAA//8DALRhJdF5AwAA
+        H4sIAAAAAAAAA4xSy27bMBC86yuIvfRiFbKs+HVLUKBFL0YPRosWgcCQK5kNxSXItZEi8L8XlBxL
+        aVOgFx44O8OZ4T5nQoDRsBWgDpJV521+t989PX78tF/fnr5X+w/fdgv6WnxuWruzX25hlhj08BMV
+        v7DeK+q8RTbkBlgFlIxJdb6qljfrm2qz7IGONNpEaz3nFeWdcSYvi7LKi1U+X1/YBzIKI2zFj0wI
+        IZ77M/l0Gp9gK4rZy02HMcoWYXsdEgIC2XQDMkYTWTqG2Qgqcoyut34XpNPk3kXRyBMFwygUWQrT
+        8YDNMcpk2R2tnQDSOWKZIvdG7y/I+WrNUusDPcQ/qNAYZ+KhDigjuWQjMnno0XMmxH1fwfFVKvCB
+        Os810yP2z81Xi0EPxuZHdHnBmFjaKWkze0Ou1sjS2DjpEJRUB9QjdSxcHrWhCZBNQv9t5i3tIbhx
+        7f/Ij4BS6Bl17QNqo14HHscCpr3819i15N4wRAwno7BmgyF9hMZGHu2wLRB/RcauboxrMfhghpVp
+        fF0sNuW6LItNAdk5+w0AAP//AwDAmd1xQAMAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 931fcef51a67f947-SJC
+      - 93bd571a5a7267e2-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -285,14 +285,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 17 Apr 2025 23:47:36 GMT
+      - Wed, 07 May 2025 02:38:17 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=7agwu5JV1OJvEFNhvfvqdgWf.HoMyIni9D85soRl3WE-1744933656-1.0.1.1-dKUwAZnjjuuiswFKWGsxpwHNBJUpjhYlZvfZpyNQIejxEJrXMCppgPvtQ9wa4SKezLmKqftvn_H.bAx_AEFJD2EWm5V6R_uK8.odneErR6A;
-        path=/; expires=Fri, 18-Apr-25 00:17:36 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=62_LRbzx15KBnTorpnulb_ZMoUJCYXHWEnTXVApNOr4-1746585497-1.0.1.1-KqnrR_1Udr1SzCiZW4umsNj1gQgcKOjAPf24HsqotTebuxO48nvo8g_X5O7Mng9tGurC0otvvkjYjsSWuRaddXculJnfdeGq5W3hJhxI21k;
+        path=/; expires=Wed, 07-May-25 03:08:17 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=LdTrzwZYrB6ZyQLY7NdaaHVpDVFvIjYm3arSpNy87wU-1744933656504-0.0.1.1-604800000;
+      - _cfuvid=LPWfk79PGAoGrMHseblqRazN9H8qdBY0BP50Y1Bp5wI-1746585497006-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -305,11 +305,130 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '540'
+      - '183'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '187'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999783'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_50fa35cb9ba592c55aacf7ddded877ac
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Information Agent.
+      You have access to specific knowledge sources.\nYour personal goal is: Provide
+      information based on knowledge sources\nTo give my best complete final answer
+      to the task respond using the exact following format:\n\nThought: I now can
+      give a great answer\nFinal Answer: Your final answer must be the great and the
+      most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
+      What is Brandon''s favorite color?\n\nThis is the expected criteria for your
+      final answer: Brandon''s favorite color.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '926'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=62_LRbzx15KBnTorpnulb_ZMoUJCYXHWEnTXVApNOr4-1746585497-1.0.1.1-KqnrR_1Udr1SzCiZW4umsNj1gQgcKOjAPf24HsqotTebuxO48nvo8g_X5O7Mng9tGurC0otvvkjYjsSWuRaddXculJnfdeGq5W3hJhxI21k;
+        _cfuvid=LPWfk79PGAoGrMHseblqRazN9H8qdBY0BP50Y1Bp5wI-1746585497006-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNb9swDL3nVxC67JIMSZo0aW4ttmI77bIO3UdhMBLtcJVJQZKTBkX/
+        +2CnrdOuA3YxYD4+8lGPvB8AGHZmBcZuMNs6+NHF1Zc7Xycnp/Rhdv3x2/fL82r+9Tr/uDrxn8yw
+        Zej6N9n8xHpvtQ6eMqscYBsJM7VVJ4vZ6Xw5n50tOqBWR76lVSGPZjqqWXg0HU9no/FiNFk+sjfK
+        lpJZwc8BAMB99211iqM7s4Lx8ClSU0pYkVk9JwGYqL6NGEyJU0bJZtiDViWTdNI/g+gOLApUvCVA
+        qFrZgJJ2FAF+ySULejjv/ldwEVGcyrsEJW41ciaw6jUCJxDNEJq1Z+v3cCu6E9AIuEX2uPYELGC1
+        rlU60JOrCJI20VIaAiYIFJO2zUKkkiKJpQSeb+lVrwQYCfI+sEXv9xAibzEToLhukC3GPezYkd8D
+        1ioVsDjesmvQJ9hx3mhzpDRtMJIDllJjja1/74/fKlLZJGz9ksb7IwBFNHf5nUs3j8jDsy9eqxB1
+        nV5RTcnCaVNEwqTSepCyBtOhDwOAm87/5oWlJkStQy6y3lLXbnK6PNQz/dr16GzxCGbN6Pv4dDIf
+        vlGvcJSRfTraIGPRbsj11H7dsHGsR8DgaOq/1bxV+zA5S/U/5XvAWgqZXBEiObYvJ+7TIrVX+a+0
+        51fuBJtEccuWiswUWyccldj4w62YtE+Z6qJkqSiGyIeDKUMxPjmbLqfT8dnYDB4GfwAAAP//AwA/
+        0jeHPgQAAA==
+    headers:
+      CF-RAY:
+      - 93bd571c9cf367e2-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 07 May 2025 02:38:18 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '785'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '931'
       x-ratelimit-limit-requests:
       - '30000'
       x-ratelimit-limit-tokens:
@@ -323,7 +442,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_8837be6510731522fd5ac4b75c11d486
+      - req_9bf7c8e011b2b1a8e8546b68c82384a7
     status:
       code: 200
       message: OK
