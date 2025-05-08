@@ -46,7 +46,7 @@ class InternalInstructor:
             ValueError: If no API key is provided or is invalid.
             RuntimeError: If chat completion creation fails.
         """
-        if not self.llm.api_key and not os.getenv("ANTHROPIC_API_KEY"):
+        if not self.llm.api_key:
             raise ValueError("API key must be provided either through LLM object or ANTHROPIC_API_KEY environment variable")
         messages = [{"role": "user", "content": self.content}]
         model = self._client.chat.completions.create(
