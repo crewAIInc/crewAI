@@ -16,6 +16,7 @@ from .tools import (
     EXASearchTool,
     FileReadTool,
     FileWriterTool,
+    FileCompressorTool,
     FirecrawlCrawlWebsiteTool,
     FirecrawlScrapeWebsiteTool,
     FirecrawlSearchTool,
