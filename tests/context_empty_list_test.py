@@ -1,9 +1,13 @@
 """Test that context=[] is respected and doesn't include previous task outputs."""
 import pytest
 from unittest import mock
-from crewai import Agent, Task, Crew, Process
-from crewai.tasks.task_output import TaskOutput, OutputFormat
-from crewai.utilities.formatter import aggregate_raw_outputs_from_tasks, aggregate_raw_outputs_from_task_outputs
+
+from crewai import Agent, Crew, Process, Task
+from crewai.tasks.task_output import OutputFormat, TaskOutput
+from crewai.utilities.formatter import (
+    aggregate_raw_outputs_from_task_outputs,
+    aggregate_raw_outputs_from_tasks,
+)
 
 def test_context_empty_list():
     """Test that context=[] is respected and doesn't include previous task outputs."""
