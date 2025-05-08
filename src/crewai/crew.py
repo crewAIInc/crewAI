@@ -876,7 +876,7 @@ class Crew(BaseModel):
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
         context = (
             aggregate_raw_outputs_from_tasks(task.context)
-            if task.context
+            if task.context and len(task.context) > 0
             else aggregate_raw_outputs_from_task_outputs(task_outputs)
         )
         return context
