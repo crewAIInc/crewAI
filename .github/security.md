@@ -1,19 +1,27 @@
-CrewAI takes the security of our software products and services seriously, which includes all source code repositories managed through our GitHub organization.
-If you believe you have found a security vulnerability in any CrewAI product or service, please report it to us as described below.
+## CrewAI Security Vulnerability Reporting Policy
 
- ## Reporting a Vulnerability
- Please do not report security vulnerabilities through public GitHub issues.
- To report a vulnerability, please email us at security@crewai.com.
- Please include the requested information listed below so that we can triage your report more quickly
+CrewAI prioritizes the security of our software products, services, and GitHub repositories. To promptly address vulnerabilities, follow these steps for reporting security issues:
 
- - Type of issue (e.g. SQL injection, cross-site scripting, etc.)
- - Full paths of source file(s) related to the manifestation of the issue
- - The location of the affected source code (tag/branch/commit or direct URL)
- - Any special configuration required to reproduce the issue
- - Step-by-step instructions to reproduce the issue (please include screenshots if needed)
- - Proof-of-concept or exploit code (if possible)
- - Impact of the issue, including how an attacker might exploit the issue
+### Reporting Process
+Do **not** report vulnerabilities via public GitHub issues.
 
- Once we have received your report, we will respond to you at the email address you provide. If the issue is confirmed, we will release a patch as soon as possible depending on the complexity of the issue.
+Email all vulnerability reports directly to:  
+**security@crewai.com**
 
- At this time, we are not offering a bug bounty program. Any rewards will be at our discretion.
+### Required Information
+To help us quickly validate and remediate the issue, your report must include:
+
+- **Vulnerability Type:** Clearly state the vulnerability type (e.g., SQL injection, XSS, privilege escalation).
+- **Affected Source Code:** Provide full file paths and direct URLs (branch, tag, or commit).
+- **Reproduction Steps:** Include detailed, step-by-step instructions. Screenshots are recommended.
+- **Special Configuration:** Document any special settings or configurations required to reproduce.
+- **Proof-of-Concept (PoC):** Provide exploit or PoC code (if available).
+- **Impact Assessment:** Clearly explain the severity and potential exploitation scenarios.
+
+### Our Response
+- We will acknowledge receipt of your report promptly via your provided email.
+- Confirmed vulnerabilities will receive priority remediation based on severity.
+- Patches will be released as swiftly as possible following verification.
+
+### Reward Notice
+Currently, we do not offer a bug bounty program. Rewards, if issued, are discretionary.
