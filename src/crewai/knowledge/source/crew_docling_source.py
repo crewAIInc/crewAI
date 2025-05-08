@@ -17,6 +17,8 @@ from crewai.utilities.logger import Logger
 class CrewDoclingSource(BaseKnowledgeSource):
     """Default Source class for converting documents to markdown or json
     This will auto support PDF, DOCX, and TXT, XLSX, Images, and HTML files without any additional dependencies and follows the docling package as the source of truth.
+    
+    Note: To use this class, install crewai with the docling extra: `pip install crewai[docling]`
     """
 
     _logger: Logger = Logger(verbose=True)
