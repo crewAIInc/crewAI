@@ -1,4 +1,6 @@
-"""Test to verify compatibility between tokenizers and transformers."""
+"""Test suite to verify compatibility between tokenizers and transformers packages.
+Ensures the installed tokenizers version meets requirements and can work effectively with transformers.
+"""
 
 import pytest
 

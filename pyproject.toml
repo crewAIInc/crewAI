@@ -53,6 +53,7 @@ openpyxl = [
 mem0 = ["mem0ai>=0.1.29"]
 docling = [
     "docling>=2.12.0",
+    # Required for transformers compatibility
     "tokenizers>=0.21,<0.22",
 ]
 
