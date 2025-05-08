@@ -169,19 +169,55 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
-  <Accordion title="Google">
-    Set the following environment variables in your `.env` file:
+  <Accordion title="Google (Gemini API)">
+    Set your API key in your `.env` file. If you need a key, or need to find an
+    existing key, check [AI Studio](https://aistudio.google.com/apikey).
 
-    ```toml Code
-    # Option 1: Gemini accessed with an API key.
+    ```toml .env
     # https://ai.google.dev/gemini-api/docs/api-key
     GEMINI_API_KEY=<your-api-key>
-
-    # Option 2: Vertex AI IAM credentials for Gemini, Anthropic, and Model Garden.
-    # https://cloud.google.com/vertex-ai/generative-ai/docs/overview
     ```
 
-    Get credentials from your Google Cloud Console and save it to a JSON file with the following code:
+    Example usage in your CrewAI project:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash",
+        temperature=0.7,
+    )
+    ```
+
+    ### Gemini models
+
+    Google offers a range of powerful models optimized for different use cases.
+
+    | Model                          | Context Window | Best For                                                          |
+    |--------------------------------|----------------|-------------------------------------------------------------------|
+    | gemini-2.5-flash-preview-04-17 | 1M tokens      | Adaptive thinking, cost efficiency                                |
+    | gemini-2.5-pro-preview-05-06   | 1M tokens      | Enhanced thinking and reasoning, multimodal understanding, advanced coding, and more |
+    | gemini-2.0-flash               | 1M tokens      | Next generation features, speed, thinking, and realtime streaming |
+    | gemini-2.0-flash-lite          | 1M tokens      | Cost efficiency and low latency                                   |
+    | gemini-1.5-flash               | 1M tokens      | Balanced multimodal model, good for most tasks                    |
+    | gemini-1.5-flash-8B            | 1M tokens      | Fastest, most cost-efficient, good for high-frequency tasks       |
+    | gemini-1.5-pro                 | 2M tokens      | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
+
+    The full list of models is available in the [Gemini model docs](https://ai.google.dev/gemini-api/docs/models).
+
+    ### Gemma
+
+    The Gemini API also allows you to use your API key to access [Gemma models](https://ai.google.dev/gemma/docs) hosted on Google infrastructure.
+
+    | Model          | Context Window |
+    |----------------|----------------|
+    | gemma-3-1b-it  | 32k tokens     |
+    | gemma-3-4b-it  | 32k tokens     |
+    | gemma-3-12b-it | 32k tokens     |
+    | gemma-3-27b-it | 128k tokens    |
+
+  </Accordion>
+  <Accordion title="Google (Vertex AI)">
+    Get credentials from your Google Cloud Console and save it to a JSON file, then load it with the following code:
     ```python Code
     import json
 
@@ -205,14 +241,18 @@ In this section, you'll find detailed examples that help you select, configure, 
         vertex_credentials=vertex_credentials_json
     )
     ```
+
     Google offers a range of powerful models optimized for different use cases:
 
-    | Model                  | Context Window | Best For                                                          |
-    |-----------------------|----------------|------------------------------------------------------------------|
-    | gemini-2.0-flash-exp  | 1M tokens      | Higher quality at faster speed, multimodal model, good for most tasks |
-    | gemini-1.5-flash      | 1M tokens      | Balanced multimodal model, good for most tasks                    |
-    | gemini-1.5-flash-8B   | 1M tokens      | Fastest, most cost-efficient, good for high-frequency tasks       |
-    | gemini-1.5-pro        | 2M tokens      | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
+    | Model                          | Context Window | Best For                                                          |
+    |--------------------------------|----------------|-------------------------------------------------------------------|
+    | gemini-2.5-flash-preview-04-17 | 1M tokens      | Adaptive thinking, cost efficiency                                |
+    | gemini-2.5-pro-preview-05-06   | 1M tokens      | Enhanced thinking and reasoning, multimodal understanding, advanced coding, and more |
+    | gemini-2.0-flash               | 1M tokens      | Next generation features, speed, thinking, and realtime streaming |
+    | gemini-2.0-flash-lite          | 1M tokens      | Cost efficiency and low latency                                   |
+    | gemini-1.5-flash               | 1M tokens      | Balanced multimodal model, good for most tasks                    |
+    | gemini-1.5-flash-8B            | 1M tokens      | Fastest, most cost-efficient, good for high-frequency tasks       |
+    | gemini-1.5-pro                 | 2M tokens      | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
   </Accordion>
 
   <Accordion title="Azure">
