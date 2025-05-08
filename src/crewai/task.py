@@ -321,8 +321,11 @@ class Task(BaseModel):
     @model_validator(mode="after")
     def check_tools(self):
         """Check if the tools are set."""
-        if not self.tools and self.agent and self.agent.tools:
-            self.tools.extend(self.agent.tools)
+        if self.agent and self.agent.tools:
+            existing_tool_names = {tool.name for tool in self.tools}
+            for tool in self.agent.tools:
+                if tool.name not in existing_tool_names:
+                    self.tools.append(tool)
         return self
 
     @model_validator(mode="after")

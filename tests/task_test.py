@@ -43,7 +43,7 @@ def test_task_tool_reflect_agent_tools():
     assert task.tools == [fake_tool]
 
 
-def test_task_tool_takes_precedence_over_agent_tools():
+def test_task_tools_combined_with_agent_tools():
     from crewai.tools import tool
 
     @tool
@@ -52,7 +52,7 @@ def test_task_tool_takes_precedence_over_agent_tools():
 
     @tool
     def fake_task_tool() -> None:
-        "Fake tool"
+        "Fake task tool"
 
     researcher = Agent(
         role="Researcher",
@@ -69,7 +69,9 @@ def test_task_tool_takes_precedence_over_agent_tools():
         tools=[fake_task_tool],
     )
 
-    assert task.tools == [fake_task_tool]
+    assert len(task.tools) == 2
+    assert any(tool.name == fake_task_tool.name for tool in task.tools)
+    assert any(tool.name == fake_tool.name for tool in task.tools)
 
 
 def test_task_prompt_includes_expected_output():
