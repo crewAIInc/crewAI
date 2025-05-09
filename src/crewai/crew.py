@@ -1391,44 +1391,13 @@ class Crew(FlowTrackable, BaseModel):
 
     def _reset_all_memories(self) -> None:
         """Reset all available memory systems."""
+        memory_systems = self._get_memory_systems()
 
-        default_reset = lambda memory: memory.reset()
-        knowledge_reset = lambda memory: self.reset_knowledge(memory)
-
-        agent_knowledge_storages = [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
-        crew_and_agent_knowledge_storages = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
-        crew_and_agent_knowledge_storages.extend(agent_knowledge_storages)
-
-        memory_systems = {
-            'short term': {
-                'system': getattr(self, "_short_term_memory", None)
-            },
-            'entity': {
-                'system': getattr(self, "_entity_memory", None)
-            },
-            'external': {
-                'system': getattr(self, "_external_memory", None)
-            },
-            'long term': {
-                'system': getattr(self, "_long_term_memory", None)
-            },
-            'task output': {
-                'system': getattr(self, "_task_output_handler", None)
-            },
-            'knowledge': {
-                'system': crew_and_agent_knowledge_storages if crew_and_agent_knowledge_storages else None,
-                'reset': knowledge_reset
-            },
-            'agent knowledge': {
-                'system': agent_knowledge_storages if agent_knowledge_storages else None,
-                'reset': knowledge_reset
-            }
-        }
-
-        for name, config in memory_systems.items():
+        for memory_type, config in memory_systems.items():
             if (system := config.get('system')) is not None:
+                name = config.get('name')
                 try:
-                    reset_fn: Callable = cast(Callable, config.get('reset', default_reset))
+                    reset_fn: Callable = cast(Callable, config.get('reset'))
                     reset_fn(system)
                     self._logger.log(
                         "info",
@@ -1439,7 +1408,6 @@ class Crew(FlowTrackable, BaseModel):
                         f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
                     ) from e
 
-
     def _reset_specific_memory(self, memory_type: str) -> None:
         """Reset a specific memory system.
 
@@ -1449,32 +1417,66 @@ class Crew(FlowTrackable, BaseModel):
         Raises:
             RuntimeError: If the specified memory system fails to reset
         """
+        memory_systems = self._get_memory_systems()
+        config = memory_systems[memory_type]
+        system = config.get('system')
+        name = config.get('name')
+
+        if system is None:
+            raise RuntimeError(f"{name} memory system is not initialized")
+        
+        try:
+            reset_fn: Callable = cast(Callable, config.get('reset'))
+            reset_fn(system)
+            self._logger.log(
+                "info",
+                f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
+            ) from e
+
+    def _get_memory_systems(self):
+        """Get all available memory systems with their configuration.
+        
+        Returns:
+            Dict containing all memory systems with their reset functions and display names.
+        """
         default_reset = lambda memory: memory.reset()
         knowledge_reset = lambda memory: self.reset_knowledge(memory)
-
-        agent_knowledge_storages =  [getattr(agent, "knowledge", None) for agent in self.agents if getattr(agent, "knowledge", None) is not None]
-        crew_and_agent_knowledge_storages = [getattr(self, "knowledge", None)] if getattr(self, "knowledge", None) is not None else []
+        
+        # Get knowledge storages for agents and crew
+        agent_knowledge_storages = [getattr(agent, "knowledge", None) for agent in self.agents 
+                                    if getattr(agent, "knowledge", None) is not None]
+        crew_knowledge = getattr(self, "knowledge", None)
+        crew_and_agent_knowledge_storages = [crew_knowledge] if crew_knowledge is not None else []
         crew_and_agent_knowledge_storages.extend(agent_knowledge_storages)
-
-        reset_functions = {
+        
+        return {
             'short': {
                 'system': getattr(self, "_short_term_memory", None),
+                'reset': default_reset,
                 'name': 'Short Term'
             },
             'entity': {
                 'system': getattr(self, "_entity_memory", None),
+                'reset': default_reset,
                 'name': 'Entity'
             },
             'external': {
                 'system': getattr(self, "_external_memory", None),
+                'reset': default_reset,
                 'name': 'External'
             },
             'long': {
                 'system': getattr(self, "_long_term_memory", None),
+                'reset': default_reset,
                 'name': 'Long Term'
             },
             'kickoff_outputs': {
                 'system': getattr(self, "_task_output_handler", None),
+                'reset': default_reset,
                 'name': 'Task Output'
             },
             'knowledge': {
@@ -1487,27 +1489,7 @@ class Crew(FlowTrackable, BaseModel):
                 'reset': knowledge_reset,
                 'name': 'Agent Knowledge'
             }
-        }       
-
-        config = reset_functions[memory_type]
-        system = config.get('system')
-        name = config.get('name')
-
-        if system is None:
-            raise RuntimeError(f"{name} memory system is not initialized")
-        
-        try:
-            reset_fn: Callable = cast(Callable, config.get('reset', default_reset))
-            reset_fn(system)
-            self._logger.log(
-                "info",
-                f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
-            )
-        except Exception as e:
-            raise RuntimeError(
-                f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
-            ) from e
-
+        }
 
     def reset_knowledge(self, knowledge_storage: List[Knowledge]) -> None:
         """Reset crew and agent knowledge storage."""
