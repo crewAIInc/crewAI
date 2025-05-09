@@ -28,7 +28,12 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
+        if: matrix.python-version != '3.13'
         run: uv sync --dev --all-extras
+
+      - name: Install the project (Python 3.13)
+        if: matrix.python-version == '3.13'
+        run: uv sync --dev  # Skip all-extras for Python 3.13 due to onnxruntime compatibility
 
       - name: Run tests
         run: uv run pytest --block-network --timeout=60 -vv
