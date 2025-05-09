@@ -162,8 +162,18 @@ def test_reset_knowledge(mock_get_crews, runner):
     assert call_count == 1, "reset_memories should have been called once"
 
 
-def test_reset_memory_from_many_crews(mock_get_crews, runner):
+def test_reset_agent_knowledge(mock_get_crews, runner):
+    result = runner.invoke(reset_memories, ["--agent-knowledge"])
+    call_count = 0
+    for crew in mock_get_crews.return_value:
+        crew.reset_memories.assert_called_once_with(command_type="agent_knowledge")
+        assert f"[Crew ({crew.name})] Agents knowledge has been reset." in result.output
+        call_count += 1
 
+    assert call_count == 1, "reset_memories should have been called once"
+
+
+def test_reset_memory_from_many_crews(mock_get_crews, runner):
     crews = []
     for crew_id in ["id-1234", "id-5678"]:
         mock_crew = mock.Mock(spec=Crew)
