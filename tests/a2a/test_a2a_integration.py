@@ -1,13 +1,17 @@
 """Tests for the A2A protocol integration."""
 
 import asyncio
+from datetime import datetime
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+pytestmark = pytest.mark.asyncio
 
 from crewai.agent import Agent
 from crewai.a2a import A2AAgentIntegration, A2AClient, A2AServer, InMemoryTaskManager
 from crewai.task import Task
 from crewai.types.a2a import (
+    JSONRPCResponse,
     Message,
     Task as A2ATask,
     TaskState,
@@ -60,7 +64,7 @@ def a2a_integration():
 @pytest.fixture
 def a2a_client():
     """Create an A2A client."""
-    return A2AClient(base_url="http://localhost:8000")
+    return A2AClient(base_url="http://localhost:8000", api_key="test_api_key")
 
 
 @pytest.fixture
@@ -81,8 +85,7 @@ class TestA2AIntegration:
     @patch("crewai.a2a.agent.A2AAgentIntegration.execute_task_via_a2a")
     def test_execute_task_via_a2a(self, mock_execute, agent):
         """Test executing a task via A2A."""
-        mock_execute.return_value = asyncio.Future()
-        mock_execute.return_value.set_result("Task result")
+        mock_execute.return_value = "Task result"
 
         result = asyncio.run(
             agent.execute_task_via_a2a(
@@ -116,8 +119,8 @@ class TestA2AIntegration:
         assert result == "Task result"
         mock_execute.assert_called_once()
         args, kwargs = mock_execute.call_args
-        assert args[0].description == "Test task"
         assert kwargs["context"] == "Test context"
+        assert kwargs["task"].description == "Test task"
 
     def test_a2a_disabled(self, agent):
         """Test that A2A methods raise ValueError when A2A is disabled."""
@@ -159,7 +162,7 @@ class TestA2AAgentIntegration:
         queue = asyncio.Queue()
         await queue.put(
             TaskStatusUpdateEvent(
-                task_id="test_task_id",
+                id="test_task_id",
                 status=TaskStatus(
                     state=TaskState.COMPLETED,
                     message=Message(
@@ -198,23 +201,29 @@ class TestA2AServer:
 class TestA2AClient:
     """Tests for the A2AClient class."""
 
-    @patch("aiohttp.ClientSession.post")
-    async def test_send_task(self, mock_post, a2a_client):
+    @patch("crewai.a2a.client.A2AClient._send_jsonrpc_request")
+    async def test_send_task(self, mock_send_request, a2a_client):
         """Test sending a task."""
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(
-            return_value={
-                "id": "test_task_id",
-                "history": [
-                    {
-                        "role": "user",
-                        "parts": [{"text": "Test task description"}],
-                    }
+        mock_response = JSONRPCResponse(
+            jsonrpc="2.0",
+            id="test_request_id",
+            result=A2ATask(
+                id="test_task_id",
+                sessionId="test_session_id",
+                status=TaskStatus(
+                    state=TaskState.SUBMITTED,
+                    timestamp=datetime.now(),
+                ),
+                history=[
+                    Message(
+                        role="user",
+                        parts=[TextPart(text="Test task description")],
+                    )
                 ],
-            }
+            )
         )
-        mock_post.return_value.__aenter__.return_value = mock_response
+        
+        mock_send_request.return_value = mock_response
 
         task = await a2a_client.send_task(
             task_id="test_task_id",
@@ -222,9 +231,10 @@ class TestA2AClient:
                 role="user",
                 parts=[TextPart(text="Test task description")],
             ),
+            session_id="test_session_id",
         )
 
         assert task.id == "test_task_id"
         assert task.history[0].role == "user"
         assert task.history[0].parts[0].text == "Test task description"
-        mock_post.assert_called_once()
+        mock_send_request.assert_called_once()

@@ -8,10 +8,13 @@ import asyncio
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union, cast
 
 import aiohttp
 from pydantic import ValidationError
+
+if TYPE_CHECKING:
+    from crewai.a2a.config import A2AConfig
 
 from crewai.types.a2a import (
     A2AClientError,
@@ -53,7 +56,8 @@ class A2AClient:
         self,
         base_url: str,
         api_key: Optional[str] = None,
-        timeout: int = 60,
+        timeout: Optional[int] = None,
+        config: Optional["A2AConfig"] = None,
     ):
         """Initialize the A2A client.
 
@@ -61,10 +65,22 @@ class A2AClient:
             base_url: The base URL of the A2A server.
             api_key: The API key to use for authentication.
             timeout: The timeout for HTTP requests in seconds.
+            config: The A2A configuration. If provided, other parameters are ignored.
         """
+        if config:
+            from crewai.a2a.config import A2AConfig
+            self.config = config
+        else:
+            from crewai.a2a.config import A2AConfig
+            self.config = A2AConfig()
+            if api_key:
+                self.config.api_key = api_key
+            if timeout:
+                self.config.client_timeout = timeout
+                
         self.base_url = base_url.rstrip("/")
-        self.api_key = api_key or os.environ.get("A2A_API_KEY")
-        self.timeout = timeout
+        self.api_key = self.config.api_key or os.environ.get("A2A_API_KEY")
+        self.timeout = self.config.client_timeout
         self.logger = logging.getLogger(__name__)
 
     async def send_task(
@@ -92,7 +108,10 @@ class A2AClient:
             The created task.
 
         Raises:
-            A2AClientError: If there is an error sending the task.
+            MissingAPIKeyError: If no API key is provided.
+            A2AClientHTTPError: If there is an HTTP error.
+            A2AClientJSONError: If there is an error parsing the JSON response.
+            A2AClientError: If there is any other error sending the task.
         """
         params = TaskSendParams(
             id=task_id,
@@ -105,15 +124,26 @@ class A2AClient:
         )
 
         request = SendTaskRequest(params=params)
-        response = await self._send_jsonrpc_request(request)
+        
+        try:
+            response = await self._send_jsonrpc_request(request)
+            
+            if response.error:
+                raise A2AClientError(f"Error sending task: {response.error.message}")
 
-        if response.error:
-            raise A2AClientError(f"Error sending task: {response.error.message}")
+            if not response.result:
+                raise A2AClientError("No result returned from send task request")
 
-        if not response.result:
-            raise A2AClientError("No result returned from send task request")
-
-        return cast(Task, response.result)
+            if isinstance(response.result, dict):
+                return Task.model_validate(response.result)
+            return cast(Task, response.result)
+        except asyncio.TimeoutError as e:
+            raise A2AClientError(f"Task request timed out: {e}")
+        except aiohttp.ClientError as e:
+            if isinstance(e, aiohttp.ClientResponseError):
+                raise A2AClientHTTPError(e.status, str(e))
+            else:
+                raise A2AClientError(f"Client error: {e}")
 
     async def send_task_streaming(
         self,
@@ -318,6 +348,14 @@ class A2AClient:
                         return JSONRPCResponse.model_validate(data)
                     except ValidationError as e:
                         raise A2AClientError(f"Invalid response: {e}")
+        except aiohttp.ClientConnectorError as e:
+            raise A2AClientHTTPError(status=0, message=f"Connection error: {e}")
+        except aiohttp.ClientOSError as e:
+            raise A2AClientHTTPError(status=0, message=f"OS error: {e}")
+        except aiohttp.ServerDisconnectedError as e:
+            raise A2AClientHTTPError(status=0, message=f"Server disconnected: {e}")
+        except aiohttp.ClientResponseError as e:
+            raise A2AClientHTTPError(e.status, str(e))
         except aiohttp.ClientError as e:
             raise A2AClientError(f"HTTP error: {e}")
 
@@ -394,6 +432,14 @@ class A2AClient:
                                         await queue.put(
                                             A2AClientError(f"Invalid artifact event: {e}")
                                         )
+        except aiohttp.ClientConnectorError as e:
+            await queue.put(A2AClientHTTPError(status=0, message=f"Connection error: {e}"))
+        except aiohttp.ClientOSError as e:
+            await queue.put(A2AClientHTTPError(status=0, message=f"OS error: {e}"))
+        except aiohttp.ServerDisconnectedError as e:
+            await queue.put(A2AClientHTTPError(status=0, message=f"Server disconnected: {e}"))
+        except aiohttp.ClientResponseError as e:
+            await queue.put(A2AClientHTTPError(e.status, str(e)))
         except aiohttp.ClientError as e:
             await queue.put(A2AClientError(f"HTTP error: {e}"))
         except asyncio.CancelledError:

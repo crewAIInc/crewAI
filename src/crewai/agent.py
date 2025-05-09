@@ -459,10 +459,11 @@ class Agent(BaseAgent):
         task = Task(
             description=task_description,
             agent=self,
+            expected_output="text",  # Default to text output
         )
         
         try:
-            result = self.execute_task(task, context)
+            result = self.execute_task(task=task, context=context)
             return result
         except Exception as e:
             self._logger.exception(f"Error handling A2A task: {e}")

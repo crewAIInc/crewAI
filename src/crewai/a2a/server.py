@@ -7,12 +7,15 @@ This module implements the server for the A2A protocol in CrewAI.
 import asyncio
 import json
 import logging
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Type, TYPE_CHECKING, Union
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import ValidationError
+
+if TYPE_CHECKING:
+    from crewai.a2a.config import A2AConfig
 
 from crewai.a2a.task_manager import InMemoryTaskManager, TaskManager
 from crewai.types.a2a import (
@@ -58,17 +61,47 @@ class A2AServer:
     def __init__(
         self,
         task_manager: Optional[TaskManager] = None,
-        enable_cors: bool = True,
+        enable_cors: Optional[bool] = None,
         cors_origins: Optional[List[str]] = None,
+        config: Optional["A2AConfig"] = None,
     ):
         """Initialize the A2A server.
 
         Args:
             task_manager: The task manager to use. If None, an InMemoryTaskManager will be created.
-            enable_cors: Whether to enable CORS.
-            cors_origins: The CORS origins to allow.
+            enable_cors: Whether to enable CORS. If None, uses config value.
+            cors_origins: The CORS origins to allow. If None, uses config value.
+            config: The A2A configuration. If provided, other parameters are ignored.
         """
-        self.app = FastAPI(title="A2A Server")
+        from crewai.a2a.config import A2AConfig
+        self.config = config or A2AConfig.from_env()
+        
+        enable_cors = enable_cors if enable_cors is not None else self.config.enable_cors
+        cors_origins = cors_origins or self.config.cors_origins
+        
+        self.app = FastAPI(
+            title="A2A Protocol Server",
+            description="""
+            A2A (Agent-to-Agent) protocol server for CrewAI.
+            
+            This server implements Google's A2A protocol specification, enabling interoperability
+            between different agent systems. It provides endpoints for task creation, retrieval,
+            cancellation, and streaming updates.
+            """,
+            version="1.0.0",
+            docs_url="/docs",
+            redoc_url="/redoc",
+            openapi_tags=[
+                {
+                    "name": "tasks",
+                    "description": "Operations for managing A2A tasks",
+                },
+                {
+                    "name": "jsonrpc",
+                    "description": "JSON-RPC interface for the A2A protocol",
+                },
+            ],
+        )
         self.task_manager = task_manager or InMemoryTaskManager()
         self.logger = logging.getLogger(__name__)
 
@@ -81,11 +114,125 @@ class A2AServer:
                 allow_headers=["*"],
             )
 
-        self.app.post("/v1/jsonrpc")(self.handle_jsonrpc)
-        self.app.post("/v1/tasks/send")(self.handle_send_task)
-        self.app.post("/v1/tasks/sendSubscribe")(self.handle_send_task_subscribe)
-        self.app.post("/v1/tasks/{task_id}/cancel")(self.handle_cancel_task)
-        self.app.get("/v1/tasks/{task_id}")(self.handle_get_task)
+        @self.app.post(
+            "/v1/jsonrpc",
+            summary="Handle JSON-RPC requests",
+            description="""
+            Process JSON-RPC requests for the A2A protocol.
+            
+            This endpoint handles all JSON-RPC requests for the A2A protocol, including:
+            - SendTask: Create a new task
+            - GetTask: Retrieve a task by ID
+            - CancelTask: Cancel a running task
+            - SetTaskPushNotification: Configure push notifications for a task
+            - GetTaskPushNotification: Retrieve push notification configuration for a task
+            """,
+            response_model=JSONRPCResponse,
+            responses={
+                200: {"description": "Successful response with result or error"},
+                400: {"description": "Invalid request format or parameters"},
+                500: {"description": "Internal server error during processing"},
+            },
+            tags=["jsonrpc"],
+        )
+        async def handle_jsonrpc(request: Request):
+            return await self.handle_jsonrpc(request)
+            
+        @self.app.post(
+            "/v1/tasks/send",
+            summary="Send a task to an agent",
+            description="""
+            Create a new task and send it to an agent for execution.
+            
+            This endpoint allows clients to send tasks to agents for processing.
+            The task is created with the provided parameters and immediately
+            transitions to the WORKING state. The response includes the created
+            task with its current status.
+            """,
+            response_model=Task,
+            responses={
+                200: {"description": "Task created successfully and processing started"},
+                400: {"description": "Invalid request format or parameters"},
+                500: {"description": "Internal server error during task creation or processing"},
+            },
+            tags=["tasks"],
+        )
+        async def handle_send_task(request: Request):
+            return await self.handle_send_task(request)
+            
+        @self.app.post(
+            "/v1/tasks/sendSubscribe",
+            summary="Send a task and subscribe to updates",
+            description="""
+            Create a new task and subscribe to status updates via Server-Sent Events (SSE).
+            
+            This endpoint allows clients to send tasks to agents and receive real-time
+            updates as the task progresses. The response is a streaming SSE connection
+            that provides status updates and artifact notifications until the task
+            reaches a terminal state (COMPLETED, FAILED, CANCELED, or EXPIRED).
+            """,
+            responses={
+                200: {
+                    "description": "Streaming response with task updates",
+                    "content": {
+                        "text/event-stream": {
+                            "schema": {"type": "string"},
+                            "example": 'event: status\ndata: {"task_id": "123", "status": {"state": "WORKING"}}\n\n',
+                        }
+                    },
+                },
+                400: {"description": "Invalid request format or parameters"},
+                500: {"description": "Internal server error during task creation or processing"},
+            },
+            tags=["tasks"],
+        )
+        async def handle_send_task_subscribe(request: Request):
+            return await self.handle_send_task_subscribe(request)
+            
+        @self.app.post(
+            "/v1/tasks/{task_id}/cancel",
+            summary="Cancel a task",
+            description="""
+            Cancel a running task by ID.
+            
+            This endpoint allows clients to cancel a task that is currently in progress.
+            The task must be in a non-terminal state (PENDING, WORKING) to be canceled.
+            Once canceled, the task transitions to the CANCELED state and cannot be
+            resumed. The response includes the updated task with its current status.
+            """,
+            response_model=Task,
+            responses={
+                200: {"description": "Task canceled successfully and status updated to CANCELED"},
+                404: {"description": "Task not found or already expired"},
+                409: {"description": "Task cannot be canceled (already in terminal state)"},
+                500: {"description": "Internal server error during task cancellation"},
+            },
+            tags=["tasks"],
+        )
+        async def handle_cancel_task(task_id: str, request: Request):
+            return await self.handle_cancel_task(task_id, request)
+            
+        @self.app.get(
+            "/v1/tasks/{task_id}",
+            summary="Get task details",
+            description="""
+            Retrieve details of a task by ID.
+            
+            This endpoint allows clients to retrieve the current state and details of a task.
+            The response includes the task's status, history, and any associated metadata.
+            Clients can specify the history_length parameter to limit the number of messages
+            included in the response.
+            """,
+            response_model=Task,
+            responses={
+                200: {"description": "Task details retrieved successfully with current status"},
+                404: {"description": "Task not found or expired"},
+                500: {"description": "Internal server error during task retrieval"},
+            },
+            tags=["tasks"],
+        )
+        async def handle_get_task(task_id: str, request: Request):
+            return await self.handle_get_task(task_id, request)
 
     async def handle_jsonrpc(self, request: Request) -> JSONResponse:
         """Handle JSON-RPC requests.
@@ -121,7 +268,7 @@ class A2AServer:
             return JSONResponse(
                 content=JSONRPCResponse(
                     id=body.get("id") if isinstance(body, dict) else None,
-                    error=InternalError(data=str(e)),
+                    error=InternalError(message="Internal server error"),
                 ).model_dump(),
                 status_code=500,
             )
@@ -210,7 +357,7 @@ class A2AServer:
             self.logger.exception(f"Error handling {method} request")
             return JSONRPCResponse(
                 id=request_id,
-                error=InternalError(data=str(e)),
+                error=InternalError(message="Internal server error"),
             )
 
     async def handle_send_task(self, request: Request) -> JSONResponse:
@@ -227,15 +374,15 @@ class A2AServer:
             params = TaskSendParams.model_validate(body)
             task = await self._handle_send_task(params)
             return JSONResponse(content=task.model_dump())
-        except ValidationError as e:
+        except ValidationError:
             return JSONResponse(
-                content={"error": str(e)},
+                content={"error": "Invalid request format or parameters"},
                 status_code=400,
             )
         except Exception as e:
             self.logger.exception("Error handling send task request")
             return JSONResponse(
-                content={"error": str(e)},
+                content={"error": "Internal server error"},
                 status_code=500,
             )
 
@@ -283,15 +430,15 @@ class A2AServer:
                 self._stream_task_updates(params.id, queue),
                 media_type="text/event-stream",
             )
-        except ValidationError as e:
+        except ValidationError:
             return JSONResponse(
-                content={"error": str(e)},
+                content={"error": "Invalid request format or parameters"},
                 status_code=400,
             )
         except Exception as e:
             self.logger.exception("Error handling send task subscribe request")
             return JSONResponse(
-                content={"error": str(e)},
+                content={"error": "Internal server error"},
                 status_code=500,
             )
 
@@ -346,7 +493,7 @@ class A2AServer:
             raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         except Exception as e:
             self.logger.exception(f"Error handling get task request for {task_id}")
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail="Internal server error")
 
     async def handle_cancel_task(self, task_id: str, request: Request) -> JSONResponse:
         """Handle cancel task requests.
@@ -365,4 +512,4 @@ class A2AServer:
             raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         except Exception as e:
             self.logger.exception(f"Error handling cancel task request for {task_id}")
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail="Internal server error")

@@ -24,6 +24,42 @@ class TaskState(str, Enum):
     CANCELED = 'canceled'
     FAILED = 'failed'
     UNKNOWN = 'unknown'
+    EXPIRED = 'expired'
+    
+    @classmethod
+    def valid_transitions(cls) -> Dict[str, List[str]]:
+        """Get valid state transitions.
+        
+        Returns:
+            A dictionary mapping from state to list of valid next states.
+        """
+        return {
+            cls.SUBMITTED: [cls.WORKING, cls.CANCELED, cls.FAILED],
+            cls.WORKING: [cls.INPUT_REQUIRED, cls.COMPLETED, cls.CANCELED, cls.FAILED],
+            cls.INPUT_REQUIRED: [cls.WORKING, cls.CANCELED, cls.FAILED],
+            cls.COMPLETED: [],  # Terminal state
+            cls.CANCELED: [],   # Terminal state
+            cls.FAILED: [],     # Terminal state
+            cls.UNKNOWN: [cls.SUBMITTED, cls.WORKING, cls.INPUT_REQUIRED, cls.COMPLETED, cls.CANCELED, cls.FAILED],
+            cls.EXPIRED: [],    # Terminal state
+        }
+        
+    @classmethod
+    def is_valid_transition(cls, from_state: 'TaskState', to_state: 'TaskState') -> bool:
+        """Check if a state transition is valid.
+        
+        Args:
+            from_state: The current state.
+            to_state: The target state.
+            
+        Returns:
+            True if the transition is valid, False otherwise.
+        """
+        if from_state == to_state:
+            return True
+            
+        valid_next_states = cls.valid_transitions().get(from_state, [])
+        return to_state in valid_next_states
 
 
 class TextPart(BaseModel):
@@ -83,11 +119,21 @@ class TaskStatus(BaseModel):
     state: TaskState
     message: Optional[Message] = None
     timestamp: datetime = Field(default_factory=datetime.now)
+    previous_state: Optional[TaskState] = None
 
     @field_serializer('timestamp')
     def serialize_dt(self, dt: datetime, _info):
         """Serialize datetime to ISO format."""
         return dt.isoformat()
+        
+    @model_validator(mode='after')
+    def validate_state_transition(self) -> Self:
+        """Validate state transition."""
+        if self.previous_state and not TaskState.is_valid_transition(self.previous_state, self.state):
+            raise ValueError(
+                f"Invalid state transition from {self.previous_state} to {self.state}"
+            )
+        return self
 
 
 class Artifact(BaseModel):
