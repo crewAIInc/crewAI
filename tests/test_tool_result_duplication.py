@@ -1,6 +1,7 @@
-import pytest
 from typing import Dict, List, Optional, Union
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from crewai.agent import Agent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
