@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -11,9 +12,24 @@ from crewai.utilities.logger import Logger
 
 
 class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
-    """Base class for knowledge sources that load content from files."""
+    """
+    Base class for knowledge sources that load content from files.
+    
+    This class provides common functionality for file-based knowledge sources,
+    including file path validation, content loading, and change detection.
+    It automatically tracks file modification times to detect when files have
+    been updated and need to be reloaded.
+    
+    Attributes:
+        file_path: Deprecated. Use file_paths instead.
+        file_paths: Path(s) to the file(s) containing knowledge data.
+        content: Dictionary mapping file paths to their loaded content.
+        storage: Storage backend for the knowledge data.
+        safe_file_paths: Validated list of Path objects.
+    """
 
     _logger: Logger = Logger(verbose=True)
+    
     file_path: Optional[Union[Path, List[Path], str, List[str]]] = Field(
         default=None,
         description="[Deprecated] The path to the file. Use file_paths instead.",
@@ -43,7 +59,34 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         """Post-initialization method to load content."""
         self.safe_file_paths = self._process_file_paths()
         self.validate_content()
+        self._record_file_mtimes()
         self.content = self.load_content()
+        
+    def _record_file_mtimes(self):
+        """
+        Record modification times of all files.
+        
+        This method stores the current modification timestamps of all files
+        in the _file_mtimes dictionary. These timestamps are later used to
+        detect when files have been modified and need to be reloaded.
+        
+        Thread-safe: Uses a lock to prevent concurrent modifications.
+        """
+        with self._lock:
+            self._file_mtimes = {}
+            for path in self.safe_file_paths:
+                try:
+                    if path.exists() and path.is_file():
+                        if os.access(path, os.R_OK):
+                            self._file_mtimes[path] = path.stat().st_mtime
+                        else:
+                            self._logger.log("warning", f"File {path} is not readable.")
+                except PermissionError as e:
+                    self._logger.log("error", f"Permission error when recording file timestamp for {path}: {str(e)}")
+                except IOError as e:
+                    self._logger.log("error", f"IO error when recording file timestamp for {path}: {str(e)}")
+                except Exception as e:
+                    self._logger.log("error", f"Unexpected error when recording file timestamp for {path}: {str(e)}")
 
     @abstractmethod
     def load_content(self) -> Dict[Path, str]:
@@ -107,3 +150,41 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
             )
 
         return [self.convert_to_path(path) for path in path_list]
+        
+    def files_have_changed(self) -> bool:
+        """
+        Check if any of the files have been modified since they were last loaded.
+        
+        This method compares the current modification timestamps of files with the
+        previously recorded timestamps to detect changes. When a file has been modified,
+        it logs the change and returns True to trigger a reload.
+        
+        Returns:
+            bool: True if any file has been modified, False otherwise.
+        """
+        for path in self.safe_file_paths:
+            try:
+                if not path.exists():
+                    self._logger.log("warning", f"File {path} no longer exists.")
+                    continue
+                    
+                if not path.is_file():
+                    self._logger.log("warning", f"Path {path} is not a file.")
+                    continue
+                    
+                if not os.access(path, os.R_OK):
+                    self._logger.log("warning", f"File {path} is not readable.")
+                    continue
+                    
+                current_mtime = path.stat().st_mtime
+                if path not in self._file_mtimes or current_mtime > self._file_mtimes[path]:
+                    self._logger.log("info", f"File {path} has been modified. Reloading data.")
+                    return True
+            except PermissionError as e:
+                self._logger.log("error", f"Permission error when checking file {path}: {str(e)}")
+            except IOError as e:
+                self._logger.log("error", f"IO error when checking file {path}: {str(e)}")
+            except Exception as e:
+                self._logger.log("error", f"Unexpected error when checking file {path}: {str(e)}")
+                
+        return False
