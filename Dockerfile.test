@@ -2,13 +2,21 @@ FROM python:3.13-slim-bookworm
 
 WORKDIR /app
 
-RUN pip install --upgrade pip
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD python -c "import crewai" || exit 1
+
+# Improved installation process
+RUN pip install --upgrade pip && pip install --no-cache-dir -U pip setuptools wheel && rm -rf /root/.cache/pip/* \
+    || { echo 'Installation failed'; exit 1; }
 
 # Copy the current directory contents into the container
 COPY . /app/
 
-# Install the package
-RUN pip install -e .
+# Install the package with error handling
+RUN pip install -e . || { echo 'Package installation failed'; exit 1; }
+
+# Version confirmation
+RUN python -c "import crewai; assert crewai.__version__, 'Version check failed'"
 
 # Test importing the package
 CMD ["python", "-c", "import crewai; print(f'Successfully imported crewai version {crewai.__version__}')"]
