@@ -88,6 +88,7 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "o1-preview": 128000,
     "o1-mini": 128000,
     "o3-mini": 200000,  # Based on official o3-mini specifications
+    "o4-mini": 200000,  # Token limit based on OpenAI's official specifications
     # gemini
     "gemini-2.0-flash": 1048576,
     "gemini-2.0-flash-thinking-exp-01-21": 32768,

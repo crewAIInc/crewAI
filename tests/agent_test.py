@@ -415,7 +415,9 @@ def test_agent_execution_with_specific_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
+@pytest.mark.parametrize("model", ["o3-mini", "o4-mini"])
+def test_agent_powered_by_o_model_that_allows_skipping_tool(model):
+    """Test that o-series models can skip using tools when appropriate."""
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
@@ -425,7 +427,7 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="o3-mini"),
+        llm=LLM(model=model),
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
@@ -441,9 +443,11 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_powered_by_new_o_model_family_that_uses_tool():
+@pytest.mark.parametrize("model", ["o3-mini", "o4-mini"])
+def test_agent_powered_by_o_model_that_uses_tool(model):
+    """Test that o-series models can use tools when appropriate."""
     @tool
-    def comapny_customer_data() -> float:
+    def company_customer_data() -> float:
         """Useful for getting customer related data."""
         return "The company has 42 customers"
 
@@ -451,18 +455,18 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm="o3-mini",
+        llm=model,
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
     )
-
+    
     task = Task(
         description="How many customers does the company have?",
         agent=agent,
         expected_output="The number of customers",
     )
-    output = agent.execute_task(task=task, tools=[comapny_customer_data])
+    output = agent.execute_task(task=task, tools=[company_customer_data])
     assert output == "42"
 
 
