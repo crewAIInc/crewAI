@@ -232,7 +232,7 @@ class Telemetry:
                                 "agent_key": task.agent.key if task.agent else None,
                                 "context": (
                                     [task.description for task in task.context]
-                                    if task.context
+                                    if isinstance(task.context, list)
                                     else None
                                 ),
                                 "tools_names": [
@@ -748,7 +748,7 @@ class Telemetry:
                             "agent_key": task.agent.key if task.agent else None,
                             "context": (
                                 [task.description for task in task.context]
-                                if task.context
+                                if isinstance(task.context, list)
                                 else None
                             ),
                             "tools_names": [
