@@ -214,8 +214,6 @@ def handle_agent_action_core(
     if show_logs:
         show_logs(formatted_answer)
 
-    if messages is not None:
-        messages.append({"role": "assistant", "content": tool_result.result})
 
     return formatted_answer
 
