@@ -1,6 +1,6 @@
 """Tests for Python version compatibility."""
-import sys
 import pytest
+import sys
 
 
 def test_python_version_compatibility():
