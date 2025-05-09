@@ -214,6 +214,9 @@ def handle_agent_action_core(
     if show_logs:
         show_logs(formatted_answer)
 
+    # Tool results are already included in the formatted answer with "Observation:" prefix,
+    # so we don't need to append them again to messages to avoid duplication and token bloat.
+    # This fixes issue #2798 where tool results were being duplicated in the LLM prompt.
 
     return formatted_answer
 
