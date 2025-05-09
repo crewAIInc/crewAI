@@ -1,11 +1,16 @@
+from typing import Dict, List, Optional, Union
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from crewai.agent import Agent
-from crewai.task import Task
-from crewai.crew import Crew
-from crewai.tools import BaseTool
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.agents.tools_handler import ToolsHandler
+from crewai.crew import Crew
+from crewai.task import Task
+from crewai.tools import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
+from crewai.utilities.agent_utils import parse_tools
 
 
 class TestTool(BaseTool):
@@ -16,7 +21,7 @@ class TestTool(BaseTool):
         return "Test tool result"
 
 
-def test_tool_result_not_duplicated_in_messages():
+def test_tool_result_not_duplicated_in_messages() -> None:
     """Test that tool results are not duplicated in messages.
     
     This test verifies the fix for issue #2798, where tool results were being
@@ -37,12 +42,25 @@ def test_tool_result_not_duplicated_in_messages():
     
     crew = Crew(agents=[agent], tasks=[task])
     
+    structured_tools = parse_tools(agent.tools)
+    tools_names = ", ".join([t.name for t in structured_tools])
+    tools_description = "\n".join([t.description for t in structured_tools])
+    
+    tools_handler = MagicMock(spec=ToolsHandler)
+    
     with patch.object(CrewAgentExecutor, '_invoke_loop') as mock_invoke_loop:
         executor = CrewAgentExecutor(
             agent=agent,
             task=task,
-            tools=agent.tools,
+            crew=crew,
             llm=agent.llm,
+            prompt={"system": "System prompt", "user": "User prompt"},
+            max_iter=10,
+            tools=structured_tools,
+            tools_names=tools_names,
+            stop_words=[],
+            tools_description=tools_description,
+            tools_handler=tools_handler,
             callbacks=[],
         )
         
