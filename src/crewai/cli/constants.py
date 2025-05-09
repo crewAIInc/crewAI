@@ -13,7 +13,7 @@ ENV_VARS = {
     ],
     "gemini": [
         {
-            "prompt": "Enter your GEMINI API key (press Enter to skip)",
+            "prompt": "Enter your GEMINI API key from https://ai.dev/apikey (press Enter to skip)",
             "key_name": "GEMINI_API_KEY",
         }
     ],

@@ -180,8 +180,9 @@ Follow the steps below to get Crewing! 🚣‍♂️
   </Step>
   <Step title="Set your environment variables">
   Before running your crew, make sure you have the following keys set as environment variables in your `.env` file:
-    - An [OpenAI API key](https://platform.openai.com/account/api-keys) (or other LLM API key): `OPENAI_API_KEY=sk-...`
     - A [Serper.dev](https://serper.dev/) API key: `SERPER_API_KEY=YOUR_KEY_HERE`
+    - The configuration for your choice of model, such as an API key. See the
+        [LLM setup guide](/concepts/llms#setting-up-your-llm) to learn how to configure models from any provider.
   </Step>
   <Step title="Lock and install the dependencies">
     - Lock the dependencies and install them by using the CLI command:
@@ -317,7 +318,7 @@ email_summarizer:
       Summarize emails into a concise and clear summary
     backstory: >
       You will create a 5 bullet point summary of the report
-    llm: openai/gpt-4o
+    llm: provider/model-id  # Add your choice of model here
 ```
 
 <Tip>

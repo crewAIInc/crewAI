@@ -397,6 +397,53 @@ result = crew.kickoff(inputs={"question": "What city does John live in and how o
 John is 30 years old and lives in San Francisco.
 ```
 </CodeGroup>
+
+## Query Rewriting
+
+CrewAI implements an intelligent query rewriting mechanism to optimize knowledge retrieval. When an agent needs to search through knowledge sources, the raw task prompt is automatically transformed into a more effective search query.
+
+### How Query Rewriting Works
+
+1. When an agent executes a task with knowledge sources available, the `_get_knowledge_search_query` method is triggered
+2. The agent's LLM is used to transform the original task prompt into an optimized search query
+3. This optimized query is then used to retrieve relevant information from knowledge sources
+
+### Benefits of Query Rewriting
+
+<CardGroup cols={2}>
+  <Card title="Improved Retrieval Accuracy" icon="bullseye-arrow">
+    By focusing on key concepts and removing irrelevant content, query rewriting helps retrieve more relevant information.
+  </Card>
+  <Card title="Context Awareness" icon="brain">
+    The rewritten queries are designed to be more specific and context-aware for vector database retrieval.
+  </Card>
+</CardGroup>
+
+### Implementation Details
+
+Query rewriting happens transparently using a system prompt that instructs the LLM to:
+
+- Focus on key words of the intended task
+- Make the query more specific and context-aware
+- Remove irrelevant content like output format instructions
+- Generate only the rewritten query without preamble or postamble
+
+<Tip>
+  This mechanism is fully automatic and requires no configuration from users. The agent's LLM is used to perform the query rewriting, so using a more capable LLM can improve the quality of rewritten queries.
+</Tip>
+
+### Example
+
+```python
+# Original task prompt
+task_prompt = "Answer the following questions about the user's favorite movies: What movie did John watch last week? Format your answer in JSON."
+
+# Behind the scenes, this might be rewritten as:
+rewritten_query = "What movies did John watch last week?"
+```
+
+The rewritten query is more focused on the core information need and removes irrelevant instructions about output formatting.
+
 ## Clearing Knowledge
 
 If you need to clear the knowledge stored in CrewAI, you can use the `crewai reset-memories` command with the `--knowledge` option.
