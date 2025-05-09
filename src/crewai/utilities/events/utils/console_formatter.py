@@ -178,6 +178,7 @@ class ConsoleFormatter:
         crew_tree: Optional[Tree],
         task_id: str,
         agent_role: str,
+        llm_name: str,
         status: str = "completed",
     ) -> None:
         """Update task status in the tree."""
@@ -208,7 +209,7 @@ class ConsoleFormatter:
 
         # Show status panel
         content = self.create_status_content(
-            f"Task {status.title()}", str(task_id), style, Agent=agent_role
+            f"Task {status.title()}", str(task_id), style, Agent=agent_role, LLM=llm_name if llm_name != "" else "default"
         )
         self.print_panel(content, panel_title, style)
 
