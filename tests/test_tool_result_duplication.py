@@ -78,8 +78,6 @@ def test_tool_result_not_duplicated_in_messages() -> None:
         
         tool_result = ToolResult(
             result="Test tool result",
-            tool_name="Test Tool",
-            tool_args={},
             result_as_answer=False,
         )
         
