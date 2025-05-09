@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
+from crewai.a2a import A2AAgentIntegration
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
@@ -131,7 +132,18 @@ class Agent(BaseAgent):
         default=None,
         description="Knowledge sources for the agent.",
     )
+    a2a_enabled: bool = Field(
+        default=False,
+        description="Whether the agent supports the A2A protocol.",
+    )
+    a2a_url: Optional[str] = Field(
+        default=None,
+        description="The URL where the agent's A2A server is hosted.",
+    )
     _knowledge: Optional[Knowledge] = PrivateAttr(
+        default=None,
+    )
+    _a2a_integration: Optional[A2AAgentIntegration] = PrivateAttr(
         default=None,
     )
 
@@ -139,6 +151,10 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self._set_knowledge()
         self.agent_ops_agent_name = self.role
+        
+        if self.a2a_enabled:
+            self._a2a_integration = A2AAgentIntegration()
+            
         unaccepted_attributes = [
             "AWS_ACCESS_KEY_ID",
             "AWS_SECRET_ACCESS_KEY",
@@ -355,6 +371,102 @@ class Agent(BaseAgent):
                 result = tool_result["result"]
 
         return result
+        
+    async def execute_task_via_a2a(
+        self,
+        task_description: str,
+        context: Optional[str] = None,
+        agent_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        timeout: int = 300,
+    ) -> str:
+        """Execute a task via the A2A protocol.
+        
+        Args:
+            task_description: The description of the task.
+            context: Additional context for the task.
+            agent_url: The URL of the agent to execute the task. Defaults to self.a2a_url.
+            api_key: The API key to use for authentication.
+            timeout: The timeout for the task execution in seconds.
+            
+        Returns:
+            The result of the task execution.
+            
+        Raises:
+            ValueError: If A2A is not enabled or no agent URL is provided.
+            TimeoutError: If the task execution times out.
+            Exception: If there is an error executing the task.
+        """
+        if not self.a2a_enabled:
+            raise ValueError("A2A protocol is not enabled for this agent")
+            
+        if not self._a2a_integration:
+            self._a2a_integration = A2AAgentIntegration()
+            
+        url = agent_url or self.a2a_url
+        if not url:
+            raise ValueError("No A2A agent URL provided")
+            
+        try:
+            import asyncio
+            if asyncio.get_event_loop().is_running():
+                return await self._a2a_integration.execute_task_via_a2a(
+                    agent_url=url,
+                    task_description=task_description,
+                    context=context,
+                    api_key=api_key,
+                    timeout=timeout,
+                )
+            else:
+                return asyncio.run(self._a2a_integration.execute_task_via_a2a(
+                    agent_url=url,
+                    task_description=task_description,
+                    context=context,
+                    api_key=api_key,
+                    timeout=timeout,
+                ))
+        except Exception as e:
+            self._logger.exception(f"Error executing task via A2A: {e}")
+            raise
+            
+    async def handle_a2a_task(
+        self,
+        task_id: str,
+        task_description: str,
+        context: Optional[str] = None,
+    ) -> str:
+        """Handle an A2A task.
+        
+        Args:
+            task_id: The ID of the A2A task.
+            task_description: The description of the task.
+            context: Additional context for the task.
+            
+        Returns:
+            The result of the task execution.
+            
+        Raises:
+            ValueError: If A2A is not enabled.
+            Exception: If there is an error handling the task.
+        """
+        if not self.a2a_enabled:
+            raise ValueError("A2A protocol is not enabled for this agent")
+            
+        if not self._a2a_integration:
+            self._a2a_integration = A2AAgentIntegration()
+            
+        # Create a Task object from the task description
+        task = Task(
+            description=task_description,
+            agent=self,
+        )
+        
+        try:
+            result = self.execute_task(task, context)
+            return result
+        except Exception as e:
+            self._logger.exception(f"Error handling A2A task: {e}")
+            raise
 
     def create_agent_executor(
         self, tools: Optional[List[BaseTool]] = None, task=None

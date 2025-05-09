@@ -23,4 +23,9 @@ __all__ = [
     "LLM",
     "Flow",
     "Knowledge",
+    "A2AAgentIntegration",
+    "A2AClient",
+    "A2AServer",
 ]
+
+from crewai.a2a import A2AAgentIntegration, A2AClient, A2AServer
