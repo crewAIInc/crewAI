@@ -1,0 +1,14 @@
+FROM python:3.13-slim-bookworm
+
+WORKDIR /app
+
+RUN pip install --upgrade pip
+
+# Copy the current directory contents into the container
+COPY . /app/
+
+# Install the package
+RUN pip install -e .
+
+# Test importing the package
+CMD ["python", "-c", "import crewai; print(f'Successfully imported crewai version {crewai.__version__}')"]
