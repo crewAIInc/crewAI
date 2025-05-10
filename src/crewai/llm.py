@@ -246,6 +246,9 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
+    ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
+    GEMINI_IDENTIFIERS = ("gemini", "gemma-")
+    
     def __init__(
         self,
         model: str,
@@ -319,8 +322,9 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
+        if not isinstance(model, str):
+            return False
+        return any(prefix in model.lower() for prefix in self.ANTHROPIC_PREFIXES)
 
     def _is_gemini_model(self, model: str) -> bool:
         """Determine if the model is from Google Gemini provider.
@@ -331,8 +335,9 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Gemini, False otherwise.
         """
-        GEMINI_IDENTIFIERS = ("gemini", "gemma-")
-        return any(identifier in model.lower() for identifier in GEMINI_IDENTIFIERS)
+        if not isinstance(model, str):
+            return False
+        return any(identifier in model.lower() for identifier in self.GEMINI_IDENTIFIERS)
 
     def _normalize_gemini_model(self, model: str) -> str:
         """Normalize Gemini model name to the format expected by LiteLLM.
@@ -345,7 +350,16 @@ class LLM(BaseLLM):
 
         Returns:
             str: Normalized model name.
+            
+        Raises:
+            ValueError: If model is not a string or is empty.
         """
+        if not isinstance(model, str):
+            raise ValueError(f"Model must be a string, got {type(model)}")
+        
+        if not model.strip():
+            raise ValueError("Model name cannot be empty")
+            
         if model.startswith("gemini/"):
             return model
             
@@ -381,12 +395,17 @@ class LLM(BaseLLM):
 
         model = self.model
         if self._is_gemini_model(model):
-            model = self._normalize_gemini_model(model)
-            
-            # --- 2.1) Map GOOGLE_API_KEY to GEMINI_API_KEY if needed
-            if not os.environ.get("GEMINI_API_KEY") and os.environ.get("GOOGLE_API_KEY"):
-                os.environ["GEMINI_API_KEY"] = os.environ["GOOGLE_API_KEY"]
-                logging.info("Mapped GOOGLE_API_KEY to GEMINI_API_KEY for Gemini model")
+            try:
+                model = self._normalize_gemini_model(model)
+                logging.info(f"Normalized Gemini model name from '{self.model}' to '{model}'")
+                
+                # --- 2.1) Map GOOGLE_API_KEY to GEMINI_API_KEY if needed
+                if not os.environ.get("GEMINI_API_KEY") and os.environ.get("GOOGLE_API_KEY"):
+                    os.environ["GEMINI_API_KEY"] = os.environ["GOOGLE_API_KEY"]
+                    logging.info("Mapped GOOGLE_API_KEY to GEMINI_API_KEY for Gemini model")
+            except ValueError as e:
+                logging.error(f"Error normalizing Gemini model: {str(e)}")
+                model = self.model
 
         # --- 3) Prepare the parameters for the completion call
         params = {
