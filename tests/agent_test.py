@@ -2,7 +2,7 @@
 
 import os
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -18,6 +18,7 @@ from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
+from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
@@ -308,9 +309,7 @@ def test_cache_hitting():
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    with (
-        patch.object(CacheHandler, "read") as read,
-    ):
+    with (patch.object(CacheHandler, "read") as read,):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -1040,7 +1039,7 @@ def test_agent_human_input():
             CrewAgentExecutor,
             "_invoke_loop",
             return_value=AgentFinish(output="Hello", thought="", text=""),
-        ) as mock_invoke_loop,
+        ),
     ):
         # Execute the task
         output = agent.execute_task(task)
@@ -2025,3 +2024,84 @@ def test_get_knowledge_search_query():
                 },
             ]
         )
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository(mock_get_agent):
+    from crewai_tools import SerperDevTool
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": ["SerperDevTool"],
+    }
+    mock_get_agent.return_value = mock_get_response
+    agent = Agent(from_repository="test_agent")
+
+    assert agent.role == "test role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+    assert len(agent.tools) == 1
+    assert isinstance(agent.tools[0], SerperDevTool)
+
+
+@pytest.fixture
+def mock_get_auth_token():
+    with patch("crewai.cli.command.get_auth_token", return_value="test_token"):
+        yield
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth_token):
+    from crewai_tools import SerperDevTool
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": ["SerperDevTool"],
+    }
+    mock_get_agent.return_value = mock_get_response
+    agent = Agent(from_repository="test_agent", role="Custom Role")
+
+    assert agent.role == "Custom Role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+    assert len(agent.tools) == 1
+    assert isinstance(agent.tools[0], SerperDevTool)
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_token):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": ["DoesNotExist"],
+    }
+    mock_get_agent.return_value = mock_get_response
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Tool DoesNotExist could not be loaded: module 'crewai_tools' has no attribute 'DoesNotExist'",
+    ):
+        Agent(from_repository="test_agent")
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_token):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 404
+    mock_get_response.text = "Agent not found"
+    mock_get_agent.return_value = mock_get_response
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Agent NOT_FOUND could not be loaded: Agent not found",
+    ):
+        Agent(from_repository="NOT_FOUND")
