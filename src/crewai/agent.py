@@ -173,6 +173,7 @@ class Agent(BaseAgent):
                         collection_name=self.role,
                         storage=self.knowledge_storage or None,
                     )
+                    self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
@@ -305,6 +306,45 @@ class Agent(BaseAgent):
                                 )
                                 + (self.crew_knowledge_context or "")
                             ),
+                        ),
+                    )
+            except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=KnowledgeSearchQueryFailedEvent(
+                        query=self.knowledge_search_query or "",
+                        agent=self,
+                        error=str(e),
+                    ),
+                )
+        elif self.crew and hasattr(self.crew, "knowledge") and self.crew.knowledge:
+            crewai_event_bus.emit(
+                self,
+                event=KnowledgeRetrievalStartedEvent(
+                    agent=self,
+                ),
+            )
+            try:
+                self.knowledge_search_query = self._get_knowledge_search_query(
+                    task_prompt
+                )
+                if self.knowledge_search_query:
+                    knowledge_snippets = self.crew.query_knowledge(
+                        [self.knowledge_search_query], **knowledge_config
+                    )
+                    if knowledge_snippets:
+                        self.crew_knowledge_context = extract_knowledge_context(
+                            knowledge_snippets
+                        )
+                        if self.crew_knowledge_context:
+                            task_prompt += self.crew_knowledge_context
+
+                    crewai_event_bus.emit(
+                        self,
+                        event=KnowledgeRetrievalCompletedEvent(
+                            query=self.knowledge_search_query,
+                            agent=self,
+                            retrieved_knowledge=self.crew_knowledge_context or "",
                         ),
                     )
             except Exception as e:
