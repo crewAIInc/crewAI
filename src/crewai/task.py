@@ -41,6 +41,7 @@ from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
+from crewai.utilities.constants import NOT_SPECIFIED
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.events import (
     TaskCompletedEvent,
@@ -97,7 +98,7 @@ class Task(BaseModel):
     )
     context: Optional[List["Task"]] = Field(
         description="Other tasks that will have their output used as context for this task.",
-        default=None,
+        default=NOT_SPECIFIED,
     )
     async_execution: Optional[bool] = Field(
         description="Whether the task should be executed asynchronously or not.",
@@ -643,7 +644,7 @@ class Task(BaseModel):
 
         cloned_context = (
             [task_mapping[context_task.key] for context_task in self.context]
-            if self.context
+            if isinstance(self.context, list)
             else None
         )
 
