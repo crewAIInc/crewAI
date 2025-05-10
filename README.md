@@ -26,7 +26,7 @@ CrewAI provides an extensive collection of powerful tools ready to enhance your 
 - **Web Scraping**: `ScrapeWebsiteTool`, `SeleniumScrapingTool`
 - **Database Integrations**: `PGSearchTool`, `MySQLSearchTool`
 - **API Integrations**: `SerperApiTool`, `EXASearchTool`
-- **AI-powered Tools**: `DallETool`, `VisionTool`
+- **AI-powered Tools**: `DallETool`, `VisionTool`, `StagehandTool`
 
 And many more robust tools to simplify your agent integrations.
 
