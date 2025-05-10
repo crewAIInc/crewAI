@@ -80,15 +80,14 @@ my_crew: Crew = Crew(
     # Short-term memory for current context using RAG
     short_term_memory = ShortTermMemory(
         storage = RAGStorage(
-                embedder_config={
-                    "provider": "openai",
-                    "config": {
-                        "model": 'text-embedding-3-small'
-                    }
-                },
-                type="short_term",
-                path="/my_crew1/"
-            )
+            embedder_config={
+                "provider": "openai",
+                "config": {
+                    "model": 'text-embedding-3-small'
+                }
+            },
+            type="short_term",
+            path="/my_crew1/"
         ),
     ),
     # Entity memory for tracking key information about entities
