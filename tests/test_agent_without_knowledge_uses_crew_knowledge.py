@@ -1,9 +1,9 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from crewai import Agent, Task, Crew, Process, LLM
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai import Agent, Crew, LLM, Process, Task
 from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 
 
 def test_agent_without_knowledge_uses_crew_knowledge():
