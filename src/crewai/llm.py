@@ -9,10 +9,14 @@ from typing import Any, Dict, List, Optional, Union
 import litellm
 from litellm import Router as LiteLLMRouter
 from litellm import get_supported_openai_params
+from tenacity import retry, stop_after_attempt, wait_exponential
 
+from crewai.utilities.logger import Logger
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
+
+logger = Logger(verbose=True)
 
 
 class FilteredStream:
@@ -155,14 +159,34 @@ class LLM:
         """
         Initialize the litellm Router with the provided model_list and routing_strategy.
         """
-        router_kwargs = {}
-        if self.routing_strategy:
-            router_kwargs["routing_strategy"] = self.routing_strategy
+        try:
+            router_kwargs = {}
+            if self.routing_strategy:
+                valid_strategies = ["simple-shuffle", "least-busy", "usage-based", "latency-based", "cost-based"]
+                if self.routing_strategy not in valid_strategies:
+                    raise ValueError(f"Invalid routing strategy: {self.routing_strategy}. Valid options are: {', '.join(valid_strategies)}")
+                router_kwargs["routing_strategy"] = self.routing_strategy
+                
+            self.router = LiteLLMRouter(
+                model_list=self.model_list,
+                **router_kwargs
+            )
+        except Exception as e:
+            logger.log("error", f"Failed to initialize router: {str(e)}")
+            raise RuntimeError(f"Router initialization failed: {str(e)}")
             
-        self.router = LiteLLMRouter(
-            model_list=self.model_list,
-            **router_kwargs
-        )
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    def _execute_router_call(self, params):
+        """
+        Execute a call to the router with retry logic for handling transient issues.
+        
+        Args:
+            params: Parameters to pass to the router completion method
+            
+        Returns:
+            The response from the router
+        """
+        return self.router.completion(model=self.model, **params)
 
     def call(self, messages: List[Dict[str, str]], callbacks: List[Any] = []) -> str:
         with suppress_warnings():
@@ -193,10 +217,7 @@ class LLM:
                 params = {k: v for k, v in params.items() if v is not None}
 
                 if self.router:
-                    response = self.router.completion(
-                        model=self.model,
-                        **params
-                    )
+                    response = self._execute_router_call(params)
                 else:
                     params.update({
                         "model": self.model,

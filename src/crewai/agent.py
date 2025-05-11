@@ -1,9 +1,10 @@
 import os
 import shutil
 import subprocess
+from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import Field, InstanceOf, PrivateAttr, model_validator, field_validator
 
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -88,11 +89,18 @@ class Agent(BaseAgent):
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will handle function calling for the agent.", default=None
     )
+    class RoutingStrategy(str, Enum):
+        SIMPLE_SHUFFLE = "simple-shuffle"
+        LEAST_BUSY = "least-busy"
+        USAGE_BASED = "usage-based"
+        LATENCY_BASED = "latency-based"
+        COST_BASED = "cost-based"
+        
     model_list: Optional[List[Dict[str, Any]]] = Field(
         default=None, description="List of model configurations for routing between multiple models."
     )
-    routing_strategy: Optional[str] = Field(
-        default=None, description="Strategy for routing between multiple models (e.g., 'simple-shuffle', 'least-busy', 'usage-based', 'latency-based')."
+    routing_strategy: Optional[RoutingStrategy] = Field(
+        default=None, description="Strategy for routing between multiple models (e.g., 'simple-shuffle', 'least-busy', 'usage-based', 'latency-based', 'cost-based')."
     )
     system_template: Optional[str] = Field(
         default=None, description="System format for the agent."
