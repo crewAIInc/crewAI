@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Union
 
 import litellm
+from litellm import Router as LiteLLMRouter
 from litellm import get_supported_openai_params
 
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -113,6 +114,8 @@ class LLM:
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
+        model_list: Optional[List[Dict[str, Any]]] = None,
+        routing_strategy: Optional[str] = None,
         **kwargs,
     ):
         self.model = model
@@ -136,11 +139,30 @@ class LLM:
         self.callbacks = callbacks
         self.context_window_size = 0
         self.kwargs = kwargs
+        self.model_list = model_list
+        self.routing_strategy = routing_strategy
+        self.router = None
 
         litellm.drop_params = True
         litellm.set_verbose = False
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
+        
+        if self.model_list:
+            self._initialize_router()
+
+    def _initialize_router(self):
+        """
+        Initialize the litellm Router with the provided model_list and routing_strategy.
+        """
+        router_kwargs = {}
+        if self.routing_strategy:
+            router_kwargs["routing_strategy"] = self.routing_strategy
+            
+        self.router = LiteLLMRouter(
+            model_list=self.model_list,
+            **router_kwargs
+        )
 
     def call(self, messages: List[Dict[str, str]], callbacks: List[Any] = []) -> str:
         with suppress_warnings():
@@ -149,7 +171,6 @@ class LLM:
 
             try:
                 params = {
-                    "model": self.model,
                     "messages": messages,
                     "timeout": self.timeout,
                     "temperature": self.temperature,
@@ -164,9 +185,6 @@ class LLM:
                     "seed": self.seed,
                     "logprobs": self.logprobs,
                     "top_logprobs": self.top_logprobs,
-                    "api_base": self.base_url,
-                    "api_version": self.api_version,
-                    "api_key": self.api_key,
                     "stream": False,
                     **self.kwargs,
                 }
@@ -174,7 +192,20 @@ class LLM:
                 # Remove None values to avoid passing unnecessary parameters
                 params = {k: v for k, v in params.items() if v is not None}
 
-                response = litellm.completion(**params)
+                if self.router:
+                    response = self.router.completion(
+                        model=self.model,
+                        **params
+                    )
+                else:
+                    params.update({
+                        "model": self.model,
+                        "api_base": self.base_url,
+                        "api_version": self.api_version,
+                        "api_key": self.api_key,
+                    })
+                    response = litellm.completion(**params)
+                
                 return response["choices"][0]["message"]["content"]
             except Exception as e:
                 if not LLMContextLengthExceededException(

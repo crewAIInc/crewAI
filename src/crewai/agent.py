@@ -86,7 +86,13 @@ class Agent(BaseAgent):
         description="Language model that will run the agent.", default=None
     )
     function_calling_llm: Optional[Any] = Field(
-        description="Language model that will run the agent.", default=None
+        description="Language model that will handle function calling for the agent.", default=None
+    )
+    model_list: Optional[List[Dict[str, Any]]] = Field(
+        default=None, description="List of model configurations for routing between multiple models."
+    )
+    routing_strategy: Optional[str] = Field(
+        default=None, description="Strategy for routing between multiple models (e.g., 'simple-shuffle', 'least-busy', 'usage-based', 'latency-based')."
     )
     system_template: Optional[str] = Field(
         default=None, description="System format for the agent."
@@ -148,10 +154,17 @@ class Agent(BaseAgent):
         # Handle different cases for self.llm
         if isinstance(self.llm, str):
             # If it's a string, create an LLM instance
-            self.llm = LLM(model=self.llm)
+            self.llm = LLM(
+                model=self.llm,
+                model_list=self.model_list,
+                routing_strategy=self.routing_strategy
+            )
         elif isinstance(self.llm, LLM):
             # If it's already an LLM instance, keep it as is
-            pass
+            if self.model_list and not getattr(self.llm, "model_list", None):
+                self.llm.model_list = self.model_list
+                self.llm.routing_strategy = self.routing_strategy
+                self.llm._initialize_router()
         elif self.llm is None:
             # Determine the model name from environment variables or use default
             model_name = (
@@ -159,7 +172,11 @@ class Agent(BaseAgent):
                 or os.environ.get("MODEL")
                 or "gpt-4o-mini"
             )
-            llm_params = {"model": model_name}
+            llm_params = {
+                "model": model_name,
+                "model_list": self.model_list,
+                "routing_strategy": self.routing_strategy
+            }
 
             api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get(
                 "OPENAI_BASE_URL"
@@ -207,6 +224,8 @@ class Agent(BaseAgent):
                 "api_key": getattr(self.llm, "api_key", None),
                 "base_url": getattr(self.llm, "base_url", None),
                 "organization": getattr(self.llm, "organization", None),
+                "model_list": self.model_list,
+                "routing_strategy": self.routing_strategy,
             }
             # Remove None values to avoid passing unnecessary parameters
             llm_params = {k: v for k, v in llm_params.items() if v is not None}
