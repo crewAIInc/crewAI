@@ -170,6 +170,22 @@ def fetch_provider_data(cache_file):
         with open(cache_file, "w") as f:
             json.dump(data, f)
         return data
+    except requests.exceptions.SSLError:
+        click.secho(
+            "SSL certificate verification failed. Retrying with verification disabled. "
+            "This is less secure but may be necessary on some systems.",
+            fg="yellow",
+        )
+        try:
+            response = requests.get(JSON_URL, stream=True, timeout=60, verify=False)
+            response.raise_for_status()
+            data = download_data(response)
+            with open(cache_file, "w") as f:
+                json.dump(data, f)
+            return data
+        except requests.RequestException as e:
+            click.secho(f"Error fetching provider data: {e}", fg="red")
+            return None
     except requests.RequestException as e:
         click.secho(f"Error fetching provider data: {e}", fg="red")
     except json.JSONDecodeError:
