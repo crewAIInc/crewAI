@@ -1,4 +1,6 @@
 import json
+import logging
+import os
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -7,6 +9,8 @@ import click
 import requests
 
 from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
+
+logger = logging.getLogger(__name__)
 
 
 def select_choice(prompt_message, choices):
@@ -157,38 +161,74 @@ def fetch_provider_data(cache_file):
     """
     Fetches provider data from a specified URL and caches it to a file.
 
+    Warning: This function includes a fallback that disables SSL verification.
+    This should only be used in development environments or when absolutely necessary.
+    Production deployments should resolve SSL certificate issues properly.
+
     Args:
     - cache_file (Path): The path to the cache file.
 
     Returns:
     - dict or None: The fetched provider data or None if the operation fails.
     """
+    allow_insecure = os.getenv("CREW_ALLOW_INSECURE_SSL", "false").lower() == "true"
+
     try:
-        response = requests.get(JSON_URL, stream=True, timeout=60)
+        verify = not allow_insecure
+        if not verify:
+            logger.warning(
+                "SSL verification disabled via CREW_ALLOW_INSECURE_SSL environment variable. "
+                "This is less secure and should only be used in development environments."
+            )
+            click.secho(
+                "SSL verification disabled via environment variable. "
+                "This is less secure and should only be used in development environments.",
+                fg="yellow",
+            )
+
+        response = requests.get(JSON_URL, stream=True, timeout=60, verify=verify)
         response.raise_for_status()
         data = download_data(response)
         with open(cache_file, "w") as f:
             json.dump(data, f)
         return data
     except requests.exceptions.SSLError:
-        click.secho(
-            "SSL certificate verification failed. Retrying with verification disabled. "
-            "This is less secure but may be necessary on some systems.",
-            fg="yellow",
-        )
-        try:
-            response = requests.get(JSON_URL, stream=True, timeout=60, verify=False)
-            response.raise_for_status()
-            data = download_data(response)
-            with open(cache_file, "w") as f:
-                json.dump(data, f)
-            return data
-        except requests.RequestException as e:
-            click.secho(f"Error fetching provider data: {e}", fg="red")
-            return None
+        if not allow_insecure:
+            logger.warning(
+                "SSL certificate verification failed. Retrying with verification disabled. "
+                "This is less secure but may be necessary on some systems."
+            )
+            click.secho(
+                "SSL certificate verification failed. Retrying with verification disabled. "
+                "This is less secure but may be necessary on some systems.",
+                fg="yellow",
+            )
+            try:
+                os.environ["CREW_TEMP_ALLOW_INSECURE"] = "true"
+                response = requests.get(
+                    JSON_URL,
+                    stream=True,
+                    timeout=60,
+                    verify=False,  # nosec B501
+                )
+                os.environ.pop("CREW_TEMP_ALLOW_INSECURE", None)
+                
+                response.raise_for_status()
+                data = download_data(response)
+                with open(cache_file, "w") as f:
+                    json.dump(data, f)
+                return data
+            except requests.RequestException as e:
+                logger.error(f"Error fetching provider data: {e}")
+                click.secho(f"Error fetching provider data: {e}", fg="red")
+                return None
+            finally:
+                os.environ.pop("CREW_TEMP_ALLOW_INSECURE", None)
     except requests.RequestException as e:
+        logger.error(f"Error fetching provider data: {e}")
         click.secho(f"Error fetching provider data: {e}", fg="red")
     except json.JSONDecodeError:
+        logger.error("Error parsing provider data. Invalid JSON format.")
         click.secho("Error parsing provider data. Invalid JSON format.", fg="red")
     return None
 
