@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import Field, PrivateAttr
 
@@ -29,13 +29,13 @@ except ImportError:
 
 
 class OpenAIAgentAdapter(BaseAgentAdapter):
-    """Adapter for OpenAI Assistants"""
+    """Adapter for OpenAI Assistants."""
 
     model_config = {"arbitrary_types_allowed": True}
 
     _openai_agent: "OpenAIAgent" = PrivateAttr()
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger())
-    _active_thread: Optional[str] = PrivateAttr(default=None)
+    _active_thread: str | None = PrivateAttr(default=None)
     function_calling_llm: Any = Field(default=None)
     step_callback: Any = Field(default=None)
     _tool_adapter: "OpenAIAgentToolAdapter" = PrivateAttr()
@@ -44,35 +44,35 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     def __init__(
         self,
         model: str = "gpt-4o-mini",
-        tools: Optional[List[BaseTool]] = None,
-        agent_config: Optional[dict] = None,
+        tools: list[BaseTool] | None = None,
+        agent_config: dict | None = None,
         **kwargs,
-    ):
+    ) -> None:
         if not OPENAI_AVAILABLE:
+            msg = "OpenAI Agent Dependencies are not installed. Please install it using `uv add openai-agents`"
             raise ImportError(
-                "OpenAI Agent Dependencies are not installed. Please install it using `uv add openai-agents`"
+                msg,
             )
-        else:
-            role = kwargs.pop("role", None)
-            goal = kwargs.pop("goal", None)
-            backstory = kwargs.pop("backstory", None)
-            super().__init__(
-                role=role,
-                goal=goal,
-                backstory=backstory,
-                tools=tools,
-                agent_config=agent_config,
-                **kwargs,
-            )
-            self._tool_adapter = OpenAIAgentToolAdapter(tools=tools)
-            self.llm = model
-            self._converter_adapter = OpenAIConverterAdapter(self)
+        role = kwargs.pop("role", None)
+        goal = kwargs.pop("goal", None)
+        backstory = kwargs.pop("backstory", None)
+        super().__init__(
+            role=role,
+            goal=goal,
+            backstory=backstory,
+            tools=tools,
+            agent_config=agent_config,
+            **kwargs,
+        )
+        self._tool_adapter = OpenAIAgentToolAdapter(tools=tools)
+        self.llm = model
+        self._converter_adapter = OpenAIConverterAdapter(self)
 
     def _build_system_prompt(self) -> str:
         """Build a system prompt for the OpenAI agent."""
         base_prompt = f"""
             You are {self.role}.
-        
+
             Your goal is: {self.goal}
 
             Your backstory: {self.backstory}
@@ -84,10 +84,10 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     def execute_task(
         self,
         task: Any,
-        context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        context: str | None = None,
+        tools: list[BaseTool] | None = None,
     ) -> str:
-        """Execute a task using the OpenAI Assistant"""
+        """Execute a task using the OpenAI Assistant."""
         self._converter_adapter.configure_structured_output(task)
         self.create_agent_executor(tools)
 
@@ -98,7 +98,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
             task_prompt = task.prompt()
             if context:
                 task_prompt = self.i18n.slice("task_with_context").format(
-                    task=task_prompt, context=context
+                    task=task_prompt, context=context,
                 )
             crewai_event_bus.emit(
                 self,
@@ -114,13 +114,13 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
             crewai_event_bus.emit(
                 self,
                 event=AgentExecutionCompletedEvent(
-                    agent=self, task=task, output=final_answer
+                    agent=self, task=task, output=final_answer,
                 ),
             )
             return final_answer
 
         except Exception as e:
-            self._logger.log("error", f"Error executing OpenAI task: {str(e)}")
+            self._logger.log("error", f"Error executing OpenAI task: {e!s}")
             crewai_event_bus.emit(
                 self,
                 event=AgentExecutionErrorEvent(
@@ -131,9 +131,8 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
             )
             raise
 
-    def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
-        """
-        Configure the OpenAI agent for execution.
+    def create_agent_executor(self, tools: list[BaseTool] | None = None) -> None:
+        """Configure the OpenAI agent for execution.
         While OpenAI handles execution differently through Runner,
         we can use this method to set up tools and configurations.
         """
@@ -152,27 +151,27 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
 
         self.agent_executor = Runner
 
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
-        """Configure tools for the OpenAI Assistant"""
+    def configure_tools(self, tools: list[BaseTool] | None = None) -> None:
+        """Configure tools for the OpenAI Assistant."""
         if tools:
             self._tool_adapter.configure_tools(tools)
             if self._tool_adapter.converted_tools:
                 self._openai_agent.tools = self._tool_adapter.converted_tools
 
     def handle_execution_result(self, result: Any) -> str:
-        """Process OpenAI Assistant execution result converting any structured output to a string"""
+        """Process OpenAI Assistant execution result converting any structured output to a string."""
         return self._converter_adapter.post_process_result(result.final_output)
 
-    def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
-        """Implement delegation tools support"""
+    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+        """Implement delegation tools support."""
         agent_tools = AgentTools(agents=agents)
-        tools = agent_tools.tools()
-        return tools
+        return agent_tools.tools()
 
     def configure_structured_output(self, task) -> None:
         """Configure the structured output for the specific agent implementation.
 
         Args:
             structured_output: The structured output to be configured
+
         """
         self._converter_adapter.configure_structured_output(task)

@@ -1,33 +1,32 @@
-"""
-Utility functions for flow visualization and dependency analysis.
+"""Utility functions for flow visualization and dependency analysis.
 
 This module provides core functionality for analyzing and manipulating flow structures,
 including node level calculation, ancestor tracking, and return value analysis.
 Functions in this module are primarily used by the visualization system to create
 accurate and informative flow diagrams.
 
-Example
+Example:
 -------
 >>> flow = Flow()
 >>> node_levels = calculate_node_levels(flow)
 >>> ancestors = build_ancestor_dict(flow)
+
 """
 
 import ast
 import inspect
 import textwrap
 from collections import defaultdict, deque
-from typing import Any, Deque, Dict, List, Optional, Set, Union
+from typing import Any
 
 
-def get_possible_return_constants(function: Any) -> Optional[List[str]]:
+def get_possible_return_constants(function: Any) -> list[str] | None:
     try:
         source = inspect.getsource(function)
     except OSError:
         # Can't get source code
         return None
-    except Exception as e:
-        print(f"Error retrieving source code for function {function.__name__}: {e}")
+    except Exception:
         return None
 
     try:
@@ -35,24 +34,18 @@ def get_possible_return_constants(function: Any) -> Optional[List[str]]:
         source = textwrap.dedent(source)
         # Parse the source code into an AST
         code_ast = ast.parse(source)
-    except IndentationError as e:
-        print(f"IndentationError while parsing source code of {function.__name__}: {e}")
-        print(f"Source code:\n{source}")
+    except IndentationError:
         return None
-    except SyntaxError as e:
-        print(f"SyntaxError while parsing source code of {function.__name__}: {e}")
-        print(f"Source code:\n{source}")
+    except SyntaxError:
         return None
-    except Exception as e:
-        print(f"Unexpected error while parsing source code of {function.__name__}: {e}")
-        print(f"Source code:\n{source}")
+    except Exception:
         return None
 
     return_values = set()
     dict_definitions = {}
 
     class DictionaryAssignmentVisitor(ast.NodeVisitor):
-        def visit_Assign(self, node):
+        def visit_Assign(self, node) -> None:
             # Check if this assignment is assigning a dictionary literal to a variable
             if isinstance(node.value, ast.Dict) and len(node.targets) == 1:
                 target = node.targets[0]
@@ -69,10 +62,10 @@ def get_possible_return_constants(function: Any) -> Optional[List[str]]:
             self.generic_visit(node)
 
     class ReturnVisitor(ast.NodeVisitor):
-        def visit_Return(self, node):
+        def visit_Return(self, node) -> None:
             # Direct string return
             if isinstance(node.value, ast.Constant) and isinstance(
-                node.value.value, str
+                node.value.value, str,
             ):
                 return_values.add(node.value.value)
             # Dictionary-based return, like return paths[result]
@@ -94,9 +87,8 @@ def get_possible_return_constants(function: Any) -> Optional[List[str]]:
     return list(return_values) if return_values else None
 
 
-def calculate_node_levels(flow: Any) -> Dict[str, int]:
-    """
-    Calculate the hierarchical level of each node in the flow.
+def calculate_node_levels(flow: Any) -> dict[str, int]:
+    """Calculate the hierarchical level of each node in the flow.
 
     Performs a breadth-first traversal of the flow graph to assign levels
     to nodes, starting with start methods at level 0.
@@ -117,11 +109,12 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     - Each subsequent connected node is assigned level = parent_level + 1
     - Handles both OR and AND conditions for listeners
     - Processes router paths separately
+
     """
-    levels: Dict[str, int] = {}
-    queue: Deque[str] = deque()
-    visited: Set[str] = set()
-    pending_and_listeners: Dict[str, Set[str]] = {}
+    levels: dict[str, int] = {}
+    queue: deque[str] = deque()
+    visited: set[str] = set()
+    pending_and_listeners: dict[str, set[str]] = {}
 
     # Make all start methods at level 0
     for method_name, method in flow._methods.items():
@@ -172,9 +165,8 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     return levels
 
 
-def count_outgoing_edges(flow: Any) -> Dict[str, int]:
-    """
-    Count the number of outgoing edges for each method in the flow.
+def count_outgoing_edges(flow: Any) -> dict[str, int]:
+    """Count the number of outgoing edges for each method in the flow.
 
     Parameters
     ----------
@@ -185,6 +177,7 @@ def count_outgoing_edges(flow: Any) -> Dict[str, int]:
     -------
     Dict[str, int]
         Dictionary mapping method names to their outgoing edge count.
+
     """
     counts = {}
     for method_name in flow._methods:
@@ -197,9 +190,8 @@ def count_outgoing_edges(flow: Any) -> Dict[str, int]:
     return counts
 
 
-def build_ancestor_dict(flow: Any) -> Dict[str, Set[str]]:
-    """
-    Build a dictionary mapping each node to its ancestor nodes.
+def build_ancestor_dict(flow: Any) -> dict[str, set[str]]:
+    """Build a dictionary mapping each node to its ancestor nodes.
 
     Parameters
     ----------
@@ -210,9 +202,10 @@ def build_ancestor_dict(flow: Any) -> Dict[str, Set[str]]:
     -------
     Dict[str, Set[str]]
         Dictionary mapping each node to a set of its ancestor nodes.
+
     """
-    ancestors: Dict[str, Set[str]] = {node: set() for node in flow._methods}
-    visited: Set[str] = set()
+    ancestors: dict[str, set[str]] = {node: set() for node in flow._methods}
+    visited: set[str] = set()
     for node in flow._methods:
         if node not in visited:
             dfs_ancestors(node, ancestors, visited, flow)
@@ -220,10 +213,9 @@ def build_ancestor_dict(flow: Any) -> Dict[str, Set[str]]:
 
 
 def dfs_ancestors(
-    node: str, ancestors: Dict[str, Set[str]], visited: Set[str], flow: Any
+    node: str, ancestors: dict[str, set[str]], visited: set[str], flow: Any,
 ) -> None:
-    """
-    Perform depth-first search to build ancestor relationships.
+    """Perform depth-first search to build ancestor relationships.
 
     Parameters
     ----------
@@ -240,6 +232,7 @@ def dfs_ancestors(
     -----
     This function modifies the ancestors dictionary in-place to build
     the complete ancestor graph.
+
     """
     if node in visited:
         return
@@ -265,10 +258,9 @@ def dfs_ancestors(
 
 
 def is_ancestor(
-    node: str, ancestor_candidate: str, ancestors: Dict[str, Set[str]]
+    node: str, ancestor_candidate: str, ancestors: dict[str, set[str]],
 ) -> bool:
-    """
-    Check if one node is an ancestor of another.
+    """Check if one node is an ancestor of another.
 
     Parameters
     ----------
@@ -283,13 +275,13 @@ def is_ancestor(
     -------
     bool
         True if ancestor_candidate is an ancestor of node, False otherwise.
+
     """
     return ancestor_candidate in ancestors.get(node, set())
 
 
-def build_parent_children_dict(flow: Any) -> Dict[str, List[str]]:
-    """
-    Build a dictionary mapping parent nodes to their children.
+def build_parent_children_dict(flow: Any) -> dict[str, list[str]]:
+    """Build a dictionary mapping parent nodes to their children.
 
     Parameters
     ----------
@@ -306,8 +298,9 @@ def build_parent_children_dict(flow: Any) -> Dict[str, List[str]]:
     - Maps listeners to their trigger methods
     - Maps router methods to their paths and listeners
     - Children lists are sorted for consistent ordering
+
     """
-    parent_children: Dict[str, List[str]] = {}
+    parent_children: dict[str, list[str]] = {}
 
     # Map listeners to their trigger methods
     for listener_name, (_, trigger_methods) in flow._listeners.items():
@@ -332,10 +325,9 @@ def build_parent_children_dict(flow: Any) -> Dict[str, List[str]]:
 
 
 def get_child_index(
-    parent: str, child: str, parent_children: Dict[str, List[str]]
+    parent: str, child: str, parent_children: dict[str, list[str]],
 ) -> int:
-    """
-    Get the index of a child node in its parent's sorted children list.
+    """Get the index of a child node in its parent's sorted children list.
 
     Parameters
     ----------
@@ -350,27 +342,25 @@ def get_child_index(
     -------
     int
         Zero-based index of the child in its parent's sorted children list.
+
     """
     children = parent_children.get(parent, [])
     children.sort()
     return children.index(child)
 
 
-def process_router_paths(flow, current, current_level, levels, queue):
-    """
-    Handle the router connections for the current node.
-    """
+def process_router_paths(flow, current, current_level, levels, queue) -> None:
+    """Handle the router connections for the current node."""
     if current in flow._routers:
         paths = flow._router_paths.get(current, [])
         for path in paths:
             for listener_name, (
-                condition_type,
+                _condition_type,
                 trigger_methods,
             ) in flow._listeners.items():
-                if path in trigger_methods:
-                    if (
-                        listener_name not in levels
-                        or levels[listener_name] > current_level + 1
-                    ):
-                        levels[listener_name] = current_level + 1
-                        queue.append(listener_name)
+                if path in trigger_methods and (
+                    listener_name not in levels
+                    or levels[listener_name] > current_level + 1
+                ):
+                    levels[listener_name] = current_level + 1
+                    queue.append(listener_name)

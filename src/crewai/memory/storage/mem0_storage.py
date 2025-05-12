@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 from mem0 import Memory, MemoryClient
 
@@ -7,17 +7,15 @@ from crewai.memory.storage.interface import Storage
 
 
 class Mem0Storage(Storage):
-    """
-    Extends Storage to handle embedding and searching across entities using Mem0.
-    """
+    """Extends Storage to handle embedding and searching across entities using Mem0."""
 
-    def __init__(self, type, crew=None, config=None):
+    def __init__(self, type, crew=None, config=None) -> None:
         super().__init__()
         supported_types = ["user", "short_term", "long_term", "entities", "external"]
         if type not in supported_types:
             raise ValueError(
                 f"Invalid type '{type}' for Mem0Storage. Must be one of: "
-                + ", ".join(supported_types)
+                + ", ".join(supported_types),
             )
 
         self.memory_type = type
@@ -29,7 +27,8 @@ class Mem0Storage(Storage):
         # User ID is required for user memory type "user" since it's used as a unique identifier for the user.
         user_id = self._get_user_id()
         if type == "user" and not user_id:
-            raise ValueError("User ID is required for user memory type")
+            msg = "User ID is required for user memory type"
+            raise ValueError(msg)
 
         # API key in memory config overrides the environment variable
         config = self._get_config()
@@ -42,23 +41,20 @@ class Mem0Storage(Storage):
         if mem0_api_key:
             if mem0_org_id and mem0_project_id:
                 self.memory = MemoryClient(
-                    api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id
+                    api_key=mem0_api_key, org_id=mem0_org_id, project_id=mem0_project_id,
                 )
             else:
                 self.memory = MemoryClient(api_key=mem0_api_key)
+        elif mem0_local_config and len(mem0_local_config):
+            self.memory = Memory.from_config(mem0_local_config)
         else:
-            if mem0_local_config and len(mem0_local_config):
-                self.memory = Memory.from_config(mem0_local_config)
-            else:
-                self.memory = Memory()
+            self.memory = Memory()
 
     def _sanitize_role(self, role: str) -> str:
-        """
-        Sanitizes agent roles to ensure valid directory names.
-        """
+        """Sanitizes agent roles to ensure valid directory names."""
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         user_id = self._get_user_id()
         agent_name = self._get_agent_name()
         params = None
@@ -97,7 +93,7 @@ class Mem0Storage(Storage):
         query: str,
         limit: int = 3,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> list[Any]:
         params = {"query": query, "limit": limit, "output_format": "v1.1"}
         if user_id := self._get_user_id():
             params["user_id"] = user_id
@@ -120,7 +116,7 @@ class Mem0Storage(Storage):
         # automatically when the crew is created.
         if isinstance(self.memory, Memory):
             del params["metadata"], params["output_format"]
-            
+
         results = self.memory.search(**params)
         return [r for r in results["results"] if r["score"] >= score_threshold]
 
@@ -133,12 +129,11 @@ class Mem0Storage(Storage):
 
         agents = self.crew.agents
         agents = [self._sanitize_role(agent.role) for agent in agents]
-        agents = "_".join(agents)
-        return agents
+        return "_".join(agents)
 
-    def _get_config(self) -> Dict[str, Any]:
+    def _get_config(self) -> dict[str, Any]:
         return self.config or getattr(self, "memory_config", {}).get("config", {}) or {}
 
-    def reset(self):
+    def reset(self) -> None:
         if self.memory:
             self.memory.reset()

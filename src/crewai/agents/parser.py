@@ -1,5 +1,5 @@
 import re
-from typing import Any, Optional, Union
+from typing import Any
 
 from json_repair import repair_json
 
@@ -18,7 +18,7 @@ class AgentAction:
     text: str
     result: str
 
-    def __init__(self, thought: str, tool: str, tool_input: str, text: str):
+    def __init__(self, thought: str, tool: str, tool_input: str, text: str) -> None:
         self.thought = thought
         self.tool = tool
         self.tool_input = tool_input
@@ -30,7 +30,7 @@ class AgentFinish:
     output: str
     text: str
 
-    def __init__(self, thought: str, output: str, text: str):
+    def __init__(self, thought: str, output: str, text: str) -> None:
         self.thought = thought
         self.output = output
         self.text = text
@@ -39,7 +39,7 @@ class AgentFinish:
 class OutputParserException(Exception):
     error: str
 
-    def __init__(self, error: str):
+    def __init__(self, error: str) -> None:
         self.error = error
 
 
@@ -67,24 +67,24 @@ class CrewAgentParser:
     _i18n: I18N = I18N()
     agent: Any = None
 
-    def __init__(self, agent: Optional[Any] = None):
+    def __init__(self, agent: Any | None = None) -> None:
         self.agent = agent
 
     @staticmethod
-    def parse_text(text: str) -> Union[AgentAction, AgentFinish]:
-        """
-        Static method to parse text into an AgentAction or AgentFinish without needing to instantiate the class.
+    def parse_text(text: str) -> AgentAction | AgentFinish:
+        """Static method to parse text into an AgentAction or AgentFinish without needing to instantiate the class.
 
         Args:
             text: The text to parse.
 
         Returns:
             Either an AgentAction or AgentFinish based on the parsed content.
+
         """
         parser = CrewAgentParser()
         return parser.parse(text)
 
-    def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
+    def parse(self, text: str) -> AgentAction | AgentFinish:
         thought = self._extract_thought(text)
         includes_answer = FINAL_ANSWER_ACTION in text
         regex = (
@@ -102,7 +102,7 @@ class CrewAgentParser:
                     final_answer = final_answer[:-3].rstrip()
             return AgentFinish(thought, final_answer, text)
 
-        elif action_match:
+        if action_match:
             action = action_match.group(1)
             clean_action = self._clean_action(action)
 
@@ -114,21 +114,21 @@ class CrewAgentParser:
             return AgentAction(thought, clean_action, safe_tool_input, text)
 
         if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
+            msg = f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{self._i18n.slice('final_answer_format')}"
             raise OutputParserException(
-                f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{self._i18n.slice('final_answer_format')}",
+                msg,
             )
-        elif not re.search(
-            r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL
+        if not re.search(
+            r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL,
         ):
             raise OutputParserException(
                 MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
             )
-        else:
-            format = self._i18n.slice("format_without_tools")
-            error = f"{format}"
-            raise OutputParserException(
-                error,
-            )
+        format = self._i18n.slice("format_without_tools")
+        error = f"{format}"
+        raise OutputParserException(
+            error,
+        )
 
     def _extract_thought(self, text: str) -> str:
         thought_index = text.find("\nAction")
@@ -138,8 +138,7 @@ class CrewAgentParser:
             return ""
         thought = text[:thought_index].strip()
         # Remove any triple backticks from the thought string
-        thought = thought.replace("```", "").strip()
-        return thought
+        return thought.replace("```", "").strip()
 
     def _clean_action(self, text: str) -> str:
         """Clean action string by removing non-essential formatting characters."""

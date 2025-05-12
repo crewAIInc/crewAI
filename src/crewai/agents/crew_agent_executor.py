@@ -1,6 +1,5 @@
-import json
-import re
-from typing import Any, Callable, Dict, List, Optional, Union
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -10,8 +9,6 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.llm import BaseLLM
-from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities import I18N, Printer
@@ -34,6 +31,10 @@ from crewai.utilities.logger import Logger
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+if TYPE_CHECKING:
+    from crewai.llm import BaseLLM
+    from crewai.tools.base_tool import BaseTool
+
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
     _logger: Logger = Logger()
@@ -46,18 +47,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
-        tools: List[CrewStructuredTool],
+        tools: list[CrewStructuredTool],
         tools_names: str,
-        stop_words: List[str],
+        stop_words: list[str],
         tools_description: str,
         tools_handler: ToolsHandler,
         step_callback: Any = None,
-        original_tools: List[Any] = [],
+        original_tools: list[Any] | None = None,
         function_calling_llm: Any = None,
         respect_context_window: bool = False,
-        request_within_rpm_limit: Optional[Callable[[], bool]] = None,
-        callbacks: List[Any] = [],
-    ):
+        request_within_rpm_limit: Callable[[], bool] | None = None,
+        callbacks: list[Any] | None = None,
+    ) -> None:
+        if callbacks is None:
+            callbacks = []
+        if original_tools is None:
+            original_tools = []
         self._i18n: I18N = I18N()
         self.llm: BaseLLM = llm
         self.task = task
@@ -79,10 +84,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
         self.ask_for_human_input = False
-        self.messages: List[Dict[str, str]] = []
+        self.messages: list[dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
-        self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
+        self.tool_name_to_tool_map: dict[str, CrewStructuredTool | BaseTool] = {
             tool.name: tool for tool in self.tools
         }
         existing_stop = self.llm.stop or []
@@ -90,11 +95,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             set(
                 existing_stop + self.stop
                 if isinstance(existing_stop, list)
-                else self.stop
-            )
+                else self.stop,
+            ),
         )
 
-    def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
+    def invoke(self, inputs: dict[str, str]) -> dict[str, Any]:
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
@@ -120,9 +125,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             handle_unknown_error(self._printer, e)
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
-                raise e
-            else:
-                raise e
+                raise
+            raise
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
@@ -133,8 +137,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self) -> AgentFinish:
-        """
-        Main loop to invoke the agent's thought process until it reaches a conclusion
+        """Main loop to invoke the agent's thought process until it reaches a conclusion
         or the maximum number of iterations is reached.
         """
         formatted_answer = None
@@ -170,8 +173,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     ):
                         fingerprint_context = {
                             "agent_fingerprint": str(
-                                self.agent.security_config.fingerprint
-                            )
+                                self.agent.security_config.fingerprint,
+                            ),
                         }
 
                     tool_result = execute_tool_and_check_finality(
@@ -187,7 +190,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         function_calling_llm=self.function_calling_llm,
                     )
                     formatted_answer = self._handle_agent_action(
-                        formatted_answer, tool_result
+                        formatted_answer, tool_result,
                     )
 
                 self._invoke_step_callback(formatted_answer)
@@ -205,7 +208,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             except Exception as e:
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
-                    raise e
+                    raise
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
@@ -216,9 +219,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         i18n=self._i18n,
                     )
                     continue
-                else:
-                    handle_unknown_error(self._printer, e)
-                    raise e
+                handle_unknown_error(self._printer, e)
+                raise
             finally:
                 self.iterations += 1
 
@@ -231,8 +233,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return formatted_answer
 
     def _handle_agent_action(
-        self, formatted_answer: AgentAction, tool_result: ToolResult
-    ) -> Union[AgentAction, AgentFinish]:
+        self, formatted_answer: AgentAction, tool_result: ToolResult,
+    ) -> AgentAction | AgentFinish:
         """Handle the AgentAction, execute tools, and process the results."""
         # Special case for add_image_tool
         add_image_tool = self._i18n.tools("add_image")
@@ -261,24 +263,26 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """Append a message to the message list with the given role."""
         self.messages.append(format_message_for_llm(text, role=role))
 
-    def _show_start_logs(self):
+    def _show_start_logs(self) -> None:
         """Show logs for the start of agent execution."""
         if self.agent is None:
-            raise ValueError("Agent cannot be None")
+            msg = "Agent cannot be None"
+            raise ValueError(msg)
         show_agent_logs(
             printer=self._printer,
             agent_role=self.agent.role,
             task_description=(
-                getattr(self.task, "description") if self.task else "Not Found"
+                self.task.description if self.task else "Not Found"
             ),
             verbose=self.agent.verbose
             or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
         )
 
-    def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
+    def _show_logs(self, formatted_answer: AgentAction | AgentFinish) -> None:
         """Show logs for the agent's execution."""
         if self.agent is None:
-            raise ValueError("Agent cannot be None")
+            msg = "Agent cannot be None"
+            raise ValueError(msg)
         show_agent_logs(
             printer=self._printer,
             agent_role=self.agent.role,
@@ -300,11 +304,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             summary = self.llm.call(
                 [
                     format_message_for_llm(
-                        self._i18n.slice("summarizer_system_message"), role="system"
+                        self._i18n.slice("summarizer_system_message"), role="system",
                     ),
                     format_message_for_llm(
                         self._i18n.slice("summarize_instruction").format(
-                            group=group["content"]
+                            group=group["content"],
                         ),
                     ),
                 ],
@@ -316,12 +320,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.messages = [
             format_message_for_llm(
-                self._i18n.slice("summary").format(merged_summary=merged_summary)
-            )
+                self._i18n.slice("summary").format(merged_summary=merged_summary),
+            ),
         ]
 
     def _handle_crew_training_output(
-        self, result: AgentFinish, human_feedback: Optional[str] = None
+        self, result: AgentFinish, human_feedback: str | None = None,
     ) -> None:
         """Handle the process of saving training data."""
         agent_id = str(self.agent.id)  # type: ignore
@@ -348,29 +352,27 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 "initial_output": result.output,
                 "human_feedback": human_feedback,
             }
+        # Save improved output
+        elif train_iteration in agent_training_data:
+            agent_training_data[train_iteration]["improved_output"] = result.output
         else:
-            # Save improved output
-            if train_iteration in agent_training_data:
-                agent_training_data[train_iteration]["improved_output"] = result.output
-            else:
-                self._printer.print(
-                    content=(
-                        f"No existing training data for agent {agent_id} and iteration "
-                        f"{train_iteration}. Cannot save improved output."
-                    ),
-                    color="red",
-                )
-                return
+            self._printer.print(
+                content=(
+                    f"No existing training data for agent {agent_id} and iteration "
+                    f"{train_iteration}. Cannot save improved output."
+                ),
+                color="red",
+            )
+            return
 
         # Update the training data and save
         training_data[agent_id] = agent_training_data
         training_handler.save(training_data)
 
-    def _format_prompt(self, prompt: str, inputs: Dict[str, str]) -> str:
+    def _format_prompt(self, prompt: str, inputs: dict[str, str]) -> str:
         prompt = prompt.replace("{input}", inputs["input"])
         prompt = prompt.replace("{tool_names}", inputs["tool_names"])
-        prompt = prompt.replace("{tools}", inputs["tools"])
-        return prompt
+        return prompt.replace("{tools}", inputs["tools"])
 
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
         """Handle human feedback with different flows for training vs regular use.
@@ -380,6 +382,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         Returns:
             AgentFinish: The final answer after processing feedback
+
         """
         human_feedback = self._ask_human_input(formatted_answer.output)
 
@@ -393,14 +396,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return bool(self.crew and self.crew._train)
 
     def _handle_training_feedback(
-        self, initial_answer: AgentFinish, feedback: str
+        self, initial_answer: AgentFinish, feedback: str,
     ) -> AgentFinish:
         """Process feedback for training scenarios with single iteration."""
         self._handle_crew_training_output(initial_answer, feedback)
         self.messages.append(
             format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
+                self._i18n.slice("feedback_instructions").format(feedback=feedback),
+            ),
         )
         improved_answer = self._invoke_loop()
         self._handle_crew_training_output(improved_answer)
@@ -408,7 +411,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return improved_answer
 
     def _handle_regular_feedback(
-        self, current_answer: AgentFinish, initial_feedback: str
+        self, current_answer: AgentFinish, initial_feedback: str,
     ) -> AgentFinish:
         """Process feedback for regular use with potential multiple iterations."""
         feedback = initial_feedback
@@ -428,8 +431,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """Process a single feedback iteration."""
         self.messages.append(
             format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
+                self._i18n.slice("feedback_instructions").format(feedback=feedback),
+            ),
         )
         return self._invoke_loop()
 

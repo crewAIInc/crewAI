@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -10,10 +10,10 @@ class Prompts(BaseModel):
 
     i18n: I18N = Field(default=I18N())
     has_tools: bool = False
-    system_template: Optional[str] = None
-    prompt_template: Optional[str] = None
-    response_template: Optional[str] = None
-    use_system_prompt: Optional[bool] = False
+    system_template: str | None = None
+    prompt_template: str | None = None
+    response_template: str | None = None
+    use_system_prompt: bool | None = False
     agent: Any
 
     def task_execution(self) -> dict[str, str]:
@@ -36,15 +36,14 @@ class Prompts(BaseModel):
                 "user": self._build_prompt(["task"]),
                 "prompt": self._build_prompt(slices),
             }
-        else:
-            return {
-                "prompt": self._build_prompt(
-                    slices,
-                    self.system_template,
-                    self.prompt_template,
-                    self.response_template,
-                )
-            }
+        return {
+            "prompt": self._build_prompt(
+                slices,
+                self.system_template,
+                self.prompt_template,
+                self.response_template,
+            ),
+        }
 
     def _build_prompt(
         self,
@@ -67,7 +66,7 @@ class Prompts(BaseModel):
             ]
             system = system_template.replace("{{ .System }}", "".join(prompt_parts))
             prompt = prompt_template.replace(
-                "{{ .Prompt }}", "".join(self.i18n.slice("task"))
+                "{{ .Prompt }}", "".join(self.i18n.slice("task")),
             )
             # Handle missing response_template
             if response_template:
@@ -76,9 +75,8 @@ class Prompts(BaseModel):
             else:
                 prompt = f"{system}\n{prompt}"
 
-        prompt = (
+        return (
             prompt.replace("{goal}", self.agent.goal)
             .replace("{role}", self.agent.role)
             .replace("{backstory}", self.agent.backstory)
         )
-        return prompt

@@ -1,23 +1,23 @@
-"""
-Utilities for creating visual representations of flow structures.
+"""Utilities for creating visual representations of flow structures.
 
 This module provides functions for generating network visualizations of flows,
 including node placement, edge creation, and visual styling. It handles the
 conversion of flow structures into visual network graphs with appropriate
 styling and layout.
 
-Example
+Example:
 -------
 >>> flow = Flow()
 >>> net = Network(directed=True)
 >>> node_positions = compute_positions(flow, node_levels)
 >>> add_nodes_to_network(net, flow, node_positions, node_styles)
 >>> add_edges(net, flow, node_positions, colors)
+
 """
 
 import ast
 import inspect
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from .utils import (
     build_ancestor_dict,
@@ -28,8 +28,7 @@ from .utils import (
 
 
 def method_calls_crew(method: Any) -> bool:
-    """
-    Check if the method contains a call to `.crew()`.
+    """Check if the method contains a call to `.crew()`.
 
     Parameters
     ----------
@@ -45,21 +44,22 @@ def method_calls_crew(method: Any) -> bool:
     -----
     Uses AST analysis to detect method calls, specifically looking for
     attribute access of 'crew'.
+
     """
     try:
         source = inspect.getsource(method)
         source = inspect.cleandoc(source)
         tree = ast.parse(source)
-    except Exception as e:
-        print(f"Could not parse method {method.__name__}: {e}")
+    except Exception:
         return False
 
     class CrewCallVisitor(ast.NodeVisitor):
         """AST visitor to detect .crew() method calls."""
-        def __init__(self):
+
+        def __init__(self) -> None:
             self.found = False
 
-        def visit_Call(self, node):
+        def visit_Call(self, node) -> None:
             if isinstance(node.func, ast.Attribute):
                 if node.func.attr == "crew":
                     self.found = True
@@ -73,11 +73,10 @@ def method_calls_crew(method: Any) -> bool:
 def add_nodes_to_network(
     net: Any,
     flow: Any,
-    node_positions: Dict[str, Tuple[float, float]],
-    node_styles: Dict[str, Dict[str, Any]]
+    node_positions: dict[str, tuple[float, float]],
+    node_styles: dict[str, dict[str, Any]],
 ) -> None:
-    """
-    Add nodes to the network visualization with appropriate styling.
+    """Add nodes to the network visualization with appropriate styling.
 
     Parameters
     ----------
@@ -97,6 +96,7 @@ def add_nodes_to_network(
     - Router methods
     - Crew methods
     - Regular methods
+
     """
     def human_friendly_label(method_name):
         return method_name.replace("_", " ").title()
@@ -123,7 +123,7 @@ def add_nodes_to_network(
                     "multi": "html",
                     "color": node_style.get("font", {}).get("color", "#FFFFFF"),
                 },
-            }
+            },
         )
 
         net.add_node(
@@ -138,12 +138,11 @@ def add_nodes_to_network(
 
 def compute_positions(
     flow: Any,
-    node_levels: Dict[str, int],
+    node_levels: dict[str, int],
     y_spacing: float = 150,
-    x_spacing: float = 150
-) -> Dict[str, Tuple[float, float]]:
-    """
-    Compute the (x, y) positions for each node in the flow graph.
+    x_spacing: float = 150,
+) -> dict[str, tuple[float, float]]:
+    """Compute the (x, y) positions for each node in the flow graph.
 
     Parameters
     ----------
@@ -160,9 +159,10 @@ def compute_positions(
     -------
     Dict[str, Tuple[float, float]]
         Dictionary mapping node names to their (x, y) coordinates.
+
     """
-    level_nodes: Dict[int, List[str]] = {}
-    node_positions: Dict[str, Tuple[float, float]] = {}
+    level_nodes: dict[int, list[str]] = {}
+    node_positions: dict[str, tuple[float, float]] = {}
 
     for method_name, level in node_levels.items():
         level_nodes.setdefault(level, []).append(method_name)
@@ -180,10 +180,10 @@ def compute_positions(
 def add_edges(
     net: Any,
     flow: Any,
-    node_positions: Dict[str, Tuple[float, float]],
-    colors: Dict[str, str]
+    node_positions: dict[str, tuple[float, float]],
+    colors: dict[str, str],
 ) -> None:
-    edge_smooth: Dict[str, Union[str, float]] = {"type": "continuous"}  # Default value
+    edge_smooth: dict[str, str | float] = {"type": "continuous"}  # Default value
     """
     Add edges to the network visualization with appropriate styling.
 
@@ -245,7 +245,7 @@ def add_edges(
                     "color": edge_color,
                     "width": 2,
                     "arrows": "to",
-                    "dashes": True if is_router_edge or is_and_condition else False,
+                    "dashes": bool(is_router_edge or is_and_condition),
                     "smooth": edge_smooth,
                 }
 
@@ -261,9 +261,7 @@ def add_edges(
                 # If it's a known router edge and the method is known, don't warn.
                 # This means the path is legitimate, just not reflected as nodes here.
                 if not (is_router_edge and method_known):
-                    print(
-                        f"Warning: No node found for '{trigger}' or '{method_name}'. Skipping edge."
-                    )
+                    pass
 
     # Edges for router return paths
     for router_method_name, paths in flow._router_paths.items():
@@ -278,7 +276,7 @@ def add_edges(
                         and listener_name in node_positions
                     ):
                         is_cycle_edge = is_ancestor(
-                            router_method_name, listener_name, ancestors
+                            router_method_name, listener_name, ancestors,
                         )
                         parent_has_multiple_children = (
                             len(parent_children.get(router_method_name, [])) > 1
@@ -293,7 +291,7 @@ def add_edges(
                                 dx = target_pos[0] - source_pos[0]
                                 smooth_type = "curvedCCW" if dx <= 0 else "curvedCW"
                                 index = get_child_index(
-                                    router_method_name, listener_name, parent_children
+                                    router_method_name, listener_name, parent_children,
                                 )
                                 edge_smooth = {
                                     "type": smooth_type,
@@ -316,6 +314,4 @@ def add_edges(
                         # Same check here: known router edge and known method?
                         method_known = listener_name in flow._methods
                         if not method_known:
-                            print(
-                                f"Warning: No node found for '{router_method_name}' or '{listener_name}'. Skipping edge."
-                            )
+                            pass

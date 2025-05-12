@@ -2,23 +2,16 @@ import datetime
 import inspect
 import json
 import logging
-import re
 import threading
 import uuid
+from collections.abc import Callable
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
 from pathlib import Path
 from typing import (
     Any,
-    Callable,
     ClassVar,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
     Union,
     get_args,
     get_origin,
@@ -71,6 +64,7 @@ class Task(BaseModel):
         output_pydantic: Pydantic model for task output.
         security_config: Security configuration including fingerprinting.
         tools: List of tools/resources limited for task execution.
+
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -79,46 +73,46 @@ class Task(BaseModel):
     tools_errors: int = 0
     delegations: int = 0
     i18n: I18N = I18N()
-    name: Optional[str] = Field(default=None)
-    prompt_context: Optional[str] = None
+    name: str | None = Field(default=None)
+    prompt_context: str | None = None
     description: str = Field(description="Description of the actual task.")
     expected_output: str = Field(
-        description="Clear definition of expected output for the task."
+        description="Clear definition of expected output for the task.",
     )
-    config: Optional[Dict[str, Any]] = Field(
+    config: dict[str, Any] | None = Field(
         description="Configuration for the agent",
         default=None,
     )
-    callback: Optional[Any] = Field(
-        description="Callback to be executed after the task is completed.", default=None
+    callback: Any | None = Field(
+        description="Callback to be executed after the task is completed.", default=None,
     )
-    agent: Optional[BaseAgent] = Field(
-        description="Agent responsible for execution the task.", default=None
+    agent: BaseAgent | None = Field(
+        description="Agent responsible for execution the task.", default=None,
     )
-    context: Optional[List["Task"]] = Field(
+    context: list["Task"] | None = Field(
         description="Other tasks that will have their output used as context for this task.",
         default=None,
     )
-    async_execution: Optional[bool] = Field(
+    async_execution: bool | None = Field(
         description="Whether the task should be executed asynchronously or not.",
         default=False,
     )
-    output_json: Optional[Type[BaseModel]] = Field(
+    output_json: type[BaseModel] | None = Field(
         description="A Pydantic model to be used to create a JSON output.",
         default=None,
     )
-    output_pydantic: Optional[Type[BaseModel]] = Field(
+    output_pydantic: type[BaseModel] | None = Field(
         description="A Pydantic model to be used to create a Pydantic output.",
         default=None,
     )
-    output_file: Optional[str] = Field(
+    output_file: str | None = Field(
         description="A file path to be used to create a file output.",
         default=None,
     )
-    output: Optional[TaskOutput] = Field(
-        description="Task output, it's final result after being executed", default=None
+    output: TaskOutput | None = Field(
+        description="Task output, it's final result after being executed", default=None,
     )
-    tools: Optional[List[BaseTool]] = Field(
+    tools: list[BaseTool] | None = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
     )
@@ -131,37 +125,36 @@ class Task(BaseModel):
         frozen=True,
         description="Unique identifier for the object, not set by user.",
     )
-    human_input: Optional[bool] = Field(
+    human_input: bool | None = Field(
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
-    converter_cls: Optional[Type[Converter]] = Field(
+    converter_cls: type[Converter] | None = Field(
         description="A converter class used to export structured output",
         default=None,
     )
-    processed_by_agents: Set[str] = Field(default_factory=set)
-    guardrail: Optional[Union[Callable[[TaskOutput], Tuple[bool, Any]], str]] = Field(
+    processed_by_agents: set[str] = Field(default_factory=set)
+    guardrail: Callable[[TaskOutput], tuple[bool, Any]] | str | None = Field(
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
     max_retries: int = Field(
-        default=3, description="Maximum number of retries when guardrail fails"
+        default=3, description="Maximum number of retries when guardrail fails",
     )
     retry_count: int = Field(default=0, description="Current number of retries")
-    start_time: Optional[datetime.datetime] = Field(
-        default=None, description="Start time of the task execution"
+    start_time: datetime.datetime | None = Field(
+        default=None, description="Start time of the task execution",
     )
-    end_time: Optional[datetime.datetime] = Field(
-        default=None, description="End time of the task execution"
+    end_time: datetime.datetime | None = Field(
+        default=None, description="End time of the task execution",
     )
 
     @field_validator("guardrail")
     @classmethod
     def validate_guardrail_function(
-        cls, v: Optional[str | Callable]
-    ) -> Optional[str | Callable]:
-        """
-        If v is a callable, validate that the guardrail function has the correct signature and behavior.
+        cls, v: str | Callable | None,
+    ) -> str | Callable | None:
+        """If v is a callable, validate that the guardrail function has the correct signature and behavior.
         If v is a string, return it as is.
 
         While type hints provide static checking, this validator ensures runtime safety by:
@@ -183,6 +176,7 @@ class Task(BaseModel):
         Raises:
             ValueError: If the function signature is invalid or return annotation
                        doesn't match Tuple[bool, Any]
+
         """
         if v is not None and callable(v):
             sig = inspect.signature(v)
@@ -192,7 +186,8 @@ class Task(BaseModel):
                 if param.default is inspect.Parameter.empty
             ]
             if len(positional_args) != 1:
-                raise ValueError("Guardrail function must accept exactly one parameter")
+                msg = "Guardrail function must accept exactly one parameter"
+                raise ValueError(msg)
 
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
@@ -210,16 +205,17 @@ class Task(BaseModel):
                         or return_annotation_args[1] == Union[str, TaskOutput]
                     )
                 ):
+                    msg = "If return type is annotated, it must be Tuple[bool, Any]"
                     raise ValueError(
-                        "If return type is annotated, it must be Tuple[bool, Any]"
+                        msg,
                     )
         return v
 
-    _guardrail: Optional[Callable] = PrivateAttr(default=None)
-    _original_description: Optional[str] = PrivateAttr(default=None)
-    _original_expected_output: Optional[str] = PrivateAttr(default=None)
-    _original_output_file: Optional[str] = PrivateAttr(default=None)
-    _thread: Optional[threading.Thread] = PrivateAttr(default=None)
+    _guardrail: Callable | None = PrivateAttr(default=None)
+    _original_description: str | None = PrivateAttr(default=None)
+    _original_expected_output: str | None = PrivateAttr(default=None)
+    _original_output_file: str | None = PrivateAttr(default=None)
+    _thread: threading.Thread | None = PrivateAttr(default=None)
 
     @model_validator(mode="before")
     @classmethod
@@ -231,8 +227,9 @@ class Task(BaseModel):
         required_fields = ["description", "expected_output"]
         for field in required_fields:
             if getattr(self, field) is None:
+                msg = f"{field} must be provided either directly or through config"
                 raise ValueError(
-                    f"{field} must be provided either directly or through config"
+                    msg,
                 )
         return self
 
@@ -245,22 +242,23 @@ class Task(BaseModel):
 
             assert self.agent is not None
             self._guardrail = LLMGuardrail(
-                description=self.guardrail, llm=self.agent.llm
+                description=self.guardrail, llm=self.agent.llm,
             )
 
         return self
 
     @field_validator("id", mode="before")
     @classmethod
-    def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+    def _deny_user_set_id(cls, v: UUID4 | None) -> None:
         if v:
+            msg = "may_not_set_field"
             raise PydanticCustomError(
-                "may_not_set_field", "This field is not to be set by the user.", {}
+                msg, "This field is not to be set by the user.", {},
             )
 
     @field_validator("output_file")
     @classmethod
-    def output_file_validation(cls, value: Optional[str]) -> Optional[str]:
+    def output_file_validation(cls, value: str | None) -> str | None:
         """Validate the output file path.
 
         Args:
@@ -274,26 +272,30 @@ class Task(BaseModel):
         Raises:
             ValueError: If the path contains invalid characters, path traversal attempts,
                       or other security concerns.
+
         """
         if value is None:
             return None
 
         # Basic security checks
         if ".." in value:
+            msg = "Path traversal attempts are not allowed in output_file paths"
             raise ValueError(
-                "Path traversal attempts are not allowed in output_file paths"
+                msg,
             )
 
         # Check for shell expansion first
-        if value.startswith("~") or value.startswith("$"):
+        if value.startswith(("~", "$")):
+            msg = "Shell expansion characters are not allowed in output_file paths"
             raise ValueError(
-                "Shell expansion characters are not allowed in output_file paths"
+                msg,
             )
 
         # Then check other shell special characters
         if any(char in value for char in ["|", ">", "<", "&", ";"]):
+            msg = "Shell special characters are not allowed in output_file paths"
             raise ValueError(
-                "Shell special characters are not allowed in output_file paths"
+                msg,
             )
 
         # Don't strip leading slash if it's a template path with variables
@@ -302,7 +304,8 @@ class Task(BaseModel):
             template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
             for var in template_vars:
                 if not var.isidentifier():
-                    raise ValueError(f"Invalid template variable name: {var}")
+                    msg = f"Invalid template variable name: {var}"
+                    raise ValueError(msg)
             return value
 
         # Strip leading slash for regular paths
@@ -330,8 +333,9 @@ class Task(BaseModel):
         """Check if an output type is set."""
         output_types = [self.output_json, self.output_pydantic]
         if len([type for type in output_types if type]) > 1:
+            msg = "output_type"
             raise PydanticCustomError(
-                "output_type",
+                msg,
                 "Only one output type can be set, either output_pydantic or output_json.",
                 {},
             )
@@ -339,9 +343,9 @@ class Task(BaseModel):
 
     def execute_sync(
         self,
-        agent: Optional[BaseAgent] = None,
-        context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        agent: BaseAgent | None = None,
+        context: str | None = None,
+        tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
         return self._execute_core(agent, context, tools)
@@ -363,8 +367,8 @@ class Task(BaseModel):
     def execute_async(
         self,
         agent: BaseAgent | None = None,
-        context: Optional[str] = None,
-        tools: Optional[List[BaseTool]] = None,
+        context: str | None = None,
+        tools: list[BaseTool] | None = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
@@ -377,9 +381,9 @@ class Task(BaseModel):
 
     def _execute_task_async(
         self,
-        agent: Optional[BaseAgent],
-        context: Optional[str],
-        tools: Optional[List[Any]],
+        agent: BaseAgent | None,
+        context: str | None,
+        tools: list[Any] | None,
         future: Future[TaskOutput],
     ) -> None:
         """Execute the task asynchronously with context handling."""
@@ -388,17 +392,18 @@ class Task(BaseModel):
 
     def _execute_core(
         self,
-        agent: Optional[BaseAgent],
-        context: Optional[str],
-        tools: Optional[List[Any]],
+        agent: BaseAgent | None,
+        context: str | None,
+        tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
         try:
             agent = agent or self.agent
             self.agent = agent
             if not agent:
+                msg = f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 raise Exception(
-                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                    msg,
                 )
 
             self.start_time = datetime.datetime.now()
@@ -430,9 +435,12 @@ class Task(BaseModel):
                 guardrail_result = self._process_guardrail(task_output)
                 if not guardrail_result.success:
                     if self.retry_count >= self.max_retries:
-                        raise Exception(
+                        msg = (
                             f"Task failed guardrail validation after {self.max_retries} retries. "
                             f"Last error: {guardrail_result.error}"
+                        )
+                        raise Exception(
+                            msg,
                         )
 
                     self.retry_count += 1
@@ -448,14 +456,15 @@ class Task(BaseModel):
                     return self._execute_core(agent, context, tools)
 
                 if guardrail_result.result is None:
+                    msg = "Task guardrail returned None as result. This is not allowed."
                     raise Exception(
-                        "Task guardrail returned None as result. This is not allowed."
+                        msg,
                     )
 
                 if isinstance(guardrail_result.result, str):
                     task_output.raw = guardrail_result.result
                     pydantic_output, json_output = self._export_output(
-                        guardrail_result.result
+                        guardrail_result.result,
                     )
                     task_output.pydantic = pydantic_output
                     task_output.json_dict = json_output
@@ -482,13 +491,13 @@ class Task(BaseModel):
                 )
                 self._save_file(content)
             crewai_event_bus.emit(
-                self, TaskCompletedEvent(output=task_output, task=self)
+                self, TaskCompletedEvent(output=task_output, task=self),
             )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
-            raise e  # Re-raise the exception after emitting the event
+            raise  # Re-raise the exception after emitting the event
 
     def _process_guardrail(self, task_output: TaskOutput) -> GuardrailResult:
         assert self._guardrail is not None
@@ -504,7 +513,7 @@ class Task(BaseModel):
         crewai_event_bus.emit(
             self,
             LLMGuardrailStartedEvent(
-                guardrail=self._guardrail, retry_count=self.retry_count
+                guardrail=self._guardrail, retry_count=self.retry_count,
             ),
         )
 
@@ -526,17 +535,18 @@ class Task(BaseModel):
 
         Returns:
             Prompt of the task.
+
         """
         tasks_slices = [self.description]
 
         output = self.i18n.slice("expected_output").format(
-            expected_output=self.expected_output
+            expected_output=self.expected_output,
         )
         tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(
-        self, inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]]
+        self, inputs: dict[str, str | int | float | dict[str, Any] | list[Any]],
     ) -> None:
         """Interpolate inputs into the task description, expected output, and output file path.
            Add conversation history if present.
@@ -547,6 +557,7 @@ class Task(BaseModel):
 
         Raises:
             ValueError: If a required template variable is missing from inputs.
+
         """
         if self._original_description is None:
             self._original_description = self.description
@@ -560,43 +571,46 @@ class Task(BaseModel):
 
         try:
             self.description = interpolate_only(
-                input_string=self._original_description, inputs=inputs
+                input_string=self._original_description, inputs=inputs,
             )
         except KeyError as e:
+            msg = f"Missing required template variable '{e.args[0]}' in description"
             raise ValueError(
-                f"Missing required template variable '{e.args[0]}' in description"
+                msg,
             ) from e
         except ValueError as e:
-            raise ValueError(f"Error interpolating description: {str(e)}") from e
+            msg = f"Error interpolating description: {e!s}"
+            raise ValueError(msg) from e
 
         try:
             self.expected_output = interpolate_only(
-                input_string=self._original_expected_output, inputs=inputs
+                input_string=self._original_expected_output, inputs=inputs,
             )
         except (KeyError, ValueError) as e:
-            raise ValueError(f"Error interpolating expected_output: {str(e)}") from e
+            msg = f"Error interpolating expected_output: {e!s}"
+            raise ValueError(msg) from e
 
         if self.output_file is not None:
             try:
                 self.output_file = interpolate_only(
-                    input_string=self._original_output_file, inputs=inputs
+                    input_string=self._original_output_file, inputs=inputs,
                 )
             except (KeyError, ValueError) as e:
+                msg = f"Error interpolating output_file path: {e!s}"
                 raise ValueError(
-                    f"Error interpolating output_file path: {str(e)}"
+                    msg,
                 ) from e
 
-        if "crew_chat_messages" in inputs and inputs["crew_chat_messages"]:
+        if inputs.get("crew_chat_messages"):
             conversation_instruction = self.i18n.slice(
-                "conversation_history_instruction"
+                "conversation_history_instruction",
             )
 
             crew_chat_messages_json = str(inputs["crew_chat_messages"])
 
             try:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
-            except json.JSONDecodeError as e:
-                print("An error occurred while parsing crew chat messages:", e)
+            except json.JSONDecodeError:
                 raise
 
             conversation_history = "\n".join(
@@ -613,14 +627,14 @@ class Task(BaseModel):
         """Increment the tools errors counter."""
         self.tools_errors += 1
 
-    def increment_delegations(self, agent_name: Optional[str]) -> None:
+    def increment_delegations(self, agent_name: str | None) -> None:
         """Increment the delegations counter."""
         if agent_name:
             self.processed_by_agents.add(agent_name)
         self.delegations += 1
 
     def copy(
-        self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
+        self, agents: list["BaseAgent"], task_mapping: dict[str, "Task"],
     ) -> "Task":
         """Creates a deep copy of the Task while preserving its original class type.
 
@@ -630,6 +644,7 @@ class Task(BaseModel):
 
         Returns:
             A copy of the task with the same class type as the original.
+
         """
         exclude = {
             "id",
@@ -653,20 +668,19 @@ class Task(BaseModel):
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = copy(self.tools) if self.tools else []
 
-        copied_task = self.__class__(
+        return self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,
             tools=cloned_tools,
         )
 
-        return copied_task
 
     def _export_output(
-        self, result: str
-    ) -> Tuple[Optional[BaseModel], Optional[Dict[str, Any]]]:
-        pydantic_output: Optional[BaseModel] = None
-        json_output: Optional[Dict[str, Any]] = None
+        self, result: str,
+    ) -> tuple[BaseModel | None, dict[str, Any] | None]:
+        pydantic_output: BaseModel | None = None
+        json_output: dict[str, Any] | None = None
 
         if self.output_pydantic or self.output_json:
             model_output = convert_to_model(
@@ -696,7 +710,7 @@ class Task(BaseModel):
             return OutputFormat.PYDANTIC
         return OutputFormat.RAW
 
-    def _save_file(self, result: Union[Dict, str, Any]) -> None:
+    def _save_file(self, result: dict | str | Any) -> None:
         """Save task output to a file.
 
         Note:
@@ -713,9 +727,11 @@ class Task(BaseModel):
             RuntimeError: If there is an error writing to the file. For cross-platform
                 compatibility, especially on Windows, use FileWriterTool from crewai_tools
                 package.
+
         """
         if self.output_file is None:
-            raise ValueError("output_file is not set.")
+            msg = "output_file is not set."
+            raise ValueError(msg)
 
         FILEWRITER_RECOMMENDATION = (
             "For cross-platform file writing, especially on Windows, "
@@ -736,15 +752,14 @@ class Task(BaseModel):
                     json.dump(result, file, ensure_ascii=False, indent=2)
                 else:
                     file.write(str(result))
-        except (OSError, IOError) as e:
+        except OSError as e:
             raise RuntimeError(
                 "\n".join(
-                    [f"Failed to save output file: {e}", FILEWRITER_RECOMMENDATION]
-                )
+                    [f"Failed to save output file: {e}", FILEWRITER_RECOMMENDATION],
+                ),
             )
-        return None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Task(description={self.description}, expected_output={self.expected_output})"
 
     @property
@@ -753,5 +768,6 @@ class Task(BaseModel):
 
         Returns:
             Fingerprint: The fingerprint of the task
+
         """
         return self.security_config.fingerprint

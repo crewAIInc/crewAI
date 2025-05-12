@@ -1,16 +1,16 @@
 """Error message definitions for CrewAI database operations."""
-from typing import Optional
 
 
 class DatabaseOperationError(Exception):
     """Base exception class for database operation errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None) -> None:
         """Initialize the database operation error.
 
         Args:
             message: The error message to display
             original_error: The original exception that caused this error, if any
+
         """
         super().__init__(message)
         self.original_error = original_error
@@ -35,5 +35,6 @@ class DatabaseError:
 
         Returns:
             The formatted error message
+
         """
         return template.format(str(error))

@@ -1,6 +1,4 @@
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Union
-from urllib.parse import urlparse
 
 from pydantic import Field, field_validator
 
@@ -16,34 +14,34 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
 
     _logger: Logger = Logger(verbose=True)
 
-    file_path: Optional[Union[Path, List[Path], str, List[str]]] = Field(
+    file_path: Path | list[Path] | str | list[str] | None = Field(
         default=None,
         description="[Deprecated] The path to the file. Use file_paths instead.",
     )
-    file_paths: Optional[Union[Path, List[Path], str, List[str]]] = Field(
-        default_factory=list, description="The path to the file"
+    file_paths: Path | list[Path] | str | list[str] | None = Field(
+        default_factory=list, description="The path to the file",
     )
-    chunks: List[str] = Field(default_factory=list)
-    content: Dict[Path, Dict[str, str]] = Field(default_factory=dict)
-    safe_file_paths: List[Path] = Field(default_factory=list)
+    chunks: list[str] = Field(default_factory=list)
+    content: dict[Path, dict[str, str]] = Field(default_factory=dict)
+    safe_file_paths: list[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
-    def validate_file_path(cls, v, info):
+    def validate_file_path(self, v, info):
         """Validate that at least one of file_path or file_paths is provided."""
         # Single check if both are None, O(1) instead of nested conditions
         if (
             v is None
             and info.data.get(
-                "file_path" if info.field_name == "file_paths" else "file_paths"
+                "file_path" if info.field_name == "file_paths" else "file_paths",
             )
             is None
         ):
-            raise ValueError("Either file_path or file_paths must be provided")
+            msg = "Either file_path or file_paths must be provided"
+            raise ValueError(msg)
         return v
 
-    def _process_file_paths(self) -> List[Path]:
+    def _process_file_paths(self) -> list[Path]:
         """Convert file_path to a list of Path objects."""
-
         if hasattr(self, "file_path") and self.file_path is not None:
             self._logger.log(
                 "warning",
@@ -53,10 +51,11 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
             self.file_paths = self.file_path
 
         if self.file_paths is None:
-            raise ValueError("Your source must be provided with a file_paths: []")
+            msg = "Your source must be provided with a file_paths: []"
+            raise ValueError(msg)
 
         # Convert single path to list
-        path_list: List[Union[Path, str]] = (
+        path_list: list[Path | str] = (
             [self.file_paths]
             if isinstance(self.file_paths, (str, Path))
             else list(self.file_paths)
@@ -65,13 +64,14 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         )
 
         if not path_list:
+            msg = "file_path/file_paths must be a Path, str, or a list of these types"
             raise ValueError(
-                "file_path/file_paths must be a Path, str, or a list of these types"
+                msg,
             )
 
         return [self.convert_to_path(path) for path in path_list]
 
-    def validate_content(self):
+    def validate_content(self) -> None:
         """Validate the paths."""
         for path in self.safe_file_paths:
             if not path.exists():
@@ -80,7 +80,8 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
                     f"File not found: {path}. Try adding sources to the knowledge directory. If it's inside the knowledge directory, use the relative path.",
                     color="red",
                 )
-                raise FileNotFoundError(f"File not found: {path}")
+                msg = f"File not found: {path}"
+                raise FileNotFoundError(msg)
             if not path.is_file():
                 self._logger.log(
                     "error",
@@ -100,7 +101,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         self.validate_content()
         self.content = self._load_content()
 
-    def _load_content(self) -> Dict[Path, Dict[str, str]]:
+    def _load_content(self) -> dict[Path, dict[str, str]]:
         """Load and preprocess Excel file content from multiple sheets.
 
         Each sheet's content is converted to CSV format and stored.
@@ -111,6 +112,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         Raises:
             ImportError: If required dependencies are missing.
             FileNotFoundError: If the specified Excel file cannot be opened.
+
         """
         pd = self._import_dependencies()
         content_dict = {}
@@ -119,14 +121,14 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
             with pd.ExcelFile(file_path) as xl:
                 sheet_dict = {
                     str(sheet_name): str(
-                        pd.read_excel(xl, sheet_name).to_csv(index=False)
+                        pd.read_excel(xl, sheet_name).to_csv(index=False),
                     )
                     for sheet_name in xl.sheet_names
                 }
             content_dict[file_path] = sheet_dict
         return content_dict
 
-    def convert_to_path(self, path: Union[Path, str]) -> Path:
+    def convert_to_path(self, path: Path | str) -> Path:
         """Convert a path to a Path object."""
         return Path(KNOWLEDGE_DIRECTORY + "/" + path) if isinstance(path, str) else path
 
@@ -138,13 +140,13 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
             return pd
         except ImportError as e:
             missing_package = str(e).split()[-1]
+            msg = f"{missing_package} is not installed. Please install it with: pip install {missing_package}"
             raise ImportError(
-                f"{missing_package} is not installed. Please install it with: pip install {missing_package}"
+                msg,
             )
 
     def add(self) -> None:
-        """
-        Add Excel file content to the knowledge source, chunk it, compute embeddings,
+        """Add Excel file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
         # Convert dictionary values to a single string if content is a dictionary
@@ -161,7 +163,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         self.chunks.extend(new_chunks)
         self._save_documents()
 
-    def _chunk_text(self, text: str) -> List[str]:
+    def _chunk_text(self, text: str) -> list[str]:
         """Utility method to split text into chunks."""
         return [
             text[i : i + self.chunk_size]

@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import inspect
 import textwrap
-from typing import Any, Callable, Optional, Union, get_type_hints
+from typing import TYPE_CHECKING, Any, get_type_hints
 
 from pydantic import BaseModel, Field, create_model
 
 from crewai.utilities.logger import Logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class CrewStructuredTool:
@@ -32,6 +35,7 @@ class CrewStructuredTool:
             args_schema: The pydantic model for the tool's arguments
             func: The function to run when the tool is called
             result_as_answer: Whether to return the output directly
+
         """
         self.name = name
         self.description = description
@@ -47,10 +51,10 @@ class CrewStructuredTool:
     def from_function(
         cls,
         func: Callable,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
+        name: str | None = None,
+        description: str | None = None,
         return_direct: bool = False,
-        args_schema: Optional[type[BaseModel]] = None,
+        args_schema: type[BaseModel] | None = None,
         infer_schema: bool = True,
         **kwargs: Any,
     ) -> CrewStructuredTool:
@@ -73,13 +77,15 @@ class CrewStructuredTool:
             ...     '''Add two numbers'''
             ...     return a + b
             >>> tool = CrewStructuredTool.from_function(add)
+
         """
         name = name or func.__name__
         description = description or inspect.getdoc(func)
 
         if description is None:
+            msg = f"Function {name} must have a docstring if description not provided."
             raise ValueError(
-                f"Function {name} must have a docstring if description not provided."
+                msg,
             )
 
         # Clean up the description
@@ -92,8 +98,9 @@ class CrewStructuredTool:
             # Infer schema from function signature
             schema = cls._create_schema_from_function(name, func)
         else:
+            msg = "Either args_schema must be provided or infer_schema must be True."
             raise ValueError(
-                "Either args_schema must be provided or infer_schema must be True."
+                msg,
             )
 
         return cls(
@@ -117,6 +124,7 @@ class CrewStructuredTool:
 
         Returns:
             A Pydantic model class
+
         """
         # Get function signature
         sig = inspect.signature(func)
@@ -165,12 +173,15 @@ class CrewStructuredTool:
             # Only validate required parameters without defaults
             if param.default == inspect.Parameter.empty:
                 if param_name not in schema_fields:
-                    raise ValueError(
+                    msg = (
                         f"Required function parameter '{param_name}' "
                         f"not found in args_schema"
                     )
+                    raise ValueError(
+                        msg,
+                    )
 
-    def _parse_args(self, raw_args: Union[str, dict]) -> dict:
+    def _parse_args(self, raw_args: str | dict) -> dict:
         """Parse and validate the input arguments against the schema.
 
         Args:
@@ -178,6 +189,7 @@ class CrewStructuredTool:
 
         Returns:
             The validated arguments as a dictionary
+
         """
         if isinstance(raw_args, str):
             try:
@@ -185,18 +197,20 @@ class CrewStructuredTool:
 
                 raw_args = json.loads(raw_args)
             except json.JSONDecodeError as e:
-                raise ValueError(f"Failed to parse arguments as JSON: {e}")
+                msg = f"Failed to parse arguments as JSON: {e}"
+                raise ValueError(msg)
 
         try:
             validated_args = self.args_schema.model_validate(raw_args)
             return validated_args.model_dump()
         except Exception as e:
-            raise ValueError(f"Arguments validation failed: {e}")
+            msg = f"Arguments validation failed: {e}"
+            raise ValueError(msg)
 
     async def ainvoke(
         self,
-        input: Union[str, dict],
-        config: Optional[dict] = None,
+        input: str | dict,
+        config: dict | None = None,
         **kwargs: Any,
     ) -> Any:
         """Asynchronously invoke the tool.
@@ -208,28 +222,28 @@ class CrewStructuredTool:
 
         Returns:
             The result of the tool execution
+
         """
         parsed_args = self._parse_args(input)
 
         if inspect.iscoroutinefunction(self.func):
             return await self.func(**parsed_args, **kwargs)
-        else:
-            # Run sync functions in a thread pool
-            import asyncio
+        # Run sync functions in a thread pool
+        import asyncio
 
-            return await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.func(**parsed_args, **kwargs)
-            )
+        return await asyncio.get_event_loop().run_in_executor(
+            None, lambda: self.func(**parsed_args, **kwargs),
+        )
 
     def _run(self, *args, **kwargs) -> Any:
         """Legacy method for compatibility."""
         # Convert args/kwargs to our expected format
-        input_dict = dict(zip(self.args_schema.model_fields.keys(), args))
+        input_dict = dict(zip(self.args_schema.model_fields.keys(), args, strict=False))
         input_dict.update(kwargs)
         return self.invoke(input_dict)
 
     def invoke(
-        self, input: Union[str, dict], config: Optional[dict] = None, **kwargs: Any
+        self, input: str | dict, config: dict | None = None, **kwargs: Any,
     ) -> Any:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)

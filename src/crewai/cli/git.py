@@ -1,16 +1,18 @@
 import subprocess
-from functools import lru_cache
+from functools import cache
 
 
 class Repository:
-    def __init__(self, path="."):
+    def __init__(self, path=".") -> None:
         self.path = path
 
         if not self.is_git_installed():
-            raise ValueError("Git is not installed or not found in your PATH.")
+            msg = "Git is not installed or not found in your PATH."
+            raise ValueError(msg)
 
         if not self.is_git_repo():
-            raise ValueError(f"{self.path} is not a Git repository.")
+            msg = f"{self.path} is not a Git repository."
+            raise ValueError(msg)
 
         self.fetch()
 
@@ -18,7 +20,7 @@ class Repository:
         """Check if Git is installed and available in the system."""
         try:
             subprocess.run(
-                ["git", "--version"], capture_output=True, check=True, text=True
+                ["git", "--version"], capture_output=True, check=True, text=True,
             )
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
@@ -36,7 +38,7 @@ class Repository:
             encoding="utf-8",
         ).strip()
 
-    @lru_cache(maxsize=None)
+    @cache
     def is_git_repo(self) -> bool:
         """Check if the current directory is a git repository."""
         try:
@@ -62,10 +64,7 @@ class Repository:
 
     def is_synced(self) -> bool:
         """Return True if the Git repository is fully synced with the remote, False otherwise."""
-        if self.has_uncommitted_changes() or self.is_ahead_or_behind():
-            return False
-        else:
-            return True
+        return not (self.has_uncommitted_changes() or self.is_ahead_or_behind())
 
     def origin_url(self) -> str | None:
         """Get the Git repository's remote URL."""

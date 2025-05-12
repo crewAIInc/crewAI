@@ -2,17 +2,11 @@ import asyncio
 import copy
 import inspect
 import logging
+from collections.abc import Callable
 from typing import (
     Any,
-    Callable,
-    Dict,
     Generic,
-    List,
-    Optional,
-    Set,
-    Type,
     TypeVar,
-    Union,
     cast,
 )
 from uuid import uuid4
@@ -48,14 +42,14 @@ class FlowState(BaseModel):
 
 # Type variables with explicit bounds
 T = TypeVar(
-    "T", bound=Union[Dict[str, Any], BaseModel]
+    "T", bound=dict[str, Any] | BaseModel,
 )  # Generic flow state type parameter
 StateT = TypeVar(
-    "StateT", bound=Union[Dict[str, Any], BaseModel]
+    "StateT", bound=dict[str, Any] | BaseModel,
 )  # State validation type parameter
 
 
-def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
+def ensure_state_type(state: Any, expected_type: type[StateT]) -> StateT:
     """Ensure state matches expected type with proper validation.
 
     Args:
@@ -68,6 +62,7 @@ def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
     Raises:
         TypeError: If state doesn't match expected type
         ValueError: If state validation fails
+
     """
     """Ensure state matches expected type with proper validation.
 
@@ -84,20 +79,22 @@ def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
     """
     if expected_type is dict:
         if not isinstance(state, dict):
-            raise TypeError(f"Expected dict, got {type(state).__name__}")
-        return cast(StateT, state)
+            msg = f"Expected dict, got {type(state).__name__}"
+            raise TypeError(msg)
+        return cast("StateT", state)
     if isinstance(expected_type, type) and issubclass(expected_type, BaseModel):
         if not isinstance(state, expected_type):
+            msg = f"Expected {expected_type.__name__}, got {type(state).__name__}"
             raise TypeError(
-                f"Expected {expected_type.__name__}, got {type(state).__name__}"
+                msg,
             )
-        return cast(StateT, state)
-    raise TypeError(f"Invalid expected_type: {expected_type}")
+        return cast("StateT", state)
+    msg = f"Invalid expected_type: {expected_type}"
+    raise TypeError(msg)
 
 
-def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
-    """
-    Marks a method as a flow's starting point.
+def start(condition: str | dict | Callable | None = None) -> Callable:
+    """Marks a method as a flow's starting point.
 
     This decorator designates a method as an entry point for the flow execution.
     It can optionally specify conditions that trigger the start based on other
@@ -135,6 +132,7 @@ def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
     >>> @start(and_("method1", "method2"))  # Start after multiple methods
     >>> def complex_start(self):
     ...     pass
+
     """
 
     def decorator(func):
@@ -154,17 +152,17 @@ def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
                 func.__trigger_methods__ = [condition.__name__]
                 func.__condition_type__ = "OR"
             else:
+                msg = "Condition must be a method, string, or a result of or_() or and_()"
                 raise ValueError(
-                    "Condition must be a method, string, or a result of or_() or and_()"
+                    msg,
                 )
         return func
 
     return decorator
 
 
-def listen(condition: Union[str, dict, Callable]) -> Callable:
-    """
-    Creates a listener that executes when specified conditions are met.
+def listen(condition: str | dict | Callable) -> Callable:
+    """Creates a listener that executes when specified conditions are met.
 
     This decorator sets up a method to execute in response to other method
     executions in the flow. It supports both simple and complex triggering
@@ -197,6 +195,7 @@ def listen(condition: Union[str, dict, Callable]) -> Callable:
     >>> @listen(or_("success", "failure"))  # Listen to multiple methods
     >>> def handle_completion(self):
     ...     pass
+
     """
 
     def decorator(func):
@@ -214,17 +213,17 @@ def listen(condition: Union[str, dict, Callable]) -> Callable:
             func.__trigger_methods__ = [condition.__name__]
             func.__condition_type__ = "OR"
         else:
+            msg = "Condition must be a method, string, or a result of or_() or and_()"
             raise ValueError(
-                "Condition must be a method, string, or a result of or_() or and_()"
+                msg,
             )
         return func
 
     return decorator
 
 
-def router(condition: Union[str, dict, Callable]) -> Callable:
-    """
-    Creates a routing method that directs flow execution based on conditions.
+def router(condition: str | dict | Callable) -> Callable:
+    """Creates a routing method that directs flow execution based on conditions.
 
     This decorator marks a method as a router, which can dynamically determine
     the next steps in the flow based on its return value. Routers are triggered
@@ -262,6 +261,7 @@ def router(condition: Union[str, dict, Callable]) -> Callable:
     ...     if all([self.state.valid, self.state.processed]):
     ...         return CONTINUE
     ...     return STOP
+
     """
 
     def decorator(func):
@@ -280,17 +280,17 @@ def router(condition: Union[str, dict, Callable]) -> Callable:
             func.__trigger_methods__ = [condition.__name__]
             func.__condition_type__ = "OR"
         else:
+            msg = "Condition must be a method, string, or a result of or_() or and_()"
             raise ValueError(
-                "Condition must be a method, string, or a result of or_() or and_()"
+                msg,
             )
         return func
 
     return decorator
 
 
-def or_(*conditions: Union[str, dict, Callable]) -> dict:
-    """
-    Combines multiple conditions with OR logic for flow control.
+def or_(*conditions: str | dict | Callable) -> dict:
+    """Combines multiple conditions with OR logic for flow control.
 
     Creates a condition that is satisfied when any of the specified conditions
     are met. This is used with @start, @listen, or @router decorators to create
@@ -320,6 +320,7 @@ def or_(*conditions: Union[str, dict, Callable]) -> dict:
     >>> @listen(or_("success", "timeout"))
     >>> def handle_completion(self):
     ...     pass
+
     """
     methods = []
     for condition in conditions:
@@ -330,13 +331,13 @@ def or_(*conditions: Union[str, dict, Callable]) -> dict:
         elif callable(condition):
             methods.append(getattr(condition, "__name__", repr(condition)))
         else:
-            raise ValueError("Invalid condition in or_()")
+            msg = "Invalid condition in or_()"
+            raise ValueError(msg)
     return {"type": "OR", "methods": methods}
 
 
-def and_(*conditions: Union[str, dict, Callable]) -> dict:
-    """
-    Combines multiple conditions with AND logic for flow control.
+def and_(*conditions: str | dict | Callable) -> dict:
+    """Combines multiple conditions with AND logic for flow control.
 
     Creates a condition that is satisfied only when all specified conditions
     are met. This is used with @start, @listen, or @router decorators to create
@@ -366,6 +367,7 @@ def and_(*conditions: Union[str, dict, Callable]) -> dict:
     >>> @listen(and_("validated", "processed"))
     >>> def handle_complete_data(self):
     ...     pass
+
     """
     methods = []
     for condition in conditions:
@@ -376,7 +378,8 @@ def and_(*conditions: Union[str, dict, Callable]) -> dict:
         elif callable(condition):
             methods.append(getattr(condition, "__name__", repr(condition)))
         else:
-            raise ValueError("Invalid condition in and_()")
+            msg = "Invalid condition in and_()"
+            raise ValueError(msg)
     return {"type": "AND", "methods": methods}
 
 
@@ -416,10 +419,10 @@ class FlowMeta(type):
                         if possible_returns:
                             router_paths[attr_name] = possible_returns
 
-        setattr(cls, "_start_methods", start_methods)
-        setattr(cls, "_listeners", listeners)
-        setattr(cls, "_routers", routers)
-        setattr(cls, "_router_paths", router_paths)
+        cls._start_methods = start_methods
+        cls._listeners = listeners
+        cls._routers = routers
+        cls._router_paths = router_paths
 
         return cls
 
@@ -427,17 +430,18 @@ class FlowMeta(type):
 class Flow(Generic[T], metaclass=FlowMeta):
     """Base class for all flows.
 
-    Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
+    Type parameter T must be either Dict[str, Any] or a subclass of BaseModel.
+    """
 
     _printer = Printer()
 
-    _start_methods: List[str] = []
-    _listeners: Dict[str, tuple[str, List[str]]] = {}
-    _routers: Set[str] = set()
-    _router_paths: Dict[str, List[str]] = {}
-    initial_state: Union[Type[T], T, None] = None
+    _start_methods: list[str] = []
+    _listeners: dict[str, tuple[str, list[str]]] = {}
+    _routers: set[str] = set()
+    _router_paths: dict[str, list[str]] = {}
+    initial_state: type[T] | T | None = None
 
-    def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
+    def __class_getitem__(cls: type["Flow"], item: type[T]) -> type["Flow"]:
         class _FlowGeneric(cls):  # type: ignore
             _initial_state_T = item  # type: ignore
 
@@ -446,7 +450,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     def __init__(
         self,
-        persistence: Optional[FlowPersistence] = None,
+        persistence: FlowPersistence | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
@@ -454,13 +458,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Args:
             persistence: Optional persistence backend for storing flow states
             **kwargs: Additional state values to initialize or override
+
         """
         # Initialize basic instance attributes
-        self._methods: Dict[str, Callable] = {}
-        self._method_execution_counts: Dict[str, int] = {}
-        self._pending_and_listeners: Dict[str, Set[str]] = {}
-        self._method_outputs: List[Any] = []  # List to store all method outputs
-        self._persistence: Optional[FlowPersistence] = persistence
+        self._methods: dict[str, Callable] = {}
+        self._method_execution_counts: dict[str, int] = {}
+        self._pending_and_listeners: dict[str, set[str]] = {}
+        self._method_outputs: list[Any] = []  # List to store all method outputs
+        self._persistence: FlowPersistence | None = persistence
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -502,58 +507,61 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Raises:
             ValueError: If structured state model lacks 'id' field
             TypeError: If state is neither BaseModel nor dictionary
+
         """
         # Handle case where initial_state is None but we have a type parameter
         if self.initial_state is None and hasattr(self, "_initial_state_T"):
-            state_type = getattr(self, "_initial_state_T")
+            state_type = self._initial_state_T
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
                     # Create instance without id, then set it
                     instance = state_type()
                     if not hasattr(instance, "id"):
-                        setattr(instance, "id", str(uuid4()))
-                    return cast(T, instance)
-                elif issubclass(state_type, BaseModel):
+                        instance.id = str(uuid4())
+                    return cast("T", instance)
+                if issubclass(state_type, BaseModel):
                     # Create a new type that includes the ID field
                     class StateWithId(state_type, FlowState):  # type: ignore
                         pass
 
                     instance = StateWithId()
                     if not hasattr(instance, "id"):
-                        setattr(instance, "id", str(uuid4()))
-                    return cast(T, instance)
-                elif state_type is dict:
-                    return cast(T, {"id": str(uuid4())})
+                        instance.id = str(uuid4())
+                    return cast("T", instance)
+                if state_type is dict:
+                    return cast("T", {"id": str(uuid4())})
 
         # Handle case where no initial state is provided
         if self.initial_state is None:
-            return cast(T, {"id": str(uuid4())})
+            return cast("T", {"id": str(uuid4())})
 
         # Handle case where initial_state is a type (class)
         if isinstance(self.initial_state, type):
             if issubclass(self.initial_state, FlowState):
-                return cast(T, self.initial_state())  # Uses model defaults
-            elif issubclass(self.initial_state, BaseModel):
+                return cast("T", self.initial_state())  # Uses model defaults
+            if issubclass(self.initial_state, BaseModel):
                 # Validate that the model has an id field
                 model_fields = getattr(self.initial_state, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
-                    raise ValueError("Flow state model must have an 'id' field")
-                return cast(T, self.initial_state())  # Uses model defaults
-            elif self.initial_state is dict:
-                return cast(T, {"id": str(uuid4())})
+                    msg = "Flow state model must have an 'id' field"
+                    raise ValueError(msg)
+                return cast("T", self.initial_state())  # Uses model defaults
+            if self.initial_state is dict:
+                return cast("T", {"id": str(uuid4())})
 
         # Handle dictionary instance case
         if isinstance(self.initial_state, dict):
             new_state = dict(self.initial_state)  # Copy to avoid mutations
             if "id" not in new_state:
                 new_state["id"] = str(uuid4())
-            return cast(T, new_state)
+            return cast("T", new_state)
 
         # Handle BaseModel instance case
         if isinstance(self.initial_state, BaseModel):
-            model = cast(BaseModel, self.initial_state)
+            model = cast("BaseModel", self.initial_state)
             if not hasattr(model, "id"):
-                raise ValueError("Flow state model must have an 'id' field")
+                msg = "Flow state model must have an 'id' field"
+                raise ValueError(msg)
 
             # Create new instance with same values to avoid mutations
             if hasattr(model, "model_dump"):
@@ -570,9 +578,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             # Create new instance of the same class
             model_class = type(model)
-            return cast(T, model_class(**state_dict))
+            return cast("T", model_class(**state_dict))
+        msg = f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         raise TypeError(
-            f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
+            msg,
         )
 
     def _copy_state(self) -> T:
@@ -583,7 +592,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return self._state
 
     @property
-    def method_outputs(self) -> List[Any]:
+    def method_outputs(self) -> list[Any]:
         """Returns the list of all outputs from executed methods."""
         return self._method_outputs
 
@@ -607,6 +616,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             flow = MyFlow()
             print(f"Current flow ID: {flow.flow_id}")  # Safely get flow ID
             ```
+
         """
         try:
             if not hasattr(self, "_state"):
@@ -614,13 +624,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             if isinstance(self._state, dict):
                 return str(self._state.get("id", ""))
-            elif isinstance(self._state, BaseModel):
+            if isinstance(self._state, BaseModel):
                 return str(getattr(self._state, "id", ""))
             return ""
         except (AttributeError, TypeError):
             return ""  # Safely handle any unexpected attribute access issues
 
-    def _initialize_state(self, inputs: Dict[str, Any]) -> None:
+    def _initialize_state(self, inputs: dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
 
         Args:
@@ -629,6 +639,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Raises:
             ValueError: If validation fails for structured state
             TypeError: If state is neither BaseModel nor dictionary
+
         """
         if isinstance(self._state, dict):
             # For dict states, preserve existing fields unless overridden
@@ -644,7 +655,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, preserve existing fields unless overridden
             try:
-                model = cast(BaseModel, self._state)
+                model = cast("BaseModel", self._state)
                 # Get current state as dict
                 if hasattr(model, "model_dump"):
                     current_state = model.model_dump()
@@ -662,19 +673,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 model_class = type(model)
                 if hasattr(model_class, "model_validate"):
                     # Pydantic v2
-                    self._state = cast(T, model_class.model_validate(new_state))
+                    self._state = cast("T", model_class.model_validate(new_state))
                 elif hasattr(model_class, "parse_obj"):
                     # Pydantic v1
-                    self._state = cast(T, model_class.parse_obj(new_state))
+                    self._state = cast("T", model_class.parse_obj(new_state))
                 else:
                     # Fallback for other BaseModel implementations
-                    self._state = cast(T, model_class(**new_state))
+                    self._state = cast("T", model_class(**new_state))
             except ValidationError as e:
-                raise ValueError(f"Invalid inputs for structured state: {e}") from e
+                msg = f"Invalid inputs for structured state: {e}"
+                raise ValueError(msg) from e
         else:
-            raise TypeError("State must be a BaseModel instance or a dictionary.")
+            msg = "State must be a BaseModel instance or a dictionary."
+            raise TypeError(msg)
 
-    def _restore_state(self, stored_state: Dict[str, Any]) -> None:
+    def _restore_state(self, stored_state: dict[str, Any]) -> None:
         """Restore flow state from persistence.
 
         Args:
@@ -683,11 +696,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Raises:
             ValueError: If validation fails for structured state
             TypeError: If state is neither BaseModel nor dictionary
+
         """
         # When restoring from persistence, use the stored ID
         stored_id = stored_state.get("id")
         if not stored_id:
-            raise ValueError("Stored state must have an 'id' field")
+            msg = "Stored state must have an 'id' field"
+            raise ValueError(msg)
 
         if isinstance(self._state, dict):
             # For dict states, update all fields from stored state
@@ -695,22 +710,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._state.update(stored_state)
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, create new instance with stored values
-            model = cast(BaseModel, self._state)
+            model = cast("BaseModel", self._state)
             if hasattr(model, "model_validate"):
                 # Pydantic v2
-                self._state = cast(T, type(model).model_validate(stored_state))
+                self._state = cast("T", type(model).model_validate(stored_state))
             elif hasattr(model, "parse_obj"):
                 # Pydantic v1
-                self._state = cast(T, type(model).parse_obj(stored_state))
+                self._state = cast("T", type(model).parse_obj(stored_state))
             else:
                 # Fallback for other BaseModel implementations
-                self._state = cast(T, type(model)(**stored_state))
+                self._state = cast("T", type(model)(**stored_state))
         else:
-            raise TypeError(f"State must be dict or BaseModel, got {type(self._state)}")
+            msg = f"State must be dict or BaseModel, got {type(self._state)}"
+            raise TypeError(msg)
 
-    def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
-        """
-        Start the flow execution in a synchronous context.
+    def kickoff(self, inputs: dict[str, Any] | None = None) -> Any:
+        """Start the flow execution in a synchronous context.
 
         This method wraps kickoff_async so that all state initialization and event
         emission is handled in the asynchronous method.
@@ -721,9 +736,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         return asyncio.run(run_flow())
 
-    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
-        """
-        Start the flow execution asynchronously.
+    async def kickoff_async(self, inputs: dict[str, Any] | None = None) -> Any:
+        """Start the flow execution asynchronously.
 
         This method performs state restoration (if an 'id' is provided and persistence is available)
         and updates the flow state with any additional inputs. It then emits the FlowStartedEvent,
@@ -735,6 +749,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
+
         """
         if inputs:
             # Override the id in the state if it exists in inputs
@@ -742,7 +757,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if isinstance(self._state, dict):
                     self._state["id"] = inputs["id"]
                 elif isinstance(self._state, BaseModel):
-                    setattr(self._state, "id", inputs["id"])
+                    self._state.id = inputs["id"]
 
             # If persistence is enabled, attempt to restore the stored state using the provided id.
             if "id" in inputs and self._persistence is not None:
@@ -756,7 +771,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     self._restore_state(stored_state)
                 else:
                     self._log_flow_event(
-                        f"No flow state found for UUID: {restore_uuid}", color="red"
+                        f"No flow state found for UUID: {restore_uuid}", color="red",
                     )
 
             # Update state with any additional inputs (ignoring the 'id' key)
@@ -774,7 +789,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ),
         )
         self._log_flow_event(
-            f"Flow started with ID: {self.flow_id}", color="bold_magenta"
+            f"Flow started with ID: {self.flow_id}", color="bold_magenta",
         )
 
         if inputs is not None and "id" not in inputs:
@@ -800,8 +815,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return final_output
 
     async def _execute_start_method(self, start_method_name: str) -> None:
-        """
-        Executes a flow's start method and its triggered listeners.
+        """Executes a flow's start method and its triggered listeners.
 
         This internal method handles the execution of methods marked with @start
         decorator and manages the subsequent chain of listener executions.
@@ -816,14 +830,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
         - Executes the start method and captures its result
         - Triggers execution of any listeners waiting on this start method
         - Part of the flow's initialization sequence
+
         """
         result = await self._execute_method(
-            start_method_name, self._methods[start_method_name]
+            start_method_name, self._methods[start_method_name],
         )
         await self._execute_listeners(start_method_name, result)
 
     async def _execute_method(
-        self, method_name: str, method: Callable, *args: Any, **kwargs: Any
+        self, method_name: str, method: Callable, *args: Any, **kwargs: Any,
     ) -> Any:
         try:
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
@@ -873,11 +888,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     error=e,
                 ),
             )
-            raise e
+            raise
 
     async def _execute_listeners(self, trigger_method: str, result: Any) -> None:
-        """
-        Executes all listeners and routers triggered by a method completion.
+        """Executes all listeners and routers triggered by a method completion.
 
         This internal method manages the execution flow by:
         1. First executing all triggered routers sequentially
@@ -897,6 +911,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         - Each router's result becomes a new trigger_method
         - Normal listeners are executed in parallel for efficiency
         - Listeners can receive the trigger method's result as a parameter
+
         """
         # First, handle routers repeatedly until no router triggers anymore
         router_results = []
@@ -904,7 +919,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         while True:
             routers_triggered = self._find_triggered_methods(
-                current_trigger, router_only=True
+                current_trigger, router_only=True,
             )
             if not routers_triggered:
                 break
@@ -920,12 +935,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
 
         # Now execute normal listeners for all router results and the original trigger
-        all_triggers = [trigger_method] + router_results
+        all_triggers = [trigger_method, *router_results]
 
         for current_trigger in all_triggers:
             if current_trigger:  # Skip None results
                 listeners_triggered = self._find_triggered_methods(
-                    current_trigger, router_only=False
+                    current_trigger, router_only=False,
                 )
                 if listeners_triggered:
                     tasks = [
@@ -935,10 +950,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     await asyncio.gather(*tasks)
 
     def _find_triggered_methods(
-        self, trigger_method: str, router_only: bool
-    ) -> List[str]:
-        """
-        Finds all methods that should be triggered based on conditions.
+        self, trigger_method: str, router_only: bool,
+    ) -> list[str]:
+        """Finds all methods that should be triggered based on conditions.
 
         This internal method evaluates both OR and AND conditions to determine
         which methods should be executed next in the flow.
@@ -963,6 +977,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
           * AND: Triggers only when all conditions are met
         - Maintains state for AND conditions using _pending_and_listeners
         - Separates router and normal listener evaluation
+
         """
         triggered = []
         for listener_name, (condition_type, methods) in self._listeners.items():
@@ -992,8 +1007,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return triggered
 
     async def _execute_single_listener(self, listener_name: str, result: Any) -> None:
-        """
-        Executes a single listener method with proper event handling.
+        """Executes a single listener method with proper event handling.
 
         This internal method manages the execution of an individual listener,
         including parameter inspection, event emission, and error handling.
@@ -1018,6 +1032,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         -------------
         Catches and logs any exceptions during execution, preventing
         individual listener failures from breaking the entire flow.
+
         """
         try:
             method = self._methods[listener_name]
@@ -1028,7 +1043,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             if method_params:
                 listener_result = await self._execute_method(
-                    listener_name, method, result
+                    listener_name, method, result,
                 )
             else:
                 listener_result = await self._execute_method(listener_name, method)
@@ -1036,17 +1051,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             # Execute listeners (and possibly routers) of this listener
             await self._execute_listeners(listener_name, listener_result)
 
-        except Exception as e:
-            print(
-                f"[Flow._execute_single_listener] Error in method {listener_name}: {e}"
-            )
+        except Exception:
             import traceback
 
             traceback.print_exc()
             raise
 
     def _log_flow_event(
-        self, message: str, color: str = "yellow", level: str = "info"
+        self, message: str, color: str = "yellow", level: str = "info",
     ) -> None:
         """Centralized logging method for flow events.
 
@@ -1064,6 +1076,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Note:
             This method uses the Printer utility for colored console output
             and the standard logging module for log level support.
+
         """
         self._printer.print(message, color=color)
         if level == "info":

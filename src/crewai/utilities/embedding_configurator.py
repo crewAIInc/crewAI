@@ -1,12 +1,12 @@
 import os
-from typing import Any, Dict, Optional, cast
+from typing import Any, cast
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
 
 
 class EmbeddingConfigurator:
-    def __init__(self):
+    def __init__(self) -> None:
         self.embedding_functions = {
             "openai": self._configure_openai,
             "azure": self._configure_azure,
@@ -23,7 +23,7 @@ class EmbeddingConfigurator:
 
     def configure_embedder(
         self,
-        embedder_config: Optional[Dict[str, Any]] = None,
+        embedder_config: dict[str, Any] | None = None,
     ) -> EmbeddingFunction:
         """Configures and returns an embedding function based on the provided config."""
         if embedder_config is None:
@@ -34,8 +34,9 @@ class EmbeddingConfigurator:
         model_name = config.get("model") if provider != "custom" else None
 
         if provider not in self.embedding_functions:
+            msg = f"Unsupported embedding provider: {provider}, supported providers: {list(self.embedding_functions.keys())}"
             raise Exception(
-                f"Unsupported embedding provider: {provider}, supported providers: {list(self.embedding_functions.keys())}"
+                msg,
             )
 
         embedding_function = self.embedding_functions[provider]
@@ -52,7 +53,7 @@ class EmbeddingConfigurator:
         )
 
         return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small",
         )
 
     @staticmethod
@@ -178,8 +179,9 @@ class EmbeddingConfigurator:
             from ibm_watsonx_ai import Credentials
             from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames as EmbedParams
         except ImportError as e:
+            msg = "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
             raise ImportError(
-                "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
+                msg,
             ) from e
 
         class WatsonEmbeddingFunction(EmbeddingFunction):
@@ -196,17 +198,16 @@ class EmbeddingConfigurator:
                     model_id=config.get("model"),
                     params=embed_params,
                     credentials=Credentials(
-                        api_key=config.get("api_key"), url=config.get("api_url")
+                        api_key=config.get("api_key"), url=config.get("api_url"),
                     ),
                     project_id=config.get("project_id"),
                 )
 
                 try:
                     embeddings = embedding.embed_documents(input)
-                    return cast(Embeddings, embeddings)
-                except Exception as e:
-                    print("Error during Watson embedding:", e)
-                    raise e
+                    return cast("Embeddings", embeddings)
+                except Exception:
+                    raise
 
         return WatsonEmbeddingFunction()
 
@@ -218,19 +219,23 @@ class EmbeddingConfigurator:
                 validate_embedding_function(custom_embedder)
                 return custom_embedder
             except Exception as e:
-                raise ValueError(f"Invalid custom embedding function: {str(e)}")
+                msg = f"Invalid custom embedding function: {e!s}"
+                raise ValueError(msg)
         elif callable(custom_embedder):
             try:
                 instance = custom_embedder()
                 if isinstance(instance, EmbeddingFunction):
                     validate_embedding_function(instance)
                     return instance
+                msg = "Custom embedder does not create an EmbeddingFunction instance"
                 raise ValueError(
-                    "Custom embedder does not create an EmbeddingFunction instance"
+                    msg,
                 )
             except Exception as e:
-                raise ValueError(f"Error instantiating custom embedder: {str(e)}")
+                msg = f"Error instantiating custom embedder: {e!s}"
+                raise ValueError(msg)
         else:
+            msg = "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"
             raise ValueError(
-                "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"
+                msg,
             )

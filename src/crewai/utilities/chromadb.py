@@ -1,5 +1,4 @@
 import re
-from typing import Optional
 
 MIN_COLLECTION_LENGTH = 3
 MAX_COLLECTION_LENGTH = 63
@@ -11,32 +10,32 @@ IPV4_PATTERN = re.compile(r"^(\d{1,3}\.){3}\d{1,3}$")
 
 
 def is_ipv4_pattern(name: str) -> bool:
-    """
-    Check if a string matches an IPv4 address pattern.
+    """Check if a string matches an IPv4 address pattern.
 
     Args:
         name: The string to check
 
     Returns:
         True if the string matches an IPv4 pattern, False otherwise
+
     """
     return bool(IPV4_PATTERN.match(name))
 
 
-def sanitize_collection_name(name: Optional[str]) -> str:
-    """
-    Sanitize a collection name to meet ChromaDB requirements:
+def sanitize_collection_name(name: str | None) -> str:
+    """Sanitize a collection name to meet ChromaDB requirements:
     1. 3-63 characters long
     2. Starts and ends with alphanumeric character
     3. Contains only alphanumeric characters, underscores, or hyphens
     4. No consecutive periods
-    5. Not a valid IPv4 address
+    5. Not a valid IPv4 address.
 
     Args:
         name: The original collection name to sanitize
 
     Returns:
         A sanitized collection name that meets ChromaDB requirements
+
     """
     if not name:
         return DEFAULT_COLLECTION

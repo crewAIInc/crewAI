@@ -1,6 +1,5 @@
 import subprocess
 from enum import Enum
-from typing import List, Optional
 
 import click
 from packaging import version
@@ -15,8 +14,7 @@ class CrewType(Enum):
 
 
 def run_crew() -> None:
-    """
-    Run the crew or flow by running a command in the UV environment.
+    """Run the crew or flow by running a command in the UV environment.
 
     Starting from version 0.103.0, this command can be used to run both
     standard crews and flows. For flows, it detects the type from pyproject.toml
@@ -48,11 +46,11 @@ def run_crew() -> None:
 
 
 def execute_command(crew_type: CrewType) -> None:
-    """
-    Execute the appropriate command based on crew type.
+    """Execute the appropriate command based on crew type.
 
     Args:
         crew_type: The type of crew to run
+
     """
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
 
@@ -67,12 +65,12 @@ def execute_command(crew_type: CrewType) -> None:
 
 
 def handle_error(error: subprocess.CalledProcessError, crew_type: CrewType) -> None:
-    """
-    Handle subprocess errors with appropriate messaging.
+    """Handle subprocess errors with appropriate messaging.
 
     Args:
         error: The subprocess error that occurred
         crew_type: The type of crew that was being run
+
     """
     entity_type = "flow" if crew_type == CrewType.FLOW else "crew"
     click.echo(f"An error occurred while running the {entity_type}: {error}", err=True)

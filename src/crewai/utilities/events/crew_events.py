@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from crewai.utilities.events.base_events import BaseEvent
 
@@ -9,12 +9,12 @@ else:
 
 
 class CrewBaseEvent(BaseEvent):
-    """Base class for crew events with fingerprint handling"""
+    """Base class for crew events with fingerprint handling."""
 
-    crew_name: Optional[str]
-    crew: Optional[Crew] = None
+    crew_name: str | None
+    crew: Crew | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data) -> None:
         super().__init__(**data)
         self.set_crew_fingerprint()
 
@@ -36,37 +36,37 @@ class CrewBaseEvent(BaseEvent):
 
 
 class CrewKickoffStartedEvent(CrewBaseEvent):
-    """Event emitted when a crew starts execution"""
+    """Event emitted when a crew starts execution."""
 
-    inputs: Optional[Dict[str, Any]]
+    inputs: dict[str, Any] | None
     type: str = "crew_kickoff_started"
 
 
 class CrewKickoffCompletedEvent(CrewBaseEvent):
-    """Event emitted when a crew completes execution"""
+    """Event emitted when a crew completes execution."""
 
     output: Any
     type: str = "crew_kickoff_completed"
 
 
 class CrewKickoffFailedEvent(CrewBaseEvent):
-    """Event emitted when a crew fails to complete execution"""
+    """Event emitted when a crew fails to complete execution."""
 
     error: str
     type: str = "crew_kickoff_failed"
 
 
 class CrewTrainStartedEvent(CrewBaseEvent):
-    """Event emitted when a crew starts training"""
+    """Event emitted when a crew starts training."""
 
     n_iterations: int
     filename: str
-    inputs: Optional[Dict[str, Any]]
+    inputs: dict[str, Any] | None
     type: str = "crew_train_started"
 
 
 class CrewTrainCompletedEvent(CrewBaseEvent):
-    """Event emitted when a crew completes training"""
+    """Event emitted when a crew completes training."""
 
     n_iterations: int
     filename: str
@@ -74,29 +74,29 @@ class CrewTrainCompletedEvent(CrewBaseEvent):
 
 
 class CrewTrainFailedEvent(CrewBaseEvent):
-    """Event emitted when a crew fails to complete training"""
+    """Event emitted when a crew fails to complete training."""
 
     error: str
     type: str = "crew_train_failed"
 
 
 class CrewTestStartedEvent(CrewBaseEvent):
-    """Event emitted when a crew starts testing"""
+    """Event emitted when a crew starts testing."""
 
     n_iterations: int
-    eval_llm: Optional[Union[str, Any]]
-    inputs: Optional[Dict[str, Any]]
+    eval_llm: str | Any | None
+    inputs: dict[str, Any] | None
     type: str = "crew_test_started"
 
 
 class CrewTestCompletedEvent(CrewBaseEvent):
-    """Event emitted when a crew completes testing"""
+    """Event emitted when a crew completes testing."""
 
     type: str = "crew_test_completed"
 
 
 class CrewTestFailedEvent(CrewBaseEvent):
-    """Event emitted when a crew fails to complete testing"""
+    """Event emitted when a crew fails to complete testing."""
 
     error: str
     type: str = "crew_test_failed"

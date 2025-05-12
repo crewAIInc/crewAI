@@ -1,20 +1,19 @@
-from typing import Dict, List, Type, Union, get_args, get_origin
+from typing import Union, get_args, get_origin
 
 from pydantic import BaseModel
 
 
 class PydanticSchemaParser(BaseModel):
-    model: Type[BaseModel]
+    model: type[BaseModel]
 
     def get_schema(self) -> str:
-        """
-        Public method to get the schema of a Pydantic model.
+        """Public method to get the schema of a Pydantic model.
 
         :return: String representation of the model schema.
         """
         return "{\n" + self._get_model_schema(self.model) + "\n}"
 
-    def _get_model_schema(self, model: Type[BaseModel], depth: int = 0) -> str:
+    def _get_model_schema(self, model: type[BaseModel], depth: int = 0) -> str:
         indent = " " * 4 * depth
         lines = [
             f"{indent}    {field_name}: {self._get_field_type(field, depth + 1)}"
@@ -26,11 +25,11 @@ class PydanticSchemaParser(BaseModel):
         field_type = field.annotation
         origin = get_origin(field_type)
 
-        if origin in {list, List}:
+        if origin in {list, list}:
             list_item_type = get_args(field_type)[0]
             return self._format_list_type(list_item_type, depth)
 
-        if origin in {dict, Dict}:
+        if origin in {dict, dict}:
             key_type, value_type = get_args(field_type)
             return f"Dict[{key_type.__name__}, {value_type.__name__}]"
 
@@ -58,29 +57,27 @@ class PydanticSchemaParser(BaseModel):
             non_none_args = [arg for arg in args if arg is not type(None)]
             if len(non_none_args) == 1:
                 inner_type = self._get_field_type_for_annotation(
-                    non_none_args[0], depth
+                    non_none_args[0], depth,
                 )
                 return f"Optional[{inner_type}]"
-            else:
-                # Union with None and multiple other types
-                inner_types = ", ".join(
-                    self._get_field_type_for_annotation(arg, depth)
-                    for arg in non_none_args
-                )
-                return f"Optional[Union[{inner_types}]]"
-        else:
-            # General Union type
+            # Union with None and multiple other types
             inner_types = ", ".join(
-                self._get_field_type_for_annotation(arg, depth) for arg in args
+                self._get_field_type_for_annotation(arg, depth)
+                for arg in non_none_args
             )
-            return f"Union[{inner_types}]"
+            return f"Optional[Union[{inner_types}]]"
+        # General Union type
+        inner_types = ", ".join(
+            self._get_field_type_for_annotation(arg, depth) for arg in args
+        )
+        return f"Union[{inner_types}]"
 
     def _get_field_type_for_annotation(self, annotation, depth: int) -> str:
         origin = get_origin(annotation)
-        if origin in {list, List}:
+        if origin in {list, list}:
             list_item_type = get_args(annotation)[0]
             return self._format_list_type(list_item_type, depth)
-        if origin in {dict, Dict}:
+        if origin in {dict, dict}:
             key_type, value_type = get_args(annotation)
             return f"Dict[{key_type.__name__}, {value_type.__name__}]"
         if origin is Union:

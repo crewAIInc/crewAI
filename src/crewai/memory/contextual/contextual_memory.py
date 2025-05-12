@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from crewai.memory import (
     EntityMemory,
@@ -12,13 +12,13 @@ from crewai.memory import (
 class ContextualMemory:
     def __init__(
         self,
-        memory_config: Optional[Dict[str, Any]],
+        memory_config: dict[str, Any] | None,
         stm: ShortTermMemory,
         ltm: LongTermMemory,
         em: EntityMemory,
         um: UserMemory,
         exm: ExternalMemory,
-    ):
+    ) -> None:
         if memory_config is not None:
             self.memory_provider = memory_config.get("provider")
         else:
@@ -30,8 +30,7 @@ class ContextualMemory:
         self.exm = exm
 
     def build_context_for_task(self, task, context) -> str:
-        """
-        Automatically builds a minimal, highly relevant set of contextual information
+        """Automatically builds a minimal, highly relevant set of contextual information
         for a given task.
         """
         query = f"{task.description} {context}".strip()
@@ -49,11 +48,9 @@ class ContextualMemory:
         return "\n".join(filter(None, context))
 
     def _fetch_stm_context(self, query) -> str:
-        """
-        Fetches recent relevant insights from STM related to the task's description and expected_output,
+        """Fetches recent relevant insights from STM related to the task's description and expected_output,
         formatted as bullet points.
         """
-
         if self.stm is None:
             return ""
 
@@ -62,16 +59,14 @@ class ContextualMemory:
             [
                 f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
                 for result in stm_results
-            ]
+            ],
         )
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
-    def _fetch_ltm_context(self, task) -> Optional[str]:
-        """
-        Fetches historical data or insights from LTM that are relevant to the task's description and expected_output,
+    def _fetch_ltm_context(self, task) -> str | None:
+        """Fetches historical data or insights from LTM that are relevant to the task's description and expected_output,
         formatted as bullet points.
         """
-
         if self.ltm is None:
             return ""
 
@@ -90,8 +85,7 @@ class ContextualMemory:
         return f"Historical Data:\n{formatted_results}" if ltm_results else ""
 
     def _fetch_entity_context(self, query) -> str:
-        """
-        Fetches relevant entity information from Entity Memory related to the task's description and expected_output,
+        """Fetches relevant entity information from Entity Memory related to the task's description and expected_output,
         formatted as bullet points.
         """
         if self.em is None:
@@ -102,19 +96,20 @@ class ContextualMemory:
             [
                 f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
                 for result in em_results
-            ]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
+            ],  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
         return f"Entities:\n{formatted_results}" if em_results else ""
 
     def _fetch_user_context(self, query: str) -> str:
-        """
-        Fetches and formats relevant user information from User Memory.
+        """Fetches and formats relevant user information from User Memory.
+
         Args:
             query (str): The search query to find relevant user memories.
+
         Returns:
             str: Formatted user memories as bullet points, or an empty string if none found.
-        """
 
+        """
         if self.um is None:
             return ""
 
@@ -128,12 +123,14 @@ class ContextualMemory:
         return f"User memories/preferences:\n{formatted_memories}"
 
     def _fetch_external_context(self, query: str) -> str:
-        """
-        Fetches and formats relevant information from External Memory.
+        """Fetches and formats relevant information from External Memory.
+
         Args:
             query (str): The search query to find relevant information.
+
         Returns:
             str: Formatted information as bullet points, or an empty string if none found.
+
         """
         if self.exm is None:
             return ""

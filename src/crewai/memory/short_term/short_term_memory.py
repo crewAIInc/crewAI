@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from pydantic import PrivateAttr
 
@@ -8,17 +8,16 @@ from crewai.memory.storage.rag_storage import RAGStorage
 
 
 class ShortTermMemory(Memory):
-    """
-    ShortTermMemory class for managing transient data related to immediate tasks
+    """ShortTermMemory class for managing transient data related to immediate tasks
     and interactions.
     Inherits from the Memory class and utilizes an instance of a class that
     adheres to the Storage for data storage, specifically working with
     MemoryItem instances.
     """
 
-    _memory_provider: Optional[str] = PrivateAttr()
+    _memory_provider: str | None = PrivateAttr()
 
-    def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
+    def __init__(self, crew=None, embedder_config=None, storage=None, path=None) -> None:
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
             memory_provider = crew.memory_config.get("provider")
         else:
@@ -28,8 +27,9 @@ class ShortTermMemory(Memory):
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
             except ImportError:
+                msg = "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 raise ImportError(
-                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
+                    msg,
                 )
             storage = Mem0Storage(type="short_term", crew=crew)
         else:
@@ -49,8 +49,8 @@ class ShortTermMemory(Memory):
     def save(
         self,
         value: Any,
-        metadata: Optional[Dict[str, Any]] = None,
-        agent: Optional[str] = None,
+        metadata: dict[str, Any] | None = None,
+        agent: str | None = None,
     ) -> None:
         item = ShortTermMemoryItem(data=value, metadata=metadata, agent=agent)
         if self._memory_provider == "mem0":
@@ -65,13 +65,14 @@ class ShortTermMemory(Memory):
         score_threshold: float = 0.35,
     ):
         return self.storage.search(
-            query=query, limit=limit, score_threshold=score_threshold
+            query=query, limit=limit, score_threshold=score_threshold,
         )  # type: ignore # BUG? The reference is to the parent class, but the parent class does not have this parameters
 
     def reset(self) -> None:
         try:
             self.storage.reset()
         except Exception as e:
+            msg = f"An error occurred while resetting the short-term memory: {e}"
             raise Exception(
-                f"An error occurred while resetting the short-term memory: {e}"
+                msg,
             )

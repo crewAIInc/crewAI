@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from logging import Logger
 
 from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus, crewai_event_bus
 
@@ -7,7 +6,7 @@ from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus, crewai_eve
 class BaseEventListener(ABC):
     verbose: bool = False
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setup_listeners(crewai_event_bus)
 

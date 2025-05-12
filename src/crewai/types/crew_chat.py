@@ -1,16 +1,16 @@
-from typing import List
 
 from pydantic import BaseModel, Field
 
 
 class ChatInputField(BaseModel):
-    """
-    Represents a single required input for the crew, with a name and short description.
+    """Represents a single required input for the crew, with a name and short description.
+
     Example:
         {
             "name": "topic",
             "description": "The topic to focus on for the conversation"
-        }
+        }.
+
     """
 
     name: str = Field(..., description="The name of the input field")
@@ -18,8 +18,8 @@ class ChatInputField(BaseModel):
 
 
 class ChatInputs(BaseModel):
-    """
-    Holds a high-level crew_description plus a list of ChatInputFields.
+    """Holds a high-level crew_description plus a list of ChatInputFields.
+
     Example:
         {
             "crew_name": "topic-based-qa",
@@ -28,13 +28,14 @@ class ChatInputs(BaseModel):
                 {"name": "topic", "description": "The topic to focus on"},
                 {"name": "username", "description": "Name of the user"},
             ]
-        }
+        }.
+
     """
 
     crew_name: str = Field(..., description="The name of the crew")
     crew_description: str = Field(
-        ..., description="A description of the crew's purpose"
+        ..., description="A description of the crew's purpose",
     )
-    inputs: List[ChatInputField] = Field(
-        default_factory=list, description="A list of input fields for the crew"
+    inputs: list[ChatInputField] = Field(
+        default_factory=list, description="A list of input fields for the crew",
     )

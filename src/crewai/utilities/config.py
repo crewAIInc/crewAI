@@ -1,13 +1,12 @@
-from typing import Any, Dict, Type
+from typing import Any
 
 from pydantic import BaseModel
 
 
 def process_config(
-    values: Dict[str, Any], model_class: Type[BaseModel]
-) -> Dict[str, Any]:
-    """
-    Process the config dictionary and update the values accordingly.
+    values: dict[str, Any], model_class: type[BaseModel],
+) -> dict[str, Any]:
+    """Process the config dictionary and update the values accordingly.
 
     Args:
         values (Dict[str, Any]): The dictionary of values to update.
@@ -15,6 +14,7 @@ def process_config(
 
     Returns:
         Dict[str, Any]: The updated values dictionary.
+
     """
     config = values.get("config", {})
     if not config:

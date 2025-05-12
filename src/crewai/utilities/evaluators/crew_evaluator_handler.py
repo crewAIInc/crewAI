@@ -14,26 +14,26 @@ from crewai.telemetry import Telemetry
 
 class TaskEvaluationPydanticOutput(BaseModel):
     quality: float = Field(
-        description="A score from 1 to 10 evaluating on completion, quality, and overall performance from the task_description and task_expected_output to the actual Task Output."
+        description="A score from 1 to 10 evaluating on completion, quality, and overall performance from the task_description and task_expected_output to the actual Task Output.",
     )
 
 
 class CrewEvaluator:
-    """
-    A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
+    """A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
 
     Attributes:
         crew (Crew): The crew of agents to evaluate.
         eval_llm (BaseLLM): Language model instance to use for evaluations
         tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
         iteration (int): The current iteration of the evaluation.
+
     """
 
     tasks_scores: defaultdict = defaultdict(list)
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, eval_llm: InstanceOf[BaseLLM]):
+    def __init__(self, crew, eval_llm: InstanceOf[BaseLLM]) -> None:
         self.crew = crew
         self.llm = eval_llm
         self._telemetry = Telemetry()
@@ -56,7 +56,7 @@ class CrewEvaluator:
         )
 
     def _evaluation_task(
-        self, evaluator_agent: Agent, task_to_evaluate: Task, task_output: str
+        self, evaluator_agent: Agent, task_to_evaluate: Task, task_output: str,
     ) -> Task:
         return Task(
             description=(
@@ -76,8 +76,7 @@ class CrewEvaluator:
         self.iteration = iteration
 
     def print_crew_evaluation_result(self) -> None:
-        """
-        Prints the evaluation result of the crew in a table.
+        """Prints the evaluation result of the crew in a table.
         A Crew with 2 tasks using the command crewai test -n 3
         will output the following table:
 
@@ -97,7 +96,7 @@ class CrewEvaluator:
         └────────────────────┴───────┴───────┴───────┴────────────┴──────────────────────────────┘
         """
         task_averages = [
-            sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values())
+            sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values(), strict=False)
         ]
         crew_average = sum(task_averages) / len(task_averages)
 
@@ -151,13 +150,13 @@ class CrewEvaluator:
         ]
         execution_time_avg = int(sum(run_exec_times) / len(run_exec_times))
         table.add_row(
-            "Execution Time (s)", *map(str, run_exec_times), f"{execution_time_avg}", ""
+            "Execution Time (s)", *map(str, run_exec_times), f"{execution_time_avg}", "",
         )
 
         console = Console()
         console.print(table)
 
-    def evaluate(self, task_output: TaskOutput):
+    def evaluate(self, task_output: TaskOutput) -> None:
         """Evaluates the performance of the agents in the crew based on the tasks they have performed."""
         current_task = None
         for task in self.crew.tasks:
@@ -166,13 +165,14 @@ class CrewEvaluator:
                 break
 
         if not current_task or not task_output:
+            msg = "Task to evaluate and task output are required for evaluation"
             raise ValueError(
-                "Task to evaluate and task output are required for evaluation"
+                msg,
             )
 
         evaluator_agent = self._evaluator_agent()
         evaluation_task = self._evaluation_task(
-            evaluator_agent, current_task, task_output.raw
+            evaluator_agent, current_task, task_output.raw,
         )
 
         evaluation_result = evaluation_task.execute_sync()
@@ -186,7 +186,8 @@ class CrewEvaluator:
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
-                current_task.execution_duration
+                current_task.execution_duration,
             )
         else:
-            raise ValueError("Evaluation result is not in the expected format")
+            msg = "Evaluation result is not in the expected format"
+            raise ValueError(msg)

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
 
 
 class BaseLLM(ABC):
@@ -17,17 +17,18 @@ class BaseLLM(ABC):
     Attributes:
         stop (list): A list of stop sequences that the LLM should use to stop generation.
             This is used by the CrewAgentExecutor and other components.
+
     """
 
     model: str
-    temperature: Optional[float] = None
-    stop: Optional[List[str]] = None
+    temperature: float | None = None
+    stop: list[str] | None = None
 
     def __init__(
         self,
         model: str,
-        temperature: Optional[float] = None,
-    ):
+        temperature: float | None = None,
+    ) -> None:
         """Initialize the BaseLLM with default attributes.
 
         This constructor sets default values for attributes that are expected
@@ -43,11 +44,11 @@ class BaseLLM(ABC):
     @abstractmethod
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Union[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+    ) -> str | Any:
         """Call the LLM with the given messages.
 
         Args:
@@ -70,14 +71,15 @@ class BaseLLM(ABC):
             ValueError: If the messages format is invalid.
             TimeoutError: If the LLM request times out.
             RuntimeError: If the LLM request fails for other reasons.
+
         """
-        pass
 
     def supports_stop_words(self) -> bool:
         """Check if the LLM supports stop words.
 
         Returns:
             bool: True if the LLM supports stop words, False otherwise.
+
         """
         return True  # Default implementation assumes support for stop words
 
@@ -86,6 +88,7 @@ class BaseLLM(ABC):
 
         Returns:
             int: The number of tokens/characters the model can handle.
+
         """
         # Default implementation - subclasses should override with model-specific values
         return 4096

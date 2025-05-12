@@ -1,5 +1,4 @@
 from os import getenv
-from typing import Optional
 from urllib.parse import urljoin
 
 import requests
@@ -8,9 +7,7 @@ from crewai.cli.version import get_crewai_version
 
 
 class PlusAPI:
-    """
-    This class exposes methods for working with the CrewAI+ API.
-    """
+    """This class exposes methods for working with the CrewAI+ API."""
 
     TOOLS_RESOURCE = "/crewai_plus/api/v1/tools"
     CREWS_RESOURCE = "/crewai_plus/api/v1/crews"
@@ -42,7 +39,7 @@ class PlusAPI:
         handle: str,
         is_public: bool,
         version: str,
-        description: Optional[str],
+        description: str | None,
         encoded_file: str,
     ):
         params = {
@@ -56,7 +53,7 @@ class PlusAPI:
 
     def deploy_by_name(self, project_name: str) -> requests.Response:
         return self._make_request(
-            "POST", f"{self.CREWS_RESOURCE}/by-name/{project_name}/deploy"
+            "POST", f"{self.CREWS_RESOURCE}/by-name/{project_name}/deploy",
         )
 
     def deploy_by_uuid(self, uuid: str) -> requests.Response:
@@ -64,29 +61,29 @@ class PlusAPI:
 
     def crew_status_by_name(self, project_name: str) -> requests.Response:
         return self._make_request(
-            "GET", f"{self.CREWS_RESOURCE}/by-name/{project_name}/status"
+            "GET", f"{self.CREWS_RESOURCE}/by-name/{project_name}/status",
         )
 
     def crew_status_by_uuid(self, uuid: str) -> requests.Response:
         return self._make_request("GET", f"{self.CREWS_RESOURCE}/{uuid}/status")
 
     def crew_by_name(
-        self, project_name: str, log_type: str = "deployment"
+        self, project_name: str, log_type: str = "deployment",
     ) -> requests.Response:
         return self._make_request(
-            "GET", f"{self.CREWS_RESOURCE}/by-name/{project_name}/logs/{log_type}"
+            "GET", f"{self.CREWS_RESOURCE}/by-name/{project_name}/logs/{log_type}",
         )
 
     def crew_by_uuid(
-        self, uuid: str, log_type: str = "deployment"
+        self, uuid: str, log_type: str = "deployment",
     ) -> requests.Response:
         return self._make_request(
-            "GET", f"{self.CREWS_RESOURCE}/{uuid}/logs/{log_type}"
+            "GET", f"{self.CREWS_RESOURCE}/{uuid}/logs/{log_type}",
         )
 
     def delete_crew_by_name(self, project_name: str) -> requests.Response:
         return self._make_request(
-            "DELETE", f"{self.CREWS_RESOURCE}/by-name/{project_name}"
+            "DELETE", f"{self.CREWS_RESOURCE}/by-name/{project_name}",
         )
 
     def delete_crew_by_uuid(self, uuid: str) -> requests.Response:

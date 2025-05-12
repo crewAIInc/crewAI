@@ -1,6 +1,5 @@
 import json
 import os
-from typing import Dict, Optional, Union
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
@@ -8,8 +7,9 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 class I18N(BaseModel):
     """Handles loading and retrieving internationalized prompts."""
-    _prompts: Dict[str, Dict[str, str]] = PrivateAttr()
-    prompt_file: Optional[str] = Field(
+
+    _prompts: dict[str, dict[str, str]] = PrivateAttr()
+    prompt_file: str | None = Field(
         default=None,
         description="Path to the prompt_file file to load",
     )
@@ -19,18 +19,20 @@ class I18N(BaseModel):
         """Load prompts from a JSON file."""
         try:
             if self.prompt_file:
-                with open(self.prompt_file, "r", encoding="utf-8") as f:
+                with open(self.prompt_file, encoding="utf-8") as f:
                     self._prompts = json.load(f)
             else:
                 dir_path = os.path.dirname(os.path.realpath(__file__))
                 prompts_path = os.path.join(dir_path, "../translations/en.json")
 
-                with open(prompts_path, "r", encoding="utf-8") as f:
+                with open(prompts_path, encoding="utf-8") as f:
                     self._prompts = json.load(f)
         except FileNotFoundError:
-            raise Exception(f"Prompt file '{self.prompt_file}' not found.")
+            msg = f"Prompt file '{self.prompt_file}' not found."
+            raise Exception(msg)
         except json.JSONDecodeError:
-            raise Exception("Error decoding JSON from the prompts file.")
+            msg = "Error decoding JSON from the prompts file."
+            raise Exception(msg)
 
         if not self._prompts:
             self._prompts = {}
@@ -43,11 +45,12 @@ class I18N(BaseModel):
     def errors(self, error: str) -> str:
         return self.retrieve("errors", error)
 
-    def tools(self, tool: str) -> Union[str, Dict[str, str]]:
+    def tools(self, tool: str) -> str | dict[str, str]:
         return self.retrieve("tools", tool)
 
     def retrieve(self, kind, key) -> str:
         try:
             return self._prompts[kind][key]
         except Exception as _:
-            raise Exception(f"Prompt for '{kind}':'{key}'  not found.")
+            msg = f"Prompt for '{kind}':'{key}'  not found."
+            raise Exception(msg)

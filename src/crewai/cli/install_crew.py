@@ -8,11 +8,9 @@ import click
 # so if you expect this to support more things you will need to replicate it there
 # ask @joaomdmoura if you are unsure
 def install_crew(proxy_options: list[str]) -> None:
-    """
-    Install the crew by running the UV command to lock and install.
-    """
+    """Install the crew by running the UV command to lock and install."""
     try:
-        command = ["uv", "sync"] + proxy_options
+        command = ["uv", "sync", *proxy_options]
         subprocess.run(command, check=True, capture_output=False, text=True)
 
     except subprocess.CalledProcessError as e:

@@ -2,7 +2,7 @@ import json
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from crewai.task import Task
 from crewai.utilities import Printer
@@ -14,12 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 class KickoffTaskOutputsSQLiteStorage:
-    """
-    An updated SQLite storage class for kickoff task outputs storage.
-    """
+    """An updated SQLite storage class for kickoff task outputs storage."""
 
     def __init__(
-        self, db_path: Optional[str] = None
+        self, db_path: str | None = None,
     ) -> None:
         if db_path is None:
             # Get the parent directory of the default db path and create our db file there
@@ -37,6 +35,7 @@ class KickoffTaskOutputsSQLiteStorage:
 
         Raises:
             DatabaseOperationError: If database initialization fails due to SQLite errors.
+
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -52,22 +51,22 @@ class KickoffTaskOutputsSQLiteStorage:
                         was_replayed BOOLEAN,
                         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                     )
-                """
+                """,
                 )
 
                 conn.commit()
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.INIT_ERROR, e)
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise DatabaseOperationError(error_msg, e)
 
     def add(
         self,
         task: Task,
-        output: Dict[str, Any],
+        output: dict[str, Any],
         task_index: int,
         was_replayed: bool = False,
-        inputs: Dict[str, Any] = {},
+        inputs: dict[str, Any] | None = None,
     ) -> None:
         """Add a new task output record to the database.
 
@@ -80,7 +79,10 @@ class KickoffTaskOutputsSQLiteStorage:
 
         Raises:
             DatabaseOperationError: If saving the task output fails due to SQLite errors.
+
         """
+        if inputs is None:
+            inputs = {}
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("BEGIN TRANSACTION")
@@ -103,7 +105,7 @@ class KickoffTaskOutputsSQLiteStorage:
                 conn.commit()
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.SAVE_ERROR, e)
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise DatabaseOperationError(error_msg, e)
 
     def update(
@@ -123,6 +125,7 @@ class KickoffTaskOutputsSQLiteStorage:
 
         Raises:
             DatabaseOperationError: If updating the task output fails due to SQLite errors.
+
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -136,7 +139,7 @@ class KickoffTaskOutputsSQLiteStorage:
                     values.append(
                         json.dumps(value, cls=CrewJSONEncoder)
                         if isinstance(value, dict)
-                        else value
+                        else value,
                     )
 
                 query = f"UPDATE latest_kickoff_task_outputs SET {', '.join(fields)} WHERE task_index = ?"  # nosec
@@ -149,10 +152,10 @@ class KickoffTaskOutputsSQLiteStorage:
                     logger.warning(f"No row found with task_index {task_index}. No update performed.")
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.UPDATE_ERROR, e)
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise DatabaseOperationError(error_msg, e)
 
-    def load(self) -> List[Dict[str, Any]]:
+    def load(self) -> list[dict[str, Any]]:
         """Load all task output records from the database.
 
         Returns:
@@ -162,6 +165,7 @@ class KickoffTaskOutputsSQLiteStorage:
 
         Raises:
             DatabaseOperationError: If loading task outputs fails due to SQLite errors.
+
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -190,7 +194,7 @@ class KickoffTaskOutputsSQLiteStorage:
 
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.LOAD_ERROR, e)
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise DatabaseOperationError(error_msg, e)
 
     def delete_all(self) -> None:
@@ -201,6 +205,7 @@ class KickoffTaskOutputsSQLiteStorage:
 
         Raises:
             DatabaseOperationError: If deleting task outputs fails due to SQLite errors.
+
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -210,5 +215,5 @@ class KickoffTaskOutputsSQLiteStorage:
                 conn.commit()
         except sqlite3.Error as e:
             error_msg = DatabaseError.format_error(DatabaseError.DELETE_ERROR, e)
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise DatabaseOperationError(error_msg, e)

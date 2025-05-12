@@ -1,4 +1,3 @@
-from typing import Optional
 
 from pydantic import PrivateAttr
 
@@ -8,15 +7,14 @@ from crewai.memory.storage.rag_storage import RAGStorage
 
 
 class EntityMemory(Memory):
-    """
-    EntityMemory class for managing structured information about entities
+    """EntityMemory class for managing structured information about entities
     and their relationships using SQLite storage.
     Inherits from the Memory class.
     """
 
-    _memory_provider: Optional[str] = PrivateAttr()
+    _memory_provider: str | None = PrivateAttr()
 
-    def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
+    def __init__(self, crew=None, embedder_config=None, storage=None, path=None) -> None:
         if crew and hasattr(crew, "memory_config") and crew.memory_config is not None:
             memory_provider = crew.memory_config.get("provider")
         else:
@@ -26,8 +24,9 @@ class EntityMemory(Memory):
             try:
                 from crewai.memory.storage.mem0_storage import Mem0Storage
             except ImportError:
+                msg = "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 raise ImportError(
-                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
+                    msg,
                 )
             storage = Mem0Storage(type="entities", crew=crew)
         else:
@@ -63,4 +62,5 @@ class EntityMemory(Memory):
         try:
             self.storage.reset()
         except Exception as e:
-            raise Exception(f"An error occurred while resetting the entity memory: {e}")
+            msg = f"An error occurred while resetting the entity memory: {e}"
+            raise Exception(msg)

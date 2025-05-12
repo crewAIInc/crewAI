@@ -1,8 +1,8 @@
 import asyncio
-import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from inspect import signature
-from typing import Any, Callable, Type, get_args, get_origin
+from typing import Any, get_args, get_origin
 
 from pydantic import (
     BaseModel,
@@ -26,8 +26,8 @@ class BaseTool(BaseModel, ABC):
     """The unique name of the tool that clearly communicates its purpose."""
     description: str
     """Used to tell the model how/when/why to use the tool."""
-    args_schema: Type[PydanticBaseModel] = Field(
-        default_factory=_ArgsSchemaPlaceholder, validate_default=True
+    args_schema: type[PydanticBaseModel] = Field(
+        default_factory=_ArgsSchemaPlaceholder, validate_default=True,
     )
     """The schema for the arguments that the tool accepts."""
     description_updated: bool = False
@@ -40,8 +40,8 @@ class BaseTool(BaseModel, ABC):
     @field_validator("args_schema", mode="before")
     @classmethod
     def _default_args_schema(
-        cls, v: Type[PydanticBaseModel]
-    ) -> Type[PydanticBaseModel]:
+        cls, v: type[PydanticBaseModel],
+    ) -> type[PydanticBaseModel]:
         if not isinstance(v, cls._ArgsSchemaPlaceholder):
             return v
 
@@ -65,7 +65,6 @@ class BaseTool(BaseModel, ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        print(f"Using Tool: {self.name}")
         result = self._run(*args, **kwargs)
 
         # If _run is async, we safely run it
@@ -102,7 +101,8 @@ class BaseTool(BaseModel, ABC):
         attribute and infers the argument schema if not explicitly provided.
         """
         if not hasattr(tool, "func") or not callable(tool.func):
-            raise ValueError("The provided tool must have a callable 'func' attribute.")
+            msg = "The provided tool must have a callable 'func' attribute."
+            raise ValueError(msg)
 
         args_schema = getattr(tool, "args_schema", None)
 
@@ -126,7 +126,7 @@ class BaseTool(BaseModel, ABC):
             else:
                 # Create a default schema with no fields if no parameters are found
                 args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
+                    f"{tool.name}Input", __base__=PydanticBaseModel,
                 )
 
         return cls(
@@ -136,7 +136,7 @@ class BaseTool(BaseModel, ABC):
             args_schema=args_schema,
         )
 
-    def _set_args_schema(self):
+    def _set_args_schema(self) -> None:
         if self.args_schema is None:
             class_name = f"{self.__class__.__name__}Schema"
             self.args_schema = type(
@@ -151,7 +151,7 @@ class BaseTool(BaseModel, ABC):
                 },
             )
 
-    def _generate_description(self):
+    def _generate_description(self) -> None:
         args_schema = {
             name: {
                 "description": field.description,
@@ -208,9 +208,11 @@ class Tool(BaseTool):
 
         Raises:
             ValueError: If the provided tool does not have a callable 'func' attribute.
+
         """
         if not hasattr(tool, "func") or not callable(tool.func):
-            raise ValueError("The provided tool must have a callable 'func' attribute.")
+            msg = "The provided tool must have a callable 'func' attribute."
+            raise ValueError(msg)
 
         args_schema = getattr(tool, "args_schema", None)
 
@@ -234,7 +236,7 @@ class Tool(BaseTool):
             else:
                 # Create a default schema with no fields if no parameters are found
                 args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
+                    f"{tool.name}Input", __base__=PydanticBaseModel,
                 )
 
         return cls(
@@ -252,20 +254,22 @@ def to_langchain(
 
 
 def tool(*args, result_as_answer=False):
-    """
-    Decorator to create a tool from a function.
-    
+    """Decorator to create a tool from a function.
+
     Args:
         *args: Positional arguments, either the function to decorate or the tool name.
         result_as_answer: Flag to indicate if the tool result should be used as the final agent answer.
+
     """
 
     def _make_with_name(tool_name: str) -> Callable:
         def _make_tool(f: Callable) -> BaseTool:
             if f.__doc__ is None:
-                raise ValueError("Function must have a docstring")
+                msg = "Function must have a docstring"
+                raise ValueError(msg)
             if f.__annotations__ is None:
-                raise ValueError("Function must have type annotations")
+                msg = "Function must have type annotations"
+                raise ValueError(msg)
 
             class_name = "".join(tool_name.split()).title()
             args_schema = type(
@@ -292,4 +296,5 @@ def tool(*args, result_as_answer=False):
         return _make_with_name(args[0].__name__)(args[0])
     if len(args) == 1 and isinstance(args[0], str):
         return _make_with_name(args[0])
-    raise ValueError("Invalid arguments")
+    msg = "Invalid arguments"
+    raise ValueError(msg)

@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from chromadb.api import ClientAPI
 
@@ -32,16 +32,15 @@ def suppress_logging(
 
 
 class RAGStorage(BaseRAGStorage):
-    """
-    Extends Storage to handle embeddings for memory entries, improving
+    """Extends Storage to handle embeddings for memory entries, improving
     search efficiency.
     """
 
     app: ClientAPI | None = None
 
     def __init__(
-        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
-    ):
+        self, type, allow_reset=True, embedder_config=None, crew=None, path=None,
+    ) -> None:
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
         agents = [self._sanitize_role(agent.role) for agent in agents]
@@ -55,11 +54,11 @@ class RAGStorage(BaseRAGStorage):
         self.path = path
         self._initialize_app()
 
-    def _set_embedder_config(self):
+    def _set_embedder_config(self) -> None:
         configurator = EmbeddingConfigurator()
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
-    def _initialize_app(self):
+    def _initialize_app(self) -> None:
         import chromadb
         from chromadb.config import Settings
 
@@ -73,48 +72,44 @@ class RAGStorage(BaseRAGStorage):
 
         try:
             self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
+                name=self.type, embedding_function=self.embedder_config,
             )
         except Exception:
             self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
+                name=self.type, embedding_function=self.embedder_config,
             )
 
     def _sanitize_role(self, role: str) -> str:
-        """
-        Sanitizes agent roles to ensure valid directory names.
-        """
+        """Sanitizes agent roles to ensure valid directory names."""
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
 
     def _build_storage_file_name(self, type: str, file_name: str) -> str:
-        """
-        Ensures file name does not exceed max allowed by OS
-        """
+        """Ensures file name does not exceed max allowed by OS."""
         base_path = f"{db_storage_path()}/{type}"
 
         if len(file_name) > MAX_FILE_NAME_LENGTH:
             logging.warning(
-                f"Trimming file name from {len(file_name)} to {MAX_FILE_NAME_LENGTH} characters."
+                f"Trimming file name from {len(file_name)} to {MAX_FILE_NAME_LENGTH} characters.",
             )
             file_name = file_name[:MAX_FILE_NAME_LENGTH]
 
         return f"{base_path}/{file_name}"
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
         try:
             self._generate_embedding(value, metadata)
         except Exception as e:
-            logging.error(f"Error during {self.type} save: {str(e)}")
+            logging.exception(f"Error during {self.type} save: {e!s}")
 
     def search(
         self,
         query: str,
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filter: dict | None = None,
         score_threshold: float = 0.35,
-    ) -> List[Any]:
+    ) -> list[Any]:
         if not hasattr(self, "app"):
             self._initialize_app()
 
@@ -135,10 +130,10 @@ class RAGStorage(BaseRAGStorage):
 
             return results
         except Exception as e:
-            logging.error(f"Error during {self.type} search: {str(e)}")
+            logging.exception(f"Error during {self.type} search: {e!s}")
             return []
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
+    def _generate_embedding(self, text: str, metadata: dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 
@@ -160,8 +155,9 @@ class RAGStorage(BaseRAGStorage):
                 # Ignore this specific error
                 pass
             else:
+                msg = f"An error occurred while resetting the {self.type} memory: {e}"
                 raise Exception(
-                    f"An error occurred while resetting the {self.type} memory: {e}"
+                    msg,
                 )
 
     def _create_default_embedding_function(self):
@@ -170,5 +166,5 @@ class RAGStorage(BaseRAGStorage):
         )
 
         return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small",
         )

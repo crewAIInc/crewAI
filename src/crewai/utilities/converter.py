@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, Optional, Type, Union, get_args, get_origin
+from typing import Any, Union, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
@@ -30,7 +30,7 @@ class Converter(OutputConverter):
                     [
                         {"role": "system", "content": self.instructions},
                         {"role": "user", "content": self.text},
-                    ]
+                    ],
                 )
                 try:
                     # Try to directly validate the response JSON
@@ -47,25 +47,29 @@ class Converter(OutputConverter):
                                 parsed = json.loads(result)
                                 result = self.model.parse_obj(parsed)
                             except Exception as parse_err:
+                                msg = f"Failed to convert partial JSON result into Pydantic: {parse_err}"
                                 raise ConverterError(
-                                    f"Failed to convert partial JSON result into Pydantic: {parse_err}"
+                                    msg,
                                 )
                         else:
+                            msg = "handle_partial_json returned an unexpected type."
                             raise ConverterError(
-                                "handle_partial_json returned an unexpected type."
+                                msg,
                             )
             return result
         except ValidationError as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
+            msg = f"Failed to convert text into a Pydantic model due to validation error: {e}"
             raise ConverterError(
-                f"Failed to convert text into a Pydantic model due to validation error: {e}"
+                msg,
             )
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
+            msg = f"Failed to convert text into a Pydantic model due to error: {e}"
             raise ConverterError(
-                f"Failed to convert text into a Pydantic model due to error: {e}"
+                msg,
             )
 
     def to_json(self, current_attempt=1):
@@ -73,15 +77,14 @@ class Converter(OutputConverter):
         try:
             if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
-            else:
-                return json.dumps(
-                    self.llm.call(
-                        [
-                            {"role": "system", "content": self.instructions},
-                            {"role": "user", "content": self.text},
-                        ]
-                    )
-                )
+            return json.dumps(
+                self.llm.call(
+                    [
+                        {"role": "system", "content": self.instructions},
+                        {"role": "user", "content": self.text},
+                    ],
+                ),
+            )
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
@@ -91,12 +94,11 @@ class Converter(OutputConverter):
         """Create an instructor."""
         from crewai.utilities import InternalInstructor
 
-        inst = InternalInstructor(
+        return InternalInstructor(
             llm=self.llm,
             model=self.model,
             content=self.text,
         )
-        return inst
 
     def _convert_with_instructions(self):
         """Create a chain."""
@@ -109,18 +111,18 @@ class Converter(OutputConverter):
             [
                 {"role": "system", "content": self.instructions},
                 {"role": "user", "content": self.text},
-            ]
+            ],
         )
         return parser.parse_result(result)
 
 
 def convert_to_model(
     result: str,
-    output_pydantic: Optional[Type[BaseModel]],
-    output_json: Optional[Type[BaseModel]],
+    output_pydantic: type[BaseModel] | None,
+    output_json: type[BaseModel] | None,
     agent: Any,
-    converter_cls: Optional[Type[Converter]] = None,
-) -> Union[dict, BaseModel, str]:
+    converter_cls: type[Converter] | None = None,
+) -> dict | BaseModel | str:
     model = output_pydantic or output_json
     if model is None:
         return result
@@ -129,12 +131,12 @@ def convert_to_model(
         return validate_model(escaped_result, model, bool(output_json))
     except json.JSONDecodeError:
         return handle_partial_json(
-            result, model, bool(output_json), agent, converter_cls
+            result, model, bool(output_json), agent, converter_cls,
         )
 
     except ValidationError:
         return handle_partial_json(
-            result, model, bool(output_json), agent, converter_cls
+            result, model, bool(output_json), agent, converter_cls,
         )
 
     except Exception as e:
@@ -146,8 +148,8 @@ def convert_to_model(
 
 
 def validate_model(
-    result: str, model: Type[BaseModel], is_json_output: bool
-) -> Union[dict, BaseModel]:
+    result: str, model: type[BaseModel], is_json_output: bool,
+) -> dict | BaseModel:
     exported_result = model.model_validate_json(result)
     if is_json_output:
         return exported_result.model_dump()
@@ -156,11 +158,11 @@ def validate_model(
 
 def handle_partial_json(
     result: str,
-    model: Type[BaseModel],
+    model: type[BaseModel],
     is_json_output: bool,
     agent: Any,
-    converter_cls: Optional[Type[Converter]] = None,
-) -> Union[dict, BaseModel, str]:
+    converter_cls: type[Converter] | None = None,
+) -> dict | BaseModel | str:
     match = re.search(r"({.*})", result, re.DOTALL)
     if match:
         try:
@@ -179,17 +181,17 @@ def handle_partial_json(
             )
 
     return convert_with_instructions(
-        result, model, is_json_output, agent, converter_cls
+        result, model, is_json_output, agent, converter_cls,
     )
 
 
 def convert_with_instructions(
     result: str,
-    model: Type[BaseModel],
+    model: type[BaseModel],
     is_json_output: bool,
     agent: Any,
-    converter_cls: Optional[Type[Converter]] = None,
-) -> Union[dict, BaseModel, str]:
+    converter_cls: type[Converter] | None = None,
+) -> dict | BaseModel | str:
     llm = agent.function_calling_llm or agent.llm
     instructions = get_conversion_instructions(model, llm)
     converter = create_converter(
@@ -214,7 +216,7 @@ def convert_with_instructions(
     return exported_result
 
 
-def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
+def get_conversion_instructions(model: type[BaseModel], llm: Any) -> str:
     instructions = "Please convert the following text into valid JSON."
     if llm and not isinstance(llm, str) and llm.supports_function_calling():
         model_schema = PydanticSchemaParser(model=model).get_schema()
@@ -232,8 +234,8 @@ def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
 
 
 def create_converter(
-    agent: Optional[Any] = None,
-    converter_cls: Optional[Type[Converter]] = None,
+    agent: Any | None = None,
+    converter_cls: type[Converter] | None = None,
     *args,
     **kwargs,
 ) -> Converter:
@@ -241,21 +243,23 @@ def create_converter(
         if hasattr(agent, "get_output_converter"):
             converter = agent.get_output_converter(*args, **kwargs)
         else:
-            raise AttributeError("Agent does not have a 'get_output_converter' method")
+            msg = "Agent does not have a 'get_output_converter' method"
+            raise AttributeError(msg)
     elif converter_cls:
         converter = converter_cls(*args, **kwargs)
     else:
-        raise ValueError("Either agent or converter_cls must be provided")
+        msg = "Either agent or converter_cls must be provided"
+        raise ValueError(msg)
 
     if not converter:
-        raise Exception("No output converter found or set.")
+        msg = "No output converter found or set."
+        raise Exception(msg)
 
     return converter
 
 
-def generate_model_description(model: Type[BaseModel]) -> str:
-    """
-    Generate a string description of a Pydantic model's fields and their types.
+def generate_model_description(model: type[BaseModel]) -> str:
+    """Generate a string description of a Pydantic model's fields and their types.
 
     This function takes a Pydantic model class and returns a string that describes
     the model's fields and their respective types. The description includes handling
@@ -272,20 +276,18 @@ def generate_model_description(model: Type[BaseModel]) -> str:
             non_none_args = [arg for arg in args if arg is not type(None)]
             if len(non_none_args) == 1:
                 return f"Optional[{describe_field(non_none_args[0])}]"
-            else:
-                return f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
-        elif origin is list:
+            return f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
+        if origin is list:
             return f"List[{describe_field(args[0])}]"
-        elif origin is dict:
+        if origin is dict:
             key_type = describe_field(args[0])
             value_type = describe_field(args[1])
             return f"Dict[{key_type}, {value_type}]"
-        elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
+        if isinstance(field_type, type) and issubclass(field_type, BaseModel):
             return generate_model_description(field_type)
-        elif hasattr(field_type, "__name__"):
+        if hasattr(field_type, "__name__"):
             return field_type.__name__
-        else:
-            return str(field_type)
+        return str(field_type)
 
     fields = model.model_fields
     field_descriptions = [

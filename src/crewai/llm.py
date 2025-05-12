@@ -6,17 +6,10 @@ import threading
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
-from types import SimpleNamespace
 from typing import (
     Any,
-    DefaultDict,
-    Dict,
-    List,
     Literal,
-    Optional,
-    Type,
     TypedDict,
-    Union,
     cast,
 )
 
@@ -31,7 +24,6 @@ from crewai.utilities.events.llm_events import (
     LLMCallType,
     LLMStreamChunkEvent,
 )
-from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
@@ -55,7 +47,7 @@ load_dotenv()
 
 
 class FilteredStream:
-    def __init__(self, original_stream):
+    def __init__(self, original_stream) -> None:
         self._original_stream = original_stream
         self._lock = threading.Lock()
 
@@ -210,7 +202,7 @@ def suppress_warnings():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         warnings.filterwarnings(
-            "ignore", message="open_text is deprecated*", category=DeprecationWarning
+            "ignore", message="open_text is deprecated*", category=DeprecationWarning,
         )
 
         # Redirect stdout and stderr
@@ -226,14 +218,14 @@ def suppress_warnings():
 
 
 class Delta(TypedDict):
-    content: Optional[str]
-    role: Optional[str]
+    content: str | None
+    role: str | None
 
 
 class StreamingChoices(TypedDict):
     delta: Delta
     index: int
-    finish_reason: Optional[str]
+    finish_reason: str | None
 
 
 class FunctionArgs(BaseModel):
@@ -249,29 +241,31 @@ class LLM(BaseLLM):
     def __init__(
         self,
         model: str,
-        timeout: Optional[Union[float, int]] = None,
-        temperature: Optional[float] = None,
-        top_p: Optional[float] = None,
-        n: Optional[int] = None,
-        stop: Optional[Union[str, List[str]]] = None,
-        max_completion_tokens: Optional[int] = None,
-        max_tokens: Optional[int] = None,
-        presence_penalty: Optional[float] = None,
-        frequency_penalty: Optional[float] = None,
-        logit_bias: Optional[Dict[int, float]] = None,
-        response_format: Optional[Type[BaseModel]] = None,
-        seed: Optional[int] = None,
-        logprobs: Optional[int] = None,
-        top_logprobs: Optional[int] = None,
-        base_url: Optional[str] = None,
-        api_base: Optional[str] = None,
-        api_version: Optional[str] = None,
-        api_key: Optional[str] = None,
-        callbacks: List[Any] = [],
-        reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
+        timeout: float | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        n: int | None = None,
+        stop: str | list[str] | None = None,
+        max_completion_tokens: int | None = None,
+        max_tokens: int | None = None,
+        presence_penalty: float | None = None,
+        frequency_penalty: float | None = None,
+        logit_bias: dict[int, float] | None = None,
+        response_format: type[BaseModel] | None = None,
+        seed: int | None = None,
+        logprobs: int | None = None,
+        top_logprobs: int | None = None,
+        base_url: str | None = None,
+        api_base: str | None = None,
+        api_version: str | None = None,
+        api_key: str | None = None,
+        callbacks: list[Any] | None = None,
+        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         stream: bool = False,
         **kwargs,
-    ):
+    ) -> None:
+        if callbacks is None:
+            callbacks = []
         self.model = model
         self.timeout = timeout
         self.temperature = temperature
@@ -301,7 +295,7 @@ class LLM(BaseLLM):
 
         # Normalize self.stop to always be a List[str]
         if stop is None:
-            self.stop: List[str] = []
+            self.stop: list[str] = []
         elif isinstance(stop, str):
             self.stop = [stop]
         else:
@@ -318,15 +312,16 @@ class LLM(BaseLLM):
 
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
+
         """
         ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
         return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
 
     def _prepare_completion_params(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-    ) -> Dict[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+    ) -> dict[str, Any]:
         """Prepare parameters for the completion call.
 
         Args:
@@ -337,6 +332,7 @@ class LLM(BaseLLM):
 
         Returns:
             Dict[str, Any]: Parameters for the completion call
+
         """
         # --- 1) Format messages according to provider requirements
         if isinstance(messages, str):
@@ -375,9 +371,9 @@ class LLM(BaseLLM):
 
     def _handle_streaming_response(
         self,
-        params: Dict[str, Any],
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any],
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
     ) -> str:
         """Handle a streaming response from the LLM.
 
@@ -391,6 +387,7 @@ class LLM(BaseLLM):
 
         Raises:
             Exception: If no content is received from the streaming response
+
         """
         # --- 1) Initialize response tracking
         full_response = ""
@@ -399,8 +396,8 @@ class LLM(BaseLLM):
         usage_info = None
         tool_calls = None
 
-        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs] = defaultdict(
-            AccumulatedToolArgs
+        accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
+            AccumulatedToolArgs,
         )
 
         # --- 2) Make sure stream is set to True and include usage metrics
@@ -424,16 +421,16 @@ class LLM(BaseLLM):
                         choices = chunk["choices"]
                     elif hasattr(chunk, "choices"):
                         # Check if choices is not a type but an actual attribute with value
-                        if not isinstance(getattr(chunk, "choices"), type):
-                            choices = getattr(chunk, "choices")
+                        if not isinstance(chunk.choices, type):
+                            choices = chunk.choices
 
                     # Try to extract usage information if available
                     if isinstance(chunk, dict) and "usage" in chunk:
                         usage_info = chunk["usage"]
                     elif hasattr(chunk, "usage"):
                         # Check if usage is not a type but an actual attribute with value
-                        if not isinstance(getattr(chunk, "usage"), type):
-                            usage_info = getattr(chunk, "usage")
+                        if not isinstance(chunk.usage, type):
+                            usage_info = chunk.usage
 
                     if choices and len(choices) > 0:
                         choice = choices[0]
@@ -443,7 +440,7 @@ class LLM(BaseLLM):
                         if isinstance(choice, dict) and "delta" in choice:
                             delta = choice["delta"]
                         elif hasattr(choice, "delta"):
-                            delta = getattr(choice, "delta")
+                            delta = choice.delta
 
                         # Extract content from delta
                         if delta:
@@ -453,7 +450,7 @@ class LLM(BaseLLM):
                                     chunk_content = delta["content"]
                             # Handle object format
                             elif hasattr(delta, "content"):
-                                chunk_content = getattr(delta, "content")
+                                chunk_content = delta.content
 
                             # Handle case where content might be None or empty
                             if chunk_content is None and isinstance(delta, dict):
@@ -491,21 +488,21 @@ class LLM(BaseLLM):
             # --- 4) Fallback to non-streaming if no content received
             if not full_response.strip() and chunk_count == 0:
                 logging.warning(
-                    "No chunks received in streaming response, falling back to non-streaming"
+                    "No chunks received in streaming response, falling back to non-streaming",
                 )
                 non_streaming_params = params.copy()
                 non_streaming_params["stream"] = False
                 non_streaming_params.pop(
-                    "stream_options", None
+                    "stream_options", None,
                 )  # Remove stream_options for non-streaming call
                 return self._handle_non_streaming_response(
-                    non_streaming_params, callbacks, available_functions
+                    non_streaming_params, callbacks, available_functions,
                 )
 
             # --- 5) Handle empty response with chunks
             if not full_response.strip() and chunk_count > 0:
                 logging.warning(
-                    f"Received {chunk_count} chunks but no content was extracted"
+                    f"Received {chunk_count} chunks but no content was extracted",
                 )
                 if last_chunk is not None:
                     try:
@@ -514,8 +511,8 @@ class LLM(BaseLLM):
                         if isinstance(last_chunk, dict) and "choices" in last_chunk:
                             choices = last_chunk["choices"]
                         elif hasattr(last_chunk, "choices"):
-                            if not isinstance(getattr(last_chunk, "choices"), type):
-                                choices = getattr(last_chunk, "choices")
+                            if not isinstance(last_chunk.choices, type):
+                                choices = last_chunk.choices
 
                         if choices and len(choices) > 0:
                             choice = choices[0]
@@ -525,30 +522,31 @@ class LLM(BaseLLM):
                             if isinstance(choice, dict) and "message" in choice:
                                 message = choice["message"]
                             elif hasattr(choice, "message"):
-                                message = getattr(choice, "message")
+                                message = choice.message
 
                             if message:
                                 content = None
                                 if isinstance(message, dict) and "content" in message:
                                     content = message["content"]
                                 elif hasattr(message, "content"):
-                                    content = getattr(message, "content")
+                                    content = message.content
 
                                 if content:
                                     full_response = content
                                     logging.info(
-                                        f"Extracted content from last chunk message: {full_response}"
+                                        f"Extracted content from last chunk message: {full_response}",
                                     )
                     except Exception as e:
                         logging.debug(f"Error extracting content from last chunk: {e}")
                         logging.debug(
-                            f"Last chunk format: {type(last_chunk)}, content: {last_chunk}"
+                            f"Last chunk format: {type(last_chunk)}, content: {last_chunk}",
                         )
 
             # --- 6) If still empty, raise an error instead of using a default response
             if not full_response.strip() and len(accumulated_tool_args) == 0:
+                msg = "No content received from streaming response. Received empty chunks or failed to extract content."
                 raise Exception(
-                    "No content received from streaming response. Received empty chunks or failed to extract content."
+                    msg,
                 )
 
             # --- 7) Check for tool calls in the final response
@@ -559,8 +557,8 @@ class LLM(BaseLLM):
                     if isinstance(last_chunk, dict) and "choices" in last_chunk:
                         choices = last_chunk["choices"]
                     elif hasattr(last_chunk, "choices"):
-                        if not isinstance(getattr(last_chunk, "choices"), type):
-                            choices = getattr(last_chunk, "choices")
+                        if not isinstance(last_chunk.choices, type):
+                            choices = last_chunk.choices
 
                     if choices and len(choices) > 0:
                         choice = choices[0]
@@ -569,13 +567,13 @@ class LLM(BaseLLM):
                         if isinstance(choice, dict) and "message" in choice:
                             message = choice["message"]
                         elif hasattr(choice, "message"):
-                            message = getattr(choice, "message")
+                            message = choice.message
 
                         if message:
                             if isinstance(message, dict) and "tool_calls" in message:
                                 tool_calls = message["tool_calls"]
                             elif hasattr(message, "tool_calls"):
-                                tool_calls = getattr(message, "tool_calls")
+                                tool_calls = message.tool_calls
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
             # --- 8) If no tool calls or no available functions, return the text response directly
@@ -605,9 +603,9 @@ class LLM(BaseLLM):
             # decide whether to summarize the content or abort based on the respect_context_window flag.
             raise LLMContextLengthExceededException(str(e))
         except Exception as e:
-            logging.error(f"Error in streaming response: {str(e)}")
+            logging.exception(f"Error in streaming response: {e!s}")
             if full_response.strip():
-                logging.warning(f"Returning partial response despite error: {str(e)}")
+                logging.warning(f"Returning partial response despite error: {e!s}")
                 self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
                 return full_response
 
@@ -617,13 +615,14 @@ class LLM(BaseLLM):
                 self,
                 event=LLMCallFailedEvent(error=str(e)),
             )
-            raise Exception(f"Failed to get streaming response: {str(e)}")
+            msg = f"Failed to get streaming response: {e!s}"
+            raise Exception(msg)
 
     def _handle_streaming_tool_calls(
         self,
-        tool_calls: List[ChatCompletionDeltaToolCall],
-        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs],
-        available_functions: Optional[Dict[str, Any]] = None,
+        tool_calls: list[ChatCompletionDeltaToolCall],
+        accumulated_tool_args: defaultdict[int, AccumulatedToolArgs],
+        available_functions: dict[str, Any] | None = None,
     ) -> None | str:
         for tool_call in tool_calls:
             current_tool_accumulator = accumulated_tool_args[tool_call.index]
@@ -662,9 +661,9 @@ class LLM(BaseLLM):
 
     def _handle_streaming_callbacks(
         self,
-        callbacks: Optional[List[Any]],
-        usage_info: Optional[Dict[str, Any]],
-        last_chunk: Optional[Any],
+        callbacks: list[Any] | None,
+        usage_info: dict[str, Any] | None,
+        last_chunk: Any | None,
     ) -> None:
         """Handle callbacks with usage info for streaming responses.
 
@@ -672,6 +671,7 @@ class LLM(BaseLLM):
             callbacks: Optional list of callback functions
             usage_info: Usage information collected during streaming
             last_chunk: The last chunk received from the streaming response
+
         """
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
@@ -688,9 +688,9 @@ class LLM(BaseLLM):
                                     usage_info = last_chunk["usage"]
                                 elif hasattr(last_chunk, "usage"):
                                     if not isinstance(
-                                        getattr(last_chunk, "usage"), type
+                                        last_chunk.usage, type,
                                     ):
-                                        usage_info = getattr(last_chunk, "usage")
+                                        usage_info = last_chunk.usage
                         except Exception as e:
                             logging.debug(f"Error extracting usage info: {e}")
 
@@ -704,9 +704,9 @@ class LLM(BaseLLM):
 
     def _handle_non_streaming_response(
         self,
-        params: Dict[str, Any],
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any],
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
     ) -> str:
         """Handle a non-streaming response from the LLM.
 
@@ -717,6 +717,7 @@ class LLM(BaseLLM):
 
         Returns:
             str: The response text
+
         """
         # --- 1) Make the completion call
         try:
@@ -731,7 +732,7 @@ class LLM(BaseLLM):
             raise LLMContextLengthExceededException(str(e))
 
         # --- 2) Extract response message and content
-        response_message = cast(Choices, cast(ModelResponse, response).choices)[
+        response_message = cast("Choices", cast("ModelResponse", response).choices)[
             0
         ].message
         text_response = response_message.content or ""
@@ -768,9 +769,9 @@ class LLM(BaseLLM):
 
     def _handle_tool_call(
         self,
-        tool_calls: List[Any],
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Optional[str]:
+        tool_calls: list[Any],
+        available_functions: dict[str, Any] | None = None,
+    ) -> str | None:
         """Handle a tool call from the LLM.
 
         Args:
@@ -779,6 +780,7 @@ class LLM(BaseLLM):
 
         Returns:
             Optional[str]: The result of the tool call, or None if no tool call was made
+
         """
         # --- 1) Validate tool calls and available functions
         if not tool_calls or not available_functions:
@@ -805,23 +807,23 @@ class LLM(BaseLLM):
             except Exception as e:
                 # --- 3.4) Handle execution errors
                 fn = available_functions.get(
-                    function_name, lambda: None
+                    function_name, lambda: None,
                 )  # Ensure fn is always a callable
-                logging.error(f"Error executing function '{function_name}': {e}")
+                logging.exception(f"Error executing function '{function_name}': {e}")
                 assert hasattr(crewai_event_bus, "emit")
                 crewai_event_bus.emit(
                     self,
-                    event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),
+                    event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}"),
                 )
         return None
 
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Union[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+    ) -> str | Any:
         """High-level LLM call method.
 
         Args:
@@ -844,6 +846,7 @@ class LLM(BaseLLM):
             TypeError: If messages format is invalid
             ValueError: If response format is not supported
             LLMContextLengthExceededException: If input exceeds model's context limit
+
         """
         # --- 1) Emit call started event
         assert hasattr(crewai_event_bus, "emit")
@@ -882,12 +885,11 @@ class LLM(BaseLLM):
                 # --- 7) Make the completion call and handle response
                 if self.stream:
                     return self._handle_streaming_response(
-                        params, callbacks, available_functions
+                        params, callbacks, available_functions,
                     )
-                else:
-                    return self._handle_non_streaming_response(
-                        params, callbacks, available_functions
-                    )
+                return self._handle_non_streaming_response(
+                    params, callbacks, available_functions,
+                )
 
             except LLMContextLengthExceededException:
                 # Re-raise LLMContextLengthExceededException as it should be handled
@@ -900,15 +902,16 @@ class LLM(BaseLLM):
                     self,
                     event=LLMCallFailedEvent(error=str(e)),
                 )
-                logging.error(f"LiteLLM call failed: {str(e)}")
+                logging.exception(f"LiteLLM call failed: {e!s}")
                 raise
 
-    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):
+    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType) -> None:
         """Handle the events for the LLM call.
 
         Args:
             response (str): The response from the LLM call.
             call_type (str): The type of call, either "tool_call" or "llm_call".
+
         """
         assert hasattr(crewai_event_bus, "emit")
         crewai_event_bus.emit(
@@ -917,8 +920,8 @@ class LLM(BaseLLM):
         )
 
     def _format_messages_for_provider(
-        self, messages: List[Dict[str, str]]
-    ) -> List[Dict[str, str]]:
+        self, messages: list[dict[str, str]],
+    ) -> list[dict[str, str]]:
         """Format messages according to provider requirements.
 
         Args:
@@ -931,15 +934,18 @@ class LLM(BaseLLM):
 
         Raises:
             TypeError: If messages is None or contains invalid message format.
+
         """
         if messages is None:
-            raise TypeError("Messages cannot be None")
+            msg = "Messages cannot be None"
+            raise TypeError(msg)
 
         # Validate message format first
         for msg in messages:
             if not isinstance(msg, dict) or "role" not in msg or "content" not in msg:
+                msg = "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 raise TypeError(
-                    "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
+                    msg,
                 )
 
         # Handle O1 models specially
@@ -949,7 +955,7 @@ class LLM(BaseLLM):
                 # Convert system messages to assistant messages
                 if msg["role"] == "system":
                     formatted_messages.append(
-                        {"role": "assistant", "content": msg["content"]}
+                        {"role": "assistant", "content": msg["content"]},
                     )
                 else:
                     formatted_messages.append(msg)
@@ -977,9 +983,8 @@ class LLM(BaseLLM):
 
         return messages
 
-    def _get_custom_llm_provider(self) -> Optional[str]:
-        """
-        Derives the custom_llm_provider from the model string.
+    def _get_custom_llm_provider(self) -> str | None:
+        """Derives the custom_llm_provider from the model string.
         - For example, if the model is "openrouter/deepseek/deepseek-chat", returns "openrouter".
         - If the model is "gemini/gemini-1.5-pro", returns "gemini".
         - If there is no '/', defaults to "openai".
@@ -989,8 +994,7 @@ class LLM(BaseLLM):
         return None
 
     def _validate_call_params(self) -> None:
-        """
-        Validate parameters before making a call. Currently this only checks if
+        """Validate parameters before making a call. Currently this only checks if
         a response_format is provided and whether the model supports it.
         The custom_llm_provider is dynamically determined from the model:
           - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
@@ -1002,19 +1006,22 @@ class LLM(BaseLLM):
             model=self.model,
             custom_llm_provider=provider,
         ):
-            raise ValueError(
+            msg = (
                 f"The model {self.model} does not support response_format for provider '{provider}'. "
                 "Please remove response_format or use a supported model."
+            )
+            raise ValueError(
+                msg,
             )
 
     def supports_function_calling(self) -> bool:
         try:
             provider = self._get_custom_llm_provider()
             return litellm.utils.supports_function_calling(
-                self.model, custom_llm_provider=provider
+                self.model, custom_llm_provider=provider,
             )
         except Exception as e:
-            logging.error(f"Failed to check function calling support: {str(e)}")
+            logging.exception(f"Failed to check function calling support: {e!s}")
             return False
 
     def supports_stop_words(self) -> bool:
@@ -1022,16 +1029,16 @@ class LLM(BaseLLM):
             params = get_supported_openai_params(model=self.model)
             return params is not None and "stop" in params
         except Exception as e:
-            logging.error(f"Failed to get supported params: {str(e)}")
+            logging.exception(f"Failed to get supported params: {e!s}")
             return False
 
     def get_context_window_size(self) -> int:
-        """
-        Returns the context window size, using 75% of the maximum to avoid
+        """Returns the context window size, using 75% of the maximum to avoid
         cutting off messages mid-thread.
 
         Raises:
             ValueError: If a model's context window size is outside valid bounds (1024-2097152)
+
         """
         if self.context_window_size != 0:
             return self.context_window_size
@@ -1042,21 +1049,21 @@ class LLM(BaseLLM):
         # Validate all context window sizes
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
             if value < MIN_CONTEXT or value > MAX_CONTEXT:
+                msg = f"Context window for {key} must be between {MIN_CONTEXT} and {MAX_CONTEXT}"
                 raise ValueError(
-                    f"Context window for {key} must be between {MIN_CONTEXT} and {MAX_CONTEXT}"
+                    msg,
                 )
 
         self.context_window_size = int(
-            DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
+            DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO,
         )
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
             if self.model.startswith(key):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
 
-    def set_callbacks(self, callbacks: List[Any]):
-        """
-        Attempt to keep a single set of callbacks in litellm by removing old
+    def set_callbacks(self, callbacks: list[Any]) -> None:
+        """Attempt to keep a single set of callbacks in litellm by removing old
         duplicates and adding new ones.
         """
         with suppress_warnings():
@@ -1071,9 +1078,8 @@ class LLM(BaseLLM):
 
             litellm.callbacks = callbacks
 
-    def set_env_callbacks(self):
-        """
-        Sets the success and failure callbacks for the LiteLLM library from environment variables.
+    def set_env_callbacks(self) -> None:
+        """Sets the success and failure callbacks for the LiteLLM library from environment variables.
 
         This method reads the `LITELLM_SUCCESS_CALLBACKS` and `LITELLM_FAILURE_CALLBACKS`
         environment variables, which should contain comma-separated lists of callback names.
@@ -1089,6 +1095,7 @@ class LLM(BaseLLM):
 
         This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
         `litellm.failure_callback` to ["langfuse"].
+
         """
         with suppress_warnings():
             success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")

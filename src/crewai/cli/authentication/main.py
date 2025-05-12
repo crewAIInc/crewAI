@@ -1,6 +1,6 @@
 import time
 import webbrowser
-from typing import Any, Dict
+from typing import Any
 
 import requests
 from rich.console import Console
@@ -17,38 +17,37 @@ class AuthenticationCommand:
     DEVICE_CODE_URL = f"https://{AUTH0_DOMAIN}/oauth/device/code"
     TOKEN_URL = f"https://{AUTH0_DOMAIN}/oauth/token"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.token_manager = TokenManager()
 
     def signup(self) -> None:
-        """Sign up to CrewAI+"""
+        """Sign up to CrewAI+."""
         console.print("Signing Up to CrewAI+ \n", style="bold blue")
         device_code_data = self._get_device_code()
         self._display_auth_instructions(device_code_data)
 
         return self._poll_for_token(device_code_data)
 
-    def _get_device_code(self) -> Dict[str, Any]:
+    def _get_device_code(self) -> dict[str, Any]:
         """Get the device code to authenticate the user."""
-
         device_code_payload = {
             "client_id": AUTH0_CLIENT_ID,
             "scope": "openid",
             "audience": AUTH0_AUDIENCE,
         }
         response = requests.post(
-            url=self.DEVICE_CODE_URL, data=device_code_payload, timeout=20
+            url=self.DEVICE_CODE_URL, data=device_code_payload, timeout=20,
         )
         response.raise_for_status()
         return response.json()
 
-    def _display_auth_instructions(self, device_code_data: Dict[str, str]) -> None:
+    def _display_auth_instructions(self, device_code_data: dict[str, str]) -> None:
         """Display the authentication instructions to the user."""
         console.print("1. Navigate to: ", device_code_data["verification_uri_complete"])
         console.print("2. Enter the following code: ", device_code_data["user_code"])
         webbrowser.open(device_code_data["verification_uri_complete"])
 
-    def _poll_for_token(self, device_code_data: Dict[str, Any]) -> None:
+    def _poll_for_token(self, device_code_data: dict[str, Any]) -> None:
         """Poll the server for the token."""
         token_payload = {
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
@@ -81,7 +80,7 @@ class AuthenticationCommand:
                     )
 
                 console.print(
-                    "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"
+                    "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n",
                 )
                 return
 
@@ -92,5 +91,5 @@ class AuthenticationCommand:
             attempts += 1
 
         console.print(
-            "Timeout: Failed to get the token. Please try again.", style="bold red"
+            "Timeout: Failed to get the token. Please try again.", style="bold red",
         )

@@ -1,20 +1,22 @@
 import warnings
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any
 
 from litellm.integrations.custom_logger import CustomLogger
-from litellm.types.utils import Usage
 
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 
+if TYPE_CHECKING:
+    from litellm.types.utils import Usage
+
 
 class TokenCalcHandler(CustomLogger):
-    def __init__(self, token_cost_process: Optional[TokenProcess]):
+    def __init__(self, token_cost_process: TokenProcess | None) -> None:
         self.token_cost_process = token_cost_process
 
     def log_success_event(
         self,
-        kwargs: Dict[str, Any],
-        response_obj: Dict[str, Any],
+        kwargs: dict[str, Any],
+        response_obj: dict[str, Any],
         start_time: float,
         end_time: float,
     ) -> None:
@@ -31,7 +33,7 @@ class TokenCalcHandler(CustomLogger):
                         self.token_cost_process.sum_prompt_tokens(usage.prompt_tokens)
                     if hasattr(usage, "completion_tokens"):
                         self.token_cost_process.sum_completion_tokens(
-                            usage.completion_tokens
+                            usage.completion_tokens,
                         )
                     if (
                         hasattr(usage, "prompt_tokens_details")
@@ -39,5 +41,5 @@ class TokenCalcHandler(CustomLogger):
                         and usage.prompt_tokens_details.cached_tokens
                     ):
                         self.token_cost_process.sum_cached_prompt_tokens(
-                            usage.prompt_tokens_details.cached_tokens
+                            usage.prompt_tokens_details.cached_tokens,
                         )

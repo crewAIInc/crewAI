@@ -10,8 +10,7 @@ from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
 
 
 def select_choice(prompt_message, choices):
-    """
-    Presents a list of choices to the user and prompts them to select one.
+    """Presents a list of choices to the user and prompts them to select one.
 
     Args:
     - prompt_message (str): The message to display to the user before presenting the choices.
@@ -19,11 +18,11 @@ def select_choice(prompt_message, choices):
 
     Returns:
     - str: The selected choice from the list, or None if the user chooses to quit.
-    """
 
+    """
     provider_models = get_provider_data()
     if not provider_models:
-        return
+        return None
     click.secho(prompt_message, fg="cyan")
     for idx, choice in enumerate(choices, start=1):
         click.secho(f"{idx}. {choice}", fg="cyan")
@@ -31,7 +30,7 @@ def select_choice(prompt_message, choices):
 
     while True:
         choice = click.prompt(
-            "Enter the number of your choice or 'q' to quit", type=str
+            "Enter the number of your choice or 'q' to quit", type=str,
         )
 
         if choice.lower() == "q":
@@ -51,8 +50,7 @@ def select_choice(prompt_message, choices):
 
 
 def select_provider(provider_models):
-    """
-    Presents a list of providers to the user and prompts them to select one.
+    """Presents a list of providers to the user and prompts them to select one.
 
     Args:
     - provider_models (dict): A dictionary of provider models.
@@ -60,12 +58,13 @@ def select_provider(provider_models):
     Returns:
     - str: The selected provider
     - None: If user explicitly quits
+
     """
     predefined_providers = [p.lower() for p in PROVIDERS]
     all_providers = sorted(set(predefined_providers + list(provider_models.keys())))
 
     provider = select_choice(
-        "Select a provider to set up:", predefined_providers + ["other"]
+        "Select a provider to set up:", [*predefined_providers, "other"],
     )
     if provider is None:  # User typed 'q'
         return None
@@ -79,8 +78,7 @@ def select_provider(provider_models):
 
 
 def select_model(provider, provider_models):
-    """
-    Presents a list of models for a given provider to the user and prompts them to select one.
+    """Presents a list of models for a given provider to the user and prompts them to select one.
 
     Args:
     - provider (str): The provider for which to select a model.
@@ -88,6 +86,7 @@ def select_model(provider, provider_models):
 
     Returns:
     - str: The selected model, or None if the operation is aborted or an invalid selection is made.
+
     """
     predefined_providers = [p.lower() for p in PROVIDERS]
 
@@ -100,15 +99,13 @@ def select_model(provider, provider_models):
         click.secho(f"No models available for provider '{provider}'.", fg="red")
         return None
 
-    selected_model = select_choice(
-        f"Select a model to use for {provider.capitalize()}:", available_models
+    return select_choice(
+        f"Select a model to use for {provider.capitalize()}:", available_models,
     )
-    return selected_model
 
 
 def load_provider_data(cache_file, cache_expiry):
-    """
-    Loads provider data from a cache file if it exists and is not expired. If the cache is expired or corrupted, it fetches the data from the web.
+    """Loads provider data from a cache file if it exists and is not expired. If the cache is expired or corrupted, it fetches the data from the web.
 
     Args:
     - cache_file (Path): The path to the cache file.
@@ -116,6 +113,7 @@ def load_provider_data(cache_file, cache_expiry):
 
     Returns:
     - dict or None: The loaded provider data or None if the operation fails.
+
     """
     current_time = time.time()
     if (
@@ -126,7 +124,7 @@ def load_provider_data(cache_file, cache_expiry):
         if data:
             return data
         click.secho(
-            "Cache is corrupted. Fetching provider data from the web...", fg="yellow"
+            "Cache is corrupted. Fetching provider data from the web...", fg="yellow",
         )
     else:
         click.secho(
@@ -137,31 +135,31 @@ def load_provider_data(cache_file, cache_expiry):
 
 
 def read_cache_file(cache_file):
-    """
-    Reads and returns the JSON content from a cache file. Returns None if the file contains invalid JSON.
+    """Reads and returns the JSON content from a cache file. Returns None if the file contains invalid JSON.
 
     Args:
     - cache_file (Path): The path to the cache file.
 
     Returns:
     - dict or None: The JSON content of the cache file or None if the JSON is invalid.
+
     """
     try:
-        with open(cache_file, "r") as f:
+        with open(cache_file) as f:
             return json.load(f)
     except json.JSONDecodeError:
         return None
 
 
 def fetch_provider_data(cache_file):
-    """
-    Fetches provider data from a specified URL and caches it to a file.
+    """Fetches provider data from a specified URL and caches it to a file.
 
     Args:
     - cache_file (Path): The path to the cache file.
 
     Returns:
     - dict or None: The fetched provider data or None if the operation fails.
+
     """
     try:
         response = requests.get(JSON_URL, stream=True, timeout=60)
@@ -178,20 +176,20 @@ def fetch_provider_data(cache_file):
 
 
 def download_data(response):
-    """
-    Downloads data from a given HTTP response and returns the JSON content.
+    """Downloads data from a given HTTP response and returns the JSON content.
 
     Args:
     - response (requests.Response): The HTTP response object.
 
     Returns:
     - dict: The JSON content of the response.
+
     """
     total_size = int(response.headers.get("content-length", 0))
     block_size = 8192
     data_chunks = []
     with click.progressbar(
-        length=total_size, label="Downloading", show_pos=True
+        length=total_size, label="Downloading", show_pos=True,
     ) as progress_bar:
         for chunk in response.iter_content(block_size):
             if chunk:
@@ -202,11 +200,11 @@ def download_data(response):
 
 
 def get_provider_data():
-    """
-    Retrieves provider data from a cache file, filters out models based on provider criteria, and returns a dictionary of providers mapped to their models.
+    """Retrieves provider data from a cache file, filters out models based on provider criteria, and returns a dictionary of providers mapped to their models.
 
     Returns:
     - dict or None: A dictionary of providers mapped to their models or None if the operation fails.
+
     """
     cache_dir = Path.home() / ".crewai"
     cache_dir.mkdir(exist_ok=True)

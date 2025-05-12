@@ -3,18 +3,12 @@ import json
 import re
 import uuid
 import warnings
+from collections.abc import Callable
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
 from typing import (
     Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Union,
     cast,
 )
 
@@ -81,8 +75,7 @@ warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 
 class Crew(FlowTrackable, BaseModel):
-    """
-    Represents a group of agents, defining how they should collaborate and the tasks they should perform.
+    """Represents a group of agents, defining how they should collaborate and the tasks they should perform.
 
     Attributes:
         tasks: List of tasks assigned to the crew.
@@ -105,6 +98,7 @@ class Crew(FlowTrackable, BaseModel):
         planning: Plan the crew execution and add the plan to the crew.
         chat_llm: The language model used for orchestrating chat interactions with the crew.
         security_config: Security configuration for the crew, including fingerprinting.
+
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -113,130 +107,130 @@ class Crew(FlowTrackable, BaseModel):
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
-    _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
-    _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
-    _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
-    _user_memory: Optional[InstanceOf[UserMemory]] = PrivateAttr()
-    _external_memory: Optional[InstanceOf[ExternalMemory]] = PrivateAttr()
-    _train: Optional[bool] = PrivateAttr(default=False)
-    _train_iteration: Optional[int] = PrivateAttr()
-    _inputs: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    _short_term_memory: InstanceOf[ShortTermMemory] | None = PrivateAttr()
+    _long_term_memory: InstanceOf[LongTermMemory] | None = PrivateAttr()
+    _entity_memory: InstanceOf[EntityMemory] | None = PrivateAttr()
+    _user_memory: InstanceOf[UserMemory] | None = PrivateAttr()
+    _external_memory: InstanceOf[ExternalMemory] | None = PrivateAttr()
+    _train: bool | None = PrivateAttr(default=False)
+    _train_iteration: int | None = PrivateAttr()
+    _inputs: dict[str, Any] | None = PrivateAttr(default=None)
     _logging_color: str = PrivateAttr(
         default="bold_purple",
     )
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
-        default_factory=TaskOutputStorageHandler
+        default_factory=TaskOutputStorageHandler,
     )
 
-    name: Optional[str] = Field(default=None)
+    name: str | None = Field(default=None)
     cache: bool = Field(default=True)
-    tasks: List[Task] = Field(default_factory=list)
-    agents: List[BaseAgent] = Field(default_factory=list)
+    tasks: list[Task] = Field(default_factory=list)
+    agents: list[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
     memory: bool = Field(
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
     )
-    memory_config: Optional[Dict[str, Any]] = Field(
+    memory_config: dict[str, Any] | None = Field(
         default=None,
         description="Configuration for the memory to be used for the crew.",
     )
-    short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
+    short_term_memory: InstanceOf[ShortTermMemory] | None = Field(
         default=None,
         description="An Instance of the ShortTermMemory to be used by the Crew",
     )
-    long_term_memory: Optional[InstanceOf[LongTermMemory]] = Field(
+    long_term_memory: InstanceOf[LongTermMemory] | None = Field(
         default=None,
         description="An Instance of the LongTermMemory to be used by the Crew",
     )
-    entity_memory: Optional[InstanceOf[EntityMemory]] = Field(
+    entity_memory: InstanceOf[EntityMemory] | None = Field(
         default=None,
         description="An Instance of the EntityMemory to be used by the Crew",
     )
-    user_memory: Optional[InstanceOf[UserMemory]] = Field(
+    user_memory: InstanceOf[UserMemory] | None = Field(
         default=None,
         description="An instance of the UserMemory to be used by the Crew to store/fetch memories of a specific user.",
     )
-    external_memory: Optional[InstanceOf[ExternalMemory]] = Field(
+    external_memory: InstanceOf[ExternalMemory] | None = Field(
         default=None,
         description="An Instance of the ExternalMemory to be used by the Crew",
     )
-    embedder: Optional[dict] = Field(
+    embedder: dict | None = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
-    usage_metrics: Optional[UsageMetrics] = Field(
+    usage_metrics: UsageMetrics | None = Field(
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
-    manager_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
-        description="Language model that will run the agent.", default=None
+    manager_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
+        description="Language model that will run the agent.", default=None,
     )
-    manager_agent: Optional[BaseAgent] = Field(
-        description="Custom agent that will be used as manager.", default=None
+    manager_agent: BaseAgent | None = Field(
+        description="Custom agent that will be used as manager.", default=None,
     )
-    function_calling_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
-        description="Language model that will run the agent.", default=None
+    function_calling_llm: str | InstanceOf[LLM] | Any | None = Field(
+        description="Language model that will run the agent.", default=None,
     )
-    config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
+    config: Json | dict[str, Any] | None = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
-    share_crew: Optional[bool] = Field(default=False)
-    step_callback: Optional[Any] = Field(
+    share_crew: bool | None = Field(default=False)
+    step_callback: Any | None = Field(
         default=None,
         description="Callback to be executed after each step for all agents execution.",
     )
-    task_callback: Optional[Any] = Field(
+    task_callback: Any | None = Field(
         default=None,
         description="Callback to be executed after each task for all agents execution.",
     )
-    before_kickoff_callbacks: List[
-        Callable[[Optional[Dict[str, Any]]], Optional[Dict[str, Any]]]
+    before_kickoff_callbacks: list[
+        Callable[[dict[str, Any] | None], dict[str, Any] | None]
     ] = Field(
         default_factory=list,
         description="List of callbacks to be executed before crew kickoff. It may be used to adjust inputs before the crew is executed.",
     )
-    after_kickoff_callbacks: List[Callable[[CrewOutput], CrewOutput]] = Field(
+    after_kickoff_callbacks: list[Callable[[CrewOutput], CrewOutput]] = Field(
         default_factory=list,
         description="List of callbacks to be executed after crew kickoff. It may be used to adjust the output of the crew.",
     )
-    max_rpm: Optional[int] = Field(
+    max_rpm: int | None = Field(
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
     )
-    prompt_file: Optional[str] = Field(
+    prompt_file: str | None = Field(
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
-    output_log_file: Optional[Union[bool, str]] = Field(
+    output_log_file: bool | str | None = Field(
         default=None,
         description="Path to the log file to be saved",
     )
-    planning: Optional[bool] = Field(
+    planning: bool | None = Field(
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
-    planning_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
+    planning_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
         default=None,
         description="Language model that will run the AgentPlanner if planning is True.",
     )
-    task_execution_output_json_files: Optional[List[str]] = Field(
+    task_execution_output_json_files: list[str] | None = Field(
         default=None,
         description="List of file paths for task execution JSON files.",
     )
-    execution_logs: List[Dict[str, Any]] = Field(
+    execution_logs: list[dict[str, Any]] = Field(
         default=[],
         description="List of execution logs for tasks",
     )
-    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
+    knowledge_sources: list[BaseKnowledgeSource] | None = Field(
         default=None,
         description="Knowledge sources for the crew. Add knowledge sources to the knowledge object.",
     )
-    chat_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
+    chat_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
-    knowledge: Optional[Knowledge] = Field(
+    knowledge: Knowledge | None = Field(
         default=None,
         description="Knowledge for the crew.",
     )
@@ -247,32 +241,34 @@ class Crew(FlowTrackable, BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+    def _deny_user_set_id(cls, v: UUID4 | None) -> None:
         """Prevent manual setting of the 'id' field by users."""
         if v:
+            msg = "may_not_set_field"
             raise PydanticCustomError(
-                "may_not_set_field", "The 'id' field cannot be set by the user.", {}
+                msg, "The 'id' field cannot be set by the user.", {},
             )
 
     @field_validator("config", mode="before")
     @classmethod
     def check_config_type(
-        cls, v: Union[Json, Dict[str, Any]]
-    ) -> Union[Json, Dict[str, Any]]:
+        cls, v: Json | dict[str, Any],
+    ) -> Json | dict[str, Any]:
         """Validates that the config is a valid type.
+
         Args:
             v: The config to be validated.
+
         Returns:
             The config if it is valid.
-        """
 
+        """
         # TODO: Improve typing
         return json.loads(v) if isinstance(v, Json) else v  # type: ignore
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
-
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
         event_listener.verbose = self.verbose
@@ -286,7 +282,7 @@ class Crew(FlowTrackable, BaseModel):
 
         return self
 
-    def _initialize_user_memory(self):
+    def _initialize_user_memory(self) -> None:
         if (
             self.memory_config
             and "user_memory" in self.memory_config
@@ -294,20 +290,21 @@ class Crew(FlowTrackable, BaseModel):
         ):  # Check for user_memory in config
             user_memory_config = self.memory_config["user_memory"]
             if isinstance(
-                user_memory_config, dict
+                user_memory_config, dict,
             ):  # Check if it's a configuration dict
                 self._user_memory = UserMemory(crew=self)
             else:
-                raise TypeError("user_memory must be a configuration dictionary")
+                msg = "user_memory must be a configuration dictionary"
+                raise TypeError(msg)
 
-    def _initialize_default_memories(self):
+    def _initialize_default_memories(self) -> None:
         self._long_term_memory = self._long_term_memory or LongTermMemory()
         self._short_term_memory = self._short_term_memory or ShortTermMemory(
             crew=self,
             embedder_config=self.embedder,
         )
         self._entity_memory = self.entity_memory or EntityMemory(
-            crew=self, embedder_config=self.embedder
+            crew=self, embedder_config=self.embedder,
         )
 
     @model_validator(mode="after")
@@ -350,7 +347,7 @@ class Crew(FlowTrackable, BaseModel):
 
             except Exception as e:
                 self._logger.log(
-                    "warning", f"Failed to init knowledge: {e}", color="yellow"
+                    "warning", f"Failed to init knowledge: {e}", color="yellow",
                 )
         return self
 
@@ -359,8 +356,9 @@ class Crew(FlowTrackable, BaseModel):
         """Validates that the language model is set when using hierarchical process."""
         if self.process == Process.hierarchical:
             if not self.manager_llm and not self.manager_agent:
+                msg = "missing_manager_llm_or_manager_agent"
                 raise PydanticCustomError(
-                    "missing_manager_llm_or_manager_agent",
+                    msg,
                     "Attribute `manager_llm` or `manager_agent` is required when using hierarchical process.",
                     {},
                 )
@@ -368,8 +366,9 @@ class Crew(FlowTrackable, BaseModel):
             if (self.manager_agent is not None) and (
                 self.agents.count(self.manager_agent) > 0
             ):
+                msg = "manager_agent_in_agents"
                 raise PydanticCustomError(
-                    "manager_agent_in_agents",
+                    msg,
                     "Manager agent should not be included in agents list.",
                     {},
                 )
@@ -380,8 +379,9 @@ class Crew(FlowTrackable, BaseModel):
     def check_config(self):
         """Validates that the crew is properly configured with agents and tasks."""
         if not self.config and not self.tasks and not self.agents:
+            msg = "missing_keys"
             raise PydanticCustomError(
-                "missing_keys",
+                msg,
                 "Either 'agents' and 'tasks' need to be set or 'config'.",
                 {},
             )
@@ -402,8 +402,9 @@ class Crew(FlowTrackable, BaseModel):
         if self.process == Process.sequential:
             for task in self.tasks:
                 if task.agent is None:
+                    msg = "missing_agent_in_task"
                     raise PydanticCustomError(
-                        "missing_agent_in_task",
+                        msg,
                         f"Sequential process error: Agent is missing in the task with the following description: {task.description}",  # type: ignore # Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
                         {},
                     )
@@ -423,8 +424,9 @@ class Crew(FlowTrackable, BaseModel):
                 break  # Stop traversing as soon as a non-async task is encountered
 
         if final_async_task_count > 1:
+            msg = "async_task_count"
             raise PydanticCustomError(
-                "async_task_count",
+                msg,
                 "The crew must end with at most one asynchronous task.",
                 {},
             )
@@ -440,8 +442,9 @@ class Crew(FlowTrackable, BaseModel):
             1 for task in self.tasks if not isinstance(task, ConditionalTask)
         )
         if non_conditional_count == 0:
+            msg = "only_conditional_tasks"
             raise PydanticCustomError(
-                "only_conditional_tasks",
+                msg,
                 "Crew must include at least one non-conditional task",
                 {},
             )
@@ -451,8 +454,9 @@ class Crew(FlowTrackable, BaseModel):
     def validate_first_task(self) -> "Crew":
         """Ensure the first task is not a ConditionalTask."""
         if self.tasks and isinstance(self.tasks[0], ConditionalTask):
+            msg = "invalid_first_task"
             raise PydanticCustomError(
-                "invalid_first_task",
+                msg,
                 "The first task cannot be a ConditionalTask.",
                 {},
             )
@@ -463,8 +467,9 @@ class Crew(FlowTrackable, BaseModel):
         """Ensure that ConditionalTask is not async."""
         for task in self.tasks:
             if task.async_execution and isinstance(task, ConditionalTask):
+                msg = "invalid_async_conditional_task"
                 raise PydanticCustomError(
-                    "invalid_async_conditional_task",
+                    msg,
                     f"Conditional Task: {task.description} , cannot be executed asynchronously.",  # type: ignore # Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
                     {},
                 )
@@ -472,8 +477,7 @@ class Crew(FlowTrackable, BaseModel):
 
     @model_validator(mode="after")
     def validate_async_task_cannot_include_sequential_async_tasks_in_context(self):
-        """
-        Validates that if a task is set to be executed asynchronously,
+        """Validates that if a task is set to be executed asynchronously,
         it cannot include other asynchronous tasks in its context unless
         separated by a synchronous task.
         """
@@ -483,8 +487,9 @@ class Crew(FlowTrackable, BaseModel):
                     if context_task.async_execution:
                         for j in range(i - 1, -1, -1):
                             if self.tasks[j] == context_task:
+                                msg = f"Task '{task.description}' is asynchronous and cannot include other sequential asynchronous tasks in its context."
                                 raise ValueError(
-                                    f"Task '{task.description}' is asynchronous and cannot include other sequential asynchronous tasks in its context."
+                                    msg,
                                 )
                             if not self.tasks[j].async_execution:
                                 break
@@ -501,42 +506,44 @@ class Crew(FlowTrackable, BaseModel):
                     if id(context_task) not in task_indices:
                         continue  # Skip context tasks not in the main tasks list
                     if task_indices[id(context_task)] > task_indices[id(task)]:
+                        msg = f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         raise ValueError(
-                            f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
+                            msg,
                         )
         return self
 
     @property
     def key(self) -> str:
-        source: List[str] = [agent.key for agent in self.agents] + [
+        source: list[str] = [agent.key for agent in self.agents] + [
             task.key for task in self.tasks
         ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
     @property
     def fingerprint(self) -> Fingerprint:
-        """
-        Get the crew's fingerprint.
+        """Get the crew's fingerprint.
 
         Returns:
             Fingerprint: The crew's fingerprint
+
         """
         return self.security_config.fingerprint
 
-    def _setup_from_config(self):
+    def _setup_from_config(self) -> None:
         assert self.config is not None, "Config should not be None."
 
         """Initializes agents and tasks from the provided config."""
         if not self.config.get("agents") or not self.config.get("tasks"):
+            msg = "missing_keys_in_config"
             raise PydanticCustomError(
-                "missing_keys_in_config", "Config should have 'agents' and 'tasks'.", {}
+                msg, "Config should have 'agents' and 'tasks'.", {},
             )
 
         self.process = self.config.get("process", self.process)
         self.agents = [Agent(**agent) for agent in self.config["agents"]]
         self.tasks = [self._create_task(task) for task in self.config["tasks"]]
 
-    def _create_task(self, task_config: Dict[str, Any]) -> Task:
+    def _create_task(self, task_config: dict[str, Any]) -> Task:
         """Creates a task instance from its configuration.
 
         Args:
@@ -544,6 +551,7 @@ class Crew(FlowTrackable, BaseModel):
 
         Returns:
             A task instance.
+
         """
         task_agent = next(
             agt for agt in self.agents if agt.role == task_config["agent"]
@@ -565,9 +573,11 @@ class Crew(FlowTrackable, BaseModel):
         CrewTrainingHandler(filename).initialize_file()
 
     def train(
-        self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = {}
+        self, n_iterations: int, filename: str, inputs: dict[str, Any] | None = None,
     ) -> None:
         """Trains the crew for a given number of iterations."""
+        if inputs is None:
+            inputs = {}
         try:
             crewai_event_bus.emit(
                 self,
@@ -590,10 +600,10 @@ class Crew(FlowTrackable, BaseModel):
             for agent in train_crew.agents:
                 if training_data.get(str(agent.id)):
                     result = TaskEvaluator(agent).evaluate_training_data(
-                        training_data=training_data, agent_id=str(agent.id)
+                        training_data=training_data, agent_id=str(agent.id),
                     )
                     CrewTrainingHandler(filename).save_trained_data(
-                        agent_id=str(agent.role), trained_data=result.model_dump()
+                        agent_id=str(agent.role), trained_data=result.model_dump(),
                     )
 
             crewai_event_bus.emit(
@@ -616,7 +626,7 @@ class Crew(FlowTrackable, BaseModel):
 
     def kickoff(
         self,
-        inputs: Optional[Dict[str, Any]] = None,
+        inputs: dict[str, Any] | None = None,
     ) -> CrewOutput:
         try:
             for before_callback in self.before_kickoff_callbacks:
@@ -657,15 +667,16 @@ class Crew(FlowTrackable, BaseModel):
             if self.planning:
                 self._handle_crew_planning()
 
-            metrics: List[UsageMetrics] = []
+            metrics: list[UsageMetrics] = []
 
             if self.process == Process.sequential:
                 result = self._run_sequential_process()
             elif self.process == Process.hierarchical:
                 result = self._run_hierarchical_process()
             else:
+                msg = f"The process '{self.process}' is not implemented yet."
                 raise NotImplementedError(
-                    f"The process '{self.process}' is not implemented yet."
+                    msg,
                 )
 
             for after_callback in self.after_kickoff_callbacks:
@@ -684,9 +695,9 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
 
-    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
+    def kickoff_for_each(self, inputs: list[dict[str, Any]]) -> list[CrewOutput]:
         """Executes the Crew's workflow for each input in the list and aggregates results."""
-        results: List[CrewOutput] = []
+        results: list[CrewOutput] = []
 
         # Initialize the parent crew's usage metrics
         total_usage_metrics = UsageMetrics()
@@ -705,11 +716,13 @@ class Crew(FlowTrackable, BaseModel):
         self._task_output_handler.reset()
         return results
 
-    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
+    async def kickoff_async(self, inputs: dict[str, Any] | None = None) -> CrewOutput:
         """Asynchronous kickoff method to start the crew execution."""
+        if inputs is None:
+            inputs = {}
         return await asyncio.to_thread(self.kickoff, inputs)
 
-    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[CrewOutput]:
+    async def kickoff_for_each_async(self, inputs: list[dict]) -> list[CrewOutput]:
         crew_copies = [self.copy() for _ in inputs]
 
         async def run_crew(crew, input_data):
@@ -731,14 +744,14 @@ class Crew(FlowTrackable, BaseModel):
         self._task_output_handler.reset()
         return results
 
-    def _handle_crew_planning(self):
+    def _handle_crew_planning(self) -> None:
         """Handles the Crew planning."""
         self._logger.log("info", "Planning the crew execution")
         result = CrewPlanner(
-            tasks=self.tasks, planning_agent_llm=self.planning_llm
+            tasks=self.tasks, planning_agent_llm=self.planning_llm,
         )._handle_crew_planning()
 
-        for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
+        for task, step_plan in zip(self.tasks, result.list_of_plans_per_task, strict=False):
             task.description += step_plan.plan
 
     def _store_execution_log(
@@ -747,11 +760,8 @@ class Crew(FlowTrackable, BaseModel):
         output: TaskOutput,
         task_index: int,
         was_replayed: bool = False,
-    ):
-        if self._inputs:
-            inputs = self._inputs
-        else:
-            inputs = {}
+    ) -> None:
+        inputs = self._inputs if self._inputs else {}
 
         log = {
             "task": task,
@@ -779,17 +789,18 @@ class Crew(FlowTrackable, BaseModel):
         self._create_manager_agent()
         return self._execute_tasks(self.tasks)
 
-    def _create_manager_agent(self):
+    def _create_manager_agent(self) -> None:
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
             if manager.tools is not None and len(manager.tools) > 0:
                 self._logger.log(
-                    "warning", "Manager agent should not have tools", color="orange"
+                    "warning", "Manager agent should not have tools", color="orange",
                 )
                 manager.tools = []
-                raise Exception("Manager agent should not have tools")
+                msg = "Manager agent should not have tools"
+                raise Exception(msg)
         else:
             self.manager_llm = create_llm(self.manager_llm)
             manager = Agent(
@@ -806,8 +817,8 @@ class Crew(FlowTrackable, BaseModel):
 
     def _execute_tasks(
         self,
-        tasks: List[Task],
-        start_index: Optional[int] = 0,
+        tasks: list[Task],
+        start_index: int | None = 0,
         was_replayed: bool = False,
     ) -> CrewOutput:
         """Executes tasks sequentially and returns the final output.
@@ -818,11 +829,11 @@ class Crew(FlowTrackable, BaseModel):
 
         Returns:
             CrewOutput: Final output of the crew
-        """
 
-        task_outputs: List[TaskOutput] = []
-        futures: List[Tuple[Task, Future[TaskOutput], int]] = []
-        last_sync_output: Optional[TaskOutput] = None
+        """
+        task_outputs: list[TaskOutput] = []
+        futures: list[tuple[Task, Future[TaskOutput], int]] = []
+        last_sync_output: TaskOutput | None = None
 
         for task_index, task in enumerate(tasks):
             if start_index is not None and task_index < start_index:
@@ -836,8 +847,9 @@ class Crew(FlowTrackable, BaseModel):
 
             agent_to_use = self._get_agent_to_use(task)
             if agent_to_use is None:
+                msg = f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 raise ValueError(
-                    f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
+                    msg,
                 )
 
             # Determine which tools to use - task tools take precedence over agent tools
@@ -846,14 +858,14 @@ class Crew(FlowTrackable, BaseModel):
             tools_for_task = self._prepare_tools(
                 agent_to_use,
                 task,
-                cast(Union[List[Tool], List[BaseTool]], tools_for_task),
+                cast("list[Tool] | list[BaseTool]", tools_for_task),
             )
 
             self._log_task_start(task, agent_to_use.role)
 
             if isinstance(task, ConditionalTask):
                 skipped_task_output = self._handle_conditional_task(
-                    task, task_outputs, futures, task_index, was_replayed
+                    task, task_outputs, futures, task_index, was_replayed,
                 )
                 if skipped_task_output:
                     task_outputs.append(skipped_task_output)
@@ -861,12 +873,12 @@ class Crew(FlowTrackable, BaseModel):
 
             if task.async_execution:
                 context = self._get_context(
-                    task, [last_sync_output] if last_sync_output else []
+                    task, [last_sync_output] if last_sync_output else [],
                 )
                 future = task.execute_async(
                     agent=agent_to_use,
                     context=context,
-                    tools=cast(List[BaseTool], tools_for_task),
+                    tools=cast("list[BaseTool]", tools_for_task),
                 )
                 futures.append((task, future, task_index))
             else:
@@ -878,7 +890,7 @@ class Crew(FlowTrackable, BaseModel):
                 task_output = task.execute_sync(
                     agent=agent_to_use,
                     context=context,
-                    tools=cast(List[BaseTool], tools_for_task),
+                    tools=cast("list[BaseTool]", tools_for_task),
                 )
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
@@ -892,11 +904,11 @@ class Crew(FlowTrackable, BaseModel):
     def _handle_conditional_task(
         self,
         task: ConditionalTask,
-        task_outputs: List[TaskOutput],
-        futures: List[Tuple[Task, Future[TaskOutput], int]],
+        task_outputs: list[TaskOutput],
+        futures: list[tuple[Task, Future[TaskOutput], int]],
         task_index: int,
         was_replayed: bool,
-    ) -> Optional[TaskOutput]:
+    ) -> TaskOutput | None:
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)
             futures.clear()
@@ -916,18 +928,19 @@ class Crew(FlowTrackable, BaseModel):
         return None
 
     def _prepare_tools(
-        self, agent: BaseAgent, task: Task, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, agent: BaseAgent, task: Task, tools: list[Tool] | list[BaseTool],
+    ) -> list[BaseTool]:
         # Add delegation tools if agent allows delegation
         if hasattr(agent, "allow_delegation") and getattr(
-            agent, "allow_delegation", False
+            agent, "allow_delegation", False,
         ):
             if self.process == Process.hierarchical:
                 if self.manager_agent:
                     tools = self._update_manager_tools(task, tools)
                 else:
+                    msg = "Manager agent is required for hierarchical process."
                     raise ValueError(
-                        "Manager agent is required for hierarchical process."
+                        msg,
                     )
 
             elif agent:
@@ -935,7 +948,7 @@ class Crew(FlowTrackable, BaseModel):
 
         # Add code execution tools if agent allows code execution
         if hasattr(agent, "allow_code_execution") and getattr(
-            agent, "allow_code_execution", False
+            agent, "allow_code_execution", False,
         ):
             tools = self._add_code_execution_tools(agent, tools)
 
@@ -947,21 +960,21 @@ class Crew(FlowTrackable, BaseModel):
             tools = self._add_multimodal_tools(agent, tools)
 
         # Return a List[BaseTool] which is compatible with both Task.execute_sync and Task.execute_async
-        return cast(List[BaseTool], tools)
+        return cast("list[BaseTool]", tools)
 
-    def _get_agent_to_use(self, task: Task) -> Optional[BaseAgent]:
+    def _get_agent_to_use(self, task: Task) -> BaseAgent | None:
         if self.process == Process.hierarchical:
             return self.manager_agent
         return task.agent
 
     def _merge_tools(
         self,
-        existing_tools: Union[List[Tool], List[BaseTool]],
-        new_tools: Union[List[Tool], List[BaseTool]],
-    ) -> List[BaseTool]:
+        existing_tools: list[Tool] | list[BaseTool],
+        new_tools: list[Tool] | list[BaseTool],
+    ) -> list[BaseTool]:
         """Merge new tools into existing tools list, avoiding duplicates by tool name."""
         if not new_tools:
-            return cast(List[BaseTool], existing_tools)
+            return cast("list[BaseTool]", existing_tools)
 
         # Create mapping of tool names to new tools
         new_tool_map = {tool.name: tool for tool in new_tools}
@@ -972,75 +985,74 @@ class Crew(FlowTrackable, BaseModel):
         # Add all new tools
         tools.extend(new_tools)
 
-        return cast(List[BaseTool], tools)
+        return cast("list[BaseTool]", tools)
 
     def _inject_delegation_tools(
         self,
-        tools: Union[List[Tool], List[BaseTool]],
+        tools: list[Tool] | list[BaseTool],
         task_agent: BaseAgent,
-        agents: List[BaseAgent],
-    ) -> List[BaseTool]:
+        agents: list[BaseAgent],
+    ) -> list[BaseTool]:
         if hasattr(task_agent, "get_delegation_tools"):
             delegation_tools = task_agent.get_delegation_tools(agents)
             # Cast delegation_tools to the expected type for _merge_tools
-            return self._merge_tools(tools, cast(List[BaseTool], delegation_tools))
-        return cast(List[BaseTool], tools)
+            return self._merge_tools(tools, cast("list[BaseTool]", delegation_tools))
+        return cast("list[BaseTool]", tools)
 
     def _add_multimodal_tools(
-        self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, agent: BaseAgent, tools: list[Tool] | list[BaseTool],
+    ) -> list[BaseTool]:
         if hasattr(agent, "get_multimodal_tools"):
             multimodal_tools = agent.get_multimodal_tools()
             # Cast multimodal_tools to the expected type for _merge_tools
-            return self._merge_tools(tools, cast(List[BaseTool], multimodal_tools))
-        return cast(List[BaseTool], tools)
+            return self._merge_tools(tools, cast("list[BaseTool]", multimodal_tools))
+        return cast("list[BaseTool]", tools)
 
     def _add_code_execution_tools(
-        self, agent: BaseAgent, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, agent: BaseAgent, tools: list[Tool] | list[BaseTool],
+    ) -> list[BaseTool]:
         if hasattr(agent, "get_code_execution_tools"):
             code_tools = agent.get_code_execution_tools()
             # Cast code_tools to the expected type for _merge_tools
-            return self._merge_tools(tools, cast(List[BaseTool], code_tools))
-        return cast(List[BaseTool], tools)
+            return self._merge_tools(tools, cast("list[BaseTool]", code_tools))
+        return cast("list[BaseTool]", tools)
 
     def _add_delegation_tools(
-        self, task: Task, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, task: Task, tools: list[Tool] | list[BaseTool],
+    ) -> list[BaseTool]:
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
         if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
             if not tools:
                 tools = []
             tools = self._inject_delegation_tools(
-                tools, task.agent, agents_for_delegation
+                tools, task.agent, agents_for_delegation,
             )
-        return cast(List[BaseTool], tools)
+        return cast("list[BaseTool]", tools)
 
-    def _log_task_start(self, task: Task, role: str = "None"):
+    def _log_task_start(self, task: Task, role: str = "None") -> None:
         if self.output_log_file:
             self._file_handler.log(
-                task_name=task.name, task=task.description, agent=role, status="started"
+                task_name=task.name, task=task.description, agent=role, status="started",
             )
 
     def _update_manager_tools(
-        self, task: Task, tools: Union[List[Tool], List[BaseTool]]
-    ) -> List[BaseTool]:
+        self, task: Task, tools: list[Tool] | list[BaseTool],
+    ) -> list[BaseTool]:
         if self.manager_agent:
             if task.agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
             else:
                 tools = self._inject_delegation_tools(
-                    tools, self.manager_agent, self.agents
+                    tools, self.manager_agent, self.agents,
                 )
-        return cast(List[BaseTool], tools)
+        return cast("list[BaseTool]", tools)
 
-    def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
-        context = (
+    def _get_context(self, task: Task, task_outputs: list[TaskOutput]):
+        return (
             aggregate_raw_outputs_from_tasks(task.context)
             if task.context
             else aggregate_raw_outputs_from_task_outputs(task_outputs)
         )
-        return context
 
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
@@ -1053,14 +1065,16 @@ class Crew(FlowTrackable, BaseModel):
                 output=output.raw,
             )
 
-    def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
+    def _create_crew_output(self, task_outputs: list[TaskOutput]) -> CrewOutput:
         if not task_outputs:
-            raise ValueError("No task outputs available to create crew output.")
+            msg = "No task outputs available to create crew output."
+            raise ValueError(msg)
 
         # Filter out empty outputs and get the last valid one as the main output
         valid_outputs = [t for t in task_outputs if t.raw]
         if not valid_outputs:
-            raise ValueError("No valid task outputs available to create crew output.")
+            msg = "No valid task outputs available to create crew output."
+            raise ValueError(msg)
         final_task_output = valid_outputs[-1]
 
         final_string_output = final_task_output.raw
@@ -1069,7 +1083,7 @@ class Crew(FlowTrackable, BaseModel):
         crewai_event_bus.emit(
             self,
             CrewKickoffCompletedEvent(
-                crew_name=self.name or "crew", output=final_task_output
+                crew_name=self.name or "crew", output=final_task_output,
             ),
         )
         return CrewOutput(
@@ -1082,22 +1096,22 @@ class Crew(FlowTrackable, BaseModel):
 
     def _process_async_tasks(
         self,
-        futures: List[Tuple[Task, Future[TaskOutput], int]],
+        futures: list[tuple[Task, Future[TaskOutput], int]],
         was_replayed: bool = False,
-    ) -> List[TaskOutput]:
-        task_outputs: List[TaskOutput] = []
+    ) -> list[TaskOutput]:
+        task_outputs: list[TaskOutput] = []
         for future_task, future, task_index in futures:
             task_output = future.result()
             task_outputs.append(task_output)
             self._process_task_result(future_task, task_output)
             self._store_execution_log(
-                future_task, task_output, task_index, was_replayed
+                future_task, task_output, task_index, was_replayed,
             )
         return task_outputs
 
     def _find_task_index(
-        self, task_id: str, stored_outputs: List[Any]
-    ) -> Optional[int]:
+        self, task_id: str, stored_outputs: list[Any],
+    ) -> int | None:
         return next(
             (
                 index
@@ -1108,16 +1122,18 @@ class Crew(FlowTrackable, BaseModel):
         )
 
     def replay(
-        self, task_id: str, inputs: Optional[Dict[str, Any]] = None
+        self, task_id: str, inputs: dict[str, Any] | None = None,
     ) -> CrewOutput:
         stored_outputs = self._task_output_handler.load()
         if not stored_outputs:
-            raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
+            msg = f"Task with id {task_id} not found in the crew's tasks."
+            raise ValueError(msg)
 
         start_index = self._find_task_index(task_id, stored_outputs)
 
         if start_index is None:
-            raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
+            msg = f"Task with id {task_id} not found in the crew's tasks."
+            raise ValueError(msg)
 
         replay_inputs = (
             inputs if inputs is not None else stored_outputs[start_index]["inputs"]
@@ -1145,28 +1161,26 @@ class Crew(FlowTrackable, BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        result = self._execute_tasks(self.tasks, start_index, True)
-        return result
+        return self._execute_tasks(self.tasks, start_index, True)
 
     def query_knowledge(
-        self, query: List[str], results_limit: int = 3, score_threshold: float = 0.35
-    ) -> Union[List[Dict[str, Any]], None]:
+        self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35,
+    ) -> list[dict[str, Any]] | None:
         if self.knowledge:
             return self.knowledge.query(
-                query, results_limit=results_limit, score_threshold=score_threshold
+                query, results_limit=results_limit, score_threshold=score_threshold,
             )
         return None
 
-    def fetch_inputs(self) -> Set[str]:
-        """
-        Gathers placeholders (e.g., {something}) referenced in tasks or agents.
+    def fetch_inputs(self) -> set[str]:
+        """Gathers placeholders (e.g., {something}) referenced in tasks or agents.
         Scans each task's 'description' + 'expected_output', and each agent's
         'role', 'goal', and 'backstory'.
 
         Returns a set of all discovered placeholder names.
         """
         placeholder_pattern = re.compile(r"\{(.+?)\}")
-        required_inputs: Set[str] = set()
+        required_inputs: set[str] = set()
 
         # Scan tasks for inputs
         for task in self.tasks:
@@ -1183,13 +1197,12 @@ class Crew(FlowTrackable, BaseModel):
         return required_inputs
 
     def copy(self):
-        """
-        Creates a deep copy of the Crew instance.
+        """Creates a deep copy of the Crew instance.
 
         Returns:
             Crew: A new instance with copied components
-        """
 
+        """
         exclude = {
             "id",
             "_rpm_controller",
@@ -1225,7 +1238,7 @@ class Crew(FlowTrackable, BaseModel):
             cloned_tasks.append(cloned_task)
             task_mapping[task.key] = cloned_task
 
-        for cloned_task, original_task in zip(cloned_tasks, self.tasks):
+        for cloned_task, original_task in zip(cloned_tasks, self.tasks, strict=False):
             if original_task.context:
                 cloned_context = [
                     task_mapping[context_task.key]
@@ -1237,11 +1250,11 @@ class Crew(FlowTrackable, BaseModel):
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
         if self.short_term_memory:
             copied_data["short_term_memory"] = self.short_term_memory.model_copy(
-                deep=True
+                deep=True,
             )
         if self.long_term_memory:
             copied_data["long_term_memory"] = self.long_term_memory.model_copy(
-                deep=True
+                deep=True,
             )
         if self.entity_memory:
             copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
@@ -1253,7 +1266,7 @@ class Crew(FlowTrackable, BaseModel):
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
 
-        copied_crew = Crew(
+        return Crew(
             **copied_data,
             agents=cloned_agents,
             tasks=cloned_tasks,
@@ -1263,20 +1276,19 @@ class Crew(FlowTrackable, BaseModel):
             manager_llm=manager_llm,
         )
 
-        return copied_crew
 
     def _set_tasks_callbacks(self) -> None:
-        """Sets callback for every task suing task_callback"""
+        """Sets callback for every task suing task_callback."""
         for task in self.tasks:
             if not task.callback:
                 task.callback = self.task_callback
 
-    def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
+    def _interpolate_inputs(self, inputs: dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
         [
             task.interpolate_inputs_and_add_conversation_history(
                 # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
-                inputs
+                inputs,
             )
             for task in self.tasks
         ]
@@ -1304,15 +1316,16 @@ class Crew(FlowTrackable, BaseModel):
     def test(
         self,
         n_iterations: int,
-        eval_llm: Union[str, InstanceOf[BaseLLM]],
-        inputs: Optional[Dict[str, Any]] = None,
+        eval_llm: str | InstanceOf[BaseLLM],
+        inputs: dict[str, Any] | None = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         try:
             # Create LLM instance and ensure it's of type LLM for CrewEvaluator
             llm_instance = create_llm(eval_llm)
             if not llm_instance:
-                raise ValueError("Failed to create LLM instance.")
+                msg = "Failed to create LLM instance."
+                raise ValueError(msg)
 
             crewai_event_bus.emit(
                 self,
@@ -1345,7 +1358,7 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
 
     def reset_memories(self, command_type: str) -> None:
@@ -1359,6 +1372,7 @@ class Crew(FlowTrackable, BaseModel):
         Raises:
             ValueError: If an invalid command type is provided.
             RuntimeError: If memory reset operation fails.
+
         """
         VALID_TYPES = frozenset(
             [
@@ -1369,12 +1383,13 @@ class Crew(FlowTrackable, BaseModel):
                 "kickoff_outputs",
                 "all",
                 "external",
-            ]
+            ],
         )
 
         if command_type not in VALID_TYPES:
+            msg = f"Invalid command type. Must be one of: {', '.join(sorted(VALID_TYPES))}"
             raise ValueError(
-                f"Invalid command type. Must be one of: {', '.join(sorted(VALID_TYPES))}"
+                msg,
             )
 
         try:
@@ -1384,7 +1399,7 @@ class Crew(FlowTrackable, BaseModel):
                 self._reset_specific_memory(command_type)
 
         except Exception as e:
-            error_msg = f"Failed to reset {command_type} memory: {str(e)}"
+            error_msg = f"Failed to reset {command_type} memory: {e!s}"
             self._logger.log("error", error_msg)
             raise RuntimeError(error_msg) from e
 
@@ -1408,8 +1423,9 @@ class Crew(FlowTrackable, BaseModel):
                         f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
                     )
                 except Exception as e:
+                    msg = f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {e!s}"
                     raise RuntimeError(
-                        f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
+                        msg,
                     ) from e
 
     def _reset_specific_memory(self, memory_type: str) -> None:
@@ -1420,6 +1436,7 @@ class Crew(FlowTrackable, BaseModel):
 
         Raises:
             RuntimeError: If the specified memory system fails to reset
+
         """
         reset_functions = {
             "long": (getattr(self, "_long_term_memory", None), "long term"),
@@ -1435,7 +1452,8 @@ class Crew(FlowTrackable, BaseModel):
 
         memory_system, name = reset_functions[memory_type]
         if memory_system is None:
-            raise RuntimeError(f"{name} memory system is not initialized")
+            msg = f"{name} memory system is not initialized"
+            raise RuntimeError(msg)
 
         try:
             memory_system.reset()
@@ -1444,6 +1462,7 @@ class Crew(FlowTrackable, BaseModel):
                 f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
             )
         except Exception as e:
+            msg = f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {e!s}"
             raise RuntimeError(
-                f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
+                msg,
             ) from e

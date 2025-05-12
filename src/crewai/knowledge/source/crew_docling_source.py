@@ -1,5 +1,6 @@
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator, List, Optional, Union
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 try:
@@ -7,7 +8,6 @@ try:
     from docling.document_converter import DocumentConverter
     from docling.exceptions import ConversionError
     from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
-    from docling_core.types.doc.document import DoclingDocument
 
     DOCLING_AVAILABLE = True
 except ImportError:
@@ -19,27 +19,33 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 
+if TYPE_CHECKING:
+    from docling_core.types.doc.document import DoclingDocument
+
 
 class CrewDoclingSource(BaseKnowledgeSource):
     """Default Source class for converting documents to markdown or json
     This will auto support PDF, DOCX, and TXT, XLSX, Images, and HTML files without any additional dependencies and follows the docling package as the source of truth.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         if not DOCLING_AVAILABLE:
-            raise ImportError(
+            msg = (
                 "The docling package is required to use CrewDoclingSource. "
                 "Please install it using: uv add docling"
+            )
+            raise ImportError(
+                msg,
             )
         super().__init__(*args, **kwargs)
 
     _logger: Logger = Logger(verbose=True)
 
-    file_path: Optional[List[Union[Path, str]]] = Field(default=None)
-    file_paths: List[Union[Path, str]] = Field(default_factory=list)
-    chunks: List[str] = Field(default_factory=list)
-    safe_file_paths: List[Union[Path, str]] = Field(default_factory=list)
-    content: List["DoclingDocument"] = Field(default_factory=list)
+    file_path: list[Path | str] | None = Field(default=None)
+    file_paths: list[Path | str] = Field(default_factory=list)
+    chunks: list[str] = Field(default_factory=list)
+    safe_file_paths: list[Path | str] = Field(default_factory=list)
+    content: list["DoclingDocument"] = Field(default_factory=list)
     document_converter: "DocumentConverter" = Field(
         default_factory=lambda: DocumentConverter(
             allowed_formats=[
@@ -51,8 +57,8 @@ class CrewDoclingSource(BaseKnowledgeSource):
                 InputFormat.IMAGE,
                 InputFormat.XLSX,
                 InputFormat.PPTX,
-            ]
-        )
+            ],
+        ),
     )
 
     def model_post_init(self, _) -> None:
@@ -66,7 +72,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
         self.safe_file_paths = self.validate_content()
         self.content = self._load_content()
 
-    def _load_content(self) -> List["DoclingDocument"]:
+    def _load_content(self) -> list["DoclingDocument"]:
         try:
             return self._convert_source_to_docling_documents()
         except ConversionError as e:
@@ -75,10 +81,10 @@ class CrewDoclingSource(BaseKnowledgeSource):
                 f"Error loading content: {e}. Supported formats: {self.document_converter.allowed_formats}",
                 "red",
             )
-            raise e
+            raise
         except Exception as e:
             self._logger.log("error", f"Error loading content: {e}")
-            raise e
+            raise
 
     def add(self) -> None:
         if self.content is None:
@@ -88,7 +94,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
             self.chunks.extend(list(new_chunks_iterable))
         self._save_documents()
 
-    def _convert_source_to_docling_documents(self) -> List["DoclingDocument"]:
+    def _convert_source_to_docling_documents(self) -> list["DoclingDocument"]:
         conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)
         return [result.document for result in conv_results_iter]
 
@@ -97,8 +103,8 @@ class CrewDoclingSource(BaseKnowledgeSource):
         for chunk in chunker.chunk(doc):
             yield chunk.text
 
-    def validate_content(self) -> List[Union[Path, str]]:
-        processed_paths: List[Union[Path, str]] = []
+    def validate_content(self) -> list[Path | str]:
+        processed_paths: list[Path | str] = []
         for path in self.file_paths:
             if isinstance(path, str):
                 if path.startswith(("http://", "https://")):
@@ -106,15 +112,18 @@ class CrewDoclingSource(BaseKnowledgeSource):
                         if self._validate_url(path):
                             processed_paths.append(path)
                         else:
-                            raise ValueError(f"Invalid URL format: {path}")
+                            msg = f"Invalid URL format: {path}"
+                            raise ValueError(msg)
                     except Exception as e:
-                        raise ValueError(f"Invalid URL: {path}. Error: {str(e)}")
+                        msg = f"Invalid URL: {path}. Error: {e!s}"
+                        raise ValueError(msg)
                 else:
                     local_path = Path(KNOWLEDGE_DIRECTORY + "/" + path)
                     if local_path.exists():
                         processed_paths.append(local_path)
                     else:
-                        raise FileNotFoundError(f"File not found: {local_path}")
+                        msg = f"File not found: {local_path}"
+                        raise FileNotFoundError(msg)
             else:
                 # this is an instance of Path
                 processed_paths.append(path)
@@ -128,7 +137,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
                     result.scheme in ("http", "https"),
                     result.netloc,
                     len(result.netloc.split(".")) >= 2,  # Ensure domain has TLD
-                ]
+                ],
             )
         except Exception:
             return False

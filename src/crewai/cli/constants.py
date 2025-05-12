@@ -3,31 +3,31 @@ ENV_VARS = {
         {
             "prompt": "Enter your OPENAI API key (press Enter to skip)",
             "key_name": "OPENAI_API_KEY",
-        }
+        },
     ],
     "anthropic": [
         {
             "prompt": "Enter your ANTHROPIC API key (press Enter to skip)",
             "key_name": "ANTHROPIC_API_KEY",
-        }
+        },
     ],
     "gemini": [
         {
             "prompt": "Enter your GEMINI API key from https://ai.dev/apikey (press Enter to skip)",
             "key_name": "GEMINI_API_KEY",
-        }
+        },
     ],
     "nvidia_nim": [
         {
             "prompt": "Enter your NVIDIA API key (press Enter to skip)",
             "key_name": "NVIDIA_NIM_API_KEY",
-        }
+        },
     ],
     "groq": [
         {
             "prompt": "Enter your GROQ API key (press Enter to skip)",
             "key_name": "GROQ_API_KEY",
-        }
+        },
     ],
     "watson": [
         {
@@ -47,7 +47,7 @@ ENV_VARS = {
         {
             "default": True,
             "API_BASE": "http://localhost:11434",
-        }
+        },
     ],
     "bedrock": [
         {
@@ -101,7 +101,7 @@ ENV_VARS = {
         {
             "prompt": "Enter your SambaNovaCloud API key (press Enter to skip)",
             "key_name": "SAMBANOVA_API_KEY",
-        }
+        },
     ],
 }
 

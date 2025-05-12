@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class OutputConverter(BaseModel, ABC):
-    """
-    Abstract base class for converting task results into structured formats.
+    """Abstract base class for converting task results into structured formats.
 
     This class provides a framework for converting unstructured text into
     either Pydantic models or JSON, tailored for specific agent requirements.
@@ -19,6 +18,7 @@ class OutputConverter(BaseModel, ABC):
         model (Any): The target model for structuring the output.
         instructions (str): Specific instructions for the conversion process.
         max_attempts (int): Maximum number of conversion attempts (default: 3).
+
     """
 
     text: str = Field(description="Text to be converted.")
@@ -33,9 +33,7 @@ class OutputConverter(BaseModel, ABC):
     @abstractmethod
     def to_pydantic(self, current_attempt=1) -> BaseModel:
         """Convert text to pydantic."""
-        pass
 
     @abstractmethod
     def to_json(self, current_attempt=1) -> dict:
         """Convert text to json."""
-        pass

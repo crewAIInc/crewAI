@@ -1,7 +1,8 @@
 import inspect
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import yaml
 from dotenv import load_dotenv
@@ -23,11 +24,11 @@ def CrewBase(cls: T) -> T:
         base_directory = Path(inspect.getfile(cls)).parent
 
         original_agents_config_path = getattr(
-            cls, "agents_config", "config/agents.yaml"
+            cls, "agents_config", "config/agents.yaml",
         )
         original_tasks_config_path = getattr(cls, "tasks_config", "config/tasks.yaml")
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
             self.load_configurations()
             self.map_all_agent_variables()
@@ -49,22 +50,22 @@ def CrewBase(cls: T) -> T:
             }
             # Store specific function types
             self._original_tasks = self._filter_functions(
-                self._original_functions, "is_task"
+                self._original_functions, "is_task",
             )
             self._original_agents = self._filter_functions(
-                self._original_functions, "is_agent"
+                self._original_functions, "is_agent",
             )
             self._before_kickoff = self._filter_functions(
-                self._original_functions, "is_before_kickoff"
+                self._original_functions, "is_before_kickoff",
             )
             self._after_kickoff = self._filter_functions(
-                self._original_functions, "is_after_kickoff"
+                self._original_functions, "is_after_kickoff",
             )
             self._kickoff = self._filter_functions(
-                self._original_functions, "is_kickoff"
+                self._original_functions, "is_kickoff",
             )
 
-        def load_configurations(self):
+        def load_configurations(self) -> None:
             """Load agent and task configurations from YAML files."""
             if isinstance(self.original_agents_config_path, str):
                 agents_config_path = (
@@ -75,12 +76,12 @@ def CrewBase(cls: T) -> T:
                 except FileNotFoundError:
                     logging.warning(
                         f"Agent config file not found at {agents_config_path}. "
-                        "Proceeding with empty agent configurations."
+                        "Proceeding with empty agent configurations.",
                     )
                     self.agents_config = {}
             else:
                 logging.warning(
-                    "No agent configuration path provided. Proceeding with empty agent configurations."
+                    "No agent configuration path provided. Proceeding with empty agent configurations.",
                 )
                 self.agents_config = {}
 
@@ -93,22 +94,21 @@ def CrewBase(cls: T) -> T:
                 except FileNotFoundError:
                     logging.warning(
                         f"Task config file not found at {tasks_config_path}. "
-                        "Proceeding with empty task configurations."
+                        "Proceeding with empty task configurations.",
                     )
                     self.tasks_config = {}
             else:
                 logging.warning(
-                    "No task configuration path provided. Proceeding with empty task configurations."
+                    "No task configuration path provided. Proceeding with empty task configurations.",
                 )
                 self.tasks_config = {}
 
         @staticmethod
         def load_yaml(config_path: Path):
             try:
-                with open(config_path, "r", encoding="utf-8") as file:
+                with open(config_path, encoding="utf-8") as file:
                     return yaml.safe_load(file)
             except FileNotFoundError:
-                print(f"File not found: {config_path}")
                 raise
 
         def _get_all_functions(self):
@@ -119,8 +119,8 @@ def CrewBase(cls: T) -> T:
             }
 
         def _filter_functions(
-            self, functions: Dict[str, Callable], attribute: str
-        ) -> Dict[str, Callable]:
+            self, functions: dict[str, Callable], attribute: str,
+        ) -> dict[str, Callable]:
             return {
                 name: func
                 for name, func in functions.items()
@@ -132,7 +132,7 @@ def CrewBase(cls: T) -> T:
             llms = self._filter_functions(all_functions, "is_llm")
             tool_functions = self._filter_functions(all_functions, "is_tool")
             cache_handler_functions = self._filter_functions(
-                all_functions, "is_cache_handler"
+                all_functions, "is_cache_handler",
             )
             callbacks = self._filter_functions(all_functions, "is_callback")
 
@@ -149,11 +149,11 @@ def CrewBase(cls: T) -> T:
         def _map_agent_variables(
             self,
             agent_name: str,
-            agent_info: Dict[str, Any],
-            llms: Dict[str, Callable],
-            tool_functions: Dict[str, Callable],
-            cache_handler_functions: Dict[str, Callable],
-            callbacks: Dict[str, Callable],
+            agent_info: dict[str, Any],
+            llms: dict[str, Callable],
+            tool_functions: dict[str, Callable],
+            cache_handler_functions: dict[str, Callable],
+            callbacks: dict[str, Callable],
         ) -> None:
             if llm := agent_info.get("llm"):
                 try:
@@ -187,12 +187,12 @@ def CrewBase(cls: T) -> T:
             agents = self._filter_functions(all_functions, "is_agent")
             tasks = self._filter_functions(all_functions, "is_task")
             output_json_functions = self._filter_functions(
-                all_functions, "is_output_json"
+                all_functions, "is_output_json",
             )
             tool_functions = self._filter_functions(all_functions, "is_tool")
             callback_functions = self._filter_functions(all_functions, "is_callback")
             output_pydantic_functions = self._filter_functions(
-                all_functions, "is_output_pydantic"
+                all_functions, "is_output_pydantic",
             )
 
             for task_name, task_info in self.tasks_config.items():
@@ -210,13 +210,13 @@ def CrewBase(cls: T) -> T:
         def _map_task_variables(
             self,
             task_name: str,
-            task_info: Dict[str, Any],
-            agents: Dict[str, Callable],
-            tasks: Dict[str, Callable],
-            output_json_functions: Dict[str, Callable],
-            tool_functions: Dict[str, Callable],
-            callback_functions: Dict[str, Callable],
-            output_pydantic_functions: Dict[str, Callable],
+            task_info: dict[str, Any],
+            agents: dict[str, Callable],
+            tasks: dict[str, Callable],
+            output_json_functions: dict[str, Callable],
+            tool_functions: dict[str, Callable],
+            callback_functions: dict[str, Callable],
+            output_pydantic_functions: dict[str, Callable],
         ) -> None:
             if context_list := task_info.get("context"):
                 self.tasks_config[task_name]["context"] = [
@@ -253,4 +253,4 @@ def CrewBase(cls: T) -> T:
     WrappedClass.__name__ = CrewBase.__name__ + "(" + cls.__name__ + ")"
     WrappedClass.__qualname__ = CrewBase.__qualname__ + "(" + cls.__name__ + ")"
 
-    return cast(T, WrappedClass)
+    return cast("T", WrappedClass)

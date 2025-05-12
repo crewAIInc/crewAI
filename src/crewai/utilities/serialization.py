@@ -1,13 +1,13 @@
 import json
 import uuid
 from datetime import date, datetime
-from typing import Any, Dict, List, Union
+from typing import Any, Union
 
 from pydantic import BaseModel
 
 SerializablePrimitive = Union[str, int, float, bool, None]
 Serializable = Union[
-    SerializablePrimitive, List["Serializable"], Dict[str, "Serializable"]
+    SerializablePrimitive, list["Serializable"], dict[str, "Serializable"],
 ]
 
 
@@ -30,6 +30,7 @@ def to_serializable(
 
     Returns:
         Serializable: A JSON-compatible structure.
+
     """
     if _current_depth >= max_depth:
         return repr(obj)
@@ -39,18 +40,18 @@ def to_serializable(
 
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
-    elif isinstance(obj, uuid.UUID):
+    if isinstance(obj, uuid.UUID):
         return str(obj)
-    elif isinstance(obj, (date, datetime)):
+    if isinstance(obj, (date, datetime)):
         return obj.isoformat()
-    elif isinstance(obj, (list, tuple, set)):
+    if isinstance(obj, (list, tuple, set)):
         return [
             to_serializable(
-                item, max_depth=max_depth, _current_depth=_current_depth + 1
+                item, max_depth=max_depth, _current_depth=_current_depth + 1,
             )
             for item in obj
         ]
-    elif isinstance(obj, dict):
+    if isinstance(obj, dict):
         return {
             _to_serializable_key(key): to_serializable(
                 obj=value,
@@ -61,20 +62,19 @@ def to_serializable(
             for key, value in obj.items()
             if key not in exclude
         }
-    elif isinstance(obj, BaseModel):
+    if isinstance(obj, BaseModel):
         return to_serializable(
             obj=obj.model_dump(exclude=exclude),
             max_depth=max_depth,
             _current_depth=_current_depth + 1,
         )
-    else:
-        return repr(obj)
+    return repr(obj)
 
 
 def _to_serializable_key(key: Any) -> str:
     if isinstance(key, (str, int)):
         return str(key)
-    return f"key_{id(key)}_{repr(key)}"
+    return f"key_{id(key)}_{key!r}"
 
 
 def to_string(obj: Any) -> str | None:
@@ -85,9 +85,9 @@ def to_string(obj: Any) -> str | None:
 
     Returns:
         str | None: A JSON-formatted string or `None` if empty.
+
     """
     serializable = to_serializable(obj)
     if serializable is None:
         return None
-    else:
-        return json.dumps(serializable)
+    return json.dumps(serializable)

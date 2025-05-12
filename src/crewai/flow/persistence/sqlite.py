@@ -1,12 +1,10 @@
-"""
-SQLite-based implementation of flow state persistence.
-"""
+"""SQLite-based implementation of flow state persistence."""
 
 import json
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -23,7 +21,7 @@ class SQLiteFlowPersistence(FlowPersistence):
 
     db_path: str
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None) -> None:
         """Initialize SQLite persistence.
 
         Args:
@@ -32,6 +30,7 @@ class SQLiteFlowPersistence(FlowPersistence):
 
         Raises:
             ValueError: If db_path is invalid
+
         """
         from crewai.utilities.paths import db_storage_path
 
@@ -39,7 +38,8 @@ class SQLiteFlowPersistence(FlowPersistence):
         path = db_path or str(Path(db_storage_path()) / "flow_states.db")
 
         if not path:
-            raise ValueError("Database path must be provided")
+            msg = "Database path must be provided"
+            raise ValueError(msg)
 
         self.db_path = path  # Now mypy knows this is str
         self.init_db()
@@ -56,21 +56,21 @@ class SQLiteFlowPersistence(FlowPersistence):
                 timestamp DATETIME NOT NULL,
                 state_json TEXT NOT NULL
             )
-            """
+            """,
             )
             # Add index for faster UUID lookups
             conn.execute(
                 """
             CREATE INDEX IF NOT EXISTS idx_flow_states_uuid
             ON flow_states(flow_uuid)
-            """
+            """,
             )
 
     def save_state(
         self,
         flow_uuid: str,
         method_name: str,
-        state_data: Union[Dict[str, Any], BaseModel],
+        state_data: dict[str, Any] | BaseModel,
     ) -> None:
         """Save the current flow state to SQLite.
 
@@ -78,6 +78,7 @@ class SQLiteFlowPersistence(FlowPersistence):
             flow_uuid: Unique identifier for the flow instance
             method_name: Name of the method that just completed
             state_data: Current state data (either dict or Pydantic model)
+
         """
         # Convert state_data to dict, handling both Pydantic and dict cases
         if isinstance(state_data, BaseModel):
@@ -85,8 +86,9 @@ class SQLiteFlowPersistence(FlowPersistence):
         elif isinstance(state_data, dict):
             state_dict = state_data
         else:
+            msg = f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
             raise ValueError(
-                f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
+                msg,
             )
 
         with sqlite3.connect(self.db_path) as conn:
@@ -107,7 +109,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                 ),
             )
 
-    def load_state(self, flow_uuid: str) -> Optional[Dict[str, Any]]:
+    def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
         """Load the most recent state for a given flow UUID.
 
         Args:
@@ -115,6 +117,7 @@ class SQLiteFlowPersistence(FlowPersistence):
 
         Returns:
             The most recent state as a dictionary, or None if no state exists
+
         """
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(

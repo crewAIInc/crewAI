@@ -1,3 +1,4 @@
+import contextlib
 import time
 from typing import TYPE_CHECKING
 
@@ -43,8 +44,7 @@ class CrewAgentExecutorMixin:
                         },
                         agent=self.agent.role,
                     )
-            except Exception as e:
-                print(f"Failed to add to short term memory: {e}")
+            except Exception:
                 pass
 
     def _create_external_memory(self, output) -> None:
@@ -56,7 +56,7 @@ class CrewAgentExecutorMixin:
             and hasattr(self.crew, "_external_memory")
             and self.crew._external_memory
         ):
-            try:
+            with contextlib.suppress(Exception):
                 self.crew._external_memory.save(
                     value=output.text,
                     metadata={
@@ -64,9 +64,6 @@ class CrewAgentExecutorMixin:
                     },
                     agent=self.agent.role,
                 )
-            except Exception as e:
-                print(f"Failed to add to external memory: {e}")
-                pass
 
     def _create_long_term_memory(self, output) -> None:
         """Create and save long-term and entity memory items based on evaluation."""
@@ -103,15 +100,13 @@ class CrewAgentExecutorMixin:
                         type=entity.type,
                         description=entity.description,
                         relationships="\n".join(
-                            [f"- {r}" for r in entity.relationships]
+                            [f"- {r}" for r in entity.relationships],
                         ),
                     )
                     self.crew._entity_memory.save(entity_memory)
-            except AttributeError as e:
-                print(f"Missing attributes for long term memory: {e}")
+            except AttributeError:
                 pass
-            except Exception as e:
-                print(f"Failed to add to long term memory: {e}")
+            except Exception:
                 pass
         elif (
             self.crew
@@ -126,7 +121,7 @@ class CrewAgentExecutorMixin:
     def _ask_human_input(self, final_answer: str) -> str:
         """Prompt human input with mode-appropriate messaging."""
         self._printer.print(
-            content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"
+            content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m",
         )
 
         # Training mode prompt (single iteration)

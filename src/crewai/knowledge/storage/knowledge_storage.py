@@ -4,12 +4,11 @@ import io
 import logging
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import chromadb
 import chromadb.errors
 from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
 from chromadb.config import Settings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
@@ -18,6 +17,9 @@ from crewai.utilities.chromadb import sanitize_collection_name
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
+
+if TYPE_CHECKING:
+    from chromadb.api.types import OneOrMany
 
 
 @contextlib.contextmanager
@@ -38,30 +40,29 @@ def suppress_logging(
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
-    """
-    Extends Storage to handle embeddings for memory entries, improving
+    """Extends Storage to handle embeddings for memory entries, improving
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
-    collection_name: Optional[str] = "knowledge"
-    app: Optional[ClientAPI] = None
+    collection: chromadb.Collection | None = None
+    collection_name: str | None = "knowledge"
+    app: ClientAPI | None = None
 
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
-        collection_name: Optional[str] = None,
-    ):
+        embedder: dict[str, Any] | None = None,
+        collection_name: str | None = None,
+    ) -> None:
         self.collection_name = collection_name
         self._set_embedder_config(embedder)
 
     def search(
         self,
-        query: List[str],
+        query: list[str],
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filter: dict | None = None,
         score_threshold: float = 0.35,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         with suppress_logging():
             if self.collection:
                 fetched = self.collection.query(
@@ -80,10 +81,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     if result["score"] >= score_threshold:
                         results.append(result)
                 return results
-            else:
-                raise Exception("Collection not initialized")
+            msg = "Collection not initialized"
+            raise Exception(msg)
 
-    def initialize_knowledge_storage(self):
+    def initialize_knowledge_storage(self) -> None:
         base_path = os.path.join(db_storage_path(), "knowledge")
         chroma_client = chromadb.PersistentClient(
             path=base_path,
@@ -104,11 +105,13 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     embedding_function=self.embedder,
                 )
             else:
-                raise Exception("Vector Database Client not initialized")
+                msg = "Vector Database Client not initialized"
+                raise Exception(msg)
         except Exception:
-            raise Exception("Failed to create or get collection")
+            msg = "Failed to create or get collection"
+            raise Exception(msg)
 
-    def reset(self):
+    def reset(self) -> None:
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
         if not self.app:
             self.app = chromadb.PersistentClient(
@@ -123,11 +126,12 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def save(
         self,
-        documents: List[str],
-        metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
-    ):
+        documents: list[str],
+        metadata: dict[str, Any] | list[dict[str, Any]] | None = None,
+    ) -> None:
         if not self.collection:
-            raise Exception("Collection not initialized")
+            msg = "Collection not initialized"
+            raise Exception(msg)
 
         try:
             # Create a dictionary to store unique documents
@@ -156,7 +160,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 filtered_ids.append(doc_id)
 
             # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
+            final_metadata: OneOrMany[chromadb.Metadata] | None = (
                 None if all(m is None for m in filtered_metadata) else filtered_metadata
             )
 
@@ -171,10 +175,13 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
                 "red",
             )
-            raise ValueError(
+            msg = (
                 "Embedding dimension mismatch. Make sure you're using the same embedding model "
                 "across all operations with this collection."
                 "Try resetting the collection using `crewai reset-memories -a`"
+            )
+            raise ValueError(
+                msg,
             ) from e
         except Exception as e:
             Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
@@ -186,15 +193,16 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         )
 
         return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small",
         )
 
-    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
+    def _set_embedder_config(self, embedder: dict[str, Any] | None = None) -> None:
         """Set the embedding configuration for the knowledge storage.
 
         Args:
             embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
                 If None or empty, defaults to the default embedding function.
+
         """
         self.embedder = (
             EmbeddingConfigurator().configure_embedder(embedder)

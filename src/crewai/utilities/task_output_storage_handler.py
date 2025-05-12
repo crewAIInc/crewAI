@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -12,12 +12,13 @@ from crewai.task import Task
 
 class ExecutionLog(BaseModel):
     """Represents a log entry for task execution."""
+
     task_id: str
-    expected_output: Optional[str] = None
-    output: Dict[str, Any]
+    expected_output: str | None = None
+    output: dict[str, Any]
     timestamp: datetime = Field(default_factory=datetime.now)
     task_index: int
-    inputs: Dict[str, Any] = Field(default_factory=dict)
+    inputs: dict[str, Any] = Field(default_factory=dict)
     was_replayed: bool = False
 
     def __getitem__(self, key: str) -> Any:
@@ -30,10 +31,11 @@ class TaskOutputStorageHandler:
     def __init__(self) -> None:
         self.storage = KickoffTaskOutputsSQLiteStorage()
 
-    def update(self, task_index: int, log: Dict[str, Any]):
+    def update(self, task_index: int, log: dict[str, Any]) -> None:
         saved_outputs = self.load()
         if saved_outputs is None:
-            raise ValueError("Logs cannot be None")
+            msg = "Logs cannot be None"
+            raise ValueError(msg)
 
         if log.get("was_replayed", False):
             replayed = {
@@ -53,15 +55,17 @@ class TaskOutputStorageHandler:
     def add(
         self,
         task: Task,
-        output: Dict[str, Any],
+        output: dict[str, Any],
         task_index: int,
-        inputs: Dict[str, Any] = {},
+        inputs: dict[str, Any] | None = None,
         was_replayed: bool = False,
-    ):
+    ) -> None:
+        if inputs is None:
+            inputs = {}
         self.storage.add(task, output, task_index, was_replayed, inputs)
 
-    def reset(self):
+    def reset(self) -> None:
         self.storage.delete_all()
 
-    def load(self) -> Optional[List[Dict[str, Any]]]:
+    def load(self) -> list[dict[str, Any]] | None:
         return self.storage.load()

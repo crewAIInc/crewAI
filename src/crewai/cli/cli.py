@@ -1,6 +1,4 @@
-import os
 from importlib.metadata import version as get_version
-from typing import Optional, Tuple
 
 import click
 
@@ -28,7 +26,7 @@ from .update_crew import update_crew
 
 @click.group()
 @click.version_option(get_version("crewai"))
-def crewai():
+def crewai() -> None:
     """Top-level command group for crewai."""
 
 
@@ -37,7 +35,7 @@ def crewai():
 @click.argument("name")
 @click.option("--provider", type=str, help="The provider to use for the crew")
 @click.option("--skip_provider", is_flag=True, help="Skip provider validation")
-def create(type, name, provider, skip_provider=False):
+def create(type, name, provider, skip_provider=False) -> None:
     """Create a new crew, or flow."""
     if type == "crew":
         create_crew(name, provider, skip_provider)
@@ -49,9 +47,9 @@ def create(type, name, provider, skip_provider=False):
 
 @crewai.command()
 @click.option(
-    "--tools", is_flag=True, help="Show the installed version of crewai tools"
+    "--tools", is_flag=True, help="Show the installed version of crewai tools",
 )
-def version(tools):
+def version(tools) -> None:
     """Show the installed version of crewai."""
     try:
         crewai_version = get_version("crewai")
@@ -82,7 +80,7 @@ def version(tools):
     default="trained_agents_data.pkl",
     help="Path to a custom file for training",
 )
-def train(n_iterations: int, filename: str):
+def train(n_iterations: int, filename: str) -> None:
     """Train the crew."""
     click.echo(f"Training the Crew for {n_iterations} iterations")
     train_crew(n_iterations, filename)
@@ -96,11 +94,11 @@ def train(n_iterations: int, filename: str):
     help="Replay the crew from this task ID, including all subsequent tasks.",
 )
 def replay(task_id: str) -> None:
-    """
-    Replay the crew execution from a specific task.
+    """Replay the crew execution from a specific task.
 
     Args:
         task_id (str): The ID of the task to replay from.
+
     """
     try:
         click.echo(f"Replaying the crew from task {task_id}")
@@ -111,16 +109,14 @@ def replay(task_id: str) -> None:
 
 @crewai.command()
 def log_tasks_outputs() -> None:
-    """
-    Retrieve your latest crew.kickoff() task outputs.
-    """
+    """Retrieve your latest crew.kickoff() task outputs."""
     try:
         storage = KickoffTaskOutputsSQLiteStorage()
         tasks = storage.load()
 
         if not tasks:
             click.echo(
-                "No task outputs found. Only crew kickoff task outputs are logged."
+                "No task outputs found. Only crew kickoff task outputs are logged.",
             )
             return
 
@@ -153,13 +149,11 @@ def reset_memories(
     kickoff_outputs: bool,
     all: bool,
 ) -> None:
-    """
-    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved.
-    """
+    """Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved."""
     try:
         if not all and not (long or short or entities or knowledge or kickoff_outputs):
             click.echo(
-                "Please specify at least one memory type to reset using the appropriate flags."
+                "Please specify at least one memory type to reset using the appropriate flags.",
             )
             return
         reset_memories_command(long, short, entities, knowledge, kickoff_outputs, all)
@@ -182,71 +176,69 @@ def reset_memories(
     default="gpt-4o-mini",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
-def test(n_iterations: int, model: str):
+def test(n_iterations: int, model: str) -> None:
     """Test the crew and evaluate the results."""
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
     evaluate_crew(n_iterations, model)
 
 
 @crewai.command(
-    context_settings=dict(
-        ignore_unknown_options=True,
-        allow_extra_args=True,
-    )
+    context_settings={
+        "ignore_unknown_options": True,
+        "allow_extra_args": True,
+    },
 )
 @click.pass_context
-def install(context):
+def install(context) -> None:
     """Install the Crew."""
     install_crew(context.args)
 
 
 @crewai.command()
-def run():
+def run() -> None:
     """Run the Crew."""
     run_crew()
 
 
 @crewai.command()
-def update():
+def update() -> None:
     """Update the pyproject.toml of the Crew project to use uv."""
     update_crew()
 
 
 @crewai.command()
-def signup():
+def signup() -> None:
     """Sign Up/Login to CrewAI+."""
     AuthenticationCommand().signup()
 
 
 @crewai.command()
-def login():
+def login() -> None:
     """Sign Up/Login to CrewAI+."""
     AuthenticationCommand().signup()
 
 
 # DEPLOY CREWAI+ COMMANDS
 @crewai.group()
-def deploy():
+def deploy() -> None:
     """Deploy the Crew CLI group."""
-    pass
 
 
 @crewai.group()
-def tool():
+def tool() -> None:
     """Tool Repository related commands."""
-    pass
 
 
 @deploy.command(name="create")
 @click.option("-y", "--yes", is_flag=True, help="Skip the confirmation prompt")
-def deploy_create(yes: bool):
+def deploy_create(yes: bool) -> None:
     """Create a Crew deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.create_crew(yes)
 
 
 @deploy.command(name="list")
-def deploy_list():
+def deploy_list() -> None:
     """List all deployments."""
     deploy_cmd = DeployCommand()
     deploy_cmd.list_crews()
@@ -254,7 +246,7 @@ def deploy_list():
 
 @deploy.command(name="push")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_push(uuid: Optional[str]):
+def deploy_push(uuid: str | None) -> None:
     """Deploy the Crew."""
     deploy_cmd = DeployCommand()
     deploy_cmd.deploy(uuid=uuid)
@@ -262,7 +254,7 @@ def deploy_push(uuid: Optional[str]):
 
 @deploy.command(name="status")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deply_status(uuid: Optional[str]):
+def deply_status(uuid: str | None) -> None:
     """Get the status of a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_status(uuid=uuid)
@@ -270,7 +262,7 @@ def deply_status(uuid: Optional[str]):
 
 @deploy.command(name="logs")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_logs(uuid: Optional[str]):
+def deploy_logs(uuid: str | None) -> None:
     """Get the logs of a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_logs(uuid=uuid)
@@ -278,7 +270,7 @@ def deploy_logs(uuid: Optional[str]):
 
 @deploy.command(name="remove")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_remove(uuid: Optional[str]):
+def deploy_remove(uuid: str | None) -> None:
     """Remove a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.remove_crew(uuid=uuid)
@@ -286,14 +278,14 @@ def deploy_remove(uuid: Optional[str]):
 
 @tool.command(name="create")
 @click.argument("handle")
-def tool_create(handle: str):
+def tool_create(handle: str) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.create(handle)
 
 
 @tool.command(name="install")
 @click.argument("handle")
-def tool_install(handle: str):
+def tool_install(handle: str) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.install(handle)
@@ -309,27 +301,26 @@ def tool_install(handle: str):
 )
 @click.option("--public", "is_public", flag_value=True, default=False)
 @click.option("--private", "is_public", flag_value=False)
-def tool_publish(is_public: bool, force: bool):
+def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.publish(is_public, force)
 
 
 @crewai.group()
-def flow():
+def flow() -> None:
     """Flow related commands."""
-    pass
 
 
 @flow.command(name="kickoff")
-def flow_run():
+def flow_run() -> None:
     """Kickoff the Flow."""
     click.echo("Running the Flow")
     kickoff_flow()
 
 
 @flow.command(name="plot")
-def flow_plot():
+def flow_plot() -> None:
     """Plot the Flow."""
     click.echo("Plotting the Flow")
     plot_flow()
@@ -337,20 +328,19 @@ def flow_plot():
 
 @flow.command(name="add-crew")
 @click.argument("crew_name")
-def flow_add_crew(crew_name):
+def flow_add_crew(crew_name) -> None:
     """Add a crew to an existing flow."""
     click.echo(f"Adding crew {crew_name} to the flow")
     add_crew_to_flow(crew_name)
 
 
 @crewai.command()
-def chat():
-    """
-    Start a conversation with the Crew, collecting user-supplied inputs,
+def chat() -> None:
+    """Start a conversation with the Crew, collecting user-supplied inputs,
     and using the Chat LLM to generate responses.
     """
     click.secho(
-        "\nStarting a conversation with the Crew\n" "Type 'exit' or Ctrl+C to quit.\n",
+        "\nStarting a conversation with the Crew\nType 'exit' or Ctrl+C to quit.\n",
     )
 
     run_chat()

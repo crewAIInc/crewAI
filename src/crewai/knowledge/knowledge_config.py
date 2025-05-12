@@ -7,6 +7,7 @@ class KnowledgeConfig(BaseModel):
     Args:
         results_limit (int): The number of relevant documents to return.
         score_threshold (float): The minimum score for a document to be considered relevant.
+
     """
 
     results_limit: int = Field(default=3, description="The number of results to return")

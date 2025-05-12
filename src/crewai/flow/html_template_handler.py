@@ -1,16 +1,14 @@
 import base64
 import re
-from pathlib import Path
 
-from crewai.flow.path_utils import safe_path_join, validate_path_exists
+from crewai.flow.path_utils import validate_path_exists
 
 
 class HTMLTemplateHandler:
     """Handles HTML template processing and generation for flow visualization diagrams."""
 
-    def __init__(self, template_path, logo_path):
-        """
-        Initialize HTMLTemplateHandler with validated template and logo paths.
+    def __init__(self, template_path, logo_path) -> None:
+        """Initialize HTMLTemplateHandler with validated template and logo paths.
 
         Parameters
         ----------
@@ -23,16 +21,18 @@ class HTMLTemplateHandler:
         ------
         ValueError
             If template or logo paths are invalid or files don't exist.
+
         """
         try:
             self.template_path = validate_path_exists(template_path, "file")
             self.logo_path = validate_path_exists(logo_path, "file")
         except ValueError as e:
-            raise ValueError(f"Invalid template or logo path: {e}")
+            msg = f"Invalid template or logo path: {e}"
+            raise ValueError(msg)
 
     def read_template(self):
         """Read and return the HTML template file contents."""
-        with open(self.template_path, "r", encoding="utf-8") as f:
+        with open(self.template_path, encoding="utf-8") as f:
             return f.read()
 
     def encode_logo(self):
@@ -81,13 +81,12 @@ class HTMLTemplateHandler:
 
         final_html_content = html_template.replace("{{ title }}", title)
         final_html_content = final_html_content.replace(
-            "{{ network_content }}", network_body
+            "{{ network_content }}", network_body,
         )
         final_html_content = final_html_content.replace(
-            "{{ logo_svg_base64 }}", logo_svg_base64
+            "{{ logo_svg_base64 }}", logo_svg_base64,
         )
-        final_html_content = final_html_content.replace(
-            "<!-- LEGEND_ITEMS_PLACEHOLDER -->", legend_items_html
+        return final_html_content.replace(
+            "<!-- LEGEND_ITEMS_PLACEHOLDER -->", legend_items_html,
         )
 
-        return final_html_content

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import aisuite as ai
 
@@ -6,17 +6,17 @@ from crewai.llms.base_llm import BaseLLM
 
 
 class AISuiteLLM(BaseLLM):
-    def __init__(self, model: str, temperature: Optional[float] = None, **kwargs):
+    def __init__(self, model: str, temperature: float | None = None, **kwargs) -> None:
         super().__init__(model, temperature, **kwargs)
         self.client = ai.Client()
 
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Union[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+    ) -> str | Any:
         completion_params = self._prepare_completion_params(messages, tools)
         response = self.client.chat.completions.create(**completion_params)
 
@@ -24,9 +24,9 @@ class AISuiteLLM(BaseLLM):
 
     def _prepare_completion_params(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-    ) -> Dict[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+    ) -> dict[str, Any]:
         return {
             "model": self.model,
             "messages": messages,

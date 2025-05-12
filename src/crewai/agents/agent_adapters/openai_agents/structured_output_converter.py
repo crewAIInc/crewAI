@@ -7,8 +7,7 @@ from crewai.utilities.i18n import I18N
 
 
 class OpenAIConverterAdapter(BaseConverterAdapter):
-    """
-    Adapter for handling structured output conversion in OpenAI agents.
+    """Adapter for handling structured output conversion in OpenAI agents.
 
     This adapter enhances the OpenAI agent to handle structured output formats
     and post-processes the results when needed.
@@ -17,21 +16,22 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         _output_format: The expected output format (json, pydantic, or None)
         _schema: The schema description for the expected output
         _output_model: The Pydantic model for the output
+
     """
 
-    def __init__(self, agent_adapter):
-        """Initialize the converter adapter with a reference to the agent adapter"""
+    def __init__(self, agent_adapter) -> None:
+        """Initialize the converter adapter with a reference to the agent adapter."""
         self.agent_adapter = agent_adapter
         self._output_format = None
         self._schema = None
         self._output_model = None
 
     def configure_structured_output(self, task) -> None:
-        """
-        Configure the structured output for OpenAI agent based on task requirements.
+        """Configure the structured output for OpenAI agent based on task requirements.
 
         Args:
             task: The task containing output format requirements
+
         """
         # Reset configuration
         self._output_format = None
@@ -55,14 +55,14 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
             self._output_model = task.output_pydantic
 
     def enhance_system_prompt(self, base_prompt: str) -> str:
-        """
-        Enhance the base system prompt with structured output requirements if needed.
+        """Enhance the base system prompt with structured output requirements if needed.
 
         Args:
             base_prompt: The original system prompt
 
         Returns:
             Enhanced system prompt with output format instructions if needed
+
         """
         if not self._output_format:
             return base_prompt
@@ -76,8 +76,7 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         return f"{base_prompt}\n\n{output_schema}"
 
     def post_process_result(self, result: str) -> str:
-        """
-        Post-process the result to ensure it matches the expected format.
+        """Post-process the result to ensure it matches the expected format.
 
         This method attempts to extract valid JSON from the result if necessary.
 
@@ -86,6 +85,7 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
 
         Returns:
             Processed result conforming to the expected output format
+
         """
         if not self._output_format:
             return result
