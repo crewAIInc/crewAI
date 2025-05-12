@@ -1446,12 +1446,13 @@ class Crew(FlowTrackable, BaseModel):
         default_reset = lambda memory: memory.reset()
         knowledge_reset = lambda memory: self.reset_knowledge(memory)
         
-        # Get knowledge storages for agents and crew
-        agent_knowledge_storages = [getattr(agent, "knowledge", None) for agent in self.agents 
+        # Get knowledge for agents 
+        agent_knowledges = [getattr(agent, "knowledge", None) for agent in self.agents 
                                     if getattr(agent, "knowledge", None) is not None]
+        
+        # Get knowledge for crew and agents
         crew_knowledge = getattr(self, "knowledge", None)
-        crew_and_agent_knowledge_storages = [crew_knowledge] if crew_knowledge is not None else []
-        crew_and_agent_knowledge_storages.extend(agent_knowledge_storages)
+        crew_and_agent_knowledges = [crew_knowledge] if crew_knowledge is not None else [] + agent_knowledges
         
         return {
             'short': {
@@ -1480,18 +1481,18 @@ class Crew(FlowTrackable, BaseModel):
                 'name': 'Task Output'
             },
             'knowledge': {
-                'system': crew_and_agent_knowledge_storages if crew_and_agent_knowledge_storages else None,
+                'system': crew_and_agent_knowledges if crew_and_agent_knowledges else None,
                 'reset': knowledge_reset,
                 'name': 'Crew Knowledge and Agent Knowledge'
             },
             'agent_knowledge': {
-                'system': agent_knowledge_storages if agent_knowledge_storages else None,
+                'system': agent_knowledges if agent_knowledges else None,
                 'reset': knowledge_reset,
                 'name': 'Agent Knowledge'
             }
         }
 
-    def reset_knowledge(self, knowledge_storage: List[Knowledge]) -> None:
+    def reset_knowledge(self, knowledges: List[Knowledge]) -> None:
         """Reset crew and agent knowledge storage."""
-        for ks in knowledge_storage:
+        for ks in knowledges:
             ks.reset()
