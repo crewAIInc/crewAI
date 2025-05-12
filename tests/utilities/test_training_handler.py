@@ -5,14 +5,14 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 class InternalCrewTrainingHandler(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.handler = CrewTrainingHandler("trained_data.pkl")
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         os.remove("trained_data.pkl")
         del self.handler
 
-    def test_save_trained_data(self):
+    def test_save_trained_data(self) -> None:
         agent_id = "agent1"
         trained_data = {"param1": 1, "param2": 2}
         self.handler.save_trained_data(agent_id, trained_data)
@@ -21,7 +21,7 @@ class InternalCrewTrainingHandler(unittest.TestCase):
         data = self.handler.load()
         assert data[agent_id] == trained_data
 
-    def test_append_existing_agent(self):
+    def test_append_existing_agent(self) -> None:
         train_iteration = 1
         agent_id = "agent1"
         new_data = {"param3": 3, "param4": 4}
@@ -31,7 +31,7 @@ class InternalCrewTrainingHandler(unittest.TestCase):
         data = self.handler.load()
         assert data[agent_id][train_iteration] == new_data
 
-    def test_append_new_agent(self):
+    def test_append_new_agent(self) -> None:
         train_iteration = 1
         agent_id = "agent2"
         new_data = {"param5": 5, "param6": 6}

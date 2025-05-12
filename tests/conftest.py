@@ -19,8 +19,9 @@ def setup_test_environment():
 
         # Validate that the directory was created successfully
         if not storage_dir.exists() or not storage_dir.is_dir():
+            msg = f"Failed to create test storage directory: {storage_dir}"
             raise RuntimeError(
-                f"Failed to create test storage directory: {storage_dir}"
+                msg,
             )
 
         # Verify directory permissions
@@ -29,9 +30,10 @@ def setup_test_environment():
             test_file = storage_dir / ".permissions_test"
             test_file.touch()
             test_file.unlink()
-        except (OSError, IOError) as e:
+        except OSError as e:
+            msg = f"Test storage directory {storage_dir} is not writable: {e}"
             raise RuntimeError(
-                f"Test storage directory {storage_dir} is not writable: {e}"
+                msg,
             )
 
         # Set environment variable to point to the test storage directory

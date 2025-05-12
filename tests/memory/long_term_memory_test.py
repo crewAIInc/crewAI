@@ -6,11 +6,11 @@ from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 
 @pytest.fixture
 def long_term_memory():
-    """Fixture to create a LongTermMemory instance"""
+    """Fixture to create a LongTermMemory instance."""
     return LongTermMemory()
 
 
-def test_save_and_search(long_term_memory):
+def test_save_and_search(long_term_memory) -> None:
     memory = LongTermMemoryItem(
         agent="test_agent",
         task="test_task",

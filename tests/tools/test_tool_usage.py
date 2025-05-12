@@ -20,10 +20,10 @@ from crewai.utilities.events.tool_usage_events import (
 
 class RandomNumberToolInput(BaseModel):
     min_value: int = Field(
-        ..., description="The minimum value of the range (inclusive)"
+        ..., description="The minimum value of the range (inclusive)",
     )
     max_value: int = Field(
-        ..., description="The maximum value of the range (inclusive)"
+        ..., description="The maximum value of the range (inclusive)",
     )
 
 
@@ -52,19 +52,19 @@ example_task = Task(
 )
 
 
-def test_random_number_tool_range():
+def test_random_number_tool_range() -> None:
     tool = RandomNumberTool()
     result = tool._run(1, 10)
     assert 1 <= result <= 10
 
 
-def test_random_number_tool_invalid_range():
+def test_random_number_tool_invalid_range() -> None:
     tool = RandomNumberTool()
     with pytest.raises(ValueError):
         tool._run(10, 1)  # min_value > max_value
 
 
-def test_random_number_tool_schema():
+def test_random_number_tool_schema() -> None:
     tool = RandomNumberTool()
 
     # Get the schema using model_json_schema()
@@ -93,7 +93,7 @@ def test_random_number_tool_schema():
     )
 
 
-def test_tool_usage_render():
+def test_tool_usage_render() -> None:
     tool = RandomNumberTool()
 
     tool_usage = ToolUsage(
@@ -128,7 +128,7 @@ def test_tool_usage_render():
     )
 
 
-def test_validate_tool_input_booleans_and_none():
+def test_validate_tool_input_booleans_and_none() -> None:
     # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -147,7 +147,7 @@ def test_validate_tool_input_booleans_and_none():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_mixed_types():
+def test_validate_tool_input_mixed_types() -> None:
     # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -166,7 +166,7 @@ def test_validate_tool_input_mixed_types():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_single_quotes():
+def test_validate_tool_input_single_quotes() -> None:
     # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -185,7 +185,7 @@ def test_validate_tool_input_single_quotes():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_invalid_json_repairable():
+def test_validate_tool_input_invalid_json_repairable() -> None:
     # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -204,7 +204,7 @@ def test_validate_tool_input_invalid_json_repairable():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_with_special_characters():
+def test_validate_tool_input_with_special_characters() -> None:
     # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -223,7 +223,7 @@ def test_validate_tool_input_with_special_characters():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_none_input():
+def test_validate_tool_input_none_input() -> None:
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -237,7 +237,7 @@ def test_validate_tool_input_none_input():
     assert arguments == {}
 
 
-def test_validate_tool_input_valid_json():
+def test_validate_tool_input_valid_json() -> None:
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -254,7 +254,7 @@ def test_validate_tool_input_valid_json():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_python_dict():
+def test_validate_tool_input_python_dict() -> None:
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -271,7 +271,7 @@ def test_validate_tool_input_python_dict():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_json5_unquoted_keys():
+def test_validate_tool_input_json5_unquoted_keys() -> None:
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -288,7 +288,7 @@ def test_validate_tool_input_json5_unquoted_keys():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_with_trailing_commas():
+def test_validate_tool_input_with_trailing_commas() -> None:
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -305,7 +305,7 @@ def test_validate_tool_input_with_trailing_commas():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_invalid_input():
+def test_validate_tool_input_invalid_input() -> None:
     # Create mock agent with proper string values
     mock_agent = MagicMock()
     mock_agent.key = "test_agent_key"  # Must be a string
@@ -348,7 +348,7 @@ def test_validate_tool_input_invalid_input():
     assert arguments == {}
 
 
-def test_validate_tool_input_complex_structure():
+def test_validate_tool_input_complex_structure() -> None:
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -384,7 +384,7 @@ def test_validate_tool_input_complex_structure():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_code_content():
+def test_validate_tool_input_code_content() -> None:
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -404,7 +404,7 @@ def test_validate_tool_input_code_content():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_with_escaped_quotes():
+def test_validate_tool_input_with_escaped_quotes() -> None:
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -421,7 +421,7 @@ def test_validate_tool_input_with_escaped_quotes():
     assert arguments == expected_arguments
 
 
-def test_validate_tool_input_large_json_content():
+def test_validate_tool_input_large_json_content() -> None:
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -441,7 +441,7 @@ def test_validate_tool_input_large_json_content():
     assert arguments == expected_arguments
 
 
-def test_tool_selection_error_event_direct():
+def test_tool_selection_error_event_direct() -> None:
     """Test tool selection error event emission directly from ToolUsage class."""
     mock_agent = MagicMock()
     mock_agent.key = "test_key"
@@ -473,10 +473,10 @@ def test_tool_selection_error_event_direct():
     received_events = []
 
     @crewai_event_bus.on(ToolSelectionErrorEvent)
-    def event_handler(source, event):
+    def event_handler(source, event) -> None:
         received_events.append(event)
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception):
         tool_usage._select_tool("Non Existent Tool")
     assert len(received_events) == 1
     event = received_events[0]
@@ -490,7 +490,7 @@ def test_tool_selection_error_event_direct():
     assert "don't exist" in event.error
 
     received_events.clear()
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception):
         tool_usage._select_tool("")
 
     assert len(received_events) == 1
@@ -504,7 +504,7 @@ def test_tool_selection_error_event_direct():
     assert "forgot the Action name" in event.error
 
 
-def test_tool_validate_input_error_event():
+def test_tool_validate_input_error_event() -> None:
     """Test tool validation input error event emission from ToolUsage class."""
     # Mock agent and required components
     mock_agent = MagicMock()
@@ -558,12 +558,12 @@ def test_tool_validate_input_error_event():
         received_events = []
 
         @crewai_event_bus.on(ToolValidateInputErrorEvent)
-        def event_handler(source, event):
+        def event_handler(source, event) -> None:
             received_events.append(event)
 
         # Test invalid input
         invalid_input = "invalid json {[}"
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception):
             tool_usage._validate_tool_input(invalid_input)
 
         # Verify event was emitted
@@ -576,7 +576,7 @@ def test_tool_validate_input_error_event():
         assert "must be a valid dictionary" in event.error
 
 
-def test_tool_usage_finished_event_with_result():
+def test_tool_usage_finished_event_with_result() -> None:
     """Test that ToolUsageFinishedEvent is emitted with correct result attributes."""
     # Create mock agent with proper string values
     mock_agent = MagicMock()
@@ -618,7 +618,7 @@ def test_tool_usage_finished_event_with_result():
     received_events = []
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
-    def event_handler(source, event):
+    def event_handler(source, event) -> None:
         received_events.append(event)
 
     # Call on_tool_use_finished with test data
@@ -652,7 +652,7 @@ def test_tool_usage_finished_event_with_result():
     assert event.type == "tool_usage_finished"
 
 
-def test_tool_usage_finished_event_with_cached_result():
+def test_tool_usage_finished_event_with_cached_result() -> None:
     """Test that ToolUsageFinishedEvent is emitted with correct result attributes when using cached result."""
     # Create mock agent with proper string values
     mock_agent = MagicMock()
@@ -694,7 +694,7 @@ def test_tool_usage_finished_event_with_cached_result():
     received_events = []
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
-    def event_handler(source, event):
+    def event_handler(source, event) -> None:
         received_events.append(event)
 
     # Call on_tool_use_finished with test data and from_cache=True

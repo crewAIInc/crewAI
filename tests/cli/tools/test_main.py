@@ -33,7 +33,7 @@ def tool_command():
 
 
 @patch("crewai.cli.tools.main.subprocess.run")
-def test_create_success(mock_subprocess, capsys, tool_command):
+def test_create_success(mock_subprocess, capsys, tool_command) -> None:
     with in_temp_dir():
         tool_command.create("test-tool")
         output = capsys.readouterr().out
@@ -43,11 +43,11 @@ def test_create_success(mock_subprocess, capsys, tool_command):
         assert os.path.isfile(os.path.join("test_tool", "README.md"))
         assert os.path.isfile(os.path.join("test_tool", "pyproject.toml"))
         assert os.path.isfile(
-            os.path.join("test_tool", "src", "test_tool", "__init__.py")
+            os.path.join("test_tool", "src", "test_tool", "__init__.py"),
         )
         assert os.path.isfile(os.path.join("test_tool", "src", "test_tool", "tool.py"))
 
-        with open(os.path.join("test_tool", "src", "test_tool", "tool.py"), "r") as f:
+        with open(os.path.join("test_tool", "src", "test_tool", "tool.py")) as f:
             content = f.read()
             assert "class TestTool" in content
 
@@ -56,7 +56,7 @@ def test_create_success(mock_subprocess, capsys, tool_command):
 
 @patch("crewai.cli.tools.main.subprocess.run")
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_success(mock_get, mock_subprocess_run, capsys, tool_command):
+def test_install_success(mock_get, mock_subprocess_run, capsys, tool_command) -> None:
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
     mock_get_response.json.return_value = {
@@ -87,7 +87,7 @@ def test_install_success(mock_get, mock_subprocess_run, capsys, tool_command):
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_tool_not_found(mock_get, capsys, tool_command):
+def test_install_tool_not_found(mock_get, capsys, tool_command) -> None:
     mock_get_response = MagicMock()
     mock_get_response.status_code = 404
     mock_get.return_value = mock_get_response
@@ -101,7 +101,7 @@ def test_install_tool_not_found(mock_get, capsys, tool_command):
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_api_error(mock_get, capsys, tool_command):
+def test_install_api_error(mock_get, capsys, tool_command) -> None:
     mock_get_response = MagicMock()
     mock_get_response.status_code = 500
     mock_get.return_value = mock_get_response
@@ -115,7 +115,7 @@ def test_install_api_error(mock_get, capsys, tool_command):
 
 
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
-def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
+def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command) -> None:
     with raises(SystemExit):
         tool_command.publish(is_public=True)
 
@@ -145,7 +145,7 @@ def test_publish_when_not_in_sync_and_force(
     mock_get_project_version,
     mock_get_project_name,
     tool_command,
-):
+) -> None:
     mock_publish_response = MagicMock()
     mock_publish_response.status_code = 200
     mock_publish_response.json.return_value = {"handle": "sample-tool"}
@@ -193,7 +193,7 @@ def test_publish_success(
     mock_get_project_version,
     mock_get_project_name,
     tool_command,
-):
+) -> None:
     mock_publish_response = MagicMock()
     mock_publish_response.status_code = 200
     mock_publish_response.json.return_value = {"handle": "sample-tool"}
@@ -240,7 +240,7 @@ def test_publish_failure(
     mock_get_project_name,
     capsys,
     tool_command,
-):
+) -> None:
     mock_publish_response = MagicMock()
     mock_publish_response.status_code = 422
     mock_publish_response.json.return_value = {"name": ["is already taken"]}
@@ -276,7 +276,7 @@ def test_publish_api_error(
     mock_get_project_name,
     capsys,
     tool_command,
-):
+) -> None:
     mock_response = MagicMock()
     mock_response.status_code = 500
     mock_response.json.return_value = {"error": "Internal Server Error"}

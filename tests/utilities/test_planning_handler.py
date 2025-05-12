@@ -1,8 +1,6 @@
-from typing import Optional
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from pydantic import BaseModel
 
 from crewai.agent import Agent
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
@@ -45,12 +43,12 @@ class InternalCrewPlanner:
                 description="Task 1",
                 expected_output="Output 1",
                 agent=Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1"),
-            )
+            ),
         ]
         planning_agent_llm = "gpt-3.5-turbo"
         return CrewPlanner(tasks, planning_agent_llm)
 
-    def test_handle_crew_planning(self, crew_planner):
+    def test_handle_crew_planning(self, crew_planner) -> None:
         list_of_plans_per_task = [
             PlanPerTask(task="Task1", plan="Plan 1"),
             PlanPerTask(task="Task2", plan="Plan 2"),
@@ -61,7 +59,7 @@ class InternalCrewPlanner:
                 description="Description",
                 agent="agent",
                 pydantic=PlannerTaskPydanticOutput(
-                    list_of_plans_per_task=list_of_plans_per_task
+                    list_of_plans_per_task=list_of_plans_per_task,
                 ),
             )
             result = crew_planner._handle_crew_planning()
@@ -70,12 +68,12 @@ class InternalCrewPlanner:
             assert len(result.list_of_plans_per_task) == len(crew_planner.tasks)
             execute.assert_called_once()
 
-    def test_create_planning_agent(self, crew_planner):
+    def test_create_planning_agent(self, crew_planner) -> None:
         agent = crew_planner._create_planning_agent()
         assert isinstance(agent, Agent)
         assert agent.role == "Task Execution Planner"
 
-    def test_create_planner_task(self, crew_planner):
+    def test_create_planner_task(self, crew_planner) -> None:
         planning_agent = Agent(
             role="Planning Agent",
             goal="Plan Step by Step Plan",
@@ -92,7 +90,7 @@ class InternalCrewPlanner:
             == "Step by step plan on how the agents can execute their tasks using the available tools with mastery"
         )
 
-    def test_create_tasks_summary(self, crew_planner):
+    def test_create_tasks_summary(self, crew_planner) -> None:
         tasks_summary = crew_planner._create_tasks_summary()
         assert isinstance(tasks_summary, str)
         assert tasks_summary.startswith("\n                Task Number 1 - Task 1")
@@ -100,8 +98,8 @@ class InternalCrewPlanner:
         # Knowledge field should not be present when empty
         assert '"agent_knowledge"' not in tasks_summary
 
-    @patch('crewai.knowledge.storage.knowledge_storage.chromadb')
-    def test_create_tasks_summary_with_knowledge_and_tools(self, mock_chroma):
+    @patch("crewai.knowledge.storage.knowledge_storage.chromadb")
+    def test_create_tasks_summary_with_knowledge_and_tools(self, mock_chroma) -> None:
         """Test task summary generation with both knowledge and tools present."""
         # Mock ChromaDB collection
         mock_collection = mock_chroma.return_value.get_or_create_collection.return_value
@@ -112,20 +110,20 @@ class InternalCrewPlanner:
             name: str
             description: str
 
-            def __init__(self, name: str, description: str):
+            def __init__(self, name: str, description: str) -> None:
                 tool_data = {"name": name, "description": description}
                 super().__init__(**tool_data)
 
-            def __str__(self):
+            def __str__(self) -> str:
                 return self.name
 
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return self.name
 
             def to_structured_tool(self):
                 return self
 
-            def _run(self, *args, **kwargs):
+            def _run(self, *args, **kwargs) -> None:
                 pass
 
             def _generate_description(self) -> str:
@@ -145,9 +143,9 @@ class InternalCrewPlanner:
                 backstory="Test Backstory",
                 tools=[tool1, tool2],
                 knowledge_sources=[
-                    StringKnowledgeSource(content="Test knowledge content")
-                ]
-            )
+                    StringKnowledgeSource(content="Test knowledge content"),
+                ],
+            ),
         )
 
         # Create planner with the new task
@@ -163,13 +161,13 @@ class InternalCrewPlanner:
         assert task.agent.role in tasks_summary
         assert task.agent.goal in tasks_summary
 
-    def test_handle_crew_planning_different_llm(self, crew_planner_different_llm):
+    def test_handle_crew_planning_different_llm(self, crew_planner_different_llm) -> None:
         with patch.object(Task, "execute_sync") as execute:
             execute.return_value = TaskOutput(
                 description="Description",
                 agent="agent",
                 pydantic=PlannerTaskPydanticOutput(
-                    list_of_plans_per_task=[PlanPerTask(task="Task1", plan="Plan 1")]
+                    list_of_plans_per_task=[PlanPerTask(task="Task1", plan="Plan 1")],
                 ),
             )
             result = crew_planner_different_llm._handle_crew_planning()
@@ -177,6 +175,6 @@ class InternalCrewPlanner:
             assert crew_planner_different_llm.planning_agent_llm == "gpt-3.5-turbo"
             assert isinstance(result, PlannerTaskPydanticOutput)
             assert len(result.list_of_plans_per_task) == len(
-                crew_planner_different_llm.tasks
+                crew_planner_different_llm.tasks,
             )
             execute.assert_called_once()

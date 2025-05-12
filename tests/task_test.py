@@ -5,7 +5,6 @@ import json
 import os
 import time
 from functools import partial
-from typing import Tuple, Union
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -19,12 +18,12 @@ from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
 
 
-def test_task_tool_reflect_agent_tools():
+def test_task_tool_reflect_agent_tools() -> None:
     from crewai.tools import tool
 
     @tool
     def fake_tool() -> None:
-        "Fake tool"
+        """Fake tool."""
 
     researcher = Agent(
         role="Researcher",
@@ -43,16 +42,16 @@ def test_task_tool_reflect_agent_tools():
     assert task.tools == [fake_tool]
 
 
-def test_task_tool_takes_precedence_over_agent_tools():
+def test_task_tool_takes_precedence_over_agent_tools() -> None:
     from crewai.tools import tool
 
     @tool
     def fake_tool() -> None:
-        "Fake tool"
+        """Fake tool."""
 
     @tool
     def fake_task_tool() -> None:
-        "Fake tool"
+        """Fake tool."""
 
     researcher = Agent(
         role="Researcher",
@@ -72,7 +71,7 @@ def test_task_tool_takes_precedence_over_agent_tools():
     assert task.tools == [fake_task_tool]
 
 
-def test_task_prompt_includes_expected_output():
+def test_task_prompt_includes_expected_output() -> None:
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -92,7 +91,7 @@ def test_task_prompt_includes_expected_output():
         execute.assert_called_once_with(task=task, context=None, tools=[])
 
 
-def test_task_callback():
+def test_task_callback() -> None:
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -120,7 +119,7 @@ def test_task_callback():
         assert task.output.name == task.name
 
 
-def test_task_callback_returns_task_output():
+def test_task_callback_returns_task_output() -> None:
     from crewai.tasks.output_format import OutputFormat
 
     researcher = Agent(
@@ -166,7 +165,7 @@ def test_task_callback_returns_task_output():
         assert output_dict == expected_output
 
 
-def test_execute_with_agent():
+def test_execute_with_agent() -> None:
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -184,7 +183,7 @@ def test_execute_with_agent():
         execute.assert_called_once_with(task=task, context=None, tools=[])
 
 
-def test_async_execution():
+def test_async_execution() -> None:
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -206,7 +205,7 @@ def test_async_execution():
         execute.assert_called_once_with(task=task, context=None, tools=[])
 
 
-def test_multiple_output_type_error():
+def test_multiple_output_type_error() -> None:
     class Output(BaseModel):
         field: str
 
@@ -219,7 +218,7 @@ def test_multiple_output_type_error():
         )
 
 
-def test_guardrail_type_error():
+def test_guardrail_type_error() -> None:
     desc = "Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting."
     expected_output = "Bullet point list of 5 interesting ideas."
     # Lambda function
@@ -248,7 +247,7 @@ def test_guardrail_type_error():
             return (True, x)
 
         @staticmethod
-        def guardrail_static_fn(x: TaskOutput) -> tuple[bool, Union[str, TaskOutput]]:
+        def guardrail_static_fn(x: TaskOutput) -> tuple[bool, str | TaskOutput]:
             return (True, x)
 
     obj = Object()
@@ -271,7 +270,7 @@ def test_guardrail_type_error():
         guardrail=Object.guardrail_static_fn,
     )
 
-    def error_fn(x: TaskOutput, y: bool) -> Tuple[bool, TaskOutput]:
+    def error_fn(x: TaskOutput, y: bool) -> tuple[bool, TaskOutput]:
         return (y, x)
 
     Task(
@@ -289,7 +288,7 @@ def test_guardrail_type_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_pydantic_sequential():
+def test_output_pydantic_sequential() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -314,7 +313,7 @@ def test_output_pydantic_sequential():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_pydantic_hierarchical():
+def test_output_pydantic_hierarchical() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -344,7 +343,7 @@ def test_output_pydantic_hierarchical():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_json_sequential():
+def test_output_json_sequential() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -365,12 +364,12 @@ def test_output_json_sequential():
 
     crew = Crew(agents=[scorer], tasks=[task], process=Process.sequential)
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
+    assert result.json == '{"score": 4}'
     assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_json_hierarchical():
+def test_output_json_hierarchical() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -400,7 +399,7 @@ def test_output_json_hierarchical():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_json_property_without_output_json():
+def test_json_property_without_output_json() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -428,7 +427,7 @@ def test_json_property_without_output_json():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_json_dict_sequential():
+def test_output_json_dict_sequential() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -448,12 +447,12 @@ def test_output_json_dict_sequential():
 
     crew = Crew(agents=[scorer], tasks=[task], process=Process.sequential)
     result = crew.kickoff()
-    assert {"score": 4} == result.json_dict
+    assert result.json_dict == {"score": 4}
     assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_json_dict_hierarchical():
+def test_output_json_dict_hierarchical() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -478,12 +477,12 @@ def test_output_json_dict_hierarchical():
         manager_llm="gpt-4o",
     )
     result = crew.kickoff()
-    assert {"score": 4} == result.json_dict
+    assert result.json_dict == {"score": 4}
     assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_pydantic_to_another_task():
+def test_output_pydantic_to_another_task() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -515,13 +514,13 @@ def test_output_pydantic_to_another_task():
     result = crew.kickoff()
     pydantic_result = result.pydantic
     assert isinstance(
-        pydantic_result, ScoreOutput
+        pydantic_result, ScoreOutput,
     ), "Expected pydantic result to be of type ScoreOutput"
     assert pydantic_result.score == 5
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_json_to_another_task():
+def test_output_json_to_another_task() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -548,11 +547,11 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
+    assert result.json == '{"score": 4}'
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_save_task_output():
+def test_save_task_output() -> None:
     scorer = Agent(
         role="Scorer",
         goal="Score the title",
@@ -576,7 +575,7 @@ def test_save_task_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_save_task_json_output():
+def test_save_task_json_output() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -600,13 +599,13 @@ def test_save_task_json_output():
 
     output_file_exists = os.path.exists("score.json")
     assert output_file_exists
-    assert {"score": 4} == json.loads(open("score.json").read())
+    assert json.loads(open("score.json").read()) == {"score": 4}
     if output_file_exists:
         os.remove("score.json")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_save_task_pydantic_output():
+def test_save_task_pydantic_output() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -630,13 +629,13 @@ def test_save_task_pydantic_output():
 
     output_file_exists = os.path.exists("score.json")
     assert output_file_exists
-    assert {"score": 4} == json.loads(open("score.json").read())
+    assert json.loads(open("score.json").read()) == {"score": 4}
     if output_file_exists:
         os.remove("score.json")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_custom_converter_cls():
+def test_custom_converter_cls() -> None:
     class ScoreOutput(BaseModel):
         score: int
 
@@ -661,14 +660,14 @@ def test_custom_converter_cls():
     crew = Crew(agents=[scorer], tasks=[task])
 
     with patch.object(
-        ScoreConverter, "to_pydantic", return_value=ScoreOutput(score=5)
+        ScoreConverter, "to_pydantic", return_value=ScoreOutput(score=5),
     ) as mock_to_pydantic:
         crew.kickoff()
         mock_to_pydantic.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_increment_delegations_for_hierarchical_process():
+def test_increment_delegations_for_hierarchical_process() -> None:
     scorer = Agent(
         role="Scorer",
         goal="Score the title",
@@ -695,7 +694,7 @@ def test_increment_delegations_for_hierarchical_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_increment_delegations_for_sequential_process():
+def test_increment_delegations_for_sequential_process() -> None:
     manager = Agent(
         role="Manager",
         goal="Coordinate scoring processes",
@@ -729,13 +728,14 @@ def test_increment_delegations_for_sequential_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_increment_tool_errors():
+def test_increment_tool_errors() -> None:
     from crewai.tools import tool
 
     @tool
     def scoring_examples() -> None:
-        "Useful examples for scoring titles."
-        raise Exception("Error")
+        """Useful examples for scoring titles."""
+        msg = "Error"
+        raise Exception(msg)
 
     scorer = Agent(
         role="Scorer",
@@ -762,7 +762,7 @@ def test_increment_tool_errors():
         assert len(increment_tools_errors.mock_calls) > 0
 
 
-def test_task_definition_based_on_dict():
+def test_task_definition_based_on_dict() -> None:
     config = {
         "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
         "expected_output": "The score of the title.",
@@ -775,7 +775,7 @@ def test_task_definition_based_on_dict():
     assert task.agent is None
 
 
-def test_conditional_task_definition_based_on_dict():
+def test_conditional_task_definition_based_on_dict() -> None:
     config = {
         "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
         "expected_output": "The score of the title.",
@@ -788,7 +788,7 @@ def test_conditional_task_definition_based_on_dict():
     assert task.agent is None
 
 
-def test_conditional_task_copy_preserves_type():
+def test_conditional_task_copy_preserves_type() -> None:
     task_config = {
         "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
         "expected_output": "The score of the title.",
@@ -807,7 +807,7 @@ def test_conditional_task_copy_preserves_type():
     assert isinstance(copied_conditional_task, ConditionalTask)
 
 
-def test_interpolate_inputs():
+def test_interpolate_inputs() -> None:
     task = Task(
         description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 interesting ideas about {topic}.",
@@ -815,7 +815,7 @@ def test_interpolate_inputs():
     )
 
     task.interpolate_inputs_and_add_conversation_history(
-        inputs={"topic": "AI", "date": "2025"}
+        inputs={"topic": "AI", "date": "2025"},
     )
     assert (
         task.description
@@ -825,7 +825,7 @@ def test_interpolate_inputs():
     assert task.output_file == "/tmp/AI/output_2025.txt"
 
     task.interpolate_inputs_and_add_conversation_history(
-        inputs={"topic": "ML", "date": "2025"}
+        inputs={"topic": "ML", "date": "2025"},
     )
     assert (
         task.description
@@ -835,10 +835,10 @@ def test_interpolate_inputs():
     assert task.output_file == "/tmp/ML/output_2025.txt"
 
 
-def test_interpolate_only():
+def test_interpolate_only() -> None:
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
-    task = Task(
-        description="Unused in this test", expected_output="Unused in this test"
+    Task(
+        description="Unused in this test", expected_output="Unused in this test",
     )
 
     # Test JSON structure preservation
@@ -855,7 +855,7 @@ def test_interpolate_only():
     # Test normal string interpolation
     normal_string = "Hello {name}, welcome to {place}!"
     result = interpolate_only(
-        input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
+        input_string=normal_string, inputs={"name": "John", "place": "CrewAI"},
     )
     assert result == "Hello John, welcome to CrewAI!"
 
@@ -869,9 +869,9 @@ def test_interpolate_only():
     assert result == no_placeholders
 
 
-def test_interpolate_only_with_dict_inside_expected_output():
+def test_interpolate_only_with_dict_inside_expected_output() -> None:
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
-    task = Task(
+    Task(
         description="Unused in this test",
         expected_output="Unused in this test: {questions}",
     )
@@ -883,7 +883,7 @@ def test_interpolate_only_with_dict_inside_expected_output():
             "questions": {
                 "main_question": "What is the user's name?",
                 "secondary_question": "What is the user's age?",
-            }
+            },
         },
     )
     assert '"main_question": "What is the user\'s name?"' in result
@@ -892,7 +892,7 @@ def test_interpolate_only_with_dict_inside_expected_output():
 
     normal_string = "Hello {name}, welcome to {place}!"
     result = interpolate_only(
-        input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
+        input_string=normal_string, inputs={"name": "John", "place": "CrewAI"},
     )
     assert result == "Hello John, welcome to CrewAI!"
 
@@ -904,7 +904,7 @@ def test_interpolate_only_with_dict_inside_expected_output():
     assert result == no_placeholders
 
 
-def test_task_output_str_with_pydantic():
+def test_task_output_str_with_pydantic() -> None:
     from crewai.tasks.output_format import OutputFormat
 
     class ScoreOutput(BaseModel):
@@ -921,7 +921,7 @@ def test_task_output_str_with_pydantic():
     assert str(task_output) == str(score_output)
 
 
-def test_task_output_str_with_json_dict():
+def test_task_output_str_with_json_dict() -> None:
     from crewai.tasks.output_format import OutputFormat
 
     json_dict = {"score": 4}
@@ -935,7 +935,7 @@ def test_task_output_str_with_json_dict():
     assert str(task_output) == str(json_dict)
 
 
-def test_task_output_str_with_raw():
+def test_task_output_str_with_raw() -> None:
     from crewai.tasks.output_format import OutputFormat
 
     raw_output = "Raw task output"
@@ -949,7 +949,7 @@ def test_task_output_str_with_raw():
     assert str(task_output) == raw_output
 
 
-def test_task_output_str_with_pydantic_and_json_dict():
+def test_task_output_str_with_pydantic_and_json_dict() -> None:
     from crewai.tasks.output_format import OutputFormat
 
     class ScoreOutput(BaseModel):
@@ -969,7 +969,7 @@ def test_task_output_str_with_pydantic_and_json_dict():
     assert str(task_output) == str(score_output)
 
 
-def test_task_output_str_with_none():
+def test_task_output_str_with_none() -> None:
     from crewai.tasks.output_format import OutputFormat
 
     task_output = TaskOutput(
@@ -981,7 +981,7 @@ def test_task_output_str_with_none():
     assert str(task_output) == ""
 
 
-def test_key():
+def test_key() -> None:
     original_description = "Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting."
     original_expected_output = "Bullet point list of 5 interesting ideas about {topic}."
     task = Task(
@@ -989,7 +989,7 @@ def test_key():
         expected_output=original_expected_output,
     )
     hash = hashlib.md5(
-        f"{original_description}|{original_expected_output}".encode()
+        f"{original_description}|{original_expected_output}".encode(),
     ).hexdigest()
 
     assert task.key == hash, "The key should be the hash of the description."
@@ -1000,7 +1000,7 @@ def test_key():
     ), "The key should be the hash of the non-interpolated description."
 
 
-def test_output_file_validation():
+def test_output_file_validation() -> None:
     """Test output file path validation."""
     # Valid paths
     assert (
@@ -1068,7 +1068,7 @@ def test_output_file_validation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_execution_times():
+def test_task_execution_times() -> None:
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -1093,8 +1093,8 @@ def test_task_execution_times():
     assert task.execution_duration == (task.end_time - task.start_time).total_seconds()
 
 
-def test_interpolate_with_list_of_strings():
-    task = Task(
+def test_interpolate_with_list_of_strings() -> None:
+    Task(
         description="Test list interpolation",
         expected_output="List: {items}",
     )
@@ -1111,8 +1111,8 @@ def test_interpolate_with_list_of_strings():
     assert result == "Available items: []"
 
 
-def test_interpolate_with_list_of_dicts():
-    task = Task(
+def test_interpolate_with_list_of_dicts() -> None:
+    Task(
         description="Test list of dicts interpolation",
         expected_output="People: {people}",
     )
@@ -1121,7 +1121,7 @@ def test_interpolate_with_list_of_dicts():
         "people": [
             {"name": "Alice", "age": 30, "skills": ["Python", "AI"]},
             {"name": "Bob", "age": 25, "skills": ["Java", "Cloud"]},
-        ]
+        ],
     }
     result = interpolate_only("{people}", input_data)
 
@@ -1136,8 +1136,8 @@ def test_interpolate_with_list_of_dicts():
     assert parsed_result[1]["skills"] == ["Java", "Cloud"]
 
 
-def test_interpolate_with_nested_structures():
-    task = Task(
+def test_interpolate_with_nested_structures() -> None:
+    Task(
         description="Test nested structures",
         expected_output="Company: {company}",
     )
@@ -1153,7 +1153,7 @@ def test_interpolate_with_nested_structures():
                 },
                 {"name": "Sales", "employees": 20, "regions": {"north": 5, "south": 3}},
             ],
-        }
+        },
     }
     result = interpolate_only("{company}", input_data)
     parsed = eval(result)
@@ -1164,8 +1164,8 @@ def test_interpolate_with_nested_structures():
     assert parsed["departments"][1]["regions"]["north"] == 5
 
 
-def test_interpolate_with_special_characters():
-    task = Task(
+def test_interpolate_with_special_characters() -> None:
+    Task(
         description="Test special characters in dicts",
         expected_output="Data: {special_data}",
     )
@@ -1176,7 +1176,7 @@ def test_interpolate_with_special_characters():
             "unicode": "文字化けテスト",
             "symbols": "!@#$%^&*()",
             "empty": "",
-        }
+        },
     }
     result = interpolate_only("{special_data}", input_data)
     parsed = eval(result)
@@ -1187,8 +1187,8 @@ def test_interpolate_with_special_characters():
     assert parsed["empty"] == ""
 
 
-def test_interpolate_mixed_types():
-    task = Task(
+def test_interpolate_mixed_types() -> None:
+    Task(
         description="Test mixed type interpolation",
         expected_output="Mixed: {data}",
     )
@@ -1203,7 +1203,7 @@ def test_interpolate_mixed_types():
                 "validated": True,
                 "tags": ["demo", "test", "temp"],
             },
-        }
+        },
     }
     result = interpolate_only("{data}", input_data)
     parsed = eval(result)
@@ -1213,8 +1213,8 @@ def test_interpolate_mixed_types():
     assert parsed["metadata"]["tags"] == ["demo", "test", "temp"]
 
 
-def test_interpolate_complex_combination():
-    task = Task(
+def test_interpolate_complex_combination() -> None:
+    Task(
         description="Test complex combination",
         expected_output="Report: {report}",
     )
@@ -1231,7 +1231,7 @@ def test_interpolate_complex_combination():
                 "metrics": {"sales": 18000, "expenses": 8500, "profit": 9500},
                 "top_products": ["Product C", "Product D"],
             },
-        ]
+        ],
     }
     result = interpolate_only("{report}", input_data)
     parsed = eval(result)
@@ -1242,8 +1242,8 @@ def test_interpolate_complex_combination():
     assert "Product D" in parsed[1]["top_products"]
 
 
-def test_interpolate_invalid_type_validation():
-    task = Task(
+def test_interpolate_invalid_type_validation() -> None:
+    Task(
         description="Test invalid type validation",
         expected_output="Should never reach here",
     )
@@ -1260,24 +1260,24 @@ def test_interpolate_invalid_type_validation():
             "name": "John",
             "age": 30,
             "tags": {"a", "b", "c"},  # Set is invalid
-        }
+        },
     }
     with pytest.raises(ValueError) as excinfo:
         interpolate_only("{data}", {"data": invalid_nested})
     assert "Unsupported type set" in str(excinfo.value)
 
 
-def test_interpolate_custom_object_validation():
-    task = Task(
+def test_interpolate_custom_object_validation() -> None:
+    Task(
         description="Test custom object rejection",
         expected_output="Should never reach here",
     )
 
     class CustomObject:
-        def __init__(self, value):
+        def __init__(self, value) -> None:
             self.value = value
 
-        def __str__(self):
+        def __str__(self) -> str:
             return str(self.value)
 
     # Test with custom object at top level
@@ -1298,13 +1298,13 @@ def test_interpolate_custom_object_validation():
     # Test with deeply nested custom object
     with pytest.raises(ValueError) as excinfo:
         interpolate_only(
-            "{data}", {"data": {"level1": {"level2": [{"level3": CustomObject(5)}]}}}
+            "{data}", {"data": {"level1": {"level2": [{"level3": CustomObject(5)}]}}},
         )
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
 
-def test_interpolate_valid_complex_types():
-    task = Task(
+def test_interpolate_valid_complex_types() -> None:
+    Task(
         description="Test valid complex types",
         expected_output="Validation should pass",
     )
@@ -1327,8 +1327,8 @@ def test_interpolate_valid_complex_types():
     assert parsed["stats"]["nested"]["deeper"]["b"] == 2.5
 
 
-def test_interpolate_edge_cases():
-    task = Task(
+def test_interpolate_edge_cases() -> None:
+    Task(
         description="Test edge cases",
         expected_output="Edge case handling",
     )
@@ -1346,8 +1346,8 @@ def test_interpolate_edge_cases():
     assert interpolate_only("{flag}", {"flag": False}) == "False"
 
 
-def test_interpolate_valid_types():
-    task = Task(
+def test_interpolate_valid_types() -> None:
+    Task(
         description="Test valid types including null and boolean",
         expected_output="Should pass validation",
     )
@@ -1371,13 +1371,13 @@ def test_interpolate_valid_types():
     assert parsed["nested"]["empty"] is None
 
 
-def test_task_with_no_max_execution_time():
+def test_task_with_no_max_execution_time() -> None:
     researcher = Agent(
     role="Researcher",
     goal="Make the best research and analysis on content about AI and AI agents",
     backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
     allow_delegation=False,
-    max_execution_time=None
+    max_execution_time=None,
     )
 
     task = Task(
@@ -1393,13 +1393,13 @@ def test_task_with_no_max_execution_time():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_with_max_execution_time():
+def test_task_with_max_execution_time() -> None:
     from crewai.tools import tool
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
 
     @tool("what amazing tool", result_as_answer=True)
     def my_tool() -> str:
-        "My tool"
+        """My tool."""
         time.sleep(1)
         return "okay"
 
@@ -1412,7 +1412,7 @@ def test_task_with_max_execution_time():
         ),
         allow_delegation=False,
         tools=[my_tool],
-        max_execution_time=4
+        max_execution_time=4,
     )
 
     task = Task(
@@ -1426,13 +1426,13 @@ def test_task_with_max_execution_time():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_with_max_execution_time_exceeded():
+def test_task_with_max_execution_time_exceeded() -> None:
     from crewai.tools import tool
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
 
     @tool("what amazing tool", result_as_answer=True)
     def my_tool() -> str:
-        "My tool"
+        """My tool."""
         time.sleep(10)
         return "okay"
 
@@ -1445,7 +1445,7 @@ def test_task_with_max_execution_time_exceeded():
         ),
         allow_delegation=False,
         tools=[my_tool],
-        max_execution_time=1
+        max_execution_time=1,
     )
 
     task = Task(

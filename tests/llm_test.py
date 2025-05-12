@@ -2,7 +2,6 @@ import os
 from time import sleep
 from unittest.mock import MagicMock, patch
 
-import litellm
 import pytest
 from pydantic import BaseModel
 
@@ -17,29 +16,25 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_callback_replacement():
+def test_llm_callback_replacement() -> None:
     llm1 = LLM(model="gpt-4o-mini")
     llm2 = LLM(model="gpt-4o-mini")
 
     calc_handler_1 = TokenCalcHandler(token_cost_process=TokenProcess())
     calc_handler_2 = TokenCalcHandler(token_cost_process=TokenProcess())
 
-    result1 = llm1.call(
+    llm1.call(
         messages=[{"role": "user", "content": "Hello, world!"}],
         callbacks=[calc_handler_1],
     )
-    print("result1:", result1)
     usage_metrics_1 = calc_handler_1.token_cost_process.get_summary()
-    print("usage_metrics_1:", usage_metrics_1)
 
-    result2 = llm2.call(
+    llm2.call(
         messages=[{"role": "user", "content": "Hello, world from another agent!"}],
         callbacks=[calc_handler_2],
     )
     sleep(5)
-    print("result2:", result2)
     usage_metrics_2 = calc_handler_2.token_cost_process.get_summary()
-    print("usage_metrics_2:", usage_metrics_2)
 
     # The first handler should not have been updated
     assert usage_metrics_1.successful_requests == 1
@@ -48,7 +43,7 @@ def test_llm_callback_replacement():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_string_input():
+def test_llm_call_with_string_input() -> None:
     llm = LLM(model="gpt-4o-mini")
 
     # Test the call method with a string input
@@ -58,7 +53,7 @@ def test_llm_call_with_string_input():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_string_input_and_callbacks():
+def test_llm_call_with_string_input_and_callbacks() -> None:
     llm = LLM(model="gpt-4o-mini")
     calc_handler = TokenCalcHandler(token_cost_process=TokenProcess())
 
@@ -75,7 +70,7 @@ def test_llm_call_with_string_input_and_callbacks():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_message_list():
+def test_llm_call_with_message_list() -> None:
     llm = LLM(model="gpt-4o-mini")
     messages = [{"role": "user", "content": "What is the capital of France?"}]
 
@@ -86,7 +81,7 @@ def test_llm_call_with_message_list():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_tool_and_string_input():
+def test_llm_call_with_tool_and_string_input() -> None:
     llm = LLM(model="gpt-4o-mini")
 
     def get_current_year() -> str:
@@ -124,7 +119,7 @@ def test_llm_call_with_tool_and_string_input():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_tool_and_message_list():
+def test_llm_call_with_tool_and_message_list() -> None:
     llm = LLM(model="gpt-4o-mini")
 
     def square_number(number: int) -> int:
@@ -140,7 +135,7 @@ def test_llm_call_with_tool_and_message_list():
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "number": {"type": "integer", "description": "The number to square"}
+                    "number": {"type": "integer", "description": "The number to square"},
                 },
                 "required": ["number"],
             },
@@ -164,7 +159,7 @@ def test_llm_call_with_tool_and_message_list():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_passes_additional_params():
+def test_llm_passes_additional_params() -> None:
     llm = LLM(
         model="gpt-4o-mini",
         vertex_credentials="test_credentials",
@@ -210,35 +205,35 @@ def test_llm_passes_additional_params():
         assert result == "Test response"
 
 
-def test_get_custom_llm_provider_openrouter():
+def test_get_custom_llm_provider_openrouter() -> None:
     llm = LLM(model="openrouter/deepseek/deepseek-chat")
     assert llm._get_custom_llm_provider() == "openrouter"
 
 
-def test_get_custom_llm_provider_gemini():
+def test_get_custom_llm_provider_gemini() -> None:
     llm = LLM(model="gemini/gemini-1.5-pro")
     assert llm._get_custom_llm_provider() == "gemini"
 
 
-def test_get_custom_llm_provider_openai():
+def test_get_custom_llm_provider_openai() -> None:
     llm = LLM(model="gpt-4")
-    assert llm._get_custom_llm_provider() == None
+    assert llm._get_custom_llm_provider() is None
 
 
-def test_validate_call_params_supported():
+def test_validate_call_params_supported() -> None:
     class DummyResponse(BaseModel):
         a: int
 
     # Patch supports_response_schema to simulate a supported model.
     with patch("crewai.llm.supports_response_schema", return_value=True):
         llm = LLM(
-            model="openrouter/deepseek/deepseek-chat", response_format=DummyResponse
+            model="openrouter/deepseek/deepseek-chat", response_format=DummyResponse,
         )
         # Should not raise any error.
         llm._validate_call_params()
 
 
-def test_validate_call_params_not_supported():
+def test_validate_call_params_not_supported() -> None:
     class DummyResponse(BaseModel):
         a: int
 
@@ -250,7 +245,7 @@ def test_validate_call_params_not_supported():
         assert "does not support response_format" in str(excinfo.value)
 
 
-def test_validate_call_params_no_response_format():
+def test_validate_call_params_no_response_format() -> None:
     # When no response_format is provided, no validation error should occur.
     llm = LLM(model="gemini/gemini-1.5-pro", response_format=None)
     llm._validate_call_params()
@@ -267,7 +262,7 @@ def test_validate_call_params_no_response_format():
         "gemini/gemini-2.5-pro-exp-03-25",
     ],
 )
-def test_gemini_models(model):
+def test_gemini_models(model) -> None:
     llm = LLM(model=model)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
@@ -284,7 +279,7 @@ def test_gemini_models(model):
         "gemini/gemma-3-27b-it",
     ],
 )
-def test_gemma3(model):
+def test_gemma3(model) -> None:
     llm = LLM(model=model)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
@@ -293,9 +288,9 @@ def test_gemma3(model):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.parametrize(
-    "model", ["gpt-4.1", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"]
+    "model", ["gpt-4.1", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"],
 )
-def test_gpt_4_1(model):
+def test_gpt_4_1(model) -> None:
     llm = LLM(model=model)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
@@ -303,7 +298,7 @@ def test_gpt_4_1(model):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_o3_mini_reasoning_effort_high():
+def test_o3_mini_reasoning_effort_high() -> None:
     llm = LLM(
         model="o3-mini",
         reasoning_effort="high",
@@ -314,7 +309,7 @@ def test_o3_mini_reasoning_effort_high():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_o3_mini_reasoning_effort_low():
+def test_o3_mini_reasoning_effort_low() -> None:
     llm = LLM(
         model="o3-mini",
         reasoning_effort="low",
@@ -325,7 +320,7 @@ def test_o3_mini_reasoning_effort_low():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_o3_mini_reasoning_effort_medium():
+def test_o3_mini_reasoning_effort_medium() -> None:
     llm = LLM(
         model="o3-mini",
         reasoning_effort="medium",
@@ -335,21 +330,20 @@ def test_o3_mini_reasoning_effort_medium():
     assert "Paris" in result
 
 
-def test_context_window_validation():
+def test_context_window_validation() -> None:
     """Test that context window validation works correctly."""
     # Test valid window size
     llm = LLM(model="o3-mini")
     assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
     # Test invalid window size
-    with pytest.raises(ValueError) as excinfo:
-        with patch.dict(
-            "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
-            {"test-model": 500},  # Below minimum
-            clear=True,
-        ):
-            llm = LLM(model="test-model")
-            llm.get_context_window_size()
+    with pytest.raises(ValueError) as excinfo, patch.dict(
+        "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
+        {"test-model": 500},  # Below minimum
+        clear=True,
+    ):
+        llm = LLM(model="test-model")
+        llm.get_context_window_size()
     assert "must be between 1024 and 2097152" in str(excinfo.value)
 
 
@@ -366,14 +360,14 @@ def get_weather_tool_schema():
                     "location": {
                         "type": "string",
                         "description": "The city and state, e.g. San Francisco, CA",
-                    }
+                    },
                 },
                 "required": ["location"],
             },
         },
     }
 
-def test_context_window_exceeded_error_handling():
+def test_context_window_exceeded_error_handling() -> None:
     """Test that litellm.ContextWindowExceededError is converted to LLMContextLengthExceededException."""
     from litellm.exceptions import ContextWindowExceededError
 
@@ -388,7 +382,7 @@ def test_context_window_exceeded_error_handling():
         mock_completion.side_effect = ContextWindowExceededError(
             "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
             model="gpt-4",
-            llm_provider="openai"
+            llm_provider="openai",
         )
 
         with pytest.raises(LLMContextLengthExceededException) as excinfo:
@@ -403,7 +397,7 @@ def test_context_window_exceeded_error_handling():
         mock_completion.side_effect = ContextWindowExceededError(
             "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
             model="gpt-4",
-            llm_provider="openai"
+            llm_provider="openai",
         )
 
         with pytest.raises(LLMContextLengthExceededException) as excinfo:
@@ -432,7 +426,7 @@ def user_message():
     return {"role": "user", "content": "test"}
 
 
-def test_anthropic_message_formatting_edge_cases(anthropic_llm):
+def test_anthropic_message_formatting_edge_cases(anthropic_llm) -> None:
     """Test edge cases for Anthropic message formatting."""
     # Test None messages
     with pytest.raises(TypeError, match="Messages cannot be None"):
@@ -449,7 +443,7 @@ def test_anthropic_message_formatting_edge_cases(anthropic_llm):
         anthropic_llm._format_messages_for_provider([{"invalid": "message"}])
 
 
-def test_anthropic_model_detection():
+def test_anthropic_model_detection() -> None:
     """Test Anthropic model detection with various formats."""
     models = [
         ("anthropic/claude-3", True),
@@ -465,7 +459,7 @@ def test_anthropic_model_detection():
         assert llm.is_anthropic == expected, f"Failed for model: {model}"
 
 
-def test_anthropic_message_formatting(anthropic_llm, system_message, user_message):
+def test_anthropic_message_formatting(anthropic_llm, system_message, user_message) -> None:
     """Test Anthropic message formatting with fixtures."""
     # Test when first message is system
     formatted = anthropic_llm._format_messages_for_provider([system_message])
@@ -492,7 +486,7 @@ def test_anthropic_message_formatting(anthropic_llm, system_message, user_messag
     assert formatted[0] == system_message
 
 
-def test_deepseek_r1_with_open_router():
+def test_deepseek_r1_with_open_router() -> None:
     if not os.getenv("OPEN_ROUTER_API_KEY"):
         pytest.skip("OPEN_ROUTER_API_KEY not set; skipping test.")
 
@@ -512,7 +506,7 @@ def assert_event_count(
     expected_stream_chunk: int = 0,
     expected_completed_llm_call: int = 0,
     expected_final_chunk_result: str = "",
-):
+) -> None:
     event_count = {
         "completed_tool_call": 0,
         "stream_chunk": 0,
@@ -553,7 +547,7 @@ def mock_emit() -> MagicMock:
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
+def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit) -> None:
     llm = LLM(model="openai/gpt-4o", stream=True)
     response = llm.call(
         messages=[
@@ -561,7 +555,7 @@ def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
         ],
         tools=[get_weather_tool_schema],
         available_functions={
-            "get_weather": lambda location: f"The weather in {location} is sunny"
+            "get_weather": lambda location: f"The weather in {location} is sunny",
         },
     )
     assert response == "The weather in New York, NY is sunny"
@@ -580,8 +574,8 @@ def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_handle_streaming_tool_calls_no_available_functions(
-    get_weather_tool_schema, mock_emit
-):
+    get_weather_tool_schema, mock_emit,
+) -> None:
     llm = LLM(model="openai/gpt-4o", stream=True)
     response = llm.call(
         messages=[
@@ -600,7 +594,7 @@ def test_handle_streaming_tool_calls_no_available_functions(
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_handle_streaming_tool_calls_no_tools(mock_emit):
+def test_handle_streaming_tool_calls_no_tools(mock_emit) -> None:
     llm = LLM(model="openai/gpt-4o", stream=True)
     response = llm.call(
         messages=[

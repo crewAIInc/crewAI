@@ -1,10 +1,6 @@
 """Test flow state persistence functionality."""
 
 import os
-from typing import Dict
-
-import pytest
-from pydantic import BaseModel
 
 from crewai.flow.flow import Flow, FlowState, listen, start
 from crewai.flow.persistence import persist
@@ -18,17 +14,17 @@ class TestState(FlowState):
     message: str = ""
 
 
-def test_persist_decorator_saves_state(tmp_path, caplog):
+def test_persist_decorator_saves_state(tmp_path, caplog) -> None:
     """Test that @persist decorator saves state in SQLite."""
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    class TestFlow(Flow[Dict[str, str]]):
-        initial_state = dict()  # Use dict instance as initial state
+    class TestFlow(Flow[dict[str, str]]):
+        initial_state = {}  # Use dict instance as initial state
 
         @start()
         @persist(persistence)
-        def init_step(self):
+        def init_step(self) -> None:
             self.state["message"] = "Hello, World!"
             self.state["id"] = "test-uuid"  # Ensure we have an ID for persistence
 
@@ -42,7 +38,7 @@ def test_persist_decorator_saves_state(tmp_path, caplog):
     assert saved_state["message"] == "Hello, World!"
 
 
-def test_structured_state_persistence(tmp_path):
+def test_structured_state_persistence(tmp_path) -> None:
     """Test persistence with Pydantic model state."""
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
@@ -52,7 +48,7 @@ def test_structured_state_persistence(tmp_path):
 
         @start()
         @persist(persistence)
-        def count_up(self):
+        def count_up(self) -> None:
             self.state.counter += 1
             self.state.message = f"Count is {self.state.counter}"
 
@@ -67,7 +63,7 @@ def test_structured_state_persistence(tmp_path):
     assert saved_state["message"] == "Count is 1"
 
 
-def test_flow_state_restoration(tmp_path):
+def test_flow_state_restoration(tmp_path) -> None:
     """Test restoring flow state from persistence with various restoration methods."""
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
@@ -76,7 +72,7 @@ def test_flow_state_restoration(tmp_path):
     class RestorableFlow(Flow[TestState]):
         @start()
         @persist(persistence)
-        def set_message(self):
+        def set_message(self) -> None:
             if self.state.message == "":
                 self.state.message = "Original message"
             if self.state.counter == 0:
@@ -106,7 +102,7 @@ def test_flow_state_restoration(tmp_path):
     assert flow3.state.message == "Updated message"  # Overridden
 
 
-def test_multiple_method_persistence(tmp_path):
+def test_multiple_method_persistence(tmp_path) -> None:
     """Test state persistence across multiple method executions."""
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
@@ -114,7 +110,7 @@ def test_multiple_method_persistence(tmp_path):
     class MultiStepFlow(Flow[TestState]):
         @start()
         @persist(persistence)
-        def step_1(self):
+        def step_1(self) -> None:
             if self.state.counter == 1:
                 self.state.counter = 99999
                 self.state.message = "Step 99999"
@@ -124,7 +120,7 @@ def test_multiple_method_persistence(tmp_path):
 
         @listen(step_1)
         @persist(persistence)
-        def step_2(self):
+        def step_2(self) -> None:
             if self.state.counter == 1:
                 self.state.counter = 2
                 self.state.message = "Step 2"
@@ -144,7 +140,7 @@ def test_multiple_method_persistence(tmp_path):
     class NoPersistenceMultiStepFlow(Flow[TestState]):
         @start()
         @persist(persistence)
-        def step_1(self):
+        def step_1(self) -> None:
             if self.state.counter == 1:
                 self.state.counter = 99999
                 self.state.message = "Step 99999"
@@ -153,7 +149,7 @@ def test_multiple_method_persistence(tmp_path):
                 self.state.message = "Step 1"
 
         @listen(step_1)
-        def step_2(self):
+        def step_2(self) -> None:
             if self.state.counter == 1:
                 self.state.counter = 2
                 self.state.message = "Step 2"
@@ -170,7 +166,7 @@ def test_multiple_method_persistence(tmp_path):
     assert final_state.message == "Step 99999"
 
 
-def test_persist_decorator_verbose_logging(tmp_path, caplog):
+def test_persist_decorator_verbose_logging(tmp_path, caplog) -> None:
     """Test that @persist decorator's verbose parameter controls logging."""
     # Set logging level to ensure we capture all logs
     caplog.set_level("INFO")
@@ -179,12 +175,12 @@ def test_persist_decorator_verbose_logging(tmp_path, caplog):
     persistence = SQLiteFlowPersistence(db_path)
 
     # Test with verbose=False (default)
-    class QuietFlow(Flow[Dict[str, str]]):
-        initial_state = dict()
+    class QuietFlow(Flow[dict[str, str]]):
+        initial_state = {}
 
         @start()
         @persist(persistence)  # Default verbose=False
-        def init_step(self):
+        def init_step(self) -> None:
             self.state["message"] = "Hello, World!"
             self.state["id"] = "test-uuid-1"
 
@@ -196,12 +192,12 @@ def test_persist_decorator_verbose_logging(tmp_path, caplog):
     caplog.clear()
 
     # Test with verbose=True
-    class VerboseFlow(Flow[Dict[str, str]]):
-        initial_state = dict()
+    class VerboseFlow(Flow[dict[str, str]]):
+        initial_state = {}
 
         @start()
         @persist(persistence, verbose=True)
-        def init_step(self):
+        def init_step(self) -> None:
             self.state["message"] = "Hello, World!"
             self.state["id"] = "test-uuid-2"
 

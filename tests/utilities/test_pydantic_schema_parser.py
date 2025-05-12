@@ -1,12 +1,10 @@
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
-def test_simple_model():
+def test_simple_model() -> None:
     class SimpleModel(BaseModel):
         field1: int
         field2: str
@@ -21,7 +19,7 @@ def test_simple_model():
     assert schema.strip() == expected_schema.strip()
 
 
-def test_nested_model():
+def test_nested_model() -> None:
     class NestedModel(BaseModel):
         nested_field: int
 
@@ -42,9 +40,9 @@ def test_nested_model():
     assert schema.strip() == expected_schema.strip()
 
 
-def test_model_with_list():
+def test_model_with_list() -> None:
     class ListModel(BaseModel):
-        list_field: List[int]
+        list_field: list[int]
 
     parser = PydanticSchemaParser(model=ListModel)
     schema = parser.get_schema()
@@ -55,9 +53,9 @@ def test_model_with_list():
     assert schema.strip() == expected_schema.strip()
 
 
-def test_model_with_optional_field():
+def test_model_with_optional_field() -> None:
     class OptionalModel(BaseModel):
-        optional_field: Optional[str]
+        optional_field: str | None
 
     parser = PydanticSchemaParser(model=OptionalModel)
     schema = parser.get_schema()
@@ -68,9 +66,9 @@ def test_model_with_optional_field():
     assert schema.strip() == expected_schema.strip()
 
 
-def test_model_with_union():
+def test_model_with_union() -> None:
     class UnionModel(BaseModel):
-        union_field: Union[int, str]
+        union_field: int | str
 
     parser = PydanticSchemaParser(model=UnionModel)
     schema = parser.get_schema()
@@ -81,9 +79,9 @@ def test_model_with_union():
     assert schema.strip() == expected_schema.strip()
 
 
-def test_model_with_dict():
+def test_model_with_dict() -> None:
     class DictModel(BaseModel):
-        dict_field: Dict[str, int]
+        dict_field: dict[str, int]
 
     parser = PydanticSchemaParser(model=DictModel)
     schema = parser.get_schema()

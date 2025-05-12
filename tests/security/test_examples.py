@@ -1,16 +1,15 @@
 """Test for the examples in the fingerprinting documentation."""
 
-import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.security import Fingerprint, SecurityConfig
 
 
-def test_basic_usage_examples():
+def test_basic_usage_examples() -> None:
     """Test the basic usage examples from the documentation."""
     # Creating components with automatic fingerprinting
     agent = Agent(
-        role="Data Scientist", goal="Analyze data", backstory="Expert in data analysis"
+        role="Data Scientist", goal="Analyze data", backstory="Expert in data analysis",
     )
 
     # Verify the agent has a fingerprint
@@ -35,11 +34,11 @@ def test_basic_usage_examples():
     assert task.fingerprint.uuid_str is not None
 
 
-def test_accessing_fingerprints_example():
+def test_accessing_fingerprints_example() -> None:
     """Test the accessing fingerprints example from the documentation."""
     # Create components
     agent = Agent(
-        role="Data Scientist", goal="Analyze data", backstory="Expert in data analysis"
+        role="Data Scientist", goal="Analyze data", backstory="Expert in data analysis",
     )
 
     crew = Crew(agents=[agent], tasks=[])
@@ -75,11 +74,11 @@ def test_accessing_fingerprints_example():
         task_fingerprint.uuid_str,
     ]
     assert len(fingerprints) == len(
-        set(fingerprints)
+        set(fingerprints),
     ), "All fingerprints should be unique"
 
 
-def test_fingerprint_metadata_example():
+def test_fingerprint_metadata_example() -> None:
     """Test using the Fingerprint's metadata for additional information."""
     # Create a SecurityConfig with custom metadata
     security_config = SecurityConfig()
@@ -97,7 +96,7 @@ def test_fingerprint_metadata_example():
     assert agent.fingerprint.metadata == {"version": "1.0", "author": "John Doe"}
 
 
-def test_fingerprint_with_security_config():
+def test_fingerprint_with_security_config() -> None:
     """Test example of using a SecurityConfig with components."""
     # Create a SecurityConfig
     security_config = SecurityConfig()
@@ -125,15 +124,15 @@ def test_fingerprint_with_security_config():
     assert task.security_config is security_config
 
 
-def test_complete_workflow_example():
+def test_complete_workflow_example() -> None:
     """Test the complete workflow example from the documentation."""
     # Create agents with auto-generated fingerprints
     researcher = Agent(
-        role="Researcher", goal="Find information", backstory="Expert researcher"
+        role="Researcher", goal="Find information", backstory="Expert researcher",
     )
 
     writer = Agent(
-        role="Writer", goal="Create content", backstory="Professional writer"
+        role="Writer", goal="Create content", backstory="Professional writer",
     )
 
     # Create tasks with auto-generated fingerprints
@@ -151,7 +150,7 @@ def test_complete_workflow_example():
 
     # Create a crew with auto-generated fingerprint
     content_crew = Crew(
-        agents=[researcher, writer], tasks=[research_task, writing_task]
+        agents=[researcher, writer], tasks=[research_task, writing_task],
     )
 
     # Verify everything has auto-generated fingerprints
@@ -170,11 +169,11 @@ def test_complete_workflow_example():
         content_crew.fingerprint.uuid_str,
     ]
     assert len(fingerprints) == len(
-        set(fingerprints)
+        set(fingerprints),
     ), "All fingerprints should be unique"
 
 
-def test_security_preservation_during_copy():
+def test_security_preservation_during_copy() -> None:
     """Test that security configurations are preserved when copying Crew and Agent objects."""
     # Create a SecurityConfig with custom metadata
     security_config = SecurityConfig()
@@ -197,7 +196,7 @@ def test_security_preservation_during_copy():
 
     # Create a crew with the agent and task
     original_crew = Crew(
-        agents=[original_agent], tasks=[task], security_config=security_config
+        agents=[original_agent], tasks=[task], security_config=security_config,
     )
 
     # Copy the agent and crew

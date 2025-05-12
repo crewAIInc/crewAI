@@ -1,14 +1,13 @@
-import pytest
 
 from crewai.cli.constants import ENV_VARS, MODELS, PROVIDERS
 
 
-def test_huggingface_in_providers():
+def test_huggingface_in_providers() -> None:
     """Test that Huggingface is in the PROVIDERS list."""
     assert "huggingface" in PROVIDERS
 
 
-def test_huggingface_env_vars():
+def test_huggingface_env_vars() -> None:
     """Test that Huggingface environment variables are properly configured."""
     assert "huggingface" in ENV_VARS
     assert any(
@@ -17,7 +16,7 @@ def test_huggingface_env_vars():
     )
 
 
-def test_huggingface_models():
+def test_huggingface_models() -> None:
     """Test that Huggingface models are properly configured."""
     assert "huggingface" in MODELS
     assert len(MODELS["huggingface"]) > 0

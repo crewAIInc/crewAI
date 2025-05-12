@@ -1,5 +1,4 @@
-"""
-Tests for verifying the integration of knowledge sources in the planning process.
+"""Tests for verifying the integration of knowledge sources in the planning process.
 This module ensures that agent knowledge is properly included during task planning.
 """
 
@@ -15,11 +14,12 @@ from crewai.utilities.planning_handler import CrewPlanner
 
 @pytest.fixture
 def mock_knowledge_source():
-    """
-    Create a mock knowledge source with test content.
+    """Create a mock knowledge source with test content.
+
     Returns:
         StringKnowledgeSource:
-            A knowledge source containing AI-related test content
+            A knowledge source containing AI-related test content.
+
     """
     content = """
     Important context about AI:
@@ -29,13 +29,13 @@ def mock_knowledge_source():
     """
     return StringKnowledgeSource(content=content)
 
-@patch('crewai.knowledge.storage.knowledge_storage.chromadb')
-def test_knowledge_included_in_planning(mock_chroma):
+@patch("crewai.knowledge.storage.knowledge_storage.chromadb")
+def test_knowledge_included_in_planning(mock_chroma) -> None:
     """Test that verifies knowledge sources are properly included in planning."""
     # Mock ChromaDB collection
     mock_collection = mock_chroma.return_value.get_or_create_collection.return_value
     mock_collection.add.return_value = None
-    
+
     # Create an agent with knowledge
     agent = Agent(
         role="AI Researcher",
@@ -43,16 +43,16 @@ def test_knowledge_included_in_planning(mock_chroma):
         backstory="Expert in artificial intelligence",
         knowledge_sources=[
             StringKnowledgeSource(
-                content="AI systems require careful training and validation."
-            )
-        ]
+                content="AI systems require careful training and validation.",
+            ),
+        ],
     )
 
     # Create a task for the agent
     task = Task(
         description="Explain the basics of AI systems",
         expected_output="A clear explanation of AI fundamentals",
-        agent=agent
+        agent=agent,
     )
 
     # Create a crew planner

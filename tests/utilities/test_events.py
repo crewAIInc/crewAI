@@ -1,5 +1,5 @@
-import os
 from datetime import datetime
+from typing import NoReturn
 from unittest.mock import Mock, patch
 
 import pytest
@@ -38,7 +38,6 @@ from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
-    LLMCallType,
     LLMStreamChunkEvent,
 )
 from crewai.utilities.events.task_events import (
@@ -74,21 +73,21 @@ event_listener = EventListener()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_start_kickoff_event():
+def test_crew_emits_start_kickoff_event() -> None:
     received_events = []
     mock_span = Mock()
 
     @crewai_event_bus.on(CrewKickoffStartedEvent)
-    def handle_crew_start(source, event):
+    def handle_crew_start(source, event) -> None:
         received_events.append(event)
 
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
     with (
         patch.object(
-            event_listener._telemetry, "crew_execution_span", return_value=mock_span
+            event_listener._telemetry, "crew_execution_span", return_value=mock_span,
         ) as mock_crew_execution_span,
         patch.object(
-            event_listener._telemetry, "end_crew", return_value=mock_span
+            event_listener._telemetry, "end_crew", return_value=mock_span,
         ) as mock_crew_ended,
     ):
         crew.kickoff()
@@ -102,11 +101,11 @@ def test_crew_emits_start_kickoff_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_end_kickoff_event():
+def test_crew_emits_end_kickoff_event() -> None:
     received_events = []
 
     @crewai_event_bus.on(CrewKickoffCompletedEvent)
-    def handle_crew_end(source, event):
+    def handle_crew_end(source, event) -> None:
         received_events.append(event)
 
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
@@ -120,22 +119,22 @@ def test_crew_emits_end_kickoff_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_test_kickoff_type_event():
+def test_crew_emits_test_kickoff_type_event() -> None:
     received_events = []
     mock_span = Mock()
 
     @crewai_event_bus.on(CrewTestStartedEvent)
-    def handle_crew_end(source, event):
+    def handle_crew_end(source, event) -> None:
         received_events.append(event)
 
     @crewai_event_bus.on(CrewTestCompletedEvent)
-    def handle_crew_test_end(source, event):
+    def handle_crew_test_end(source, event) -> None:
         received_events.append(event)
 
     eval_llm = LLM(model="gpt-4o-mini")
     with (
         patch.object(
-            event_listener._telemetry, "test_execution_span", return_value=mock_span
+            event_listener._telemetry, "test_execution_span", return_value=mock_span,
         ) as mock_crew_execution_span,
     ):
         crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
@@ -159,13 +158,13 @@ def test_crew_emits_test_kickoff_type_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_kickoff_failed_event():
+def test_crew_emits_kickoff_failed_event() -> None:
     received_events = []
 
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
-        def handle_crew_failed(source, event):
+        def handle_crew_failed(source, event) -> None:
             received_events.append(event)
 
         crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
@@ -184,11 +183,11 @@ def test_crew_emits_kickoff_failed_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_start_task_event():
+def test_crew_emits_start_task_event() -> None:
     received_events = []
 
     @crewai_event_bus.on(TaskStartedEvent)
-    def handle_task_start(source, event):
+    def handle_task_start(source, event) -> None:
         received_events.append(event)
 
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
@@ -201,21 +200,21 @@ def test_crew_emits_start_task_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_end_task_event():
+def test_crew_emits_end_task_event() -> None:
     received_events = []
 
     @crewai_event_bus.on(TaskCompletedEvent)
-    def handle_task_end(source, event):
+    def handle_task_end(source, event) -> None:
         received_events.append(event)
 
     mock_span = Mock()
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
     with (
         patch.object(
-            event_listener._telemetry, "task_started", return_value=mock_span
+            event_listener._telemetry, "task_started", return_value=mock_span,
         ) as mock_task_started,
         patch.object(
-            event_listener._telemetry, "task_ended", return_value=mock_span
+            event_listener._telemetry, "task_ended", return_value=mock_span,
         ) as mock_task_ended,
     ):
         crew.kickoff()
@@ -229,12 +228,12 @@ def test_crew_emits_end_task_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_emits_failed_event_on_execution_error():
+def test_task_emits_failed_event_on_execution_error() -> None:
     received_events = []
     received_sources = []
 
     @crewai_event_bus.on(TaskFailedEvent)
-    def handle_task_failed(source, event):
+    def handle_task_failed(source, event) -> None:
         received_events.append(event)
         received_sources.append(source)
 
@@ -266,15 +265,15 @@ def test_task_emits_failed_event_on_execution_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_emits_execution_started_and_completed_events():
+def test_agent_emits_execution_started_and_completed_events() -> None:
     received_events = []
 
     @crewai_event_bus.on(AgentExecutionStartedEvent)
-    def handle_agent_start(source, event):
+    def handle_agent_start(source, event) -> None:
         received_events.append(event)
 
     @crewai_event_bus.on(AgentExecutionCompletedEvent)
-    def handle_agent_completed(source, event):
+    def handle_agent_completed(source, event) -> None:
         received_events.append(event)
 
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
@@ -295,21 +294,21 @@ def test_agent_emits_execution_started_and_completed_events():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_emits_execution_error_event():
+def test_agent_emits_execution_error_event() -> None:
     received_events = []
 
     @crewai_event_bus.on(AgentExecutionErrorEvent)
-    def handle_agent_start(source, event):
+    def handle_agent_start(source, event) -> None:
         received_events.append(event)
 
     error_message = "Error happening while sending prompt to model."
     base_agent.max_retry_limit = 0
     with patch.object(
-        CrewAgentExecutor, "invoke", wraps=base_agent.agent_executor.invoke
+        CrewAgentExecutor, "invoke", wraps=base_agent.agent_executor.invoke,
     ) as invoke_mock:
         invoke_mock.side_effect = Exception(error_message)
 
-        with pytest.raises(Exception) as e:
+        with pytest.raises(Exception):
             base_agent.execute_task(
                 task=base_task,
             )
@@ -325,7 +324,7 @@ def test_agent_emits_execution_error_event():
 class SayHiTool(BaseTool):
     name: str = Field(default="say_hi", description="The name of the tool")
     description: str = Field(
-        default="Say hi", description="The description of the tool"
+        default="Say hi", description="The description of the tool",
     )
 
     def _run(self) -> str:
@@ -333,11 +332,11 @@ class SayHiTool(BaseTool):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_tools_emits_finished_events():
+def test_tools_emits_finished_events() -> None:
     received_events = []
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
-    def handle_tool_end(source, event):
+    def handle_tool_end(source, event) -> None:
         received_events.append(event)
 
     agent = Agent(
@@ -364,16 +363,16 @@ def test_tools_emits_finished_events():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_tools_emits_error_events():
+def test_tools_emits_error_events() -> None:
     received_events = []
 
     @crewai_event_bus.on(ToolUsageErrorEvent)
-    def handle_tool_end(source, event):
+    def handle_tool_end(source, event) -> None:
         received_events.append(event)
 
     class ErrorTool(BaseTool):
         name: str = Field(
-            default="error_tool", description="A tool that raises an error"
+            default="error_tool", description="A tool that raises an error",
         )
         description: str = Field(
             default="This tool always raises an error",
@@ -381,7 +380,8 @@ def test_tools_emits_error_events():
         )
 
         def _run(self) -> str:
-            raise Exception("Simulated tool error")
+            msg = "Simulated tool error"
+            raise Exception(msg)
 
     agent = Agent(
         role="base_agent",
@@ -410,22 +410,22 @@ def test_tools_emits_error_events():
     assert isinstance(received_events[0].timestamp, datetime)
 
 
-def test_flow_emits_start_event():
+def test_flow_emits_start_event() -> None:
     received_events = []
     mock_span = Mock()
 
     @crewai_event_bus.on(FlowStartedEvent)
-    def handle_flow_start(source, event):
+    def handle_flow_start(source, event) -> None:
         received_events.append(event)
 
     class TestFlow(Flow[dict]):
         @start()
-        def begin(self):
+        def begin(self) -> str:
             return "started"
 
     with (
         patch.object(
-            event_listener._telemetry, "flow_execution_span", return_value=mock_span
+            event_listener._telemetry, "flow_execution_span", return_value=mock_span,
         ) as mock_flow_execution_span,
     ):
         flow = TestFlow()
@@ -437,18 +437,18 @@ def test_flow_emits_start_event():
     assert received_events[0].type == "flow_started"
 
 
-def test_flow_emits_finish_event():
+def test_flow_emits_finish_event() -> None:
     received_events = []
 
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(FlowFinishedEvent)
-        def handle_flow_finish(source, event):
+        def handle_flow_finish(source, event) -> None:
             received_events.append(event)
 
         class TestFlow(Flow[dict]):
             @start()
-            def begin(self):
+            def begin(self) -> str:
                 return "completed"
 
         flow = TestFlow()
@@ -461,23 +461,22 @@ def test_flow_emits_finish_event():
         assert result == "completed"
 
 
-def test_flow_emits_method_execution_started_event():
+def test_flow_emits_method_execution_started_event() -> None:
     received_events = []
 
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
-        def handle_method_start(source, event):
-            print("event in method name", event.method_name)
+        def handle_method_start(source, event) -> None:
             received_events.append(event)
 
         class TestFlow(Flow[dict]):
             @start()
-            def begin(self):
+            def begin(self) -> str:
                 return "started"
 
             @listen("begin")
-            def second_method(self):
+            def second_method(self) -> str:
                 return "executed"
 
         flow = TestFlow()
@@ -495,10 +494,10 @@ def test_flow_emits_method_execution_started_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_register_handler_adds_new_handler():
+def test_register_handler_adds_new_handler() -> None:
     received_events = []
 
-    def custom_handler(source, event):
+    def custom_handler(source, event) -> None:
         received_events.append(event)
 
     with crewai_event_bus.scoped_handlers():
@@ -513,14 +512,14 @@ def test_register_handler_adds_new_handler():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_handlers_for_same_event():
+def test_multiple_handlers_for_same_event() -> None:
     received_events_1 = []
     received_events_2 = []
 
-    def handler_1(source, event):
+    def handler_1(source, event) -> None:
         received_events_1.append(event)
 
-    def handler_2(source, event):
+    def handler_2(source, event) -> None:
         received_events_2.append(event)
 
     with crewai_event_bus.scoped_handlers():
@@ -536,22 +535,22 @@ def test_multiple_handlers_for_same_event():
         assert received_events_2[0].type == "crew_kickoff_started"
 
 
-def test_flow_emits_created_event():
+def test_flow_emits_created_event() -> None:
     received_events = []
     mock_span = Mock()
 
     @crewai_event_bus.on(FlowCreatedEvent)
-    def handle_flow_created(source, event):
+    def handle_flow_created(source, event) -> None:
         received_events.append(event)
 
     class TestFlow(Flow[dict]):
         @start()
-        def begin(self):
+        def begin(self) -> str:
             return "started"
 
     with (
         patch.object(
-            event_listener._telemetry, "flow_creation_span", return_value=mock_span
+            event_listener._telemetry, "flow_creation_span", return_value=mock_span,
         ) as mock_flow_creation_span,
     ):
         flow = TestFlow()
@@ -564,17 +563,17 @@ def test_flow_emits_created_event():
     assert received_events[0].type == "flow_created"
 
 
-def test_flow_emits_method_execution_failed_event():
+def test_flow_emits_method_execution_failed_event() -> None:
     received_events = []
     error = Exception("Simulated method failure")
 
     @crewai_event_bus.on(MethodExecutionFailedEvent)
-    def handle_method_failed(source, event):
+    def handle_method_failed(source, event) -> None:
         received_events.append(event)
 
     class TestFlow(Flow[dict]):
         @start()
-        def begin(self):
+        def begin(self) -> NoReturn:
             raise error
 
     flow = TestFlow()
@@ -589,15 +588,15 @@ def test_flow_emits_method_execution_failed_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_emits_call_started_event():
+def test_llm_emits_call_started_event() -> None:
     received_events = []
 
     @crewai_event_bus.on(LLMCallStartedEvent)
-    def handle_llm_call_started(source, event):
+    def handle_llm_call_started(source, event) -> None:
         received_events.append(event)
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
-    def handle_llm_call_completed(source, event):
+    def handle_llm_call_completed(source, event) -> None:
         received_events.append(event)
 
     llm = LLM(model="gpt-4o-mini")
@@ -609,11 +608,11 @@ def test_llm_emits_call_started_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_emits_call_failed_event():
+def test_llm_emits_call_failed_event() -> None:
     received_events = []
 
     @crewai_event_bus.on(LLMCallFailedEvent)
-    def handle_llm_call_failed(source, event):
+    def handle_llm_call_failed(source, event) -> None:
         received_events.append(event)
 
     error_message = "Simulated LLM call failure"
@@ -629,14 +628,14 @@ def test_llm_emits_call_failed_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_emits_stream_chunk_events():
+def test_llm_emits_stream_chunk_events() -> None:
     """Test that LLM emits stream chunk events when streaming is enabled."""
     received_chunks = []
 
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(LLMStreamChunkEvent)
-        def handle_stream_chunk(source, event):
+        def handle_stream_chunk(source, event) -> None:
             received_chunks.append(event.chunk)
 
         # Create an LLM with streaming enabled
@@ -653,14 +652,14 @@ def test_llm_emits_stream_chunk_events():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_no_stream_chunks_when_streaming_disabled():
+def test_llm_no_stream_chunks_when_streaming_disabled() -> None:
     """Test that LLM doesn't emit stream chunk events when streaming is disabled."""
     received_chunks = []
 
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(LLMStreamChunkEvent)
-        def handle_stream_chunk(source, event):
+        def handle_stream_chunk(source, event) -> None:
             received_chunks.append(event.chunk)
 
         # Create an LLM with streaming disabled
@@ -673,11 +672,12 @@ def test_llm_no_stream_chunks_when_streaming_disabled():
         assert len(received_chunks) == 0
 
         # Verify we got a response
-        assert response and isinstance(response, str)
+        assert response
+        assert isinstance(response, str)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_streaming_fallback_to_non_streaming():
+def test_streaming_fallback_to_non_streaming() -> None:
     """Test that streaming falls back to non-streaming when there's an error."""
     received_chunks = []
     fallback_called = False
@@ -685,7 +685,7 @@ def test_streaming_fallback_to_non_streaming():
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(LLMStreamChunkEvent)
-        def handle_stream_chunk(source, event):
+        def handle_stream_chunk(source, event) -> None:
             received_chunks.append(event.chunk)
 
         # Create an LLM with streaming enabled
@@ -695,7 +695,7 @@ def test_streaming_fallback_to_non_streaming():
         original_call = llm.call
 
         # Create a mock call method that handles the streaming error
-        def mock_call(messages, tools=None, callbacks=None, available_functions=None):
+        def mock_call(messages, tools=None, callbacks=None, available_functions=None) -> str:
             nonlocal fallback_called
             # Emit a couple of chunks to simulate partial streaming
             crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 1"))
@@ -731,14 +731,14 @@ def test_streaming_fallback_to_non_streaming():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_streaming_empty_response_handling():
+def test_streaming_empty_response_handling() -> None:
     """Test that streaming handles empty responses correctly."""
     received_chunks = []
 
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(LLMStreamChunkEvent)
-        def handle_stream_chunk(source, event):
+        def handle_stream_chunk(source, event) -> None:
             received_chunks.append(event.chunk)
 
         # Create an LLM with streaming enabled
@@ -748,7 +748,7 @@ def test_streaming_empty_response_handling():
         original_call = llm.call
 
         # Create a mock call method that simulates empty chunks
-        def mock_call(messages, tools=None, callbacks=None, available_functions=None):
+        def mock_call(messages, tools=None, callbacks=None, available_functions=None) -> str:
             # Emit a few empty chunks
             for _ in range(3):
                 crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk=""))
@@ -768,7 +768,8 @@ def test_streaming_empty_response_handling():
             assert all(chunk == "" for chunk in received_chunks)
 
             # Verify the response is the default message for empty responses
-            assert "I apologize" in response and "couldn't generate" in response
+            assert "I apologize" in response
+            assert "couldn't generate" in response
 
         finally:
             # Restore the original method

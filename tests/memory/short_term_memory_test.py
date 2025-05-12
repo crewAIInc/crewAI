@@ -11,7 +11,7 @@ from crewai.task import Task
 
 @pytest.fixture
 def short_term_memory():
-    """Fixture to create a ShortTermMemory instance"""
+    """Fixture to create a ShortTermMemory instance."""
     agent = Agent(
         role="Researcher",
         goal="Search relevant data and provide results",
@@ -28,7 +28,7 @@ def short_term_memory():
     return ShortTermMemory(crew=Crew(agents=[agent], tasks=[task]))
 
 
-def test_save_and_search(short_term_memory):
+def test_save_and_search(short_term_memory) -> None:
     memory = ShortTermMemoryItem(
         data="""test value test value test value test value test value test value
         test value test value test value test value test value test value
@@ -55,7 +55,7 @@ def test_save_and_search(short_term_memory):
             "context": memory.data,
             "metadata": {"agent": "test_agent"},
             "score": 0.95,
-        }
+        },
     ]
     with patch.object(ShortTermMemory, "search", return_value=expected_result):
         find = short_term_memory.search("test value", score_threshold=0.01)[0]

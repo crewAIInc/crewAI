@@ -1,7 +1,6 @@
 """Test Knowledge creation and querying functionality."""
 
 from pathlib import Path
-from typing import List, Union
 from unittest.mock import patch
 
 import pytest
@@ -25,23 +24,23 @@ def mock_vector_db():
             {
                 "context": "Brandon's favorite color is blue and he likes Mexican food.",
                 "score": 0.9,
-            }
+            },
         ]
         instance.reset.return_value = None
         yield instance
 
 
 @pytest.fixture(autouse=True)
-def reset_knowledge_storage(mock_vector_db):
+def reset_knowledge_storage(mock_vector_db) -> None:
     """Fixture to reset knowledge storage before each test."""
-    yield
+    return
 
 
-def test_single_short_string(mock_vector_db):
+def test_single_short_string(mock_vector_db) -> None:
     # Create a knowledge base with a single short string
     content = "Brandon's favorite color is blue and he likes Mexican food."
     string_source = StringKnowledgeSource(
-        content=content, metadata={"preference": "personal"}
+        content=content, metadata={"preference": "personal"},
     )
     mock_vector_db.sources = [string_source]
     mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
@@ -56,7 +55,7 @@ def test_single_short_string(mock_vector_db):
 
 
 # @pytest.mark.vcr(filter_headers=["authorization"])
-def test_single_2k_character_string(mock_vector_db):
+def test_single_2k_character_string(mock_vector_db) -> None:
     # Create a 2k character string with various facts about Brandon
     content = (
         "Brandon is a software engineer who lives in San Francisco. "
@@ -81,7 +80,7 @@ def test_single_2k_character_string(mock_vector_db):
         "He is also a fan of the Golden State Warriors and enjoys watching their games. "
     )
     string_source = StringKnowledgeSource(
-        content=content, metadata={"preference": "personal"}
+        content=content, metadata={"preference": "personal"},
     )
     mock_vector_db.sources = [string_source]
     mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
@@ -95,7 +94,7 @@ def test_single_2k_character_string(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
-def test_multiple_short_strings(mock_vector_db):
+def test_multiple_short_strings(mock_vector_db) -> None:
     # Create multiple short string sources
     contents = [
         "Brandon loves hiking.",
@@ -109,7 +108,7 @@ def test_multiple_short_strings(mock_vector_db):
 
     # Mock the vector db query response
     mock_vector_db.query.return_value = [
-        {"context": "Brandon has a dog named Max.", "score": 0.9}
+        {"context": "Brandon has a dog named Max.", "score": 0.9},
     ]
 
     mock_vector_db.sources = string_sources
@@ -124,7 +123,7 @@ def test_multiple_short_strings(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
-def test_multiple_2k_character_strings(mock_vector_db):
+def test_multiple_2k_character_strings(mock_vector_db) -> None:
     # Create multiple 2k character strings with various facts about Brandon
     contents = [
         (
@@ -194,7 +193,7 @@ def test_multiple_2k_character_strings(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
-def test_single_short_file(mock_vector_db, tmpdir):
+def test_single_short_file(mock_vector_db, tmpdir) -> None:
     # Create a single short text file
     content = "Brandon's favorite sport is basketball."
     file_path = Path(tmpdir.join("short_file.txt"))
@@ -202,7 +201,7 @@ def test_single_short_file(mock_vector_db, tmpdir):
         f.write(content)
 
     file_source = TextFileKnowledgeSource(
-        file_paths=[file_path], metadata={"preference": "personal"}
+        file_paths=[file_path], metadata={"preference": "personal"},
     )
     mock_vector_db.sources = [file_source]
     mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
@@ -215,7 +214,7 @@ def test_single_short_file(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-def test_single_2k_character_file(mock_vector_db, tmpdir):
+def test_single_2k_character_file(mock_vector_db, tmpdir) -> None:
     # Create a single 2k character text file with various facts about Brandon
     content = (
         "Brandon is a software engineer who lives in San Francisco. "
@@ -244,7 +243,7 @@ def test_single_2k_character_file(mock_vector_db, tmpdir):
         f.write(content)
 
     file_source = TextFileKnowledgeSource(
-        file_paths=[file_path], metadata={"preference": "personal"}
+        file_paths=[file_path], metadata={"preference": "personal"},
     )
     mock_vector_db.sources = [file_source]
     mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
@@ -257,7 +256,7 @@ def test_single_2k_character_file(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-def test_multiple_short_files(mock_vector_db, tmpdir):
+def test_multiple_short_files(mock_vector_db, tmpdir) -> None:
     # Create multiple short text files
     contents = [
         {
@@ -286,7 +285,7 @@ def test_multiple_short_files(mock_vector_db, tmpdir):
     ]
     mock_vector_db.sources = file_sources
     mock_vector_db.query.return_value = [
-        {"context": "Brandon lives in New York.", "score": 0.9}
+        {"context": "Brandon lives in New York.", "score": 0.9},
     ]
     # Perform a query
     query = "What city does he reside in?"
@@ -296,7 +295,7 @@ def test_multiple_short_files(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-def test_multiple_2k_character_files(mock_vector_db, tmpdir):
+def test_multiple_2k_character_files(mock_vector_db, tmpdir) -> None:
     # Create multiple 2k character text files with various facts about Brandon
     contents = [
         (
@@ -362,7 +361,7 @@ def test_multiple_2k_character_files(mock_vector_db, tmpdir):
         {
             "context": "Brandon's favorite book is 'The Hitchhiker's Guide to the Galaxy'.",
             "score": 0.9,
-        }
+        },
     ]
     # Perform a query
     query = "What is Brandon's favorite book?"
@@ -377,7 +376,7 @@ def test_multiple_2k_character_files(mock_vector_db, tmpdir):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hybrid_string_and_files(mock_vector_db, tmpdir):
+def test_hybrid_string_and_files(mock_vector_db, tmpdir) -> None:
     # Create string sources
     string_contents = [
         "Brandon is learning French.",
@@ -418,7 +417,7 @@ def test_hybrid_string_and_files(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-def test_pdf_knowledge_source(mock_vector_db):
+def test_pdf_knowledge_source(mock_vector_db) -> None:
     # Get the directory of the current file
     current_dir = Path(__file__).parent
     # Construct the path to the PDF file
@@ -426,11 +425,11 @@ def test_pdf_knowledge_source(mock_vector_db):
 
     # Create a PDFKnowledgeSource
     pdf_source = PDFKnowledgeSource(
-        file_paths=[pdf_path], metadata={"preference": "personal"}
+        file_paths=[pdf_path], metadata={"preference": "personal"},
     )
     mock_vector_db.sources = [pdf_source]
     mock_vector_db.query.return_value = [
-        {"context": "crewai create crew latest-ai-development", "score": 0.9}
+        {"context": "crewai create crew latest-ai-development", "score": 0.9},
     ]
 
     # Perform a query
@@ -446,9 +445,8 @@ def test_pdf_knowledge_source(mock_vector_db):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_csv_knowledge_source(mock_vector_db, tmpdir):
+def test_csv_knowledge_source(mock_vector_db, tmpdir) -> None:
     """Test CSVKnowledgeSource with a simple CSV file."""
-
     # Create a CSV file with sample data
     csv_content = [
         ["Name", "Age", "City"],
@@ -463,11 +461,11 @@ def test_csv_knowledge_source(mock_vector_db, tmpdir):
 
     # Create a CSVKnowledgeSource
     csv_source = CSVKnowledgeSource(
-        file_paths=[csv_path], metadata={"preference": "personal"}
+        file_paths=[csv_path], metadata={"preference": "personal"},
     )
     mock_vector_db.sources = [csv_source]
     mock_vector_db.query.return_value = [
-        {"context": "Brandon is 30 years old.", "score": 0.9}
+        {"context": "Brandon is 30 years old.", "score": 0.9},
     ]
 
     # Perform a query
@@ -479,16 +477,15 @@ def test_csv_knowledge_source(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-def test_json_knowledge_source(mock_vector_db, tmpdir):
+def test_json_knowledge_source(mock_vector_db, tmpdir) -> None:
     """Test JSONKnowledgeSource with a simple JSON file."""
-
     # Create a JSON file with sample data
     json_data = {
         "people": [
             {"name": "Brandon", "age": 30, "city": "New York"},
             {"name": "Alice", "age": 25, "city": "Los Angeles"},
             {"name": "Bob", "age": 35, "city": "Chicago"},
-        ]
+        ],
     }
     json_path = Path(tmpdir.join("data.json"))
     with open(json_path, "w", encoding="utf-8") as f:
@@ -498,11 +495,11 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
 
     # Create a JSONKnowledgeSource
     json_source = JSONKnowledgeSource(
-        file_paths=[json_path], metadata={"preference": "personal"}
+        file_paths=[json_path], metadata={"preference": "personal"},
     )
     mock_vector_db.sources = [json_source]
     mock_vector_db.query.return_value = [
-        {"context": "Alice lives in Los Angeles.", "score": 0.9}
+        {"context": "Alice lives in Los Angeles.", "score": 0.9},
     ]
 
     # Perform a query
@@ -514,9 +511,8 @@ def test_json_knowledge_source(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-def test_excel_knowledge_source(mock_vector_db, tmpdir):
+def test_excel_knowledge_source(mock_vector_db, tmpdir) -> None:
     """Test ExcelKnowledgeSource with a simple Excel file."""
-
     # Create an Excel file with sample data
     import pandas as pd
 
@@ -531,11 +527,11 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
 
     # Create an ExcelKnowledgeSource
     excel_source = ExcelKnowledgeSource(
-        file_paths=[excel_path], metadata={"preference": "personal"}
+        file_paths=[excel_path], metadata={"preference": "personal"},
     )
     mock_vector_db.sources = [excel_source]
     mock_vector_db.query.return_value = [
-        {"context": "Brandon is 30 years old.", "score": 0.9}
+        {"context": "Brandon is 30 years old.", "score": 0.9},
     ]
 
     # Perform a query
@@ -548,7 +544,7 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
 
 
 @pytest.mark.vcr
-def test_docling_source(mock_vector_db):
+def test_docling_source(mock_vector_db) -> None:
     docling_source = CrewDoclingSource(
         file_paths=[
             "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
@@ -559,7 +555,7 @@ def test_docling_source(mock_vector_db):
         {
             "context": "Reward hacking is a technique used to improve the performance of reinforcement learning agents.",
             "score": 0.9,
-        }
+        },
     ]
     # Perform a query
     query = "What is reward hacking?"
@@ -569,8 +565,8 @@ def test_docling_source(mock_vector_db):
 
 
 @pytest.mark.vcr
-def test_multiple_docling_sources():
-    urls: List[Union[Path, str]] = [
+def test_multiple_docling_sources() -> None:
+    urls: list[Path | str] = [
         "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
         "https://lilianweng.github.io/posts/2024-07-07-hallucination/",
     ]
@@ -580,7 +576,7 @@ def test_multiple_docling_sources():
     assert docling_source.content is not None
 
 
-def test_file_path_validation():
+def test_file_path_validation() -> None:
     """Test file path validation for knowledge sources."""
     current_dir = Path(__file__).parent
     pdf_path = current_dir / "crewai_quickstart.pdf"

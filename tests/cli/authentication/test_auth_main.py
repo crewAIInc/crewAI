@@ -1,17 +1,18 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 
 from crewai.cli.authentication.main import AuthenticationCommand
 
 
 class TestAuthenticationCommand(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.auth_command = AuthenticationCommand()
 
     @patch("crewai.cli.authentication.main.requests.post")
-    def test_get_device_code(self, mock_post):
+    def test_get_device_code(self, mock_post) -> None:
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "device_code": "123456",
@@ -23,16 +24,14 @@ class TestAuthenticationCommand(unittest.TestCase):
 
         device_code_data = self.auth_command._get_device_code()
 
-        self.assertEqual(device_code_data["device_code"], "123456")
-        self.assertEqual(device_code_data["user_code"], "ABCDEF")
-        self.assertEqual(
-            device_code_data["verification_uri_complete"], "https://example.com"
-        )
-        self.assertEqual(device_code_data["interval"], 5)
+        assert device_code_data["device_code"] == "123456"
+        assert device_code_data["user_code"] == "ABCDEF"
+        assert device_code_data["verification_uri_complete"] == "https://example.com"
+        assert device_code_data["interval"] == 5
 
     @patch("crewai.cli.authentication.main.console.print")
     @patch("crewai.cli.authentication.main.webbrowser.open")
-    def test_display_auth_instructions(self, mock_open, mock_print):
+    def test_display_auth_instructions(self, mock_open, mock_print) -> None:
         device_code_data = {
             "verification_uri_complete": "https://example.com",
             "user_code": "ABCDEF",
@@ -49,8 +48,8 @@ class TestAuthenticationCommand(unittest.TestCase):
     @patch("crewai.cli.authentication.main.validate_token")
     @patch("crewai.cli.authentication.main.console.print")
     def test_poll_for_token_success(
-        self, mock_print, mock_validate_token, mock_post, mock_tool
-    ):
+        self, mock_print, mock_validate_token, mock_post, mock_tool,
+    ) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -66,12 +65,12 @@ class TestAuthenticationCommand(unittest.TestCase):
 
         mock_validate_token.assert_called_once_with("TOKEN")
         mock_print.assert_called_once_with(
-            "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"
+            "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n",
         )
 
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.console.print")
-    def test_poll_for_token_error(self, mock_print, mock_post):
+    def test_poll_for_token_error(self, mock_print, mock_post) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 400
         mock_response.json.return_value = {
@@ -80,14 +79,14 @@ class TestAuthenticationCommand(unittest.TestCase):
         }
         mock_post.return_value = mock_response
 
-        with self.assertRaises(requests.HTTPError):
+        with pytest.raises(requests.HTTPError):
             self.auth_command._poll_for_token({"device_code": "123456"})
 
         mock_print.assert_not_called()
 
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.console.print")
-    def test_poll_for_token_timeout(self, mock_print, mock_post):
+    def test_poll_for_token_timeout(self, mock_print, mock_post) -> None:
         mock_response = MagicMock()
         mock_response.status_code = 400
         mock_response.json.return_value = {
@@ -99,5 +98,5 @@ class TestAuthenticationCommand(unittest.TestCase):
         self.auth_command._poll_for_token({"device_code": "123456", "interval": 0.01})
 
         mock_print.assert_called_once_with(
-            "Timeout: Failed to get the token. Please try again.", style="bold red"
+            "Timeout: Failed to get the token. Please try again.", style="bold red",
         )

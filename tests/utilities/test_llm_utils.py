@@ -8,25 +8,25 @@ from crewai.llm import LLM
 from crewai.utilities.llm_utils import create_llm
 
 
-def test_create_llm_with_llm_instance():
+def test_create_llm_with_llm_instance() -> None:
     existing_llm = LLM(model="gpt-4o")
     llm = create_llm(llm_value=existing_llm)
     assert llm is existing_llm
 
 
-def test_create_llm_with_valid_model_string():
+def test_create_llm_with_valid_model_string() -> None:
     llm = create_llm(llm_value="gpt-4o")
     assert isinstance(llm, LLM)
     assert llm.model == "gpt-4o"
 
 
-def test_create_llm_with_invalid_model_string():
+def test_create_llm_with_invalid_model_string() -> None:
     with pytest.raises(BadRequestError, match="LLM Provider NOT provided"):
         llm = create_llm(llm_value="invalid-model")
         llm.call(messages=[{"role": "user", "content": "Hello, world!"}])
 
 
-def test_create_llm_with_unknown_object_missing_attributes():
+def test_create_llm_with_unknown_object_missing_attributes() -> None:
     class UnknownObject:
         pass
 
@@ -38,7 +38,7 @@ def test_create_llm_with_unknown_object_missing_attributes():
         llm.call(messages=[{"role": "user", "content": "Hello, world!"}])
 
 
-def test_create_llm_with_none_uses_default_model():
+def test_create_llm_with_none_uses_default_model() -> None:
     with patch.dict(os.environ, {}, clear=True):
         with patch("crewai.cli.constants.DEFAULT_LLM_MODEL", "gpt-4o"):
             llm = create_llm(llm_value=None)
@@ -46,7 +46,7 @@ def test_create_llm_with_none_uses_default_model():
             assert llm.model == "gpt-4o-mini"
 
 
-def test_create_llm_with_unknown_object():
+def test_create_llm_with_unknown_object() -> None:
     class UnknownObject:
         model_name = "gpt-4o"
         temperature = 0.7
@@ -60,7 +60,7 @@ def test_create_llm_with_unknown_object():
     assert llm.max_tokens == 1500
 
 
-def test_create_llm_from_env_with_unaccepted_attributes():
+def test_create_llm_from_env_with_unaccepted_attributes() -> None:
     with patch.dict(
         os.environ,
         {
@@ -78,7 +78,7 @@ def test_create_llm_from_env_with_unaccepted_attributes():
         assert not hasattr(llm, "AWS_REGION_NAME")
 
 
-def test_create_llm_with_partial_attributes():
+def test_create_llm_with_partial_attributes() -> None:
     class PartialAttributes:
         model_name = "gpt-4o"
         # temperature is missing
@@ -90,7 +90,7 @@ def test_create_llm_with_partial_attributes():
     assert llm.temperature is None  # Should handle missing attributes gracefully
 
 
-def test_create_llm_with_invalid_type():
+def test_create_llm_with_invalid_type() -> None:
     with pytest.raises(BadRequestError, match="LLM Provider NOT provided"):
         llm = create_llm(llm_value=42)
         llm.call(messages=[{"role": "user", "content": "Hello, world!"}])

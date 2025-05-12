@@ -22,7 +22,7 @@ from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
-def test_agent_llm_creation_with_env_vars():
+def test_agent_llm_creation_with_env_vars() -> None:
     # Store original environment variables
     original_api_key = os.environ.get("OPENAI_API_KEY")
     original_api_base = os.environ.get("OPENAI_API_BASE")
@@ -65,7 +65,7 @@ def test_agent_llm_creation_with_env_vars():
         os.environ["OPENAI_MODEL_NAME"] = original_model_name
 
 
-def test_agent_creation():
+def test_agent_creation() -> None:
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     assert agent.role == "test role"
@@ -73,7 +73,7 @@ def test_agent_creation():
     assert agent.backstory == "test backstory"
 
 
-def test_agent_with_only_system_template():
+def test_agent_with_only_system_template() -> None:
     """Test that an agent with only system_template works without errors."""
     agent = Agent(
         role="Test Role",
@@ -89,7 +89,7 @@ def test_agent_with_only_system_template():
     assert agent.backstory == "Test Backstory"
 
 
-def test_agent_with_only_prompt_template():
+def test_agent_with_only_prompt_template() -> None:
     """Test that an agent with only system_template works without errors."""
     agent = Agent(
         role="Test Role",
@@ -105,7 +105,7 @@ def test_agent_with_only_prompt_template():
     assert agent.backstory == "Test Backstory"
 
 
-def test_agent_with_missing_response_template():
+def test_agent_with_missing_response_template() -> None:
     """Test that an agent with system_template and prompt_template but no response_template works without errors."""
     agent = Agent(
         role="Test Role",
@@ -122,20 +122,20 @@ def test_agent_with_missing_response_template():
     assert agent.backstory == "Test Backstory"
 
 
-def test_agent_default_values():
+def test_agent_default_values() -> None:
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
     assert agent.llm.model == "gpt-4o-mini"
     assert agent.allow_delegation is False
 
 
-def test_custom_llm():
+def test_custom_llm() -> None:
     agent = Agent(
-        role="test role", goal="test goal", backstory="test backstory", llm="gpt-4"
+        role="test role", goal="test goal", backstory="test backstory", llm="gpt-4",
     )
     assert agent.llm.model == "gpt-4"
 
 
-def test_custom_llm_with_langchain():
+def test_custom_llm_with_langchain() -> None:
     from langchain_openai import ChatOpenAI
 
     agent = Agent(
@@ -148,7 +148,7 @@ def test_custom_llm_with_langchain():
     assert agent.llm.model == "gpt-4"
 
 
-def test_custom_llm_temperature_preservation():
+def test_custom_llm_temperature_preservation() -> None:
     from langchain_openai import ChatOpenAI
 
     langchain_llm = ChatOpenAI(temperature=0.7, model="gpt-4")
@@ -165,7 +165,7 @@ def test_custom_llm_temperature_preservation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execution():
+def test_agent_execution() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -184,7 +184,7 @@ def test_agent_execution():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execution_with_tools():
+def test_agent_execution_with_tools() -> None:
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
@@ -206,7 +206,7 @@ def test_agent_execution_with_tools():
     received_events = []
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
-    def handle_tool_end(source, event):
+    def handle_tool_end(source, event) -> None:
         received_events.append(event)
 
     output = agent.execute_task(task)
@@ -219,7 +219,7 @@ def test_agent_execution_with_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_logging_tool_usage():
+def test_logging_tool_usage() -> None:
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
@@ -244,7 +244,7 @@ def test_logging_tool_usage():
     agent.tools_handler.cache = CacheHandler()
     output = agent.execute_task(task)
     tool_usage = InstructorToolCalling(
-        tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
+        tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4},
     )
 
     assert output == "The result of the multiplication is 12."
@@ -253,7 +253,7 @@ def test_logging_tool_usage():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_cache_hitting():
+def test_cache_hitting() -> None:
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
@@ -305,7 +305,7 @@ def test_cache_hitting():
     received_events = []
 
     @crewai_event_bus.on(ToolUsageFinishedEvent)
-    def handle_tool_end(source, event):
+    def handle_tool_end(source, event) -> None:
         received_events.append(event)
 
     with (
@@ -320,7 +320,7 @@ def test_cache_hitting():
         output = agent.execute_task(task)
         assert output == "0"
         read.assert_called_with(
-            tool="multiplier", input={"first_number": 2, "second_number": 6}
+            tool="multiplier", input={"first_number": 2, "second_number": 6},
         )
         assert len(received_events) == 1
         assert isinstance(received_events[0], ToolUsageFinishedEvent)
@@ -328,7 +328,7 @@ def test_cache_hitting():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_disabling_cache_for_agent():
+def test_disabling_cache_for_agent() -> None:
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
@@ -392,7 +392,7 @@ def test_disabling_cache_for_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execution_with_specific_tools():
+def test_agent_execution_with_specific_tools() -> None:
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
@@ -415,7 +415,7 @@ def test_agent_execution_with_specific_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
+def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool() -> None:
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
         """Useful for when you need to multiply two numbers together."""
@@ -441,7 +441,7 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_powered_by_new_o_model_family_that_uses_tool():
+def test_agent_powered_by_new_o_model_family_that_uses_tool() -> None:
     @tool
     def comapny_customer_data() -> float:
         """Useful for getting customer related data."""
@@ -467,11 +467,12 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_custom_max_iterations():
+def test_agent_custom_max_iterations() -> None:
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        tool non-stop.
+        """
         return 42
 
     agent = Agent(
@@ -483,7 +484,7 @@ def test_agent_custom_max_iterations():
     )
 
     with patch.object(
-        LLM, "call", wraps=LLM("gpt-4o", stop=["\nObservation:"]).call
+        LLM, "call", wraps=LLM("gpt-4o", stop=["\nObservation:"]).call,
     ) as private_mock:
         task = Task(
             description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
@@ -497,11 +498,12 @@ def test_agent_custom_max_iterations():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_repeated_tool_usage(capsys):
+def test_agent_repeated_tool_usage(capsys) -> None:
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        tool non-stop.
+        """
         return 42
 
     agent = Agent(
@@ -534,11 +536,12 @@ def test_agent_repeated_tool_usage(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
+def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys) -> None:
     @tool
     def get_final_answer(anything: str) -> float:
         """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        tool non-stop.
+        """
         return 42
 
     agent = Agent(
@@ -570,11 +573,12 @@ def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_moved_on_after_max_iterations():
+def test_agent_moved_on_after_max_iterations() -> None:
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        tool non-stop.
+        """
         return 42
 
     agent = Agent(
@@ -597,11 +601,12 @@ def test_agent_moved_on_after_max_iterations():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_respect_the_max_rpm_set(capsys):
+def test_agent_respect_the_max_rpm_set(capsys) -> None:
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        tool non-stop.
+        """
         return 42
 
     agent = Agent(
@@ -631,7 +636,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
+def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys) -> None:
     from unittest.mock import patch
 
     from crewai.tools import tool
@@ -639,7 +644,8 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        tool non-stop.
+        """
         return 42
 
     agent = Agent(
@@ -669,7 +675,7 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_without_max_rpm_respects_crew_rpm(capsys):
+def test_agent_without_max_rpm_respects_crew_rpm(capsys) -> None:
     from unittest.mock import patch
 
     from crewai.tools import tool
@@ -729,7 +735,7 @@ def test_agent_without_max_rpm_respects_crew_rpm(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_error_on_parsing_tool(capsys):
+def test_agent_error_on_parsing_tool(capsys) -> None:
     from unittest.mock import patch
 
     from crewai.tools import tool
@@ -737,7 +743,8 @@ def test_agent_error_on_parsing_tool(capsys):
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        tool non-stop.
+        """
         return 42
 
     agent1 = Agent(
@@ -753,7 +760,7 @@ def test_agent_error_on_parsing_tool(capsys):
             expected_output="The final answer",
             agent=agent1,
             tools=[get_final_answer],
-        )
+        ),
     ]
 
     crew = Crew(
@@ -772,7 +779,7 @@ def test_agent_error_on_parsing_tool(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_remembers_output_format_after_using_tools_too_many_times():
+def test_agent_remembers_output_format_after_using_tools_too_many_times() -> None:
     from unittest.mock import patch
 
     from crewai.tools import tool
@@ -780,7 +787,8 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        tool non-stop.
+        """
         return 42
 
     agent1 = Agent(
@@ -796,7 +804,7 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
             expected_output="The final answer",
             agent=agent1,
             tools=[get_final_answer],
-        )
+        ),
     ]
 
     crew = Crew(agents=[agent1], tasks=tasks, verbose=True)
@@ -807,15 +815,15 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_use_specific_tasks_output_as_context(capsys):
+def test_agent_use_specific_tasks_output_as_context(capsys) -> None:
     agent1 = Agent(role="test role", goal="test goal", backstory="test backstory")
     agent2 = Agent(role="test role2", goal="test goal2", backstory="test backstory2")
 
     say_hi_task = Task(
-        description="Just say hi.", agent=agent1, expected_output="Your greeting."
+        description="Just say hi.", agent=agent1, expected_output="Your greeting.",
     )
     say_bye_task = Task(
-        description="Just say bye.", agent=agent1, expected_output="Your farewell."
+        description="Just say bye.", agent=agent1, expected_output="Your farewell.",
     )
     answer_task = Task(
         description="Answer accordingly to the context you got.",
@@ -834,9 +842,9 @@ def test_agent_use_specific_tasks_output_as_context(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_step_callback():
+def test_agent_step_callback() -> None:
     class StepCallback:
-        def callback(self, step):
+        def callback(self, step) -> None:
             pass
 
     with patch.object(StepCallback, "callback") as callback:
@@ -868,7 +876,7 @@ def test_agent_step_callback():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_function_calling_llm():
+def test_agent_function_calling_llm() -> None:
     llm = "gpt-4o"
 
     @tool
@@ -901,7 +909,7 @@ def test_agent_function_calling_llm():
 
     with (
         patch.object(
-            instructor, "from_litellm", wraps=instructor.from_litellm
+            instructor, "from_litellm", wraps=instructor.from_litellm,
         ) as mock_from_litellm,
         patch.object(
             ToolUsage,
@@ -915,7 +923,7 @@ def test_agent_function_calling_llm():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
+def test_tool_result_as_answer_is_the_final_answer_for_the_agent() -> None:
     from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
@@ -945,7 +953,7 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_tool_usage_information_is_appended_to_agent():
+def test_tool_usage_information_is_appended_to_agent() -> None:
     from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
@@ -977,11 +985,11 @@ def test_tool_usage_information_is_appended_to_agent():
             "tool_name": "Decide Greetings",
             "tool_args": {},
             "result_as_answer": True,
-        }
+        },
     ]
 
 
-def test_agent_definition_based_on_dict():
+def test_agent_definition_based_on_dict() -> None:
     config = {
         "role": "test role",
         "goal": "test goal",
@@ -1000,7 +1008,7 @@ def test_agent_definition_based_on_dict():
 
 # test for human input
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_human_input():
+def test_agent_human_input() -> None:
     # Agent configuration
     config = {
         "role": "test role",
@@ -1023,7 +1031,7 @@ def test_agent_human_input():
         [
             "Don't say hi, say Hello instead!",  # First feedback: instruct change
             "",  # Second feedback: empty string signals acceptance
-        ]
+        ],
     )
 
     def ask_human_input_side_effect(*args, **kwargs):
@@ -1040,7 +1048,7 @@ def test_agent_human_input():
             CrewAgentExecutor,
             "_invoke_loop",
             return_value=AgentFinish(output="Hello", thought="", text=""),
-        ) as mock_invoke_loop,
+        ),
     ):
         # Execute the task
         output = agent.execute_task(task)
@@ -1052,7 +1060,7 @@ def test_agent_human_input():
         assert output.strip().lower() == "hello"
 
 
-def test_interpolate_inputs():
+def test_interpolate_inputs() -> None:
     agent = Agent(
         role="{topic} specialist",
         goal="Figure {goal} out",
@@ -1070,7 +1078,7 @@ def test_interpolate_inputs():
     assert agent.backstory == "I am the master of nothing"
 
 
-def test_not_using_system_prompt():
+def test_not_using_system_prompt() -> None:
     agent = Agent(
         role="{topic} specialist",
         goal="Figure {goal} out",
@@ -1083,7 +1091,7 @@ def test_not_using_system_prompt():
     assert not agent.agent_executor.prompt.get("system")
 
 
-def test_using_system_prompt():
+def test_using_system_prompt() -> None:
     agent = Agent(
         role="{topic} specialist",
         goal="Figure {goal} out",
@@ -1095,7 +1103,7 @@ def test_using_system_prompt():
     assert agent.agent_executor.prompt.get("system")
 
 
-def test_system_and_prompt_template():
+def test_system_and_prompt_template() -> None:
     agent = Agent(
         role="{topic} specialist",
         goal="Figure {goal} out",
@@ -1148,7 +1156,7 @@ Thought:<|eot_id|>
 
 
 @patch("crewai.agent.CrewTrainingHandler")
-def test_agent_training_handler(crew_training_handler):
+def test_agent_training_handler(crew_training_handler) -> None:
     task_prompt = "What is 1 + 1?"
     agent = Agent(
         role="test role",
@@ -1157,7 +1165,7 @@ def test_agent_training_handler(crew_training_handler):
         verbose=True,
     )
     crew_training_handler().load.return_value = {
-        f"{str(agent.id)}": {"0": {"human_feedback": "good"}}
+        f"{agent.id!s}": {"0": {"human_feedback": "good"}},
     }
 
     result = agent._training_handler(task_prompt=task_prompt)
@@ -1165,12 +1173,12 @@ def test_agent_training_handler(crew_training_handler):
     assert result == "What is 1 + 1?\n\nYou MUST follow these instructions: \n good"
 
     crew_training_handler.assert_has_calls(
-        [mock.call(), mock.call("training_data.pkl"), mock.call().load()]
+        [mock.call(), mock.call("training_data.pkl"), mock.call().load()],
     )
 
 
 @patch("crewai.agent.CrewTrainingHandler")
-def test_agent_use_trained_data(crew_training_handler):
+def test_agent_use_trained_data(crew_training_handler) -> None:
     task_prompt = "What is 1 + 1?"
     agent = Agent(
         role="researcher",
@@ -1183,8 +1191,8 @@ def test_agent_use_trained_data(crew_training_handler):
             "suggestions": [
                 "The result of the math operation must be right.",
                 "Result must be better than 1.",
-            ]
-        }
+            ],
+        },
     }
 
     result = agent._use_trained_data(task_prompt=task_prompt)
@@ -1194,11 +1202,11 @@ def test_agent_use_trained_data(crew_training_handler):
         " - The result of the math operation must be right.\n - Result must be better than 1."
     )
     crew_training_handler.assert_has_calls(
-        [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
+        [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()],
     )
 
 
-def test_agent_max_retry_limit():
+def test_agent_max_retry_limit() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1215,7 +1223,7 @@ def test_agent_max_retry_limit():
 
     error_message = "Error happening while sending prompt to model."
     with patch.object(
-        CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke
+        CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke,
     ) as invoke_mock:
         invoke_mock.side_effect = Exception(error_message)
 
@@ -1237,7 +1245,7 @@ def test_agent_max_retry_limit():
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,
-                    }
+                    },
                 ),
                 mock.call(
                     {
@@ -1245,13 +1253,13 @@ def test_agent_max_retry_limit():
                         "tool_names": "",
                         "tools": "",
                         "ask_for_human_input": True,
-                    }
+                    },
                 ),
-            ]
+            ],
         )
 
 
-def test_agent_with_llm():
+def test_agent_with_llm() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1264,7 +1272,7 @@ def test_agent_with_llm():
     assert agent.llm.temperature == 0.7
 
 
-def test_agent_with_custom_stop_words():
+def test_agent_with_custom_stop_words() -> None:
     stop_words = ["STOP", "END"]
     agent = Agent(
         role="test role",
@@ -1274,13 +1282,13 @@ def test_agent_with_custom_stop_words():
     )
 
     assert isinstance(agent.llm, LLM)
-    assert set(agent.llm.stop) == set(stop_words + ["\nObservation:"])
+    assert set(agent.llm.stop) == {*stop_words, "\nObservation:"}
     assert all(word in agent.llm.stop for word in stop_words)
     assert "\nObservation:" in agent.llm.stop
 
 
-def test_agent_with_callbacks():
-    def dummy_callback(response):
+def test_agent_with_callbacks() -> None:
+    def dummy_callback(response) -> None:
         pass
 
     agent = Agent(
@@ -1295,7 +1303,7 @@ def test_agent_with_callbacks():
     assert agent.llm.callbacks[0] == dummy_callback
 
 
-def test_agent_with_additional_kwargs():
+def test_agent_with_additional_kwargs() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1318,7 +1326,7 @@ def test_agent_with_additional_kwargs():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call():
+def test_llm_call() -> None:
     llm = LLM(model="gpt-3.5-turbo")
     messages = [{"role": "user", "content": "Say 'Hello, World!'"}]
 
@@ -1327,7 +1335,7 @@ def test_llm_call():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_error():
+def test_llm_call_with_error() -> None:
     llm = LLM(model="non-existent-model")
     messages = [{"role": "user", "content": "This should fail"}]
 
@@ -1336,7 +1344,7 @@ def test_llm_call_with_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_handle_context_length_exceeds_limit():
+def test_handle_context_length_exceeds_limit() -> None:
     # Import necessary modules
     from crewai.utilities.agent_utils import handle_context_length
     from crewai.utilities.i18n import I18N
@@ -1361,7 +1369,7 @@ def test_handle_context_length_exceeds_limit():
         {
             "role": "user",
             "content": "This is a test message that would exceed context length",
-        }
+        },
     ]
 
     # Set up test parameters
@@ -1389,7 +1397,7 @@ def test_handle_context_length_exceeds_limit():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_handle_context_length_exceeds_limit_cli_no():
+def test_handle_context_length_exceeds_limit_cli_no() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1399,7 +1407,7 @@ def test_handle_context_length_exceeds_limit_cli_no():
     task = Task(description="test task", agent=agent, expected_output="test output")
 
     with patch.object(
-        CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke
+        CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke,
     ) as private_mock:
         task = Task(
             description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
@@ -1411,12 +1419,12 @@ def test_handle_context_length_exceeds_limit_cli_no():
         private_mock.assert_called_once()
         pytest.raises(SystemExit)
         with patch(
-            "crewai.utilities.agent_utils.handle_context_length"
+            "crewai.utilities.agent_utils.handle_context_length",
         ) as mock_handle_context:
             mock_handle_context.assert_not_called()
 
 
-def test_agent_with_all_llm_attributes():
+def test_agent_with_all_llm_attributes() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1448,7 +1456,7 @@ def test_agent_with_all_llm_attributes():
     assert agent.llm.temperature == 0.7
     assert agent.llm.top_p == 0.9
     assert agent.llm.n == 1
-    assert set(agent.llm.stop) == set(["STOP", "END", "\nObservation:"])
+    assert set(agent.llm.stop) == {"STOP", "END", "\nObservation:"}
     assert all(word in agent.llm.stop for word in ["STOP", "END", "\nObservation:"])
     assert agent.llm.max_tokens == 100
     assert agent.llm.presence_penalty == 0.1
@@ -1464,7 +1472,7 @@ def test_agent_with_all_llm_attributes():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_all_attributes():
+def test_llm_call_with_all_attributes() -> None:
     llm = LLM(
         model="gpt-3.5-turbo",
         temperature=0.7,
@@ -1481,7 +1489,7 @@ def test_llm_call_with_all_attributes():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_ollama_llama3():
+def test_agent_with_ollama_llama3() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1502,7 +1510,7 @@ def test_agent_with_ollama_llama3():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_ollama_llama3():
+def test_llm_call_with_ollama_llama3() -> None:
     llm = LLM(
         model="ollama/llama3.2:3b",
         base_url="http://localhost:11434",
@@ -1510,7 +1518,7 @@ def test_llm_call_with_ollama_llama3():
         max_tokens=30,
     )
     messages = [
-        {"role": "user", "content": "Respond in 20 words. Which model are you?"}
+        {"role": "user", "content": "Respond in 20 words. Which model are you?"},
     ]
 
     response = llm.call(messages)
@@ -1521,7 +1529,7 @@ def test_llm_call_with_ollama_llama3():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execute_task_basic():
+def test_agent_execute_task_basic() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1540,7 +1548,7 @@ def test_agent_execute_task_basic():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execute_task_with_context():
+def test_agent_execute_task_with_context() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1558,11 +1566,12 @@ def test_agent_execute_task_with_context():
 
     result = agent.execute_task(task, context=context)
     assert len(result.split(".")) == 3
-    assert "fox" in result.lower() and "dog" in result.lower()
+    assert "fox" in result.lower()
+    assert "dog" in result.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execute_task_with_tool():
+def test_agent_execute_task_with_tool() -> None:
     @tool
     def dummy_tool(query: str) -> str:
         """Useful for when you need to get a dummy result for a query."""
@@ -1587,7 +1596,7 @@ def test_agent_execute_task_with_tool():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execute_task_with_custom_llm():
+def test_agent_execute_task_with_custom_llm() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1603,12 +1612,12 @@ def test_agent_execute_task_with_custom_llm():
 
     result = agent.execute_task(task)
     assert result.startswith(
-        "Artificial minds,\nCoding thoughts in circuits bright,\nAI's silent might."
+        "Artificial minds,\nCoding thoughts in circuits bright,\nAI's silent might.",
     )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execute_task_with_ollama():
+def test_agent_execute_task_with_ollama() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1628,7 +1637,7 @@ def test_agent_execute_task_with_ollama():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_knowledge_sources():
+def test_agent_with_knowledge_sources() -> None:
     # Create a knowledge source with some content
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
@@ -1660,12 +1669,12 @@ def test_agent_with_knowledge_sources():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
+def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold() -> None:
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
     knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
     with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage",
     ) as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
@@ -1695,12 +1704,12 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_default():
+def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_default() -> None:
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
     knowledge_config = KnowledgeConfig()
     with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage",
     ) as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
@@ -1732,7 +1741,7 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_defau
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_knowledge_sources_extensive_role():
+def test_agent_with_knowledge_sources_extensive_role() -> None:
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
@@ -1762,7 +1771,7 @@ def test_agent_with_knowledge_sources_extensive_role():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_knowledge_sources_works_with_copy():
+def test_agent_with_knowledge_sources_works_with_copy() -> None:
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
@@ -1783,7 +1792,7 @@ def test_agent_with_knowledge_sources_works_with_copy():
         )
 
         with patch(
-            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+            "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage",
         ) as MockKnowledgeStorage:
             mock_knowledge_storage = MockKnowledgeStorage.return_value
             agent.knowledge_storage = mock_knowledge_storage
@@ -1801,7 +1810,7 @@ def test_agent_with_knowledge_sources_works_with_copy():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_knowledge_sources_generate_search_query():
+def test_agent_with_knowledge_sources_generate_search_query() -> None:
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
@@ -1835,7 +1844,7 @@ def test_agent_with_knowledge_sources_generate_search_query():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_litellm_auth_error_handling():
+def test_litellm_auth_error_handling() -> None:
     """Test that LiteLLM authentication errors are handled correctly and not retried."""
     from litellm import AuthenticationError as LiteLLMAuthenticationError
 
@@ -1861,7 +1870,7 @@ def test_litellm_auth_error_handling():
         pytest.raises(LiteLLMAuthenticationError, match="Invalid API key"),
     ):
         mock_llm_call.side_effect = LiteLLMAuthenticationError(
-            message="Invalid API key", llm_provider="openai", model="gpt-4"
+            message="Invalid API key", llm_provider="openai", model="gpt-4",
         )
         agent.execute_task(task)
 
@@ -1869,7 +1878,7 @@ def test_litellm_auth_error_handling():
     mock_llm_call.assert_called_once()
 
 
-def test_crew_agent_executor_litellm_auth_error():
+def test_crew_agent_executor_litellm_auth_error() -> None:
     """Test that CrewAgentExecutor handles LiteLLM authentication errors by raising them."""
     from litellm.exceptions import AuthenticationError
 
@@ -1911,18 +1920,18 @@ def test_crew_agent_executor_litellm_auth_error():
         pytest.raises(AuthenticationError) as exc_info,
     ):
         mock_llm_call.side_effect = AuthenticationError(
-            message="Invalid API key", llm_provider="openai", model="gpt-4"
+            message="Invalid API key", llm_provider="openai", model="gpt-4",
         )
         executor.invoke(
             {
                 "input": "test input",
                 "tool_names": "",
                 "tools": "",
-            }
+            },
         )
 
     # Verify error handling messages
-    error_message = f"Error during LLM call: {str(mock_llm_call.side_effect)}"
+    error_message = f"Error during LLM call: {mock_llm_call.side_effect!s}"
     mock_printer.assert_any_call(
         content=error_message,
         color="red",
@@ -1938,7 +1947,7 @@ def test_crew_agent_executor_litellm_auth_error():
     assert exc_info.value.model == "gpt-4"
 
 
-def test_litellm_anthropic_error_handling():
+def test_litellm_anthropic_error_handling() -> None:
     """Test that AnthropicError from LiteLLM is handled correctly and not retried."""
     from litellm.llms.anthropic.common_utils import AnthropicError
 
@@ -1974,7 +1983,7 @@ def test_litellm_anthropic_error_handling():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_get_knowledge_search_query():
+def test_get_knowledge_search_query() -> None:
     """Test that _get_knowledge_search_query calls the LLM with the correct prompts."""
     from crewai.utilities.i18n import I18N
 
@@ -2014,14 +2023,14 @@ def test_get_knowledge_search_query():
                 {
                     "role": "system",
                     "content": i18n.slice(
-                        "knowledge_search_query_system_prompt"
+                        "knowledge_search_query_system_prompt",
                     ).format(task_prompt=task.description),
                 },
                 {
                     "role": "user",
                     "content": i18n.slice("knowledge_search_query").format(
-                        task_prompt=task_prompt
+                        task_prompt=task_prompt,
                     ),
                 },
-            ]
+            ],
         )

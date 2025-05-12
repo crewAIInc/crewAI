@@ -6,7 +6,7 @@ from datetime import datetime
 from crewai.security import Fingerprint, SecurityConfig
 
 
-def test_security_config_creation_with_defaults():
+def test_security_config_creation_with_defaults() -> None:
     """Test creating a SecurityConfig with default values."""
     config = SecurityConfig()
 
@@ -16,7 +16,7 @@ def test_security_config_creation_with_defaults():
     assert config.fingerprint.uuid_str is not None  # UUID is auto-generated
 
 
-def test_security_config_fingerprint_generation():
+def test_security_config_fingerprint_generation() -> None:
     """Test that SecurityConfig automatically generates fingerprints."""
     config = SecurityConfig()
 
@@ -27,7 +27,7 @@ def test_security_config_fingerprint_generation():
     assert len(config.fingerprint.uuid_str) > 0
 
 
-def test_security_config_init_params():
+def test_security_config_init_params() -> None:
     """Test that SecurityConfig can be initialized and modified."""
     # Create a config
     config = SecurityConfig()
@@ -43,7 +43,7 @@ def test_security_config_init_params():
     assert config.fingerprint.metadata == {"version": "1.0"}
 
 
-def test_security_config_to_dict():
+def test_security_config_to_dict() -> None:
     """Test converting SecurityConfig to dictionary."""
     # Create a config with a fingerprint that has metadata
     config = SecurityConfig()
@@ -57,19 +57,16 @@ def test_security_config_to_dict():
     assert config_dict["fingerprint"]["metadata"] == {"version": "1.0"}
 
 
-def test_security_config_from_dict():
+def test_security_config_from_dict() -> None:
     """Test creating SecurityConfig from dictionary."""
     # Create a fingerprint dict
     fingerprint_dict = {
         "uuid_str": "b723c6ff-95de-5e87-860b-467b72282bd8",
         "created_at": datetime.now().isoformat(),
-        "metadata": {"version": "1.0"}
+        "metadata": {"version": "1.0"},
     }
 
     # Create a config dict with just the fingerprint
-    config_dict = {
-        "fingerprint": fingerprint_dict
-    }
 
     # Create config manually since from_dict has a specific implementation
     config = SecurityConfig()
@@ -85,7 +82,7 @@ def test_security_config_from_dict():
     assert config.fingerprint.metadata == fingerprint_dict["metadata"]
 
 
-def test_security_config_json_serialization():
+def test_security_config_json_serialization() -> None:
     """Test that SecurityConfig can be JSON serialized and deserialized."""
     # Create a config with fingerprint metadata
     config = SecurityConfig()

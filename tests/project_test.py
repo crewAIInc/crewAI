@@ -1,5 +1,3 @@
-from typing import List
-from unittest.mock import patch
 
 import pytest
 
@@ -23,7 +21,7 @@ class SimpleCrew:
     @agent
     def simple_agent(self):
         return Agent(
-            role="Simple Agent", goal="Simple Goal", backstory="Simple Backstory"
+            role="Simple Agent", goal="Simple Goal", backstory="Simple Backstory",
         )
 
     @task
@@ -44,8 +42,8 @@ class InternalCrew:
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
+    agents: list[BaseAgent]
+    tasks: list[Task]
 
     @llm
     def local_llm(self):
@@ -87,7 +85,7 @@ class InternalCrew:
         return Crew(agents=self.agents, tasks=self.tasks, verbose=True)
 
 
-def test_agent_memoization():
+def test_agent_memoization() -> None:
     crew = SimpleCrew()
     first_call_result = crew.simple_agent()
     second_call_result = crew.simple_agent()
@@ -97,7 +95,7 @@ def test_agent_memoization():
     ), "Agent memoization is not working as expected"
 
 
-def test_task_memoization():
+def test_task_memoization() -> None:
     crew = SimpleCrew()
     first_call_result = crew.simple_task()
     second_call_result = crew.simple_task()
@@ -107,7 +105,7 @@ def test_task_memoization():
     ), "Task memoization is not working as expected"
 
 
-def test_crew_memoization():
+def test_crew_memoization() -> None:
     crew = InternalCrew()
     first_call_result = crew.crew()
     second_call_result = crew.crew()
@@ -117,7 +115,7 @@ def test_crew_memoization():
     ), "Crew references should point to the same object"
 
 
-def test_task_name():
+def test_task_name() -> None:
     simple_task = SimpleCrew().simple_task()
     assert (
         simple_task.name == "simple_task"
@@ -129,7 +127,7 @@ def test_task_name():
     ), "Custom task name is not being set as expected"
 
 
-def test_agent_function_calling_llm():
+def test_agent_function_calling_llm() -> None:
     crew = InternalCrew()
     llm = crew.local_llm()
     obj_llm_agent = crew.researcher()
@@ -143,7 +141,7 @@ def test_agent_function_calling_llm():
     ), "agent's function_calling_llm is incorrect"
 
 
-def test_task_guardrail():
+def test_task_guardrail() -> None:
     crew = InternalCrew()
     research_task = crew.research_task()
     assert research_task.guardrail == "ensure each bullet contains its source"
@@ -153,7 +151,7 @@ def test_task_guardrail():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_before_kickoff_modification():
+def test_before_kickoff_modification() -> None:
     crew = InternalCrew()
     inputs = {"topic": "LLMs"}
     result = crew.crew().kickoff(inputs=inputs)
@@ -161,7 +159,7 @@ def test_before_kickoff_modification():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_after_kickoff_modification():
+def test_after_kickoff_modification() -> None:
     crew = InternalCrew()
     # Assuming the crew execution returns a dict
     result = crew.crew().kickoff({"topic": "LLMs"})
@@ -172,18 +170,18 @@ def test_after_kickoff_modification():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_before_kickoff_with_none_input():
+def test_before_kickoff_with_none_input() -> None:
     crew = InternalCrew()
     crew.crew().kickoff(None)
     # Test should pass without raising exceptions
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_before_after_kickoff():
+def test_multiple_before_after_kickoff() -> None:
     @CrewBase
     class MultipleHooksCrew:
-        agents: List[BaseAgent]
-        tasks: List[Task]
+        agents: list[BaseAgent]
+        tasks: list[Task]
 
         agents_config = "config/agents.yaml"
         tasks_config = "config/tasks.yaml"

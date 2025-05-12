@@ -13,8 +13,7 @@ from crewai.task import Task
 
 @pytest.fixture
 def mock_mem0_memory():
-    mock_memory = MagicMock(spec=Memory)
-    return mock_memory
+    return MagicMock(spec=Memory)
 
 
 @pytest.fixture
@@ -29,8 +28,7 @@ def patch_configure_mem0(mock_mem0_memory):
 @pytest.fixture
 def external_memory_with_mocked_config(patch_configure_mem0):
     embedder_config = {"provider": "mem0"}
-    external_memory = ExternalMemory(embedder_config=embedder_config)
-    return external_memory
+    return ExternalMemory(embedder_config=embedder_config)
 
 
 @pytest.fixture
@@ -49,7 +47,7 @@ def crew_with_external_memory(external_memory_with_mocked_config, patch_configur
         agent=agent,
     )
 
-    crew = Crew(
+    return Crew(
         agents=[agent],
         tasks=[task],
         verbose=True,
@@ -58,12 +56,11 @@ def crew_with_external_memory(external_memory_with_mocked_config, patch_configur
         external_memory=external_memory_with_mocked_config,
     )
 
-    return crew
 
 
 @pytest.fixture
 def crew_with_external_memory_without_memory_flag(
-    external_memory_with_mocked_config, patch_configure_mem0
+    external_memory_with_mocked_config, patch_configure_mem0,
 ):
     agent = Agent(
         role="Researcher",
@@ -79,7 +76,7 @@ def crew_with_external_memory_without_memory_flag(
         agent=agent,
     )
 
-    crew = Crew(
+    return Crew(
         agents=[agent],
         tasks=[task],
         verbose=True,
@@ -87,17 +84,16 @@ def crew_with_external_memory_without_memory_flag(
         external_memory=external_memory_with_mocked_config,
     )
 
-    return crew
 
 
-def test_external_memory_initialization(external_memory_with_mocked_config):
+def test_external_memory_initialization(external_memory_with_mocked_config) -> None:
     assert external_memory_with_mocked_config is not None
     assert isinstance(external_memory_with_mocked_config, ExternalMemory)
 
 
-def test_external_memory_save(external_memory_with_mocked_config):
+def test_external_memory_save(external_memory_with_mocked_config) -> None:
     memory_item = ExternalMemoryItem(
-        value="test value", metadata={"task": "test_task"}, agent="test_agent"
+        value="test value", metadata={"task": "test_task"}, agent="test_agent",
     )
 
     with patch.object(ExternalMemory, "save") as mock_save:
@@ -114,51 +110,51 @@ def test_external_memory_save(external_memory_with_mocked_config):
         )
 
 
-def test_external_memory_reset(external_memory_with_mocked_config):
+def test_external_memory_reset(external_memory_with_mocked_config) -> None:
     with patch(
-        "crewai.memory.external.external_memory.ExternalMemory.reset"
+        "crewai.memory.external.external_memory.ExternalMemory.reset",
     ) as mock_reset:
         external_memory_with_mocked_config.reset()
         mock_reset.assert_called_once()
 
 
-def test_external_memory_supported_storages():
+def test_external_memory_supported_storages() -> None:
     supported_storages = ExternalMemory.external_supported_storages()
     assert "mem0" in supported_storages
     assert callable(supported_storages["mem0"])
 
 
-def test_external_memory_create_storage_invalid_provider():
+def test_external_memory_create_storage_invalid_provider() -> None:
     embedder_config = {"provider": "invalid_provider", "config": {}}
 
     with pytest.raises(ValueError, match="Provider invalid_provider not supported"):
         ExternalMemory.create_storage(None, embedder_config)
 
 
-def test_external_memory_create_storage_missing_provider():
+def test_external_memory_create_storage_missing_provider() -> None:
     embedder_config = {"config": {}}
 
     with pytest.raises(
-        ValueError, match="embedder_config must include a 'provider' key"
+        ValueError, match="embedder_config must include a 'provider' key",
     ):
         ExternalMemory.create_storage(None, embedder_config)
 
 
-def test_external_memory_create_storage_missing_config():
+def test_external_memory_create_storage_missing_config() -> None:
     with pytest.raises(ValueError, match="embedder_config is required"):
         ExternalMemory.create_storage(None, None)
 
 
-def test_crew_with_external_memory_initialization(crew_with_external_memory):
+def test_crew_with_external_memory_initialization(crew_with_external_memory) -> None:
     assert crew_with_external_memory._external_memory is not None
     assert isinstance(crew_with_external_memory._external_memory, ExternalMemory)
     assert crew_with_external_memory._external_memory.crew == crew_with_external_memory
 
 
 @pytest.mark.parametrize("mem_type", ["external", "all"])
-def test_crew_external_memory_reset(mem_type, crew_with_external_memory):
+def test_crew_external_memory_reset(mem_type, crew_with_external_memory) -> None:
     with patch(
-        "crewai.memory.external.external_memory.ExternalMemory.reset"
+        "crewai.memory.external.external_memory.ExternalMemory.reset",
     ) as mock_reset:
         crew_with_external_memory.reset_memories(mem_type)
         mock_reset.assert_called_once()
@@ -167,10 +163,10 @@ def test_crew_external_memory_reset(mem_type, crew_with_external_memory):
 @pytest.mark.parametrize("mem_method", ["search", "save"])
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_external_memory_save_with_memory_flag(
-    mem_method, crew_with_external_memory
-):
+    mem_method, crew_with_external_memory,
+) -> None:
     with patch(
-        f"crewai.memory.external.external_memory.ExternalMemory.{mem_method}"
+        f"crewai.memory.external.external_memory.ExternalMemory.{mem_method}",
     ) as mock_method:
         crew_with_external_memory.kickoff()
         assert mock_method.call_count > 0
@@ -179,27 +175,27 @@ def test_crew_external_memory_save_with_memory_flag(
 @pytest.mark.parametrize("mem_method", ["search", "save"])
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_external_memory_save_using_crew_without_memory_flag(
-    mem_method, crew_with_external_memory_without_memory_flag
-):
+    mem_method, crew_with_external_memory_without_memory_flag,
+) -> None:
     with patch(
-        f"crewai.memory.external.external_memory.ExternalMemory.{mem_method}"
+        f"crewai.memory.external.external_memory.ExternalMemory.{mem_method}",
     ) as mock_method:
         crew_with_external_memory_without_memory_flag.kickoff()
         assert mock_method.call_count > 0
 
 
-def test_external_memory_custom_storage(crew_with_external_memory):
+def test_external_memory_custom_storage(crew_with_external_memory) -> None:
     class CustomStorage(Storage):
-        def __init__(self):
+        def __init__(self) -> None:
             self.memories = []
 
-        def save(self, value, metadata=None, agent=None):
+        def save(self, value, metadata=None, agent=None) -> None:
             self.memories.append({"value": value, "metadata": metadata, "agent": agent})
 
         def search(self, query, limit=10, score_threshold=0.5):
             return self.memories
 
-        def reset(self):
+        def reset(self) -> None:
             self.memories = []
 
     custom_storage = CustomStorage()

@@ -2,8 +2,6 @@
 
 import hashlib
 import json
-import os
-import tempfile
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -14,10 +12,9 @@ import pytest
 from crewai.agent import Agent
 from crewai.agents import CacheHandler
 from crewai.agents.cache import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
-from crewai.flow import Flow, listen, start
+from crewai.flow import Flow, start
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
@@ -74,7 +71,7 @@ def writer():
     )
 
 
-def test_crew_with_only_conditional_tasks_raises_error(researcher):
+def test_crew_with_only_conditional_tasks_raises_error(researcher) -> None:
     """Test that creating a crew with only conditional tasks raises an error."""
 
     def condition_func(task_output: TaskOutput) -> bool:
@@ -109,7 +106,7 @@ def test_crew_with_only_conditional_tasks_raises_error(researcher):
         )
 
 
-def test_crew_config_conditional_requirement():
+def test_crew_config_conditional_requirement() -> None:
     with pytest.raises(ValueError):
         Crew(process=Process.sequential)
 
@@ -139,7 +136,7 @@ def test_crew_config_conditional_requirement():
                     "agent": "Senior Writer",
                 },
             ],
-        }
+        },
     )
     parsed_config = json.loads(config)
 
@@ -157,8 +154,8 @@ def test_crew_config_conditional_requirement():
 
 
 def test_async_task_cannot_include_sequential_async_tasks_in_context(
-    researcher, writer
-):
+    researcher, writer,
+) -> None:
     task1 = Task(
         description="Task 1",
         async_execution=True,
@@ -206,7 +203,7 @@ def test_async_task_cannot_include_sequential_async_tasks_in_context(
         pytest.fail("Unexpected ValidationError raised")
 
 
-def test_context_no_future_tasks(researcher, writer):
+def test_context_no_future_tasks(researcher, writer) -> None:
     task2 = Task(
         description="Task 2",
         expected_output="output",
@@ -238,7 +235,7 @@ def test_context_no_future_tasks(researcher, writer):
         Crew(tasks=[task1, task2, task3, task4], agents=[researcher, writer])
 
 
-def test_crew_config_with_wrong_keys():
+def test_crew_config_with_wrong_keys() -> None:
     no_tasks_config = json.dumps(
         {
             "agents": [
@@ -246,9 +243,9 @@ def test_crew_config_with_wrong_keys():
                     "role": "Senior Researcher",
                     "goal": "Make the best research and analysis on content about AI and AI agents",
                     "backstory": "You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
-                }
-            ]
-        }
+                },
+            ],
+        },
     )
 
     no_agents_config = json.dumps(
@@ -257,9 +254,9 @@ def test_crew_config_with_wrong_keys():
                 {
                     "description": "Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
                     "agent": "Senior Researcher",
-                }
-            ]
-        }
+                },
+            ],
+        },
     )
     with pytest.raises(ValueError):
         Crew(process=Process.sequential, config='{"wrong_key": "wrong_value"}')
@@ -270,7 +267,7 @@ def test_crew_config_with_wrong_keys():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_creation(researcher, writer):
+def test_crew_creation(researcher, writer) -> None:
     tasks = [
         Task(
             description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
@@ -302,7 +299,7 @@ def test_crew_creation(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_sync_task_execution(researcher, writer):
+def test_sync_task_execution(researcher, writer) -> None:
     from unittest.mock import patch
 
     tasks = [
@@ -325,7 +322,7 @@ def test_sync_task_execution(researcher, writer):
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -334,7 +331,7 @@ def test_sync_task_execution(researcher, writer):
         task.output = mock_task_output
 
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -343,7 +340,7 @@ def test_sync_task_execution(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_process(researcher, writer):
+def test_hierarchical_process(researcher, writer) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -364,7 +361,7 @@ def test_hierarchical_process(researcher, writer):
     )
 
 
-def test_manager_llm_requirement_for_hierarchical_process(researcher, writer):
+def test_manager_llm_requirement_for_hierarchical_process(researcher, writer) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -379,10 +376,8 @@ def test_manager_llm_requirement_for_hierarchical_process(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
-    """
-    Test that the manager agent delegates to the assigned task agent.
-    """
+def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer) -> None:
+    """Test that the manager agent delegates to the assigned task agent."""
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -397,7 +392,7 @@ def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -405,7 +400,7 @@ def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
     task.output = mock_task_output
 
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -431,10 +426,8 @@ def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_manager_agent_delegating_to_all_agents(researcher, writer):
-    """
-    Test that the manager agent delegates to all agents when none are specified.
-    """
+def test_manager_agent_delegating_to_all_agents(researcher, writer) -> None:
+    """Test that the manager agent delegates to all agents when none are specified."""
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -464,9 +457,8 @@ def test_manager_agent_delegating_to_all_agents(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_manager_agent_delegates_with_varied_role_cases():
-    """
-    Test that the manager agent can delegate to agents regardless of case or whitespace variations in role names.
+def test_manager_agent_delegates_with_varied_role_cases() -> None:
+    """Test that the manager agent can delegate to agents regardless of case or whitespace variations in role names.
     This test verifies the fix for issue #1503 where role matching was too strict.
     """
     # Create agents with varied case and whitespace in roles
@@ -498,12 +490,12 @@ def test_manager_agent_delegates_with_varied_role_cases():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
     task.output = mock_task_output
 
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -541,13 +533,13 @@ def test_manager_agent_delegates_with_varied_role_cases():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_with_delegating_agents(ceo, writer):
+def test_crew_with_delegating_agents(ceo, writer) -> None:
     tasks = [
         Task(
             description="Produce and amazing 1 paragraph draft of an article about AI Agents.",
             expected_output="A 4 paragraph article about AI.",
             agent=ceo,
-        )
+        ),
     ]
 
     crew = Crew(
@@ -565,8 +557,7 @@ def test_crew_with_delegating_agents(ceo, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer):
-    from typing import Type
+def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer) -> None:
 
     from pydantic import BaseModel, Field
 
@@ -580,7 +571,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -592,7 +583,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
             expected_output="A 4 paragraph article about AI.",
             agent=ceo,
             tools=[TestTool()],
-        )
+        ),
     ]
 
     crew = Crew(
@@ -602,7 +593,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -610,7 +601,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
     tasks[0].output = mock_task_output
 
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -627,8 +618,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer):
-    from typing import Type
+def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer) -> None:
 
     from pydantic import BaseModel, Field
 
@@ -642,7 +632,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -656,7 +646,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
             description="Produce and amazing 1 paragraph draft of an article about AI Agents.",
             expected_output="A 4 paragraph article about AI.",
             agent=new_ceo,
-        )
+        ),
     ]
 
     crew = Crew(
@@ -666,7 +656,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -674,7 +664,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
     tasks[0].output = mock_task_output
 
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -691,8 +681,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_tools_override_agent_tools(researcher):
-    from typing import Type
+def test_task_tools_override_agent_tools(researcher) -> None:
 
     from pydantic import BaseModel, Field
 
@@ -706,7 +695,7 @@ def test_task_tools_override_agent_tools(researcher):
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -714,7 +703,7 @@ def test_task_tools_override_agent_tools(researcher):
     class AnotherTestTool(BaseTool):
         name: str = "Another Test Tool"
         description: str = "Another test tool"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Another processed: {query}"
@@ -746,12 +735,8 @@ def test_task_tools_override_agent_tools(researcher):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_tools_override_agent_tools_with_allow_delegation(researcher, writer):
-    """
-    Test that task tools override agent tools while preserving delegation tools when allow_delegation=True
-    """
-    from typing import Type
-
+def test_task_tools_override_agent_tools_with_allow_delegation(researcher, writer) -> None:
+    """Test that task tools override agent tools while preserving delegation tools when allow_delegation=True."""
     from pydantic import BaseModel, Field
 
     from crewai.tools import BaseTool
@@ -762,7 +747,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -770,7 +755,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     class AnotherTestTool(BaseTool):
         name: str = "Another Test Tool"
         description: str = "Another test tool"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Another processed: {query}"
@@ -797,12 +782,12 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # We mock execute_sync to verify which tools get used at runtime
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -829,7 +814,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_verbose_output(researcher, writer, capsys):
+def test_crew_verbose_output(researcher, writer, capsys) -> None:
     tasks = [
         Task(
             description="Research AI advancements.",
@@ -889,7 +874,7 @@ def test_crew_verbose_output(researcher, writer, capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_cache_hitting_between_agents(researcher, writer, ceo):
+def test_cache_hitting_between_agents(researcher, writer, ceo) -> None:
     from unittest.mock import call, patch
 
     from crewai.tools import tool
@@ -932,7 +917,7 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_api_calls_throttling(capsys):
+def test_api_calls_throttling(capsys) -> None:
     from unittest.mock import patch
 
     from crewai.tools import tool
@@ -940,7 +925,8 @@ def test_api_calls_throttling(capsys):
     @tool
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        tool non-stop.
+        """
         return 42
 
     agent = Agent(
@@ -971,7 +957,7 @@ def test_api_calls_throttling(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_kickoff_usage_metrics():
+def test_crew_kickoff_usage_metrics() -> None:
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -1006,7 +992,7 @@ def test_crew_kickoff_usage_metrics():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_kickoff_streaming_usage_metrics():
+def test_crew_kickoff_streaming_usage_metrics() -> None:
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -1041,7 +1027,7 @@ def test_crew_kickoff_streaming_usage_metrics():
         assert result.token_usage.cached_prompt_tokens == 0
 
 
-def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
+def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set() -> None:
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1062,7 +1048,7 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_sequential_async_task_execution_completion(researcher, writer):
+def test_sequential_async_task_execution_completion(researcher, writer) -> None:
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
@@ -1089,12 +1075,12 @@ def test_sequential_async_task_execution_completion(researcher, writer):
 
     sequential_result = sequential_crew.kickoff()
     assert sequential_result.raw.startswith(
-        "The history of artificial intelligence (AI) is marked by several pivotal events that have shaped the field into what it is today."
+        "The history of artificial intelligence (AI) is marked by several pivotal events that have shaped the field into what it is today.",
     )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_single_task_with_async_execution():
+def test_single_task_with_async_execution() -> None:
     researcher_agent = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -1117,12 +1103,12 @@ def test_single_task_with_async_execution():
 
     result = crew.kickoff()
     assert result.raw.startswith(
-        "- Ethical implications of AI in law enforcement and surveillance."
+        "- Ethical implications of AI in law enforcement and surveillance.",
     )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_three_task_with_async_execution():
+def test_three_task_with_async_execution() -> None:
     researcher_agent = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -1168,7 +1154,7 @@ def test_three_task_with_async_execution():
 
 @pytest.mark.asyncio
 @pytest.mark.vcr(filter_headers=["authorization"])
-async def test_crew_async_kickoff():
+async def test_crew_async_kickoff() -> None:
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -1216,7 +1202,7 @@ async def test_crew_async_kickoff():
 
 @pytest.mark.asyncio
 @pytest.mark.vcr(filter_headers=["authorization"])
-async def test_async_task_execution_call_count(researcher, writer):
+async def test_async_task_execution_call_count(researcher, writer) -> None:
     from unittest.mock import MagicMock, patch
 
     list_ideas = Task(
@@ -1245,7 +1231,7 @@ async def test_async_task_execution_call_count(researcher, writer):
 
     # Create a valid TaskOutput instance to mock the return value
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # Create a MagicMock Future instance
@@ -1259,10 +1245,10 @@ async def test_async_task_execution_call_count(researcher, writer):
 
     with (
         patch.object(
-            Task, "execute_sync", return_value=mock_task_output
+            Task, "execute_sync", return_value=mock_task_output,
         ) as mock_execute_sync,
         patch.object(
-            Task, "execute_async", return_value=mock_future
+            Task, "execute_async", return_value=mock_future,
         ) as mock_execute_async,
     ):
         crew.kickoff()
@@ -1272,9 +1258,8 @@ async def test_async_task_execution_call_count(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_kickoff_for_each_single_input():
+def test_kickoff_for_each_single_input() -> None:
     """Tests if kickoff_for_each works with a single input."""
-
     inputs = [{"topic": "dog"}]
 
     agent = Agent(
@@ -1296,9 +1281,8 @@ def test_kickoff_for_each_single_input():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_kickoff_for_each_multiple_inputs():
+def test_kickoff_for_each_multiple_inputs() -> None:
     """Tests if kickoff_for_each works with multiple inputs."""
-
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -1324,7 +1308,7 @@ def test_kickoff_for_each_multiple_inputs():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_kickoff_for_each_empty_input():
+def test_kickoff_for_each_empty_input() -> None:
     """Tests if kickoff_for_each handles an empty input list."""
     agent = Agent(
         role="{topic} Researcher",
@@ -1344,9 +1328,8 @@ def test_kickoff_for_each_empty_input():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_kickoff_for_each_invalid_input():
+def test_kickoff_for_each_invalid_input() -> None:
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
-
     agent = Agent(
         role="{topic} Researcher",
         goal="Express hot takes on {topic}.",
@@ -1366,7 +1349,7 @@ def test_kickoff_for_each_invalid_input():
         crew.kickoff_for_each(["invalid input"])
 
 
-def test_kickoff_for_each_error_handling():
+def test_kickoff_for_each_error_handling() -> None:
     """Tests error handling in kickoff_for_each when kickoff raises an error."""
     from unittest.mock import patch
 
@@ -1396,14 +1379,14 @@ def test_kickoff_for_each_error_handling():
 
     with patch.object(Crew, "kickoff") as mock_kickoff:
         mock_kickoff.side_effect = expected_outputs[:2] + [
-            Exception("Simulated kickoff error")
+            Exception("Simulated kickoff error"),
         ]
         with pytest.raises(Exception, match="Simulated kickoff error"):
             crew.kickoff_for_each(inputs=inputs)
 
 
 @pytest.mark.asyncio
-async def test_kickoff_async_basic_functionality_and_output():
+async def test_kickoff_async_basic_functionality_and_output() -> None:
     """Tests the basic functionality and output of kickoff_async."""
     from unittest.mock import patch
 
@@ -1437,7 +1420,7 @@ async def test_kickoff_async_basic_functionality_and_output():
 
 
 @pytest.mark.asyncio
-async def test_async_kickoff_for_each_async_basic_functionality_and_output():
+async def test_async_kickoff_for_each_async_basic_functionality_and_output() -> None:
     """Tests the basic functionality and output of kickoff_for_each_async."""
     inputs = [
         {"topic": "dog"},
@@ -1470,7 +1453,7 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
         return expected_outputs[index]
 
     with patch.object(
-        Crew, "kickoff_async", side_effect=mock_kickoff_async
+        Crew, "kickoff_async", side_effect=mock_kickoff_async,
     ) as mock_kickoff_async:
         crew = Crew(agents=[agent], tasks=[task])
 
@@ -1483,9 +1466,8 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
 
 
 @pytest.mark.asyncio
-async def test_async_kickoff_for_each_async_empty_input():
+async def test_async_kickoff_for_each_async_empty_input() -> None:
     """Tests if akickoff_for_each_async handles an empty input list."""
-
     agent = Agent(
         role="{topic} Researcher",
         goal="Express hot takes on {topic}.",
@@ -1511,7 +1493,7 @@ async def test_async_kickoff_for_each_async_empty_input():
     assert results == [], "Result should be an empty list when input is empty"
 
 
-def test_set_agents_step_callback():
+def test_set_agents_step_callback() -> None:
     from unittest.mock import patch
 
     researcher_agent = Agent(
@@ -1541,13 +1523,13 @@ def test_set_agents_step_callback():
         assert researcher_agent.step_callback is not None
 
 
-def test_dont_set_agents_step_callback_if_already_set():
+def test_dont_set_agents_step_callback_if_already_set() -> None:
     from unittest.mock import patch
 
-    def agent_callback(_):
+    def agent_callback(_) -> None:
         pass
 
-    def crew_callback(_):
+    def crew_callback(_) -> None:
         pass
 
     researcher_agent = Agent(
@@ -1580,7 +1562,7 @@ def test_dont_set_agents_step_callback_if_already_set():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_function_calling_llm():
+def test_crew_function_calling_llm() -> None:
     from crewai import LLM
     from crewai.tools import tool
 
@@ -1612,12 +1594,12 @@ def test_crew_function_calling_llm():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_with_no_arguments():
+def test_task_with_no_arguments() -> None:
     from crewai.tools import tool
 
     @tool
     def return_data() -> str:
-        "Useful to get the sales related data"
+        """Useful to get the sales related data."""
         return "January: 5, February: 10, March: 15, April: 20, May: 25"
 
     researcher = Agent(
@@ -1640,7 +1622,7 @@ def test_task_with_no_arguments():
     assert result.raw == "The total number of sales is 75."
 
 
-def test_code_execution_flag_adds_code_tool_upon_kickoff():
+def test_code_execution_flag_adds_code_tool_upon_kickoff() -> None:
     from crewai_tools import CodeInterpreterTool
 
     programmer = Agent(
@@ -1660,11 +1642,11 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
     crew = Crew(agents=[programmer], tasks=[task])
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -1675,12 +1657,12 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
         # Verify that exactly one tool was used and it was a CodeInterpreterTool
         assert len(used_tools) == 1, "Should have exactly one tool"
         assert isinstance(
-            used_tools[0], CodeInterpreterTool
+            used_tools[0], CodeInterpreterTool,
         ), "Tool should be CodeInterpreterTool"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_delegation_is_not_enabled_if_there_are_only_one_agent():
+def test_delegation_is_not_enabled_if_there_are_only_one_agent() -> None:
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -1701,7 +1683,7 @@ def test_delegation_is_not_enabled_if_there_are_only_one_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
+def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent() -> None:
     agent = Agent(
         role="Researcher",
         goal="Be super empathetic.",
@@ -1719,7 +1701,7 @@ def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_sequential_crew_creation_tasks_without_agents(researcher):
+def test_sequential_crew_creation_tasks_without_agents(researcher) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -1742,7 +1724,7 @@ def test_sequential_crew_creation_tasks_without_agents(researcher):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_usage_metrics_are_captured_for_hierarchical_process():
+def test_agent_usage_metrics_are_captured_for_hierarchical_process() -> None:
     agent = Agent(
         role="Researcher",
         goal="Be super empathetic.",
@@ -1753,7 +1735,7 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     task = Task(description="Ask the researched to say hi!", expected_output="Howdy!")
 
     crew = Crew(
-        agents=[agent], tasks=[task], process=Process.hierarchical, manager_llm="gpt-4o"
+        agents=[agent], tasks=[task], process=Process.hierarchical, manager_llm="gpt-4o",
     )
 
     result = crew.kickoff()
@@ -1769,10 +1751,9 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
-    """
-    Agents are not required for tasks in a hierarchical process but sometimes they are still added
-    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer) -> None:
+    """Agents are not required for tasks in a hierarchical process but sometimes they are still added
+    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task.
     """
     task = Task(
         description="Write one amazing paragraph about AI.",
@@ -1788,7 +1769,7 @@ def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -1796,7 +1777,7 @@ def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
     task.output = mock_task_output
 
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -1822,10 +1803,8 @@ def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, writer, ceo):
-    """
-    Tests that async tasks in hierarchical crews are handled correctly with proper delegation tools
-    """
+def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, writer, ceo) -> None:
+    """Tests that async tasks in hierarchical crews are handled correctly with proper delegation tools."""
     task = Task(
         description="Write one amazing paragraph about AI.",
         expected_output="A single paragraph with 4 sentences.",
@@ -1841,7 +1820,7 @@ def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, write
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # Create a mock Future that returns our TaskOutput
@@ -1853,7 +1832,7 @@ def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, write
     task.output = mock_task_output
 
     with patch.object(
-        Task, "execute_async", return_value=mock_future
+        Task, "execute_async", return_value=mock_future,
     ) as mock_execute_async:
         crew.kickoff()
 
@@ -1879,10 +1858,9 @@ def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, write
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_crew_creation_tasks_with_sync_last(researcher, writer, ceo):
-    """
-    Agents are not required for tasks in a hierarchical process but sometimes they are still added
-    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+def test_hierarchical_crew_creation_tasks_with_sync_last(researcher, writer, ceo) -> None:
+    """Agents are not required for tasks in a hierarchical process but sometimes they are still added
+    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task.
     """
     task = Task(
         description="Write one amazing paragraph about AI.",
@@ -1912,7 +1890,7 @@ def test_hierarchical_crew_creation_tasks_with_sync_last(researcher, writer, ceo
     )
 
 
-def test_crew_inputs_interpolate_both_agents_and_tasks():
+def test_crew_inputs_interpolate_both_agents_and_tasks() -> None:
     agent = Agent(
         role="{topic} Researcher",
         goal="Express hot takes on {topic}.",
@@ -1936,7 +1914,7 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     assert crew.agents[0].backstory == "You have a lot of experience with AI."
 
 
-def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
+def test_crew_inputs_interpolate_both_agents_and_tasks_diff() -> None:
     from unittest.mock import patch
 
     agent = Agent(
@@ -1953,23 +1931,21 @@ def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
 
     crew = Crew(agents=[agent], tasks=[task])
 
-    with patch.object(Agent, "execute_task") as execute:
-        with patch.object(
-            Agent, "interpolate_inputs", wraps=agent.interpolate_inputs
-        ) as interpolate_agent_inputs:
-            with patch.object(
-                Task,
-                "interpolate_inputs_and_add_conversation_history",
-                wraps=task.interpolate_inputs_and_add_conversation_history,
-            ) as interpolate_task_inputs:
-                execute.return_value = "ok"
-                crew.kickoff(inputs={"topic": "AI", "points": 5})
-                interpolate_agent_inputs.assert_called()
-                interpolate_task_inputs.assert_called()
+    with patch.object(Agent, "execute_task") as execute, patch.object(
+        Agent, "interpolate_inputs", wraps=agent.interpolate_inputs,
+    ) as interpolate_agent_inputs, patch.object(
+        Task,
+        "interpolate_inputs_and_add_conversation_history",
+        wraps=task.interpolate_inputs_and_add_conversation_history,
+    ) as interpolate_task_inputs:
+        execute.return_value = "ok"
+        crew.kickoff(inputs={"topic": "AI", "points": 5})
+        interpolate_agent_inputs.assert_called()
+        interpolate_task_inputs.assert_called()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_does_not_interpolate_without_inputs():
+def test_crew_does_not_interpolate_without_inputs() -> None:
     from unittest.mock import patch
 
     agent = Agent(
@@ -1988,14 +1964,14 @@ def test_crew_does_not_interpolate_without_inputs():
 
     with patch.object(Agent, "interpolate_inputs") as interpolate_agent_inputs:
         with patch.object(
-            Task, "interpolate_inputs_and_add_conversation_history"
+            Task, "interpolate_inputs_and_add_conversation_history",
         ) as interpolate_task_inputs:
             crew.kickoff()
             interpolate_agent_inputs.assert_not_called()
             interpolate_task_inputs.assert_not_called()
 
 
-def test_task_callback_on_crew():
+def test_task_callback_on_crew() -> None:
     from unittest.mock import MagicMock, patch
 
     researcher_agent = Agent(
@@ -2031,7 +2007,7 @@ def test_task_callback_on_crew():
         assert isinstance(args[0], TaskOutput)
 
 
-def test_task_callback_both_on_task_and_crew():
+def test_task_callback_both_on_task_and_crew() -> None:
     from unittest.mock import MagicMock, patch
 
     mock_callback_on_task = MagicMock()
@@ -2068,7 +2044,7 @@ def test_task_callback_both_on_task_and_crew():
         mock_callback_on_crew.assert_called_once_with(list_ideas.output)
 
 
-def test_task_same_callback_both_on_task_and_crew():
+def test_task_same_callback_both_on_task_and_crew() -> None:
     from unittest.mock import MagicMock, patch
 
     mock_callback = MagicMock()
@@ -2104,7 +2080,7 @@ def test_task_same_callback_both_on_task_and_crew():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_tools_with_custom_caching():
+def test_tools_with_custom_caching() -> None:
     from unittest.mock import patch
 
     from crewai.tools import tool
@@ -2115,8 +2091,7 @@ def test_tools_with_custom_caching():
         return first_number * second_number
 
     def cache_func(args, result):
-        cache = result % 2 == 0
-        return cache
+        return result % 2 == 0
 
     multiplcation_tool.cache_function = cache_func
 
@@ -2163,7 +2138,7 @@ def test_tools_with_custom_caching():
     crew = Crew(agents=[writer1, writer2], tasks=[task1, task2, task3, task4])
 
     with patch.object(
-        CacheHandler, "add", wraps=crew._cache_handler.add
+        CacheHandler, "add", wraps=crew._cache_handler.add,
     ) as add_to_cache:
         result = crew.kickoff()
 
@@ -2181,7 +2156,7 @@ def test_tools_with_custom_caching():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_task_uses_last_output(researcher, writer):
+def test_conditional_task_uses_last_output(researcher, writer) -> None:
     """Test that conditional tasks use the last task output for condition evaluation."""
     task1 = Task(
         description="First task",
@@ -2255,7 +2230,7 @@ def test_conditional_task_uses_last_output(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_tasks_result_collection(researcher, writer):
+def test_conditional_tasks_result_collection(researcher, writer) -> None:
     """Test that task outputs are properly collected based on execution status."""
     task1 = Task(
         description="Normal task that always executes",
@@ -2336,7 +2311,7 @@ def test_conditional_tasks_result_collection(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_conditional_tasks(researcher, writer):
+def test_multiple_conditional_tasks(researcher, writer) -> None:
     """Test that having multiple conditional tasks in sequence works correctly."""
     task1 = Task(
         description="Initial research task",
@@ -2385,7 +2360,7 @@ def test_multiple_conditional_tasks(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_using_contextual_memory():
+def test_using_contextual_memory() -> None:
     from unittest.mock import patch
 
     math_researcher = Agent(
@@ -2413,7 +2388,7 @@ def test_using_contextual_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_using_contextual_memory_with_long_term_memory():
+def test_using_contextual_memory_with_long_term_memory() -> None:
     from unittest.mock import patch
 
     math_researcher = Agent(
@@ -2442,7 +2417,7 @@ def test_using_contextual_memory_with_long_term_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_warning_long_term_memory_without_entity_memory():
+def test_warning_long_term_memory_without_entity_memory() -> None:
     from unittest.mock import patch
 
     math_researcher = Agent(
@@ -2467,7 +2442,7 @@ def test_warning_long_term_memory_without_entity_memory():
     with (
         patch("crewai.utilities.printer.Printer.print") as mock_print,
         patch(
-            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
+            "crewai.memory.long_term.long_term_memory.LongTermMemory.save",
         ) as save_memory,
     ):
         crew.kickoff()
@@ -2479,7 +2454,7 @@ def test_warning_long_term_memory_without_entity_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_long_term_memory_with_memory_flag():
+def test_long_term_memory_with_memory_flag() -> None:
     from unittest.mock import patch
 
     math_researcher = Agent(
@@ -2505,7 +2480,7 @@ def test_long_term_memory_with_memory_flag():
     with (
         patch("crewai.utilities.printer.Printer.print") as mock_print,
         patch(
-            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
+            "crewai.memory.long_term.long_term_memory.LongTermMemory.save",
         ) as save_memory,
     ):
         crew.kickoff()
@@ -2514,7 +2489,7 @@ def test_long_term_memory_with_memory_flag():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_using_contextual_memory_with_short_term_memory():
+def test_using_contextual_memory_with_short_term_memory() -> None:
     from unittest.mock import patch
 
     math_researcher = Agent(
@@ -2543,7 +2518,7 @@ def test_using_contextual_memory_with_short_term_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_disabled_memory_using_contextual_memory():
+def test_disabled_memory_using_contextual_memory() -> None:
     from unittest.mock import patch
 
     math_researcher = Agent(
@@ -2571,14 +2546,14 @@ def test_disabled_memory_using_contextual_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_log_file_output(tmp_path, researcher):
+def test_crew_log_file_output(tmp_path, researcher) -> None:
     test_file = tmp_path / "logs.txt"
     tasks = [
         Task(
             description="Say Hi",
             expected_output="The word: Hi",
             agent=researcher,
-        )
+        ),
     ]
 
     crew = Crew(agents=[researcher], tasks=tasks, output_log_file=str(test_file))
@@ -2587,7 +2562,7 @@ def test_crew_log_file_output(tmp_path, researcher):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_output_file_end_to_end(tmp_path):
+def test_crew_output_file_end_to_end(tmp_path) -> None:
     """Test output file functionality in a full crew context."""
     # Create an agent
     agent = Agent(
@@ -2619,7 +2594,7 @@ def test_crew_output_file_end_to_end(tmp_path):
     assert expected_file.exists(), f"Output file {expected_file} was not created"
 
 
-def test_crew_output_file_validation_failures():
+def test_crew_output_file_validation_failures() -> None:
     """Test output file validation failures in a crew context."""
     agent = Agent(
         role="Researcher",
@@ -2669,7 +2644,7 @@ def test_crew_output_file_validation_failures():
         Crew(agents=[agent], tasks=[task]).kickoff()
 
 
-def test_manager_agent(researcher, writer):
+def test_manager_agent(researcher, writer) -> None:
     from unittest.mock import patch
 
     task = Task(
@@ -2692,7 +2667,7 @@ def test_manager_agent(researcher, writer):
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -2700,14 +2675,14 @@ def test_manager_agent(researcher, writer):
     task.output = mock_task_output
 
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
         assert manager.allow_delegation is True
         mock_execute_sync.assert_called()
 
 
-def test_manager_agent_in_agents_raises_exception(researcher, writer):
+def test_manager_agent_in_agents_raises_exception(researcher, writer) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2729,7 +2704,7 @@ def test_manager_agent_in_agents_raises_exception(researcher, writer):
         )
 
 
-def test_manager_agent_with_tools_raises_exception(researcher, writer):
+def test_manager_agent_with_tools_raises_exception(researcher, writer) -> None:
     from crewai.tools import tool
 
     @tool
@@ -2766,8 +2741,8 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
 @patch("crewai.crew.TaskEvaluator")
 @patch("crewai.crew.Crew.copy")
 def test_crew_train_success(
-    copy_mock, task_evaluator, crew_training_handler, kickoff_mock, researcher, writer
-):
+    copy_mock, task_evaluator, crew_training_handler, kickoff_mock, researcher, writer,
+) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2785,20 +2760,20 @@ def test_crew_train_success(
     received_events = []
 
     @crewai_event_bus.on(CrewTrainStartedEvent)
-    def on_crew_train_started(source, event: CrewTrainStartedEvent):
+    def on_crew_train_started(source, event: CrewTrainStartedEvent) -> None:
         received_events.append(event)
 
     @crewai_event_bus.on(CrewTrainCompletedEvent)
-    def on_crew_train_completed(source, event: CrewTrainCompletedEvent):
+    def on_crew_train_completed(source, event: CrewTrainCompletedEvent) -> None:
         received_events.append(event)
 
     crew.train(
-        n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
+        n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl",
     )
 
     # Ensure kickoff is called on the copied crew
     kickoff_mock.assert_has_calls(
-        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})],
     )
 
     task_evaluator.assert_has_calls(
@@ -2815,7 +2790,7 @@ def test_crew_train_success(
                 agent_id=str(writer.id),
             ),
             mock.call().evaluate_training_data().model_dump(),
-        ]
+        ],
     )
 
     crew_training_handler.assert_any_call("training_data.pkl")
@@ -2834,7 +2809,7 @@ def test_crew_train_success(
                 agent_id="Senior Writer",
                 trained_data=task_evaluator().evaluate_training_data().model_dump(),
             ),
-        ]
+        ],
     )
 
     assert len(received_events) == 2
@@ -2842,7 +2817,7 @@ def test_crew_train_success(
     assert isinstance(received_events[1], CrewTrainCompletedEvent)
 
 
-def test_crew_train_error(researcher, writer):
+def test_crew_train_error(researcher, writer) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2857,11 +2832,11 @@ def test_crew_train_error(researcher, writer):
     with pytest.raises(TypeError) as e:
         crew.train()  # type: ignore purposefully throwing err
         assert "train() missing 1 required positional argument: 'n_iterations'" in str(
-            e
+            e,
         )
 
 
-def test__setup_for_training(researcher, writer):
+def test__setup_for_training(researcher, writer) -> None:
     researcher.allow_delegation = True
     writer.allow_delegation = True
     agents = [researcher, writer]
@@ -2892,7 +2867,7 @@ def test__setup_for_training(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_feature(researcher, writer):
+def test_replay_feature(researcher, writer) -> None:
     list_ideas = Task(
         description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
         expected_output="Bullet point list of 5 important events. No additional commentary.",
@@ -2929,7 +2904,7 @@ def test_replay_feature(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_replay_error(researcher, writer):
+def test_crew_replay_error(researcher, writer) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2947,7 +2922,7 @@ def test_crew_replay_error(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_task_db_init():
+def test_crew_task_db_init() -> None:
     agent = Agent(
         role="Content Writer",
         goal="Write engaging content on various topics.",
@@ -2981,11 +2956,11 @@ def test_crew_task_db_init():
             db_handler.load()
             assert True  # If we reach this point, no exception was raised
         except Exception as e:
-            pytest.fail(f"An exception was raised: {str(e)}")
+            pytest.fail(f"An exception was raised: {e!s}")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_task_with_context():
+def test_replay_task_with_context() -> None:
     agent1 = Agent(
         role="Researcher",
         goal="Research AI advancements.",
@@ -3084,13 +3059,13 @@ def test_replay_task_with_context():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_with_context():
+def test_replay_with_context() -> None:
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
-        description="Context Task", expected_output="Say Task Output", agent=agent
+        description="Context Task", expected_output="Say Task Output", agent=agent,
     )
     task2 = Task(
-        description="Test Task", expected_output="Say Hi", agent=agent, context=[task1]
+        description="Test Task", expected_output="Say Hi", agent=agent, context=[task1],
     )
 
     context_output = TaskOutput(
@@ -3142,13 +3117,13 @@ def test_replay_with_context():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_with_invalid_task_id():
+def test_replay_with_invalid_task_id() -> None:
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
-        description="Context Task", expected_output="Say Task Output", agent=agent
+        description="Context Task", expected_output="Say Task Output", agent=agent,
     )
     task2 = Task(
-        description="Test Task", expected_output="Say Hi", agent=agent, context=[task1]
+        description="Test Task", expected_output="Say Hi", agent=agent, context=[task1],
     )
 
     context_output = TaskOutput(
@@ -3203,7 +3178,7 @@ def test_replay_with_invalid_task_id():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 @patch.object(Crew, "_interpolate_inputs")
-def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
+def test_replay_interpolates_inputs_properly(mock_interpolate_inputs) -> None:
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(description="Context Task", expected_output="Say {name}", agent=agent)
     task2 = Task(
@@ -3263,7 +3238,7 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_setup_context():
+def test_replay_setup_context() -> None:
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(description="Context Task", expected_output="Say {name}", agent=agent)
     task2 = Task(
@@ -3325,7 +3300,7 @@ def test_replay_setup_context():
         assert crew.tasks[1].prompt_context == "context raw output"
 
 
-def test_key(researcher, writer):
+def test_key(researcher, writer) -> None:
     tasks = [
         Task(
             description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
@@ -3344,13 +3319,13 @@ def test_key(researcher, writer):
         tasks=tasks,
     )
     hash = hashlib.md5(
-        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
+        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode(),
     ).hexdigest()
 
     assert crew.key == hash
 
 
-def test_key_with_interpolated_inputs():
+def test_key_with_interpolated_inputs() -> None:
     researcher = Agent(
         role="{topic} Researcher",
         goal="Make the best research and analysis on content {topic}",
@@ -3384,7 +3359,7 @@ def test_key_with_interpolated_inputs():
         tasks=tasks,
     )
     hash = hashlib.md5(
-        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
+        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode(),
     ).hexdigest()
 
     assert crew.key == hash
@@ -3395,8 +3370,8 @@ def test_key_with_interpolated_inputs():
 
 
 def test_conditional_task_requirement_breaks_when_singular_conditional_task(
-    researcher, writer
-):
+    researcher, writer,
+) -> None:
     def condition_fn(output) -> bool:
         return output.raw.startswith("Andrew Ng has!!")
 
@@ -3414,7 +3389,7 @@ def test_conditional_task_requirement_breaks_when_singular_conditional_task(
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_task_last_task_when_conditional_is_true(researcher, writer):
+def test_conditional_task_last_task_when_conditional_is_true(researcher, writer) -> None:
     def condition_fn(output) -> bool:
         return True
 
@@ -3436,12 +3411,12 @@ def test_conditional_task_last_task_when_conditional_is_true(researcher, writer)
     )
     result = crew.kickoff()
     assert result.raw.startswith(
-        "Hi\n\nHere are five interesting ideas for articles focused on AI and AI agents, each accompanied by a compelling paragraph to showcase the potential impact and depth of each topic:"
+        "Hi\n\nHere are five interesting ideas for articles focused on AI and AI agents, each accompanied by a compelling paragraph to showcase the potential impact and depth of each topic:",
     )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_task_last_task_when_conditional_is_false(researcher, writer):
+def test_conditional_task_last_task_when_conditional_is_false(researcher, writer) -> None:
     def condition_fn(output) -> bool:
         return False
 
@@ -3465,7 +3440,7 @@ def test_conditional_task_last_task_when_conditional_is_false(researcher, writer
     assert result.raw == "Hi"
 
 
-def test_conditional_task_requirement_breaks_when_task_async(researcher, writer):
+def test_conditional_task_requirement_breaks_when_task_async(researcher, writer) -> None:
     def my_condition(context):
         return context.get("some_value") > 10
 
@@ -3490,7 +3465,7 @@ def test_conditional_task_requirement_breaks_when_task_async(researcher, writer)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_should_skip(researcher, writer):
+def test_conditional_should_skip(researcher, writer) -> None:
     task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
 
     condition_mock = MagicMock(return_value=False)
@@ -3522,11 +3497,11 @@ def test_conditional_should_skip(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_should_execute(researcher, writer):
+def test_conditional_should_execute(researcher, writer) -> None:
     task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
 
     condition_mock = MagicMock(
-        return_value=True
+        return_value=True,
     )  # should execute this conditional task
     task2 = ConditionalTask(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3555,7 +3530,7 @@ def test_conditional_should_execute(researcher, writer):
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch("crewai.crew.Crew.copy")
 @mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator, researcher):
+def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator, researcher) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -3576,18 +3551,18 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator, research
     received_events = []
 
     @crewai_event_bus.on(CrewTestStartedEvent)
-    def on_crew_test_started(source, event: CrewTestStartedEvent):
+    def on_crew_test_started(source, event: CrewTestStartedEvent) -> None:
         received_events.append(event)
 
     @crewai_event_bus.on(CrewTestCompletedEvent)
-    def on_crew_test_completed(source, event: CrewTestCompletedEvent):
+    def on_crew_test_completed(source, event: CrewTestCompletedEvent) -> None:
         received_events.append(event)
 
     crew.test(n_iterations, llm_instance, inputs={"topic": "AI"})
 
     # Ensure kickoff is called on the copied crew
     kickoff_mock.assert_has_calls(
-        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})],
     )
 
     crew_evaluator.assert_has_calls(
@@ -3596,7 +3571,7 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator, research
             mock.call().set_iteration(1),
             mock.call().set_iteration(2),
             mock.call().print_crew_evaluation_result(),
-        ]
+        ],
     )
 
     assert len(received_events) == 2
@@ -3605,7 +3580,7 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator, research
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_verbose_manager_agent(researcher, writer):
+def test_hierarchical_verbose_manager_agent(researcher, writer) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -3626,7 +3601,7 @@ def test_hierarchical_verbose_manager_agent(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_verbose_false_manager_agent(researcher, writer):
+def test_hierarchical_verbose_false_manager_agent(researcher, writer) -> None:
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -3646,7 +3621,7 @@ def test_hierarchical_verbose_false_manager_agent(researcher, writer):
     assert not crew.manager_agent.verbose
 
 
-def test_fetch_inputs():
+def test_fetch_inputs() -> None:
     agent = Agent(
         role="{role_detail} Researcher",
         goal="Research on {topic}.",
@@ -3669,12 +3644,8 @@ def test_fetch_inputs():
     ), f"Expected {expected_placeholders}, but got {actual_placeholders}"
 
 
-def test_task_tools_preserve_code_execution_tools():
-    """
-    Test that task tools don't override code execution tools when allow_code_execution=True
-    """
-    from typing import Type
-
+def test_task_tools_preserve_code_execution_tools() -> None:
+    """Test that task tools don't override code execution tools when allow_code_execution=True."""
     from crewai_tools import CodeInterpreterTool
     from pydantic import BaseModel, Field
 
@@ -3688,7 +3659,7 @@ def test_task_tools_preserve_code_execution_tools():
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool that just returns the input"
-        args_schema: Type[BaseModel] = TestToolInput
+        args_schema: type[BaseModel] = TestToolInput
 
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
@@ -3726,11 +3697,11 @@ def test_task_tools_preserve_code_execution_tools():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -3756,10 +3727,8 @@ def test_task_tools_preserve_code_execution_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multimodal_flag_adds_multimodal_tools():
-    """
-    Test that an agent with multimodal=True automatically has multimodal tools added to the task execution.
-    """
+def test_multimodal_flag_adds_multimodal_tools() -> None:
+    """Test that an agent with multimodal=True automatically has multimodal tools added to the task execution."""
     from crewai.tools.agent_tools.add_image_tool import AddImageTool
 
     # Create an agent that supports multimodal
@@ -3782,12 +3751,12 @@ def test_multimodal_flag_adds_multimodal_tools():
     crew = Crew(agents=[multimodal_agent], tasks=[task], process=Process.sequential)
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent",
     )
 
     # Mock execute_sync to verify the tools passed at runtime
     with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
+        Task, "execute_sync", return_value=mock_task_output,
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -3805,10 +3774,8 @@ def test_multimodal_flag_adds_multimodal_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multimodal_agent_image_tool_handling():
-    """
-    Test that multimodal agents properly handle image tools in the CrewAgentExecutor
-    """
+def test_multimodal_agent_image_tool_handling() -> None:
+    """Test that multimodal agents properly handle image tools in the CrewAgentExecutor."""
     # Create a multimodal agent
     multimodal_agent = Agent(
         role="Image Analyst",
@@ -3879,9 +3846,8 @@ def test_multimodal_agent_image_tool_handling():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multimodal_agent_describing_image_successfully():
-    """
-    Test that a multimodal agent can process images without validation errors.
+def test_multimodal_agent_describing_image_successfully() -> None:
+    """Test that a multimodal agent can process images without validation errors.
     This test reproduces the scenario from issue #2475.
     """
     llm = LLM(model="openai/gpt-4o", temperature=0.7)  # model with vision capabilities
@@ -3917,10 +3883,8 @@ def test_multimodal_agent_describing_image_successfully():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multimodal_agent_live_image_analysis():
-    """
-    Test that multimodal agents can analyze images through a real API call
-    """
+def test_multimodal_agent_live_image_analysis() -> None:
+    """Test that multimodal agents can analyze images through a real API call."""
     # Create a multimodal agent
     image_analyst = Agent(
         role="Image Analyst",
@@ -3949,8 +3913,8 @@ def test_multimodal_agent_live_image_analysis():
     # Execute with an image URL
     result = crew.kickoff(
         inputs={
-            "image_url": "https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k="
-        }
+            "image_url": "https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k=",
+        },
     )
 
     # Verify we got a meaningful response
@@ -3960,13 +3924,13 @@ def test_multimodal_agent_live_image_analysis():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_with_failing_task_guardrails():
+def test_crew_with_failing_task_guardrails() -> None:
     """Test that crew properly handles failing guardrails and retries with validation feedback."""
 
     def strict_format_guardrail(result: TaskOutput):
         """Validates that the output follows a strict format:
         - Must start with 'REPORT:'
-        - Must end with 'END REPORT'
+        - Must end with 'END REPORT'.
         """
         content = result.raw.strip()
 
@@ -4017,7 +3981,7 @@ def test_crew_with_failing_task_guardrails():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_guardrail_feedback_in_context():
+def test_crew_guardrail_feedback_in_context() -> None:
     """Test that guardrail feedback is properly appended to task context for retries."""
 
     def format_guardrail(result: TaskOutput):
@@ -4048,7 +4012,7 @@ def test_crew_guardrail_feedback_in_context():
 
     with patch.object(Agent, "execute_task") as mock_execute_task:
         # Define side_effect to capture context and return different responses
-        def side_effect(task, context=None, tools=None):
+        def side_effect(task, context=None, tools=None) -> str:
             execution_contexts.append(context if context else "")
             if len(execution_contexts) == 1:
                 return "This is a test response"
@@ -4074,7 +4038,7 @@ def test_crew_guardrail_feedback_in_context():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_before_kickoff_callback():
+def test_before_kickoff_callback() -> None:
     from crewai.project import CrewBase
 
     @CrewBase
@@ -4084,13 +4048,13 @@ def test_before_kickoff_callback():
         from crewai.agents.agent_builder.base_agent import BaseAgent
         from crewai.project import CrewBase, agent, before_kickoff, crew, task
 
-        agents: List[BaseAgent]
-        tasks: List[Task]
+        agents: list[BaseAgent]
+        tasks: list[Task]
 
         agents_config = None
         tasks_config = None
 
-        def __init__(self):
+        def __init__(self) -> None:
             self.inputs_modified = False
 
         @before_kickoff
@@ -4109,12 +4073,11 @@ def test_before_kickoff_callback():
 
         @task
         def my_task(self):
-            task = Task(
+            return Task(
                 description="Test task description",
                 expected_output="Test expected output",
                 agent=self.my_agent(),
             )
-            return task
 
         @crew
         def crew(self):
@@ -4139,7 +4102,7 @@ def test_before_kickoff_callback():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_before_kickoff_without_inputs():
+def test_before_kickoff_without_inputs() -> None:
     from crewai.project import CrewBase, agent, before_kickoff, task
 
     @CrewBase
@@ -4149,7 +4112,7 @@ def test_before_kickoff_without_inputs():
         agents_config = None
         tasks_config = None
 
-        def __init__(self):
+        def __init__(self) -> None:
             self.inputs_modified = False
             self.received_inputs = None
 
@@ -4199,7 +4162,7 @@ def test_before_kickoff_without_inputs():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_with_knowledge_sources_works_with_copy(researcher, writer):
+def test_crew_with_knowledge_sources_works_with_copy(researcher, writer) -> None:
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
@@ -4217,7 +4180,7 @@ def test_crew_with_knowledge_sources_works_with_copy(researcher, writer):
     assert len(crew_copy.tasks) == len(crew.tasks)
 
 
-def test_crew_kickoff_for_each_works_with_manager_agent_copy():
+def test_crew_kickoff_for_each_works_with_manager_agent_copy() -> None:
     researcher = Agent(
         role="Researcher",
         goal="Conduct thorough research and analysis on AI and AI agents",
@@ -4262,7 +4225,7 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
     assert crew_copy.manager_agent.goal == crew.manager_agent.goal
 
 
-def test_crew_copy_with_memory():
+def test_crew_copy_with_memory() -> None:
     """Test that copying a crew with memory enabled does not raise validation errors and copies memory correctly."""
     agent = Agent(role="Test Agent", goal="Test Goal", backstory="Test Backstory")
     task = Task(description="Test Task", expected_output="Test Output", agent=agent)
@@ -4282,7 +4245,7 @@ def test_crew_copy_with_memory():
         crew_copy = crew.copy()
 
         assert hasattr(
-            crew_copy, "_short_term_memory"
+            crew_copy, "_short_term_memory",
         ), "Copied crew should have _short_term_memory"
         assert (
             crew_copy._short_term_memory is not None
@@ -4292,7 +4255,7 @@ def test_crew_copy_with_memory():
         ), "Copied _short_term_memory should be a new object"
 
         assert hasattr(
-            crew_copy, "_long_term_memory"
+            crew_copy, "_long_term_memory",
         ), "Copied crew should have _long_term_memory"
         assert (
             crew_copy._long_term_memory is not None
@@ -4302,7 +4265,7 @@ def test_crew_copy_with_memory():
         ), "Copied _long_term_memory should be a new object"
 
         assert hasattr(
-            crew_copy, "_entity_memory"
+            crew_copy, "_entity_memory",
         ), "Copied crew should have _entity_memory"
         assert (
             crew_copy._entity_memory is not None
@@ -4313,7 +4276,7 @@ def test_crew_copy_with_memory():
 
         if original_external_id:
             assert hasattr(
-                crew_copy, "_external_memory"
+                crew_copy, "_external_memory",
             ), "Copied crew should have _external_memory"
             assert (
                 crew_copy._external_memory is not None
@@ -4329,7 +4292,7 @@ def test_crew_copy_with_memory():
 
         if original_user_id:
             assert hasattr(
-                crew_copy, "_user_memory"
+                crew_copy, "_user_memory",
             ), "Copied crew should have _user_memory"
             assert (
                 crew_copy._user_memory is not None
@@ -4345,15 +4308,15 @@ def test_crew_copy_with_memory():
     except pydantic_core.ValidationError as e:
         if "Input should be an instance of" in str(e) and ("Memory" in str(e)):
             pytest.fail(
-                f"Copying with memory raised Pydantic ValidationError, likely due to incorrect memory copy: {e}"
+                f"Copying with memory raised Pydantic ValidationError, likely due to incorrect memory copy: {e}",
             )
         else:
-            raise e  # Re-raise other validation errors
+            raise  # Re-raise other validation errors
     except Exception as e:
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
 
 
-def test_sets_parent_flow_when_outside_flow(researcher, writer):
+def test_sets_parent_flow_when_outside_flow(researcher, writer) -> None:
     crew = Crew(
         agents=[researcher, writer],
         process=Process.sequential,
@@ -4365,7 +4328,7 @@ def test_sets_parent_flow_when_outside_flow(researcher, writer):
     assert crew.parent_flow is None
 
 
-def test_sets_parent_flow_when_inside_flow(researcher, writer):
+def test_sets_parent_flow_when_inside_flow(researcher, writer) -> None:
     class MyFlow(Flow):
         @start()
         def start(self):
@@ -4374,7 +4337,7 @@ def test_sets_parent_flow_when_inside_flow(researcher, writer):
                 process=Process.sequential,
                 tasks=[
                     Task(
-                        description="Task 1", expected_output="output", agent=researcher
+                        description="Task 1", expected_output="output", agent=researcher,
                     ),
                     Task(description="Task 2", expected_output="output", agent=writer),
                 ],

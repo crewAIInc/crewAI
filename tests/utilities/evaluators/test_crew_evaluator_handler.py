@@ -25,15 +25,15 @@ class InternalCrewEvaluator:
 
         return CrewEvaluator(crew, openai_model_name="gpt-4o-mini")
 
-    def test_setup_for_evaluating(self, crew_planner):
+    def test_setup_for_evaluating(self, crew_planner) -> None:
         crew_planner._setup_for_evaluating()
         assert crew_planner.crew.tasks[0].callback == crew_planner.evaluate
 
-    def test_set_iteration(self, crew_planner):
+    def test_set_iteration(self, crew_planner) -> None:
         crew_planner.set_iteration(1)
         assert crew_planner.iteration == 1
 
-    def test_evaluator_agent(self, crew_planner):
+    def test_evaluator_agent(self, crew_planner) -> None:
         agent = crew_planner._evaluator_agent()
         assert agent.role == "Task Execution Evaluator"
         assert (
@@ -47,7 +47,7 @@ class InternalCrewEvaluator:
         assert agent.verbose is False
         assert agent.llm.model == "gpt-4o-mini"
 
-    def test_evaluation_task(self, crew_planner):
+    def test_evaluation_task(self, crew_planner) -> None:
         evaluator_agent = Agent(
             role="Evaluator Agent",
             goal="Evaluate the performance of the agents in the crew",
@@ -60,11 +60,11 @@ class InternalCrewEvaluator:
         )
         task_output = "Task Output 1"
         task = crew_planner._evaluation_task(
-            evaluator_agent, task_to_evaluate, task_output
+            evaluator_agent, task_to_evaluate, task_output,
         )
 
         assert task.description.startswith(
-            "Based on the task description and the expected output, compare and evaluate the performance of the agents in the crew based on the Task Output they have performed using score from 1 to 10 evaluating on completion, quality, and overall performance."
+            "Based on the task description and the expected output, compare and evaluate the performance of the agents in the crew based on the Task Output they have performed using score from 1 to 10 evaluating on completion, quality, and overall performance.",
         )
 
         assert task.agent == evaluator_agent
@@ -79,7 +79,7 @@ class InternalCrewEvaluator:
 
     @mock.patch("crewai.utilities.evaluators.crew_evaluator_handler.Console")
     @mock.patch("crewai.utilities.evaluators.crew_evaluator_handler.Table")
-    def test_print_crew_evaluation_result(self, table, console, crew_planner):
+    def test_print_crew_evaluation_result(self, table, console, crew_planner) -> None:
         # Set up task scores and execution times
         crew_planner.tasks_scores = {
             1: [10, 9, 8],
@@ -97,10 +97,10 @@ class InternalCrewEvaluator:
         ]
         crew_planner.crew.tasks = [
             mock.Mock(
-                agent=crew_planner.crew.agents[0], processed_by_agents=["Agent 1"]
+                agent=crew_planner.crew.agents[0], processed_by_agents=["Agent 1"],
             ),
             mock.Mock(
-                agent=crew_planner.crew.agents[1], processed_by_agents=["Agent 2"]
+                agent=crew_planner.crew.agents[1], processed_by_agents=["Agent 2"],
             ),
         ]
 
@@ -111,7 +111,7 @@ class InternalCrewEvaluator:
         table.assert_has_calls(
             [
                 mock.call(
-                    title="Tasks Scores \n (1-10 Higher is better)", box=mock.ANY
+                    title="Tasks Scores \n (1-10 Higher is better)", box=mock.ANY,
                 ),  # Title and styling
                 mock.call().add_column("Tasks/Crew/Agents", style="cyan"),  # Columns
                 mock.call().add_column("Run 1", justify="center"),
@@ -125,15 +125,15 @@ class InternalCrewEvaluator:
                 # Add crew averages and execution times
                 mock.call().add_row("Crew", "9.00", "8.00", "8.5", ""),
                 mock.call().add_row("Execution Time (s)", "135", "155", "145", ""),
-            ]
+            ],
         )
 
         # Ensure the console prints the table
         console.assert_has_calls([mock.call(), mock.call().print(table())])
 
-    def test_evaluate(self, crew_planner):
+    def test_evaluate(self, crew_planner) -> None:
         task_output = TaskOutput(
-            description="Task 1", agent=str(crew_planner.crew.agents[0])
+            description="Task 1", agent=str(crew_planner.crew.agents[0]),
         )
 
         with mock.patch.object(Task, "execute_sync") as execute:

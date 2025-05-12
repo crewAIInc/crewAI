@@ -23,18 +23,18 @@ def temp_tree():
     shutil.rmtree(root_dir)
 
 
-def create_file(path, content):
+def create_file(path, content) -> None:
     with open(path, "w") as f:
         f.write(content)
 
 
-def test_tree_find_and_replace_file_content(temp_tree):
+def test_tree_find_and_replace_file_content(temp_tree) -> None:
     utils.tree_find_and_replace(temp_tree, "world", "universe")
-    with open(os.path.join(temp_tree, "file1.txt"), "r") as f:
+    with open(os.path.join(temp_tree, "file1.txt")) as f:
         assert f.read() == "Hello, universe!"
 
 
-def test_tree_find_and_replace_file_name(temp_tree):
+def test_tree_find_and_replace_file_name(temp_tree) -> None:
     old_path = os.path.join(temp_tree, "file2.txt")
     new_path = os.path.join(temp_tree, "file2_renamed.txt")
     os.rename(old_path, new_path)
@@ -43,19 +43,19 @@ def test_tree_find_and_replace_file_name(temp_tree):
     assert not os.path.exists(new_path)
 
 
-def test_tree_find_and_replace_directory_name(temp_tree):
+def test_tree_find_and_replace_directory_name(temp_tree) -> None:
     utils.tree_find_and_replace(temp_tree, "empty", "renamed")
     assert os.path.exists(os.path.join(temp_tree, "renamed_dir"))
     assert not os.path.exists(os.path.join(temp_tree, "empty_dir"))
 
 
-def test_tree_find_and_replace_nested_content(temp_tree):
+def test_tree_find_and_replace_nested_content(temp_tree) -> None:
     utils.tree_find_and_replace(temp_tree, "Nested", "Updated")
-    with open(os.path.join(temp_tree, "nested_dir", "nested_file.txt"), "r") as f:
+    with open(os.path.join(temp_tree, "nested_dir", "nested_file.txt")) as f:
         assert f.read() == "Updated content"
 
 
-def test_tree_find_and_replace_no_matches(temp_tree):
+def test_tree_find_and_replace_no_matches(temp_tree) -> None:
     utils.tree_find_and_replace(temp_tree, "nonexistent", "replacement")
     assert set(os.listdir(temp_tree)) == {
         "file1.txt",
@@ -65,7 +65,7 @@ def test_tree_find_and_replace_no_matches(temp_tree):
     }
 
 
-def test_tree_copy_full_structure(temp_tree):
+def test_tree_copy_full_structure(temp_tree) -> None:
     dest_dir = tempfile.mkdtemp()
     try:
         utils.tree_copy(temp_tree, dest_dir)
@@ -79,19 +79,19 @@ def test_tree_copy_full_structure(temp_tree):
         shutil.rmtree(dest_dir)
 
 
-def test_tree_copy_preserve_content(temp_tree):
+def test_tree_copy_preserve_content(temp_tree) -> None:
     dest_dir = tempfile.mkdtemp()
     try:
         utils.tree_copy(temp_tree, dest_dir)
-        with open(os.path.join(dest_dir, "file1.txt"), "r") as f:
+        with open(os.path.join(dest_dir, "file1.txt")) as f:
             assert f.read() == "Hello, world!"
-        with open(os.path.join(dest_dir, "nested_dir", "nested_file.txt"), "r") as f:
+        with open(os.path.join(dest_dir, "nested_dir", "nested_file.txt")) as f:
             assert f.read() == "Nested content"
     finally:
         shutil.rmtree(dest_dir)
 
 
-def test_tree_copy_to_existing_directory(temp_tree):
+def test_tree_copy_to_existing_directory(temp_tree) -> None:
     dest_dir = tempfile.mkdtemp()
     try:
         create_file(os.path.join(dest_dir, "existing_file.txt"), "I was here first")

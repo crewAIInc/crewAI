@@ -5,12 +5,11 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
-from pydantic import ValidationError
 
 from crewai.security import Fingerprint
 
 
-def test_fingerprint_creation_with_defaults():
+def test_fingerprint_creation_with_defaults() -> None:
     """Test creating a Fingerprint with default values."""
     fingerprint = Fingerprint()
 
@@ -27,7 +26,7 @@ def test_fingerprint_creation_with_defaults():
     assert fingerprint.metadata == {}
 
 
-def test_fingerprint_creation_with_metadata():
+def test_fingerprint_creation_with_metadata() -> None:
     """Test creating a Fingerprint with custom metadata only."""
     metadata = {"version": "1.0", "author": "Test Author"}
 
@@ -40,7 +39,7 @@ def test_fingerprint_creation_with_metadata():
     assert fingerprint.metadata == metadata
 
 
-def test_fingerprint_uuid_cannot_be_set():
+def test_fingerprint_uuid_cannot_be_set() -> None:
     """Test that uuid_str cannot be manually set."""
     original_uuid = "b723c6ff-95de-5e87-860b-467b72282bd8"
 
@@ -52,7 +51,7 @@ def test_fingerprint_uuid_cannot_be_set():
     assert uuid.UUID(fingerprint.uuid_str)  # Should be a valid UUID
 
 
-def test_fingerprint_created_at_cannot_be_set():
+def test_fingerprint_created_at_cannot_be_set() -> None:
     """Test that created_at cannot be manually set."""
     original_time = datetime.now() - timedelta(days=1)
 
@@ -64,7 +63,7 @@ def test_fingerprint_created_at_cannot_be_set():
     assert fingerprint.created_at > original_time  # Should be more recent
 
 
-def test_fingerprint_uuid_property():
+def test_fingerprint_uuid_property() -> None:
     """Test the uuid property returns a UUID object."""
     fingerprint = Fingerprint()
 
@@ -72,7 +71,7 @@ def test_fingerprint_uuid_property():
     assert str(fingerprint.uuid) == fingerprint.uuid_str
 
 
-def test_fingerprint_deterministic_generation():
+def test_fingerprint_deterministic_generation() -> None:
     """Test that the same seed string always generates the same fingerprint using generate method."""
     seed = "test-seed"
 
@@ -88,7 +87,7 @@ def test_fingerprint_deterministic_generation():
     assert uuid_str1 == uuid_str2
 
 
-def test_fingerprint_generate_classmethod():
+def test_fingerprint_generate_classmethod() -> None:
     """Test the generate class method."""
     # Without seed
     fingerprint1 = Fingerprint.generate()
@@ -107,7 +106,7 @@ def test_fingerprint_generate_classmethod():
     assert fingerprint2.uuid_str == fingerprint3.uuid_str
 
 
-def test_fingerprint_string_representation():
+def test_fingerprint_string_representation() -> None:
     """Test the string representation of Fingerprint."""
     fingerprint = Fingerprint()
     uuid_str = fingerprint.uuid_str
@@ -116,7 +115,7 @@ def test_fingerprint_string_representation():
     assert uuid_str in string_repr
 
 
-def test_fingerprint_equality():
+def test_fingerprint_equality() -> None:
     """Test fingerprint equality comparison."""
     # Using generate with the same seed to get consistent UUIDs
     seed = "test-equality"
@@ -129,7 +128,7 @@ def test_fingerprint_equality():
     assert fingerprint1 != fingerprint3
 
 
-def test_fingerprint_hash():
+def test_fingerprint_hash() -> None:
     """Test that fingerprints can be used as dictionary keys."""
     # Using generate with the same seed to get consistent UUIDs
     seed = "test-hash"
@@ -145,7 +144,7 @@ def test_fingerprint_hash():
     assert fingerprint_dict[fingerprint2] == "value"
 
 
-def test_fingerprint_to_dict():
+def test_fingerprint_to_dict() -> None:
     """Test converting fingerprint to dictionary."""
     metadata = {"version": "1.0"}
     fingerprint = Fingerprint(metadata=metadata)
@@ -160,7 +159,7 @@ def test_fingerprint_to_dict():
     assert fingerprint_dict["metadata"] == metadata
 
 
-def test_fingerprint_from_dict():
+def test_fingerprint_from_dict() -> None:
     """Test creating fingerprint from dictionary."""
     uuid_str = "b723c6ff-95de-5e87-860b-467b72282bd8"
     created_at = datetime.now()
@@ -170,7 +169,7 @@ def test_fingerprint_from_dict():
     fingerprint_dict = {
         "uuid_str": uuid_str,
         "created_at": created_at_iso,
-        "metadata": metadata
+        "metadata": metadata,
     }
 
     fingerprint = Fingerprint.from_dict(fingerprint_dict)
@@ -180,7 +179,7 @@ def test_fingerprint_from_dict():
     assert fingerprint.metadata == metadata
 
 
-def test_fingerprint_json_serialization():
+def test_fingerprint_json_serialization() -> None:
     """Test that Fingerprint can be JSON serialized and deserialized."""
     # Create a fingerprint, get its values
     metadata = {"version": "1.0"}
@@ -202,7 +201,7 @@ def test_fingerprint_json_serialization():
     assert new_fingerprint.metadata == metadata
 
 
-def test_invalid_uuid_str():
+def test_invalid_uuid_str() -> None:
     """Test handling of invalid UUID strings."""
     uuid_str = "not-a-valid-uuid"
     created_at = datetime.now().isoformat()
@@ -210,7 +209,7 @@ def test_invalid_uuid_str():
     fingerprint_dict = {
         "uuid_str": uuid_str,
         "created_at": created_at,
-        "metadata": {}
+        "metadata": {},
     }
 
     # The Fingerprint.from_dict method accepts even invalid UUIDs
@@ -223,10 +222,10 @@ def test_invalid_uuid_str():
 
     # But this will raise an exception when we try to access the uuid property
     with pytest.raises(ValueError):
-        uuid_obj = fingerprint.uuid
+        pass
 
 
-def test_fingerprint_metadata_mutation():
+def test_fingerprint_metadata_mutation() -> None:
     """Test that metadata can be modified after fingerprint creation."""
     # Create a fingerprint with initial metadata
     initial_metadata = {"version": "1.0", "status": "draft"}
@@ -243,7 +242,7 @@ def test_fingerprint_metadata_mutation():
     expected_metadata = {
         "version": "1.0",
         "status": "published",
-        "author": "Test Author"
+        "author": "Test Author",
     }
     assert fingerprint.metadata == expected_metadata
 

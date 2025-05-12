@@ -1,4 +1,4 @@
-from unittest.mock import ANY, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -13,7 +13,7 @@ from crewai.utilities.events import (
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
 
-def test_task_without_guardrail():
+def test_task_without_guardrail() -> None:
     """Test that tasks work normally without guardrails (backward compatibility)."""
     agent = Mock()
     agent.role = "test_agent"
@@ -27,7 +27,7 @@ def test_task_without_guardrail():
     assert result.raw == "test result"
 
 
-def test_task_with_successful_guardrail_func():
+def test_task_with_successful_guardrail_func() -> None:
     """Test that successful guardrail validation passes transformed result."""
 
     def guardrail(result: TaskOutput):
@@ -45,7 +45,7 @@ def test_task_with_successful_guardrail_func():
     assert result.raw == "TEST RESULT"
 
 
-def test_task_with_failing_guardrail():
+def test_task_with_failing_guardrail() -> None:
     """Test that failing guardrail triggers retry with error context."""
 
     def guardrail(result: TaskOutput):
@@ -72,7 +72,7 @@ def test_task_with_failing_guardrail():
     assert task.retry_count == 1
 
 
-def test_task_with_guardrail_retries():
+def test_task_with_guardrail_retries() -> None:
     """Test that guardrail respects max_retries configuration."""
 
     def guardrail(result: TaskOutput):
@@ -98,7 +98,7 @@ def test_task_with_guardrail_retries():
     assert "Invalid format" in str(exc_info.value)
 
 
-def test_guardrail_error_in_context():
+def test_guardrail_error_in_context() -> None:
     """Test that guardrail error is passed in context for retry."""
 
     def guardrail(result: TaskOutput):
@@ -118,7 +118,7 @@ def test_guardrail_error_in_context():
     # Mock execute_task to succeed on second attempt
     first_call = True
 
-    def execute_task(task, context, tools):
+    def execute_task(task, context, tools) -> str:
         nonlocal first_call
         if first_call:
             first_call = False
@@ -152,9 +152,9 @@ def task_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_guardrail_process_output(task_output):
+def test_task_guardrail_process_output(task_output) -> None:
     guardrail = LLMGuardrail(
-        description="Ensure the result has less than 10 words", llm=LLM(model="gpt-4o")
+        description="Ensure the result has less than 10 words", llm=LLM(model="gpt-4o"),
     )
 
     result = guardrail(task_output)
@@ -163,7 +163,7 @@ def test_task_guardrail_process_output(task_output):
     assert "exceeding the guardrail limit of fewer than" in result[1].lower()
 
     guardrail = LLMGuardrail(
-        description="Ensure the result has less than 500 words", llm=LLM(model="gpt-4o")
+        description="Ensure the result has less than 500 words", llm=LLM(model="gpt-4o"),
     )
 
     result = guardrail(task_output)
@@ -172,27 +172,27 @@ def test_task_guardrail_process_output(task_output):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_guardrail_emits_events(sample_agent):
+def test_guardrail_emits_events(sample_agent) -> None:
     started_guardrail = []
     completed_guardrail = []
 
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(LLMGuardrailStartedEvent)
-        def handle_guardrail_started(source, event):
+        def handle_guardrail_started(source, event) -> None:
             started_guardrail.append(
-                {"guardrail": event.guardrail, "retry_count": event.retry_count}
+                {"guardrail": event.guardrail, "retry_count": event.retry_count},
             )
 
         @crewai_event_bus.on(LLMGuardrailCompletedEvent)
-        def handle_guardrail_completed(source, event):
+        def handle_guardrail_completed(source, event) -> None:
             completed_guardrail.append(
                 {
                     "success": event.success,
                     "result": event.result,
                     "error": event.error,
                     "retry_count": event.retry_count,
-                }
+                },
             )
 
         task = Task(
@@ -248,7 +248,7 @@ def test_guardrail_emits_events(sample_agent):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_guardrail_when_an_error_occurs(sample_agent, task_output):
+def test_guardrail_when_an_error_occurs(sample_agent, task_output) -> None:
     with (
         patch(
             "crewai.Agent.kickoff",
