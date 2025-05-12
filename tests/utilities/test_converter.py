@@ -359,7 +359,7 @@ def test_convert_with_instructions():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_converter_with_llama3_2_model():
-    llm = LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434")
+    llm = LLM(model="openrouter/meta-llama/llama-3.2-3b-instruct", api_key='ABC')
     sample_text = "Name: Alice Llama, Age: 30"
     instructions = get_conversion_instructions(SimpleModel, llm)
     converter = Converter(
