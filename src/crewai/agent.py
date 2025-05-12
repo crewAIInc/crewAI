@@ -173,6 +173,7 @@ class Agent(BaseAgent):
                         collection_name=self.role,
                         storage=self.knowledge_storage or None,
                     )
+                    self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
@@ -258,7 +259,7 @@ class Agent(BaseAgent):
             self.knowledge_config.model_dump() if self.knowledge_config else {}
         )
 
-        if self.knowledge:
+        if self.knowledge or self.crew.knowledge:
             crewai_event_bus.emit(
                 self,
                 event=KnowledgeRetrievalStartedEvent(
@@ -270,16 +271,19 @@ class Agent(BaseAgent):
                     task_prompt
                 )
                 if self.knowledge_search_query:
-                    agent_knowledge_snippets = self.knowledge.query(
-                        [self.knowledge_search_query], **knowledge_config
-                    )
-                    if agent_knowledge_snippets:
-                        self.agent_knowledge_context = extract_knowledge_context(
-                            agent_knowledge_snippets
+                    
+                    if self.knowledge:
+                        agent_knowledge_snippets = self.knowledge.query(
+                            [self.knowledge_search_query], **knowledge_config
                         )
-                        if self.agent_knowledge_context:
-                            task_prompt += self.agent_knowledge_context
-                    if self.crew:
+                        if agent_knowledge_snippets:
+                            self.agent_knowledge_context = extract_knowledge_context(
+                                agent_knowledge_snippets
+                            )
+                            if self.agent_knowledge_context:
+                                task_prompt += self.agent_knowledge_context
+                                
+                    if self.crew and self.crew.knowledge:
                         knowledge_snippets = self.crew.query_knowledge(
                             [self.knowledge_search_query], **knowledge_config
                         )
