@@ -5,6 +5,7 @@ import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.telemetry import Telemetry
+from opentelemetry import trace
 
 
 @pytest.mark.parametrize(
@@ -34,7 +35,7 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
-from opentelemetry import trace
+
 
 
 @patch("crewai.telemetry.telemetry.logger.error")

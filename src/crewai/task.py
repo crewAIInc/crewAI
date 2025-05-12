@@ -2,7 +2,6 @@ import datetime
 import inspect
 import json
 import logging
-import re
 import threading
 import uuid
 from concurrent.futures import Future

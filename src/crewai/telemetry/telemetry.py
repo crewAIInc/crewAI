@@ -9,6 +9,17 @@ import warnings
 from contextlib import contextmanager
 from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Optional
+from opentelemetry import trace  # noqa: E402
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter,  # noqa: E402
+)
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
+from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
+from opentelemetry.sdk.trace.export import (  # noqa: E402
+    BatchSpanProcessor,
+    SpanExportResult,
+)
+from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
 
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
@@ -25,17 +36,7 @@ def suppress_warnings():
         yield
 
 
-from opentelemetry import trace  # noqa: E402
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,  # noqa: E402
-)
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
-from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
-from opentelemetry.sdk.trace.export import (  # noqa: E402
-    BatchSpanProcessor,
-    SpanExportResult,
-)
-from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
+
 
 if TYPE_CHECKING:
     from crewai.crew import Crew

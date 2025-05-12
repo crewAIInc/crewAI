@@ -1040,7 +1040,7 @@ def test_agent_human_input():
             CrewAgentExecutor,
             "_invoke_loop",
             return_value=AgentFinish(output="Hello", thought="", text=""),
-        ) as mock_invoke_loop,
+        ),
     ):
         # Execute the task
         output = agent.execute_task(task)

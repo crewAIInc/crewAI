@@ -5,7 +5,6 @@ import uuid
 from datetime import datetime, timedelta
 
 import pytest
-from pydantic import ValidationError
 
 from crewai.security import Fingerprint
 
@@ -223,7 +222,7 @@ def test_invalid_uuid_str():
 
     # But this will raise an exception when we try to access the uuid property
     with pytest.raises(ValueError):
-        uuid_obj = fingerprint.uuid
+        pass
 
 
 def test_fingerprint_metadata_mutation():

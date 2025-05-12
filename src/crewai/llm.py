@@ -6,7 +6,6 @@ import threading
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
-from types import SimpleNamespace
 from typing import (
     Any,
     DefaultDict,
@@ -31,7 +30,6 @@ from crewai.utilities.events.llm_events import (
     LLMCallType,
     LLMStreamChunkEvent,
 )
-from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)

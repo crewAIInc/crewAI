@@ -1,4 +1,3 @@
-import pytest
 
 from crewai.cli.constants import ENV_VARS, MODELS, PROVIDERS
 

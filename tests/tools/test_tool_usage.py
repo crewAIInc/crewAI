@@ -476,7 +476,7 @@ def test_tool_selection_error_event_direct():
     def event_handler(source, event):
         received_events.append(event)
 
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception):
         tool_usage._select_tool("Non Existent Tool")
     assert len(received_events) == 1
     event = received_events[0]
@@ -490,7 +490,7 @@ def test_tool_selection_error_event_direct():
     assert "don't exist" in event.error
 
     received_events.clear()
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(Exception):
         tool_usage._select_tool("")
 
     assert len(received_events) == 1
@@ -563,7 +563,7 @@ def test_tool_validate_input_error_event():
 
         # Test invalid input
         invalid_input = "invalid json {[}"
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception):
             tool_usage._validate_tool_input(invalid_input)
 
         # Verify event was emitted

@@ -837,7 +837,7 @@ def test_interpolate_inputs():
 
 def test_interpolate_only():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
-    task = Task(
+    Task(
         description="Unused in this test", expected_output="Unused in this test"
     )
 
@@ -871,7 +871,7 @@ def test_interpolate_only():
 
 def test_interpolate_only_with_dict_inside_expected_output():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
-    task = Task(
+    Task(
         description="Unused in this test",
         expected_output="Unused in this test: {questions}",
     )
@@ -1094,7 +1094,7 @@ def test_task_execution_times():
 
 
 def test_interpolate_with_list_of_strings():
-    task = Task(
+    Task(
         description="Test list interpolation",
         expected_output="List: {items}",
     )
@@ -1112,7 +1112,7 @@ def test_interpolate_with_list_of_strings():
 
 
 def test_interpolate_with_list_of_dicts():
-    task = Task(
+    Task(
         description="Test list of dicts interpolation",
         expected_output="People: {people}",
     )
@@ -1137,7 +1137,7 @@ def test_interpolate_with_list_of_dicts():
 
 
 def test_interpolate_with_nested_structures():
-    task = Task(
+    Task(
         description="Test nested structures",
         expected_output="Company: {company}",
     )
@@ -1165,7 +1165,7 @@ def test_interpolate_with_nested_structures():
 
 
 def test_interpolate_with_special_characters():
-    task = Task(
+    Task(
         description="Test special characters in dicts",
         expected_output="Data: {special_data}",
     )
@@ -1188,7 +1188,7 @@ def test_interpolate_with_special_characters():
 
 
 def test_interpolate_mixed_types():
-    task = Task(
+    Task(
         description="Test mixed type interpolation",
         expected_output="Mixed: {data}",
     )
@@ -1214,7 +1214,7 @@ def test_interpolate_mixed_types():
 
 
 def test_interpolate_complex_combination():
-    task = Task(
+    Task(
         description="Test complex combination",
         expected_output="Report: {report}",
     )
@@ -1243,7 +1243,7 @@ def test_interpolate_complex_combination():
 
 
 def test_interpolate_invalid_type_validation():
-    task = Task(
+    Task(
         description="Test invalid type validation",
         expected_output="Should never reach here",
     )
@@ -1268,7 +1268,7 @@ def test_interpolate_invalid_type_validation():
 
 
 def test_interpolate_custom_object_validation():
-    task = Task(
+    Task(
         description="Test custom object rejection",
         expected_output="Should never reach here",
     )
@@ -1304,7 +1304,7 @@ def test_interpolate_custom_object_validation():
 
 
 def test_interpolate_valid_complex_types():
-    task = Task(
+    Task(
         description="Test valid complex types",
         expected_output="Validation should pass",
     )
@@ -1328,7 +1328,7 @@ def test_interpolate_valid_complex_types():
 
 
 def test_interpolate_edge_cases():
-    task = Task(
+    Task(
         description="Test edge cases",
         expected_output="Edge case handling",
     )
@@ -1347,7 +1347,7 @@ def test_interpolate_edge_cases():
 
 
 def test_interpolate_valid_types():
-    task = Task(
+    Task(
         description="Test valid types including null and boolean",
         expected_output="Should pass validation",
     )

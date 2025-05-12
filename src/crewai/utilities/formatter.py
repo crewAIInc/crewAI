@@ -1,4 +1,3 @@
-import re
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:

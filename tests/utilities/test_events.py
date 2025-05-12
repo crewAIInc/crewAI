@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from unittest.mock import Mock, patch
 
@@ -38,7 +37,6 @@ from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
-    LLMCallType,
     LLMStreamChunkEvent,
 )
 from crewai.utilities.events.task_events import (
@@ -309,7 +307,7 @@ def test_agent_emits_execution_error_event():
     ) as invoke_mock:
         invoke_mock.side_effect = Exception(error_message)
 
-        with pytest.raises(Exception) as e:
+        with pytest.raises(Exception):
             base_agent.execute_task(
                 task=base_task,
             )
