@@ -1452,8 +1452,8 @@ class Crew(FlowTrackable, BaseModel):
         
         # Get knowledge for crew and agents
         crew_knowledge = getattr(self, "knowledge", None)
-        crew_and_agent_knowledges = [crew_knowledge] if crew_knowledge is not None else [] + agent_knowledges
-        
+        crew_and_agent_knowledges = ([crew_knowledge] if crew_knowledge is not None else []) + agent_knowledges
+
         return {
             'short': {
                 'system': getattr(self, "_short_term_memory", None),
