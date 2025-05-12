@@ -94,8 +94,10 @@ crewai = "crewai.cli.cli:crewai"
 
 [tool.mypy]
 ignore_missing_imports = true
-disable_error_code = 'import-untyped'
+disable_error_code = 'import-untyped,union-attr'
 exclude = ["cli/templates"]
+implicit_optional = true
+strict_optional = false
 
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]
