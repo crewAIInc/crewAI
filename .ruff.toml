@@ -2,3 +2,34 @@ exclude = [
     "templates",
     "__init__.py",
 ]
+
+[lint]
+select = ["ALL"]
+ignore = [
+    "D100",  # Missing docstring in public module
+    "D101",  # Missing docstring in public class
+    "D102",  # Missing docstring in public method
+    "D103",  # Missing docstring in public function
+    "D104",  # Missing docstring in public package
+    "D105",  # Missing docstring in magic method
+    "D106",  # Missing docstring in public nested class
+    "D107",  # Missing docstring in __init__
+    "ANN001",  # Missing type annotation for function argument
+    "ANN002",  # Missing type annotation for *args
+    "ANN003",  # Missing type annotation for **kwargs
+    "ANN101",  # Missing type annotation for self in method
+    "ANN102",  # Missing type annotation for cls in classmethod
+    "ANN201",  # Missing return type annotation for public function
+    "ANN202",  # Missing return type annotation for private function
+    "ANN204",  # Missing return type annotation for special method
+    "ANN205",  # Missing return type annotation for staticmethod
+    "ANN206",  # Missing return type annotation for classmethod
+    "E501",  # Line too long
+    "PT011",  # pytest.raises() without match parameter
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["S101"]  # Allow assert in tests
+
+[lint.isort]
+known-first-party = ["crewai"]
