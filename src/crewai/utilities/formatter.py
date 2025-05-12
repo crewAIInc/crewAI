@@ -1,7 +1,5 @@
-import re
-from typing import TYPE_CHECKING, List, Type
+from typing import TYPE_CHECKING, List
 
-from crewai.utilities.constants import NOT_SPECIFIED
 
 if TYPE_CHECKING:
     from crewai.task import Task
