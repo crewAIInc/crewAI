@@ -29,7 +29,12 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
-"tests/*" = ["S101"]  # Allow assert in tests
+"tests/*" = [
+    "S101",  # Allow assert in tests
+    "SLF001",  # Allow private member access in tests
+    "DTZ001",  # Allow datetime without tzinfo in tests
+    "PTH107",  # Allow os.remove instead of Path.unlink in tests
+]
 
 [lint.isort]
 known-first-party = ["crewai"]
