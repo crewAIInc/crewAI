@@ -1443,8 +1443,10 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             Dict containing all memory systems with their reset functions and display names.
         """
-        default_reset = lambda memory: memory.reset()
-        knowledge_reset = lambda memory: self.reset_knowledge(memory)
+        def default_reset(memory):
+            return memory.reset()
+        def knowledge_reset(memory):
+            return self.reset_knowledge(memory)
         
         # Get knowledge for agents 
         agent_knowledges = [getattr(agent, "knowledge", None) for agent in self.agents 

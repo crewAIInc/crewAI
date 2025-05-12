@@ -1,6 +1,5 @@
-import os
 from importlib.metadata import version as get_version
-from typing import Optional, Tuple
+from typing import Optional
 
 import click
 
