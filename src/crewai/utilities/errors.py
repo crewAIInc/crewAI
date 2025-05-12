@@ -1,4 +1,5 @@
 """Error message definitions for CrewAI database operations."""
+
 from typing import Optional
 
 
@@ -37,3 +38,9 @@ class DatabaseError:
             The formatted error message
         """
         return template.format(str(error))
+
+
+class AgentRepositoryError(Exception):
+    """Exception raised when an agent repository is not found."""
+
+    ...
