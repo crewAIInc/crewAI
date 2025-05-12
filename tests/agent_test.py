@@ -2026,8 +2026,16 @@ def test_get_knowledge_search_query():
         )
 
 
+@pytest.fixture
+def mock_get_auth_token():
+    with patch(
+        "crewai.cli.authentication.token.get_auth_token", return_value="test_token"
+    ):
+        yield
+
+
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
-def test_agent_from_repository(mock_get_agent):
+def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     from crewai_tools import SerperDevTool
 
     mock_get_response = MagicMock()
@@ -2046,12 +2054,6 @@ def test_agent_from_repository(mock_get_agent):
     assert agent.backstory == "test backstory"
     assert len(agent.tools) == 1
     assert isinstance(agent.tools[0], SerperDevTool)
-
-
-@pytest.fixture
-def mock_get_auth_token():
-    with patch("crewai.cli.command.get_auth_token", return_value="test_token"):
-        yield
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
