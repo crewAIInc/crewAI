@@ -1451,7 +1451,6 @@ class Crew(FlowTrackable, BaseModel):
         # Get knowledge for agents 
         agent_knowledges = [getattr(agent, "knowledge", None) for agent in self.agents 
                                     if getattr(agent, "knowledge", None) is not None]
-        
         # Get knowledge for crew and agents
         crew_knowledge = getattr(self, "knowledge", None)
         crew_and_agent_knowledges = ([crew_knowledge] if crew_knowledge is not None else []) + agent_knowledges
