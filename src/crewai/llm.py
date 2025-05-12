@@ -55,7 +55,7 @@ import logging
 
 load_dotenv()
 
-# ✅ Patch: Gemini key fallback
+# Patch: Gemini key fallback
 if "GEMINI_API_KEY" not in os.environ and "GOOGLE_API_KEY" in os.environ:
     os.environ["GEMINI_API_KEY"] = os.environ["GOOGLE_API_KEY"]
     logging.info("[CrewAI Gemini Patch] Set GEMINI_API_KEY from GOOGLE_API_KEY")
@@ -332,12 +332,6 @@ class LLM(BaseLLM):
             api_key = os.environ["GOOGLE_API_KEY"]
             os.environ["GEMINI_API_KEY"] = api_key
 
-        # Raise if still not found
-        if not api_key:
-            raise ValueError(
-                "No valid API key found. Please set GEMINI_API_KEY or GOOGLE_API_KEY."
-            )
-
         self.api_key = api_key
 
         self.set_callbacks(callbacks)
@@ -412,10 +406,6 @@ class LLM(BaseLLM):
 
         # Remove None values
         params = {k: v for k, v in params.items() if v is not None}
-
-        # ✅ Final Fix: Explicitly inject the API key
-        if self.api_key:
-            params["api_key"] = self.api_key
 
         return params
 
