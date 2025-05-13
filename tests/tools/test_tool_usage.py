@@ -102,15 +102,15 @@ def test_tool_usage_render():
 
     rendered = tool_usage._render()
 
-    # Updated checks to match the actual output
+    # Updated checks to match the actual output with JSON formatting
     assert "Tool Name: Random Number Generator" in rendered
     assert "Tool Arguments:" in rendered
     assert (
-        "'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}"
+        '"min_value": {"description": "The minimum value of the range (inclusive)", "type": "int"}'
         in rendered
     )
     assert (
-        "'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}"
+        '"max_value": {"description": "The maximum value of the range (inclusive)", "type": "int"}'
         in rendered
     )
     assert (
@@ -118,6 +118,6 @@ def test_tool_usage_render():
         in rendered
     )
     assert (
-        "Tool Name: Random Number Generator\nTool Arguments: {'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}, 'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}}\nTool Description: Generates a random number within a specified range"
+        'Tool Name: Random Number Generator\nTool Arguments: {"min_value": {"description": "The minimum value of the range (inclusive)", "type": "int"}, "max_value": {"description": "The maximum value of the range (inclusive)", "type": "int"}}\nTool Description: Generates a random number within a specified range'
         in rendered
     )
