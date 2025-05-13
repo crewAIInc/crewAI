@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Optional, Type
+from typing import Any, Callable, Optional, Type
 
 
 try:
@@ -70,7 +70,7 @@ class QdrantVectorSearchTool(BaseTool):
         default=None,
         description="The API key for the Qdrant server",
     )
-    custom_embedding_fn: Optional[callable] = Field(
+    custom_embedding_fn: Optional[Callable] = Field(
         default=None,
         description="A custom embedding function to use for vectorization. If not provided, the default model will be used.",
     )
