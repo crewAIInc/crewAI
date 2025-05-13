@@ -4,6 +4,7 @@ from unittest import mock
 
 import pytest
 import requests
+from requests.exceptions import RequestException, SSLError, Timeout
 
 from crewai.cli.provider import (
     fetch_provider_data,
@@ -53,7 +54,7 @@ class TestProviderFunctions:
     @mock.patch("crewai.cli.provider.requests.get")
     def test_fetch_provider_data_handles_request_exception(self, mock_get, mock_cache_file):
         """Test that fetch_provider_data handles RequestException properly."""
-        mock_get.side_effect = requests.RequestException("Test error")
+        mock_get.side_effect = RequestException("Test error")
 
         result = fetch_provider_data(mock_cache_file)
 
@@ -63,7 +64,7 @@ class TestProviderFunctions:
     @mock.patch("crewai.cli.provider.requests.get")
     def test_fetch_provider_data_handles_timeout(self, mock_get, mock_cache_file):
         """Test that fetch_provider_data handles Timeout exception properly."""
-        mock_get.side_effect = requests.Timeout("Connection timed out")
+        mock_get.side_effect = Timeout("Connection timed out")
 
         result = fetch_provider_data(mock_cache_file)
 
@@ -73,7 +74,7 @@ class TestProviderFunctions:
     @mock.patch("crewai.cli.provider.requests.get")
     def test_fetch_provider_data_handles_ssl_error(self, mock_get, mock_cache_file):
         """Test that fetch_provider_data handles SSLError exception properly."""
-        mock_get.side_effect = requests.SSLError("SSL Certificate verification failed")
+        mock_get.side_effect = SSLError("SSL Certificate verification failed")
 
         result = fetch_provider_data(mock_cache_file)
 
