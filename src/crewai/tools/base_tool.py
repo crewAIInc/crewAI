@@ -136,15 +136,24 @@ class BaseTool(BaseModel, ABC):
 
     def _generate_description(self):
         import json
-        args_schema = {
-            name: {
-                "description": field.description,
-                "type": BaseTool._get_arg_annotations(field.annotation),
-            }
-            for name, field in self.args_schema.model_fields.items()
-        }
+        import logging
 
-        self.description = f"Tool Name: {self.name}\nTool Arguments: {json.dumps(args_schema)}\nTool Description: {self.description}"
+        logger = logging.getLogger(__name__)
+        
+        try:
+            args_schema = {
+                name: {
+                    "description": field.description,
+                    "type": BaseTool._get_arg_annotations(field.annotation),
+                }
+                for name, field in self.args_schema.model_fields.items()
+            }
+            args_json = json.dumps(args_schema)
+        except Exception as e:
+            logger.warning(f"Failed to serialize args schema: {e}")
+            args_json = str(args_schema)
+            
+        self.description = f"Tool Name: {self.name}\nTool Arguments: {args_json}\nTool Description: {self.description}"
 
     @staticmethod
     def _get_arg_annotations(annotation: type[Any] | None) -> str:
