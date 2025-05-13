@@ -37,10 +37,11 @@ def crewai():
 @click.argument("name")
 @click.option("--provider", type=str, help="The provider to use for the crew")
 @click.option("--skip_provider", is_flag=True, help="Skip provider validation")
-def create(type, name, provider, skip_provider=False):
+@click.option("--skip_ssl_verify", is_flag=True, help="Skip SSL certificate verification (not secure)")
+def create(type, name, provider, skip_provider=False, skip_ssl_verify=False):
     """Create a new crew, or flow."""
     if type == "crew":
-        create_crew(name, provider, skip_provider)
+        create_crew(name, provider, skip_provider, skip_ssl_verify=skip_ssl_verify)
     elif type == "flow":
         create_flow(name)
     else:

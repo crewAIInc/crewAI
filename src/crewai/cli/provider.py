@@ -106,13 +106,14 @@ def select_model(provider, provider_models):
     return selected_model
 
 
-def load_provider_data(cache_file, cache_expiry):
+def load_provider_data(cache_file, cache_expiry, skip_ssl_verify=False):
     """
     Loads provider data from a cache file if it exists and is not expired. If the cache is expired or corrupted, it fetches the data from the web.
 
     Args:
     - cache_file (Path): The path to the cache file.
     - cache_expiry (int): The cache expiry time in seconds.
+    - skip_ssl_verify (bool): Whether to skip SSL certificate verification.
 
     Returns:
     - dict or None: The loaded provider data or None if the operation fails.
@@ -133,7 +134,7 @@ def load_provider_data(cache_file, cache_expiry):
             "Cache expired or not found. Fetching provider data from the web...",
             fg="cyan",
         )
-    return fetch_provider_data(cache_file)
+    return fetch_provider_data(cache_file, skip_ssl_verify)
 
 
 def read_cache_file(cache_file):
@@ -153,18 +154,24 @@ def read_cache_file(cache_file):
         return None
 
 
-def fetch_provider_data(cache_file):
+def fetch_provider_data(cache_file, skip_ssl_verify=False):
     """
     Fetches provider data from a specified URL and caches it to a file.
 
     Args:
     - cache_file (Path): The path to the cache file.
+    - skip_ssl_verify (bool): Whether to skip SSL certificate verification.
 
     Returns:
     - dict or None: The fetched provider data or None if the operation fails.
     """
     try:
-        response = requests.get(JSON_URL, stream=True, timeout=60)
+        if skip_ssl_verify:
+            click.secho(
+                "Warning: SSL certificate verification is disabled. This is not secure!",
+                fg="yellow",
+            )
+        response = requests.get(JSON_URL, stream=True, timeout=60, verify=not skip_ssl_verify)
         response.raise_for_status()
         data = download_data(response)
         with open(cache_file, "w") as f:
@@ -201,9 +208,12 @@ def download_data(response):
     return json.loads(data_content.decode("utf-8"))
 
 
-def get_provider_data():
+def get_provider_data(skip_ssl_verify=False):
     """
     Retrieves provider data from a cache file, filters out models based on provider criteria, and returns a dictionary of providers mapped to their models.
+
+    Args:
+    - skip_ssl_verify (bool): Whether to skip SSL certificate verification.
 
     Returns:
     - dict or None: A dictionary of providers mapped to their models or None if the operation fails.
@@ -213,7 +223,7 @@ def get_provider_data():
     cache_file = cache_dir / "provider_cache.json"
     cache_expiry = 24 * 3600
 
-    data = load_provider_data(cache_file, cache_expiry)
+    data = load_provider_data(cache_file, cache_expiry, skip_ssl_verify)
     if not data:
         return None
 

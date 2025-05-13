@@ -89,12 +89,12 @@ def copy_template_files(folder_path, name, class_name, parent_folder):
             copy_template(src_file, dst_file, name, class_name, folder_path.name)
 
 
-def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
+def create_crew(name, provider=None, skip_provider=False, parent_folder=None, skip_ssl_verify=False):
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
     if not skip_provider:
         if not provider:
-            provider_models = get_provider_data()
+            provider_models = get_provider_data(skip_ssl_verify)
             if not provider_models:
                 return
 
@@ -114,7 +114,7 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
                 click.secho("Keeping existing provider configuration.", fg="yellow")
                 return
 
-        provider_models = get_provider_data()
+        provider_models = get_provider_data(skip_ssl_verify)
         if not provider_models:
             return
 
