@@ -1,11 +1,9 @@
-import json
 import tempfile
 from pathlib import Path
 from unittest import mock
 
 import pytest
 import requests
-from click.testing import CliRunner
 
 from crewai.cli.provider import (
     fetch_provider_data,
