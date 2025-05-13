@@ -20,12 +20,12 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.agent_utils import (
     get_tool_names,
+    load_agent_from_repository,
     parse_tools,
     render_text_description_and_args,
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
-from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.events.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -143,41 +143,8 @@ class Agent(BaseAgent):
     @model_validator(mode="before")
     def validate_from_repository(cls, v):
         if v is not None and (from_repository := v.get("from_repository")):
-            return cls._load_agent_from_repository(from_repository) | v
+            return load_agent_from_repository(from_repository) | v
         return v
-
-    @classmethod
-    def _load_agent_from_repository(cls, from_repository: str) -> Dict[str, Any]:
-        attributes: Dict[str, Any] = {}
-        if from_repository:
-            import importlib
-
-            from crewai.cli.authentication.token import get_auth_token
-            from crewai.cli.plus_api import PlusAPI
-
-            client = PlusAPI(api_key=get_auth_token())
-            response = client.get_agent(from_repository)
-            if response.status_code != 200:
-                raise AgentRepositoryError(
-                    f"Agent {from_repository} could not be loaded: {response.text}"
-                )
-
-            agent = response.json()
-            for key, value in agent.items():
-                if key == "tools":
-                    attributes[key] = []
-                    for tool_name in value:
-                        try:
-                            module = importlib.import_module("crewai_tools")
-                            tool_class = getattr(module, tool_name)
-                            attributes[key].append(tool_class())
-                        except Exception as e:
-                            raise AgentRepositoryError(
-                                f"Tool {tool_name} could not be loaded: {e}"
-                            ) from e
-                else:
-                    attributes[key] = value
-        return attributes
 
     @model_validator(mode="after")
     def post_init_setup(self):
