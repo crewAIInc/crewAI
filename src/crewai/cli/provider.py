@@ -148,9 +148,19 @@ def read_cache_file(cache_file):
     - dict or None: The JSON content of the cache file or None if the JSON is invalid.
     """
     try:
+        if not cache_file.exists():
+            return None
         with open(cache_file, "r") as f:
-            return json.load(f)
-    except json.JSONDecodeError:
+            data = json.load(f)
+            if not isinstance(data, dict):
+                click.secho("Invalid cache file format", fg="yellow")
+                return None
+            return data
+    except json.JSONDecodeError as e:
+        click.secho(f"Error parsing cache file: {str(e)}", fg="yellow")
+        return None
+    except OSError as e:
+        click.secho(f"Error reading cache file: {str(e)}", fg="yellow")
         return None
 
 
@@ -177,11 +187,26 @@ def fetch_provider_data(cache_file, skip_ssl_verify=False):
         with open(cache_file, "w") as f:
             json.dump(data, f)
         return data
+    except requests.Timeout:
+        click.secho("Timeout while fetching provider data", fg="red")
+        return None
+    except requests.SSLError as e:
+        click.secho(f"SSL verification failed: {str(e)}", fg="red")
+        if not skip_ssl_verify:
+            click.secho(
+                "You can bypass SSL verification with --skip_ssl_verify flag (not secure)",
+                fg="yellow",
+            )
+        return None
     except requests.RequestException as e:
-        click.secho(f"Error fetching provider data: {e}", fg="red")
+        click.secho(f"Error fetching provider data: {str(e)}", fg="red")
+        return None
     except json.JSONDecodeError:
         click.secho("Error parsing provider data. Invalid JSON format.", fg="red")
-    return None
+        return None
+    except OSError as e:
+        click.secho(f"Error writing to cache file: {str(e)}", fg="red")
+        return None
 
 
 def download_data(response):
