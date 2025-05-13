@@ -157,13 +157,15 @@ In this section, you'll find detailed examples that help you select, configure, 
     Set the following environment variables in your `.env` file:
 
     ```toml Code
-    LLAMA_API_KEY=LLM|...
+    # Meta Llama API Key Configuration
+    LLAMA_API_KEY=LLM|your_api_key_here
     ```
 
     Example usage in your CrewAI project:
     ```python Code
     from crewai import LLM
 
+    # Initialize Meta Llama LLM
     llm = LLM(
         model="meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8",
         temperature=0.8,
