@@ -700,4 +700,11 @@ recent_news = SpaceNewsKnowledgeSource(
     - Configure appropriate embedding models
     - Consider using local embedding providers for faster processing
   </Accordion>
+
+  <Accordion title="One Time Knowledge">
+    - With the typical file structure provided by CrewAI, knowledge sources are embedded every time the kickoff is triggered.
+    - If the knowledge sources are large, this leads to inefficiency and increased latency, as the same data is embedded each time.
+    - To resolve this, directly initialize the knowledge parameter instead of the knowledge_sources parameter.
+    - Link to the issue to get complete idea [Github Issue](https://github.com/crewAIInc/crewAI/issues/2755)
+  </Accordion>  
 </AccordionGroup>
