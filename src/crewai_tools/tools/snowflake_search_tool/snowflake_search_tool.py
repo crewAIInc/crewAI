@@ -21,7 +21,6 @@ except ImportError:
     SNOWFLAKE_AVAILABLE = False
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Cache for query results

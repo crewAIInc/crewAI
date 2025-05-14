@@ -2,15 +2,12 @@ import datetime
 import json
 import logging
 import os
-from typing import Any, Type, Optional
+from typing import Any, Optional, Type
 
 import requests
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 

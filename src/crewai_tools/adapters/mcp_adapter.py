@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 from crewai.tools import BaseTool
 
 """
@@ -8,9 +10,6 @@ MCPServer for CrewAI.
 
 
 """
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
