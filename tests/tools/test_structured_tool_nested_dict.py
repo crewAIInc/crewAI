@@ -1,6 +1,5 @@
 import pytest
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Union
 
 from crewai.tools.structured_tool import CrewStructuredTool
 
