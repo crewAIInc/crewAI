@@ -4,13 +4,13 @@ import hashlib
 import json
 from concurrent.futures import Future
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pydantic_core
 import pytest
 
 from crewai.agent import Agent
-from crewai.agents.cache import CacheHandler
+from crewai.agents import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow import Flow, start
@@ -3136,6 +3136,30 @@ def test_replay_with_context():
         crew.replay(str(task2.id))
 
         assert crew.tasks[1].context[0].output.raw == "context raw output"
+
+
+def test_replay_with_context_set_to_nullable():
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(
+        description="Context Task", expected_output="Say Task Output", agent=agent
+    )
+    task2 = Task(
+        description="Test Task", expected_output="Say Hi", agent=agent, context=[]
+    )
+    task3 = Task(
+        description="Test Task 3", expected_output="Say Hi", agent=agent, context=None
+    )
+
+    crew = Crew(agents=[agent], tasks=[task1, task2, task3], process=Process.sequential)
+    with patch("crewai.task.Task.execute_sync") as mock_execute_task:
+        mock_execute_task.return_value = TaskOutput(
+            description="Test Task Output",
+            raw="test raw output",
+            agent="test_agent",
+        )
+        crew.kickoff()
+
+    mock_execute_task.assert_called_with(agent=ANY, context="", tools=ANY)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
