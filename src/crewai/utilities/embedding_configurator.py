@@ -140,7 +140,7 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_voyageai(config, model_name):
-        from chromadb.utils.embedding_functions.voyageai_embedding_function import (
+        from crewai.knowledge.embedder.chromadb.utils.embedding_functions.voyageai_embedding_function import (
             VoyageAIEmbeddingFunction,
         )
 
