@@ -150,11 +150,11 @@ class TestInterpolateOnly:
         """Test a complex scenario with both valid variables and JSON structures."""
         template = """
         {agent_name} is working on task {task_id}.
-        
+
         Instructions:
         1. Process the data
         2. Return results as:
-        
+
         {
           "taskId": "{task_id}",
           "results": {
@@ -185,3 +185,47 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+
+    def test_list_variables_indexing(self):
+        template = """
+      {list_variable[0]}
+      """
+
+        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+            "list_variable": ["item1", "item2"]
+        }
+
+        results = interpolate_only(template, inputs)
+
+        assert "item1" in results
+
+    def test_dict_variables(self):
+        template = """
+        {list_variable.key1}
+        """
+
+        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+            "list_variable": {"key1": "item1", "key2": "item2"}
+        }
+
+        results = interpolate_only(template, inputs)
+
+        assert "item1" in results
+
+    def test_mixed_variables(self):
+        template = """
+          {list_variable[0].key1}
+          {list_variable[1].key2}
+          """
+
+        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+            "list_variable": [
+                {"key1": "item1", "key2": "item2"},
+                {"key1": "item3", "key2": "item4"},
+            ]
+        }
+
+        results = interpolate_only(template, inputs)
+
+        assert "item1" in results
+        assert "item4" in results
