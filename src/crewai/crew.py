@@ -52,7 +52,7 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
-from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.events.crew_events import (
@@ -478,7 +478,7 @@ class Crew(FlowTrackable, BaseModel):
         separated by a synchronous task.
         """
         for i, task in enumerate(self.tasks):
-            if task.async_execution and task.context:
+            if task.async_execution and isinstance(task.context, list):
                 for context_task in task.context:
                     if context_task.async_execution:
                         for j in range(i - 1, -1, -1):
@@ -496,7 +496,7 @@ class Crew(FlowTrackable, BaseModel):
         task_indices = {id(task): i for i, task in enumerate(self.tasks)}
 
         for task in self.tasks:
-            if task.context:
+            if isinstance(task.context, list):
                 for context_task in task.context:
                     if id(context_task) not in task_indices:
                         continue  # Skip context tasks not in the main tasks list
@@ -1034,11 +1034,14 @@ class Crew(FlowTrackable, BaseModel):
                 )
         return cast(List[BaseTool], tools)
 
-    def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
+    def _get_context(self, task: Task, task_outputs: List[TaskOutput]) -> str:
+        if not task.context:
+            return ""
+
         context = (
-            aggregate_raw_outputs_from_tasks(task.context)
-            if task.context
-            else aggregate_raw_outputs_from_task_outputs(task_outputs)
+            aggregate_raw_outputs_from_task_outputs(task_outputs)
+            if task.context is NOT_SPECIFIED
+            else aggregate_raw_outputs_from_tasks(task.context)
         )
         return context
 
@@ -1226,7 +1229,7 @@ class Crew(FlowTrackable, BaseModel):
             task_mapping[task.key] = cloned_task
 
         for cloned_task, original_task in zip(cloned_tasks, self.tasks):
-            if original_task.context:
+            if isinstance(original_task.context, list):
                 cloned_context = [
                     task_mapping[context_task.key]
                     for context_task in original_task.context
