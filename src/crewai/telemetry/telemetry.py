@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import platform
 import warnings
@@ -9,10 +10,24 @@ from contextlib import contextmanager
 from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Optional
 
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter,
+)
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    SpanExportResult,
+)
+from opentelemetry.trace import Span, Status, StatusCode
+
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
     CREWAI_TELEMETRY_SERVICE_NAME,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -22,18 +37,18 @@ def suppress_warnings():
         yield
 
 
-from opentelemetry import trace  # noqa: E402
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,  # noqa: E402
-)
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
-from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
-from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
-from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
-
 if TYPE_CHECKING:
     from crewai.crew import Crew
     from crewai.task import Task
+
+
+class SafeOTLPSpanExporter(OTLPSpanExporter):
+    def export(self, spans) -> SpanExportResult:
+        try:
+            return super().export(spans)
+        except Exception as e:
+            logger.error(e)
+            return SpanExportResult.FAILURE
 
 
 class Telemetry:
@@ -64,7 +79,7 @@ class Telemetry:
                 self.provider = TracerProvider(resource=self.resource)
 
             processor = BatchSpanProcessor(
-                OTLPSpanExporter(
+                SafeOTLPSpanExporter(
                     endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
                     timeout=30,
                 )
@@ -217,7 +232,7 @@ class Telemetry:
                                 "agent_key": task.agent.key if task.agent else None,
                                 "context": (
                                     [task.description for task in task.context]
-                                    if task.context
+                                    if isinstance(task.context, list)
                                     else None
                                 ),
                                 "tools_names": [
@@ -733,7 +748,7 @@ class Telemetry:
                             "agent_key": task.agent.key if task.agent else None,
                             "context": (
                                 [task.description for task in task.context]
-                                if task.context
+                                if isinstance(task.context, list)
                                 else None
                             ),
                             "tools_names": [

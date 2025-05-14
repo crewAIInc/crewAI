@@ -6,7 +6,17 @@ import warnings
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from pydantic import (
     UUID4,
@@ -24,6 +34,7 @@ from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
+from crewai.flow.flow_trackable import FlowTrackable
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM, BaseLLM
@@ -41,7 +52,7 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
-from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.events.crew_events import (
@@ -69,7 +80,7 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 
-class Crew(BaseModel):
+class Crew(FlowTrackable, BaseModel):
     """
     Represents a group of agents, defining how they should collaborate and the tasks they should perform.
 
@@ -304,7 +315,9 @@ class Crew(BaseModel):
         """Initialize private memory attributes."""
         self._external_memory = (
             # External memory doesn’t support a default value since it was designed to be managed entirely externally
-            self.external_memory.set_crew(self) if self.external_memory else None
+            self.external_memory.set_crew(self)
+            if self.external_memory
+            else None
         )
 
         self._long_term_memory = self.long_term_memory
@@ -333,6 +346,7 @@ class Crew(BaseModel):
                         embedder=self.embedder,
                         collection_name="crew",
                     )
+                    self.knowledge.add_sources()
 
             except Exception as e:
                 self._logger.log(
@@ -464,7 +478,7 @@ class Crew(BaseModel):
         separated by a synchronous task.
         """
         for i, task in enumerate(self.tasks):
-            if task.async_execution and task.context:
+            if task.async_execution and isinstance(task.context, list):
                 for context_task in task.context:
                     if context_task.async_execution:
                         for j in range(i - 1, -1, -1):
@@ -482,7 +496,7 @@ class Crew(BaseModel):
         task_indices = {id(task): i for i, task in enumerate(self.tasks)}
 
         for task in self.tasks:
-            if task.context:
+            if isinstance(task.context, list):
                 for context_task in task.context:
                     if id(context_task) not in task_indices:
                         continue  # Skip context tasks not in the main tasks list
@@ -1020,11 +1034,14 @@ class Crew(BaseModel):
                 )
         return cast(List[BaseTool], tools)
 
-    def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
+    def _get_context(self, task: Task, task_outputs: List[TaskOutput]) -> str:
+        if not task.context:
+            return ""
+
         context = (
-            aggregate_raw_outputs_from_tasks(task.context)
-            if task.context
-            else aggregate_raw_outputs_from_task_outputs(task_outputs)
+            aggregate_raw_outputs_from_task_outputs(task_outputs)
+            if task.context is NOT_SPECIFIED
+            else aggregate_raw_outputs_from_tasks(task.context)
         )
         return context
 
@@ -1212,7 +1229,7 @@ class Crew(BaseModel):
             task_mapping[task.key] = cloned_task
 
         for cloned_task, original_task in zip(cloned_tasks, self.tasks):
-            if original_task.context:
+            if isinstance(original_task.context, list):
                 cloned_context = [
                     task_mapping[context_task.key]
                     for context_task in original_task.context
@@ -1339,7 +1356,7 @@ class Crew(BaseModel):
 
         Args:
             command_type: Type of memory to reset.
-                Valid options: 'long', 'short', 'entity', 'knowledge',
+                Valid options: 'long', 'short', 'entity', 'knowledge', 'agent_knowledge'
                 'kickoff_outputs', or 'all'
 
         Raises:
@@ -1352,6 +1369,7 @@ class Crew(BaseModel):
                 "short",
                 "entity",
                 "knowledge",
+                "agent_knowledge",
                 "kickoff_outputs",
                 "all",
                 "external",
@@ -1369,8 +1387,6 @@ class Crew(BaseModel):
             else:
                 self._reset_specific_memory(command_type)
 
-            self._logger.log("info", f"{command_type} memory has been reset")
-
         except Exception as e:
             error_msg = f"Failed to reset {command_type} memory: {str(e)}"
             self._logger.log("error", error_msg)
@@ -1378,21 +1394,22 @@ class Crew(BaseModel):
 
     def _reset_all_memories(self) -> None:
         """Reset all available memory systems."""
-        memory_systems = [
-            ("short term", getattr(self, "_short_term_memory", None)),
-            ("entity", getattr(self, "_entity_memory", None)),
-            ("external", getattr(self, "_external_memory", None)),
-            ("long term", getattr(self, "_long_term_memory", None)),
-            ("task output", getattr(self, "_task_output_handler", None)),
-            ("knowledge", getattr(self, "knowledge", None)),
-        ]
+        memory_systems = self._get_memory_systems()
 
-        for name, system in memory_systems:
-            if system is not None:
+        for memory_type, config in memory_systems.items():
+            if (system := config.get('system')) is not None:
+                name = config.get('name')
                 try:
-                    system.reset()
+                    reset_fn: Callable = cast(Callable, config.get('reset'))
+                    reset_fn(system)
+                    self._logger.log(
+                        "info",
+                        f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
+                    )
                 except Exception as e:
-                    raise RuntimeError(f"Failed to reset {name} memory") from e
+                    raise RuntimeError(
+                        f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
+                    ) from e
 
     def _reset_specific_memory(self, memory_type: str) -> None:
         """Reset a specific memory system.
@@ -1403,23 +1420,83 @@ class Crew(BaseModel):
         Raises:
             RuntimeError: If the specified memory system fails to reset
         """
-        reset_functions = {
-            "long": (getattr(self, "_long_term_memory", None), "long term"),
-            "short": (getattr(self, "_short_term_memory", None), "short term"),
-            "entity": (getattr(self, "_entity_memory", None), "entity"),
-            "knowledge": (getattr(self, "knowledge", None), "knowledge"),
-            "kickoff_outputs": (
-                getattr(self, "_task_output_handler", None),
-                "task output",
-            ),
-            "external": (getattr(self, "_external_memory", None), "external"),
+        memory_systems = self._get_memory_systems()
+        config = memory_systems[memory_type]
+        system = config.get('system')
+        name = config.get('name')
+
+        if system is None:
+            raise RuntimeError(f"{name} memory system is not initialized")
+        
+        try:
+            reset_fn: Callable = cast(Callable, config.get('reset'))
+            reset_fn(system)
+            self._logger.log(
+                "info",
+                f"[Crew ({self.name if self.name else self.id})] {name} memory has been reset",
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"[Crew ({self.name if self.name else self.id})] Failed to reset {name} memory: {str(e)}"
+            ) from e
+
+    def _get_memory_systems(self):
+        """Get all available memory systems with their configuration.
+        
+        Returns:
+            Dict containing all memory systems with their reset functions and display names.
+        """
+        def default_reset(memory):
+            return memory.reset()
+        def knowledge_reset(memory):
+            return self.reset_knowledge(memory)
+        
+        # Get knowledge for agents 
+        agent_knowledges = [getattr(agent, "knowledge", None) for agent in self.agents 
+                                    if getattr(agent, "knowledge", None) is not None]
+        # Get knowledge for crew and agents
+        crew_knowledge = getattr(self, "knowledge", None)
+        crew_and_agent_knowledges = ([crew_knowledge] if crew_knowledge is not None else []) + agent_knowledges
+
+        return {
+            'short': {
+                'system': getattr(self, "_short_term_memory", None),
+                'reset': default_reset,
+                'name': 'Short Term'
+            },
+            'entity': {
+                'system': getattr(self, "_entity_memory", None),
+                'reset': default_reset,
+                'name': 'Entity'
+            },
+            'external': {
+                'system': getattr(self, "_external_memory", None),
+                'reset': default_reset,
+                'name': 'External'
+            },
+            'long': {
+                'system': getattr(self, "_long_term_memory", None),
+                'reset': default_reset,
+                'name': 'Long Term'
+            },
+            'kickoff_outputs': {
+                'system': getattr(self, "_task_output_handler", None),
+                'reset': default_reset,
+                'name': 'Task Output'
+            },
+            'knowledge': {
+                'system': crew_and_agent_knowledges if crew_and_agent_knowledges else None,
+                'reset': knowledge_reset,
+                'name': 'Crew Knowledge and Agent Knowledge'
+            },
+            'agent_knowledge': {
+                'system': agent_knowledges if agent_knowledges else None,
+                'reset': knowledge_reset,
+                'name': 'Agent Knowledge'
+            }
         }
 
-        memory_system, name = reset_functions[memory_type]
-        if memory_system is None:
-            raise RuntimeError(f"{name} memory system is not initialized")
-
-        try:
-            memory_system.reset()
-        except Exception as e:
-            raise RuntimeError(f"Failed to reset {name} memory") from e
+    def reset_knowledge(self, knowledges: List[Knowledge]) -> None:
+        """Reset crew and agent knowledge storage."""
+        for ks in knowledges:
+            ks.reset()

@@ -9,6 +9,10 @@ from .crew_events import (
     CrewTestCompletedEvent,
     CrewTestFailedEvent,
 )
+from .llm_guardrail_events import (
+    LLMGuardrailCompletedEvent,
+    LLMGuardrailStartedEvent,
+)
 from .agent_events import (
     AgentExecutionStartedEvent,
     AgentExecutionCompletedEvent,

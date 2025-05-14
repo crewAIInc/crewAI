@@ -1,13 +1,16 @@
 import asyncio
 from typing import cast
+from unittest.mock import Mock
 
 import pytest
 from pydantic import BaseModel, Field
 
 from crewai import LLM, Agent
+from crewai.flow import Flow, start
 from crewai.lite_agent import LiteAgent, LiteAgentOutput
 from crewai.tools import BaseTool
 from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.agent_events import LiteAgentExecutionStartedEvent
 from crewai.utilities.events.tool_usage_events import ToolUsageStartedEvent
 
 
@@ -255,3 +258,60 @@ async def test_lite_agent_returns_usage_metrics_async():
     assert "21 million" in result.raw or "37 million" in result.raw
     assert result.usage_metrics is not None
     assert result.usage_metrics["total_tokens"] > 0
+
+
+class TestFlow(Flow):
+    """A test flow that creates and runs an agent."""
+
+    def __init__(self, llm, tools):
+        self.llm = llm
+        self.tools = tools
+        super().__init__()
+
+    @start()
+    def start(self):
+        agent = Agent(
+            role="Test Agent",
+            goal="Test Goal",
+            backstory="Test Backstory",
+            llm=self.llm,
+            tools=self.tools,
+        )
+        return agent.kickoff("Test query")
+
+
+def verify_agent_parent_flow(result, agent, flow):
+    """Verify that both the result and agent have the correct parent flow."""
+    assert result.parent_flow is flow
+    assert agent is not None
+    assert agent.parent_flow is flow
+
+
+def test_sets_parent_flow_when_inside_flow():
+    captured_agent = None
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Test response"
+
+    class MyFlow(Flow):
+        @start()
+        def start(self):
+            agent = Agent(
+                role="Test Agent",
+                goal="Test Goal",
+                backstory="Test Backstory",
+                llm=mock_llm,
+                tools=[WebSearchTool()],
+            )
+            return agent.kickoff("Test query")
+
+    flow = MyFlow()
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
+        def capture_agent(source, event):
+            nonlocal captured_agent
+            captured_agent = source
+
+        result = flow.kickoff()
+        assert captured_agent.parent_flow is flow

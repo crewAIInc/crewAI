@@ -75,11 +75,12 @@ class ExampleFlow(Flow):
 
 
 flow = ExampleFlow()
+flow.plot()
 result = flow.kickoff()
 
 print(f"Generated fun fact: {result}")
 ```
-
+![Flow Visual image](/images/crewai-flow-1.png)
 In the above example, we have created a simple Flow that generates a random city using OpenAI and then generates a fun fact about that city. The Flow consists of two tasks: `generate_city` and `generate_fun_fact`. The `generate_city` task is the starting point of the Flow, and the `generate_fun_fact` task listens for the output of the `generate_city` task.
 
 Each Flow instance automatically receives a unique identifier (UUID) in its state, which helps track and manage flow executions. The state can also store additional data (like the generated city and fun fact) that persists throughout the flow's execution.
@@ -146,6 +147,7 @@ class OutputExampleFlow(Flow):
 
 
 flow = OutputExampleFlow()
+flow.plot("my_flow_plot")
 final_output = flow.kickoff()
 
 print("---- Final Output ----")
@@ -158,9 +160,10 @@ Second method received: Output from first_method
 ```
 
 </CodeGroup>
+![Flow Visual image](/images/crewai-flow-2.png)
 
 In this example, the `second_method` is the last method to complete, so its output will be the final output of the Flow.
-The `kickoff()` method will return the final output, which is then printed to the console.
+The `kickoff()` method will return the final output, which is then printed to the console. The `plot()` method will generate the HTML file, which will help you understand the flow.
 
 #### Accessing and Updating State
 
@@ -192,6 +195,7 @@ class StateExampleFlow(Flow[ExampleState]):
         return self.state.message
 
 flow = StateExampleFlow()
+flow.plot("my_flow_plot")
 final_output = flow.kickoff()
 print(f"Final Output: {final_output}")
 print("Final State:")
@@ -205,6 +209,8 @@ counter=2 message='Hello from first_method - updated by second_method'
 ```
 
 </CodeGroup>
+
+![Flow Visual image](/images/crewai-flow-2.png)
 
 In this example, the state is updated by both `first_method` and `second_method`.
 After the Flow has run, you can access the final state to see the updates made by these methods.
@@ -249,8 +255,11 @@ class UnstructuredExampleFlow(Flow):
 
 
 flow = UnstructuredExampleFlow()
+flow.plot("my_flow_plot")
 flow.kickoff()
 ```
+
+![Flow Visual image](/images/crewai-flow-3.png)
 
 **Note:** The `id` field is automatically generated and preserved throughout the flow's execution. You don't need to manage or set it manually, and it will be maintained even when updating the state with new data.
 
@@ -301,6 +310,8 @@ class StructuredExampleFlow(Flow[ExampleState]):
 flow = StructuredExampleFlow()
 flow.kickoff()
 ```
+
+![Flow Visual image](/images/crewai-flow-3.png)
 
 **Key Points:**
 
@@ -436,6 +447,7 @@ class OrExampleFlow(Flow):
 
 
 flow = OrExampleFlow()
+flow.plot("my_flow_plot")
 flow.kickoff()
 ```
 
@@ -445,6 +457,8 @@ Logger: Hello from the second method
 ```
 
 </CodeGroup>
+
+![Flow Visual image](/images/crewai-flow-4.png)
 
 When you run this Flow, the `logger` method will be triggered by the output of either the `start_method` or the `second_method`.
 The `or_` function is used to listen to multiple methods and trigger the listener method when any of the specified methods emit an output.
@@ -474,6 +488,7 @@ class AndExampleFlow(Flow):
         print(self.state)
 
 flow = AndExampleFlow()
+flow.plot()
 flow.kickoff()
 ```
 
@@ -483,6 +498,8 @@ flow.kickoff()
 ```
 
 </CodeGroup>
+
+![Flow Visual image](/images/crewai-flow-5.png)
 
 When you run this Flow, the `logger` method will be triggered only when both the `start_method` and the `second_method` emit an output.
 The `and_` function is used to listen to multiple methods and trigger the listener method only when all the specified methods emit an output.
@@ -527,6 +544,7 @@ class RouterFlow(Flow[ExampleState]):
 
 
 flow = RouterFlow()
+flow.plot("my_flow_plot")
 flow.kickoff()
 ```
 
@@ -537,6 +555,8 @@ Fourth method running
 ```
 
 </CodeGroup>
+
+![Flow Visual image](/images/crewai-flow-6.png)
 
 In the above example, the `start_method` generates a random boolean value and sets it in the state.
 The `second_method` uses the `@router()` decorator to define conditional routing logic based on the value of the boolean.
@@ -641,6 +661,7 @@ class MarketResearchFlow(Flow[MarketResearchState]):
 # Usage example
 async def run_flow():
     flow = MarketResearchFlow()
+    flow.plot("MarketResearchFlowPlot")
     result = await flow.kickoff_async(inputs={"product": "AI-powered chatbots"})
     return result
 
@@ -649,6 +670,8 @@ async def run_flow():
 if __name__ == "__main__":
     asyncio.run(run_flow())
 ```
+
+![Flow Visual image](/images/crewai-flow-7.png)
 
 This example demonstrates several key features of using Agents in flows:
 
@@ -746,13 +769,16 @@ def kickoff():
 
 def plot():
     poem_flow = PoemFlow()
-    poem_flow.plot()
+    poem_flow.plot("PoemFlowPlot")
 
 if __name__ == "__main__":
     kickoff()
+    plot()
 ```
 
-In this example, the `PoemFlow` class defines a flow that generates a sentence count, uses the `PoemCrew` to generate a poem, and then saves the poem to a file. The flow is kicked off by calling the `kickoff()` method.
+In this example, the `PoemFlow` class defines a flow that generates a sentence count, uses the `PoemCrew` to generate a poem, and then saves the poem to a file. The flow is kicked off by calling the `kickoff()` method. The PoemFlowPlot will be generated by `plot()` method.
+
+![Flow Visual image](/images/crewai-flow-8.png)
 
 ### Running the Flow
 
