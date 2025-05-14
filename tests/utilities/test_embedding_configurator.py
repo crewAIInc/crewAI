@@ -1,5 +1,3 @@
-import os
-import pytest
 from unittest.mock import patch, MagicMock
 
 from crewai.utilities.embedding_configurator import EmbeddingConfigurator

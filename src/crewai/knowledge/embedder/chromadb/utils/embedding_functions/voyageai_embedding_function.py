@@ -1,5 +1,4 @@
 import logging
-from typing import List, Optional
 
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 
@@ -9,7 +8,7 @@ logger = logging.getLogger(__name__)
 class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
     def __init__(self, api_key: str, model_name: str = "voyage-3"):
         try:
-            import voyageai
+            import voyageai  # noqa: F401
         except ImportError:
             raise ValueError(
                 "The voyageai python package is not installed. Please install it with `pip install voyageai`"
