@@ -2044,7 +2044,7 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": ["SerperDevTool"],
+        "tools": [{"name": "SerperDevTool"}],
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent")
@@ -2066,7 +2066,7 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": ["SerperDevTool"],
+        "tools": [{"name": "SerperDevTool"}],
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent", role="Custom Role")
@@ -2086,7 +2086,7 @@ def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": ["DoesNotExist"],
+        "tools": [{"name": "DoesNotExist"}],
     }
     mock_get_agent.return_value = mock_get_response
     with pytest.raises(

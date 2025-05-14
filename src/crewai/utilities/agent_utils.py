@@ -450,14 +450,14 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
         for key, value in agent.items():
             if key == "tools":
                 attributes[key] = []
-                for tool_name in value:
+                for tool in value:
                     try:
                         module = importlib.import_module("crewai_tools")
-                        tool_class = getattr(module, tool_name)
+                        tool_class = getattr(module, tool["name"])
                         attributes[key].append(tool_class())
                     except Exception as e:
                         raise AgentRepositoryError(
-                            f"Tool {tool_name} could not be loaded: {e}"
+                            f"Tool {tool['name']} could not be loaded: {e}"
                         ) from e
             else:
                 attributes[key] = value
