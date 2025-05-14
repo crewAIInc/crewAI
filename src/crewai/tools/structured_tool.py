@@ -187,6 +187,16 @@ class CrewStructuredTool:
             except json.JSONDecodeError as e:
                 raise ValueError(f"Failed to parse arguments as JSON: {e}")
 
+        # Handle nested dictionaries with 'value' field for all parameter types
+        if isinstance(raw_args, dict):
+            schema_fields = self.args_schema.model_fields
+            
+            for field_name, field_value in list(raw_args.items()):
+                # Check if this field exists in the schema
+                if field_name in schema_fields:
+                    if (isinstance(field_value, dict) and 'value' in field_value):
+                        raw_args[field_name] = field_value['value']
+
         try:
             validated_args = self.args_schema.model_validate(raw_args)
             return validated_args.model_dump()
