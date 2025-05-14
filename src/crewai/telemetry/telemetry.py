@@ -10,6 +10,18 @@ from contextlib import contextmanager
 from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Optional
 
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter,
+)
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    SpanExportResult,
+)
+from opentelemetry.trace import Span, Status, StatusCode
+
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
     CREWAI_TELEMETRY_SERVICE_NAME,
@@ -24,18 +36,6 @@ def suppress_warnings():
         warnings.filterwarnings("ignore")
         yield
 
-
-from opentelemetry import trace  # noqa: E402
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,  # noqa: E402
-)
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
-from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
-from opentelemetry.sdk.trace.export import (  # noqa: E402
-    BatchSpanProcessor,
-    SpanExportResult,
-)
-from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
@@ -232,7 +232,7 @@ class Telemetry:
                                 "agent_key": task.agent.key if task.agent else None,
                                 "context": (
                                     [task.description for task in task.context]
-                                    if task.context
+                                    if isinstance(task.context, list)
                                     else None
                                 ),
                                 "tools_names": [
@@ -748,7 +748,7 @@ class Telemetry:
                             "agent_key": task.agent.key if task.agent else None,
                             "context": (
                                 [task.description for task in task.context]
-                                if task.context
+                                if isinstance(task.context, list)
                                 else None
                             ),
                             "tools_names": [
