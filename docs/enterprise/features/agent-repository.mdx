@@ -1,0 +1,70 @@
+---
+title: "Agent Repository"
+description: "Store and retrieve agents for your CrewAI projects"
+---
+
+# Agent Repository
+
+The Agent Repository allows you to store, manage, and reuse agents across your CrewAI projects. This feature streamlines the development process by enabling you to configure agents once and use them in multiple projects.
+
+## How It Works
+
+When you create an agent in the CrewAI interface, it's stored in the Agent Repository. You can then initialize these agents in your code using the `from_repository` parameter.
+
+## Usage
+
+To use an agent from the repository in your CrewAI project, initialize it with the following code:
+
+```python
+from crewai import Agent
+
+# Initialize the agent with its role
+agent = Agent(from_repository="python-job-researcher")
+```
+
+### Creating a Crew with Repository Agents
+
+```python
+from crewai import Agent, Crew, Task
+
+agent = Agent(from_repository="python-job-researcher")
+
+job_search_task = Task(
+    description="Search for recent Python developer job listings online",
+    expected_output="Markdown list of 5 recent Python developer jobs with details.",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[job_search_task], verbose=True)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Important Notes
+
+- The `from_repository` value must match the agent's role in a URL-safe format.
+- If you change an agent's role after creation, you must update the `from_repository` value in your code accordingly, or you won't be able to find the agent anymore.
+- Make sure you have permission to use the agent as mentioned in the key points.
+
+## Agent Configuration
+
+When configuring an agent in the repository, you can specify:
+
+1. **Role** - The agent's primary function (e.g., "Python Job Researcher")
+2. **Goal** - What the agent aims to achieve (e.g., "Find Python developer job opportunities")
+3. **Backstory** - Context for the agent's behavior
+4. **Tools** - Available capabilities for the agent to use when performing tasks
+5. **Visibility Controls** - Who can access and use the agent
+
+## Managing Agents
+
+The Agent Repository interface provides functionality to:
+
+- View all available agents
+- Add new agents
+- Edit existing agents
+- Delete agents
+- View agent details including usage examples
+
+By leveraging the Agent Repository, you can build more modular and reusable AI workflows while maintaining a central location for managing your agents.
