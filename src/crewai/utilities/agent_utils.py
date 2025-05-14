@@ -441,6 +441,11 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
 
         client = PlusAPI(api_key=get_auth_token())
         response = client.get_agent(from_repository)
+        if response.status_code == 404:
+            raise AgentRepositoryError(
+                f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization"
+            )
+
         if response.status_code != 200:
             raise AgentRepositoryError(
                 f"Agent {from_repository} could not be loaded: {response.text}"

@@ -2097,6 +2097,19 @@ def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_internal_error(mock_get_agent, mock_get_auth_token):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 500
+    mock_get_response.text = "Internal server error"
+    mock_get_agent.return_value = mock_get_response
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Agent test_agent could not be loaded: Internal server error",
+    ):
+        Agent(from_repository="test_agent")
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_token):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 404
@@ -2104,6 +2117,6 @@ def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_tok
     mock_get_agent.return_value = mock_get_response
     with pytest.raises(
         AgentRepositoryError,
-        match="Agent NOT_FOUND could not be loaded: Agent not found",
+        match="Agent test_agent does not exist, make sure the name is correct or the agent is available on your organization",
     ):
-        Agent(from_repository="NOT_FOUND")
+        Agent(from_repository="test_agent")
