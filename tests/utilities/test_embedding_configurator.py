@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from crewai.utilities.embedding_configurator import EmbeddingConfigurator
-from crewai.knowledge.embedder.chromadb.utils.embedding_functions.voyageai_embedding_function import VoyageAIEmbeddingFunction
 
 
 class TestEmbeddingConfigurator:
