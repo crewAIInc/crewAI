@@ -137,3 +137,37 @@ def test_nested_dict_without_value_key():
     invalid_input = {"query": {"description": "A string input parameter", "other_key": "test"}}
     with pytest.raises(ValueError):
         tool._parse_args(invalid_input)
+
+
+def test_empty_nested_dict():
+    """Test handling of empty nested dictionaries."""
+    def test_func(query: str) -> str:
+        return f"Processed: {query}"
+    
+    tool = CrewStructuredTool.from_function(
+        func=test_func,
+        name="StringTool",
+        description="A tool that processes string input"
+    )
+    
+    # Test with empty nested dict
+    empty_dict_input = {"query": {}}
+    with pytest.raises(ValueError):
+        tool._parse_args(empty_dict_input)
+
+
+def test_deeply_nested_structure():
+    """Test handling of deeply nested structures."""
+    def test_func(query: str) -> str:
+        return f"Processed: {query}"
+    
+    tool = CrewStructuredTool.from_function(
+        func=test_func,
+        name="StringTool",
+        description="A tool that processes string input"
+    )
+    
+    # Test with deeply nested structure
+    deeply_nested = {"query": {"nested": {"deeper": {"value": "deep value"}}}}
+    with pytest.raises(ValueError):
+        tool._parse_args(deeply_nested)

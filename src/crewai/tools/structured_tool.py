@@ -173,11 +173,18 @@ class CrewStructuredTool:
     def _parse_args(self, raw_args: Union[str, dict]) -> dict:
         """Parse and validate the input arguments against the schema.
 
+        This method handles different input formats from various LLM providers,
+        including nested dictionaries with 'value' fields that some providers use.
+
         Args:
-            raw_args: The raw arguments to parse, either as a string or dict
+            raw_args: The raw arguments to parse, either as a string or dict.
+                     Supports nested dictionaries with 'value' field for LLM provider compatibility.
 
         Returns:
             The validated arguments as a dictionary
+
+        Raises:
+            ValueError: If argument parsing or validation fails
         """
         if isinstance(raw_args, str):
             try:
@@ -194,8 +201,23 @@ class CrewStructuredTool:
             for field_name, field_value in list(raw_args.items()):
                 # Check if this field exists in the schema
                 if field_name in schema_fields:
-                    if (isinstance(field_value, dict) and 'value' in field_value):
-                        raw_args[field_name] = field_value['value']
+                    # Handle nested dictionaries with 'value' field
+                    if isinstance(field_value, dict):
+                        if 'value' in field_value:
+                            # Extract the value from the nested dictionary
+                            value = field_value['value']
+                            self._logger.debug(f"Extracting value from nested dict for {field_name}")
+                            
+                            expected_type = schema_fields[field_name].annotation
+                            
+                            if expected_type in (str, int, float, bool) and not isinstance(value, expected_type):
+                                self._logger.warning(
+                                    f"Type mismatch for {field_name}: expected {expected_type}, got {type(value)}"
+                                )
+                                
+                            raw_args[field_name] = value
+                        else:
+                            self._logger.debug(f"Nested dict for {field_name} has no 'value' key")
 
         try:
             validated_args = self.args_schema.model_validate(raw_args)
