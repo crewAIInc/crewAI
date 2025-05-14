@@ -16,6 +16,7 @@ from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities import I18N, Printer
+from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -428,3 +429,36 @@ def show_agent_logs(
             printer.print(
                 content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
             )
+
+
+def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
+    attributes: Dict[str, Any] = {}
+    if from_repository:
+        import importlib
+
+        from crewai.cli.authentication.token import get_auth_token
+        from crewai.cli.plus_api import PlusAPI
+
+        client = PlusAPI(api_key=get_auth_token())
+        response = client.get_agent(from_repository)
+        if response.status_code != 200:
+            raise AgentRepositoryError(
+                f"Agent {from_repository} could not be loaded: {response.text}"
+            )
+
+        agent = response.json()
+        for key, value in agent.items():
+            if key == "tools":
+                attributes[key] = []
+                for tool_name in value:
+                    try:
+                        module = importlib.import_module("crewai_tools")
+                        tool_class = getattr(module, tool_name)
+                        attributes[key].append(tool_class())
+                    except Exception as e:
+                        raise AgentRepositoryError(
+                            f"Tool {tool_name} could not be loaded: {e}"
+                        ) from e
+            else:
+                attributes[key] = value
+    return attributes
