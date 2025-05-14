@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import time
 from functools import partial
 from typing import Tuple, Union
 from unittest.mock import MagicMock, patch
@@ -787,6 +788,25 @@ def test_conditional_task_definition_based_on_dict():
     assert task.agent is None
 
 
+def test_conditional_task_copy_preserves_type():
+    task_config = {
+        "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
+        "expected_output": "The score of the title.",
+    }
+    original_task = Task(**task_config)
+    copied_task = original_task.copy(agents=[], task_mapping={})
+    assert isinstance(copied_task, Task)
+
+    original_conditional_config = {
+        "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'. Check examples to base your evaluation on.",
+        "expected_output": "The score of the title.",
+        "condition": lambda x: True,
+    }
+    original_conditional_task = ConditionalTask(**original_conditional_config)
+    copied_conditional_task = original_conditional_task.copy(agents=[], task_mapping={})
+    assert isinstance(copied_conditional_task, ConditionalTask)
+
+
 def test_interpolate_inputs():
     task = Task(
         description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
@@ -1349,3 +1369,90 @@ def test_interpolate_valid_types():
     assert parsed["optional"] is None
     assert parsed["nested"]["flag"] is True
     assert parsed["nested"]["empty"] is None
+
+
+def test_task_with_no_max_execution_time():
+    researcher = Agent(
+    role="Researcher",
+    goal="Make the best research and analysis on content about AI and AI agents",
+    backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+    allow_delegation=False,
+    max_execution_time=None
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+    )
+
+    with patch.object(Agent, "_execute_without_timeout", return_value = "ok") as execute:
+        result = task.execute_sync(agent=researcher)
+        assert result.raw == "ok"
+        execute.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_with_max_execution_time():
+    from crewai.tools import tool
+    """Test that execution raises TimeoutError when max_execution_time is exceeded."""
+
+    @tool("what amazing tool", result_as_answer=True)
+    def my_tool() -> str:
+        "My tool"
+        time.sleep(1)
+        return "okay"
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents. Use the tool provided to you.",
+        backstory=(
+            "You're an expert researcher, specialized in technology, software engineering, AI and startups. "
+            "You work as a freelancer and are now working on doing research and analysis for a new customer."
+        ),
+        allow_delegation=False,
+        tools=[my_tool],
+        max_execution_time=4
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+    )
+
+    result = task.execute_sync(agent=researcher)
+    assert result.raw == "okay"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_with_max_execution_time_exceeded():
+    from crewai.tools import tool
+    """Test that execution raises TimeoutError when max_execution_time is exceeded."""
+
+    @tool("what amazing tool", result_as_answer=True)
+    def my_tool() -> str:
+        "My tool"
+        time.sleep(10)
+        return "okay"
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents. Use the tool provided to you.",
+        backstory=(
+            "You're an expert researcher, specialized in technology, software engineering, AI and startups. "
+            "You work as a freelancer and are now working on doing research and analysis for a new customer."
+        ),
+        allow_delegation=False,
+        tools=[my_tool],
+        max_execution_time=1
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+    )
+
+    with pytest.raises(TimeoutError):
+        task.execute_sync(agent=researcher)

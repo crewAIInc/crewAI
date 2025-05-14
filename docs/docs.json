@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "palm",
+  "theme": "mint",
   "name": "CrewAI",
   "colors": {
     "primary": "#EB6658",
@@ -8,25 +8,27 @@
     "dark": "#C94C3C"
   },
   "favicon": "favicon.svg",
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude"]
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Get Started",
+        "tab": "Documentation",
         "groups": [
           {
             "group": "Get Started",
             "pages": [
               "introduction",
               "installation",
-              "quickstart",
-              "changelog"
+              "quickstart"
             ]
           },
           {
             "group": "Guides",
             "pages": [
               {
-                "group": "Concepts",
+                "group": "Strategy",
                 "pages": [
                   "guides/concepts/evaluating-use-cases"
                 ]
@@ -76,34 +78,7 @@
               "concepts/testing",
               "concepts/cli",
               "concepts/tools",
-              "concepts/event-listener",
-              "concepts/langchain-tools",
-              "concepts/llamaindex-tools"
-            ]
-          },
-          {
-            "group": "How to Guides",
-            "pages": [
-              "how-to/create-custom-tools",
-              "how-to/sequential-process",
-              "how-to/hierarchical-process",
-              "how-to/custom-manager-agent",
-              "how-to/llm-connections",
-              "how-to/customizing-agents",
-              "how-to/multimodal-agents",
-              "how-to/coding-agents",
-              "how-to/force-tool-output-as-result",
-              "how-to/human-input-on-execution",
-              "how-to/kickoff-async",
-              "how-to/kickoff-for-each",
-              "how-to/replay-tasks-from-latest-crew-kickoff",
-              "how-to/conditional-tasks",
-              "how-to/agentops-observability",
-              "how-to/langtrace-observability",
-              "how-to/mlflow-observability",
-              "how-to/openlit-observability",
-              "how-to/portkey-observability",
-              "how-to/langfuse-observability"
+              "concepts/event-listener"
             ]
           },
           {
@@ -111,6 +86,8 @@
             "pages": [
               "tools/aimindtool",
               "tools/apifyactorstool",
+              "tools/bedrockinvokeagenttool",
+              "tools/bedrockkbretriever",
               "tools/bravesearchtool",
               "tools/browserbaseloadtool",
               "tools/codedocssearchtool",
@@ -131,6 +108,7 @@
               "tools/hyperbrowserloadtool",
               "tools/linkupsearchtool",
               "tools/llamaindextool",
+              "tools/langchaintool",
               "tools/serperdevtool",
               "tools/s3readertool",
               "tools/s3writertool",
@@ -161,9 +139,79 @@
             ]
           },
           {
+            "group": "Agent Monitoring & Observability",
+            "pages": [
+              "how-to/agentops-observability",
+              "how-to/arize-phoenix-observability",
+              "how-to/langfuse-observability",
+              "how-to/langtrace-observability",
+              "how-to/mlflow-observability",
+              "how-to/openlit-observability",
+              "how-to/opik-observability",
+              "how-to/portkey-observability",
+              "how-to/weave-integration"
+            ]
+          },
+          {
+            "group": "Learn",
+            "pages": [
+              "how-to/conditional-tasks",
+              "how-to/coding-agents",
+              "how-to/create-custom-tools",
+              "how-to/custom-llm",
+              "how-to/custom-manager-agent",
+              "how-to/customizing-agents",
+              "how-to/force-tool-output-as-result",
+              "how-to/hierarchical-process",
+              "how-to/human-input-on-execution",
+              "how-to/kickoff-async",
+              "how-to/kickoff-for-each",
+              "how-to/llm-connections",
+              "how-to/multimodal-agents",
+              "how-to/replay-tasks-from-latest-crew-kickoff",
+              "how-to/sequential-process"
+            ]
+          },
+          {
             "group": "Telemetry",
             "pages": [
               "telemetry"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Enterprise",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "enterprise/introduction"
+            ]
+          },
+          {
+            "group": "How-To Guides",
+            "pages": [
+              "enterprise/guides/build-crew",
+              "enterprise/guides/deploy-crew",
+              "enterprise/guides/kickoff-crew",
+              "enterprise/guides/update-crew",
+              "enterprise/guides/use-crew-api",
+              "enterprise/guides/enable-crew-studio"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "enterprise/features/tool-repository",
+              "enterprise/features/webhook-streaming",
+              "enterprise/features/traces"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "enterprise/resources/frequently-asked-questions"
             ]
           }
         ]
@@ -178,14 +226,35 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "Releases",
+        "groups": [
+          {
+            "group": "Releases",
+            "pages": [
+              "changelog"
+            ]
+          }
+        ]
       }
     ],
     "global": {
       "anchors": [
         {
-          "anchor": "Community",
+          "anchor": "Website",
+          "href": "https://crewai.com",
+          "icon": "globe"
+        },
+        {
+          "anchor": "Forum",
           "href": "https://community.crewai.com",
           "icon": "discourse"
+        },
+        {
+          "anchor": "Get Help",
+          "href": "mailto:support@crewai.com",
+          "icon": "headset"
         }
       ]
     }
@@ -199,6 +268,12 @@
     "strict": false
   },
   "navbar": {
+    "links": [
+      {
+        "label": "Start Free Trial",
+        "href": "https://app.crewai.com"
+      }
+    ],
     "primary": {
       "type": "github",
       "href": "https://github.com/crewAIInc/crewAI"
@@ -208,7 +283,12 @@
     "prompt": "Search CrewAI docs"
   },
   "seo": {
-    "indexing": "navigable"
+    "indexing": "all"
+  },
+  "errors": {
+    "404": {
+      "redirect": true
+    }
   },
   "footer": {
     "socials": {

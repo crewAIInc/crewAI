@@ -42,6 +42,16 @@ CrewAI supports various types of knowledge sources out of the box:
 | `collection_name`          | **str**                              | No       | Name of the collection where the knowledge will be stored. Used to identify different sets of knowledge. Defaults to "knowledge" if not provided.     |
 | `storage`                  | **Optional[KnowledgeStorage]**       | No       | Custom storage configuration for managing how the knowledge is stored and retrieved. If not provided, a default storage will be created.              |
 
+
+<Tip>
+Unlike retrieval from a vector database using a tool, agents preloaded with knowledge will not need a retrieval persona or task.
+Simply add the relevant knowledge sources your agent or crew needs to function.
+
+Knowledge sources can be added at the agent or crew level.
+Crew level knowledge sources will be used by **all agents** in the crew.
+Agent level knowledge sources will be used by the **specific agent** that is preloaded with the knowledge.
+</Tip>
+
 ## Quickstart Example
 
 <Tip>
@@ -145,6 +155,26 @@ result = crew.kickoff(
     }
 )
 ```
+
+## Knowledge Configuration
+
+You can configure the knowledge configuration for the crew or agent.
+
+```python Code
+from crewai.knowledge.knowledge_config import KnowledgeConfig
+
+knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
+
+agent = Agent(
+    ...
+    knowledge_config=knowledge_config
+)
+```
+
+<Tip>
+  `results_limit`: is the number of relevant documents to return. Default is 3.
+  `score_threshold`: is the minimum score for a document to be considered relevant. Default is 0.35.
+</Tip>
 
 ## More Examples
 
@@ -367,6 +397,53 @@ result = crew.kickoff(inputs={"question": "What city does John live in and how o
 John is 30 years old and lives in San Francisco.
 ```
 </CodeGroup>
+
+## Query Rewriting
+
+CrewAI implements an intelligent query rewriting mechanism to optimize knowledge retrieval. When an agent needs to search through knowledge sources, the raw task prompt is automatically transformed into a more effective search query.
+
+### How Query Rewriting Works
+
+1. When an agent executes a task with knowledge sources available, the `_get_knowledge_search_query` method is triggered
+2. The agent's LLM is used to transform the original task prompt into an optimized search query
+3. This optimized query is then used to retrieve relevant information from knowledge sources
+
+### Benefits of Query Rewriting
+
+<CardGroup cols={2}>
+  <Card title="Improved Retrieval Accuracy" icon="bullseye-arrow">
+    By focusing on key concepts and removing irrelevant content, query rewriting helps retrieve more relevant information.
+  </Card>
+  <Card title="Context Awareness" icon="brain">
+    The rewritten queries are designed to be more specific and context-aware for vector database retrieval.
+  </Card>
+</CardGroup>
+
+### Implementation Details
+
+Query rewriting happens transparently using a system prompt that instructs the LLM to:
+
+- Focus on key words of the intended task
+- Make the query more specific and context-aware
+- Remove irrelevant content like output format instructions
+- Generate only the rewritten query without preamble or postamble
+
+<Tip>
+  This mechanism is fully automatic and requires no configuration from users. The agent's LLM is used to perform the query rewriting, so using a more capable LLM can improve the quality of rewritten queries.
+</Tip>
+
+### Example
+
+```python
+# Original task prompt
+task_prompt = "Answer the following questions about the user's favorite movies: What movie did John watch last week? Format your answer in JSON."
+
+# Behind the scenes, this might be rewritten as:
+rewritten_query = "What movies did John watch last week?"
+```
+
+The rewritten query is more focused on the core information need and removes irrelevant instructions about output formatting.
+
 ## Clearing Knowledge
 
 If you need to clear the knowledge stored in CrewAI, you can use the `crewai reset-memories` command with the `--knowledge` option.
@@ -623,4 +700,11 @@ recent_news = SpaceNewsKnowledgeSource(
     - Configure appropriate embedding models
     - Consider using local embedding providers for faster processing
   </Accordion>
+
+  <Accordion title="One Time Knowledge">
+    - With the typical file structure provided by CrewAI, knowledge sources are embedded every time the kickoff is triggered.
+    - If the knowledge sources are large, this leads to inefficiency and increased latency, as the same data is embedded each time.
+    - To resolve this, directly initialize the knowledge parameter instead of the knowledge_sources parameter.
+    - Link to the issue to get complete idea [Github Issue](https://github.com/crewAIInc/crewAI/issues/2755)
+  </Accordion>  
 </AccordionGroup>

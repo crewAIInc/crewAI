@@ -1,5 +1,5 @@
-import re
 from typing import TYPE_CHECKING, List
+
 
 if TYPE_CHECKING:
     from crewai.task import Task
@@ -17,6 +17,11 @@ def aggregate_raw_outputs_from_task_outputs(task_outputs: List["TaskOutput"]) ->
 
 def aggregate_raw_outputs_from_tasks(tasks: List["Task"]) -> str:
     """Generate string context from the tasks."""
-    task_outputs = [task.output for task in tasks if task.output is not None]
+
+    task_outputs = (
+        [task.output for task in tasks if task.output is not None]
+        if isinstance(tasks, list)
+        else []
+    )
 
     return aggregate_raw_outputs_from_task_outputs(task_outputs)
