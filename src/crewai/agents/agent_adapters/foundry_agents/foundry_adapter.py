@@ -3,8 +3,8 @@ from typing import Any, List, Optional
 from pydantic import Field, PrivateAttr
 
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
-from crewai.agents.agent_adapters.azure_agents.structured_output_converter import (
-    AzureConverterAdapter,
+from crewai.agents.agent_adapters.foundry_agents.structured_output_converter import (
+    FoundryConverterAdapter,
 )
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools import BaseTool
@@ -18,28 +18,30 @@ from crewai.utilities.events.agent_events import (
 )
 
 try:
-    from agents import Agent as AzureAgent  # type: ignore
-    from agents import Runner, enable_verbose_stdout_logging  # type: ignore
+    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects.models import MessageTextContent
+    from azure.identity import DefaultAzureCredential
 
-    from .azure_agent_tool_adapter import AzureAgentToolAdapter
 
-    OPENAI_AVAILABLE = True
+    from .foundry_agent_tool_adapter import FoundryAgentToolAdapter
+
+    FOUNDRY_AVAILABLE = True
 except ImportError:
-    OPENAI_AVAILABLE = False
+    FOUNDRY_AVAILABLE = False
 
 
-class AzureAgentAdapter(BaseAgentAdapter):
-    """Adapter for Azure OpenAI Assistants"""
+class FoundryAgentAdapter(BaseAgentAdapter):
+    """Adapter for Foundry Assistants"""
 
     model_config = {"arbitrary_types_allowed": True}
 
-    _azure_agent: "AzureAgent" = PrivateAttr()
+    _foundry_agent: "FoundryAgent" = PrivateAttr()
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger())
     _active_thread: Optional[str] = PrivateAttr(default=None)
     function_calling_llm: Any = Field(default=None)
     step_callback: Any = Field(default=None)
-    _tool_adapter: "AzureAgentToolAdapter" = PrivateAttr()
-    _converter_adapter: AzureConverterAdapter = PrivateAttr()
+    _tool_adapter: "FoundryAgentToolAdapter" = PrivateAttr()
+    _converter_adapter: FoundryConverterAdapter = PrivateAttr()
 
     def __init__(
         self,
@@ -48,9 +50,9 @@ class AzureAgentAdapter(BaseAgentAdapter):
         agent_config: Optional[dict] = None,
         **kwargs,
     ):
-        if not OPENAI_AVAILABLE:
+        if not FOUNDRY_AVAILABLE:
             raise ImportError(
-                "OpenAI Agent Dependencies are not installed. Please install it using `uv add openai-agents`" # TODO: figure out uv azure openai install
+                "Foundry Agent Dependencies are not installed. Please install it using `uv pip install azure-ai-projects azure-identity`"
             )
         else:
             role = kwargs.pop("role", None)
@@ -64,12 +66,12 @@ class AzureAgentAdapter(BaseAgentAdapter):
                 agent_config=agent_config,
                 **kwargs,
             )
-            self._tool_adapter = AzureAgentToolAdapter(tools=tools)
+            self._tool_adapter = FoundryAgentToolAdapter(tools=tools)
             self.llm = model
-            self._converter_adapter = AzureConverterAdapter(self)
+            self._converter_adapter = FoundryConverterAdapter(self)
 
     def _build_system_prompt(self) -> str:
-        """Build a system prompt for the OpenAI agent."""
+        """Build a system prompt for the Foundry agent."""
         base_prompt = f"""
             You are {self.role}.
         
@@ -87,7 +89,7 @@ class AzureAgentAdapter(BaseAgentAdapter):
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
     ) -> str:
-        """Execute a task using the Azure OpenAI Assistant"""
+        """Execute a task using the Foundry Assistant"""
         self._converter_adapter.configure_structured_output(task)
         self.create_agent_executor(tools)
 
@@ -109,7 +111,7 @@ class AzureAgentAdapter(BaseAgentAdapter):
                     task=task,
                 ),
             )
-            result = self.agent_executor.run_sync(self._azure_agent, task_prompt)
+            result = self.agent_executor.run_sync(self._foundry_agent, task_prompt)
             final_answer = self.handle_execution_result(result)
             crewai_event_bus.emit(
                 self,
@@ -120,7 +122,7 @@ class AzureAgentAdapter(BaseAgentAdapter):
             return final_answer
 
         except Exception as e:
-            self._logger.log("error", f"Error executing Azure OpenAI task: {str(e)}")
+            self._logger.log("error", f"Error executing Foundry task: {str(e)}")
             crewai_event_bus.emit(
                 self,
                 event=AgentExecutionErrorEvent(
@@ -133,14 +135,14 @@ class AzureAgentAdapter(BaseAgentAdapter):
 
     def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
         """
-        Configure the Azure OpenAI agent for execution.
-        While Azure OpenAI handles execution differently through Runner,
+        Configure the Foundry agent for execution.
+        While Foundry handles execution differently through Runner,
         we can use this method to set up tools and configurations.
         """
         all_tools = list(self.tools or []) + list(tools or [])
 
         instructions = self._build_system_prompt()
-        self._azure_agent = AzureAgent(
+        self._foundry_agent = FoundryAgent(
             name=self.role,
             instructions=instructions,
             model=self.llm,
@@ -153,14 +155,14 @@ class AzureAgentAdapter(BaseAgentAdapter):
         self.agent_executor = Runner
 
     def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
-        """Configure tools for the Azure OpenAI Assistant"""
+        """Configure tools for the Foundry Assistant"""
         if tools:
             self._tool_adapter.configure_tools(tools)
             if self._tool_adapter.converted_tools:
-                self._azure_agent.tools = self._tool_adapter.converted_tools
+                self._foundry_agent.tools = self._tool_adapter.converted_tools
 
     def handle_execution_result(self, result: Any) -> str:
-        """Process Azure OpenAI Assistant execution result converting any structured output to a string"""
+        """Process Foundry Assistant execution result converting any structured output to a string"""
         return self._converter_adapter.post_process_result(result.final_output)
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:

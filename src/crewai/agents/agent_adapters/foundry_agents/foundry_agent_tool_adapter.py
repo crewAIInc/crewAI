@@ -7,37 +7,37 @@ from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
 from crewai.tools import BaseTool
 
 
-class AzureAgentToolAdapter(BaseToolAdapter):
-    """Adapter for Azure OpenAI Assistant tools"""
+class FoundryAgentToolAdapter(BaseToolAdapter):
+    """Adapter for Foundry Assistant tools"""
 
     def __init__(self, tools: Optional[List[BaseTool]] = None):
         self.original_tools = tools or []
 
     def configure_tools(self, tools: List[BaseTool]) -> None:
-        """Configure tools for the Azure OpenAI Assistant"""
+        """Configure tools for the Foundry Assistant"""
         if self.original_tools:
             all_tools = tools + self.original_tools
         else:
             all_tools = tools
         if all_tools:
-            self.converted_tools = self._convert_tools_to_azure_format(all_tools)
+            self.converted_tools = self._convert_tools_to_foundry_format(all_tools)
 
-    def _convert_tools_to_azure_format(
+    def _convert_tools_to_foundry_format(
         self, tools: Optional[List[BaseTool]]
     ) -> List[Tool]:
-        """Convert CrewAI tools to Azure OpenAI Assistant tool format"""
+        """Convert CrewAI tools to Foundry Assistant tool format"""
         if not tools:
             return []
 
         def sanitize_tool_name(name: str) -> str:
-            """Convert tool name to match Azure OpenAI's required pattern"""
+            """Convert tool name to match Foundry's required pattern"""
             import re
 
             sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", name).lower()
             return sanitized
 
         def create_tool_wrapper(tool: BaseTool):
-            """Create a wrapper function that handles the Azure OpenAI function tool interface"""
+            """Create a wrapper function that handles the Foundry function tool interface"""
 
             async def wrapper(context_wrapper: Any, arguments: Any) -> Any:
                 # Get the parameter name from the schema
@@ -74,18 +74,18 @@ class AzureAgentToolAdapter(BaseToolAdapter):
 
             return wrapper
 
-        azure_tools = []
+        foundry_tools = []
         for tool in tools:
             schema = tool.args_schema.model_json_schema()
 
             schema.update({"additionalProperties": False, "type": "object"})
 
-            azure_tool = FunctionTool(
+            foundry_tool = FunctionTool(
                 name=sanitize_tool_name(tool.name),
                 description=tool.description,
                 params_json_schema=schema,
                 on_invoke_tool=create_tool_wrapper(tool),
             )
-            azure_tools.append(azure_tool)
+            foundry_tools.append(foundry_tool)
 
-        return azure_tools
+        return foundry_tools

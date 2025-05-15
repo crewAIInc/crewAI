@@ -6,11 +6,11 @@ from crewai.utilities.converter import generate_model_description
 from crewai.utilities.i18n import I18N
 
 
-class AzureConverterAdapter(BaseConverterAdapter):
+class FoundryConverterAdapter(BaseConverterAdapter):
     """
-    Adapter for handling structured output conversion in Azure agents.
+    Adapter for handling structured output conversion in Foundry agents.
 
-    This adapter enhances the Azure agent to handle structured output formats
+    This adapter enhances the Foundry agent to handle structured output formats
     and post-processes the results when needed.
 
     Attributes:
@@ -28,7 +28,7 @@ class AzureConverterAdapter(BaseConverterAdapter):
 
     def configure_structured_output(self, task) -> None:
         """
-        Configure the structured output for Azure agent based on task requirements.
+        Configure the structured output for Foundry agent based on task requirements.
 
         Args:
             task: The task containing output format requirements
@@ -46,12 +46,12 @@ class AzureConverterAdapter(BaseConverterAdapter):
         if task.output_json:
             self._output_format = "json"
             self._schema = generate_model_description(task.output_json)
-            self.agent_adapter._azure_agent.output_type = task.output_json
+            self.agent_adapter._foundry_agent.output_type = task.output_json
             self._output_model = task.output_json
         elif task.output_pydantic:
             self._output_format = "pydantic"
             self._schema = generate_model_description(task.output_pydantic)
-            self.agent_adapter._azure_agent.output_type = task.output_pydantic
+            self.agent_adapter._foundry_agent.output_type = task.output_pydantic
             self._output_model = task.output_pydantic
 
     def enhance_system_prompt(self, base_prompt: str) -> str:
