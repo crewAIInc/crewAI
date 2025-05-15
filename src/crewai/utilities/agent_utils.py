@@ -1,7 +1,7 @@
 import json
 import re
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
-
+from litellm.exceptions import RateLimitError
 from crewai.agents.parser import (
     FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
     AgentAction,
@@ -15,7 +15,7 @@ from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
-from crewai.utilities import I18N, Printer
+from crewai.utilities import I18N, Printer, TPMController
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -135,6 +135,12 @@ def enforce_rpm_limit(
     if request_within_rpm_limit:
         request_within_rpm_limit()
 
+def enforce_tpm_limit(
+    request_within_tpm_limit: Optional[Callable[[], bool]] = None,
+) -> None:
+    """Enforce the tokens used per minute (TPM) limit if applicable."""
+    if request_within_tpm_limit:
+        request_within_tpm_limit()
 
 def get_llm_response(
     llm: Union[LLM, BaseLLM],
@@ -320,6 +326,31 @@ def handle_context_length(
         raise SystemExit(
             "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
         )
+
+    
+def is_token_limit_exceeded(exception: Exception) -> bool:
+    """Check if the exception is due to exceeding token limit per minute.
+
+    Args:
+        exception: The exception to check
+
+    Returns:
+        bool: True if the exception is due to to exceeding token limit per minute.
+    """
+    if isinstance(exception, RateLimitError):
+        return "Rate limit reached" in str(exception) or "rate_limit_exceeded" in str(exception)
+    return False
+
+
+def handle_exceeded_token_limits(
+    tpm_controller: TPMController
+) -> None:
+    """Handle token limit error by waiting.
+
+    Args:
+        token_counter: Class with Sleep function 
+    """
+    tpm_controller(1)
 
 
 def summarize_messages(

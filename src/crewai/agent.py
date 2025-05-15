@@ -61,6 +61,7 @@ class Agent(BaseAgent):
             function_calling_llm: The language model that will handle the tool calling for this agent, it overrides the crew function_calling_llm.
             max_iter: Maximum number of iterations for an agent to execute a task.
             max_rpm: Maximum number of requests per minute for the agent execution to be respected.
+            max_tpm: Maximum number of tokens that should be used for the agent execution            
             verbose: Whether the agent execution should be in verbose mode.
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
             tools: Tools at agents disposal
@@ -390,6 +391,9 @@ class Agent(BaseAgent):
         if self.max_rpm and self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()
 
+        if self.max_tpm and self._tpm_controller:
+            self._tpm_controller.stop_tpm_counter()             
+
         # If there was any tool in self.tools_results that had result_as_answer
         # set to True, return the results of the last tool that had
         # result_as_answer set to True
@@ -501,6 +505,9 @@ class Agent(BaseAgent):
             request_within_rpm_limit=(
                 self._rpm_controller.check_or_wait if self._rpm_controller else None
             ),
+            request_within_tpm_limit=(
+                self._tpm_controller.check_or_wait if self._tpm_controller else None
+            ),            
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 

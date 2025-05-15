@@ -17,6 +17,7 @@ from crewai.tools.tool_types import ToolResult
 from crewai.utilities import I18N, Printer
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
+    enforce_tpm_limit,
     format_message_for_llm,
     get_llm_response,
     handle_agent_action_core,
@@ -26,6 +27,8 @@ from crewai.utilities.agent_utils import (
     handle_unknown_error,
     has_reached_max_iterations,
     is_context_length_exceeded,
+    is_token_limit_exceeded,
+    handle_exceeded_token_limits,
     process_llm_response,
     show_agent_logs,
 )
@@ -56,6 +59,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         function_calling_llm: Any = None,
         respect_context_window: bool = False,
         request_within_rpm_limit: Optional[Callable[[], bool]] = None,
+        request_within_tpm_limit: Optional[Callable[[], bool]] = None,
         callbacks: List[Any] = [],
     ):
         self._i18n: I18N = I18N()
@@ -78,6 +82,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
+        self.request_within_tpm_limit = request_within_tpm_limit
         self.ask_for_human_input = False
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
@@ -152,6 +157,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                enforce_tpm_limit(self.request_within_tpm_limit)
+
                 answer = get_llm_response(
                     llm=self.llm,
                     messages=self.messages,
@@ -203,8 +210,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 )
 
             except Exception as e:
+                if is_token_limit_exceeded(e):
+                    handle_exceeded_token_limits(self.request_within_tpm_limit)
+                    continue
+
                 if e.__class__.__module__.startswith("litellm"):
-                    # Do not retry on litellm errors
+                    # Do not retry on other litellm errors
                     raise e
                 if is_context_length_exceeded(e):
                     handle_context_length(
