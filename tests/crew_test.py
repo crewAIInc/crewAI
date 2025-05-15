@@ -14,6 +14,7 @@ from crewai.agents import CacheHandler
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow import Flow, start
+from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
@@ -4403,3 +4404,165 @@ def test_sets_parent_flow_when_inside_flow(researcher, writer):
     flow = MyFlow()
     result = flow.kickoff()
     assert result.parent_flow is flow
+
+
+def test_reset_knowledge_with_no_crew_knowledge(researcher,writer):
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ]
+    )
+
+    with pytest.raises(RuntimeError) as excinfo:
+        crew.reset_memories(command_type='knowledge')
+        
+        # Optionally, you can also check the error message
+    assert "Crew Knowledge and Agent Knowledge memory system is not initialized" in str(excinfo.value)  # Replace with the expected message
+
+
+def test_reset_knowledge_with_only_crew_knowledge(researcher,writer):
+    mock_ks = MagicMock(spec=Knowledge)
+
+    with patch.object(Crew,'reset_knowledge') as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+            knowledge=mock_ks
+        )
+
+        crew.reset_memories(command_type='knowledge')
+        mock_reset_agent_knowledge.assert_called_once_with([mock_ks])
+
+
+def test_reset_knowledge_with_crew_and_agent_knowledge(researcher,writer):
+    mock_ks_crew = MagicMock(spec=Knowledge)
+    mock_ks_research = MagicMock(spec=Knowledge)
+    mock_ks_writer = MagicMock(spec=Knowledge)
+
+    researcher.knowledge = mock_ks_research
+    writer.knowledge = mock_ks_writer
+
+    with patch.object(Crew,'reset_knowledge') as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+            knowledge=mock_ks_crew
+        )
+
+        crew.reset_memories(command_type='knowledge')
+        mock_reset_agent_knowledge.assert_called_once_with([mock_ks_crew,mock_ks_research,mock_ks_writer])
+
+
+def test_reset_knowledge_with_only_agent_knowledge(researcher,writer):
+    mock_ks_research = MagicMock(spec=Knowledge)
+    mock_ks_writer = MagicMock(spec=Knowledge)
+
+    researcher.knowledge = mock_ks_research
+    writer.knowledge = mock_ks_writer
+
+    with patch.object(Crew,'reset_knowledge') as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+        )
+
+        crew.reset_memories(command_type='knowledge')
+        mock_reset_agent_knowledge.assert_called_once_with([mock_ks_research,mock_ks_writer])
+
+
+def test_reset_agent_knowledge_with_no_agent_knowledge(researcher,writer):
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+    )
+
+    with pytest.raises(RuntimeError) as excinfo:
+        crew.reset_memories(command_type='agent_knowledge')
+    
+    # Optionally, you can also check the error message
+    assert "Agent Knowledge memory system is not initialized" in str(excinfo.value)  # Replace with the expected message
+
+
+def test_reset_agent_knowledge_with_only_crew_knowledge(researcher,writer):
+    mock_ks = MagicMock(spec=Knowledge)
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+        knowledge=mock_ks
+    )
+
+    with pytest.raises(RuntimeError) as excinfo:
+        crew.reset_memories(command_type='agent_knowledge')
+    
+    # Optionally, you can also check the error message
+    assert "Agent Knowledge memory system is not initialized" in str(excinfo.value)  # Replace with the expected message
+
+
+def test_reset_agent_knowledge_with_crew_and_agent_knowledge(researcher,writer):
+    mock_ks_crew = MagicMock(spec=Knowledge)
+    mock_ks_research = MagicMock(spec=Knowledge)
+    mock_ks_writer = MagicMock(spec=Knowledge)
+
+    researcher.knowledge = mock_ks_research
+    writer.knowledge = mock_ks_writer
+
+    with patch.object(Crew,'reset_knowledge') as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+            knowledge=mock_ks_crew
+        )
+
+        crew.reset_memories(command_type='agent_knowledge')
+        mock_reset_agent_knowledge.assert_called_once_with([mock_ks_research,mock_ks_writer])
+
+
+def test_reset_agent_knowledge_with_only_agent_knowledge(researcher,writer):
+    mock_ks_research = MagicMock(spec=Knowledge)
+    mock_ks_writer = MagicMock(spec=Knowledge)
+
+    researcher.knowledge = mock_ks_research
+    writer.knowledge = mock_ks_writer
+
+    with patch.object(Crew,'reset_knowledge') as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+        )
+
+        crew.reset_memories(command_type='agent_knowledge')
+        mock_reset_agent_knowledge.assert_called_once_with([mock_ks_research,mock_ks_writer])
+
+
