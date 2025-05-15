@@ -129,6 +129,7 @@
               "tools/seleniumscrapingtool",
               "tools/snowflakesearchtool",
               "tools/spidertool",
+              "tools/stagehandtool",
               "tools/txtsearchtool",
               "tools/visiontool",
               "tools/weaviatevectorsearchtool",
