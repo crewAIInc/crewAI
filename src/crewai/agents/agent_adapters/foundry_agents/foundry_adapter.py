@@ -18,7 +18,7 @@ from crewai.utilities.events.agent_events import (
 )
 
 try:
-    from azure.ai.projects import AIProjectClient
+    from azure.ai.projects import AIProjectClient as FoundryAgent
     from azure.ai.projects.models import MessageTextContent
     from azure.identity import DefaultAzureCredential
 
@@ -93,26 +93,59 @@ class FoundryAgentAdapter(BaseAgentAdapter):
         self._converter_adapter.configure_structured_output(task)
         self.create_agent_executor(tools)
 
-        if self.verbose:
-            enable_verbose_stdout_logging()
+        task_prompt = task.prompt()
+        if context:
+            task_prompt = self.i18n.slice("task_with_context").format(
+                task=task_prompt, context=context
+            )
+
+        crewai_event_bus.emit(
+            self,
+            event=AgentExecutionStartedEvent(
+                agent=self,
+                tools=self.tools,
+                task_prompt=task_prompt,
+                task=task,
+            ),
+        )
 
         try:
-            task_prompt = task.prompt()
-            if context:
-                task_prompt = self.i18n.slice("task_with_context").format(
-                    task=task_prompt, context=context
-                )
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionStartedEvent(
-                    agent=self,
-                    tools=self.tools,
-                    task_prompt=task_prompt,
-                    task=task,
-                ),
+            from azure.ai.projects import AIProjectClient
+            from azure.ai.projects.models import MessageTextContent
+            from azure.identity import DefaultAzureCredential
+            import os, time
+
+            project_client = AIProjectClient.from_connection_string(
+                credential=DefaultAzureCredential(),
+                conn_str=os.environ["PROJECT_CONNECTION_STRING"],
             )
-            result = self.agent_executor.run_sync(self._foundry_agent, task_prompt)
-            final_answer = self.handle_execution_result(result)
+
+            agent = project_client.agents.create_agent(
+                model=self.llm,
+                name=self.role or "crewai-agent",
+                instructions=self._build_system_prompt(),
+            )
+
+            thread = project_client.agents.create_thread()
+            message = project_client.agents.create_message(
+                thread_id=thread.id,
+                role="user",
+                content=task_prompt,
+            )
+
+            run = project_client.agents.create_run(thread_id=thread.id, agent_id=agent.id)
+            while run.status in ["queued", "in_progress", "requires_action"]:
+                time.sleep(1)
+                run = project_client.agents.get_run(thread_id=thread.id, run_id=run.id)
+
+            messages = project_client.agents.list_messages(thread_id=thread.id)
+            final_answer = ""
+            for m in reversed(messages.data):
+                content = m.content[-1]
+                if isinstance(content, MessageTextContent):
+                    final_answer = content.text.value
+                    break
+
             crewai_event_bus.emit(
                 self,
                 event=AgentExecutionCompletedEvent(
@@ -125,13 +158,11 @@ class FoundryAgentAdapter(BaseAgentAdapter):
             self._logger.log("error", f"Error executing Foundry task: {str(e)}")
             crewai_event_bus.emit(
                 self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
+                event=AgentExecutionErrorEvent(agent=self, task=task, error=str(e)),
             )
             raise
+
+
 
     def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
         """
@@ -142,28 +173,9 @@ class FoundryAgentAdapter(BaseAgentAdapter):
         all_tools = list(self.tools or []) + list(tools or [])
 
         instructions = self._build_system_prompt()
-        self._foundry_agent = FoundryAgent(
-            name=self.role,
-            instructions=instructions,
-            model=self.llm,
-            **self._agent_config or {},
-        )
-
-        if all_tools:
-            self.configure_tools(all_tools)
-
-        self.agent_executor = Runner
 
     def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
-        """Configure tools for the Foundry Assistant"""
-        if tools:
-            self._tool_adapter.configure_tools(tools)
-            if self._tool_adapter.converted_tools:
-                self._foundry_agent.tools = self._tool_adapter.converted_tools
-
-    def handle_execution_result(self, result: Any) -> str:
-        """Process Foundry Assistant execution result converting any structured output to a string"""
-        return self._converter_adapter.post_process_result(result.final_output)
+        pass  # No-op or actual logic can be added later
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support"""
