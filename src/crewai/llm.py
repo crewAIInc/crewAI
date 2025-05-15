@@ -92,6 +92,8 @@ def suppress_warnings():
 
 
 class LLM:
+    MODELS_WITHOUT_STOP_SUPPORT = ["o3", "o3-mini", "o4-mini"]
+    
     def __init__(
         self,
         model: str,
@@ -193,11 +195,18 @@ class LLM:
             return False
 
     def supports_stop_words(self) -> bool:
-        models_without_stop_support = ["o3", "o3-mini", "o4-mini"]
+        """
+        Determines whether the current model supports the 'stop' parameter.
         
-        for model in models_without_stop_support:
-            if self.model.startswith(model):
-                return False
+        This method checks if the model is in the list of models known not to support
+        stop words, and if not, it queries the litellm library to determine if the
+        model supports the 'stop' parameter.
+        
+        Returns:
+            bool: True if the model supports stop words, False otherwise.
+        """
+        if any(self.model.startswith(model) for model in self.MODELS_WITHOUT_STOP_SUPPORT):
+            return False
                 
         try:
             params = get_supported_openai_params(model=self.model)
