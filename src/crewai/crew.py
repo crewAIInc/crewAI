@@ -657,8 +657,6 @@ class Crew(FlowTrackable, BaseModel):
             if self.planning:
                 self._handle_crew_planning()
 
-            metrics: List[UsageMetrics] = []
-
             if self.process == Process.sequential:
                 result = self._run_sequential_process()
             elif self.process == Process.hierarchical:
@@ -671,11 +669,8 @@ class Crew(FlowTrackable, BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
-            metrics += [agent._token_process.get_summary() for agent in self.agents]
+            self.usage_metrics = self.calculate_usage_metrics()
 
-            self.usage_metrics = UsageMetrics()
-            for metric in metrics:
-                self.usage_metrics.add_usage_metrics(metric)
             return result
         except Exception as e:
             crewai_event_bus.emit(
