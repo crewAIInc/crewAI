@@ -45,7 +45,7 @@ class FoundryAgentAdapter(BaseAgentAdapter):
 
     def __init__(
         self,
-        model: str = "gpt-4o-mini",
+        model: str = "gpt-4.1-mini",
         tools: Optional[List[BaseTool]] = None,
         agent_config: Optional[dict] = None,
         **kwargs,
@@ -139,12 +139,7 @@ class FoundryAgentAdapter(BaseAgentAdapter):
                 run = project_client.agents.get_run(thread_id=thread.id, run_id=run.id)
 
             messages = project_client.agents.list_messages(thread_id=thread.id)
-            final_answer = ""
-            for m in reversed(messages.data):
-                content = m.content[-1]
-                if isinstance(content, MessageTextContent):
-                    final_answer = content.text.value
-                    break
+            final_answer = messages.data[0].content[0]['text']['value']
 
             crewai_event_bus.emit(
                 self,
