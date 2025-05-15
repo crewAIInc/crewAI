@@ -21,7 +21,6 @@ from crewai.utilities import RPMController
 from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
-from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
 
 def test_agent_llm_creation_with_env_vars():
