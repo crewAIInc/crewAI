@@ -10,6 +10,7 @@ def reset_memories_command(
     short,
     entity,
     knowledge,
+    agent_knowledge,
     kickoff_outputs,
     all,
 ) -> None:
@@ -23,10 +24,11 @@ def reset_memories_command(
       kickoff_outputs (bool): Whether to reset the latest kickoff task outputs.
       all (bool): Whether to reset all memories.
       knowledge (bool): Whether to reset the knowledge.
+      agent_knowledge (bool): Whether to reset the agents knowledge.
     """
 
     try:
-        if not any([long, short, entity, kickoff_outputs, knowledge, all]):
+        if not any([long, short, entity, kickoff_outputs, knowledge, agent_knowledge, all]):
             click.echo(
                 "No memory type specified. Please specify at least one type to reset."
             )
@@ -66,6 +68,11 @@ def reset_memories_command(
                 crew.reset_memories(command_type="knowledge")
                 click.echo(
                     f"[Crew ({crew.name if crew.name else crew.id})] Knowledge has been reset."
+                )
+            if agent_knowledge:
+                crew.reset_memories(command_type="agent_knowledge")
+                click.echo(
+                    f"[Crew ({crew.name if crew.name else crew.id})] Agents knowledge has been reset."
                 )
 
     except subprocess.CalledProcessError as e:

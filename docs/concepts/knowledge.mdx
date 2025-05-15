@@ -497,6 +497,13 @@ crew = Crew(
 result = crew.kickoff(
     inputs={"question": "What is the storage capacity of the XPS 13?"}
 )
+
+# Resetting the agent specific knowledge via crew object
+crew.reset_memories(command_type = 'agent_knowledge')
+
+# Resetting the agent specific knowledge via CLI
+crewai reset-memories --agent-knowledge 
+crewai reset-memories -akn
 ```
 
 <Info>
