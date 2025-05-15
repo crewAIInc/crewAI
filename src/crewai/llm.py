@@ -155,7 +155,7 @@ class LLM:
                     "temperature": self.temperature,
                     "top_p": self.top_p,
                     "n": self.n,
-                    "stop": self.stop,
+                    "stop": self.stop if self.supports_stop_words() else None,
                     "max_tokens": self.max_tokens or self.max_completion_tokens,
                     "presence_penalty": self.presence_penalty,
                     "frequency_penalty": self.frequency_penalty,
@@ -193,6 +193,12 @@ class LLM:
             return False
 
     def supports_stop_words(self) -> bool:
+        models_without_stop_support = ["o3", "o3-mini", "o4-mini"]
+        
+        for model in models_without_stop_support:
+            if self.model.startswith(model):
+                return False
+                
         try:
             params = get_supported_openai_params(model=self.model)
             return "stop" in params

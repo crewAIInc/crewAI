@@ -28,3 +28,33 @@ def test_llm_callback_replacement():
     assert usage_metrics_1.successful_requests == 1
     assert usage_metrics_2.successful_requests == 1
     assert usage_metrics_1 == calc_handler_1.token_cost_process.get_summary()
+
+
+def test_supports_stop_words_for_o3_model():
+    """Test that supports_stop_words returns False for o3 model."""
+    llm = LLM(model="o3")
+    assert not llm.supports_stop_words()
+
+
+def test_supports_stop_words_for_o4_mini_model():
+    """Test that supports_stop_words returns False for o4-mini model."""
+    llm = LLM(model="o4-mini")
+    assert not llm.supports_stop_words()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_call_excludes_stop_parameter_for_unsupported_models(monkeypatch):
+    """Test that the LLM.call method excludes the stop parameter for models that don't support it."""
+    def mock_completion(**kwargs):
+        assert 'stop' not in kwargs, "Stop parameter should be excluded for o3 model"
+        return {"choices": [{"message": {"content": "Hello, World!"}}]}
+    
+    monkeypatch.setattr("litellm.completion", mock_completion)
+    
+    llm = LLM(model="o3")
+    llm.stop = ["STOP"]
+    
+    messages = [{"role": "user", "content": "Say 'Hello, World!'"}]
+    response = llm.call(messages)
+    
+    assert response == "Hello, World!"
