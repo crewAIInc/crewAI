@@ -61,6 +61,7 @@ class TestPlusAPI(unittest.TestCase):
             "version": version,
             "file": encoded_file,
             "description": description,
+            "available_tool_classes": None,
         }
         mock_make_request.assert_called_once_with(
             "POST", "/crewai_plus/api/v1/tools", json=params
@@ -87,6 +88,7 @@ class TestPlusAPI(unittest.TestCase):
             "version": version,
             "file": encoded_file,
             "description": description,
+            "available_tool_classes": None,
         }
         mock_make_request.assert_called_once_with(
             "POST", "/crewai_plus/api/v1/tools", json=params

@@ -1,5 +1,5 @@
 from os import getenv
-from typing import Optional
+from typing import List, Optional
 from urllib.parse import urljoin
 
 import requests
@@ -48,6 +48,7 @@ class PlusAPI:
         version: str,
         description: Optional[str],
         encoded_file: str,
+        available_tool_classes: Optional[List[str]] = None,
     ):
         params = {
             "handle": handle,
@@ -55,6 +56,7 @@ class PlusAPI:
             "version": version,
             "file": encoded_file,
             "description": description,
+            "available_tool_classes": available_tool_classes,
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 
