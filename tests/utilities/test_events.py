@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from unittest.mock import Mock, patch
 
@@ -22,6 +21,7 @@ from crewai.utilities.events.crew_events import (
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
+    CrewTestResultEvent,
     CrewTestStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
@@ -38,7 +38,6 @@ from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
     LLMCallStartedEvent,
-    LLMCallType,
     LLMStreamChunkEvent,
 )
 from crewai.utilities.events.task_events import (
@@ -132,6 +131,10 @@ def test_crew_emits_test_kickoff_type_event():
     def handle_crew_test_end(source, event):
         received_events.append(event)
 
+    @crewai_event_bus.on(CrewTestResultEvent)
+    def handle_crew_test_result(source, event):
+        received_events.append(event)
+
     eval_llm = LLM(model="gpt-4o-mini")
     with (
         patch.object(
@@ -149,13 +152,16 @@ def test_crew_emits_test_kickoff_type_event():
         assert args[2] is None
         assert args[3] == eval_llm
 
-    assert len(received_events) == 2
+    assert len(received_events) == 3
     assert received_events[0].crew_name == "TestCrew"
     assert isinstance(received_events[0].timestamp, datetime)
     assert received_events[0].type == "crew_test_started"
     assert received_events[1].crew_name == "TestCrew"
     assert isinstance(received_events[1].timestamp, datetime)
-    assert received_events[1].type == "crew_test_completed"
+    assert received_events[1].type == "crew_test_result"
+    assert received_events[2].crew_name == "TestCrew"
+    assert isinstance(received_events[2].timestamp, datetime)
+    assert received_events[2].type == "crew_test_completed"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -309,7 +315,7 @@ def test_agent_emits_execution_error_event():
     ) as invoke_mock:
         invoke_mock.side_effect = Exception(error_message)
 
-        with pytest.raises(Exception) as e:
+        with pytest.raises(Exception):
             base_agent.execute_task(
                 task=base_task,
             )

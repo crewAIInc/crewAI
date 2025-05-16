@@ -64,6 +64,13 @@ class Telemetry:
     attribute in the Crew class.
     """
 
+    _instance = None
+
+    def __new__(cls):
+        if not hasattr(cls, "instance"):
+            cls.instance = super(Telemetry, cls).__new__(cls)
+        return cls.instance
+
     def __init__(self):
         self.ready: bool = False
         self.trace_set: bool = False
