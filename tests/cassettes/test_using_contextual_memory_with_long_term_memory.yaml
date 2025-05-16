@@ -1,0 +1,209 @@
+interactions:
+- request:
+    body: !!binary |
+      CuAMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkStwwKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKdCAoQe1SuF2c2xWX4juAv74oXphII/LGj/b5w49QqDENyZXcgQ3JlYXRlZDABOcCZ
+      B6F1rTUYQRhzEqF1rTUYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTE0LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi45Si4KCGNyZXdfa2V5EiIKIGM5N2I1ZmViNWQxYjY2YmI1OTAwNmFhYTAx
+      YTI5Y2Q2SjEKB2NyZXdfaWQSJgokMDU1YWZhNGQtNWU5MS00YWU1LTg4ZTQtMGQ3N2I2OTZiODJl
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJGI3NzY4MjJlLTU4YzItNDg5Ni05NmVhLTlmNDQzNjc4NThjNko7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNC0xMlQxNzo1MjozMS4zOTkzMTdK
+      0QIKC2NyZXdfYWdlbnRzEsECCr4CW3sia2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJk
+      NTNkZGE3IiwgImlkIjogIjI5MmZlMjI4LTNlYzEtNDE4Zi05NzQzLTFkNTI3ZGY5M2QwYyIsICJy
+      b2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJt
+      YXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRv
+      LW1pbmkiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRp
+      b24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv8B
+      CgpjcmV3X3Rhc2tzEvABCu0BW3sia2V5IjogIjYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIx
+      YzRmIiwgImlkIjogIjhlY2E1NTQzLTc3MDEtNDhjMy1hODM1LWI4YWE2YmE3YTMzZSIsICJhc3lu
+      Y19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUi
+      OiAiUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiMDdkOTliNjMwNDExZDM1ZmQ5MDQ3YTUzMmQ1
+      M2RkYTciLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKABAoQmqGVrPp33uFfE2WlsNm/
+      phIIx0mZ95NGSyIqDFRhc2sgQ3JlYXRlZDABObBlHqF1rTUYQbi3HqF1rTUYSi4KCGNyZXdfa2V5
+      EiIKIGM5N2I1ZmViNWQxYjY2YmI1OTAwNmFhYTAxYTI5Y2Q2SjEKB2NyZXdfaWQSJgokMDU1YWZh
+      NGQtNWU5MS00YWU1LTg4ZTQtMGQ3N2I2OTZiODJlSi4KCHRhc2tfa2V5EiIKIDYzOTk2NTE3ZjNm
+      M2YxYzk0ZDZiYjYxN2FhMGIxYzRmSjEKB3Rhc2tfaWQSJgokOGVjYTU1NDMtNzcwMS00OGMzLWE4
+      MzUtYjhhYTZiYTdhMzNlSjoKEGNyZXdfZmluZ2VycHJpbnQSJgokYjc3NjgyMmUtNThjMi00ODk2
+      LTk2ZWEtOWY0NDM2Nzg1OGM2SjoKEHRhc2tfZmluZ2VycHJpbnQSJgokYTk5NjE4ZTYtODFhZC00
+      N2YyLWE4ZGEtOTc1NjkzN2YxYmIwSjsKG3Rhc2tfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoy
+      MDI1LTA0LTEyVDE3OjUyOjMxLjM5ODIxNEo7ChFhZ2VudF9maW5nZXJwcmludBImCiRlZjkxZGYx
+      NS0zNmNiLTQ0MDQtOWFkMi05MmM1OTQ1NGU2ZTZ6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1635'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sat, 12 Apr 2025 20:52:35 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
+      an expert in research and you love to learn new things.\nYour personal goal
+      is: You research about math.\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Research a topic
+      to teach a kid aged 6 about math.\n\nThis is the expected criteria for your
+      final answer: A topic, explanation, angle, and examples.\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\n# Useful context:
+      \n<MagicMock name=''build_context_for_task()'' id=''13586043616''>\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1031'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BLc7zvaXoFAArOIDK9TrMtdq8kKY0\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744491151,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer.  \\nFinal
+      Answer: \\n\\n**Topic: Introduction to Addition with Fun Objects**\\n\\n**Explanation:**
+      \ \\nAt its core, addition is all about combining two or more groups of things
+      to find out how many there are in total. We can think of addition as a way to
+      bring friends together! Imagine if you have some apples and your friend brings
+      some more apples; together, you want to find out how many apples there are altogether.
+      This is the foundation of addition, and it can be made fun and engaging for
+      a 6-year-old.\\n\\n**Angle:**  \\nTo make this relatable and enjoyable, we can
+      use everyday objects that kids love, such as toys, fruits, or even drawings.
+      We can create little stories or scenarios that involve addition, turning it
+      into a game where they get to count and add things together. By using real items,
+      children can see and feel what addition means, making it easier to grasp the
+      concept.\\n\\n**Examples:**  \\n1. **Using Fruits:**  \\n   Let's say you have
+      3 oranges. You can say, \\\"I have 3 oranges.\\\" Then, if your friend brings
+      you 2 more oranges, you can introduce the addition by saying, \\\"Now, how many
+      do we have all together?\\\"  \\n   - So you would show it as: 3 (oranges you
+      have) + 2 (oranges your friend brought) = ?  \\n   To find the answer, you can
+      count all the oranges together: 1, 2, 3 (your oranges) and 4, 5 (your friend's
+      oranges).  \\n   - The answer is 5 oranges in total!\\n\\n2. **Using Toys:**
+      \ \\n   If a child has 4 toy cars and finds 3 more under the couch, we can ask,
+      \\\"How many cars do you have now?\\\"  \\n   - Write it down: 4 (toy cars)
+      + 3 (found cars) = ?  \\n   Then, count the toy cars together: 1, 2, 3, 4 (original
+      cars), 5, 6, 7.  \\n   - The answer is 7 toy cars!\\n\\n3. **Story Scenario:**
+      \ \\n   Create an engaging story: \\\"Once upon a time, there were 2 friendly
+      puppies. One day, 3 more puppies came to play. How many puppies are playing
+      now?\\\"  \\n   - Present it as: 2 (original puppies) + 3 (new puppies) = ?
+      \ \\n   Count the puppies: 1, 2 (the first two) and then 3, 4, 5 (the new ones).
+      \ \\n   - The answer is 5 puppies playing!\\n\\nBy presenting addition through
+      fun scenarios and interactive counting, a 6-year-old can learn and understand
+      addition while enjoying the process. They can even use crayons to draw the items
+      or fruit to count in a playful, hands-on approach. This makes math not just
+      a subject, but also a delightful adventure!\",\n        \"refusal\": null,\n
+      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 206,\n    \"completion_tokens\":
+      609,\n    \"total_tokens\": 815,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92f59ba1fa19572a-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:52:44 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=C7ejNhC7vNTBO9VtBqzN_ce__mP2Dz8noDo2lIcNBn0-1744491164-1.0.1.1-kQgWk4d54JIGxg_yCJ.7uV9HkU8JXrhpfIth0WHDdqf9ESzAsQyDu0xKVLYnga.xswBnm5kePpuFCcnIqGKgyag31cEyuiFFf6JHTvQcvWI;
+        path=/; expires=Sat, 12-Apr-25 21:22:44 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=QuvcyYK0MZfY9dNclglrzesXcplWfoZN.rd4J57.xtY-1744491164641-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '12806'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999777'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_49f3c203229149ce08c0813ac4071355
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

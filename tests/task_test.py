@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import time
 from functools import partial
 from typing import Tuple, Union
 from unittest.mock import MagicMock, patch
@@ -15,6 +16,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
+from crewai.utilities.string_utils import interpolate_only
 
 
 def test_task_tool_reflect_agent_tools():
@@ -786,6 +788,25 @@ def test_conditional_task_definition_based_on_dict():
     assert task.agent is None
 
 
+def test_conditional_task_copy_preserves_type():
+    task_config = {
+        "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
+        "expected_output": "The score of the title.",
+    }
+    original_task = Task(**task_config)
+    copied_task = original_task.copy(agents=[], task_mapping={})
+    assert isinstance(copied_task, Task)
+
+    original_conditional_config = {
+        "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'. Check examples to base your evaluation on.",
+        "expected_output": "The score of the title.",
+        "condition": lambda x: True,
+    }
+    original_conditional_task = ConditionalTask(**original_conditional_config)
+    copied_conditional_task = original_conditional_task.copy(agents=[], task_mapping={})
+    assert isinstance(copied_conditional_task, ConditionalTask)
+
+
 def test_interpolate_inputs():
     task = Task(
         description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
@@ -816,13 +837,10 @@ def test_interpolate_inputs():
 
 def test_interpolate_only():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
-    task = Task(
-        description="Unused in this test", expected_output="Unused in this test"
-    )
 
     # Test JSON structure preservation
     json_string = '{"info": "Look at {placeholder}", "nested": {"val": "{nestedVal}"}}'
-    result = task.interpolate_only(
+    result = interpolate_only(
         input_string=json_string,
         inputs={"placeholder": "the data", "nestedVal": "something else"},
     )
@@ -833,32 +851,26 @@ def test_interpolate_only():
 
     # Test normal string interpolation
     normal_string = "Hello {name}, welcome to {place}!"
-    result = task.interpolate_only(
+    result = interpolate_only(
         input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
     )
     assert result == "Hello John, welcome to CrewAI!"
 
     # Test empty string
-    result = task.interpolate_only(input_string="", inputs={"unused": "value"})
+    result = interpolate_only(input_string="", inputs={"unused": "value"})
     assert result == ""
 
     # Test string with no placeholders
     no_placeholders = "Hello, this is a test"
-    result = task.interpolate_only(
-        input_string=no_placeholders, inputs={"unused": "value"}
-    )
+    result = interpolate_only(input_string=no_placeholders, inputs={"unused": "value"})
     assert result == no_placeholders
 
 
 def test_interpolate_only_with_dict_inside_expected_output():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
-    task = Task(
-        description="Unused in this test",
-        expected_output="Unused in this test: {questions}",
-    )
 
     json_string = '{"questions": {"main_question": "What is the user\'s name?", "secondary_question": "What is the user\'s age?"}}'
-    result = task.interpolate_only(
+    result = interpolate_only(
         input_string=json_string,
         inputs={
             "questions": {
@@ -872,18 +884,16 @@ def test_interpolate_only_with_dict_inside_expected_output():
     assert result == json_string
 
     normal_string = "Hello {name}, welcome to {place}!"
-    result = task.interpolate_only(
+    result = interpolate_only(
         input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
     )
     assert result == "Hello John, welcome to CrewAI!"
 
-    result = task.interpolate_only(input_string="", inputs={"unused": "value"})
+    result = interpolate_only(input_string="", inputs={"unused": "value"})
     assert result == ""
 
     no_placeholders = "Hello, this is a test"
-    result = task.interpolate_only(
-        input_string=no_placeholders, inputs={"unused": "value"}
-    )
+    result = interpolate_only(input_string=no_placeholders, inputs={"unused": "value"})
     assert result == no_placeholders
 
 
@@ -1077,36 +1087,26 @@ def test_task_execution_times():
 
 
 def test_interpolate_with_list_of_strings():
-    task = Task(
-        description="Test list interpolation",
-        expected_output="List: {items}",
-    )
-
     # Test simple list of strings
     input_str = "Available items: {items}"
     inputs = {"items": ["apple", "banana", "cherry"]}
-    result = task.interpolate_only(input_str, inputs)
+    result = interpolate_only(input_str, inputs)
     assert result == f"Available items: {inputs['items']}"
 
     # Test empty list
     empty_list_input = {"items": []}
-    result = task.interpolate_only(input_str, empty_list_input)
+    result = interpolate_only(input_str, empty_list_input)
     assert result == "Available items: []"
 
 
 def test_interpolate_with_list_of_dicts():
-    task = Task(
-        description="Test list of dicts interpolation",
-        expected_output="People: {people}",
-    )
-
     input_data = {
         "people": [
             {"name": "Alice", "age": 30, "skills": ["Python", "AI"]},
             {"name": "Bob", "age": 25, "skills": ["Java", "Cloud"]},
         ]
     }
-    result = task.interpolate_only("{people}", input_data)
+    result = interpolate_only("{people}", input_data)
 
     parsed_result = eval(result)
     assert isinstance(parsed_result, list)
@@ -1120,11 +1120,6 @@ def test_interpolate_with_list_of_dicts():
 
 
 def test_interpolate_with_nested_structures():
-    task = Task(
-        description="Test nested structures",
-        expected_output="Company: {company}",
-    )
-
     input_data = {
         "company": {
             "name": "TechCorp",
@@ -1138,7 +1133,7 @@ def test_interpolate_with_nested_structures():
             ],
         }
     }
-    result = task.interpolate_only("{company}", input_data)
+    result = interpolate_only("{company}", input_data)
     parsed = eval(result)
 
     assert parsed["name"] == "TechCorp"
@@ -1148,11 +1143,6 @@ def test_interpolate_with_nested_structures():
 
 
 def test_interpolate_with_special_characters():
-    task = Task(
-        description="Test special characters in dicts",
-        expected_output="Data: {special_data}",
-    )
-
     input_data = {
         "special_data": {
             "quotes": """This has "double" and 'single' quotes""",
@@ -1161,7 +1151,7 @@ def test_interpolate_with_special_characters():
             "empty": "",
         }
     }
-    result = task.interpolate_only("{special_data}", input_data)
+    result = interpolate_only("{special_data}", input_data)
     parsed = eval(result)
 
     assert parsed["quotes"] == """This has "double" and 'single' quotes"""
@@ -1171,11 +1161,6 @@ def test_interpolate_with_special_characters():
 
 
 def test_interpolate_mixed_types():
-    task = Task(
-        description="Test mixed type interpolation",
-        expected_output="Mixed: {data}",
-    )
-
     input_data = {
         "data": {
             "name": "Test Dataset",
@@ -1188,7 +1173,7 @@ def test_interpolate_mixed_types():
             },
         }
     }
-    result = task.interpolate_only("{data}", input_data)
+    result = interpolate_only("{data}", input_data)
     parsed = eval(result)
 
     assert parsed["name"] == "Test Dataset"
@@ -1197,11 +1182,6 @@ def test_interpolate_mixed_types():
 
 
 def test_interpolate_complex_combination():
-    task = Task(
-        description="Test complex combination",
-        expected_output="Report: {report}",
-    )
-
     input_data = {
         "report": [
             {
@@ -1216,7 +1196,7 @@ def test_interpolate_complex_combination():
             },
         ]
     }
-    result = task.interpolate_only("{report}", input_data)
+    result = interpolate_only("{report}", input_data)
     parsed = eval(result)
 
     assert len(parsed) == 2
@@ -1226,14 +1206,9 @@ def test_interpolate_complex_combination():
 
 
 def test_interpolate_invalid_type_validation():
-    task = Task(
-        description="Test invalid type validation",
-        expected_output="Should never reach here",
-    )
-
     # Test with invalid top-level type
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only("{data}", {"data": set()})  # type: ignore we are purposely testing this failure
+        interpolate_only("{data}", {"data": set()})  # type: ignore we are purposely testing this failure
 
     assert "Unsupported type set" in str(excinfo.value)
 
@@ -1246,16 +1221,11 @@ def test_interpolate_invalid_type_validation():
         }
     }
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only("{data}", {"data": invalid_nested})
+        interpolate_only("{data}", {"data": invalid_nested})
     assert "Unsupported type set" in str(excinfo.value)
 
 
 def test_interpolate_custom_object_validation():
-    task = Task(
-        description="Test custom object rejection",
-        expected_output="Should never reach here",
-    )
-
     class CustomObject:
         def __init__(self, value):
             self.value = value
@@ -1265,35 +1235,28 @@ def test_interpolate_custom_object_validation():
 
     # Test with custom object at top level
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only("{obj}", {"obj": CustomObject(5)})  # type: ignore we are purposely testing this failure
+        interpolate_only("{obj}", {"obj": CustomObject(5)})  # type: ignore we are purposely testing this failure
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
     # Test with nested custom object in dictionary
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only(
-            "{data}", {"data": {"valid": 1, "invalid": CustomObject(5)}}
-        )
+        interpolate_only("{data}", {"data": {"valid": 1, "invalid": CustomObject(5)}})
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
     # Test with nested custom object in list
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only("{data}", {"data": [1, "valid", CustomObject(5)]})
+        interpolate_only("{data}", {"data": [1, "valid", CustomObject(5)]})
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
     # Test with deeply nested custom object
     with pytest.raises(ValueError) as excinfo:
-        task.interpolate_only(
+        interpolate_only(
             "{data}", {"data": {"level1": {"level2": [{"level3": CustomObject(5)}]}}}
         )
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
 
 def test_interpolate_valid_complex_types():
-    task = Task(
-        description="Test valid complex types",
-        expected_output="Validation should pass",
-    )
-
     # Valid complex structure
     valid_data = {
         "name": "Valid Dataset",
@@ -1306,37 +1269,27 @@ def test_interpolate_valid_complex_types():
     }
 
     # Should not raise any errors
-    result = task.interpolate_only("{data}", {"data": valid_data})
+    result = interpolate_only("{data}", {"data": valid_data})
     parsed = eval(result)
     assert parsed["name"] == "Valid Dataset"
     assert parsed["stats"]["nested"]["deeper"]["b"] == 2.5
 
 
 def test_interpolate_edge_cases():
-    task = Task(
-        description="Test edge cases",
-        expected_output="Edge case handling",
-    )
-
     # Test empty dict and list
-    assert task.interpolate_only("{}", {"data": {}}) == "{}"
-    assert task.interpolate_only("[]", {"data": []}) == "[]"
+    assert interpolate_only("{}", {"data": {}}) == "{}"
+    assert interpolate_only("[]", {"data": []}) == "[]"
 
     # Test numeric types
-    assert task.interpolate_only("{num}", {"num": 42}) == "42"
-    assert task.interpolate_only("{num}", {"num": 3.14}) == "3.14"
+    assert interpolate_only("{num}", {"num": 42}) == "42"
+    assert interpolate_only("{num}", {"num": 3.14}) == "3.14"
 
     # Test boolean values (valid JSON types)
-    assert task.interpolate_only("{flag}", {"flag": True}) == "True"
-    assert task.interpolate_only("{flag}", {"flag": False}) == "False"
+    assert interpolate_only("{flag}", {"flag": True}) == "True"
+    assert interpolate_only("{flag}", {"flag": False}) == "False"
 
 
 def test_interpolate_valid_types():
-    task = Task(
-        description="Test valid types including null and boolean",
-        expected_output="Should pass validation",
-    )
-
     # Test with boolean and null values (valid JSON types)
     valid_data = {
         "name": "Test",
@@ -1346,7 +1299,7 @@ def test_interpolate_valid_types():
         "nested": {"flag": True, "empty": None},
     }
 
-    result = task.interpolate_only("{data}", {"data": valid_data})
+    result = interpolate_only("{data}", {"data": valid_data})
     parsed = eval(result)
 
     assert parsed["active"] is True
@@ -1354,3 +1307,116 @@ def test_interpolate_valid_types():
     assert parsed["optional"] is None
     assert parsed["nested"]["flag"] is True
     assert parsed["nested"]["empty"] is None
+
+
+def test_task_with_no_max_execution_time():
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+        max_execution_time=None,
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+    )
+
+    with patch.object(Agent, "_execute_without_timeout", return_value="ok") as execute:
+        result = task.execute_sync(agent=researcher)
+        assert result.raw == "ok"
+        execute.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_with_max_execution_time():
+    from crewai.tools import tool
+
+    """Test that execution raises TimeoutError when max_execution_time is exceeded."""
+
+    @tool("what amazing tool", result_as_answer=True)
+    def my_tool() -> str:
+        "My tool"
+        time.sleep(1)
+        return "okay"
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents. Use the tool provided to you.",
+        backstory=(
+            "You're an expert researcher, specialized in technology, software engineering, AI and startups. "
+            "You work as a freelancer and are now working on doing research and analysis for a new customer."
+        ),
+        allow_delegation=False,
+        tools=[my_tool],
+        max_execution_time=4,
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+    )
+
+    result = task.execute_sync(agent=researcher)
+    assert result.raw == "okay"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_with_max_execution_time_exceeded():
+    from crewai.tools import tool
+
+    """Test that execution raises TimeoutError when max_execution_time is exceeded."""
+
+    @tool("what amazing tool", result_as_answer=True)
+    def my_tool() -> str:
+        "My tool"
+        time.sleep(10)
+        return "okay"
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents. Use the tool provided to you.",
+        backstory=(
+            "You're an expert researcher, specialized in technology, software engineering, AI and startups. "
+            "You work as a freelancer and are now working on doing research and analysis for a new customer."
+        ),
+        allow_delegation=False,
+        tools=[my_tool],
+        max_execution_time=1,
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+    )
+
+    with pytest.raises(TimeoutError):
+        task.execute_sync(agent=researcher)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_interpolation_with_hyphens():
+    agent = Agent(
+        role="Researcher",
+        goal="be an assistant that responds with {interpolation-with-hyphens}",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="be an assistant that responds with {interpolation-with-hyphens}",
+        expected_output="The response should be addressing: {interpolation-with-hyphens}",
+        agent=agent,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        verbose=True,
+    )
+    result = crew.kickoff(inputs={"interpolation-with-hyphens": "say hello world"})
+    assert "say hello world" in task.prompt()
+
+    assert result.raw == "Hello, World!"

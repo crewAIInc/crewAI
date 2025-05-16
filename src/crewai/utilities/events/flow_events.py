@@ -2,10 +2,10 @@ from typing import Any, Dict, Optional, Union
 
 from pydantic import BaseModel, ConfigDict
 
-from .base_events import CrewEvent
+from .base_events import BaseEvent
 
 
-class FlowEvent(CrewEvent):
+class FlowEvent(BaseEvent):
     """Base class for all flow events"""
 
     type: str

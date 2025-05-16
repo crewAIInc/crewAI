@@ -87,15 +87,20 @@ Follow the steps below to get Crewing! 🚣‍♂️
     from crewai import Agent, Crew, Process, Task
     from crewai.project import CrewBase, agent, crew, task
     from crewai_tools import SerperDevTool
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from typing import List
 
     @CrewBase
     class LatestAiDevelopmentCrew():
       """LatestAiDevelopment crew"""
 
+      agents: List[BaseAgent]
+      tasks: List[Task]
+
       @agent
       def researcher(self) -> Agent:
         return Agent(
-          config=self.agents_config['researcher'],
+          config=self.agents_config['researcher'], # type: ignore[index]
           verbose=True,
           tools=[SerperDevTool()]
         )
@@ -103,20 +108,20 @@ Follow the steps below to get Crewing! 🚣‍♂️
       @agent
       def reporting_analyst(self) -> Agent:
         return Agent(
-          config=self.agents_config['reporting_analyst'],
+          config=self.agents_config['reporting_analyst'], # type: ignore[index]
           verbose=True
         )
 
       @task
       def research_task(self) -> Task:
         return Task(
-          config=self.tasks_config['research_task'],
+          config=self.tasks_config['research_task'], # type: ignore[index]
         )
 
       @task
       def reporting_task(self) -> Task:
         return Task(
-          config=self.tasks_config['reporting_task'],
+          config=self.tasks_config['reporting_task'], # type: ignore[index]
           output_file='output/report.md' # This is the file that will be contain the final report.
         )
 
@@ -175,8 +180,9 @@ Follow the steps below to get Crewing! 🚣‍♂️
   </Step>
   <Step title="Set your environment variables">
   Before running your crew, make sure you have the following keys set as environment variables in your `.env` file:
-    - An [OpenAI API key](https://platform.openai.com/account/api-keys) (or other LLM API key): `OPENAI_API_KEY=sk-...`
     - A [Serper.dev](https://serper.dev/) API key: `SERPER_API_KEY=YOUR_KEY_HERE`
+    - The configuration for your choice of model, such as an API key. See the
+        [LLM setup guide](/concepts/llms#setting-up-your-llm) to learn how to configure models from any provider.
   </Step>
   <Step title="Lock and install the dependencies">
     - Lock the dependencies and install them by using the CLI command:
@@ -199,6 +205,22 @@ Follow the steps below to get Crewing! 🚣‍♂️
         crewai run
         ```
       </CodeGroup>
+  </Step>
+
+  <Step title="Enterprise Alternative: Create in Crew Studio">
+  For CrewAI Enterprise users, you can create the same crew without writing code:
+
+  1. Log in to your CrewAI Enterprise account (create a free account at [app.crewai.com](https://app.crewai.com))
+  2. Open Crew Studio
+  3. Type what is the automation you're tryign to build
+  4. Create your tasks visually and connect them in sequence
+  5. Configure your inputs and click "Download Code" or "Deploy"
+
+  ![Crew Studio Quickstart](../images/enterprise/crew-studio-quickstart.png)
+
+  <Card title="Try CrewAI Enterprise" icon="rocket" href="https://app.crewai.com">
+    Start your free account at CrewAI Enterprise
+  </Card>
   </Step>
   <Step title="View your final report">
   You should see the output in the console and the `report.md` file should be created in the root of your project with the final report.
@@ -271,7 +293,7 @@ Follow the steps below to get Crewing! 🚣‍♂️
 </Steps>
 
 <Check>
-Congratulations! 
+Congratulations!
 
 You have successfully set up your crew project and are ready to start building your own agentic workflows!
 </Check>
@@ -296,11 +318,11 @@ email_summarizer:
       Summarize emails into a concise and clear summary
     backstory: >
       You will create a 5 bullet point summary of the report
-    llm: openai/gpt-4o
+    llm: provider/model-id  # Add your choice of model here
 ```
 
 <Tip>
-  Note how we use the same name for the agent in the `tasks.yaml` (`email_summarizer_task`) file as the method name in the `crew.py` (`email_summarizer_task`) file.
+  Note how we use the same name for the task in the `tasks.yaml` (`email_summarizer_task`) file as the method name in the `crew.py` (`email_summarizer_task`) file.
 </Tip>
 
 ```yaml tasks.yaml
@@ -315,9 +337,22 @@ email_summarizer_task:
       - research_task
 ```
 
-## Deploying Your Project
+## Deploying Your Crew
 
-The easiest way to deploy your crew is through [CrewAI Enterprise](http://app.crewai.com), where you can deploy your crew in a few clicks.
+The easiest way to deploy your crew to production is through [CrewAI Enterprise](http://app.crewai.com).
+
+Watch this video tutorial for a step-by-step demonstration of deploying your crew to [CrewAI Enterprise](http://app.crewai.com) using the CLI.
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/3EqSV-CYDZA"
+  title="CrewAI Deployment Guide"
+  frameborder="0"
+  style={{ borderRadius: '10px' }}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
 
 <CardGroup cols={2}>
   <Card

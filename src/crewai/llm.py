@@ -4,9 +4,11 @@ import os
 import sys
 import threading
 import warnings
-from contextlib import contextmanager
+from collections import defaultdict
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from typing import (
     Any,
+    DefaultDict,
     Dict,
     List,
     Literal,
@@ -18,7 +20,8 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-from pydantic import BaseModel
+from litellm.types.utils import ChatCompletionDeltaToolCall
+from pydantic import BaseModel, Field
 
 from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
@@ -27,12 +30,12 @@ from crewai.utilities.events.llm_events import (
     LLMCallType,
     LLMStreamChunkEvent,
 )
-from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
     from litellm import Choices
+    from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
@@ -40,6 +43,10 @@ with warnings.catch_warnings():
     from litellm.utils import supports_response_schema
 
 
+import io
+from typing import TextIO
+
+from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -48,18 +55,23 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 load_dotenv()
 
 
-class FilteredStream:
-    def __init__(self, original_stream):
+class FilteredStream(io.TextIOBase):
+    _lock = None
+
+    def __init__(self, original_stream: TextIO):
         self._original_stream = original_stream
         self._lock = threading.Lock()
 
-    def write(self, s) -> int:
+    def write(self, s: str) -> int:
+        if not self._lock:
+            self._lock = threading.Lock()
+
         with self._lock:
             # Filter out extraneous messages from LiteLLM
             if (
                 "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
                 in s
-                or "LiteLLM.Info: If you need to debug this error, use `litellm.set_verbose=True`"
+                or "LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()`"
                 in s
             ):
                 return 0
@@ -76,14 +88,26 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4o": 128000,
     "gpt-4o-mini": 128000,
     "gpt-4-turbo": 128000,
+    "gpt-4.1": 1047576,  # Based on official docs
+    "gpt-4.1-mini-2025-04-14": 1047576,
+    "gpt-4.1-nano-2025-04-14": 1047576,
     "o1-preview": 128000,
     "o1-mini": 128000,
     "o3-mini": 200000,  # Based on official o3-mini specifications
     # gemini
     "gemini-2.0-flash": 1048576,
+    "gemini-2.0-flash-thinking-exp-01-21": 32768,
+    "gemini-2.0-flash-lite-001": 1048576,
+    "gemini-2.0-flash-001": 1048576,
+    "gemini-2.5-flash-preview-04-17": 1048576,
+    "gemini-2.5-pro-exp-03-25": 1048576,
     "gemini-1.5-pro": 2097152,
     "gemini-1.5-flash": 1048576,
     "gemini-1.5-flash-8b": 1048576,
+    "gemini/gemma-3-1b-it": 32000,
+    "gemini/gemma-3-4b-it": 128000,
+    "gemini/gemma-3-12b-it": 128000,
+    "gemini/gemma-3-27b-it": 128000,
     # deepseek
     "deepseek-chat": 128000,
     # groq
@@ -114,6 +138,60 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "Llama-3.2-11B-Vision-Instruct": 16384,
     "Meta-Llama-3.2-3B-Instruct": 4096,
     "Meta-Llama-3.2-1B-Instruct": 16384,
+    # bedrock
+    "us.amazon.nova-pro-v1:0": 300000,
+    "us.amazon.nova-micro-v1:0": 128000,
+    "us.amazon.nova-lite-v1:0": 300000,
+    "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
+    "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "us.anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
+    "us.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "us.anthropic.claude-3-opus-20240229-v1:0": 200000,
+    "us.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "us.meta.llama3-2-11b-instruct-v1:0": 128000,
+    "us.meta.llama3-2-3b-instruct-v1:0": 131000,
+    "us.meta.llama3-2-90b-instruct-v1:0": 128000,
+    "us.meta.llama3-2-1b-instruct-v1:0": 131000,
+    "us.meta.llama3-1-8b-instruct-v1:0": 128000,
+    "us.meta.llama3-1-70b-instruct-v1:0": 128000,
+    "us.meta.llama3-3-70b-instruct-v1:0": 128000,
+    "us.meta.llama3-1-405b-instruct-v1:0": 128000,
+    "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
+    "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
+    "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "amazon.nova-pro-v1:0": 300000,
+    "amazon.nova-micro-v1:0": 128000,
+    "amazon.nova-lite-v1:0": 300000,
+    "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
+    "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
+    "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
+    "anthropic.claude-3-7-sonnet-20250219-v1:0": 200000,
+    "anthropic.claude-3-sonnet-20240229-v1:0": 200000,
+    "anthropic.claude-3-opus-20240229-v1:0": 200000,
+    "anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    "anthropic.claude-v2:1": 200000,
+    "anthropic.claude-v2": 100000,
+    "anthropic.claude-instant-v1": 100000,
+    "meta.llama3-1-405b-instruct-v1:0": 128000,
+    "meta.llama3-1-70b-instruct-v1:0": 128000,
+    "meta.llama3-1-8b-instruct-v1:0": 128000,
+    "meta.llama3-70b-instruct-v1:0": 8000,
+    "meta.llama3-8b-instruct-v1:0": 8000,
+    "amazon.titan-text-lite-v1": 4000,
+    "amazon.titan-text-express-v1": 8000,
+    "cohere.command-text-v14": 4000,
+    "ai21.j2-mid-v1": 8191,
+    "ai21.j2-ultra-v1": 8191,
+    "ai21.jamba-instruct-v1:0": 256000,
+    "mistral.mistral-7b-instruct-v0:2": 32000,
+    "mistral.mixtral-8x7b-instruct-v0:1": 32000,
     # mistral
     "mistral-tiny": 32768,
     "mistral-small-latest": 32768,
@@ -142,15 +220,11 @@ def suppress_warnings():
         )
 
         # Redirect stdout and stderr
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
-        sys.stdout = FilteredStream(old_stdout)
-        sys.stderr = FilteredStream(old_stderr)
-        try:
+        with (
+            redirect_stdout(FilteredStream(sys.stdout)),
+            redirect_stderr(FilteredStream(sys.stderr)),
+        ):
             yield
-        finally:
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
 
 
 class Delta(TypedDict):
@@ -164,7 +238,16 @@ class StreamingChoices(TypedDict):
     finish_reason: Optional[str]
 
 
-class LLM:
+class FunctionArgs(BaseModel):
+    name: str = ""
+    arguments: str = ""
+
+
+class AccumulatedToolArgs(BaseModel):
+    function: FunctionArgs = Field(default_factory=FunctionArgs)
+
+
+class LLM(BaseLLM):
     def __init__(
         self,
         model: str,
@@ -316,6 +399,11 @@ class LLM:
         last_chunk = None
         chunk_count = 0
         usage_info = None
+        tool_calls = None
+
+        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs] = defaultdict(
+            AccumulatedToolArgs
+        )
 
         # --- 2) Make sure stream is set to True and include usage metrics
         params["stream"] = True
@@ -373,6 +461,20 @@ class LLM:
                             if chunk_content is None and isinstance(delta, dict):
                                 # Some models might send empty content chunks
                                 chunk_content = ""
+
+                            # Enable tool calls using streaming
+                            if "tool_calls" in delta:
+                                tool_calls = delta["tool_calls"]
+
+                                if tool_calls:
+                                    result = self._handle_streaming_tool_calls(
+                                        tool_calls=tool_calls,
+                                        accumulated_tool_args=accumulated_tool_args,
+                                        available_functions=available_functions,
+                                    )
+                                    if result is not None:
+                                        chunk_content = result
+
                 except Exception as e:
                     logging.debug(f"Error extracting content from chunk: {e}")
                     logging.debug(f"Chunk format: {type(chunk)}, content: {chunk}")
@@ -383,11 +485,11 @@ class LLM:
                     full_response += chunk_content
 
                     # Emit the chunk event
+                    assert hasattr(crewai_event_bus, "emit")
                     crewai_event_bus.emit(
                         self,
                         event=LLMStreamChunkEvent(chunk=chunk_content),
                     )
-
             # --- 4) Fallback to non-streaming if no content received
             if not full_response.strip() and chunk_count == 0:
                 logging.warning(
@@ -446,7 +548,7 @@ class LLM:
                         )
 
             # --- 6) If still empty, raise an error instead of using a default response
-            if not full_response.strip():
+            if not full_response.strip() and len(accumulated_tool_args) == 0:
                 raise Exception(
                     "No content received from streaming response. Received empty chunks or failed to extract content."
                 )
@@ -478,8 +580,8 @@ class LLM:
                                 tool_calls = getattr(message, "tool_calls")
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
-
             # --- 8) If no tool calls or no available functions, return the text response directly
+
             if not tool_calls or not available_functions:
                 # Log token usage if available in streaming mode
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
@@ -499,6 +601,11 @@ class LLM:
             self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
             return full_response
 
+        except ContextWindowExceededError as e:
+            # Catch context window errors from litellm and convert them to our own exception type.
+            # This exception is handled by CrewAgentExecutor._invoke_loop() which can then
+            # decide whether to summarize the content or abort based on the respect_context_window flag.
+            raise LLMContextLengthExceededException(str(e))
         except Exception as e:
             logging.error(f"Error in streaming response: {str(e)}")
             if full_response.strip():
@@ -507,11 +614,53 @@ class LLM:
                 return full_response
 
             # Emit failed event and re-raise the exception
+            assert hasattr(crewai_event_bus, "emit")
             crewai_event_bus.emit(
                 self,
                 event=LLMCallFailedEvent(error=str(e)),
             )
             raise Exception(f"Failed to get streaming response: {str(e)}")
+
+    def _handle_streaming_tool_calls(
+        self,
+        tool_calls: List[ChatCompletionDeltaToolCall],
+        accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs],
+        available_functions: Optional[Dict[str, Any]] = None,
+    ) -> None | str:
+        for tool_call in tool_calls:
+            current_tool_accumulator = accumulated_tool_args[tool_call.index]
+
+            if tool_call.function.name:
+                current_tool_accumulator.function.name = tool_call.function.name
+
+            if tool_call.function.arguments:
+                current_tool_accumulator.function.arguments += (
+                    tool_call.function.arguments
+                )
+            assert hasattr(crewai_event_bus, "emit")
+            crewai_event_bus.emit(
+                self,
+                event=LLMStreamChunkEvent(
+                    tool_call=tool_call.to_dict(),
+                    chunk=tool_call.function.arguments,
+                ),
+            )
+
+            if (
+                current_tool_accumulator.function.name
+                and current_tool_accumulator.function.arguments
+                and available_functions
+            ):
+                try:
+                    json.loads(current_tool_accumulator.function.arguments)
+
+                    return self._handle_tool_call(
+                        [current_tool_accumulator],
+                        available_functions,
+                    )
+                except json.JSONDecodeError:
+                    continue
+        return None
 
     def _handle_streaming_callbacks(
         self,
@@ -572,7 +721,16 @@ class LLM:
             str: The response text
         """
         # --- 1) Make the completion call
-        response = litellm.completion(**params)
+        try:
+            # Attempt to make the completion call, but catch context window errors
+            # and convert them to our own exception type for consistent handling
+            # across the codebase. This allows CrewAgentExecutor to handle context
+            # length issues appropriately.
+            response = litellm.completion(**params)
+        except ContextWindowExceededError as e:
+            # Convert litellm's context window error to our own exception type
+            # for consistent handling in the rest of the codebase
+            raise LLMContextLengthExceededException(str(e))
 
         # --- 2) Extract response message and content
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
@@ -652,15 +810,7 @@ class LLM:
                     function_name, lambda: None
                 )  # Ensure fn is always a callable
                 logging.error(f"Error executing function '{function_name}': {e}")
-                crewai_event_bus.emit(
-                    self,
-                    event=ToolExecutionErrorEvent(
-                        tool_name=function_name,
-                        tool_args=function_args,
-                        tool_class=fn,
-                        error=str(e),
-                    ),
-                )
+                assert hasattr(crewai_event_bus, "emit")
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),
@@ -698,6 +848,7 @@ class LLM:
             LLMContextLengthExceededException: If input exceeds model's context limit
         """
         # --- 1) Emit call started event
+        assert hasattr(crewai_event_bus, "emit")
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
@@ -740,15 +891,18 @@ class LLM:
                         params, callbacks, available_functions
                     )
 
+            except LLMContextLengthExceededException:
+                # Re-raise LLMContextLengthExceededException as it should be handled
+                # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                # whether to summarize the content or abort based on the respect_context_window flag
+                raise
             except Exception as e:
+                assert hasattr(crewai_event_bus, "emit")
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=str(e)),
                 )
-                if not LLMContextLengthExceededException(
-                    str(e)
-                )._is_context_limit_error(str(e)):
-                    logging.error(f"LiteLLM call failed: {str(e)}")
+                logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
     def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):
@@ -758,6 +912,7 @@ class LLM:
             response (str): The response from the LLM call.
             call_type (str): The type of call, either "tool_call" or "llm_call".
         """
+        assert hasattr(crewai_event_bus, "emit")
         crewai_event_bus.emit(
             self,
             event=LLMCallCompletedEvent(response=response, call_type=call_type),

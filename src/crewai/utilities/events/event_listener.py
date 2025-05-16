@@ -8,6 +8,14 @@ from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
 from crewai.utilities.constants import EMITTER_COLOR
 from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.utilities.events.knowledge_events import (
+    KnowledgeQueryCompletedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeQueryStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeSearchQueryFailedEvent,
+)
 from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
@@ -16,7 +24,13 @@ from crewai.utilities.events.llm_events import (
 )
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 
-from .agent_events import AgentExecutionCompletedEvent, AgentExecutionStartedEvent
+from .agent_events import (
+    AgentExecutionCompletedEvent,
+    AgentExecutionStartedEvent,
+    LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionErrorEvent,
+    LiteAgentExecutionStartedEvent,
+)
 from .crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
@@ -51,6 +65,8 @@ class EventListener(BaseEventListener):
     execution_spans: Dict[Task, Any] = Field(default_factory=dict)
     next_chunk = 0
     text_stream = StringIO()
+    knowledge_retrieval_in_progress = False
+    knowledge_query_in_progress = False
 
     def __new__(cls):
         if cls._instance is None:
@@ -65,7 +81,7 @@ class EventListener(BaseEventListener):
             self._telemetry.set_tracer()
             self.execution_spans = {}
             self._initialized = True
-            self.formatter = ConsoleFormatter()
+            self.formatter = ConsoleFormatter(verbose=True)
 
     # ----------- CREW EVENTS -----------
 
@@ -169,6 +185,36 @@ class EventListener(BaseEventListener):
                 self.formatter.current_agent_branch,
                 event.agent.role,
                 self.formatter.current_crew_tree,
+            )
+
+        # ----------- LITE AGENT EVENTS -----------
+
+        @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
+        def on_lite_agent_execution_started(
+            source, event: LiteAgentExecutionStartedEvent
+        ):
+            """Handle LiteAgent execution started event."""
+            self.formatter.handle_lite_agent_execution(
+                event.agent_info["role"], status="started", **event.agent_info
+            )
+
+        @crewai_event_bus.on(LiteAgentExecutionCompletedEvent)
+        def on_lite_agent_execution_completed(
+            source, event: LiteAgentExecutionCompletedEvent
+        ):
+            """Handle LiteAgent execution completed event."""
+            self.formatter.handle_lite_agent_execution(
+                event.agent_info["role"], status="completed", **event.agent_info
+            )
+
+        @crewai_event_bus.on(LiteAgentExecutionErrorEvent)
+        def on_lite_agent_execution_error(source, event: LiteAgentExecutionErrorEvent):
+            """Handle LiteAgent execution error event."""
+            self.formatter.handle_lite_agent_execution(
+                event.agent_info["role"],
+                status="failed",
+                error=event.error,
+                **event.agent_info,
             )
 
         # ----------- FLOW EVENTS -----------
@@ -305,6 +351,60 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(CrewTestFailedEvent)
         def on_crew_test_failed(source, event: CrewTestFailedEvent):
             self.formatter.handle_crew_test_failed(event.crew_name or "Crew")
+
+        @crewai_event_bus.on(KnowledgeRetrievalStartedEvent)
+        def on_knowledge_retrieval_started(
+            source, event: KnowledgeRetrievalStartedEvent
+        ):
+            if self.knowledge_retrieval_in_progress:
+                return
+
+            self.knowledge_retrieval_in_progress = True
+
+            self.formatter.handle_knowledge_retrieval_started(
+                self.formatter.current_agent_branch,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(KnowledgeRetrievalCompletedEvent)
+        def on_knowledge_retrieval_completed(
+            source, event: KnowledgeRetrievalCompletedEvent
+        ):
+            if not self.knowledge_retrieval_in_progress:
+                return
+
+            self.knowledge_retrieval_in_progress = False
+            self.formatter.handle_knowledge_retrieval_completed(
+                self.formatter.current_agent_branch,
+                self.formatter.current_crew_tree,
+                event.retrieved_knowledge,
+            )
+
+        @crewai_event_bus.on(KnowledgeQueryStartedEvent)
+        def on_knowledge_query_started(source, event: KnowledgeQueryStartedEvent):
+            pass
+
+        @crewai_event_bus.on(KnowledgeQueryFailedEvent)
+        def on_knowledge_query_failed(source, event: KnowledgeQueryFailedEvent):
+            self.formatter.handle_knowledge_query_failed(
+                self.formatter.current_agent_branch,
+                event.error,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(KnowledgeQueryCompletedEvent)
+        def on_knowledge_query_completed(source, event: KnowledgeQueryCompletedEvent):
+            pass
+
+        @crewai_event_bus.on(KnowledgeSearchQueryFailedEvent)
+        def on_knowledge_search_query_failed(
+            source, event: KnowledgeSearchQueryFailedEvent
+        ):
+            self.formatter.handle_knowledge_search_query_failed(
+                self.formatter.current_agent_branch,
+                event.error,
+                self.formatter.current_crew_tree,
+            )
 
 
 event_listener = EventListener()
