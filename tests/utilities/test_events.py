@@ -158,10 +158,10 @@ def test_crew_emits_test_kickoff_type_event():
     assert received_events[0].type == "crew_test_started"
     assert received_events[1].crew_name == "TestCrew"
     assert isinstance(received_events[1].timestamp, datetime)
-    assert received_events[1].type == "crew_test_completed"
+    assert received_events[1].type == "crew_test_result"
     assert received_events[2].crew_name == "TestCrew"
     assert isinstance(received_events[2].timestamp, datetime)
-    assert received_events[2].type == "crew_test_result"
+    assert received_events[2].type == "crew_test_completed"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
