@@ -1202,7 +1202,6 @@ class Crew(FlowTrackable, BaseModel):
             "_long_term_memory",
             "_entity_memory",
             "_external_memory",
-            "_telemetry",
             "agents",
             "tasks",
             "knowledge_sources",
