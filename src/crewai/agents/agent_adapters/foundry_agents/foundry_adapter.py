@@ -1,5 +1,6 @@
 from typing import Any, List, Optional
-
+import os
+import time
 from pydantic import Field, PrivateAttr
 
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
@@ -18,7 +19,7 @@ from crewai.utilities.events.agent_events import (
 )
 
 try:
-    from azure.ai.projects import AIProjectClient as FoundryAgent
+    from azure.ai.projects import AIProjectClient as FoundryClient
     from azure.ai.projects.models import MessageTextContent
     from azure.identity import DefaultAzureCredential
 
@@ -35,13 +36,14 @@ class FoundryAgentAdapter(BaseAgentAdapter):
 
     model_config = {"arbitrary_types_allowed": True}
 
-    _foundry_agent: "FoundryAgent" = PrivateAttr()
+    _foundry_client: "FoundryClient" = PrivateAttr()
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger())
-    _active_thread: Optional[str] = PrivateAttr(default=None)
+    _active_thread_id: Optional[str] = PrivateAttr(default=None)
     function_calling_llm: Any = Field(default=None)
     step_callback: Any = Field(default=None)
     _tool_adapter: "FoundryAgentToolAdapter" = PrivateAttr()
     _converter_adapter: FoundryConverterAdapter = PrivateAttr()
+    _converted_tools: List[Any] = PrivateAttr(default=[])
 
     def __init__(
         self,
@@ -110,35 +112,18 @@ class FoundryAgentAdapter(BaseAgentAdapter):
         )
 
         try:
-            from azure.ai.projects import AIProjectClient
-            from azure.ai.projects.models import MessageTextContent
-            from azure.identity import DefaultAzureCredential
-            import os, time
-
-            project_client = AIProjectClient.from_connection_string(
-                credential=DefaultAzureCredential(),
-                conn_str=os.environ["PROJECT_CONNECTION_STRING"],
-            )
-
-            agent = project_client.agents.create_agent(
-                model=self.llm,
-                name=self.role or "crewai-agent",
-                instructions=self._build_system_prompt(),
-            )
-
-            thread = project_client.agents.create_thread()
-            message = project_client.agents.create_message(
-                thread_id=thread.id,
+            self._foundry_client.agents.create_message(
+                thread_id=self._active_thread_id,
                 role="user",
                 content=task_prompt,
             )
 
-            run = project_client.agents.create_run(thread_id=thread.id, agent_id=agent.id)
+            run = self._foundry_client.agents.create_run(thread_id=self._active_thread_id, agent_id=self._foundry_agent_id)
             while run.status in ["queued", "in_progress", "requires_action"]:
                 time.sleep(1)
-                run = project_client.agents.get_run(thread_id=thread.id, run_id=run.id)
+                run = self._foundry_client.agents.get_run(thread_id=self._active_thread_id, run_id=run.id)
 
-            messages = project_client.agents.list_messages(thread_id=thread.id)
+            messages = self._foundry_client.agents.list_messages(thread_id=self._active_thread_id)
             final_answer = messages.data[0].content[0]['text']['value']
 
             crewai_event_bus.emit(
@@ -160,6 +145,17 @@ class FoundryAgentAdapter(BaseAgentAdapter):
 
 
     def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
+        self._foundry_client = FoundryClient.from_connection_string(
+            credential=DefaultAzureCredential(),
+            conn_str=os.environ["PROJECT_CONNECTION_STRING"],
+        )
+        agent = self._foundry_client.agents.create_agent(
+            model=self.llm,
+            name=self.role or "crewai-agent",
+            instructions=self._build_system_prompt(),
+        )
+        self._foundry_agent_id = agent.id
+        self._active_thread_id = self._foundry_client.agents.create_thread().id
         self.configure_tools(tools)
 
 
@@ -168,7 +164,7 @@ class FoundryAgentAdapter(BaseAgentAdapter):
         if tools:
             self._tool_adapter.configure_tools(tools)
             if self._tool_adapter.converted_tools:
-                self._foundry_agent.tools = self._tool_adapter.converted_tools
+                self._converted_tools = self._tool_adapter.converted_tools
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support"""
