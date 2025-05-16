@@ -1,10 +1,12 @@
-from typing import List
-
-from crewai.task import Task
-from crewai.tasks.task_output import TaskOutput
+from typing import TYPE_CHECKING, List
 
 
-def aggregate_raw_outputs_from_task_outputs(task_outputs: List[TaskOutput]) -> str:
+if TYPE_CHECKING:
+    from crewai.task import Task
+    from crewai.tasks.task_output import TaskOutput
+
+
+def aggregate_raw_outputs_from_task_outputs(task_outputs: List["TaskOutput"]) -> str:
     """Generate string context from the task outputs."""
     dividers = "\n\n----------\n\n"
 
@@ -13,8 +15,13 @@ def aggregate_raw_outputs_from_task_outputs(task_outputs: List[TaskOutput]) -> s
     return context
 
 
-def aggregate_raw_outputs_from_tasks(tasks: List[Task]) -> str:
+def aggregate_raw_outputs_from_tasks(tasks: List["Task"]) -> str:
     """Generate string context from the tasks."""
-    task_outputs = [task.output for task in tasks if task.output is not None]
+
+    task_outputs = (
+        [task.output for task in tasks if task.output is not None]
+        if isinstance(tasks, list)
+        else []
+    )
 
     return aggregate_raw_outputs_from_task_outputs(task_outputs)

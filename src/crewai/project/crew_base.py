@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(level=logging.WARNING)
-
 T = TypeVar("T", bound=type)
 
 """Base decorator for creating crew classes with configuration and function management."""
@@ -137,13 +135,11 @@ def CrewBase(cls: T) -> T:
                 all_functions, "is_cache_handler"
             )
             callbacks = self._filter_functions(all_functions, "is_callback")
-            agents = self._filter_functions(all_functions, "is_agent")
 
             for agent_name, agent_info in self.agents_config.items():
                 self._map_agent_variables(
                     agent_name,
                     agent_info,
-                    agents,
                     llms,
                     tool_functions,
                     cache_handler_functions,
@@ -154,7 +150,6 @@ def CrewBase(cls: T) -> T:
             self,
             agent_name: str,
             agent_info: Dict[str, Any],
-            agents: Dict[str, Callable],
             llms: Dict[str, Callable],
             tool_functions: Dict[str, Callable],
             cache_handler_functions: Dict[str, Callable],
@@ -172,9 +167,10 @@ def CrewBase(cls: T) -> T:
                 ]
 
             if function_calling_llm := agent_info.get("function_calling_llm"):
-                self.agents_config[agent_name]["function_calling_llm"] = agents[
-                    function_calling_llm
-                ]()
+                try:
+                    self.agents_config[agent_name]["function_calling_llm"] = llms[function_calling_llm]()
+                except KeyError:
+                    self.agents_config[agent_name]["function_calling_llm"] = function_calling_llm
 
             if step_callback := agent_info.get("step_callback"):
                 self.agents_config[agent_name]["step_callback"] = callbacks[
@@ -249,6 +245,9 @@ def CrewBase(cls: T) -> T:
                 self.tasks_config[task_name]["callbacks"] = [
                     callback_functions[callback]() for callback in callbacks
                 ]
+
+            if guardrail := task_info.get("guardrail"):
+                self.tasks_config[task_name]["guardrail"] = guardrail
 
     # Include base class (qual)name in the wrapper class (qual)name.
     WrappedClass.__name__ = CrewBase.__name__ + "(" + cls.__name__ + ")"

@@ -124,7 +124,9 @@ class ToolCommand(PlusAPIMixin, BaseCommand):
 
         published_handle = publish_response.json()["handle"]
         console.print(
-            f"Successfully published {published_handle} ({project_version}).\nInstall it in other projects with crewai tool install {published_handle}",
+            f"Successfully published `{published_handle}` ({project_version}).\n\n"
+            + "⚠️ Security checks are running in the background. Your tool will be available once these are complete.\n"
+            + f"You can monitor the status or access your tool here:\nhttps://app.crewai.com/crewai_plus/tools/{published_handle}",
             style="bold green",
         )
 
@@ -160,8 +162,12 @@ class ToolCommand(PlusAPIMixin, BaseCommand):
         login_response_json = login_response.json()
 
         settings = Settings()
-        settings.tool_repository_username = login_response_json["credential"]["username"]
-        settings.tool_repository_password = login_response_json["credential"]["password"]
+        settings.tool_repository_username = login_response_json["credential"][
+            "username"
+        ]
+        settings.tool_repository_password = login_response_json["credential"][
+            "password"
+        ]
         settings.dump()
 
         console.print(
@@ -186,7 +192,7 @@ class ToolCommand(PlusAPIMixin, BaseCommand):
             capture_output=False,
             env=self._build_env_with_credentials(repository_handle),
             text=True,
-            check=True
+            check=True,
         )
 
         if add_package_result.stderr:
@@ -211,7 +217,11 @@ class ToolCommand(PlusAPIMixin, BaseCommand):
         settings = Settings()
 
         env = os.environ.copy()
-        env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(settings.tool_repository_username or "")
-        env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(settings.tool_repository_password or "")
+        env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(
+            settings.tool_repository_username or ""
+        )
+        env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(
+            settings.tool_repository_password or ""
+        )
 
         return env

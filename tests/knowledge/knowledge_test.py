@@ -547,6 +547,7 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
+@pytest.mark.vcr
 def test_docling_source(mock_vector_db):
     docling_source = CrewDoclingSource(
         file_paths=[
@@ -567,6 +568,7 @@ def test_docling_source(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
+@pytest.mark.vcr
 def test_multiple_docling_sources():
     urls: List[Union[Path, str]] = [
         "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",

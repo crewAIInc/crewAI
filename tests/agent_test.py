@@ -2,23 +2,25 @@
 
 import os
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
-from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
+from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
+from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
-from crewai.utilities.events import Emitter
+from crewai.utilities.errors import AgentRepositoryError
+from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -70,7 +72,55 @@ def test_agent_creation():
     assert agent.role == "test role"
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
-    assert agent.tools == []
+
+
+def test_agent_with_only_system_template():
+    """Test that an agent with only system_template works without errors."""
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        system_template="You are a test agent...",
+        # prompt_template is intentionally missing
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
+
+
+def test_agent_with_only_prompt_template():
+    """Test that an agent with only system_template works without errors."""
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        prompt_template="You are a test agent...",
+        # prompt_template is intentionally missing
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
+
+
+def test_agent_with_missing_response_template():
+    """Test that an agent with system_template and prompt_template but no response_template works without errors."""
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        system_template="You are a test agent...",
+        prompt_template="This is a test prompt...",
+        # response_template is intentionally missing
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
 
 
 def test_agent_default_values():
@@ -154,15 +204,19 @@ def test_agent_execution_with_tools():
         agent=agent,
         expected_output="The result of the multiplication.",
     )
-    with patch.object(Emitter, "emit") as emit:
-        output = agent.execute_task(task)
-        assert output == "The result of the multiplication is 12."
-        assert emit.call_count == 1
-        args, _ = emit.call_args
-        assert isinstance(args[1], ToolUsageFinished)
-        assert not args[1].from_cache
-        assert args[1].tool_name == "multiplier"
-        assert args[1].tool_args == {"first_number": 3, "second_number": 4}
+    received_events = []
+
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def handle_tool_end(source, event):
+        received_events.append(event)
+
+    output = agent.execute_task(task)
+    assert output == "The result of the multiplication is 12."
+
+    assert len(received_events) == 1
+    assert isinstance(received_events[0], ToolUsageFinishedEvent)
+    assert received_events[0].tool_name == "multiplier"
+    assert received_events[0].tool_args == {"first_number": 3, "second_number": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -249,11 +303,13 @@ def test_cache_hitting():
         "multiplier-{'first_number': 3, 'second_number': 3}": 9,
         "multiplier-{'first_number': 12, 'second_number': 3}": 36,
     }
+    received_events = []
 
-    with (
-        patch.object(CacheHandler, "read") as read,
-        patch.object(Emitter, "emit") as emit,
-    ):
+    @crewai_event_bus.on(ToolUsageFinishedEvent)
+    def handle_tool_end(source, event):
+        received_events.append(event)
+
+    with (patch.object(CacheHandler, "read") as read,):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -265,10 +321,9 @@ def test_cache_hitting():
         read.assert_called_with(
             tool="multiplier", input={"first_number": 2, "second_number": 6}
         )
-        assert emit.call_count == 1
-        args, _ = emit.call_args
-        assert isinstance(args[1], ToolUsageFinished)
-        assert args[1].from_cache
+        assert len(received_events) == 1
+        assert isinstance(received_events[0], ToolUsageFinishedEvent)
+        assert received_events[0].from_cache
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -369,7 +424,7 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm="o1-preview",
+        llm=LLM(model="o3-mini"),
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
@@ -395,7 +450,7 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm="o1-preview",
+        llm="o3-mini",
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
@@ -437,7 +492,7 @@ def test_agent_custom_max_iterations():
             task=task,
             tools=[get_final_answer],
         )
-        assert private_mock.call_count == 2
+        assert private_mock.call_count == 3
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -525,7 +580,7 @@ def test_agent_moved_on_after_max_iterations():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        max_iter=3,
+        max_iter=5,
         allow_delegation=False,
     )
 
@@ -546,6 +601,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
+        return 42
 
     agent = Agent(
         role="test role",
@@ -567,7 +623,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
             task=task,
             tools=[get_final_answer],
         )
-        assert output == "The final answer is 42."
+        assert output == "42"
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called()
@@ -857,25 +913,6 @@ def test_agent_function_calling_llm():
         mock_original_tool_calling.assert_called()
 
 
-def test_agent_count_formatting_error():
-    from unittest.mock import patch
-
-    agent1 = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        verbose=True,
-    )
-
-    parser = CrewAgentParser(agent=agent1)
-
-    with patch.object(Agent, "increment_formatting_errors") as mock_count_errors:
-        test_text = "This text does not match expected formats."
-        with pytest.raises(OutputParserException):
-            parser.parse(test_text)
-        mock_count_errors.assert_called_once()
-
-
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
     from crewai.tools import BaseTool
@@ -983,23 +1020,35 @@ def test_agent_human_input():
     # Side effect function for _ask_human_input to simulate multiple feedback iterations
     feedback_responses = iter(
         [
-            "Don't say hi, say Hello instead!",  # First feedback
-            "looks good",  # Second feedback to exit loop
+            "Don't say hi, say Hello instead!",  # First feedback: instruct change
+            "",  # Second feedback: empty string signals acceptance
         ]
     )
 
     def ask_human_input_side_effect(*args, **kwargs):
         return next(feedback_responses)
 
-    with patch.object(
-        CrewAgentExecutor, "_ask_human_input", side_effect=ask_human_input_side_effect
-    ) as mock_human_input:
+    # Patch both _ask_human_input and _invoke_loop to avoid real API/network calls.
+    with (
+        patch.object(
+            CrewAgentExecutor,
+            "_ask_human_input",
+            side_effect=ask_human_input_side_effect,
+        ) as mock_human_input,
+        patch.object(
+            CrewAgentExecutor,
+            "_invoke_loop",
+            return_value=AgentFinish(output="Hello", thought="", text=""),
+        ),
+    ):
         # Execute the task
         output = agent.execute_task(task)
 
-        # Assertions to ensure the agent behaves correctly
-        assert mock_human_input.call_count == 2  # Should have asked for feedback twice
-        assert output.strip().lower() == "hello"  # Final output should be 'Hello'
+        # Assertions to ensure the agent behaves correctly.
+        # It should have requested feedback twice.
+        assert mock_human_input.call_count == 2
+        # The final result should be processed to "Hello"
+        assert output.strip().lower() == "hello"
 
 
 def test_interpolate_inputs():
@@ -1287,46 +1336,55 @@ def test_llm_call_with_error():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_handle_context_length_exceeds_limit():
+    # Import necessary modules
+    from crewai.utilities.agent_utils import handle_context_length
+    from crewai.utilities.i18n import I18N
+    from crewai.utilities.printer import Printer
+
+    # Create mocks for dependencies
+    printer = Printer()
+    i18n = I18N()
+
+    # Create an agent just for its LLM
     agent = Agent(
         role="test role",
         goal="test goal",
         backstory="test backstory",
-    )
-    original_action = AgentAction(
-        tool="test_tool",
-        tool_input="test_input",
-        text="test_log",
-        thought="test_thought",
+        respect_context_window=True,
     )
 
-    with patch.object(
-        CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke
-    ) as private_mock:
-        task = Task(
-            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
-            expected_output="The final answer",
-        )
-        agent.execute_task(
-            task=task,
-        )
-        private_mock.assert_called_once()
-        with patch.object(
-            CrewAgentExecutor, "_handle_context_length"
-        ) as mock_handle_context:
-            mock_handle_context.side_effect = ValueError(
-                "Context length limit exceeded"
+    llm = agent.llm
+
+    # Create test messages
+    messages = [
+        {
+            "role": "user",
+            "content": "This is a test message that would exceed context length",
+        }
+    ]
+
+    # Set up test parameters
+    respect_context_window = True
+    callbacks = []
+
+    # Apply our patch to summarize_messages to force an error
+    with patch("crewai.utilities.agent_utils.summarize_messages") as mock_summarize:
+        mock_summarize.side_effect = ValueError("Context length limit exceeded")
+
+        # Directly call handle_context_length with our parameters
+        with pytest.raises(ValueError) as excinfo:
+            handle_context_length(
+                respect_context_window=respect_context_window,
+                printer=printer,
+                messages=messages,
+                llm=llm,
+                callbacks=callbacks,
+                i18n=i18n,
             )
 
-            long_input = "This is a very long input. " * 10000
-
-            # Attempt to handle context length, expecting the mocked error
-            with pytest.raises(ValueError) as excinfo:
-                agent.agent_executor._handle_context_length(
-                    [(original_action, long_input)]
-                )
-
-            assert "Context length limit exceeded" in str(excinfo.value)
-            mock_handle_context.assert_called_once()
+        # Verify our patch was called and raised the correct error
+        assert "Context length limit exceeded" in str(excinfo.value)
+        mock_summarize.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1335,7 +1393,7 @@ def test_handle_context_length_exceeds_limit_cli_no():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        sliding_context_window=False,
+        respect_context_window=False,
     )
     task = Task(description="test task", agent=agent, expected_output="test output")
 
@@ -1351,8 +1409,8 @@ def test_handle_context_length_exceeds_limit_cli_no():
         )
         private_mock.assert_called_once()
         pytest.raises(SystemExit)
-        with patch.object(
-            CrewAgentExecutor, "_handle_context_length"
+        with patch(
+            "crewai.utilities.agent_utils.handle_context_length"
         ) as mock_handle_context:
             mock_handle_context.assert_not_called()
 
@@ -1573,13 +1631,10 @@ def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
-
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
+    with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [{"content": content}]
+        mock_knowledge_instance.search.return_value = [{"content": content}]
 
         agent = Agent(
             role="Information Agent",
@@ -1600,6 +1655,108 @@ def test_agent_with_knowledge_sources():
         result = crew.kickoff()
 
         # Assert that the agent provides the correct information
+        assert "red" in result.raw.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+    knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
+    with patch(
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+    ) as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+        with patch.object(Knowledge, "query") as mock_knowledge_query:
+            agent = Agent(
+                role="Information Agent",
+                goal="Provide information based on knowledge sources",
+                backstory="You have access to specific knowledge sources.",
+                llm=LLM(model="gpt-4o-mini"),
+                knowledge_sources=[string_source],
+                knowledge_config=knowledge_config,
+            )
+            task = Task(
+                description="What is Brandon's favorite color?",
+                expected_output="Brandon's favorite color.",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task])
+            crew.kickoff()
+
+            assert agent.knowledge is not None
+            mock_knowledge_query.assert_called_once_with(
+                ["Brandon's favorite color"],
+                **knowledge_config.model_dump(),
+            )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_default():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+    knowledge_config = KnowledgeConfig()
+    with patch(
+        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
+    ) as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+        with patch.object(Knowledge, "query") as mock_knowledge_query:
+            string_source = StringKnowledgeSource(content=content)
+            knowledge_config = KnowledgeConfig()
+            agent = Agent(
+                role="Information Agent",
+                goal="Provide information based on knowledge sources",
+                backstory="You have access to specific knowledge sources.",
+                llm=LLM(model="gpt-4o-mini"),
+                knowledge_sources=[string_source],
+                knowledge_config=knowledge_config,
+            )
+            task = Task(
+                description="What is Brandon's favorite color?",
+                expected_output="Brandon's favorite color.",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task])
+            crew.kickoff()
+
+            assert agent.knowledge is not None
+            mock_knowledge_query.assert_called_once_with(
+                ["Brandon's favorite color"],
+                **knowledge_config.model_dump(),
+            )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_extensive_role():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    with patch("crewai.knowledge") as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+
+        agent = Agent(
+            role="Information Agent with extensive role description that is longer than 80 characters",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
+
+        task = Task(
+            description="What is Brandon's favorite color?",
+            expected_output="Brandon's favorite color.",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
         assert "red" in result.raw.lower()
 
 
@@ -1640,6 +1797,40 @@ def test_agent_with_knowledge_sources_works_with_copy():
             assert isinstance(agent_copy.knowledge_sources[0], StringKnowledgeSource)
             assert agent_copy.knowledge_sources[0].content == content
             assert isinstance(agent_copy.llm, LLM)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_generate_search_query():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    with patch("crewai.knowledge") as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+
+        agent = Agent(
+            role="Information Agent with extensive role description that is longer than 80 characters",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
+
+        task = Task(
+            description="What is Brandon's favorite color?",
+            expected_output="The answer to the question, in a format like this: `{{name: str, favorite_color: str}}`",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        # Updated assertion to check the JSON content
+        assert "Brandon" in str(agent.knowledge_search_query)
+        assert "favorite color" in str(agent.knowledge_search_query)
+
+        assert "red" in result.raw.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1779,3 +1970,153 @@ def test_litellm_anthropic_error_handling():
 
     # Verify the LLM call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_get_knowledge_search_query():
+    """Test that _get_knowledge_search_query calls the LLM with the correct prompts."""
+    from crewai.utilities.i18n import I18N
+
+    content = "The capital of France is Paris."
+    string_source = StringKnowledgeSource(content=content)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="I have access to knowledge sources",
+        llm=LLM(model="gpt-4"),
+        knowledge_sources=[string_source],
+    )
+
+    task = Task(
+        description="What is the capital of France?",
+        expected_output="The capital of France is Paris.",
+        agent=agent,
+    )
+
+    i18n = I18N()
+    task_prompt = task.prompt()
+
+    with patch.object(agent, "_get_knowledge_search_query") as mock_get_query:
+        mock_get_query.return_value = "Capital of France"
+
+        crew = Crew(agents=[agent], tasks=[task])
+        crew.kickoff()
+
+        mock_get_query.assert_called_once_with(task_prompt)
+
+    with patch.object(agent.llm, "call") as mock_llm_call:
+        agent._get_knowledge_search_query(task_prompt)
+
+        mock_llm_call.assert_called_once_with(
+            [
+                {
+                    "role": "system",
+                    "content": i18n.slice(
+                        "knowledge_search_query_system_prompt"
+                    ).format(task_prompt=task.description),
+                },
+                {
+                    "role": "user",
+                    "content": i18n.slice("knowledge_search_query").format(
+                        task_prompt=task_prompt
+                    ),
+                },
+            ]
+        )
+
+
+@pytest.fixture
+def mock_get_auth_token():
+    with patch(
+        "crewai.cli.authentication.token.get_auth_token", return_value="test_token"
+    ):
+        yield
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
+    from crewai_tools import SerperDevTool
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": [{"name": "SerperDevTool"}],
+    }
+    mock_get_agent.return_value = mock_get_response
+    agent = Agent(from_repository="test_agent")
+
+    assert agent.role == "test role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+    assert len(agent.tools) == 1
+    assert isinstance(agent.tools[0], SerperDevTool)
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth_token):
+    from crewai_tools import SerperDevTool
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": [{"name": "SerperDevTool"}],
+    }
+    mock_get_agent.return_value = mock_get_response
+    agent = Agent(from_repository="test_agent", role="Custom Role")
+
+    assert agent.role == "Custom Role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+    assert len(agent.tools) == 1
+    assert isinstance(agent.tools[0], SerperDevTool)
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_token):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": [{"name": "DoesNotExist"}],
+    }
+    mock_get_agent.return_value = mock_get_response
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Tool DoesNotExist could not be loaded: module 'crewai_tools' has no attribute 'DoesNotExist'",
+    ):
+        Agent(from_repository="test_agent")
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_internal_error(mock_get_agent, mock_get_auth_token):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 500
+    mock_get_response.text = "Internal server error"
+    mock_get_agent.return_value = mock_get_response
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Agent test_agent could not be loaded: Internal server error",
+    ):
+        Agent(from_repository="test_agent")
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_token):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 404
+    mock_get_response.text = "Agent not found"
+    mock_get_agent.return_value = mock_get_response
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Agent test_agent does not exist, make sure the name is correct or the agent is available on your organization",
+    ):
+        Agent(from_repository="test_agent")

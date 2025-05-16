@@ -1,0 +1,182 @@
+interactions:
+- request:
+    body: !!binary |
+      Ct8MCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkStgwKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcCAoQfm0pqVSMD2d8x7Z0oecKIRIIgWppMg8y3GoqDENyZXcgQ3JlYXRlZDABORAN
+      KtAWrDUYQagXMtAWrDUYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTE0LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi45Si4KCGNyZXdfa2V5EiIKIDA3YTcxNzY4Y2M0YzkzZWFiM2IzMWUzYzhk
+      MjgzMmM2SjEKB2NyZXdfaWQSJgokNGY1NjNkN2MtYmYyOC00ZWM2LTgzNzQtMDZlMjZiYzA1NWU0
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJGU4MGY4MDFmLWViZmQtNDlkOS1iNTEwLTM0NmVjN2VlNzAzZko7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNC0xMlQxNzoyNzoyNC42NTU4NzhK
+      0AIKC2NyZXdfYWdlbnRzEsACCr0CW3sia2V5IjogIjAyZGYxM2UzNjcxMmFiZjUxZDIzOGZlZWJh
+      YjFjYTI2IiwgImlkIjogIjg5MjdlNzQ1LWNkNWQtNDJkMy1hMjA2LTEyYTUxOWRlMDY1OCIsICJy
+      b2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiB0cnVlLCAibWF4X2l0ZXIiOiAyNSwgIm1h
+      eF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8t
+      bWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlv
+      bj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEK
+      CmNyZXdfdGFza3MS8AEK7QFbeyJrZXkiOiAiN2I0MmRmM2MzYzc0YzIxYzg5NDgwZTBjMDcwNTM4
+      NWYiLCAiaWQiOiAiNDM0MDgzNDYtMjA5OC00M2I1LWE0NWUtMmU2MWY4ZmYxZTliIiwgImFzeW5j
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6
+      ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICIwMmRmMTNlMzY3MTJhYmY1MWQyMzhmZWViYWIx
+      Y2EyNiIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEoAEChDv1iM8ejIY7tezTF4KBssA
+      Eghn2bJnw2f60SoMVGFzayBDcmVhdGVkMAE58LFA0BasNRhB4AdB0BasNRhKLgoIY3Jld19rZXkS
+      IgogMDdhNzE3NjhjYzRjOTNlYWIzYjMxZTNjOGQyODMyYzZKMQoHY3Jld19pZBImCiQ0ZjU2M2Q3
+      Yy1iZjI4LTRlYzYtODM3NC0wNmUyNmJjMDU1ZTRKLgoIdGFza19rZXkSIgogN2I0MmRmM2MzYzc0
+      YzIxYzg5NDgwZTBjMDcwNTM4NWZKMQoHdGFza19pZBImCiQ0MzQwODM0Ni0yMDk4LTQzYjUtYTQ1
+      ZS0yZTYxZjhmZjFlOWJKOgoQY3Jld19maW5nZXJwcmludBImCiRlODBmODAxZi1lYmZkLTQ5ZDkt
+      YjUxMC0zNDZlYzdlZTcwM2ZKOgoQdGFza19maW5nZXJwcmludBImCiQ2YjgzODVkYS0yYWJjLTRm
+      NWEtOTk3NC0xNjhiMzVhNDBlOTlKOwobdGFza19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwKGjIw
+      MjUtMDQtMTJUMTc6Mjc6MjQuNjU1ODQ4SjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJDIyNTI4NDRl
+      LWNlMTYtNDYyZi04NDI4LTYwYzZmMWYyNGE3N3oCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1634'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sat, 12 Apr 2025 20:27:26 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You are
+      a researcher at a leading tech think tank.\nYour personal goal is: Search relevant
+      data and provide results\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Perform a search
+      on specific topics.\n\nThis is the expected criteria for your final answer:
+      A list of relevant URLs based on the search query.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\n# Useful context: \nExternal
+      memories:\n\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '989'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=nSje5Zn_Lk69BDG85XIauC2hrZjGl0pR2sel9__KWGw-1744489610-1.0.1.1-CPlAgcgTAE30uWrbi_2wiCWrbRDRWiaa.YuQMgST42DLDVg_wdNlJMDQT3Lsqk.g.BO68A66TTirWA0blQaQw.9xdBbPwKO609_ftjdwi5U;
+        _cfuvid=XLC52GLAWCOeWn2vI379CnSGKjPa7f.qr2vSAQ_R66M-1744489610542-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BLbjg0OfADWdrLsZxrjKHEeVVbWle\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744489644,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: Here is a list of relevant URLs based on the specified search query:
+      \ \\n\\n1. https://www.forbes.com/technology/  \\n2. https://www.sciencedirect.com/
+      \ \\n3. https://www.techcrunch.com/  \\n4. https://www.wired.com/  \\n5. https://www.researchgate.net/
+      \ \\n6. https://www.springer.com/  \\n7. https://www.jstor.org/  \\n8. https://www.statista.com/
+      \ \\n9. https://www.pwc.com/gx/en/services/consulting/technology.html  \\n10.
+      https://www.gartner.com/en/information-technology  \\n\\nThese URLs provide
+      access to a wealth of information on various technology-related topics, including
+      articles, research papers, and analytics.\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 185,\n    \"completion_tokens\":
+      169,\n    \"total_tokens\": 354,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_80cf447eee\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92f576d83a447e05-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 12 Apr 2025 20:27:27 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '2273'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999788'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_38f6879956c29e6c61c844d1906fa2e8
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

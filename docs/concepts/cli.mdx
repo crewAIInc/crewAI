@@ -110,6 +110,8 @@ crewai reset-memories [OPTIONS]
 - `-s, --short`: Reset SHORT TERM memory
 - `-e, --entities`: Reset ENTITIES memory
 - `-k, --kickoff-outputs`: Reset LATEST KICKOFF TASK OUTPUTS
+- `-kn, --knowledge`: Reset KNOWLEDGE storage
+- `-akn, --agent-knowledge`: Reset AGENT KNOWLEDGE storage
 - `-a, --all`: Reset ALL memories
 
 Example:
@@ -136,16 +138,20 @@ crewai test -n 5 -m gpt-3.5-turbo
 
 ### 8. Run
 
-Run the crew.
+Run the crew or flow.
 
 ```shell Terminal
 crewai run
 ```
+
+<Note>
+Starting from version 0.103.0, the `crewai run` command can be used to run both standard crews and flows. For flows, it automatically detects the type from pyproject.toml and runs the appropriate command. This is now the recommended way to run both crews and flows.
+</Note>
+
 <Note>
 Make sure to run these commands from the directory where your CrewAI project is set up. 
 Some commands may require additional configuration or setup within your project structure.
 </Note>
-
 
 ### 9. Chat
 
@@ -175,8 +181,78 @@ def crew(self) -> Crew:
 ```
 </Note>
 
+### 10. Deploy
 
-### 10. API Keys
+Deploy the crew or flow to [CrewAI Enterprise](https://app.crewai.com).
+
+- **Authentication**: You need to be authenticated to deploy to CrewAI Enterprise.
+    ```shell Terminal
+    crewai signup
+    ```
+    If you already have an account, you can login with:
+    ```shell Terminal
+    crewai login
+    ```
+
+- **Create a deployment**: Once you are authenticated, you can create a deployment for your crew or flow from the root of your localproject.
+    ```shell Terminal
+    crewai deploy create
+    ```
+    - Reads your local project configuration.
+    - Prompts you to confirm the environment variables (like `OPENAI_API_KEY`, `SERPER_API_KEY`) found locally. These will be securely stored with the deployment on the Enterprise platform. Ensure your sensitive keys are correctly configured locally (e.g., in a `.env` file) before running this.
+    - Links the deployment to the corresponding remote GitHub repository (it usually detects this automatically).
+
+- **Deploy the Crew**: Once you are authenticated, you can deploy your crew or flow to CrewAI Enterprise.
+    ```shell Terminal
+    crewai deploy push
+    ``` 
+    - Initiates the deployment process on the CrewAI Enterprise platform.
+    - Upon successful initiation, it will output the Deployment created successfully! message along with the Deployment Name and a unique Deployment ID (UUID).
+
+- **Deployment Status**: You can check the status of your deployment with:
+    ```shell Terminal
+    crewai deploy status
+    ```
+    This fetches the latest deployment status of your most recent deployment attempt (e.g., `Building Images for Crew`, `Deploy Enqueued`, `Online`).
+
+- **Deployment Logs**: You can check the logs of your deployment with:
+    ```shell Terminal
+    crewai deploy logs
+    ```
+    This streams the deployment logs to your terminal.
+
+- **List deployments**: You can list all your deployments with:
+    ```shell Terminal
+    crewai deploy list
+    ```
+    This lists all your deployments.
+
+- **Delete a deployment**: You can delete a deployment with:
+    ```shell Terminal
+    crewai deploy remove
+    ```
+    This deletes the deployment from the CrewAI Enterprise platform.
+
+- **Help Command**: You can get help with the CLI with:
+    ```shell Terminal
+    crewai deploy --help
+    ```
+    This shows the help message for the CrewAI Deploy CLI.
+
+Watch this video tutorial for a step-by-step demonstration of deploying your crew to [CrewAI Enterprise](http://app.crewai.com) using the CLI.
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/3EqSV-CYDZA"
+  title="CrewAI Deployment Guide"
+  frameborder="0"
+  style={{ borderRadius: '10px' }}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+### 11. API Keys
 
 When running ```crewai create crew``` command, the CLI will first show you the top 5 most common LLM providers and ask you to select one.
 

@@ -1,12 +1,14 @@
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, InstanceOf
 from rich.box import HEAVY_EDGE
 from rich.console import Console
 from rich.table import Table
 
 from crewai.agent import Agent
+from crewai.llm import BaseLLM
+from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.crew_types import CrewType
 from crewai.utilities.logger import Logger
@@ -23,8 +25,8 @@ class CrewEvaluator:
     A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
 
     Attributes:
-        crew (CrewType): The crew of agents to evaluate.
-        openai_model_name (str): The model to use for evaluating the performance of the agents (for now ONLY OpenAI accepted).
+        crew (Crew): The crew of agents to evaluate.
+        eval_llm (BaseLLM): Language model instance to use for evaluations
         tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
         iteration (int): The current iteration of the evaluation.
     """
@@ -33,9 +35,10 @@ class CrewEvaluator:
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew: CrewType, openai_model_name: str):
+    def __init__(self, crew, eval_llm: InstanceOf[BaseLLM]):
         self.crew = crew
-        self.openai_model_name = openai_model_name
+        self.llm = eval_llm
+        self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
     def _setup_for_evaluating(self) -> None:
@@ -51,7 +54,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=self.openai_model_name,
+            llm=self.llm,
         )
 
     def _evaluation_task(
@@ -177,6 +180,12 @@ class CrewEvaluator:
         evaluation_result = evaluation_task.execute_sync()
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
+            self._test_result_span = self._telemetry.individual_test_result_span(
+                self.crew,
+                evaluation_result.pydantic.quality,
+                current_task.execution_duration,
+                self.llm.model,
+            )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
                 current_task.execution_duration

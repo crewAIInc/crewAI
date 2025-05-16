@@ -5,24 +5,34 @@ import time
 from difflib import SequenceMatcher
 from json import JSONDecodeError
 from textwrap import dedent
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import json5
 from json_repair import repair_json
 
-import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
-from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
-from crewai.utilities import I18N, Converter, ConverterError, Printer
+from crewai.utilities import I18N, Converter, Printer
+from crewai.utilities.agent_utils import (
+    get_tool_names,
+    render_text_description_and_args,
+)
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.tool_usage_events import (
+    ToolSelectionErrorEvent,
+    ToolUsageErrorEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
+    ToolValidateInputErrorEvent,
+)
 
-try:
-    import agentops  # type: ignore
-except ImportError:
-    agentops = None
+if TYPE_CHECKING:
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.lite_agent import LiteAgent
+
 OPENAI_BIGGER_MODELS = [
     "gpt-4",
     "gpt-4o",
@@ -58,30 +68,28 @@ class ToolUsage:
 
     def __init__(
         self,
-        tools_handler: ToolsHandler,
-        tools: List[BaseTool],
-        original_tools: List[Any],
-        tools_description: str,
-        tools_names: str,
-        task: Task,
+        tools_handler: Optional[ToolsHandler],
+        tools: List[CrewStructuredTool],
+        task: Optional[Task],
         function_calling_llm: Any,
-        agent: Any,
-        action: Any,
+        agent: Optional[Union["BaseAgent", "LiteAgent"]] = None,
+        action: Any = None,
+        fingerprint_context: Optional[Dict[str, str]] = None,
     ) -> None:
-        self._i18n: I18N = agent.i18n
+        self._i18n: I18N = agent.i18n if agent else I18N()
         self._printer: Printer = Printer()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
         self._remember_format_after_usages: int = 3
         self.agent = agent
-        self.tools_description = tools_description
-        self.tools_names = tools_names
+        self.tools_description = render_text_description_and_args(tools)
+        self.tools_names = get_tool_names(tools)
         self.tools_handler = tools_handler
-        self.original_tools = original_tools
         self.tools = tools
         self.task = task
         self.action = action
         self.function_calling_llm = function_calling_llm
+        self.fingerprint_context = fingerprint_context or {}
 
         # Set the maximum parsing attempts for bigger models
         if (
@@ -100,29 +108,35 @@ class ToolUsage:
     ) -> str:
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
-            if self.agent.verbose:
+            if self.agent and self.agent.verbose:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
-            self.task.increment_tools_errors()
+            if self.task:
+                self.task.increment_tools_errors()
             return error
 
         try:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
             error = getattr(e, "message", str(e))
-            self.task.increment_tools_errors()
-            if self.agent.verbose:
+            if self.task:
+                self.task.increment_tools_errors()
+            if self.agent and self.agent.verbose:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
 
-        if isinstance(tool, CrewStructuredTool) and tool.name == self._i18n.tools("add_image")["name"]:  # type: ignore
+        if (
+            isinstance(tool, CrewStructuredTool)
+            and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
+        ):
             try:
                 result = self._use(tool_string=tool_string, tool=tool, calling=calling)
                 return result
 
             except Exception as e:
                 error = getattr(e, "message", str(e))
-                self.task.increment_tools_errors()
-                if self.agent.verbose:
+                if self.task:
+                    self.task.increment_tools_errors()
+                if self.agent and self.agent.verbose:
                     self._printer.print(content=f"\n\n{error}\n", color="red")
                 return error
 
@@ -131,10 +145,9 @@ class ToolUsage:
     def _use(
         self,
         tool_string: str,
-        tool: Any,
+        tool: CrewStructuredTool,
         calling: Union[ToolCalling, InstructorToolCalling],
-    ) -> str:  # TODO: Fix this return type
-        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None  # type: ignore
+    ) -> str:
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -144,24 +157,44 @@ class ToolUsage:
                 return result  # type: ignore # Fix the return type of this function
 
             except Exception:
-                self.task.increment_tools_errors()
+                if self.task:
+                    self.task.increment_tools_errors()
 
+        if self.agent:
+            event_data = {
+                "agent_key": self.agent.key,
+                "agent_role": self.agent.role,
+                "tool_name": self.action.tool,
+                "tool_args": self.action.tool_input,
+                "tool_class": self.action.tool,
+                "agent": self.agent,
+            }
+
+            if self.agent.fingerprint:
+                event_data.update(self.agent.fingerprint)
+
+            crewai_event_bus.emit(self,ToolUsageStartedEvent(**event_data))
+            
         started_at = time.time()
         from_cache = False
+        result = None  # type: ignore
 
-        result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
-        # check if cache is available
-        if self.tools_handler.cache:
-            result = self.tools_handler.cache.read(  # type: ignore # Incompatible types in assignment (expression has type "str | None", variable has type "str")
+        if self.tools_handler and self.tools_handler.cache:
+            result = self.tools_handler.cache.read(
                 tool=calling.tool_name, input=calling.arguments
-            )
+            )  # type: ignore
             from_cache = result is not None
 
-        original_tool = next(
-            (ot for ot in self.original_tools if ot.name == tool.name), None
+        available_tool = next(
+            (
+                available_tool
+                for available_tool in self.tools
+                if available_tool.name == tool.name
+            ),
+            None,
         )
 
-        if result is None:  #! finecwg: if not result --> if result is None
+        if result is None:
             try:
                 if calling.tool_name in [
                     "Delegate work to coworker",
@@ -170,22 +203,31 @@ class ToolUsage:
                     coworker = (
                         calling.arguments.get("coworker") if calling.arguments else None
                     )
-                    self.task.increment_delegations(coworker)
+                    if self.task:
+                        self.task.increment_delegations(coworker)
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.model_json_schema()["properties"].keys()  # type: ignore
+                        acceptable_args = tool.args_schema.model_json_schema()[
+                            "properties"
+                        ].keys()  # type: ignore
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
                             if k in acceptable_args
                         }
+                        # Add fingerprint metadata if available
+                        arguments = self._add_fingerprint_metadata(arguments)
                         result = tool.invoke(input=arguments)
                     except Exception:
                         arguments = calling.arguments
+                        # Add fingerprint metadata if available
+                        arguments = self._add_fingerprint_metadata(arguments)
                         result = tool.invoke(input=arguments)
                 else:
-                    result = tool.invoke(input={})
+                    # Add fingerprint metadata even to empty arguments
+                    arguments = self._add_fingerprint_metadata({})
+                    result = tool.invoke(input=arguments)
             except Exception as e:
                 self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                 self._run_attempts += 1
@@ -194,29 +236,27 @@ class ToolUsage:
                         error=e, tool=tool.name, tool_inputs=tool.description
                     )
                     error = ToolUsageErrorException(
-                        f'\n{error_message}.\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                        f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                     ).message
-                    self.task.increment_tools_errors()
-                    if self.agent.verbose:
+                    if self.task:
+                        self.task.increment_tools_errors()
+                    if self.agent and self.agent.verbose:
                         self._printer.print(
                             content=f"\n\n{error_message}\n", color="red"
                         )
                     return error  # type: ignore # No return value expected
 
-                self.task.increment_tools_errors()
-                if agentops:
-                    agentops.record(
-                        agentops.ErrorEvent(exception=e, trigger_event=tool_event)
-                    )
+                if self.task:
+                    self.task.increment_tools_errors()
                 return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
 
             if self.tools_handler:
                 should_cache = True
                 if (
-                    hasattr(original_tool, "cache_function")
-                    and original_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+                    hasattr(available_tool, "cache_function")
+                    and available_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
                 ):
-                    should_cache = original_tool.cache_function(  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+                    should_cache = available_tool.cache_function(  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
                         calling.arguments, result
                     )
 
@@ -238,44 +278,50 @@ class ToolUsage:
             tool_calling=calling,
             from_cache=from_cache,
             started_at=started_at,
+            result=result,
         )
 
         if (
-            hasattr(original_tool, "result_as_answer")
-            and original_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+            hasattr(available_tool, "result_as_answer")
+            and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
         ):
-            result_as_answer = original_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
-            data["result_as_answer"] = result_as_answer
+            result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
+            data["result_as_answer"] = result_as_answer  # type: ignore
 
-        self.agent.tools_results.append(data)
+        if self.agent and hasattr(self.agent, "tools_results"):
+            self.agent.tools_results.append(data)
 
-        return result  # type: ignore # No return value expected
-
-    def _format_result(self, result: Any) -> None:
-        self.task.used_tools += 1
-        if self._should_remember_format():  # type: ignore # "_should_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
-            result = self._remember_format(result=result)  # type: ignore # "_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
         return result
 
-    def _should_remember_format(self) -> bool:
-        return self.task.used_tools % self._remember_format_after_usages == 0
+    def _format_result(self, result: Any) -> str:
+        if self.task:
+            self.task.used_tools += 1
+        if self._should_remember_format():
+            result = self._remember_format(result=result)
+        return str(result)
 
-    def _remember_format(self, result: str) -> None:
+    def _should_remember_format(self) -> bool:
+        if self.task:
+            return self.task.used_tools % self._remember_format_after_usages == 0
+        return False
+
+    def _remember_format(self, result: str) -> str:
         result = str(result)
         result += "\n\n" + self._i18n.slice("tools").format(
             tools=self.tools_description, tool_names=self.tools_names
         )
-        return result  # type: ignore # No return value expected
+        return result
 
     def _check_tool_repeated_usage(
         self, calling: Union[ToolCalling, InstructorToolCalling]
-    ) -> None:
+    ) -> bool:
         if not self.tools_handler:
-            return False  # type: ignore # No return value expected
+            return False
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (  # type: ignore # No return value expected
+            return (calling.tool_name == last_tool_usage.tool_name) and (
                 calling.arguments == last_tool_usage.arguments
             )
+        return False
 
     def _select_tool(self, tool_name: str) -> Any:
         order_tools = sorted(
@@ -294,15 +340,35 @@ class ToolUsage:
                 > 0.85
             ):
                 return tool
-        self.task.increment_tools_errors()
+        if self.task:
+            self.task.increment_tools_errors()
+        tool_selection_data: Dict[str, Any] = {
+            "agent_key": getattr(self.agent, "key", None) if self.agent else None,
+            "agent_role": getattr(self.agent, "role", None) if self.agent else None,
+            "tool_name": tool_name,
+            "tool_args": {},
+            "tool_class": self.tools_description,
+        }
         if tool_name and tool_name != "":
-            raise Exception(
-                f"Action '{tool_name}' don't exist, these are the only available Actions:\n{self.tools_description}"
+            error = f"Action '{tool_name}' don't exist, these are the only available Actions:\n{self.tools_description}"
+            crewai_event_bus.emit(
+                self,
+                ToolSelectionErrorEvent(
+                    **tool_selection_data,
+                    error=error,
+                ),
             )
+            raise Exception(error)
         else:
-            raise Exception(
-                f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+            error = f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+            crewai_event_bus.emit(
+                self,
+                ToolSelectionErrorEvent(
+                    **tool_selection_data,
+                    error=error,
+                ),
             )
+            raise Exception(error)
 
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
@@ -311,7 +377,9 @@ class ToolUsage:
             descriptions.append(tool.description)
         return "\n--\n".join(descriptions)
 
-    def _function_calling(self, tool_string: str):
+    def _function_calling(
+        self, tool_string: str
+    ) -> Union[ToolCalling, InstructorToolCalling]:
         model = (
             InstructorToolCalling
             if self.function_calling_llm.supports_function_calling()
@@ -333,18 +401,14 @@ class ToolUsage:
             max_attempts=1,
         )
         tool_object = converter.to_pydantic()
-        calling = ToolCalling(
-            tool_name=tool_object["tool_name"],
-            arguments=tool_object["arguments"],
-            log=tool_string,  # type: ignore
-        )
+        if not isinstance(tool_object, (ToolCalling, InstructorToolCalling)):
+            raise ToolUsageErrorException("Failed to parse tool calling")
 
-        if isinstance(calling, ConverterError):
-            raise calling
+        return tool_object
 
-        return calling
-
-    def _original_tool_calling(self, tool_string: str, raise_error: bool = False):
+    def _original_tool_calling(
+        self, tool_string: str, raise_error: bool = False
+    ) -> Union[ToolCalling, InstructorToolCalling, ToolUsageErrorException]:
         tool_name = self.action.tool
         tool = self._select_tool(tool_name)
         try:
@@ -355,7 +419,7 @@ class ToolUsage:
                 raise
             else:
                 return ToolUsageErrorException(
-                    f'{self._i18n.errors("tool_arguments_error")}'
+                    f"{self._i18n.errors('tool_arguments_error')}"
                 )
 
         if not isinstance(arguments, dict):
@@ -363,18 +427,17 @@ class ToolUsage:
                 raise
             else:
                 return ToolUsageErrorException(
-                    f'{self._i18n.errors("tool_arguments_error")}'
+                    f"{self._i18n.errors('tool_arguments_error')}"
                 )
 
         return ToolCalling(
             tool_name=tool.name,
             arguments=arguments,
-            log=tool_string,
         )
 
     def _tool_calling(
         self, tool_string: str
-    ) -> Union[ToolCalling, InstructorToolCalling]:
+    ) -> Union[ToolCalling, InstructorToolCalling, ToolUsageErrorException]:
         try:
             try:
                 return self._original_tool_calling(tool_string, raise_error=True)
@@ -421,6 +484,7 @@ class ToolUsage:
             if isinstance(arguments, dict):
                 return arguments
         except (ValueError, SyntaxError):
+            repaired_input = repair_json(tool_input)
             pass  # Continue to the next parsing attempt
 
         # Attempt 3: Parse as JSON5
@@ -433,7 +497,7 @@ class ToolUsage:
 
         # Attempt 4: Repair JSON
         try:
-            repaired_input = repair_json(tool_input)
+            repaired_input = str(repair_json(tool_input, skip_json_loads=True))
             self._printer.print(
                 content=f"Repaired JSON: {repaired_input}", color="blue"
             )
@@ -441,21 +505,51 @@ class ToolUsage:
             if isinstance(arguments, dict):
                 return arguments
         except Exception as e:
-            self._printer.print(content=f"Failed to repair JSON: {e}", color="red")
+            error = f"Failed to repair JSON: {e}"
+            self._printer.print(content=error, color="red")
 
-        # If all parsing attempts fail, raise an error
-        raise Exception(
+        error_message = (
             "Tool input must be a valid dictionary in JSON or Python literal format"
         )
+        self._emit_validate_input_error(error_message)
+        # If all parsing attempts fail, raise an error
+        raise Exception(error_message)
 
-    def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
-        event_data = self._prepare_event_data(tool, tool_calling)
-        events.emit(
-            source=self, event=ToolUsageError(**{**event_data, "error": str(e)})
+    def _emit_validate_input_error(self, final_error: str):
+        tool_selection_data = {
+            "agent_key": getattr(self.agent, "key", None) if self.agent else None,
+            "agent_role": getattr(self.agent, "role", None) if self.agent else None,
+            "tool_name": self.action.tool,
+            "tool_args": str(self.action.tool_input),
+            "tool_class": self.__class__.__name__,
+            "agent": self.agent,  # Adding agent for fingerprint extraction
+        }
+
+        # Include fingerprint context if available
+        if self.fingerprint_context:
+            tool_selection_data.update(self.fingerprint_context)
+
+        crewai_event_bus.emit(
+            self,
+            ToolValidateInputErrorEvent(**tool_selection_data, error=final_error),
         )
 
+    def on_tool_error(
+        self,
+        tool: Any,
+        tool_calling: Union[ToolCalling, InstructorToolCalling],
+        e: Exception,
+    ) -> None:
+        event_data = self._prepare_event_data(tool, tool_calling)
+        crewai_event_bus.emit(self, ToolUsageErrorEvent(**{**event_data, "error": e}))
+
     def on_tool_use_finished(
-        self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float
+        self,
+        tool: Any,
+        tool_calling: Union[ToolCalling, InstructorToolCalling],
+        from_cache: bool,
+        started_at: float,
+        result: Any,
     ) -> None:
         finished_at = time.time()
         event_data = self._prepare_event_data(tool, tool_calling)
@@ -464,17 +558,75 @@ class ToolUsage:
                 "started_at": datetime.datetime.fromtimestamp(started_at),
                 "finished_at": datetime.datetime.fromtimestamp(finished_at),
                 "from_cache": from_cache,
+                "output": result,
             }
         )
-        events.emit(source=self, event=ToolUsageFinished(**event_data))
+        crewai_event_bus.emit(self, ToolUsageFinishedEvent(**event_data))
 
-    def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
-        return {
-            "agent_key": self.agent.key,
-            "agent_role": (self.agent._original_role or self.agent.role),
+    def _prepare_event_data(
+        self, tool: Any, tool_calling: Union[ToolCalling, InstructorToolCalling]
+    ) -> dict:
+        event_data = {
             "run_attempts": self._run_attempts,
-            "delegations": self.task.delegations,
+            "delegations": self.task.delegations if self.task else 0,
             "tool_name": tool.name,
             "tool_args": tool_calling.arguments,
             "tool_class": tool.__class__.__name__,
+            "agent_key": (
+                getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+            ),
+            "agent_role": (
+                getattr(self.agent, "_original_role", None)
+                or getattr(self.agent, "role", "unknown")
+                if self.agent
+                else "unknown"
+            ),
         }
+
+        # Include fingerprint context if available
+        if self.fingerprint_context:
+            event_data.update(self.fingerprint_context)
+
+        return event_data
+
+    def _add_fingerprint_metadata(self, arguments: dict) -> dict:
+        """Add fingerprint metadata to tool arguments if available.
+
+        Args:
+            arguments: The original tool arguments
+
+        Returns:
+            Updated arguments dictionary with fingerprint metadata
+        """
+        # Create a shallow copy to avoid modifying the original
+        arguments = arguments.copy()
+
+        # Add security metadata under a designated key
+        if "security_context" not in arguments:
+            arguments["security_context"] = {}
+
+        security_context = arguments["security_context"]
+
+        # Add agent fingerprint if available
+        if self.agent and hasattr(self.agent, "security_config"):
+            security_config = getattr(self.agent, "security_config", None)
+            if security_config and hasattr(security_config, "fingerprint"):
+                try:
+                    security_context["agent_fingerprint"] = (
+                        security_config.fingerprint.to_dict()
+                    )
+                except AttributeError:
+                    pass
+
+        # Add task fingerprint if available
+        if self.task and hasattr(self.task, "security_config"):
+            security_config = getattr(self.task, "security_config", None)
+            if security_config and hasattr(security_config, "fingerprint"):
+                try:
+                    security_context["task_fingerprint"] = (
+                        security_config.fingerprint.to_dict()
+                    )
+                except AttributeError:
+                    pass
+
+        return arguments

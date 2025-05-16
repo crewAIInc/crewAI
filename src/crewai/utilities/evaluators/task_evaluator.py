@@ -3,18 +3,8 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from crewai.utilities import Converter
+from crewai.utilities.events import TaskEvaluationEvent, crewai_event_bus
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
-
-agentops = None
-try:
-    from agentops import track_agent  # type: ignore
-except ImportError:
-
-    def track_agent(name):
-        def noop(f):
-            return f
-
-        return noop
 
 
 class Entity(BaseModel):
@@ -48,12 +38,15 @@ class TrainingTaskEvaluation(BaseModel):
     )
 
 
-@track_agent(name="Task Evaluator")
 class TaskEvaluator:
     def __init__(self, original_agent):
         self.llm = original_agent.llm
+        self.original_agent = original_agent
 
     def evaluate(self, task, output) -> TaskEvaluation:
+        crewai_event_bus.emit(
+            self, TaskEvaluationEvent(evaluation_type="task_evaluation", task=task)
+        )
         evaluation_query = (
             f"Assess the quality of the task completed based on the description, expected output, and actual results.\n\n"
             f"Task Description:\n{task.description}\n\n"
@@ -90,6 +83,9 @@ class TaskEvaluator:
             - training_data (dict): The training data to be evaluated.
             - agent_id (str): The ID of the agent.
         """
+        crewai_event_bus.emit(
+            self, TaskEvaluationEvent(evaluation_type="training_data_evaluation")
+        )
 
         output_training_data = training_data[agent_id]
         final_aggregated_data = ""

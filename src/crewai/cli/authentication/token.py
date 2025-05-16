@@ -4,5 +4,7 @@ from pathlib import Path
 
 def get_auth_token() -> str:
     """Get the authentication token."""
-    token_manager = TokenManager()
-    return token_manager.get_token()
+    access_token = TokenManager().get_token()
+    if not access_token:
+        raise Exception("No token found, make sure you are logged in")
+    return access_token
