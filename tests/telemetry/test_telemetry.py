@@ -67,3 +67,32 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
 
     export_mock.assert_called_once()
     logger_mock.assert_called_once_with(error)
+
+
+def test_telemetry_singleton_pattern():
+    """Test that Telemetry uses the singleton pattern correctly."""
+    Telemetry._instance = None
+
+    telemetry1 = Telemetry()
+    telemetry2 = Telemetry()
+
+    assert telemetry1 is telemetry2
+
+    setattr(telemetry1, "test_attribute", "test_value")
+    assert hasattr(telemetry2, "test_attribute")
+    assert getattr(telemetry2, "test_attribute") == "test_value"
+
+    import threading
+
+    instances = []
+
+    def create_instance():
+        instances.append(Telemetry())
+
+    threads = [threading.Thread(target=create_instance) for _ in range(5)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert all(instance is telemetry1 for instance in instances)

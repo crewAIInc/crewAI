@@ -22,6 +22,7 @@ from crewai.utilities.events.crew_events import (
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
+    CrewTestResultEvent,
     CrewTestStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
@@ -132,6 +133,10 @@ def test_crew_emits_test_kickoff_type_event():
     def handle_crew_test_end(source, event):
         received_events.append(event)
 
+    @crewai_event_bus.on(CrewTestResultEvent)
+    def handle_crew_test_result(source, event):
+        received_events.append(event)
+
     eval_llm = LLM(model="gpt-4o-mini")
     with (
         patch.object(
@@ -149,13 +154,16 @@ def test_crew_emits_test_kickoff_type_event():
         assert args[2] is None
         assert args[3] == eval_llm
 
-    assert len(received_events) == 2
+    assert len(received_events) == 3
     assert received_events[0].crew_name == "TestCrew"
     assert isinstance(received_events[0].timestamp, datetime)
     assert received_events[0].type == "crew_test_started"
     assert received_events[1].crew_name == "TestCrew"
     assert isinstance(received_events[1].timestamp, datetime)
     assert received_events[1].type == "crew_test_completed"
+    assert received_events[2].crew_name == "TestCrew"
+    assert isinstance(received_events[2].timestamp, datetime)
+    assert received_events[2].type == "crew_test_result"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
