@@ -1765,6 +1765,50 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     )
 
 
+def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
+    """Ensure Crew.kickoff() sums UsageMetrics from both regular and manager agents."""
+
+    # ── 1.  Build the manager and a simple task ──────────────────────────────────
+    manager = Agent(
+        role="Manager",
+        goal="Coordinate everything.",
+        backstory="Keeps the project on track.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Say hello",
+        expected_output="Hello",
+        agent=researcher,  # *regular* agent
+    )
+
+    # ── 2.  Stub out each agent’s _token_process.get_summary() ───────────────────
+    researcher_metrics = UsageMetrics(total_tokens=120, prompt_tokens=80, completion_tokens=40, successful_requests=2)
+    manager_metrics = UsageMetrics(total_tokens=30, prompt_tokens=20, completion_tokens=10, successful_requests=1)
+
+    # Replace the internal _token_process objects with simple mocks
+    researcher._token_process = MagicMock(get_summary=MagicMock(return_value=researcher_metrics))
+    manager._token_process = MagicMock(get_summary=MagicMock(return_value=manager_metrics))
+
+    # ── 3.  Create the crew (hierarchical!) and kick it off ──────────────────────
+    crew = Crew(
+        agents=[researcher],  # regular agents
+        manager_agent=manager,  # manager to be included
+        tasks=[task],
+        process=Process.hierarchical,
+    )
+
+    # We don’t care about LLM output here; patch execute_sync to avoid network
+    with patch.object(Task, "execute_sync", return_value=TaskOutput(description="dummy", raw="Hello", agent=researcher.role)):
+        crew.kickoff()
+
+    # ── 4.  Assert the aggregated numbers are the *sum* of both agents ───────────
+    assert crew.usage_metrics.total_tokens == researcher_metrics.total_tokens + manager_metrics.total_tokens
+    assert crew.usage_metrics.prompt_tokens == researcher_metrics.prompt_tokens + manager_metrics.prompt_tokens
+    assert crew.usage_metrics.completion_tokens == researcher_metrics.completion_tokens + manager_metrics.completion_tokens
+    assert crew.usage_metrics.successful_requests == researcher_metrics.successful_requests + manager_metrics.successful_requests
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
     """
@@ -4564,5 +4608,3 @@ def test_reset_agent_knowledge_with_only_agent_knowledge(researcher,writer):
 
         crew.reset_memories(command_type='agent_knowledge')
         mock_reset_agent_knowledge.assert_called_once_with([mock_ks_research,mock_ks_writer])
-
-
