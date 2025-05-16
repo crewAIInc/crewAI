@@ -48,7 +48,7 @@ class PlusAPI:
         version: str,
         description: Optional[str],
         encoded_file: str,
-        available_tool_classes: Optional[List[str]] = None,
+        available_exports: Optional[List[str]] = None,
     ):
         params = {
             "handle": handle,
@@ -56,7 +56,7 @@ class PlusAPI:
             "version": version,
             "file": encoded_file,
             "description": description,
-            "available_tool_classes": available_tool_classes,
+            "available_exports": available_exports,
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 

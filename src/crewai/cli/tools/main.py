@@ -11,7 +11,7 @@ from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.config import Settings
 from crewai.cli.utils import (
-    extract_available_tools,
+    extract_available_exports,
     get_project_description,
     get_project_name,
     get_project_version,
@@ -84,11 +84,11 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         encoded_tarball = None
 
         console.print("[bold blue]Discovering tools from your project...[/bold blue]")
-        available_tools = extract_available_tools()
+        available_exports = extract_available_exports()
 
-        if available_tools:
+        if available_exports:
             console.print(
-                f"[green]Found these tools to publish: {', '.join(available_tools)}[/green]"
+                f"[green]Found these tools to publish: {', '.join(available_exports)}[/green]"
             )
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
@@ -121,7 +121,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             version=project_version,
             description=project_description,
             encoded_file=f"data:application/x-gzip;base64,{encoded_tarball}",
-            available_tools=available_tools,
+            available_exports=available_exports,
         )
 
         self._validate_response(publish_response)

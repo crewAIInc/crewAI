@@ -355,7 +355,7 @@ def is_valid_tool(obj):
     return isinstance(obj, Tool)
 
 
-def extract_available_tools(dir_path: str = "src"):
+def extract_available_exports(dir_path: str = "src"):
     """
     Extract available tool classes from the project's __init__.py files.
     Only includes classes that inherit from BaseTool or functions decorated with @tool.
@@ -365,17 +365,17 @@ def extract_available_tools(dir_path: str = "src"):
     """
     try:
         init_files = Path(dir_path).glob("**/__init__.py")
-        available_tools = []
+        available_exports = []
 
         for init_file in init_files:
             tools = _load_tools_from_init(init_file)
-            available_tools.extend(tools)
+            available_exports.extend(tools)
 
-        if not available_tools:
+        if not available_exports:
             _print_no_tools_warning()
             raise SystemExit(1)
 
-        return available_tools
+        return available_exports
 
     except Exception as e:
         console.print(f"[red]Error: Could not extract tool classes: {str(e)}[/red]")
@@ -406,6 +406,7 @@ def _load_tools_from_init(init_file: Path) -> list:
             )
             raise SystemExit(1)
 
+        # TODO: Security check: prevent any inject malicious code, or stuff like that
         return [
             name
             for name in module.__all__
