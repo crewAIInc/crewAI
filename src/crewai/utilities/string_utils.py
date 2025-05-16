@@ -59,7 +59,7 @@ def interpolate_only(
     # The regex pattern to find valid variable placeholders
     # Matches {variable_name} where variable_name starts with a letter/underscore
     # and contains only letters, numbers, and underscores
-    pattern = r"\{([A-Za-z_][A-Za-z0-9_]*)\}"
+    pattern = r"\{([A-Za-z_][A-Za-z0-9_\-]*)\}"
 
     # Find all matching variables in the input string
     variables = re.findall(pattern, input_string)
