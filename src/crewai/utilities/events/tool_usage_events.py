@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
-from .base_events import CrewEvent
+from .base_events import BaseEvent
 
 
-class ToolUsageEvent(CrewEvent):
+class ToolUsageEvent(BaseEvent):
     """Base event for tool usage tracking"""
 
     agent_key: str
@@ -14,8 +14,21 @@ class ToolUsageEvent(CrewEvent):
     tool_class: str
     run_attempts: int | None = None
     delegations: int | None = None
+    agent: Optional[Any] = None
 
     model_config = {"arbitrary_types_allowed": True}
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Set fingerprint data from the agent
+        if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
+            self.source_fingerprint = self.agent.fingerprint.uuid_str
+            self.source_type = "agent"
+            if (
+                hasattr(self.agent.fingerprint, "metadata")
+                and self.agent.fingerprint.metadata
+            ):
+                self.fingerprint_metadata = self.agent.fingerprint.metadata
 
 
 class ToolUsageStartedEvent(ToolUsageEvent):
@@ -30,6 +43,7 @@ class ToolUsageFinishedEvent(ToolUsageEvent):
     started_at: datetime
     finished_at: datetime
     from_cache: bool = False
+    output: Any
     type: str = "tool_usage_finished"
 
 
@@ -54,7 +68,7 @@ class ToolSelectionErrorEvent(ToolUsageEvent):
     type: str = "tool_selection_error"
 
 
-class ToolExecutionErrorEvent(CrewEvent):
+class ToolExecutionErrorEvent(BaseEvent):
     """Event emitted when a tool execution encounters an error"""
 
     error: Any
@@ -62,3 +76,16 @@ class ToolExecutionErrorEvent(CrewEvent):
     tool_name: str
     tool_args: Dict[str, Any]
     tool_class: Callable
+    agent: Optional[Any] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Set fingerprint data from the agent
+        if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
+            self.source_fingerprint = self.agent.fingerprint.uuid_str
+            self.source_type = "agent"
+            if (
+                hasattr(self.agent.fingerprint, "metadata")
+                and self.agent.fingerprint.metadata
+            ):
+                self.fingerprint_metadata = self.agent.fingerprint.metadata

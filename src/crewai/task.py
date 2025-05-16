@@ -40,6 +40,7 @@ from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
+from crewai.utilities.constants import NOT_SPECIFIED
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.events import (
     TaskCompletedEvent,
@@ -49,6 +50,7 @@ from crewai.utilities.events import (
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
+from crewai.utilities.string_utils import interpolate_only
 
 
 class Task(BaseModel):
@@ -95,7 +97,7 @@ class Task(BaseModel):
     )
     context: Optional[List["Task"]] = Field(
         description="Other tasks that will have their output used as context for this task.",
-        default=None,
+        default=NOT_SPECIFIED,
     )
     async_execution: Optional[bool] = Field(
         description="Whether the task should be executed asynchronously or not.",
@@ -138,9 +140,9 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: Set[str] = Field(default_factory=set)
-    guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
+    guardrail: Optional[Union[Callable[[TaskOutput], Tuple[bool, Any]], str]] = Field(
         default=None,
-        description="Function to validate task output before proceeding to next task",
+        description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
     max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
@@ -155,8 +157,12 @@ class Task(BaseModel):
 
     @field_validator("guardrail")
     @classmethod
-    def validate_guardrail_function(cls, v: Optional[Callable]) -> Optional[Callable]:
-        """Validate that the guardrail function has the correct signature and behavior.
+    def validate_guardrail_function(
+        cls, v: Optional[str | Callable]
+    ) -> Optional[str | Callable]:
+        """
+        If v is a callable, validate that the guardrail function has the correct signature and behavior.
+        If v is a string, return it as is.
 
         While type hints provide static checking, this validator ensures runtime safety by:
         1. Verifying the function accepts exactly one parameter (the TaskOutput)
@@ -169,16 +175,16 @@ class Task(BaseModel):
         - Clear error messages help users debug guardrail implementation issues
 
         Args:
-            v: The guardrail function to validate
+            v: The guardrail function to validate or a string describing the guardrail task
 
         Returns:
-            The validated guardrail function
+            The validated guardrail function or a string describing the guardrail task
 
         Raises:
             ValueError: If the function signature is invalid or return annotation
                        doesn't match Tuple[bool, Any]
         """
-        if v is not None:
+        if v is not None and callable(v):
             sig = inspect.signature(v)
             positional_args = [
                 param
@@ -209,6 +215,7 @@ class Task(BaseModel):
                     )
         return v
 
+    _guardrail: Optional[Callable] = PrivateAttr(default=None)
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _original_output_file: Optional[str] = PrivateAttr(default=None)
@@ -227,6 +234,20 @@ class Task(BaseModel):
                 raise ValueError(
                     f"{field} must be provided either directly or through config"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def ensure_guardrail_is_callable(self) -> "Task":
+        if callable(self.guardrail):
+            self._guardrail = self.guardrail
+        elif isinstance(self.guardrail, str):
+            from crewai.tasks.llm_guardrail import LLMGuardrail
+
+            assert self.agent is not None
+            self._guardrail = LLMGuardrail(
+                description=self.guardrail, llm=self.agent.llm
+            )
+
         return self
 
     @field_validator("id", mode="before")
@@ -386,7 +407,7 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context))
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -405,10 +426,8 @@ class Task(BaseModel):
                 output_format=self._get_output_format(),
             )
 
-            if self.guardrail:
-                guardrail_result = GuardrailResult.from_tuple(
-                    self.guardrail(task_output)
-                )
+            if self._guardrail:
+                guardrail_result = self._process_guardrail(task_output)
                 if not guardrail_result.success:
                     if self.retry_count >= self.max_retries:
                         raise Exception(
@@ -462,12 +481,45 @@ class Task(BaseModel):
                     )
                 )
                 self._save_file(content)
-            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output))
+            crewai_event_bus.emit(
+                self, TaskCompletedEvent(output=task_output, task=self)
+            )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e)))
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
+
+    def _process_guardrail(self, task_output: TaskOutput) -> GuardrailResult:
+        assert self._guardrail is not None
+
+        from crewai.utilities.events import (
+            LLMGuardrailCompletedEvent,
+            LLMGuardrailStartedEvent,
+        )
+        from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+
+        result = self._guardrail(task_output)
+
+        crewai_event_bus.emit(
+            self,
+            LLMGuardrailStartedEvent(
+                guardrail=self._guardrail, retry_count=self.retry_count
+            ),
+        )
+
+        guardrail_result = GuardrailResult.from_tuple(result)
+
+        crewai_event_bus.emit(
+            self,
+            LLMGuardrailCompletedEvent(
+                success=guardrail_result.success,
+                result=guardrail_result.result,
+                error=guardrail_result.error,
+                retry_count=self.retry_count,
+            ),
+        )
+        return guardrail_result
 
     def prompt(self) -> str:
         """Prompt the task.
@@ -507,7 +559,9 @@ class Task(BaseModel):
             return
 
         try:
-            self.description = self._original_description.format(**inputs)
+            self.description = interpolate_only(
+                input_string=self._original_description, inputs=inputs
+            )
         except KeyError as e:
             raise ValueError(
                 f"Missing required template variable '{e.args[0]}' in description"
@@ -516,7 +570,7 @@ class Task(BaseModel):
             raise ValueError(f"Error interpolating description: {str(e)}") from e
 
         try:
-            self.expected_output = self.interpolate_only(
+            self.expected_output = interpolate_only(
                 input_string=self._original_expected_output, inputs=inputs
             )
         except (KeyError, ValueError) as e:
@@ -524,7 +578,7 @@ class Task(BaseModel):
 
         if self.output_file is not None:
             try:
-                self.output_file = self.interpolate_only(
+                self.output_file = interpolate_only(
                     input_string=self._original_output_file, inputs=inputs
                 )
             except (KeyError, ValueError) as e:
@@ -555,72 +609,6 @@ class Task(BaseModel):
                 f"\n\n{conversation_instruction}\n\n{conversation_history}"
             )
 
-    def interpolate_only(
-        self,
-        input_string: Optional[str],
-        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
-    ) -> str:
-        """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
-
-        Args:
-            input_string: The string containing template variables to interpolate.
-                         Can be None or empty, in which case an empty string is returned.
-            inputs: Dictionary mapping template variables to their values.
-                   Supported value types are strings, integers, floats, and dicts/lists
-                   containing only these types and other nested dicts/lists.
-
-        Returns:
-            The interpolated string with all template variables replaced with their values.
-            Empty string if input_string is None or empty.
-
-        Raises:
-            ValueError: If a value contains unsupported types
-        """
-
-        # Validation function for recursive type checking
-        def validate_type(value: Any) -> None:
-            if value is None:
-                return
-            if isinstance(value, (str, int, float, bool)):
-                return
-            if isinstance(value, (dict, list)):
-                for item in value.values() if isinstance(value, dict) else value:
-                    validate_type(item)
-                return
-            raise ValueError(
-                f"Unsupported type {type(value).__name__} in inputs. "
-                "Only str, int, float, bool, dict, and list are allowed."
-            )
-
-        # Validate all input values
-        for key, value in inputs.items():
-            try:
-                validate_type(value)
-            except ValueError as e:
-                raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
-
-        if input_string is None or not input_string:
-            return ""
-        if "{" not in input_string and "}" not in input_string:
-            return input_string
-        if not inputs:
-            raise ValueError(
-                "Inputs dictionary cannot be empty when interpolating variables"
-            )
-        try:
-            escaped_string = input_string.replace("{", "{{").replace("}", "}}")
-
-            for key in inputs.keys():
-                escaped_string = escaped_string.replace(f"{{{{{key}}}}}", f"{{{key}}}")
-
-            return escaped_string.format(**inputs)
-        except KeyError as e:
-            raise KeyError(
-                f"Template variable '{e.args[0]}' not found in inputs dictionary"
-            ) from e
-        except ValueError as e:
-            raise ValueError(f"Error during string interpolation: {str(e)}") from e
-
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
         self.tools_errors += 1
@@ -634,7 +622,15 @@ class Task(BaseModel):
     def copy(
         self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
     ) -> "Task":
-        """Create a deep copy of the Task."""
+        """Creates a deep copy of the Task while preserving its original class type.
+
+        Args:
+            agents: List of agents available for the task.
+            task_mapping: Dictionary mapping task IDs to Task instances.
+
+        Returns:
+            A copy of the task with the same class type as the original.
+        """
         exclude = {
             "id",
             "agent",
@@ -647,7 +643,7 @@ class Task(BaseModel):
 
         cloned_context = (
             [task_mapping[context_task.key] for context_task in self.context]
-            if self.context
+            if isinstance(self.context, list)
             else None
         )
 
@@ -657,7 +653,7 @@ class Task(BaseModel):
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = copy(self.tools) if self.tools else []
 
-        copied_task = Task(
+        copied_task = self.__class__(
             **copied_data,
             context=cloned_context,
             agent=cloned_agent,

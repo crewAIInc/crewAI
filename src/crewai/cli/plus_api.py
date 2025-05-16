@@ -14,6 +14,7 @@ class PlusAPI:
 
     TOOLS_RESOURCE = "/crewai_plus/api/v1/tools"
     CREWS_RESOURCE = "/crewai_plus/api/v1/crews"
+    AGENTS_RESOURCE = "/crewai_plus/api/v1/agents"
 
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
@@ -36,6 +37,9 @@ class PlusAPI:
 
     def get_tool(self, handle: str):
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
+
+    def get_agent(self, handle: str):
+        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}")
 
     def publish_tool(
         self,

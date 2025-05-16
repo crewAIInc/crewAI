@@ -1,0 +1,378 @@
+interactions:
+- request:
+    body: !!binary |
+      CpIKCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS6QkKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRLBBwoQ08SlQ6w2FsCauTgZCqberRIITfOsgNi1qJkqDENyZXcgQ3JlYXRlZDABOdjG
+      6D/PcDAYQahPEkDPcDAYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTA4LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi45Si4KCGNyZXdfa2V5EiIKIDkwNzMxMTU4MzVlMWNhZjJhNmUxNTIyZDA1
+      YTBiNTFkSjEKB2NyZXdfaWQSJgokMzdjOGM4NzgtN2NmZC00YjEyLWE4YzctYzIyZDZlOTIxODBk
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrgAgoLY3Jl
+      d19hZ2VudHMS0AIKzQJbeyJrZXkiOiAiNzYyM2ZjNGY3ZDk0Y2YzZmRiZmNjMjlmYjBiMDIyYmIi
+      LCAiaWQiOiAiYmVjMjljMTAtOTljYi00MzQwLWIwYTItMWU1NTVkNGRmZGM0IiwgInJvbGUiOiAi
+      VmlzdWFsIFF1YWxpdHkgSW5zcGVjdG9yIiwgInZlcmJvc2U/IjogdHJ1ZSwgIm1heF9pdGVyIjog
+      MjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAi
+      b3BlbmFpL2dwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2Rl
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6
+      IFtdfV1KjQIKCmNyZXdfdGFza3MS/gEK+wFbeyJrZXkiOiAiMDExM2E5ZTg0N2M2NjI2ZDY0ZDZk
+      Yzk4M2IwNDA5MTgiLCAiaWQiOiAiZWQzYmY1YWUtZTBjMS00MjIxLWFhYTgtMThlNjVkYTMyZjc1
+      IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdl
+      bnRfcm9sZSI6ICJWaXN1YWwgUXVhbGl0eSBJbnNwZWN0b3IiLCAiYWdlbnRfa2V5IjogIjc2MjNm
+      YzRmN2Q5NGNmM2ZkYmZjYzI5ZmIwYjAyMmJiIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQAB
+      AAASjgIKECo77ESam8oLrZMmgLLaoksSCLE6x14/Kb1vKgxUYXNrIENyZWF0ZWQwATlI/chAz3Aw
+      GEEAgMpAz3AwGEouCghjcmV3X2tleRIiCiA5MDczMTE1ODM1ZTFjYWYyYTZlMTUyMmQwNWEwYjUx
+      ZEoxCgdjcmV3X2lkEiYKJDM3YzhjODc4LTdjZmQtNGIxMi1hOGM3LWMyMmQ2ZTkyMTgwZEouCgh0
+      YXNrX2tleRIiCiAwMTEzYTllODQ3YzY2MjZkNjRkNmRjOTgzYjA0MDkxOEoxCgd0YXNrX2lkEiYK
+      JGVkM2JmNWFlLWUwYzEtNDIyMS1hYWE4LTE4ZTY1ZGEzMmY3NXoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1301'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 26 Mar 2025 19:24:52 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Visual Quality Inspector.
+      Senior quality control expert with expertise in visual inspection\nYour personal
+      goal is: Perform detailed quality analysis of product images\nYou ONLY have
+      access to the following tools, and should NEVER make up tools that are not listed
+      here:\n\nTool Name: Add image to content\nTool Arguments: {''image_url'': {''description'':
+      ''The URL or path of the image to add'', ''type'': ''str''}, ''action'': {''description'':
+      ''Optional context or question about the image'', ''type'': ''Union[str, NoneType]''}}\nTool
+      Description: See image to understand its content, you can optionally ask a question
+      about the image\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [Add image to content], just the name, exactly as it''s written.\nAction
+      Input: the input to the action, just a simple JSON object, enclosed in curly
+      braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: \n        Analyze
+      the product image at https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244
+      with focus on:\n        1. Quality of materials\n        2. Manufacturing defects\n        3.
+      Compliance with standards\n        Provide a detailed report highlighting any
+      issues found.\n        \n\nThis is the expected criteria for your final answer:
+      A detailed report highlighting any issues found\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"],
+      "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2033'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BFQepLwSYYzdKLylSFsgcJeg6GTqS\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743017091,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I need to examine the product
+      image to assess the quality of materials, look for any manufacturing defects,
+      and check compliance with standards.\\n\\nAction: Add image to content\\nAction
+      Input: {\\\"image_url\\\": \\\"https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244\\\",
+      \\\"action\\\": \\\"Analyze the quality of materials, manufacturing defects,
+      and compliance with standards.\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 413,\n    \"completion_tokens\":
+      101,\n    \"total_tokens\": 514,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_7e8d90e604\"\n}\n"
+    headers:
+      CF-RAY:
+      - 926907d79dcff1e7-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 26 Mar 2025 19:24:53 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=WK433.4kW8cr9rwvOlk4EZ2SfRYK9lAPwXCBYEvLcmU-1743017093-1.0.1.1-kVZyUew5rUbMk.2koGJF_rmX.fTseqN241n2M40n8KvBGoKgy6KM6xBmvFbIVWxUs2Y5ZAz8mWy9CrGjaNKSfCzxmv4.pq78z_DGHr37PgI;
+        path=/; expires=Wed, 26-Mar-25 19:54:53 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=T77PMcuNYeyzK0tQyDOe7EScjVBVzW_7DpD3YQBqmUc-1743017093675-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1729'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '50000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '49999'
+      x-ratelimit-remaining-tokens:
+      - '149999534'
+      x-ratelimit-reset-requests:
+      - 1ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_2399c3355adf16734907c73611a7d330
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CtgBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSrwEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKYAQoQp2ACB2xRGve4HGtU2RdWCBIIlQcsbhK22ykqClRvb2wgVXNhZ2UwATlACEXG
+      z3AwGEHAjGPGz3AwGEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEwOC4wSiMKCXRvb2xfbmFtZRIW
+      ChRBZGQgaW1hZ2UgdG8gY29udGVudEoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '219'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 26 Mar 2025 19:24:57 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Visual Quality Inspector.
+      Senior quality control expert with expertise in visual inspection\nYour personal
+      goal is: Perform detailed quality analysis of product images\nYou ONLY have
+      access to the following tools, and should NEVER make up tools that are not listed
+      here:\n\nTool Name: Add image to content\nTool Arguments: {''image_url'': {''description'':
+      ''The URL or path of the image to add'', ''type'': ''str''}, ''action'': {''description'':
+      ''Optional context or question about the image'', ''type'': ''Union[str, NoneType]''}}\nTool
+      Description: See image to understand its content, you can optionally ask a question
+      about the image\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [Add image to content], just the name, exactly as it''s written.\nAction
+      Input: the input to the action, just a simple JSON object, enclosed in curly
+      braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: \n        Analyze
+      the product image at https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244
+      with focus on:\n        1. Quality of materials\n        2. Manufacturing defects\n        3.
+      Compliance with standards\n        Provide a detailed report highlighting any
+      issues found.\n        \n\nThis is the expected criteria for your final answer:
+      A detailed report highlighting any issues found\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "user", "content": [{"type": "text",
+      "text": "Analyze the quality of materials, manufacturing defects, and compliance
+      with standards."}, {"type": "image_url", "image_url": {"url": "https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244"}}]},
+      {"role": "assistant", "content": "Thought: I need to examine the product image
+      to assess the quality of materials, look for any manufacturing defects, and
+      check compliance with standards.\n\nAction: Add image to content\nAction Input:
+      {\"image_url\": \"https://www.us.maguireshoes.com/cdn/shop/files/FW24-Edito-Lucena-Distressed-01_1920x.jpg?v=1736371244\",
+      \"action\": \"Analyze the quality of materials, manufacturing defects, and compliance
+      with standards.\"}"}], "model": "gpt-4o", "stop": ["\nObservation:"], "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '2797'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=WK433.4kW8cr9rwvOlk4EZ2SfRYK9lAPwXCBYEvLcmU-1743017093-1.0.1.1-kVZyUew5rUbMk.2koGJF_rmX.fTseqN241n2M40n8KvBGoKgy6KM6xBmvFbIVWxUs2Y5ZAz8mWy9CrGjaNKSfCzxmv4.pq78z_DGHr37PgI;
+        _cfuvid=T77PMcuNYeyzK0tQyDOe7EScjVBVzW_7DpD3YQBqmUc-1743017093675-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BFQetNNvmPgPxhzaKiHYsPqm8aN0i\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743017095,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Observation: The image displays a black
+      leather boot with a pointed toe and a low heel. \\n\\nQuality of Materials:\\n1.
+      The leather appears to be of good quality, displaying a consistent texture and
+      finish, which suggests durability.\\n2. The material has a slight sheen, indicating
+      a possible finishing treatment that enhances the appearance and may offer some
+      protection.\\n\\nManufacturing Defects:\\n1. There are no visible stitching
+      errors; the seams appear straight and clean.\\n2. No apparent glue marks or
+      uneven edges, which indicates good craftsmanship.\\n3. There is a slight distressed
+      effect, but it appears intentional as part of the design rather than a defect.\\n\\nCompliance
+      with Standards:\\n1. The shoe design seems to comply with typical fashion standards,
+      showing a balance of aesthetics and functionality.\\n2. The heel height and
+      shape appear to provide stability, aligning with safety standards for footwear.\\n\\nFinal
+      Answer: The analysis of the product image reveals that the black leather boot
+      is made of high-quality materials with no visible manufacturing defects. The
+      craftsmanship is precise, with clean seams and a well-executed design. The distressed
+      effect appears intentional and part of the aesthetic. The boot seems to comply
+      with fashion and safety standards, offering both style and functionality. No
+      significant issues were found.\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1300,\n    \"completion_tokens\":
+      250,\n    \"total_tokens\": 1550,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_3a5b33c01a\"\n}\n"
+    headers:
+      CF-RAY:
+      - 926907e45f33f1e7-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 26 Mar 2025 19:25:01 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '7242'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-input-images:
+      - '250000'
+      x-ratelimit-limit-requests:
+      - '50000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-input-images:
+      - '249999'
+      x-ratelimit-remaining-requests:
+      - '49999'
+      x-ratelimit-remaining-tokens:
+      - '149998641'
+      x-ratelimit-reset-input-images:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 1ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_c5dd144c8ac1bb3bd96ffbba40707b2d
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

@@ -4,10 +4,10 @@ from typing import Any, Callable, Dict, List, Type, TypeVar, cast
 
 from blinker import Signal
 
-from crewai.utilities.events.base_events import CrewEvent
+from crewai.utilities.events.base_events import BaseEvent
 from crewai.utilities.events.event_types import EventTypes
 
-EventT = TypeVar("EventT", bound=CrewEvent)
+EventT = TypeVar("EventT", bound=BaseEvent)
 
 
 class CrewAIEventsBus:
@@ -30,7 +30,7 @@ class CrewAIEventsBus:
     def _initialize(self) -> None:
         """Initialize the event bus internal state"""
         self._signal = Signal("crewai_event_bus")
-        self._handlers: Dict[Type[CrewEvent], List[Callable]] = {}
+        self._handlers: Dict[Type[BaseEvent], List[Callable]] = {}
 
     def on(
         self, event_type: Type[EventT]
@@ -59,7 +59,7 @@ class CrewAIEventsBus:
 
         return decorator
 
-    def emit(self, source: Any, event: CrewEvent) -> None:
+    def emit(self, source: Any, event: BaseEvent) -> None:
         """
         Emit an event to all registered handlers
 
@@ -70,7 +70,12 @@ class CrewAIEventsBus:
         for event_type, handlers in self._handlers.items():
             if isinstance(event, event_type):
                 for handler in handlers:
-                    handler(source, event)
+                    try:
+                        handler(source, event)
+                    except Exception as e:
+                        print(
+                            f"[EventBus Error] Handler '{handler.__name__}' failed for event '{event_type.__name__}': {e}"
+                        )
 
         self._signal.send(source, event=event)
 

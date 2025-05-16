@@ -6,6 +6,7 @@ research_task:
   expected_output: >
     A list with 10 bullet points of the most relevant information about {topic}
   agent: researcher
+  guardrail: ensure each bullet contains its source
 
 reporting_task:
   description: >
