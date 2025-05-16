@@ -120,7 +120,7 @@ class FoundryAgentAdapter(BaseAgentAdapter):
 
             run = self._foundry_client.agents.create_run(thread_id=self._active_thread_id, agent_id=self._foundry_agent_id)
             while run.status in ["queued", "in_progress", "requires_action"]:
-                time.sleep(1)
+                time.sleep(.2)
                 run = self._foundry_client.agents.get_run(thread_id=self._active_thread_id, run_id=run.id)
 
             messages = self._foundry_client.agents.list_messages(thread_id=self._active_thread_id)
@@ -141,7 +141,6 @@ class FoundryAgentAdapter(BaseAgentAdapter):
                 event=AgentExecutionErrorEvent(agent=self, task=task, error=str(e)),
             )
             raise
-
 
 
     def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
