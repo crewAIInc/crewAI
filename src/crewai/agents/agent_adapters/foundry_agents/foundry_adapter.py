@@ -160,17 +160,15 @@ class FoundryAgentAdapter(BaseAgentAdapter):
 
 
     def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
-        """
-        Configure the Foundry agent for execution.
-        While Foundry handles execution differently through Runner,
-        we can use this method to set up tools and configurations.
-        """
-        all_tools = list(self.tools or []) + list(tools or [])
+        self.configure_tools(tools)
 
-        instructions = self._build_system_prompt()
 
     def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
-        pass  # No-op or actual logic can be added later
+        """Configure tools for the Foundry Assistant"""
+        if tools:
+            self._tool_adapter.configure_tools(tools)
+            if self._tool_adapter.converted_tools:
+                self._foundry_agent.tools = self._tool_adapter.converted_tools
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support"""

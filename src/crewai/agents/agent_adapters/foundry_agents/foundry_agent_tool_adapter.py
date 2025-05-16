@@ -1,17 +1,40 @@
 import inspect
 from typing import Any, List, Optional
 
-from agents import FunctionTool, Tool
+from azure.ai.projects.models import (
+    CodeInterpreterTool,
+    FileSearchToolDefinition,
+    AzureAISearchToolDefinition,
+    BingCustomSearchToolDefinition,
+    AzureFunctionToolDefinition,
+)
 
 from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
 from crewai.tools import BaseTool
+from azure.ai.projects.models import FunctionToolDefinition
 
 
 class FoundryAgentToolAdapter(BaseToolAdapter):
     """Adapter for Foundry Assistant tools"""
 
     def __init__(self, tools: Optional[List[BaseTool]] = None):
-        self.original_tools = tools or []
+        # Instantiate what we can now
+        code_interpreter = CodeInterpreterTool()
+
+        # Stub placeholders for unconfigured tools
+        file_search = FileSearchToolDefinition(name="file-search")
+        azure_search = AzureAISearchToolDefinition(name="azure-search")
+        bing_search = BingCustomSearchToolDefinition(name="bing-search")
+        azure_fn = AzureFunctionToolDefinition(name="azure-function")
+
+        # Aggregate them
+        built_in_tools = (
+            code_interpreter.definitions +
+            [file_search, azure_search, bing_search, azure_fn]
+        )
+
+        self.original_tools = (tools or []) + built_in_tools
+        self.tool_resources = code_interpreter.resources
 
     def configure_tools(self, tools: List[BaseTool]) -> None:
         """Configure tools for the Foundry Assistant"""
@@ -24,68 +47,26 @@ class FoundryAgentToolAdapter(BaseToolAdapter):
 
     def _convert_tools_to_foundry_format(
         self, tools: Optional[List[BaseTool]]
-    ) -> List[Tool]:
-        """Convert CrewAI tools to Foundry Assistant tool format"""
+    ) -> List[Any]:
+        """
+        Converts a list of BaseTool instances into Azure Foundry-compatible FunctionToolDefinitions.
+        This version assumes you're using the standard SDK with no direct callable FunctionTool.
+        """
+
         if not tools:
             return []
 
-        def sanitize_tool_name(name: str) -> str:
-            """Convert tool name to match Foundry's required pattern"""
-            import re
-
-            sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", name).lower()
-            return sanitized
-
-        def create_tool_wrapper(tool: BaseTool):
-            """Create a wrapper function that handles the Foundry function tool interface"""
-
-            async def wrapper(context_wrapper: Any, arguments: Any) -> Any:
-                # Get the parameter name from the schema
-                param_name = list(
-                    tool.args_schema.model_json_schema()["properties"].keys()
-                )[0]
-
-                # Handle different argument types
-                if isinstance(arguments, dict):
-                    args_dict = arguments
-                elif isinstance(arguments, str):
-                    try:
-                        import json
-
-                        args_dict = json.loads(arguments)
-                    except json.JSONDecodeError:
-                        args_dict = {param_name: arguments}
-                else:
-                    args_dict = {param_name: str(arguments)}
-
-                # Run the tool with the processed arguments
-                output = tool._run(**args_dict)
-
-                # Await if the tool returned a coroutine
-                if inspect.isawaitable(output):
-                    result = await output
-                else:
-                    result = output
-
-                # Ensure the result is JSON serializable
-                if isinstance(result, (dict, list, str, int, float, bool, type(None))):
-                    return result
-                return str(result)
-
-            return wrapper
-
         foundry_tools = []
         for tool in tools:
-            schema = tool.args_schema.model_json_schema()
+            tool._set_args_schema()
+            schema = tool.args_schema.schema()
 
-            schema.update({"additionalProperties": False, "type": "object"})
-
-            foundry_tool = FunctionTool(
-                name=sanitize_tool_name(tool.name),
+            foundry_tool = FunctionToolDefinition(
+                name=tool.name,
                 description=tool.description,
-                params_json_schema=schema,
-                on_invoke_tool=create_tool_wrapper(tool),
+                parameters=schema
             )
             foundry_tools.append(foundry_tool)
 
         return foundry_tools
+
