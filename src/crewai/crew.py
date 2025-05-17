@@ -16,6 +16,16 @@ from typing import (
     Tuple,
     Union,
     cast,
+    TypedDict,
+)
+
+from crewai.types.crew_types import (
+    CrewConfig,
+    MemoryConfig,
+    AgentProtocol,
+    TaskProtocol,
+    validate_agent,
+    validate_task,
 )
 
 from pydantic import (
@@ -257,17 +267,35 @@ class Crew(FlowTrackable, BaseModel):
     @field_validator("config", mode="before")
     @classmethod
     def check_config_type(
-        cls, v: Union[Json, Dict[str, Any]]
-    ) -> Union[Json, Dict[str, Any]]:
+        cls, 
+        v: Union[Json, Dict[str, Any], str]
+    ) -> Dict[str, Any]:
         """Validates that the config is a valid type.
+        
         Args:
-            v: The config to be validated.
+            v: The configuration to be validated. Can be a JSON string, 
+               a JSON object, or a dictionary.
+        
         Returns:
-            The config if it is valid.
+            A validated configuration dictionary.
+        
+        Raises:
+            json.JSONDecodeError: If the input is an invalid JSON string.
+            TypeError: If the input is not a supported configuration type.
         """
-
-        # TODO: Improve typing
-        return json.loads(v) if isinstance(v, Json) else v  # type: ignore
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON configuration: {e}") from e
+        
+        if isinstance(v, dict):
+            return v
+        
+        if isinstance(v, Json):
+            return json.loads(v)
+        
+        raise TypeError(f"Unsupported configuration type: {type(v)}")
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
