@@ -151,6 +151,7 @@ class EventListener(BaseEventListener):
                 self.formatter.current_crew_tree,
                 source.id,
                 source.agent.role,
+                source.agent.llm.model if hasattr(source.agent, "llm") and getattr(source.agent.llm, "model", None) else ""
                 "completed",
             )
 
