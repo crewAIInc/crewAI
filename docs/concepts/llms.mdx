@@ -791,6 +791,24 @@ Learn how to get the most out of your LLM configuration:
       Remember to regularly monitor your token usage and adjust your configuration as needed to optimize costs and performance.
     </Info>
   </Accordion>
+  
+  <Accordion title="Drop Additional Parameters">
+    CrewAI internally uses Litellm for LLM calls, which allows you to drop additional parameters that are not needed for your specific use case. This can help simplify your code and reduce the complexity of your LLM configuration.
+    For example, if you don't need to send the <code>stop</code> parameter, you can simply omit it from your LLM call:
+
+    ```python
+    from crewai import LLM
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "<api-key>"
+
+    o3_llm = LLM(
+        model="o3",
+        drop_params=True,
+        additional_drop_params=["stop"]
+    )
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## Common Issues and Solutions
