@@ -6,8 +6,8 @@ icon: database
 
 ## Introduction to Memory Systems in CrewAI
 
-The crewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents. 
-This system comprises `short-term memory`, `long-term memory`, `entity memory`, and `contextual memory`, each serving a unique purpose in aiding agents to remember, 
+The crewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents.
+This system comprises `short-term memory`, `long-term memory`, `entity memory`, and `contextual memory`, each serving a unique purpose in aiding agents to remember,
 reason, and learn from past interactions.
 
 ## Memory System Components
@@ -32,8 +32,8 @@ reason, and learn from past interactions.
 ## Implementing Memory in Your Crew
 
 When configuring a crew, you can enable and customize each memory component to suit the crew's objectives and the nature of tasks it will perform.
-By default, the memory system is disabled, and you can ensure it is active by setting `memory=True` in the crew configuration. 
-The memory will use OpenAI embeddings by default, but you can change it by setting `embedder` to a different model. 
+By default, the memory system is disabled, and you can ensure it is active by setting `memory=True` in the crew configuration.
+The memory will use OpenAI embeddings by default, but you can change it by setting `embedder` to a different model.
 It's also possible to initialize the memory instance with your own instance.
 
 The 'embedder' only applies to **Short-Term Memory** which uses Chroma for RAG.
@@ -164,7 +164,7 @@ crew = Crew(
 
 ## Integrating Mem0 for Enhanced User Memory
 
-[Mem0](https://mem0.ai/) is a self-improving memory layer for LLM applications, enabling personalized AI experiences. 
+[Mem0](https://mem0.ai/) is a self-improving memory layer for LLM applications, enabling personalized AI experiences.
 
 
 ### Using Mem0 API platform
@@ -279,7 +279,7 @@ crew = Crew(
 ### Using External Memory
 
 External Memory is a powerful feature that allows you to integrate external memory systems with your CrewAI applications. This is particularly useful when you want to use specialized memory providers or maintain memory across different applications.
-Since it’s an external memory, we’re not able to add a default value to it - unlike with Long Term and Short Term memory. 
+Since it’s an external memory, we’re not able to add a default value to it - unlike with Long Term and Short Term memory.
 
 #### Basic Usage with Mem0
 
@@ -678,7 +678,7 @@ crewai reset-memories [OPTIONS]
 | `-s`, `--short`    | Reset SHORT TERM memory.         | Flag (boolean) | False   |
 | `-e`, `--entities` | Reset ENTITIES memory.           | Flag (boolean) | False   |
 | `-k`, `--kickoff-outputs` | Reset LATEST KICKOFF TASK OUTPUTS. | Flag (boolean) | False   |
-| `-kn`, `--knowledge` | Reset KNOWLEDEGE storage | Flag (boolean) | False   |
+| `-kn`, `--knowledge` | Reset KNOWLEDGE storage | Flag (boolean) | False   |
 | `-akn`, `--agent-knowledge` | Reset AGENT KNOWLEDGE storage | Flag (boolean) | False   |
 | `-a`, `--all`      | Reset ALL memories.              | Flag (boolean) | False   |
 
@@ -712,9 +712,9 @@ my_crew.reset_memories(command_type = 'all') # Resets all the memory
 
 | Command Type       | Description                      |
 | :----------------- | :------------------------------- |
-| `long`             | Reset LONG TERM memory.          | 
-| `short`            | Reset SHORT TERM memory.         | 
-| `entities`         | Reset ENTITIES memory.           | 
+| `long`             | Reset LONG TERM memory.          |
+| `short`            | Reset SHORT TERM memory.         |
+| `entities`         | Reset ENTITIES memory.           |
 | `kickoff_outputs`  | Reset LATEST KICKOFF TASK OUTPUTS. |
 | `knowledge`        | Reset KNOWLEDGE memory.          |
 | `agent_knowledge`  | Reset AGENT KNOWLEDGE memory.    |
@@ -730,5 +730,5 @@ my_crew.reset_memories(command_type = 'all') # Resets all the memory
 
 ## Conclusion
 
-Integrating CrewAI's memory system into your projects is straightforward. By leveraging the provided memory components and configurations, 
+Integrating CrewAI's memory system into your projects is straightforward. By leveraging the provided memory components and configurations,
 you can quickly empower your agents with the ability to remember, reason, and learn from their interactions, unlocking new levels of intelligence and capability.

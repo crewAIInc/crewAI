@@ -1,6 +1,6 @@
 ---
 title: Opik Integration
-description: Learn how to use Comet Opik to debug, evaluate, and monitor your CrewAI applications with comprehensive tracing, automated evaluations, and production-ready dashboards. 
+description: Learn how to use Comet Opik to debug, evaluate, and monitor your CrewAI applications with comprehensive tracing, automated evaluations, and production-ready dashboards.
 icon: meteor
 ---
 
@@ -20,9 +20,9 @@ Opik provides comprehensive support for every stage of your CrewAI application d
 - **Monitor & Analyze Production Data**: Understand your models' performance on unseen data in production and generate datasets for new dev iterations.
 
 ## Setup
-Comet provides a hosted version of the Opik platform, or you can run the platform locally. 
+Comet provides a hosted version of the Opik platform, or you can run the platform locally.
 
-To use the hosted version, simply [create a free Comet account](https://www.comet.com/signup?utm_medium=github&utm_source=crewai_docs) and grab you API Key.
+To use the hosted version, simply [create a free Comet account](https://www.comet.com/signup?utm_medium=github&utm_source=crewai_docs) and grab your API Key.
 
 To run the Opik platform locally, see our [installation guide](https://www.comet.com/docs/opik/self-host/overview/) for more information.
 
@@ -42,7 +42,7 @@ For this guide we will use CrewAI’s quickstart example.
     </Step>
     <Step title="Prepare environment">
       First, we set up our API keys for our LLM-provider as environment variables:
-  
+
       ```python
       import os
       import getpass
@@ -102,7 +102,7 @@ For this guide we will use CrewAI’s quickstart example.
       ```
 
       Now we can import Opik’s tracker and run our crew:
-  
+
       ```python
       from opik.integrations.crewai import track_crewai
 

@@ -55,7 +55,7 @@ Agent level knowledge sources will be used by the **specific agent** that is pre
 ## Quickstart Example
 
 <Tip>
-For file-Based Knowledge Sources, make sure to place your files in a `knowledge` directory at the root of your project. 
+For file-Based Knowledge Sources, make sure to place your files in a `knowledge` directory at the root of your project.
 Also, use relative paths from the `knowledge` directory when creating the source.
 </Tip>
 
@@ -101,7 +101,7 @@ result = crew.kickoff(inputs={"question": "What city does John live in and how o
 ```
 
 
-Here's another example with the `CrewDoclingSource`. The CrewDoclingSource is actually quite versatile and can handle multiple file formats including MD, PDF, DOCX, HTML, and more. 
+Here's another example with the `CrewDoclingSource`. The CrewDoclingSource is actually quite versatile and can handle multiple file formats including MD, PDF, DOCX, HTML, and more.
 
 <Note>
   You need to install `docling` for the following example to work: `uv add docling`
@@ -180,7 +180,7 @@ agent = Agent(
 
 Here are examples of how to use different types of knowledge sources:
 
-Note: Please ensure that you create the ./knowldge folder. All source files (e.g., .txt, .pdf, .xlsx, .json) should be placed in this folder for centralized management.
+Note: Please ensure that you create the ./knowledge folder. All source files (e.g., .txt, .pdf, .xlsx, .json) should be placed in this folder for centralized management.
 
 ### Text File Knowledge Source
 ```python
@@ -291,7 +291,7 @@ crew = Crew(
 
 ### Chunking Configuration
 
-Knowledge sources automatically chunk content for better processing. 
+Knowledge sources automatically chunk content for better processing.
 You can configure chunking behavior in your knowledge sources:
 
 ```python
@@ -311,7 +311,7 @@ The chunking configuration helps in:
 
 ### Embeddings Configuration
 
-You can also configure the embedder for the knowledge store. 
+You can also configure the embedder for the knowledge store.
 This is useful if you want to use a different embedder for the knowledge store than the one used for the agents.
 The `embedder` parameter supports various embedding model providers that include:
 - `openai`: OpenAI's embedding models
@@ -393,7 +393,7 @@ result = crew.kickoff(inputs={"question": "What city does John live in and how o
 ## Task: Answer the following questions about the user: What city does John live in and how old is he?
 
 # Agent: About User
-## Final Answer: 
+## Final Answer:
 John is 30 years old and lives in San Francisco.
 ```
 </CodeGroup>
@@ -502,7 +502,7 @@ result = crew.kickoff(
 crew.reset_memories(command_type = 'agent_knowledge')
 
 # Resetting the agent specific knowledge via CLI
-crewai reset-memories --agent-knowledge 
+crewai reset-memories --agent-knowledge
 crewai reset-memories -akn
 ```
 
@@ -703,7 +703,7 @@ recent_news = SpaceNewsKnowledgeSource(
   </Accordion>
 
   <Accordion title="Performance Tips">
-    - Adjust chunk sizes based on content complexity 
+    - Adjust chunk sizes based on content complexity
     - Configure appropriate embedding models
     - Consider using local embedding providers for faster processing
   </Accordion>
@@ -713,5 +713,5 @@ recent_news = SpaceNewsKnowledgeSource(
     - If the knowledge sources are large, this leads to inefficiency and increased latency, as the same data is embedded each time.
     - To resolve this, directly initialize the knowledge parameter instead of the knowledge_sources parameter.
     - Link to the issue to get complete idea [Github Issue](https://github.com/crewAIInc/crewAI/issues/2755)
-  </Accordion>  
+  </Accordion>
 </AccordionGroup>

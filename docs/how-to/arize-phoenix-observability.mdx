@@ -50,7 +50,7 @@ os.environ["SERPER_API_KEY"] = SERPER_API_KEY
 
 ### Step 3: Initialize OpenTelemetry with Phoenix
 
-Initialize the OpenInference OpenTelemetry instrumentation SDK to start capturing traces and send them to Phoenix. 
+Initialize the OpenInference OpenTelemetry instrumentation SDK to start capturing traces and send them to Phoenix.
 
 ```python
 from phoenix.otel import register
@@ -86,7 +86,7 @@ researcher = Agent(
     You have a knack for dissecting complex data and presenting actionable insights.""",
     verbose=True,
     allow_delegation=False,
-    # You can pass an optional llm attribute specifying what model you wanna use.
+    # You can pass an optional llm attribute specifying what model you wan to use.
     # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7),
     tools=[search_tool],
 )
