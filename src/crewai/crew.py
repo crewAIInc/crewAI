@@ -113,6 +113,10 @@ class Crew(BaseModel):
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
     )
+    memory_verbose: bool = Field(
+        default=False,
+        description="Whether to show verbose logs about memory operations",
+    )
     memory_config: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Configuration for the memory to be used for the crew.",
@@ -257,7 +261,7 @@ class Crew(BaseModel):
         """Set private attributes."""
         if self.memory:
             self._long_term_memory = (
-                self.long_term_memory if self.long_term_memory else LongTermMemory()
+                self.long_term_memory if self.long_term_memory else LongTermMemory(memory_verbose=self.memory_verbose)
             )
             self._short_term_memory = (
                 self.short_term_memory
@@ -265,16 +269,17 @@ class Crew(BaseModel):
                 else ShortTermMemory(
                     crew=self,
                     embedder_config=self.embedder,
+                    memory_verbose=self.memory_verbose,
                 )
             )
             self._entity_memory = (
                 self.entity_memory
                 if self.entity_memory
-                else EntityMemory(crew=self, embedder_config=self.embedder)
+                else EntityMemory(crew=self, embedder_config=self.embedder, memory_verbose=self.memory_verbose)
             )
             if hasattr(self, "memory_config") and self.memory_config is not None:
                 self._user_memory = (
-                    self.user_memory if self.user_memory else UserMemory(crew=self)
+                    self.user_memory if self.user_memory else UserMemory(crew=self, memory_verbose=self.memory_verbose)
                 )
             else:
                 self._user_memory = None

@@ -11,7 +11,7 @@ class UserMemory(Memory):
     MemoryItem instances.
     """
 
-    def __init__(self, crew=None):
+    def __init__(self, crew=None, memory_verbose=False):
         try:
             from crewai.memory.storage.mem0_storage import Mem0Storage
         except ImportError:
@@ -19,7 +19,7 @@ class UserMemory(Memory):
                 "Mem0 is not installed. Please install it with `pip install mem0ai`."
             )
         storage = Mem0Storage(type="user", crew=crew)
-        super().__init__(storage)
+        super().__init__(storage, memory_verbose=memory_verbose)
 
     def save(
         self,

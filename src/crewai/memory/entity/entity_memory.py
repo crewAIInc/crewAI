@@ -10,7 +10,7 @@ class EntityMemory(Memory):
     Inherits from the Memory class.
     """
 
-    def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
+    def __init__(self, crew=None, embedder_config=None, storage=None, path=None, memory_verbose=False):
         if hasattr(crew, "memory_config") and crew.memory_config is not None:
             self.memory_provider = crew.memory_config.get("provider")
         else:
@@ -36,10 +36,15 @@ class EntityMemory(Memory):
                     path=path,
                 )
             )
-        super().__init__(storage)
+        super().__init__(storage, memory_verbose=memory_verbose)
 
     def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         """Saves an entity item into the SQLite storage."""
+        if self.memory_verbose:
+            memory_type = self.__class__.__name__
+            self._logger.log("info", f"{memory_type}: Saving entity: {item.name} ({item.type})", color="cyan")
+            self._logger.log("info", f"{memory_type}: Description: {item.description[:100]}{'...' if len(item.description) > 100 else ''}", color="cyan")
+            
         if self.memory_provider == "mem0":
             data = f"""
             Remember details about the following entity:
