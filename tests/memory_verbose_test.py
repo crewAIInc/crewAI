@@ -4,7 +4,7 @@ import pytest
 
 from crewai.agent import Agent
 from crewai.crew import Crew
-from crewai.memory.memory import Memory
+from crewai.memory.memory import Memory, MemoryOperationError
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.task import Task
@@ -79,11 +79,11 @@ def test_memory_verbose_in_short_term_memory():
         memory = ShortTermMemory(memory_verbose=True)
         assert memory.memory_verbose is True
         
-        mock_logger = MagicMock(spec=Logger)
+        mock_logger = MagicMock()
         memory._logger = mock_logger
         
         memory.save("test value", {"test": "metadata"}, "test_agent")
-        mock_logger.log.assert_called_once()
+        assert mock_logger.log.call_count >= 1
 
 
 def test_memory_verbose_passed_from_crew_to_memory():
@@ -120,3 +120,28 @@ def test_memory_verbose_passed_from_crew_to_memory():
         mock_stm.assert_called_with(crew=crew, embedder_config=None, memory_verbose=True)
         mock_em.assert_called_with(crew=crew, embedder_config=None, memory_verbose=True)
         mock_um.assert_called_with(crew=crew, memory_verbose=True)
+
+
+def test_memory_verbose_error_handling():
+    """Test that memory operations errors are properly handled when memory_verbose is enabled"""
+    storage = MagicMock()
+    storage.save.side_effect = Exception("Test error")
+    storage.search.side_effect = Exception("Test error")
+    
+    mock_logger = MagicMock()
+    
+    with patch('crewai.memory.memory.Logger', return_value=mock_logger):
+        memory = Memory(storage=storage, memory_verbose=True)
+        
+        with pytest.raises(MemoryOperationError) as exc_info:
+            memory.save("test value", {"test": "metadata"}, "test_agent")
+        
+        assert "save" in str(exc_info.value)
+        assert "Test error" in str(exc_info.value)
+        assert "Memory" in str(exc_info.value)
+        
+        with pytest.raises(MemoryOperationError) as exc_info:
+            memory.search("test query")
+        
+        assert "search" in str(exc_info.value)
+        assert "Test error" in str(exc_info.value)

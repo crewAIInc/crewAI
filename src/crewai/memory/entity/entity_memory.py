@@ -1,5 +1,7 @@
+from typing import Any, Dict, List, Optional
+
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
-from crewai.memory.memory import Memory
+from crewai.memory.memory import Memory, MemoryOperationError
 from crewai.memory.storage.rag_storage import RAGStorage
 
 
@@ -8,9 +10,24 @@ class EntityMemory(Memory):
     EntityMemory class for managing structured information about entities
     and their relationships using SQLite storage.
     Inherits from the Memory class.
+    
+    Attributes:
+        memory_provider: The memory provider to use, if any.
+        storage: The storage backend for the memory.
+        memory_verbose: Whether to log memory operations.
     """
 
     def __init__(self, crew=None, embedder_config=None, storage=None, path=None, memory_verbose=False):
+        """
+        Initialize an EntityMemory instance.
+        
+        Args:
+            crew: The crew to associate with this memory.
+            embedder_config: Configuration for the embedder.
+            storage: The storage backend for the memory.
+            path: Path to the storage file, if any.
+            memory_verbose: Whether to log memory operations.
+        """
         if hasattr(crew, "memory_config") and crew.memory_config is not None:
             self.memory_provider = crew.memory_config.get("provider")
         else:
@@ -39,25 +56,45 @@ class EntityMemory(Memory):
         super().__init__(storage, memory_verbose=memory_verbose)
 
     def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
-        """Saves an entity item into the SQLite storage."""
-        if self.memory_verbose:
-            memory_type = self.__class__.__name__
-            self._logger.log("info", f"{memory_type}: Saving entity: {item.name} ({item.type})", color="cyan")
-            self._logger.log("info", f"{memory_type}: Description: {item.description[:100]}{'...' if len(item.description) > 100 else ''}", color="cyan")
+        """
+        Saves an entity item into storage.
+        
+        Args:
+            item: The entity memory item to save.
             
-        if self.memory_provider == "mem0":
-            data = f"""
-            Remember details about the following entity:
-            Name: {item.name}
-            Type: {item.type}
-            Entity Description: {item.description}
-            """
-        else:
-            data = f"{item.name}({item.type}): {item.description}"
-        super().save(data, item.metadata)
+        Raises:
+            MemoryOperationError: If there's an error saving the entity to memory.
+        """
+        try:
+            if self.memory_verbose:
+                self._log_operation("Saving entity", f"{item.name} ({item.type})")
+                self._log_operation("Description", item.description)
+                
+            if self.memory_provider == "mem0":
+                data = f"""
+                Remember details about the following entity:
+                Name: {item.name}
+                Type: {item.type}
+                Entity Description: {item.description}
+                """
+            else:
+                data = f"{item.name}({item.type}): {item.description}"
+            super().save(data, item.metadata)
+        except Exception as e:
+            if self.memory_verbose:
+                self._log_operation("Error saving entity", str(e), level="error", color="red")
+            raise MemoryOperationError(str(e), "save entity", self.__class__.__name__)
 
     def reset(self) -> None:
+        """
+        Reset the entity memory.
+        
+        Raises:
+            MemoryOperationError: If there's an error resetting the memory.
+        """
         try:
             self.storage.reset()
         except Exception as e:
-            raise Exception(f"An error occurred while resetting the entity memory: {e}")
+            if self.memory_verbose:
+                self._log_operation("Error resetting", str(e), level="error", color="red")
+            raise MemoryOperationError(str(e), "reset", self.__class__.__name__)
