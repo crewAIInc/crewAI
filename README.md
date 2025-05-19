@@ -1,4 +1,4 @@
-gti<div align="center">
+<div align="center">
 
 ![Logo of CrewAI](./docs/crewai_logo.png)
 
@@ -35,8 +35,7 @@ You can try one part of the suite the [Crew Control Plane for free](https://app.
 - **24/7 Support**: Dedicated enterprise support to ensure uninterrupted operation and quick resolution of issues.
 - **On-premise and Cloud Deployment Options**: Deploy CrewAI Enterprise on-premise or in the cloud, depending on your security and compliance requirements.
 
-CrewAI Enterprise is designed for enterprises seeking a powerful,
-reliable solution to transform complex business processes into efficient,
+CrewAI Enterprise is designed for enterprises seeking a powerful, reliable solution to transform complex business processes into efficient,
 intelligent automations.
 
 <h3>
@@ -363,7 +362,7 @@ In addition to the sequential process, you can use the hierarchical process, whi
 
 CrewAI stands apart as a lean, standalone, high-performance framework delivering simplicity, flexibility, and precise control—free from the complexity and limitations found in other agent frameworks.
 
-- **Standalone & Lean**: Completely independent from other frameworks like LangChain, offering faster execution and lighter resource demands.
+- **Standalone & Lean**: Completely independent of other frameworks like LangChain, offering faster execution and lighter resource demands.
 - **Flexible & Precise**: Easily orchestrate autonomous agents through intuitive [Crews](https://docs.crewai.com/concepts/crews) or precise [Flows](https://docs.crewai.com/concepts/flows), achieving perfect balance for your needs.
 - **Seamless Integration**: Effortlessly combine Crews (autonomy) and Flows (precision) to create complex, real-world automations.
 - **Deep Customization**: Tailor every aspect—from high-level workflows down to low-level internal prompts and agent behaviors.
@@ -502,7 +501,7 @@ This example demonstrates how to:
 
 ## Connecting Your Crew to a Model
 
-CrewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
+CrewAI supports using various LLMs through a variety of connection options. By default, your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
 Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models.
 
@@ -583,7 +582,7 @@ Data collected includes:
   - So we can understand how many users are using the latest version
 - Version of Python
   - So we can decide on what versions to better support
-- General OS (e.g. number of CPUs, macOS/Windows/Linux)
+- General OS (e.g., number of CPUs, macOS/Windows/Linux)
   - So we know what OS we should focus on and if we could build specific OS related features
 - Number of agents and tasks in a crew
   - So we make sure we are testing internally with similar use cases and educate people on the best practices
@@ -594,7 +593,7 @@ Data collected includes:
 - If Tasks are being executed in parallel or sequentially
   - Understand if we should focus more on parallel execution
 - Language model being used
-  - Improved support on most used languages
+  - Improved support for most used languages
 - Roles of agents in a crew
   - Understand high level use cases so we can build better tools, integrations and examples about it
 - Tools names available
