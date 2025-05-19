@@ -106,7 +106,7 @@ ENV_VARS = {
     "featherless_ai": [
         {
             "prompt": "Enter your Featherless AI API key (press Enter to skip)",
-            "key_name": "FEATHERLESS_API_KEY",
+            "key_name": "FEATHERLESS_AI_API_KEY",
         }
     ],
 }
