@@ -103,6 +103,12 @@ ENV_VARS = {
             "key_name": "SAMBANOVA_API_KEY",
         }
     ],
+    "featherless_ai": [
+        {
+            "prompt": "Enter your Featherless AI API key (press Enter to skip)",
+            "key_name": "FEATHERLESS_API_KEY",
+        }
+    ],
 }
 
 
@@ -119,6 +125,7 @@ PROVIDERS = [
     "azure",
     "cerebras",
     "sambanova",
+    "featherless_ai",
 ]
 
 MODELS = {
@@ -313,6 +320,24 @@ MODELS = {
         "sambanova/Llama-3.2-11B-Vision-Instruct",
         "sambanova/Meta-Llama-3.2-3B-Instruct",
         "sambanova/Meta-Llama-3.2-1B-Instruct",
+    ],
+    "featherless_ai": [
+        "featherless_ai/meta-llama/Meta-Llama-3.1-8B-Instruct",
+        "featherless_ai/meta-llama/Meta-Llama-3.1-70B-Instruct",
+        "featherless_ai/meta-llama/Meta-Llama-3.3-70B-Instruct",
+        "featherless_ai/mistralai/Mistral-Small-24B-Instruct-2501",
+        "featherless_ai/mistralai/Mistral-Small-3.1-24B-Instruct-2503",
+        "featherless_ai/deepseek-ai/DeepSeek-R1",
+        "featherless_ai/deepseek-ai/DeepSeek-V3-0324",
+        "featherless_ai/Qwen/Qwen2-7B-Instruct",
+        "featherless_ai/Qwen/Qwen2-14B-Instruct",
+        "featherless_ai/Qwen/Qwen2-32B-Instruct",
+        "featherless_ai/Qwen/Qwen2-72B-Instruct",
+        "featherless_ai/Qwen/Qwen2.5-7B-Instruct",
+        "featherless_ai/Qwen/Qwen2.5-Coder-32B-Instruct",
+        "featherless_ai/Qwen/Qwen3-8B",
+        "featherless_ai/Qwen/Qwen3-14B",
+        "featherless_ai/Qwen/Qwen3-32B",
     ],
 }
 

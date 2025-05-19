@@ -604,6 +604,31 @@ In this section, you'll find detailed examples that help you select, configure, 
     | Qwen2 familly      | 8,192 tokens           | High-performance and output quality          |
   </Accordion>
 
+  <Accordion title="Featherless AI">
+    Set the following environment variables in your `.env` file:
+
+    ```toml Code
+    FEATHERLESS_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="featherless_ai/meta-llama/Meta-Llama-3.1-8B-Instruct",
+        temperature=0.7
+    )
+    ```
+    | Model              | Context Window         | Best For                                     |
+    |--------------------|------------------------|----------------------------------------------|
+    | Llama 3.1 70B/8B   | 16,384 tokens          | Complex reasoning, instruction following, and creative content generation |
+    | Llama 3.3 70B      | 16,384 tokens          | Advanced reasoning, coding, and multi-turn conversations                  |
+    | Deepseek v3/R1     | 32,768 tokens          | Scientific research, technical documentation, and long-form content       |
+    | Qwen2 familly      | 16,384 tokens          | Multilingual tasks, knowledge-intensive applications, and RAG systems     |
+    | Qwen3 familly      | 16,384 tokens          | Enhanced reasoning, coding capabilities, and enterprise applications      |
+    | Mistral 3          | 16,384 tokens          | Balanced performance across reasoning, coding, and creative tasks         |
+    | Mistral 3.1        | 16,384 tokens          | Improved instruction following, factual accuracy, and specialized domains |
+  </Accordion>
+
   <Accordion title="Cerebras">
     Set the following environment variables in your `.env` file:
     ```toml Code
@@ -628,7 +653,7 @@ In this section, you'll find detailed examples that help you select, configure, 
       - Support for long context windows
     </Info>
   </Accordion>
-
+  
   <Accordion title="Open Router">
     Set the following environment variables in your `.env` file:
     ```toml Code
