@@ -213,14 +213,8 @@ def update():
 
 
 @crewai.command()
-def signup():
-    """Sign Up/Login to CrewAI+."""
-    AuthenticationCommand().signup()
-
-
-@crewai.command()
 def login():
-    """Sign Up/Login to CrewAI+."""
+    """Sign Up/Login to CrewAI Enterprise."""
     AuthenticationCommand().signup()
 
 
