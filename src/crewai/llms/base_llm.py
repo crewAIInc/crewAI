@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 
 class BaseLLM(ABC):
@@ -27,7 +27,7 @@ class BaseLLM(ABC):
         self,
         model: str,
         temperature: Optional[float] = None,
-    ):
+    ) -> None:
         """Initialize the BaseLLM with default attributes.
 
         This constructor sets default values for attributes that are expected
@@ -36,7 +36,16 @@ class BaseLLM(ABC):
         All custom LLM implementations should call super().__init__(model="model_name"),
         where "model_name" is a string identifier for your model. This parameter
         is required and cannot be omitted.
+
+        Args:
+            model (str): Required. A string identifier for the model.
+            temperature (Optional[float]): The sampling temperature to use.
+
+        Raises:
+            ValueError: If the model parameter is not provided or empty.
         """
+        if not model:
+            raise ValueError("model parameter is required and must be a non-empty string")
         self.model = model
         self.temperature = temperature
         self.stop = []
