@@ -8,7 +8,7 @@ icon: language
 
 ## Description
 
-This tool is used to convert natural language to SQL queries. When passed to the agent it will generate queries and then use them to interact with the database.
+This tool is used to convert natural language to SQL queries. When passed to the agent, it will generate queries and then use them to interact with the database.
 
 This enables multiple workflows like having an Agent to access the database fetch information based on the goal and then use the information to generate a response, report or any other output.
 Along with that provides the ability for the Agent to update the database based on its goal.
@@ -66,7 +66,7 @@ The second task goal was:
 "Review the data and create a detailed report, and then create the table on the database with the fields based on the data provided.
 Include information on the average, maximum, and minimum monthly revenue for each city, but only include cities that have more than one user. Also, count the number of users in each city and sort the results by the average monthly revenue in descending order."
 
-Now things start to get interesting, the Agent generates the SQL query to not only create the table but also insert the data into the table. And in the end the Agent still returns the final report which is exactly what was in the database.
+Now things start to get interesting, the Agent generates the SQL query to not only create the table but also insert the data into the table. And in the end, the Agent still returns the final report which is exactly what was in the database.
 
 ![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-4.png)
 ![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-5.png)
@@ -77,7 +77,7 @@ Now things start to get interesting, the Agent generates the SQL query to not on
 
 This is a simple example of how the NL2SQLTool can be used to interact with the database and generate reports based on the data in the database.
 
-The Tool provides endless possibilities on the logic of the Agent and how it can interact with the database.
+The Tool provides endless possibilities for the logic of the Agent and how it can interact with the database.
 
 ```md
  DB -> Agent -> ... -> Agent -> DB
