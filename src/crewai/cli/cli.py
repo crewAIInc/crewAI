@@ -150,7 +150,7 @@ def reset_memories(
     all: bool,
 ) -> None:
     """
-    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs, knowledge, agent_knowledge). This will delete all the data saved.
+    Reset the crew memories (long, short, entity, latest_crew_kickoff_outputs, knowledge, agent_knowledge). This will delete all the data saved.
     """
     try:
         memory_types = [long, short, entities, knowledge, agent_knowledge, kickoff_outputs, all]

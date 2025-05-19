@@ -253,7 +253,7 @@ def write_env_file(folder_path, env_vars):
 
 
 def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
-    """Get the crew instances from the a file."""
+    """Get the crew instances from a file."""
     crew_instances = []
     try:
         import importlib.util

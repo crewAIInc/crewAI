@@ -115,11 +115,11 @@ def parse_version(version: str) -> str:
     """Parse and convert version specifiers."""
     if version.startswith("^"):
         main_lib_version = version[1:].split(",")[0]
-        addtional_lib_version = None
+        additional_lib_version = None
         if len(version[1:].split(",")) > 1:
-            addtional_lib_version = version[1:].split(",")[1]
+            additional_lib_version = version[1:].split(",")[1]
 
         return f">={main_lib_version}" + (
-            f",{addtional_lib_version}" if addtional_lib_version else ""
+            f",{additional_lib_version}" if additional_lib_version else ""
         )
     return version

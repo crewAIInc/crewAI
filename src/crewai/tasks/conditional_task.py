@@ -10,7 +10,7 @@ from crewai.tasks.task_output import TaskOutput
 class ConditionalTask(Task):
     """
     A task that can be conditionally executed based on the output of another task.
-    Note: This cannot be the only task you have in your crew and cannot be the first since its needs context from the previous task.
+    Note: This cannot be the only task you have in your crew and cannot be the first since it needs context from the previous task.
     """
 
     condition: Callable[[TaskOutput], bool] = Field(
