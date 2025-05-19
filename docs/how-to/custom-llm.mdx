@@ -16,6 +16,7 @@ To create a custom LLM implementation, you need to:
    - `supports_function_calling()`: Whether the LLM supports function calling
    - `supports_stop_words()`: Whether the LLM supports stop words
    - `get_context_window_size()`: The context window size of the LLM
+3. Ensure you pass a model identifier string to the BaseLLM constructor using `super().__init__(model="your-model-name")`
 
 ## Example: Basic Custom LLM
 
@@ -25,7 +26,7 @@ from typing import Any, Dict, List, Optional, Union
 
 class CustomLLM(BaseLLM):
     def __init__(self, api_key: str, endpoint: str):
-        super().__init__()  # Initialize the base class to set default attributes
+        super().__init__(model="custom-model")  # Initialize with required model parameter
         if not api_key or not isinstance(api_key, str):
             raise ValueError("Invalid API key: must be a non-empty string")
         if not endpoint or not isinstance(endpoint, str):
@@ -195,7 +196,7 @@ Always validate input parameters to prevent runtime errors:
 
 ```python
 def __init__(self, api_key: str, endpoint: str):
-    super().__init__()
+    super().__init__(model="custom-model")  # Initialize with required model parameter
     if not api_key or not isinstance(api_key, str):
         raise ValueError("Invalid API key: must be a non-empty string")
     if not endpoint or not isinstance(endpoint, str):
@@ -239,7 +240,7 @@ from typing import Any, Dict, List, Optional, Union
 
 class JWTAuthLLM(BaseLLM):
     def __init__(self, jwt_token: str, endpoint: str):
-        super().__init__()  # Initialize the base class to set default attributes
+        super().__init__(model="custom-jwt-model")  # Initialize with required model parameter
         if not jwt_token or not isinstance(jwt_token, str):
             raise ValueError("Invalid JWT token: must be a non-empty string")
         if not endpoint or not isinstance(endpoint, str):
@@ -387,7 +388,7 @@ from typing import Any, Dict, List, Optional, Union
 
 class LoggingLLM(BaseLLM):
     def __init__(self, api_key: str, endpoint: str):
-        super().__init__()
+        super().__init__(model="custom-logging-model")  # Initialize with required model parameter
         self.api_key = api_key
         self.endpoint = endpoint
         self.logger = logging.getLogger("crewai.llm.custom")
@@ -425,7 +426,7 @@ class RateLimitedLLM(BaseLLM):
         endpoint: str, 
         requests_per_minute: int = 60
     ):
-        super().__init__()
+        super().__init__(model="custom-rate-limited-model")  # Initialize with required model parameter
         self.api_key = api_key
         self.endpoint = endpoint
         self.requests_per_minute = requests_per_minute
@@ -468,7 +469,7 @@ from typing import Any, Dict, List, Optional, Union
 
 class MetricsCollectingLLM(BaseLLM):
     def __init__(self, api_key: str, endpoint: str):
-        super().__init__()
+        super().__init__(model="custom-metrics-model")  # Initialize with required model parameter
         self.api_key = api_key
         self.endpoint = endpoint
         self.metrics: Dict[str, Any] = {

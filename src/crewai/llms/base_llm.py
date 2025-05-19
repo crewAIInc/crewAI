@@ -33,8 +33,9 @@ class BaseLLM(ABC):
         This constructor sets default values for attributes that are expected
         by the CrewAgentExecutor and other components.
 
-        All custom LLM implementations should call super().__init__() to ensure
-        that these default attributes are properly initialized.
+        All custom LLM implementations should call super().__init__(model="model_name"),
+        where "model_name" is a string identifier for your model. This parameter
+        is required and cannot be omitted.
         """
         self.model = model
         self.temperature = temperature
