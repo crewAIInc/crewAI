@@ -385,7 +385,7 @@ def extract_available_exports(dir_path: str = "src"):
         raise SystemExit(1)
 
 
-def _load_tools_from_init(init_file: Path) -> list:
+def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
     """
     Load and validate tools from a given __init__.py file.
     """
@@ -407,8 +407,11 @@ def _load_tools_from_init(init_file: Path) -> list:
             raise SystemExit(1)
 
         # TODO: Security check: prevent any inject malicious code, or stuff like that
+
         return [
-            name
+            {
+                "name": name,
+            }
             for name in module.__all__
             if hasattr(module, name) and is_valid_tool(getattr(module, name))
         ]

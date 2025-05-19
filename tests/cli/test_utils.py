@@ -165,7 +165,7 @@ __all__ = ['MyTool']
 """,
     )
     tools = utils.extract_available_exports(dir_path=temp_project_dir)
-    assert ["MyTool"] == tools
+    assert [{"name": "MyTool"}] == tools
 
 
 def test_extract_available_exports_valid_tool_decorator(temp_project_dir):
@@ -182,7 +182,7 @@ __all__ = ['my_tool_function']
 """,
     )
     tools = utils.extract_available_exports(dir_path=temp_project_dir)
-    assert ["my_tool_function"] == tools
+    assert [{"name": "my_tool_function"}] == tools
 
 
 def test_extract_available_exports_multiple_valid_tools(temp_project_dir):
@@ -203,7 +203,7 @@ __all__ = ['MyTool', 'my_tool_function']
 """,
     )
     tools = utils.extract_available_exports(dir_path=temp_project_dir)
-    assert ["MyTool", "my_tool_function"] == tools
+    assert [{"name": "MyTool"}, {"name": "my_tool_function"}] == tools
 
 
 def test_extract_available_exports_with_invalid_tool_decorator(temp_project_dir):
@@ -222,7 +222,7 @@ __all__ = ['MyTool', 'not_a_tool']
 """,
     )
     tools = utils.extract_available_exports(dir_path=temp_project_dir)
-    assert ["MyTool"] == tools
+    assert [{"name": "MyTool"}] == tools
 
 
 def test_extract_available_exports_import_error(temp_project_dir, capsys):
