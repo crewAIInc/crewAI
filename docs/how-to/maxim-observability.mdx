@@ -21,7 +21,7 @@ Maxim AI provides comprehensive agent monitoring, evaluation, and observability 
 
 ### Prerequisites
 
-- Python 3.7+
+- Python 3.7 or later (Python 3.9+ recommended)
 - A Maxim account ([sign up here](https://getmaxim.ai/))
 - A CrewAI project
 
@@ -45,8 +45,13 @@ maxim-py>=3.6.2
 ### 1. Set up environment variables
 
 ```python
-MAXIM_API_KEY=xxx
-MAXIM_LOG_REPO_ID=xxx
+### Environment Variables Setup
+
+# Create a `.env` file in your project root:
+
+# Maxim API Configuration
+MAXIM_API_KEY=your_api_key_here
+MAXIM_LOG_REPO_ID=your_repo_id_here
 ```
 
 ### 2. Import the required packages
@@ -60,7 +65,7 @@ from maxim.logger.crewai import instrument_crewai
 ### 3. Initialise Maxim with your API key
 
 ```python
-# Initialize Maxim
+# Initialize Maxim logger
 logger = Maxim().logger()
 
 # Instrument CrewAI with just one line
@@ -70,7 +75,8 @@ instrument_crewai(logger)
 ### 4. Create and run your CrewAI application as usual
 
 ```python
-# Your regular CrewAI code
+
+# Create your agent
 researcher = Agent(
     role='Senior Research Analyst',
     goal='Uncover cutting-edge developments in AI',
@@ -79,20 +85,23 @@ researcher = Agent(
     llm=llm
 )
 
-# Create tasks, crew, and run as normal
+# Define the task
 research_task = Task(
     description="Research the latest AI advancements...",
     agent=researcher
 )
 
+# Configure and run the crew
 crew = Crew(
     agents=[researcher],
     tasks=[research_task],
     verbose=True
 )
 
-result = crew.kickoff()
-maxim.cleanup()
+try:
+    result = crew.kickoff()
+finally:
+    maxim.cleanup()  # Ensure cleanup happens even if errors occur
 ```
 
 That's it! All your CrewAI agent interactions will now be logged and available in your Maxim dashboard.
