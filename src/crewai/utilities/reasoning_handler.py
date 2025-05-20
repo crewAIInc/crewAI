@@ -8,6 +8,12 @@ from crewai.agent import Agent
 from crewai.task import Task
 from crewai.utilities import I18N
 from crewai.llm import LLM
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.reasoning_events import (
+    AgentReasoningStartedEvent,
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
+)
 
 
 class ReasoningPlan(BaseModel):
@@ -49,7 +55,55 @@ class AgentReasoning:
         Returns:
             AgentReasoningOutput: The output of the agent reasoning process.
         """
-        return self.__handle_agent_reasoning()
+        # Emit a reasoning started event (attempt 1)
+        try:
+            crewai_event_bus.emit(
+                self.agent,
+                AgentReasoningStartedEvent(
+                    agent_role=self.agent.role,
+                    task_id=str(self.task.id),
+                    attempt=1,
+                ),
+            )
+        except Exception:
+            # Ignore event bus errors to avoid breaking execution
+            pass
+
+        try:
+            output = self.__handle_agent_reasoning()
+
+            # Emit reasoning completed event
+            try:
+                crewai_event_bus.emit(
+                    self.agent,
+                    AgentReasoningCompletedEvent(
+                        agent_role=self.agent.role,
+                        task_id=str(self.task.id),
+                        plan=output.plan.plan,
+                        ready=output.plan.ready,
+                        attempt=1,
+                    ),
+                )
+            except Exception:
+                pass
+
+            return output
+        except Exception as e:
+            # Emit reasoning failed event
+            try:
+                crewai_event_bus.emit(
+                    self.agent,
+                    AgentReasoningFailedEvent(
+                        agent_role=self.agent.role,
+                        task_id=str(self.task.id),
+                        error=str(e),
+                        attempt=1,
+                    ),
+                )
+            except Exception:
+                pass
+
+            raise
 
     def __handle_agent_reasoning(self) -> AgentReasoningOutput:
         """
@@ -108,6 +162,19 @@ class AgentReasoning:
         max_attempts = self.agent.max_reasoning_attempts
 
         while not ready and (max_attempts is None or attempt < max_attempts):
+            # Emit event for each refinement attempt
+            try:
+                crewai_event_bus.emit(
+                    self.agent,
+                    AgentReasoningStartedEvent(
+                        agent_role=self.agent.role,
+                        task_id=str(self.task.id),
+                        attempt=attempt + 1,
+                    ),
+                )
+            except Exception:
+                pass
+
             refine_prompt = self.__create_refine_prompt(plan)
 
             if self.llm.supports_function_calling():
@@ -179,12 +246,18 @@ class AgentReasoning:
                 backstory=self.__get_agent_backstory()
             )
 
+            # Prepare a simple callable that just returns the tool arguments as JSON
+            def _create_reasoning_plan(plan: str, ready: bool):  # noqa: N802
+                """Return the reasoning plan result in JSON string form."""
+                return json.dumps({"plan": plan, "ready": ready})
+
             response = self.llm.call(
                 [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
-                tools=[function_schema]
+                tools=[function_schema],
+                available_functions={"create_reasoning_plan": _create_reasoning_plan},
             )
 
             self.logger.debug(f"Function calling response: {response[:100]}...")
