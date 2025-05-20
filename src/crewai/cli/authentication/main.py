@@ -20,11 +20,8 @@ class AuthenticationCommand:
     def __init__(self):
         self.token_manager = TokenManager()
 
-    def signup(self) -> None:
-        """Sign up to CrewAI+"""
-        console.print("Signing Up to CrewAI+ \n", style="bold blue")
-        device_code_data = self._get_device_code()
-        self._display_auth_instructions(device_code_data)
+    def login(self) -> None:
+        """Login or Sign Up to CrewAI Enterprise"""
 
         return self._poll_for_token(device_code_data)
 
