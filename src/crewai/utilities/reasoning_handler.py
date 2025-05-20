@@ -76,9 +76,15 @@ class AgentReasoning:
             response = self.__call_with_function(reasoning_prompt, "initial_plan")
             return response.plan, response.ready
         else:
+            system_prompt = self.i18n.retrieve("reasoning", "initial_plan").format(
+                role=self.agent.role,
+                goal=self.agent.goal,
+                backstory=self.agent.backstory
+            )
+            
             response = self.agent.llm.call(
                 [
-                    {"role": "system", "content": self.i18n.retrieve("reasoning", "initial_plan")},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": reasoning_prompt}
                 ]
             )
@@ -106,9 +112,15 @@ class AgentReasoning:
                 response = self.__call_with_function(refine_prompt, "refine_plan")
                 plan, ready = response.plan, response.ready
             else:
+                system_prompt = self.i18n.retrieve("reasoning", "refine_plan").format(
+                    role=self.agent.role,
+                    goal=self.agent.goal,
+                    backstory=self.agent.backstory
+                )
+                
                 response = self.agent.llm.call(
                     [
-                        {"role": "system", "content": self.i18n.retrieve("reasoning", "refine_plan")},
+                        {"role": "system", "content": system_prompt},
                         {"role": "user", "content": refine_prompt}
                     ]
                 )
@@ -157,9 +169,15 @@ class AgentReasoning:
         }
         
         try:
+            system_prompt = self.i18n.retrieve("reasoning", prompt_type).format(
+                role=self.agent.role,
+                goal=self.agent.goal,
+                backstory=self.agent.backstory
+            )
+            
             response = self.agent.llm.call(
                 [
-                    {"role": "system", "content": self.i18n.retrieve("reasoning", prompt_type)},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 tools=[function_schema]
@@ -183,9 +201,15 @@ class AgentReasoning:
             self.logger.warning(f"Error during function calling: {str(e)}. Falling back to text parsing.")
             
             try:
+                system_prompt = self.i18n.retrieve("reasoning", prompt_type).format(
+                    role=self.agent.role,
+                    goal=self.agent.goal,
+                    backstory=self.agent.backstory
+                )
+                
                 fallback_response = self.agent.llm.call(
                     [
-                        {"role": "system", "content": self.i18n.retrieve("reasoning", prompt_type)},
+                        {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt}
                     ]
                 )
