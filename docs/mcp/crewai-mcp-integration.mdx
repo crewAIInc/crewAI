@@ -1,0 +1,230 @@
+---
+title: 'MCP Servers as Tools in CrewAI'
+description: 'Learn how to integrate MCP servers as tools in your CrewAI agents using the `crewai-tools` library.'
+icon: 'plug'
+---
+
+## Overview
+
+The [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) provides a standardized way for AI agents to provide context to LLMs by communicating with external services, known as MCP Servers. 
+The `crewai-tools` library extends CrewAI's capabilities by allowing you to seamlessly integrate tools from these MCP servers into your agents. 
+This gives your crews access to a vast ecosystem of functionalities. For now, we support **Standard Input/Output** (Stdio) and **Server-Sent Events** (SSE) transport mechanisms. 
+
+<Info>
+We will also be integrating **Streamable HTTP** transport in the near future. 
+Streamable HTTP is designed for efficient, bi-directional communication over a single HTTP connection.
+</Info>
+
+## Installation
+
+Before you start using MCP with `crewai-tools`, you need to install the `mcp` extra `crewai-tools` dependency with the following command:
+
+```shell
+uv pip install 'crewai-tools[mcp]'
+```
+
+### Integrating MCP Tools with `MCPServerAdapter`
+
+The `MCPServerAdapter` class from `crewai-tools` is the primary way to connect to an MCP server and make its tools available to your CrewAI agents. 
+It supports different transport mechanisms, primarily **Stdio** (for local servers) and **SSE** (Server-Sent Events).You have two main options for managing the connection lifecycle:
+
+### Option 1: Fully Managed Connection (Recommended)
+
+Using a Python context manager (`with` statement) is the recommended approach. It automatically handles starting and stopping the connection to the MCP server.
+
+**For a local Stdio-based MCP server:**
+
+```python
+from crewai_tools import MCPServerAdapter
+from crewai import Agent, Task, Crew
+from mcp import StdioServerParameters
+import os
+
+server_params=StdioServerParameters(
+    command="python3", # Or your uvx executable i.e. "uvx"
+    args=["mock_server.py"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+with MCPServerAdapter(server_params=server_params) as tools:
+    print(f"Available tools from Stdio MCP server: {[tool.name for tool in tools]}")
+
+    # Example: Using the tools from the Stdio MCP server in a CrewAI Agent
+    agent = Agent(
+        role="Web Information Retriever",
+        goal="Scrape content from a specified URL.",
+        backstory="An AI that can fetch and process web page data via an MCP tool.",
+        tools=tools,
+        verbose=True,
+    )
+    task = Task(
+        description="Scrape content from a specified URL.",
+        expected_output="Scraped content from the specified URL.",
+        agent=agent,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        verbose=True,
+    )
+    result = crew.kickoff()
+    print(result)
+```
+
+**For a remote SSE-based MCP server:**
+
+```python
+from crewai_tools import MCPServerAdapter
+from crewai import Agent, Task, Crew
+from mcp import StdioServerParameters
+
+server_params=StdioServerParameters(url="http://localhost:8000/sse")
+
+with MCPServerAdapter(server_params=server_params) as tools:
+    print(f"Available tools from SSE MCP server: {[tool.name for tool in tools]}")
+
+    # Example: Using the tools from the SSE MCP server in a CrewAI Agent
+    agent = Agent(
+        role="Web Information Retriever",
+        goal="Scrape content from a specified URL.",
+        backstory="An AI that can fetch and process web page data via an MCP tool.",
+        tools=tools,
+        verbose=True,
+    )
+    task = Task(
+        description="Scrape content from a specified URL.",
+        expected_output="Scraped content from the specified URL.",
+        agent=agent,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        verbose=True,
+    )
+    result = crew.kickoff()
+    print(result)
+```
+
+### Option 2: More control over the MCP server connection lifecycle
+
+If you need finer-grained control over the MCP server connection lifecycle, you can instantiate `MCPServerAdapter` directly and manage its `start()` and `stop()` methods.
+
+<Info>
+You **MUST** call `mcp_server_adapter.stop()` to ensure the connection is closed and resources are released. Using a `try...finally` block is highly recommended.
+</Info>
+
+#### Stdio Transport Example (Manual)
+
+```python
+from mcp import StdioServerParameters
+from crewai_tools import MCPServerAdapter
+from crewai import Agent, Task, Crew
+import os
+
+stdio_params = StdioServerParameters(
+    command="uvx", # Or your python3 executable i.e. "python3"
+    args=["--quiet", "your-mcp-server@0.1.3"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+mcp_server_adapter = MCPServerAdapter(server_params=stdio_params)
+try:
+    mcp_server_adapter.start() # Manually start the connection
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual Stdio): {[tool.name for tool in tools]}")
+
+    # Use 'tools' with your Agent, Task, Crew setup as in Option 1
+    agent = Agent(
+        role="Medical Researcher", 
+        goal="Find recent studies on a given topic using PubMed.", 
+        backstory="An AI assistant specialized in biomedical literature research.", 
+        tools=tools,
+        verbose=True 
+    )
+    
+    task = Task(
+        description="Search for recent articles on 'crispr gene editing'.",
+        expected_output="A summary of the top 3 recent articles.",
+        agent=agent
+    )
+    
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        verbose=True,
+        process=Process.sequential
+    )
+    
+    result = crew.kickoff()
+    print(result)
+finally:
+    print("Stopping Stdio MCP server connection (manual)...")
+    mcp_server_adapter.stop() # **Crucial: Ensure stop is called**
+```
+
+
+#### SSE Transport Example (Manual)
+
+```python
+from crewai_tools import MCPServerAdapter
+from crewai import Agent, Task, Crew, Process
+from mcp import StdioServerParameters
+
+
+server_params = {"url": "http://localhost:8000/sse"}
+
+try:
+    mcp_server_adapter = MCPServerAdapter(server_params)
+    mcp_server_adapter.start()
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual SSE): {[tool.name for tool in tools]}")
+
+    agent = Agent(
+        role="Medical Researcher", 
+        goal="Find recent studies on a given topic using PubMed.", 
+        backstory="An AI assistant specialized in biomedical literature research.", 
+        tools=tools,
+        verbose=True 
+    )
+    
+    task = Task(
+        description="Search for recent articles on 'crispr gene editing'.",
+        expected_output="A summary of the top 3 recent articles.",
+        agent=agent
+    )
+    
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        verbose=True,
+        process=Process.sequential
+    )
+    
+    result = crew.kickoff()
+    print(result)
+finally:
+    print("Stopping SSE MCP server connection (manual)...")
+    mcp_server_adapter.stop() # **Crucial: Ensure stop is called**
+```
+
+## Staying Safe with MCP
+<Warning>
+Always ensure that you trust an MCP Server before using it.
+</Warning>
+
+#### Security Warning: DNS Rebinding Attacks
+SSE transports can be vulnerable to DNS rebinding attacks if not properly secured. 
+To prevent this:
+
+1. **Always validate Origin headers** on incoming SSE connections to ensure they come from expected sources
+2. **Avoid binding servers to all network interfaces** (0.0.0.0) when running locally - bind only to localhost (127.0.0.1) instead
+3. **Implement proper authentication** for all SSE connections
+
+Without these protections, attackers could use DNS rebinding to interact with local MCP servers from remote websites.
+
+For more details, see the [MCP Transport Security](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations) documentation.
+
+### Limitations
+*   **Supported Primitives**: Currently, `MCPServerAdapter` primarily supports adapting MCP `tools`. 
+Other MCP primitives like `prompts` or `resources` are not directly integrated as CrewAI components through this adapter at this time.
+*   **Output Handling**: The adapter typically processes the primary text output from an MCP tool (e.g., `.content[0].text`). Complex or multi-modal outputs might require custom handling if not fitting this pattern.
