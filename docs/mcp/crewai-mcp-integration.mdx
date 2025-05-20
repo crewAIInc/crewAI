@@ -35,18 +35,18 @@ Using a Python context manager (`with` statement) is the recommended approach. I
 **For a local Stdio-based MCP server:**
 
 ```python
-from crewai_tools import MCPServerAdapter
 from crewai import Agent, Task, Crew
+from crewai_tools import MCPServerAdapter
 from mcp import StdioServerParameters
 import os
 
 server_params=StdioServerParameters(
-    command="python3", # Or your uvx executable i.e. "uvx"
+    command="uxv", # Or your python3 executable i.e. "python3"
     args=["mock_server.py"],
     env={"UV_PYTHON": "3.12", **os.environ},
 )
 
-with MCPServerAdapter(server_params=server_params) as tools:
+with MCPServerAdapter(server_params) as tools:
     print(f"Available tools from Stdio MCP server: {[tool.name for tool in tools]}")
 
     # Example: Using the tools from the Stdio MCP server in a CrewAI Agent
@@ -76,11 +76,10 @@ with MCPServerAdapter(server_params=server_params) as tools:
 ```python
 from crewai_tools import MCPServerAdapter
 from crewai import Agent, Task, Crew
-from mcp import StdioServerParameters
 
-server_params=StdioServerParameters(url="http://localhost:8000/sse")
+server_params = {"url": "http://localhost:8000/sse"}
 
-with MCPServerAdapter(server_params=server_params) as tools:
+with MCPServerAdapter(server_params) as tools:
     print(f"Available tools from SSE MCP server: {[tool.name for tool in tools]}")
 
     # Example: Using the tools from the SSE MCP server in a CrewAI Agent
