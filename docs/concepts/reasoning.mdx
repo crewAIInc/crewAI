@@ -67,3 +67,74 @@ result = crew.kickoff()
 
 print(result)
 ```
+
+## Error Handling
+
+The reasoning process is designed to be robust, with error handling built in. If an error occurs during reasoning, the agent will proceed with executing the task without the reasoning plan. This ensures that tasks can still be executed even if the reasoning process fails.
+
+Here's how to handle potential errors in your code:
+
+```python
+from crewai import Agent, Task
+import logging
+
+# Set up logging to capture any reasoning errors
+logging.basicConfig(level=logging.INFO)
+
+# Create an agent with reasoning enabled
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    reasoning=True,
+    max_reasoning_attempts=3
+)
+
+# Create a task
+task = Task(
+    description="Analyze the provided sales data and identify key trends.",
+    expected_output="A report highlighting the top 3 sales trends.",
+    agent=agent
+)
+
+# Execute the task
+# If an error occurs during reasoning, it will be logged and execution will continue
+result = agent.execute_task(task)
+```
+
+## Example Reasoning Output
+
+Here's an example of what a reasoning plan might look like for a data analysis task:
+
+```
+Task: Analyze the provided sales data and identify key trends.
+
+Reasoning Plan:
+I'll analyze the sales data to identify the top 3 trends. 
+
+1. Understanding of the task:
+   I need to analyze sales data to identify key trends that would be valuable for business decision-making.
+
+2. Key steps I'll take:
+   - First, I'll examine the data structure to understand what fields are available
+   - Then I'll perform exploratory data analysis to identify patterns
+   - Next, I'll analyze sales by time periods to identify temporal trends
+   - I'll also analyze sales by product categories and customer segments
+   - Finally, I'll identify the top 3 most significant trends
+
+3. Approach to challenges:
+   - If the data has missing values, I'll decide whether to fill or filter them
+   - If the data has outliers, I'll investigate whether they're valid data points or errors
+   - If trends aren't immediately obvious, I'll apply statistical methods to uncover patterns
+
+4. Use of available tools:
+   - I'll use data analysis tools to explore and visualize the data
+   - I'll use statistical tools to identify significant patterns
+   - I'll use knowledge retrieval to access relevant information about sales analysis
+
+5. Expected outcome:
+   A concise report highlighting the top 3 sales trends with supporting evidence from the data.
+
+READY: I am ready to execute the task.
+```
+
+This reasoning plan helps the agent organize its approach to the task, consider potential challenges, and ensure it delivers the expected output.

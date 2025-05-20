@@ -276,13 +276,16 @@ class Agent(BaseAgent):
             Output of the agent
         """
         if self.reasoning:
-            from crewai.utilities.reasoning_handler import AgentReasoning
-            
-            reasoning_handler = AgentReasoning(task=task, agent=self)
-            reasoning_output = reasoning_handler._handle_agent_reasoning()
-            
-            # Add the reasoning plan to the task description
-            task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
+            try:
+                from crewai.utilities.reasoning_handler import AgentReasoning, AgentReasoningOutput
+                
+                reasoning_handler = AgentReasoning(task=task, agent=self)
+                reasoning_output: AgentReasoningOutput = reasoning_handler.handle_agent_reasoning()
+                
+                # Add the reasoning plan to the task description
+                task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
+            except Exception as e:
+                self._logger.error(f"Error during reasoning process: {str(e)}")
             
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")

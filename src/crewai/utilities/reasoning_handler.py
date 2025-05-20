@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -24,38 +24,81 @@ class AgentReasoning:
     before executing a task.
     """
     def __init__(self, task: Task, agent: Agent):
+        if not task or not agent:
+            raise ValueError("Both task and agent must be provided.")
         self.task = task
         self.agent = agent
         self.logger = logging.getLogger(__name__)
+        self.__system_prompts = {
+            "initial_plan": "You are a helpful assistant that helps an agent create a plan for a task.",
+            "refine_plan": "You are a helpful assistant that helps an agent refine a plan for a task."
+        }
 
-    def _handle_agent_reasoning(self) -> AgentReasoningOutput:
+    def handle_agent_reasoning(self) -> AgentReasoningOutput:
         """
-        Handles the agent reasoning process by creating a detailed plan for the task
-        and determining if the agent is ready to execute it.
+        Public method for the reasoning process that creates and refines a plan
+        for the task until the agent is ready to execute it.
+        
+        Returns:
+            AgentReasoningOutput: The output of the agent reasoning process.
         """
-        reasoning_prompt = self._create_reasoning_prompt()
+        return self.__handle_agent_reasoning()
+    
+    def __handle_agent_reasoning(self) -> AgentReasoningOutput:
+        """
+        Private method that handles the agent reasoning process.
+        
+        Returns:
+            AgentReasoningOutput: The output of the agent reasoning process.
+        """
+        plan, ready = self.__create_initial_plan()
+        
+        plan, ready = self.__refine_plan_if_needed(plan, ready)
+        
+        reasoning_plan = ReasoningPlan(plan=plan, ready=ready)
+        return AgentReasoningOutput(plan=reasoning_plan)
+
+    def __create_initial_plan(self) -> Tuple[str, bool]:
+        """
+        Creates the initial reasoning plan for the task.
+        
+        Returns:
+            Tuple[str, bool]: The initial plan and whether the agent is ready to execute the task.
+        """
+        reasoning_prompt = self.__create_reasoning_prompt()
         
         response = self.agent.llm.call(
             [
-                {"role": "system", "content": "You are a helpful assistant that helps an agent create a plan for a task."},
+                {"role": "system", "content": self.__system_prompts["initial_plan"]},
                 {"role": "user", "content": reasoning_prompt}
             ]
         )
         
-        plan, ready = self._parse_reasoning_response(response)
+        return self.__parse_reasoning_response(response)
+    
+    def __refine_plan_if_needed(self, plan: str, ready: bool) -> Tuple[str, bool]:
+        """
+        Refines the reasoning plan if the agent is not ready to execute the task.
         
+        Args:
+            plan: The current reasoning plan.
+            ready: Whether the agent is ready to execute the task.
+            
+        Returns:
+            Tuple[str, bool]: The refined plan and whether the agent is ready to execute the task.
+        """
         attempt = 1
         max_attempts = self.agent.max_reasoning_attempts
         
         while not ready and (max_attempts is None or attempt < max_attempts):
-            refine_prompt = self._create_refine_prompt(plan)
+            refine_prompt = self.__create_refine_prompt(plan)
             response = self.agent.llm.call(
                 [
-                    {"role": "system", "content": "You are a helpful assistant that helps an agent refine a plan for a task."},
+                    {"role": "system", "content": self.__system_prompts["refine_plan"]},
                     {"role": "user", "content": refine_prompt}
                 ]
             )
-            plan, ready = self._parse_reasoning_response(response)
+            plan, ready = self.__parse_reasoning_response(response)
             attempt += 1
             
             if max_attempts is not None and attempt >= max_attempts:
@@ -64,11 +107,17 @@ class AgentReasoning:
                 )
                 break
         
-        reasoning_plan = ReasoningPlan(plan=plan, ready=ready)
-        return AgentReasoningOutput(plan=reasoning_plan)
+        return plan, ready
 
-    def _create_reasoning_prompt(self) -> str:
-        """Creates a prompt for the agent to reason about the task."""
+    def __create_reasoning_prompt(self) -> str:
+        """
+        Creates a prompt for the agent to reason about the task.
+        
+        Returns:
+            str: The reasoning prompt.
+        """
+        available_tools = self.__format_available_tools()
+        
         return f"""
         You are functioning as {self.agent.role}. Your goal is: {self.agent.goal}.
         
@@ -78,7 +127,7 @@ class AgentReasoning:
         Expected output:
         {self.task.expected_output}
         
-        Available tools: {', '.join([tool.name for tool in (self.task.tools or [])])}
+        Available tools: {available_tools}
         
         Before executing this task, create a detailed plan that outlines:
         1. Your understanding of the task
@@ -93,8 +142,28 @@ class AgentReasoning:
         - "NOT READY: I need to refine my plan because [specific reason]."
         """
 
-    def _create_refine_prompt(self, current_plan: str) -> str:
-        """Creates a prompt for the agent to refine its reasoning plan."""
+    def __format_available_tools(self) -> str:
+        """
+        Formats the available tools for inclusion in the prompt.
+        
+        Returns:
+            str: Comma-separated list of tool names.
+        """
+        try:
+            return ', '.join([tool.name for tool in (self.task.tools or [])])
+        except (AttributeError, TypeError):
+            return "No tools available"
+
+    def __create_refine_prompt(self, current_plan: str) -> str:
+        """
+        Creates a prompt for the agent to refine its reasoning plan.
+        
+        Args:
+            current_plan: The current reasoning plan.
+            
+        Returns:
+            str: The refine prompt.
+        """
         return f"""
         You are functioning as {self.agent.role}. Your goal is: {self.agent.goal}.
         
@@ -111,11 +180,20 @@ class AgentReasoning:
         - "NOT READY: I need to refine my plan further because [specific reason]."
         """
 
-    def _parse_reasoning_response(self, response: str) -> tuple[str, bool]:
+    def __parse_reasoning_response(self, response: str) -> Tuple[str, bool]:
         """
         Parses the reasoning response to extract the plan and whether
         the agent is ready to execute the task.
+        
+        Args:
+            response: The LLM response.
+            
+        Returns:
+            Tuple[str, bool]: The plan and whether the agent is ready to execute the task.
         """
+        if not response:
+            return "No plan was generated.", False
+            
         plan = response
         ready = False
         
@@ -123,3 +201,16 @@ class AgentReasoning:
             ready = True
         
         return plan, ready
+        
+    def _handle_agent_reasoning(self) -> AgentReasoningOutput:
+        """
+        Deprecated method for backward compatibility.
+        Use handle_agent_reasoning() instead.
+        
+        Returns:
+            AgentReasoningOutput: The output of the agent reasoning process.
+        """
+        self.logger.warning(
+            "The _handle_agent_reasoning method is deprecated. Use handle_agent_reasoning instead."
+        )
+        return self.handle_agent_reasoning()

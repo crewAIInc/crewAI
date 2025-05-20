@@ -4,9 +4,21 @@ import pytest
 
 from crewai import Agent, Task
 from crewai.llm import LLM
+from crewai.utilities.reasoning_handler import AgentReasoning
 
 
-def test_agent_with_reasoning():
+@pytest.fixture
+def mock_llm_responses():
+    """Fixture for mock LLM responses."""
+    return {
+        "ready": "I'll solve this simple math problem.\n\nREADY: I am ready to execute the task.\n\n",
+        "not_ready": "I need to think about derivatives.\n\nNOT READY: I need to refine my plan because I'm not sure about the derivative rules.",
+        "ready_after_refine": "I'll use the power rule for derivatives where d/dx(x^n) = n*x^(n-1).\n\nREADY: I am ready to execute the task.",
+        "execution": "4"
+    }
+
+
+def test_agent_with_reasoning(mock_llm_responses):
     """Test agent with reasoning."""
     llm = LLM("gpt-3.5-turbo")
     
@@ -26,19 +38,18 @@ def test_agent_with_reasoning():
     )
     
     agent.llm.call = lambda messages, *args, **kwargs: (
-        "I'll solve this simple math problem.\n\n"
-        "READY: I am ready to execute the task.\n\n"
+        mock_llm_responses["ready"]
         if any("create a detailed plan" in msg.get("content", "") for msg in messages)
-        else "4"
+        else mock_llm_responses["execution"]
     )
     
     result = agent.execute_task(task)
     
-    assert result == "4"
+    assert result == mock_llm_responses["execution"]
     assert "Reasoning Plan:" in task.description
 
 
-def test_agent_with_reasoning_not_ready_initially():
+def test_agent_with_reasoning_not_ready_initially(mock_llm_responses):
     """Test agent with reasoning that requires refinement."""
     llm = LLM("gpt-3.5-turbo")
     
@@ -64,9 +75,9 @@ def test_agent_with_reasoning_not_ready_initially():
         if any("create a detailed plan" in msg.get("content", "") for msg in messages) or any("refine your plan" in msg.get("content", "") for msg in messages):
             call_count[0] += 1
             if call_count[0] == 1:
-                return "I need to think about derivatives.\n\nNOT READY: I need to refine my plan because I'm not sure about the derivative rules."
+                return mock_llm_responses["not_ready"]
             else:
-                return "I'll use the power rule for derivatives where d/dx(x^n) = n*x^(n-1).\n\nREADY: I am ready to execute the task."
+                return mock_llm_responses["ready_after_refine"]
         else:
             return "2x"
     
@@ -115,3 +126,54 @@ def test_agent_with_reasoning_max_attempts_reached():
     assert result == "This is an unsolved problem in mathematics."
     assert call_count[0] == 2  # Should have made exactly 2 reasoning calls (max_attempts)
     assert "Reasoning Plan:" in task.description
+
+
+def test_agent_reasoning_input_validation():
+    """Test input validation in AgentReasoning."""
+    llm = LLM("gpt-3.5-turbo")
+    
+    agent = Agent(
+        role="Test Agent",
+        goal="To test the reasoning feature",
+        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        llm=llm,
+        reasoning=True
+    )
+    
+    with pytest.raises(ValueError, match="Both task and agent must be provided"):
+        AgentReasoning(task=None, agent=agent)
+    
+    task = Task(
+        description="Simple task",
+        expected_output="Simple output"
+    )
+    with pytest.raises(ValueError, match="Both task and agent must be provided"):
+        AgentReasoning(task=task, agent=None)
+
+
+def test_agent_reasoning_error_handling():
+    """Test error handling during the reasoning process."""
+    llm = LLM("gpt-3.5-turbo")
+    
+    agent = Agent(
+        role="Test Agent",
+        goal="To test the reasoning feature",
+        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        llm=llm,
+        reasoning=True
+    )
+    
+    task = Task(
+        description="Task that will cause an error",
+        expected_output="Output that will never be generated",
+        agent=agent
+    )
+    
+    def mock_llm_call_error(*args, **kwargs):
+        raise Exception("LLM error during reasoning")
+    
+    agent.llm.call = mock_llm_call_error
+    
+    result = agent.execute_task(task)
+    
+    assert result is not None
