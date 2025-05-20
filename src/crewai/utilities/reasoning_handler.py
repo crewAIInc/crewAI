@@ -162,29 +162,44 @@ class AgentReasoning:
                     {"role": "system", "content": self.i18n.retrieve("reasoning", prompt_type)},
                     {"role": "user", "content": prompt}
                 ],
-                response_format={"type": "json_object"},
-                tools=[function_schema],
-                tool_choice={"type": "function", "function": {"name": "create_reasoning_plan"}}
+                tools=[function_schema]
             )
             
             self.logger.debug(f"Function calling response: {response[:100]}...")
             
-            result = json.loads(response)
-            return ReasoningFunction(plan=result["plan"], ready=result["ready"])
-        except (json.JSONDecodeError, KeyError, Exception) as e:
+            try:
+                result = json.loads(response)
+                if "plan" in result and "ready" in result:
+                    return ReasoningFunction(plan=result["plan"], ready=result["ready"])
+            except (json.JSONDecodeError, KeyError):
+                pass
+                
+            return ReasoningFunction(
+                plan=response,
+                ready="READY: I am ready to execute the task." in response
+            )
+            
+        except Exception as e:
             self.logger.warning(f"Error during function calling: {str(e)}. Falling back to text parsing.")
             
-            fallback_response = self.agent.llm.call(
-                [
-                    {"role": "system", "content": self.i18n.retrieve("reasoning", prompt_type)},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            
-            return ReasoningFunction(
-                plan=fallback_response,
-                ready="READY: I am ready to execute the task." in fallback_response
-            )
+            try:
+                fallback_response = self.agent.llm.call(
+                    [
+                        {"role": "system", "content": self.i18n.retrieve("reasoning", prompt_type)},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                
+                return ReasoningFunction(
+                    plan=fallback_response,
+                    ready="READY: I am ready to execute the task." in fallback_response
+                )
+            except Exception as inner_e:
+                self.logger.error(f"Error during fallback text parsing: {str(inner_e)}")
+                return ReasoningFunction(
+                    plan="Failed to generate a plan due to an error.",
+                    ready=True  # Default to ready to avoid getting stuck
+                )
 
     def __create_reasoning_prompt(self) -> str:
         """
