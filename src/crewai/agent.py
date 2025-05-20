@@ -285,7 +285,10 @@ class Agent(BaseAgent):
                 # Add the reasoning plan to the task description
                 task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
             except Exception as e:
-                self._logger.error(f"Error during reasoning process: {str(e)}")
+                if hasattr(self, '_logger'):
+                    self._logger.log("error", f"Error during reasoning process: {str(e)}")
+                else:
+                    print(f"Error during reasoning process: {str(e)}")
             
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")

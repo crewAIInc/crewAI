@@ -1,5 +1,6 @@
 """Tests for reasoning in agents."""
 
+import json
 import pytest
 
 from crewai import Agent, Task
@@ -169,11 +170,93 @@ def test_agent_reasoning_error_handling():
         agent=agent
     )
     
+    original_call = agent.llm.call
+    call_count = [0]
+    
     def mock_llm_call_error(*args, **kwargs):
-        raise Exception("LLM error during reasoning")
+        call_count[0] += 1
+        if call_count[0] <= 2:  # First calls are for reasoning
+            raise Exception("LLM error during reasoning")
+        return "Fallback execution result"  # Return a value for task execution
     
     agent.llm.call = mock_llm_call_error
     
     result = agent.execute_task(task)
     
-    assert result is not None
+    assert result == "Fallback execution result"
+    assert call_count[0] > 2  # Ensure we called the mock multiple times
+
+
+def test_agent_with_function_calling():
+    """Test agent with reasoning using function calling."""
+    llm = LLM("gpt-3.5-turbo")
+    
+    agent = Agent(
+        role="Test Agent",
+        goal="To test the reasoning feature",
+        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        llm=llm,
+        reasoning=True,
+        verbose=True
+    )
+    
+    task = Task(
+        description="Simple math task: What's 2+2?",
+        expected_output="The answer should be a number.",
+        agent=agent
+    )
+    
+    agent.llm.supports_function_calling = lambda: True
+    
+    def mock_function_call(messages, *args, **kwargs):
+        if "tools" in kwargs:
+            return json.dumps({
+                "plan": "I'll solve this simple math problem: 2+2=4.",
+                "ready": True
+            })
+        else:
+            return "4"
+    
+    agent.llm.call = mock_function_call
+    
+    result = agent.execute_task(task)
+    
+    assert result == "4"
+    assert "Reasoning Plan:" in task.description
+    assert "I'll solve this simple math problem: 2+2=4." in task.description
+
+
+def test_agent_with_function_calling_fallback():
+    """Test agent with reasoning using function calling that falls back to text parsing."""
+    llm = LLM("gpt-3.5-turbo")
+    
+    agent = Agent(
+        role="Test Agent",
+        goal="To test the reasoning feature",
+        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        llm=llm,
+        reasoning=True,
+        verbose=True
+    )
+    
+    task = Task(
+        description="Simple math task: What's 2+2?",
+        expected_output="The answer should be a number.",
+        agent=agent
+    )
+    
+    agent.llm.supports_function_calling = lambda: True
+    
+    def mock_function_call(messages, *args, **kwargs):
+        if "tools" in kwargs:
+            return "Invalid JSON that will trigger fallback. READY: I am ready to execute the task."
+        else:
+            return "4"
+    
+    agent.llm.call = mock_function_call
+    
+    result = agent.execute_task(task)
+    
+    assert result == "4"
+    assert "Reasoning Plan:" in task.description
+    assert "Invalid JSON that will trigger fallback" in task.description
