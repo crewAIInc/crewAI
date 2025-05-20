@@ -1,7 +1,7 @@
 """Test the markdown attribute in Task class."""
 
 import pytest
-from unittest.mock import patch
+from pydantic import BaseModel
 
 from crewai import Agent, Task
 
@@ -70,6 +70,10 @@ def test_markdown_with_empty_description():
 def test_markdown_with_complex_output_format():
     """Test markdown with JSON output format to ensure compatibility."""
     
+    class ResearchOutput(BaseModel):
+        title: str
+        findings: list[str]
+    
     researcher = Agent(
         role="Researcher",
         goal="Research a topic",
@@ -81,7 +85,7 @@ def test_markdown_with_complex_output_format():
         description="Research topic",
         expected_output="Research results",
         markdown=True,
-        output_json=True,
+        output_json=ResearchOutput,
         agent=researcher,
     )
 
