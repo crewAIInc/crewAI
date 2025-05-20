@@ -1,14 +1,14 @@
 ---
 title: Using Multimodal Agents
 description: Learn how to enable and use multimodal capabilities in your agents for processing images and other non-text content within the CrewAI framework.
-icon: image
+icon: video
 ---
 
-# Using Multimodal Agents
+## Using Multimodal Agents
 
 CrewAI supports multimodal agents that can process both text and non-text content like images. This guide will show you how to enable and use multimodal capabilities in your agents.
 
-## Enabling Multimodal Capabilities
+### Enabling Multimodal Capabilities
 
 To create a multimodal agent, simply set the `multimodal` parameter to `True` when initializing your agent:
 
@@ -25,7 +25,7 @@ agent = Agent(
 
 When you set `multimodal=True`, the agent is automatically configured with the necessary tools for handling non-text content, including the `AddImageTool`.
 
-## Working with Images
+### Working with Images
 
 The multimodal agent comes pre-configured with the `AddImageTool`, which allows it to process images. You don't need to manually add this tool - it's automatically included when you enable multimodal capabilities.
 
@@ -45,6 +45,7 @@ image_analyst = Agent(
 # Create a task for image analysis
 task = Task(
     description="Analyze the product image at https://example.com/product.jpg and provide a detailed description",
+    expected_output="A detailed description of the product image",
     agent=image_analyst
 )
 
@@ -81,6 +82,7 @@ inspection_task = Task(
     3. Compliance with standards
     Provide a detailed report highlighting any issues found.
     """,
+    expected_output="A detailed report highlighting any issues found",
     agent=expert_analyst
 )
 
@@ -108,7 +110,7 @@ The multimodal agent will automatically handle the image processing through its 
 - Process image content with optional context or specific questions
 - Provide analysis and insights based on the visual information and task requirements
 
-## Best Practices
+### Best Practices
 
 When working with multimodal agents, keep these best practices in mind:
 

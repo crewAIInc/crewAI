@@ -547,6 +547,7 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
+@pytest.mark.vcr
 def test_docling_source(mock_vector_db):
     docling_source = CrewDoclingSource(
         file_paths=[
@@ -567,6 +568,7 @@ def test_docling_source(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
+@pytest.mark.vcr
 def test_multiple_docling_sources():
     urls: List[Union[Path, str]] = [
         "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
@@ -578,9 +580,26 @@ def test_multiple_docling_sources():
     assert docling_source.content is not None
 
 
-def test_docling_source_with_local_file():
+def test_file_path_validation():
+    """Test file path validation for knowledge sources."""
     current_dir = Path(__file__).parent
     pdf_path = current_dir / "crewai_quickstart.pdf"
-    docling_source = CrewDoclingSource(file_paths=[pdf_path])
-    assert docling_source.file_paths == [pdf_path]
-    assert docling_source.content is not None
+
+    # Test valid single file_path
+    source = PDFKnowledgeSource(file_path=pdf_path)
+    assert source.safe_file_paths == [pdf_path]
+
+    # Test valid file_paths list
+    source = PDFKnowledgeSource(file_paths=[pdf_path])
+    assert source.safe_file_paths == [pdf_path]
+
+    # Test both file_path and file_paths provided (should use file_paths)
+    source = PDFKnowledgeSource(file_path=pdf_path, file_paths=[pdf_path])
+    assert source.safe_file_paths == [pdf_path]
+
+    # Test neither file_path nor file_paths provided
+    with pytest.raises(
+        ValueError,
+        match="file_path/file_paths must be a Path, str, or a list of these types",
+    ):
+        PDFKnowledgeSource()

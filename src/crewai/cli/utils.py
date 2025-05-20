@@ -2,13 +2,16 @@ import os
 import shutil
 import sys
 from functools import reduce
-from typing import Any, Dict, List
+from inspect import isfunction, ismethod
+from typing import Any, Dict, List, get_type_hints
 
 import click
 import tomli
 from rich.console import Console
 
 from crewai.cli.constants import ENV_VARS
+from crewai.crew import Crew
+from crewai.flow import Flow
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -247,3 +250,92 @@ def write_env_file(folder_path, env_vars):
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
             file.write(f"{key}={value}\n")
+
+
+def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
+    """Get the crew instances from the a file."""
+    crew_instances = []
+    try:
+        import importlib.util
+
+        for root, _, files in os.walk("."):
+            if crew_path in files:
+                crew_os_path = os.path.join(root, crew_path)
+                try:
+                    spec = importlib.util.spec_from_file_location(
+                        "crew_module", crew_os_path
+                    )
+                    if not spec or not spec.loader:
+                        continue
+                    module = importlib.util.module_from_spec(spec)
+                    try:
+                        sys.modules[spec.name] = module
+                        spec.loader.exec_module(module)
+
+                        for attr_name in dir(module):
+                            module_attr = getattr(module, attr_name)
+
+                            try:
+                                crew_instances.extend(fetch_crews(module_attr))
+                            except Exception as e:
+                                print(f"Error processing attribute {attr_name}: {e}")
+                                continue
+
+                    except Exception as exec_error:
+                        print(f"Error executing module: {exec_error}")
+                        import traceback
+
+                        print(f"Traceback: {traceback.format_exc()}")
+                except (ImportError, AttributeError) as e:
+                    if require:
+                        console.print(
+                            f"Error importing crew from {crew_path}: {str(e)}",
+                            style="bold red",
+                        )
+                        continue
+
+                break
+
+        if require:
+            console.print("No valid Crew instance found in crew.py", style="bold red")
+            raise SystemExit
+
+    except Exception as e:
+        if require:
+            console.print(
+                f"Unexpected error while loading crew: {str(e)}", style="bold red"
+            )
+            raise SystemExit
+    return crew_instances
+
+
+def get_crew_instance(module_attr) -> Crew | None:
+    if (
+        callable(module_attr)
+        and hasattr(module_attr, "is_crew_class")
+        and module_attr.is_crew_class
+    ):
+        return module_attr().crew()
+    if (ismethod(module_attr) or isfunction(module_attr)) and get_type_hints(
+        module_attr
+    ).get("return") is Crew:
+        return module_attr()
+    elif isinstance(module_attr, Crew):
+        return module_attr
+    else:
+        return None
+
+
+def fetch_crews(module_attr) -> list[Crew]:
+    crew_instances: list[Crew] = []
+
+    if crew_instance := get_crew_instance(module_attr):
+        crew_instances.append(crew_instance)
+
+    if isinstance(module_attr, type) and issubclass(module_attr, Flow):
+        instance = module_attr()
+        for attr_name in dir(instance):
+            attr = getattr(instance, attr_name)
+            if crew_instance := get_crew_instance(attr):
+                crew_instances.append(crew_instance)
+    return crew_instances

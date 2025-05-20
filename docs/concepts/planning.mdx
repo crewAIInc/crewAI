@@ -31,7 +31,7 @@ From this point on, your crew will have planning enabled, and the tasks will be 
 
 #### Planning LLM
 
-Now you can define the LLM that will be used to plan the tasks. You can use any ChatOpenAI LLM model available.
+Now you can define the LLM that will be used to plan the tasks. 
 
 When running the base case example, you will see something like the output below, which represents the output of the `AgentPlanner` 
 responsible for creating the step-by-step logic to add to the Agents' tasks.
@@ -39,7 +39,6 @@ responsible for creating the step-by-step logic to add to the Agents' tasks.
 <CodeGroup>
 ```python Code
 from crewai import Crew, Agent, Task, Process
-from langchain_openai import ChatOpenAI
 
 # Assemble your crew with planning capabilities and custom LLM
 my_crew = Crew(
@@ -47,7 +46,7 @@ my_crew = Crew(
     tasks=self.tasks,
     process=Process.sequential,
     planning=True,
-    planning_llm=ChatOpenAI(model="gpt-4o")
+    planning_llm="gpt-4o"
 )
 
 # Run the crew
@@ -82,8 +81,8 @@ my_crew.kickoff()
 
 3. **Collect Data:**
 
-   - Search for the latest papers, articles, and reports published in 2023 and early 2024.
-   - Use keywords like "Large Language Models 2024", "AI LLM advancements", "AI ethics 2024", etc.
+   - Search for the latest papers, articles, and reports published in 2024 and early 2025.
+   - Use keywords like "Large Language Models 2025", "AI LLM advancements", "AI ethics 2025", etc.
 
 4. **Analyze Findings:**
 

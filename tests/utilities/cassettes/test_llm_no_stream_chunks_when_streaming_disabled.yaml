@@ -1,0 +1,110 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "Tell me a short joke"}], "model":
+      "gpt-4o", "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '98'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=IY8ppO70AMHr2skDSUsGh71zqHHdCQCZ3OvkPi26NBc-1740424913267-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BHJ51XXwVMlREjnoe4n4fiA0Ynkab\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1743464619,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Why don't skeletons fight each other?\\n\\nThey
+      don't have the guts.\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 12,\n    \"completion_tokens\":
+      15,\n    \"total_tokens\": 27,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_de57b65c90\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9293b5d18d3f9450-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 31 Mar 2025 23:43:40 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=.esGqWXxYzwXyi6048Ocr_NZH1IMsgTTuNN0drcWtSI-1743464620-1.0.1.1-YroBLb5o02zaPiXdGGE3YNO3x56olTA3JQos540j.l2aoeOzHIMVubkp2uSSTBHefPb7OPDKFzjpRXoAVof9jgVUDL6C89g4Zu1_SXtWxEE;
+        path=/; expires=Tue, 01-Apr-25 00:13:40 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=jrsyZSqr3xLO_beX7x7VEel62eQFToYHZgRqR0eqVNs-1743464620187-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '275'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '50000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '49999'
+      x-ratelimit-remaining-tokens:
+      - '149999993'
+      x-ratelimit-reset-requests:
+      - 1ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_09cc97e978a7a4b57a1c9ebc9c688fb8
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

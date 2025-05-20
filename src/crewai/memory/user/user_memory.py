@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, Dict, Optional
 
 from crewai.memory.memory import Memory
@@ -12,6 +13,12 @@ class UserMemory(Memory):
     """
 
     def __init__(self, crew=None):
+        warnings.warn(
+            "UserMemory is deprecated and will be removed in a future version. "
+            "Please use ExternalMemory instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         try:
             from crewai.memory.storage.mem0_storage import Mem0Storage
         except ImportError:
@@ -43,3 +50,9 @@ class UserMemory(Memory):
             score_threshold=score_threshold,
         )
         return results
+
+    def reset(self) -> None:
+        try:
+            self.storage.reset()
+        except Exception as e:
+            raise Exception(f"An error occurred while resetting the user memory: {e}")

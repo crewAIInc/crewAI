@@ -4,8 +4,6 @@ description: What is knowledge in CrewAI and how to use it.
 icon: book
 ---
 
-# Using Knowledge in CrewAI
-
 ## What is Knowledge?
 
 Knowledge in CrewAI is a powerful system that allows AI agents to access and utilize external information sources during their tasks.
@@ -36,7 +34,30 @@ CrewAI supports various types of knowledge sources out of the box:
   </Card>
 </CardGroup>
 
-## Quick Start
+## Supported Knowledge Parameters
+
+| Parameter                    | Type                                | Required | Description                                                                                                                                           |
+| :--------------------------- | :---------------------------------- | :------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sources`                  | **List[BaseKnowledgeSource]**        | Yes      | List of knowledge sources that provide content to be stored and queried. Can include PDF, CSV, Excel, JSON, text files, or string content.           |
+| `collection_name`          | **str**                              | No       | Name of the collection where the knowledge will be stored. Used to identify different sets of knowledge. Defaults to "knowledge" if not provided.     |
+| `storage`                  | **Optional[KnowledgeStorage]**       | No       | Custom storage configuration for managing how the knowledge is stored and retrieved. If not provided, a default storage will be created.              |
+
+
+<Tip>
+Unlike retrieval from a vector database using a tool, agents preloaded with knowledge will not need a retrieval persona or task.
+Simply add the relevant knowledge sources your agent or crew needs to function.
+
+Knowledge sources can be added at the agent or crew level.
+Crew level knowledge sources will be used by **all agents** in the crew.
+Agent level knowledge sources will be used by the **specific agent** that is preloaded with the knowledge.
+</Tip>
+
+## Quickstart Example
+
+<Tip>
+For file-Based Knowledge Sources, make sure to place your files in a `knowledge` directory at the root of your project. 
+Also, use relative paths from the `knowledge` directory when creating the source.
+</Tip>
 
 Here's an example using string-based knowledge:
 
@@ -80,7 +101,14 @@ result = crew.kickoff(inputs={"question": "What city does John live in and how o
 ```
 
 
-Here's another example with the `CrewDoclingSource`
+Here's another example with the `CrewDoclingSource`. The CrewDoclingSource is actually quite versatile and can handle multiple file formats including MD, PDF, DOCX, HTML, and more. 
+
+<Note>
+  You need to install `docling` for the following example to work: `uv add docling`
+</Note>
+
+
+
 ```python Code
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
@@ -130,36 +158,291 @@ result = crew.kickoff(
 
 ## Knowledge Configuration
 
-### Chunking Configuration
-
-Control how content is split for processing by setting the chunk size and overlap.
+You can configure the knowledge configuration for the crew or agent.
 
 ```python Code
-knowledge_source = StringKnowledgeSource(
-    content="Long content...",
-    chunk_size=4000,     # Characters per chunk (default)
-    chunk_overlap=200    # Overlap between chunks (default)
+from crewai.knowledge.knowledge_config import KnowledgeConfig
+
+knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
+
+agent = Agent(
+    ...
+    knowledge_config=knowledge_config
 )
 ```
 
-## Embedder Configuration
+<Tip>
+  `results_limit`: is the number of relevant documents to return. Default is 3.
+  `score_threshold`: is the minimum score for a document to be considered relevant. Default is 0.35.
+</Tip>
 
-You can also configure the embedder for the knowledge store. This is useful if you want to use a different embedder for the knowledge store than the one used for the agents.
+## More Examples
 
-```python Code
-...
-string_source = StringKnowledgeSource(
-    content="Users name is John. He is 30 years old and lives in San Francisco.",
+Here are examples of how to use different types of knowledge sources:
+
+Note: Please ensure that you create the ./knowldge folder. All source files (e.g., .txt, .pdf, .xlsx, .json) should be placed in this folder for centralized management.
+
+### Text File Knowledge Source
+```python
+from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+
+# Create a text file knowledge source
+text_source = TextFileKnowledgeSource(
+    file_paths=["document.txt", "another.txt"]
 )
+
+# Create crew with text file source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[text_source]
+)
+
 crew = Crew(
     ...
-    knowledge_sources=[string_source],
-    embedder={
-        "provider": "openai",
-        "config": {"model": "text-embedding-3-small"},
-    },
+    knowledge_sources=[text_source]
 )
 ```
+
+### PDF Knowledge Source
+```python
+from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
+
+# Create a PDF knowledge source
+pdf_source = PDFKnowledgeSource(
+    file_paths=["document.pdf", "another.pdf"]
+)
+
+# Create crew with PDF knowledge source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[pdf_source]
+)
+
+crew = Crew(
+    ...
+    knowledge_sources=[pdf_source]
+)
+```
+
+### CSV Knowledge Source
+```python
+from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
+
+# Create a CSV knowledge source
+csv_source = CSVKnowledgeSource(
+    file_paths=["data.csv"]
+)
+
+# Create crew with CSV knowledge source or on agent level
+agent = Agent(
+    ...
+    knowledge_sources=[csv_source]
+)
+
+crew = Crew(
+    ...
+    knowledge_sources=[csv_source]
+)
+```
+
+### Excel Knowledge Source
+```python
+from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
+
+# Create an Excel knowledge source
+excel_source = ExcelKnowledgeSource(
+    file_paths=["spreadsheet.xlsx"]
+)
+
+# Create crew with Excel knowledge source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[excel_source]
+)
+
+crew = Crew(
+    ...
+    knowledge_sources=[excel_source]
+)
+```
+
+### JSON Knowledge Source
+```python
+from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
+
+# Create a JSON knowledge source
+json_source = JSONKnowledgeSource(
+    file_paths=["data.json"]
+)
+
+# Create crew with JSON knowledge source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[json_source]
+)
+
+crew = Crew(
+    ...
+    knowledge_sources=[json_source]
+)
+```
+
+## Knowledge Configuration
+
+### Chunking Configuration
+
+Knowledge sources automatically chunk content for better processing. 
+You can configure chunking behavior in your knowledge sources:
+
+```python
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+source = StringKnowledgeSource(
+    content="Your content here",
+    chunk_size=4000,      # Maximum size of each chunk (default: 4000)
+    chunk_overlap=200     # Overlap between chunks (default: 200)
+)
+```
+
+The chunking configuration helps in:
+- Breaking down large documents into manageable pieces
+- Maintaining context through chunk overlap
+- Optimizing retrieval accuracy
+
+### Embeddings Configuration
+
+You can also configure the embedder for the knowledge store. 
+This is useful if you want to use a different embedder for the knowledge store than the one used for the agents.
+The `embedder` parameter supports various embedding model providers that include:
+- `openai`: OpenAI's embedding models
+- `google`: Google's text embedding models
+- `azure`: Azure OpenAI embeddings
+- `ollama`: Local embeddings with Ollama
+- `vertexai`: Google Cloud VertexAI embeddings
+- `cohere`: Cohere's embedding models
+- `voyageai`: VoyageAI's embedding models
+- `bedrock`: AWS Bedrock embeddings
+- `huggingface`: Hugging Face models
+- `watson`: IBM Watson embeddings
+
+Here's an example of how to configure the embedder for the knowledge store using Google's `text-embedding-004` model:
+<CodeGroup>
+```python Example
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+import os
+
+# Get the GEMINI API key
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+# Create a knowledge source
+content = "Users name is John. He is 30 years old and lives in San Francisco."
+string_source = StringKnowledgeSource(
+    content=content,
+)
+
+# Create an LLM with a temperature of 0 to ensure deterministic outputs
+gemini_llm = LLM(
+    model="gemini/gemini-1.5-pro-002",
+    api_key=GEMINI_API_KEY,
+    temperature=0,
+)
+
+# Create an agent with the knowledge store
+agent = Agent(
+    role="About User",
+    goal="You know everything about the user.",
+    backstory="""You are a master at understanding people and their preferences.""",
+    verbose=True,
+    allow_delegation=False,
+    llm=gemini_llm,
+    embedder={
+        "provider": "google",
+        "config": {
+            "model": "models/text-embedding-004",
+            "api_key": GEMINI_API_KEY,
+        }
+    }
+)
+
+task = Task(
+    description="Answer the following questions about the user: {question}",
+    expected_output="An answer to the question.",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    knowledge_sources=[string_source],
+    embedder={
+        "provider": "google",
+        "config": {
+            "model": "models/text-embedding-004",
+            "api_key": GEMINI_API_KEY,
+        }
+    }
+)
+
+result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
+```
+```text Output
+# Agent: About User
+## Task: Answer the following questions about the user: What city does John live in and how old is he?
+
+# Agent: About User
+## Final Answer: 
+John is 30 years old and lives in San Francisco.
+```
+</CodeGroup>
+
+## Query Rewriting
+
+CrewAI implements an intelligent query rewriting mechanism to optimize knowledge retrieval. When an agent needs to search through knowledge sources, the raw task prompt is automatically transformed into a more effective search query.
+
+### How Query Rewriting Works
+
+1. When an agent executes a task with knowledge sources available, the `_get_knowledge_search_query` method is triggered
+2. The agent's LLM is used to transform the original task prompt into an optimized search query
+3. This optimized query is then used to retrieve relevant information from knowledge sources
+
+### Benefits of Query Rewriting
+
+<CardGroup cols={2}>
+  <Card title="Improved Retrieval Accuracy" icon="bullseye-arrow">
+    By focusing on key concepts and removing irrelevant content, query rewriting helps retrieve more relevant information.
+  </Card>
+  <Card title="Context Awareness" icon="brain">
+    The rewritten queries are designed to be more specific and context-aware for vector database retrieval.
+  </Card>
+</CardGroup>
+
+### Implementation Details
+
+Query rewriting happens transparently using a system prompt that instructs the LLM to:
+
+- Focus on key words of the intended task
+- Make the query more specific and context-aware
+- Remove irrelevant content like output format instructions
+- Generate only the rewritten query without preamble or postamble
+
+<Tip>
+  This mechanism is fully automatic and requires no configuration from users. The agent's LLM is used to perform the query rewriting, so using a more capable LLM can improve the quality of rewritten queries.
+</Tip>
+
+### Example
+
+```python
+# Original task prompt
+task_prompt = "Answer the following questions about the user's favorite movies: What movie did John watch last week? Format your answer in JSON."
+
+# Behind the scenes, this might be rewritten as:
+rewritten_query = "What movies did John watch last week?"
+```
+
+The rewritten query is more focused on the core information need and removes irrelevant instructions about output formatting.
 
 ## Clearing Knowledge
 
@@ -170,6 +453,65 @@ crewai reset-memories --knowledge
 ```
 
 This is useful when you've updated your knowledge sources and want to ensure that the agents are using the most recent information.
+
+## Agent-Specific Knowledge
+
+While knowledge can be provided at the crew level using `crew.knowledge_sources`, individual agents can also have their own knowledge sources using the `knowledge_sources` parameter:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create agent-specific knowledge about a product
+product_specs = StringKnowledgeSource(
+    content="""The XPS 13 laptop features:
+    - 13.4-inch 4K display
+    - Intel Core i7 processor
+    - 16GB RAM
+    - 512GB SSD storage
+    - 12-hour battery life""",
+    metadata={"category": "product_specs"}
+)
+
+# Create a support agent with product knowledge
+support_agent = Agent(
+    role="Technical Support Specialist",
+    goal="Provide accurate product information and support.",
+    backstory="You are an expert on our laptop products and specifications.",
+    knowledge_sources=[product_specs]  # Agent-specific knowledge
+)
+
+# Create a task that requires product knowledge
+support_task = Task(
+    description="Answer this customer question: {question}",
+    agent=support_agent
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[support_agent],
+    tasks=[support_task]
+)
+
+# Get answer about the laptop's specifications
+result = crew.kickoff(
+    inputs={"question": "What is the storage capacity of the XPS 13?"}
+)
+
+# Resetting the agent specific knowledge via crew object
+crew.reset_memories(command_type = 'agent_knowledge')
+
+# Resetting the agent specific knowledge via CLI
+crewai reset-memories --agent-knowledge 
+crewai reset-memories -akn
+```
+
+<Info>
+  Benefits of agent-specific knowledge:
+  - Give agents specialized information for their roles
+  - Maintain separation of concerns between agents
+  - Combine with crew-level knowledge for layered information access
+</Info>
 
 ## Custom Knowledge Sources
 
@@ -204,12 +546,12 @@ class SpaceNewsKnowledgeSource(BaseKnowledgeSource):
             data = response.json()
             articles = data.get('results', [])
 
-            formatted_data = self._format_articles(articles)
+            formatted_data = self.validate_content(articles)
             return {self.api_endpoint: formatted_data}
         except Exception as e:
             raise ValueError(f"Failed to fetch space news: {str(e)}")
 
-    def _format_articles(self, articles: list) -> str:
+    def validate_content(self, articles: list) -> str:
         """Format articles into readable text."""
         formatted = "Space News Articles:\n\n"
         for article in articles:
@@ -365,4 +707,11 @@ recent_news = SpaceNewsKnowledgeSource(
     - Configure appropriate embedding models
     - Consider using local embedding providers for faster processing
   </Accordion>
+
+  <Accordion title="One Time Knowledge">
+    - With the typical file structure provided by CrewAI, knowledge sources are embedded every time the kickoff is triggered.
+    - If the knowledge sources are large, this leads to inefficiency and increased latency, as the same data is embedded each time.
+    - To resolve this, directly initialize the knowledge parameter instead of the knowledge_sources parameter.
+    - Link to the issue to get complete idea [Github Issue](https://github.com/crewAIInc/crewAI/issues/2755)
+  </Accordion>  
 </AccordionGroup>

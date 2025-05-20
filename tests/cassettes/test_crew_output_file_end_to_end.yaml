@@ -1,0 +1,243 @@
+interactions:
+- request:
+    body: !!binary |
+      CuIcCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuRwKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKjBwoQXK7w4+uvyEkrI9D5qyvcJxII5UmQ7hmczdIqDENyZXcgQ3JlYXRlZDABOfxQ
+      /hs4jBUYQUi3DBw4jBUYShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuODYuMEoaCg5weXRob25fdmVy
+      c2lvbhIICgYzLjEyLjdKLgoIY3Jld19rZXkSIgogYzk3YjVmZWI1ZDFiNjZiYjU5MDA2YWFhMDFh
+      MjljZDZKMQoHY3Jld19pZBImCiRkZjY3NGMwYi1hOTc0LTQ3NTAtYjlkMS0yZWQxNjM3MzFiNTZK
+      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
+      bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBStECCgtjcmV3
+      X2FnZW50cxLBAgq+Alt7ImtleSI6ICIwN2Q5OWI2MzA0MTFkMzVmZDkwNDdhNTMyZDUzZGRhNyIs
+      ICJpZCI6ICI5MDYwYTQ2Zi02MDY3LTQ1N2MtOGU3ZC04NjAyN2YzY2U5ZDUiLCAicm9sZSI6ICJS
+      ZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDIwLCAibWF4X3JwbSI6
+      IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00by1taW5pIiwg
+      ImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZh
+      bHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr/AQoKY3Jld190
+      YXNrcxLwAQrtAVt7ImtleSI6ICI2Mzk5NjUxN2YzZjNmMWM5NGQ2YmI2MTdhYTBiMWM0ZiIsICJp
+      ZCI6ICJjYTA4ZjkyOS0yMmI0LTQyZmQtYjViMC05N2M3MjM0ZDk5OTEiLCAiYXN5bmNfZXhlY3V0
+      aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlJlc2Vh
+      cmNoZXIiLCAiYWdlbnRfa2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJkNTNkZGE3Iiwg
+      InRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEOTJZh9R45IwgGVg9cinZmISCJopKRMf
+      bpMJKgxUYXNrIENyZWF0ZWQwATlG+zQcOIwVGEHk0zUcOIwVGEouCghjcmV3X2tleRIiCiBjOTdi
+      NWZlYjVkMWI2NmJiNTkwMDZhYWEwMWEyOWNkNkoxCgdjcmV3X2lkEiYKJGRmNjc0YzBiLWE5NzQt
+      NDc1MC1iOWQxLTJlZDE2MzczMWI1NkouCgh0YXNrX2tleRIiCiA2Mzk5NjUxN2YzZjNmMWM5NGQ2
+      YmI2MTdhYTBiMWM0ZkoxCgd0YXNrX2lkEiYKJGNhMDhmOTI5LTIyYjQtNDJmZC1iNWIwLTk3Yzcy
+      MzRkOTk5MXoCGAGFAQABAAASowcKEEvwrN8+tNMIBwtnA+ip7jASCI78Hrh2wlsBKgxDcmV3IENy
+      ZWF0ZWQwATkcRqYeOIwVGEE8erQeOIwVGEoaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjg2LjBKGgoO
+      cHl0aG9uX3ZlcnNpb24SCAoGMy4xMi43Si4KCGNyZXdfa2V5EiIKIDhjMjc1MmY0OWU1YjlkMmI2
+      OGNiMzVjYWM4ZmNjODZkSjEKB2NyZXdfaWQSJgokZmRkYzA4ZTMtNDUyNi00N2Q2LThlNWMtNjY0
+      YzIyMjc4ZDgyShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQ
+      AEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIY
+      AUrRAgoLY3Jld19hZ2VudHMSwQIKvgJbeyJrZXkiOiAiOGJkMjEzOWI1OTc1MTgxNTA2ZTQxZmQ5
+      YzQ1NjNkNzUiLCAiaWQiOiAiY2UxNjA2YjktMjdiOS00ZDc4LWEyODctNDZiMDNlZDg3ZTA1Iiwg
+      InJvbGUiOiAiUmVzZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyMCwg
+      Im1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQt
+      NG8tbWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1
+      dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K
+      /wEKCmNyZXdfdGFza3MS8AEK7QFbeyJrZXkiOiAiMGQ2ODVhMjE5OTRkOTQ5MDk3YmM1YTU2ZDcz
+      N2U2ZDEiLCAiaWQiOiAiNDdkMzRjZjktMGYxZS00Y2JkLTgzMzItNzRjZjY0YWRlOThlIiwgImFz
+      eW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9s
+      ZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDlj
+      NDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChAf4TXS782b0PBJ4NSB
+      JXwsEgjXnd13GkMzlyoMVGFzayBDcmVhdGVkMAE5mb/cHjiMFRhBGRTiHjiMFRhKLgoIY3Jld19r
+      ZXkSIgogOGMyNzUyZjQ5ZTViOWQyYjY4Y2IzNWNhYzhmY2M4NmRKMQoHY3Jld19pZBImCiRmZGRj
+      MDhlMy00NTI2LTQ3ZDYtOGU1Yy02NjRjMjIyNzhkODJKLgoIdGFza19rZXkSIgogMGQ2ODVhMjE5
+      OTRkOTQ5MDk3YmM1YTU2ZDczN2U2ZDFKMQoHdGFza19pZBImCiQ0N2QzNGNmOS0wZjFlLTRjYmQt
+      ODMzMi03NGNmNjRhZGU5OGV6AhgBhQEAAQAAEqMHChAyBGKhzDhROB5pmAoXrikyEgj6SCwzj1dU
+      LyoMQ3JldyBDcmVhdGVkMAE5vkjTHziMFRhBRDbhHziMFRhKGgoOY3Jld2FpX3ZlcnNpb24SCAoG
+      MC44Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTIuN0ouCghjcmV3X2tleRIiCiBiNjczNjg2
+      ZmM4MjJjMjAzYzdlODc5YzY3NTQyNDY5OUoxCgdjcmV3X2lkEiYKJGYyYWVlYTYzLTU2OWUtNDUz
+      NS1iZTY0LTRiZjYzZmU5NjhjN0ocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3
+      X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29m
+      X2FnZW50cxICGAFK0QIKC2NyZXdfYWdlbnRzEsECCr4CW3sia2V5IjogImI1OWNmNzdiNmU3NjU4
+      NDg3MGViMWMzODgyM2Q3ZTI4IiwgImlkIjogImJiZjNkM2E4LWEwMjUtNGI0ZC1hY2Q0LTFmNzcz
+      NTI3MWJmMCIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9p
+      dGVyIjogMjAsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJs
+      bG0iOiAiZ3B0LTRvLW1pbmkiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3df
+      Y29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFt
+      ZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvABCu0BW3sia2V5IjogImE1ZTVjNThjZWExYjlkMDAz
+      MzJlNjg0NDFkMzI3YmRmIiwgImlkIjogIjBiOTRiMTY0LTM5NTktNGFmYS05Njg4LWJjNmEwZWMy
+      MWYzOCIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwg
+      ImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiYjU5Y2Y3N2I2ZTc2NTg0
+      ODcwZWIxYzM4ODIzZDdlMjgiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQyYfi
+      Ftim717svttBZY3p5hIIUxR5bBHzWWkqDFRhc2sgQ3JlYXRlZDABOV4OBiA4jBUYQbLjBiA4jBUY
+      Si4KCGNyZXdfa2V5EiIKIGI2NzM2ODZmYzgyMmMyMDNjN2U4NzljNjc1NDI0Njk5SjEKB2NyZXdf
+      aWQSJgokZjJhZWVhNjMtNTY5ZS00NTM1LWJlNjQtNGJmNjNmZTk2OGM3Si4KCHRhc2tfa2V5EiIK
+      IGE1ZTVjNThjZWExYjlkMDAzMzJlNjg0NDFkMzI3YmRmSjEKB3Rhc2tfaWQSJgokMGI5NGIxNjQt
+      Mzk1OS00YWZhLTk2ODgtYmM2YTBlYzIxZjM4egIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3685'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 29 Dec 2024 04:43:27 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You have
+      extensive AI research experience.\nYour personal goal is: Analyze AI topics\nTo
+      give my best complete final answer to the task use the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Explain the advantages of AI.\n\nThis is the expect criteria for your
+      final answer: A summary of the main advantages, bullet points recommended.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"], "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '922'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=eff7OIkJ0zWRunpA6z67LHqscmSe6XjNxXiPw1R3xCc-1733770413538-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AjfR6FDuTw7NGzy8w7sxjvOkUQlru\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1735447404,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer:  \\n**Advantages of AI**  \\n\\n1. **Increased Efficiency and Productivity**
+      \ \\n   - AI systems can process large amounts of data quickly and accurately,
+      leading to faster decision-making and increased productivity in various sectors.\\n\\n2.
+      **Cost Savings**  \\n   - Automation of repetitive and time-consuming tasks
+      reduces labor costs and increases operational efficiency, allowing businesses
+      to allocate resources more effectively.\\n\\n3. **Enhanced Data Analysis**  \\n
+      \  - AI excels at analyzing big data, identifying patterns, and providing insights
+      that support better strategic planning and business decision-making.\\n\\n4.
+      **24/7 Availability**  \\n   - AI solutions, such as chatbots and virtual assistants,
+      operate continuously without breaks, offering constant support and customer
+      service, enhancing user experience.\\n\\n5. **Personalization**  \\n   - AI
+      enables the customization of content, products, and services based on user preferences
+      and behaviors, leading to improved customer satisfaction and loyalty.\\n\\n6.
+      **Improved Accuracy**  \\n   - AI technologies, such as machine learning algorithms,
+      reduce the likelihood of human error in various processes, leading to greater
+      accuracy and reliability.\\n\\n7. **Enhanced Innovation**  \\n   - AI fosters
+      innovative solutions by providing new tools and approaches to problem-solving,
+      enabling companies to develop cutting-edge products and services.\\n\\n8. **Scalability**
+      \ \\n   - AI can be scaled to handle varying amounts of workloads without significant
+      changes to infrastructure, making it easier for organizations to expand operations.\\n\\n9.
+      **Predictive Capabilities**  \\n   - Advanced analytics powered by AI can anticipate
+      trends and outcomes, allowing businesses to proactively adjust strategies and
+      improve forecasting.\\n\\n10. **Health Benefits**  \\n    - In healthcare, AI
+      assists in diagnostics, personalized treatment plans, and predictive analytics,
+      leading to better patient care and improved health outcomes.\\n\\n11. **Safety
+      and Risk Mitigation**  \\n    - AI can enhance safety in various industries
+      by taking over dangerous tasks, monitoring for hazards, and predicting maintenance
+      needs for critical machinery, thereby preventing accidents.\\n\\n12. **Reduced
+      Environmental Impact**  \\n    - AI can optimize resource usage in areas such
+      as energy consumption and supply chain logistics, contributing to sustainability
+      efforts and reducing overall environmental footprints.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 168,\n    \"completion_tokens\":
+      440,\n    \"total_tokens\": 608,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_0aa8d3e20b\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8f9721053d1eb9f1-SEA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 29 Dec 2024 04:43:32 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=5enubNIoQSGMYEgy8Q2FpzzhphA0y.0lXukRZrWFvMk-1735447412-1.0.1.1-FIK1sMkUl3YnW1gTC6ftDtb2mKsbosb4mwabdFAlWCfJ6pXeavYq.bPsfKNvzAb5WYq60yVGH5lHsJT05bhSgw;
+        path=/; expires=Sun, 29-Dec-24 05:13:32 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=63wmKMTuFamkLN8FBI4fP8JZWbjWiRxWm7wb3kz.z_A-1735447412038-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '7577'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999793'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_55b8d714656e8f10f4e23cbe9034d66b
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

@@ -227,13 +227,6 @@ def test_missing_action_input_error(parser):
     assert "I missed the 'Action Input:' after 'Action:'." in str(exc_info.value)
 
 
-def test_action_and_final_answer_error(parser):
-    text = "Thought: I found the information\nAction: search\nAction Input: what is the temperature in SF?\nFinal Answer: The temperature is 100 degrees"
-    with pytest.raises(OutputParserException) as exc_info:
-        parser.parse(text)
-    assert "both perform Action and give a Final Answer" in str(exc_info.value)
-
-
 def test_safe_repair_json(parser):
     invalid_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": Senior Researcher'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'

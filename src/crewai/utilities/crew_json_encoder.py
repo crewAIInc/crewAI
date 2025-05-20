@@ -1,3 +1,5 @@
+"""JSON encoder for handling CrewAI specific types."""
+
 import json
 from datetime import date, datetime
 from decimal import Decimal
@@ -8,6 +10,7 @@ from pydantic import BaseModel
 
 
 class CrewJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder for CrewAI objects and special types."""
     def default(self, obj):
         if isinstance(obj, BaseModel):
             return self._handle_pydantic_model(obj)

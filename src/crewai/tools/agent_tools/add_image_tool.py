@@ -7,11 +7,11 @@ from crewai.utilities import I18N
 
 i18n = I18N()
 
+
 class AddImageToolSchema(BaseModel):
     image_url: str = Field(..., description="The URL or path of the image to add")
     action: Optional[str] = Field(
-        default=None,
-        description="Optional context or question about the image"
+        default=None, description="Optional context or question about the image"
     )
 
 
@@ -36,10 +36,7 @@ class AddImageTool(BaseTool):
                 "image_url": {
                     "url": image_url,
                 },
-            }
+            },
         ]
 
-        return {
-            "role": "user",
-            "content": content
-        }
+        return {"role": "user", "content": content}
