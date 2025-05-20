@@ -135,6 +135,10 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    markdown: Optional[bool] = Field(
+        description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
+        default=False,
+    )
     converter_cls: Optional[Type[Converter]] = Field(
         description="A converter class used to export structured output",
         default=None,
@@ -533,6 +537,11 @@ class Task(BaseModel):
             expected_output=self.expected_output
         )
         tasks_slices = [self.description, output]
+        
+        if self.markdown:
+            markdown_instruction = "Your final answer MUST be formatted in Markdown syntax."
+            tasks_slices.append(markdown_instruction)
+            
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(
