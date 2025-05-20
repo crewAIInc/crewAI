@@ -1,0 +1,69 @@
+---
+title: "Agent Reasoning"
+---
+
+# Agent Reasoning
+
+Agent reasoning is a feature that allows agents to reflect on a task and create a plan before execution. This helps agents approach tasks more methodically and ensures they're ready to perform the assigned work.
+
+## How to Use Agent Reasoning
+
+To enable reasoning for an agent, simply set `reasoning=True` when creating the agent:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze complex datasets and provide insights",
+    backstory="You are an experienced data analyst with expertise in finding patterns in complex data.",
+    reasoning=True,  # Enable reasoning
+    max_reasoning_attempts=3  # Optional: Set a maximum number of reasoning attempts
+)
+```
+
+## How It Works
+
+When reasoning is enabled, before executing a task, the agent will:
+
+1. Reflect on the task and create a detailed plan
+2. Evaluate whether it's ready to execute the task
+3. Refine the plan as necessary until it's ready or max_reasoning_attempts is reached
+4. Inject the reasoning plan into the task description before execution
+
+This process helps the agent break down complex tasks into manageable steps and identify potential challenges before starting.
+
+## Configuration Options
+
+- `reasoning` (bool): Enable or disable reasoning (default: False)
+- `max_reasoning_attempts` (int, optional): Maximum number of attempts to refine the plan before proceeding with execution. If None (default), the agent will continue refining until it's ready.
+
+## Example
+
+Here's a complete example:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with reasoning enabled
+analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst.",
+    reasoning=True,
+    max_reasoning_attempts=3  # Optional: Set a limit on reasoning attempts
+)
+
+# Create a task
+analysis_task = Task(
+    description="Analyze the provided sales data and identify key trends.",
+    expected_output="A report highlighting the top 3 sales trends.",
+    agent=analyst
+)
+
+# Create a crew and run the task
+crew = Crew(agents=[analyst], tasks=[analysis_task])
+result = crew.kickoff()
+
+print(result)
+```
