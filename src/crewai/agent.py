@@ -119,6 +119,14 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
+    reasoning: bool = Field(
+        default=False,
+        description="Whether the agent should reflect and create a plan before executing a task.",
+    )
+    max_reasoning_attempts: Optional[int] = Field(
+        default=None,
+        description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+    )
     embedder: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
@@ -225,6 +233,21 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        if self.reasoning:
+            try:
+                from crewai.utilities.reasoning_handler import AgentReasoning, AgentReasoningOutput
+                
+                reasoning_handler = AgentReasoning(task=task, agent=self)
+                reasoning_output: AgentReasoningOutput = reasoning_handler.handle_agent_reasoning()
+                
+                # Add the reasoning plan to the task description
+                task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
+            except Exception as e:
+                if hasattr(self, '_logger'):
+                    self._logger.log("error", f"Error during reasoning process: {str(e)}")
+                else:
+                    print(f"Error during reasoning process: {str(e)}")
+            
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
