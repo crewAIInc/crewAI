@@ -15,6 +15,7 @@ class ConsoleFormatter:
     current_method_branch: Optional[Tree] = None
     current_lite_agent_branch: Optional[Tree] = None
     tool_usage_counts: Dict[str, int] = {}
+    current_reasoning_branch: Optional[Tree] = None  # Track reasoning status
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -399,7 +400,11 @@ class ConsoleFormatter:
         tree_to_use = branch_to_use or crew_tree
 
         if branch_to_use is None or tree_to_use is None:
-            return None
+            # If we don't have a valid branch, default to crew_tree if provided
+            if crew_tree is not None:
+                branch_to_use = tree_to_use = crew_tree
+            else:
+                return None
 
         # Update tool usage count
         self.tool_usage_counts[tool_name] = self.tool_usage_counts.get(tool_name, 0) + 1
@@ -501,7 +506,11 @@ class ConsoleFormatter:
         tree_to_use = branch_to_use or crew_tree
 
         if branch_to_use is None or tree_to_use is None:
-            return None
+            # If we don't have a valid branch, default to crew_tree if provided
+            if crew_tree is not None:
+                branch_to_use = tree_to_use = crew_tree
+            else:
+                return None
 
         # Only add thinking status if we don't have a current tool branch
         if self.current_tool_branch is None:
@@ -797,7 +806,7 @@ class ConsoleFormatter:
         tree_to_use = branch_to_use or crew_tree
 
         if branch_to_use is None or tree_to_use is None:
-            # If we don't have a valid branch, use crew_tree as the branch if available
+            # If we don't have a valid branch, default to crew_tree if provided
             if crew_tree is not None:
                 branch_to_use = tree_to_use = crew_tree
             else:
@@ -982,3 +991,118 @@ class ConsoleFormatter:
             "Knowledge Search Failed", "Search Error", "red", Error=error
         )
         self.print_panel(error_content, "Search Error", "red")
+
+    # ----------- AGENT REASONING EVENTS -----------
+
+    def handle_reasoning_started(
+        self,
+        agent_branch: Optional[Tree],
+        attempt: int,
+        crew_tree: Optional[Tree],
+    ) -> Optional[Tree]:
+        """Handle agent reasoning started (or refinement) event."""
+        if not self.verbose:
+            return None
+
+        # Prefer LiteAgent branch if we are within a LiteAgent context
+        branch_to_use = self.current_lite_agent_branch or agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None or tree_to_use is None:
+            # If we don't have a valid branch, default to crew_tree if provided
+            if crew_tree is not None:
+                branch_to_use = tree_to_use = crew_tree
+            else:
+                return None
+
+        # Reuse existing reasoning branch if present
+        reasoning_branch = self.current_reasoning_branch
+        if reasoning_branch is None:
+            reasoning_branch = branch_to_use.add("")
+            self.current_reasoning_branch = reasoning_branch
+
+        # Build label text depending on attempt
+        status_text = (
+            f"Reasoning (Attempt {attempt})" if attempt > 1 else "Reasoning..."
+        )
+        self.update_tree_label(reasoning_branch, "🧠", status_text, "blue")
+
+        self.print(tree_to_use)
+        self.print()
+
+        return reasoning_branch
+
+    def handle_reasoning_completed(
+        self,
+        plan: str,
+        ready: bool,
+        crew_tree: Optional[Tree],
+    ) -> None:
+        """Handle agent reasoning completed event."""
+        if not self.verbose:
+            return
+
+        reasoning_branch = self.current_reasoning_branch
+        tree_to_use = (
+            self.current_lite_agent_branch
+            or self.current_agent_branch
+            or crew_tree
+        )
+
+        style = "green" if ready else "yellow"
+        status_text = "Reasoning Completed" if ready else "Reasoning Completed (Not Ready)"
+
+        if reasoning_branch is not None:
+            self.update_tree_label(reasoning_branch, "✅", status_text, style)
+
+        if tree_to_use is not None:
+            self.print(tree_to_use)
+
+        # Show plan in a panel (trim very long plans)
+        if plan:
+            plan_panel = Panel(
+                Text(plan, style="white"),
+                title="🧠 Reasoning Plan",
+                border_style=style,
+                padding=(1, 2),
+            )
+            self.print(plan_panel)
+
+        self.print()
+
+        # Clear stored branch after completion
+        self.current_reasoning_branch = None
+
+    def handle_reasoning_failed(
+        self,
+        error: str,
+        crew_tree: Optional[Tree],
+    ) -> None:
+        """Handle agent reasoning failure event."""
+        if not self.verbose:
+            return
+
+        reasoning_branch = self.current_reasoning_branch
+        tree_to_use = (
+            self.current_lite_agent_branch
+            or self.current_agent_branch
+            or crew_tree
+        )
+
+        if reasoning_branch is not None:
+            self.update_tree_label(reasoning_branch, "❌", "Reasoning Failed", "red")
+
+        if tree_to_use is not None:
+            self.print(tree_to_use)
+
+        # Error panel
+        error_content = self.create_status_content(
+            "Reasoning Failed",
+            "Error",
+            "red",
+            Error=error,
+        )
+        self.print_panel(error_content, "Reasoning Error", "red")
+
+        # Clear stored branch after failure
+        self.current_reasoning_branch = None
