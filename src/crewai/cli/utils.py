@@ -161,7 +161,7 @@ def tree_find_and_replace(directory, find, replace):
         for filename in files:
             filepath = os.path.join(path, filename)
 
-            with open(filepath, "r") as file:
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as file:
                 contents = file.read()
             with open(filepath, "w") as file:
                 file.write(contents.replace(find, replace))
