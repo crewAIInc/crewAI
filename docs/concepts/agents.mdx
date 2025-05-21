@@ -58,6 +58,8 @@ The Visual Agent Builder enables:
 | **Embedder** _(optional)_               | `embedder`               | `Optional[Dict[str, Any]]`    | Configuration for the embedder used by the agent.                                                                     |
 | **Knowledge Sources** _(optional)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | Knowledge sources available to the agent.                                                                     |
 | **Use System Prompt** _(optional)_      | `use_system_prompt`      | `Optional[bool]`              | Whether to use system prompt (for o1 model support). Default is True.                                                 |
+| **Inject Date** _(optional)_           | `inject_date`            | `bool`                        | Whether to automatically inject the current date into tasks. Default is False.                                         |
+| **Date Format** _(optional)_           | `date_format`            | `str`                         | Format string for date when inject_date is enabled. Default is "%Y-%m-%d" (ISO format).                                |
 
 ## Creating Agents
 
@@ -226,6 +228,18 @@ custom_agent = Agent(
 )
 ```
 
+#### Date-Aware Agent
+```python Code
+date_aware_agent = Agent(
+    role="Market Analyst",
+    goal="Track market movements with precise date references",
+    backstory="Expert in time-sensitive financial analysis and reporting",
+    inject_date=True,  # Automatically inject current date into tasks
+    date_format="%B %d, %Y",  # Format as "May 21, 2025"
+    verbose=True
+)
+```
+
 ### Parameter Details
 
 #### Critical Parameters
@@ -331,6 +345,12 @@ When `memory` is enabled, the agent will maintain context across multiple intera
 - Consider using different LLMs for different purposes:
   - Main `llm` for complex reasoning
   - `function_calling_llm` for efficient tool usage
+
+### Date Awareness
+- Use `inject_date: true` to provide agents with current date awareness
+- Customize the date format with `date_format` using standard Python datetime format codes
+- Valid format codes include: %Y (year), %m (month), %d (day), %B (full month name), etc.
+- Invalid date formats will be logged as warnings and will not modify the task description
 
 ### Model Compatibility
 - Set `use_system_prompt: false` for older models that don't support system messages
