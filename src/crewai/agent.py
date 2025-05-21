@@ -119,6 +119,10 @@ class Agent(BaseAgent):
         default=False,
         description="Whether to automatically inject the current date into tasks.",
     )
+    date_format: str = Field(
+        default="%Y-%m-%d",
+        description="Format string for date when inject_date is enabled.",
+    )
     code_execution_mode: Literal["safe", "unsafe"] = Field(
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
@@ -254,8 +258,14 @@ class Agent(BaseAgent):
             
         if self.inject_date:
             from datetime import datetime
-            current_date = datetime.now().strftime("%Y-%m-%d")
-            task.description += f"\n\nCurrent Date: {current_date}"
+            try:
+                current_date: str = datetime.now().strftime(self.date_format)
+                task.description += f"\n\nCurrent Date: {current_date}"
+            except Exception as e:
+                if hasattr(self, '_logger'):
+                    self._logger.log("warning", f"Failed to inject date: {str(e)}")
+                else:
+                    print(f"Warning: Failed to inject date: {str(e)}")
             
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
