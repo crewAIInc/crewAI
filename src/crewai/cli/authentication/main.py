@@ -90,7 +90,7 @@ class AuthenticationCommand:
             f"state={self.STATE}"
         )
 
-    def _listen_for_auth_response(self) -> dict[str, str]:
+    def _listen_for_auth_response(self) -> dict[str, str | list[str]]:
         """
         Listen for the authentication response from the browser.
 
@@ -98,7 +98,7 @@ class AuthenticationCommand:
             dict[str, str]: The URL parameters passed in the querystring of the redirect URL.
         """
 
-        redirect_url_params = {}
+        redirect_url_params: dict[str, str | list[str]] = {}
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
             server_socket.bind((self.SOCKET_HOST, self.SOCKET_PORT))
@@ -115,12 +115,11 @@ class AuthenticationCommand:
 
                 # Parse the URL path to get query string parameters
                 parsed_url = urlparse(path)
-                redirect_url_params = parse_qs(parsed_url.query)
 
                 # Convert values from lists to single values if appropriate
                 redirect_url_params = {
                     k: v[0] if len(v) == 1 else v
-                    for k, v in redirect_url_params.items()
+                    for k, v in parse_qs(parsed_url.query).items()
                 }
 
                 # Prepare the HTTP response with success message and JS that attempts to close the tab.
@@ -156,7 +155,7 @@ class AuthenticationCommand:
 
     def _validate_and_extract_tokens(
         self, response_dict: dict[str, str]
-    ) -> [str, str, dict[str, str]]:
+    ) -> tuple[str, str, dict[str, str]]:
         user_info = {}
         try:
             validate_token(response_dict["access_token"])
