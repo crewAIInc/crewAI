@@ -1,6 +1,7 @@
 from typing import Any, List, Optional
 import os
 import time
+import json
 from pydantic import Field, PrivateAttr
 
 from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
@@ -22,6 +23,7 @@ try:
     from azure.ai.projects import AIProjectClient as FoundryClient
     from azure.ai.projects.models import MessageTextContent
     from azure.identity import DefaultAzureCredential
+    from azure.ai.projects.models import FunctionTool
 
 
     from .foundry_agent_tool_adapter import FoundryAgentToolAdapter
@@ -43,7 +45,7 @@ class FoundryAgentAdapter(BaseAgentAdapter):
     step_callback: Any = Field(default=None)
     _tool_adapter: "FoundryAgentToolAdapter" = PrivateAttr()
     _converter_adapter: FoundryConverterAdapter = PrivateAttr()
-    _converted_tools: List[Any] = PrivateAttr(default=[])
+    _converted_tools: Optional[FunctionTool] = PrivateAttr(default=None)
 
     def __init__(
         self,
@@ -91,7 +93,7 @@ class FoundryAgentAdapter(BaseAgentAdapter):
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
     ) -> str:
-        """Execute a task using the Foundry Assistant"""
+        """Execute a task using the Foundry Assistant (automatic mode)"""
         self._converter_adapter.configure_structured_output(task)
         self.create_agent_executor(tools)
 
@@ -118,10 +120,10 @@ class FoundryAgentAdapter(BaseAgentAdapter):
                 content=task_prompt,
             )
 
-            run = self._foundry_client.agents.create_run(thread_id=self._active_thread_id, agent_id=self._foundry_agent_id)
-            while run.status in ["queued", "in_progress", "requires_action"]:
-                time.sleep(.2)
-                run = self._foundry_client.agents.get_run(thread_id=self._active_thread_id, run_id=run.id)
+            self._foundry_client.agents.create_and_process_run(
+                thread_id=self._active_thread_id,
+                agent_id=self._foundry_agent_id
+            )
 
             messages = self._foundry_client.agents.list_messages(thread_id=self._active_thread_id)
             final_answer = messages.data[0].content[0]['text']['value']
@@ -144,6 +146,7 @@ class FoundryAgentAdapter(BaseAgentAdapter):
 
 
     def create_agent_executor(self, tools: Optional[List[BaseTool]] = None) -> None:
+        self.configure_tools(tools)
         self._foundry_client = FoundryClient.from_connection_string(
             credential=DefaultAzureCredential(),
             conn_str=os.environ["PROJECT_CONNECTION_STRING"],
@@ -152,10 +155,11 @@ class FoundryAgentAdapter(BaseAgentAdapter):
             model=self.llm,
             name=self.role or "crewai-agent",
             instructions=self._build_system_prompt(),
+            tools=self._converted_tools.definitions if self._converted_tools else None,
         )
+
         self._foundry_agent_id = agent.id
         self._active_thread_id = self._foundry_client.agents.create_thread().id
-        self.configure_tools(tools)
 
 
     def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
