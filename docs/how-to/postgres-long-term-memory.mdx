@@ -1,0 +1,256 @@
+# Using PostgreSQL for Long-Term Memory
+
+CrewAI supports both SQLite and PostgreSQL as database backends for the long-term memory storage system. This guide explains how to configure and use PostgreSQL for storing agent memories, which is especially useful for production environments and when working with Amazon RDS or other managed database services.
+
+## Prerequisites
+
+To use PostgreSQL as your long-term memory storage, you'll need to install the `postgres` extras:
+
+```bash
+pip install 'crewai[postgres]'
+```
+
+This will install the required `psycopg` dependency, which is a modern PostgreSQL client for Python.
+
+## Configuration
+
+You can configure a crew to use PostgreSQL for long-term memory storage in several ways:
+
+### Option 1: Direct Storage Configuration
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.storage.ltm_postgres_storage import LTMPostgresStorage
+
+# Initialize PostgreSQL storage
+postgres_storage = LTMPostgresStorage(
+    connection_string="postgresql://username:password@hostname:5432/database",
+    schema="public",                  # Optional, defaults to "public"
+    table_name="long_term_memories",  # Optional, defaults to "long_term_memories"
+    use_connection_pool=True,         # Optional, defaults to True
+    min_pool_size=1,                  # Optional, defaults to 1
+    max_pool_size=5                   # Optional, defaults to 5
+)
+
+# Create long-term memory with the PostgreSQL storage
+long_term_memory = LongTermMemory(storage=postgres_storage)
+
+# Create a crew with the configured memory
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=long_term_memory
+)
+```
+
+### Option 2: Using the LongTermMemory Configuration
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+
+# Create long-term memory with PostgreSQL configuration
+long_term_memory = LongTermMemory(
+    storage_type="postgres",
+    postgres_connection_string="postgresql://username:password@hostname:5432/database",
+    postgres_schema="public",                # Optional, defaults to "public"
+    postgres_table_name="agent_memories"     # Optional, defaults to "long_term_memories"
+)
+
+# Create a crew with the configured memory
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=long_term_memory
+)
+```
+
+### Option 3: Using Environment Variables
+
+CrewAI supports configuring PostgreSQL through environment variables, which is recommended for production environments:
+
+```python
+# Set environment variables in your deployment environment or .env file:
+# CREWAI_PG_CONNECTION_STRING=postgresql://username:password@hostname:5432/database
+# or individual components:
+# CREWAI_PG_HOST=hostname
+# CREWAI_PG_PORT=5432
+# CREWAI_PG_USER=username
+# CREWAI_PG_PASSWORD=password
+# CREWAI_PG_DB=database
+# CREWAI_PG_SCHEMA=public
+# CREWAI_PG_TABLE=long_term_memories
+# CREWAI_PG_MIN_POOL=1
+# CREWAI_PG_MAX_POOL=5
+# CREWAI_PG_ENABLE_POOL=true
+
+from crewai import Agent, Crew, Task
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+
+# Create long-term memory with PostgreSQL configured from environment variables
+long_term_memory = LongTermMemory(storage_type="postgres")
+
+# Create a crew with the configured memory
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=long_term_memory
+)
+```
+
+## Environment Variables
+
+CrewAI supports the following environment variables for PostgreSQL configuration:
+
+| Environment Variable        | Description                            | Default Value       |
+|-----------------------------|----------------------------------------|---------------------|
+| CREWAI_PG_CONNECTION_STRING | Full connection string (takes priority) | None                |
+| CREWAI_PG_HOST              | PostgreSQL host                        | localhost           |
+| CREWAI_PG_PORT              | PostgreSQL port                        | 5432                |
+| CREWAI_PG_USER              | PostgreSQL username                    | postgres            |
+| CREWAI_PG_PASSWORD          | PostgreSQL password                    | (empty string)      |
+| CREWAI_PG_DB                | PostgreSQL database name               | crewai              |
+| CREWAI_PG_SCHEMA            | PostgreSQL schema                      | public              |
+| CREWAI_PG_TABLE             | PostgreSQL table name                  | long_term_memories  |
+| CREWAI_PG_MIN_POOL          | Minimum connection pool size           | 1                   |
+| CREWAI_PG_MAX_POOL          | Maximum connection pool size           | 5                   |
+| CREWAI_PG_ENABLE_POOL       | Enable connection pooling              | true                |
+
+If `CREWAI_PG_CONNECTION_STRING` is set, it will be used directly and other component variables will be ignored.
+
+## Connection Pooling
+
+CrewAI supports connection pooling for PostgreSQL, which is highly recommended for production environments as it:
+
+- Reduces the overhead of creating new connections for each database operation
+- Improves performance and throughput for high-volume applications
+- Handles connection errors and reconnection automatically
+
+Connection pooling is enabled by default but can be disabled if needed:
+
+```python
+# Disable connection pooling
+postgres_storage = LTMPostgresStorage(
+    connection_string="postgresql://username:password@hostname:5432/database",
+    use_connection_pool=False
+)
+```
+
+You can also configure the pool size to match your application's requirements:
+
+```python
+# Configure pool size for high-volume applications
+postgres_storage = LTMPostgresStorage(
+    connection_string="postgresql://username:password@hostname:5432/database",
+    min_pool_size=5,   # Maintain at least 5 connections
+    max_pool_size=20   # Allow up to 20 connections when needed
+)
+```
+
+## Batch Operations
+
+The PostgreSQL storage implementation supports batch operations for improved performance when saving multiple memory items at once:
+
+```python
+# Get the storage from your memory instance
+postgres_storage = crew.memory.storage
+
+# Example batch items
+batch_items = [
+    {
+        "task_description": "Task 1",
+        "metadata": {"key": "value1", "quality": 0.9},
+        "datetime": "2023-01-01T12:00:00",
+        "score": 0.9
+    },
+    {
+        "task_description": "Task 2",
+        "metadata": {"key": "value2", "quality": 0.8},
+        "datetime": "2023-01-01T12:01:00",
+        "score": 0.8
+    }
+]
+
+# Save multiple items in a single transaction
+postgres_storage.save_many(batch_items)
+```
+
+## Connection String Format
+
+The PostgreSQL connection string should follow this format:
+
+```
+postgresql://username:password@hostname:port/database
+```
+
+Examples:
+
+- Local PostgreSQL: `postgresql://postgres:password@localhost:5432/crewai_db`
+- Amazon RDS: `postgresql://myuser:mypassword@myinstance.abc123xyz.us-east-1.rds.amazonaws.com:5432/mydb`
+- Azure Database for PostgreSQL: `postgresql://myuser@myserver:mypassword@myserver.postgres.database.azure.com:5432/mydb`
+
+## Security Considerations
+
+- **Environment Variables**: For better security, store your database credentials in environment variables:
+
+```python
+import os
+
+postgres_connection = os.environ.get("CREWAI_PG_CONNECTION_STRING")
+long_term_memory = LongTermMemory(
+    storage_type="postgres"
+)
+```
+
+- **Connection Pooling**: For production applications, consider using a connection pooling library like `pgbouncer` to manage database connections efficiently.
+
+## Using with Amazon RDS
+
+When using Amazon RDS for PostgreSQL, make sure to:
+
+1. Configure your RDS security group to allow connections from your application
+2. Use SSL connections for security (`postgresql://user:password@hostname:5432/database?sslmode=require`)
+3. Consider using AWS Secrets Manager for managing the database credentials
+
+## Database Structure
+
+When you use PostgreSQL storage, CrewAI automatically creates:
+
+1. The specified schema (if it doesn't exist)
+2. A table called `long_term_memories` (or your custom table name) with the following structure:
+   - `id`: Serial primary key
+   - `task_description`: Text field containing the task description
+   - `metadata`: JSONB field containing all memory metadata
+   - `datetime`: Text field with the ISO-formatted timestamp
+   - `score`: Real number field for the memory score
+3. An index on the `task_description` column for faster lookups
+
+## Migrating from SQLite
+
+If you've been using SQLite and want to migrate to PostgreSQL, you'll need to export your data from SQLite and import it into PostgreSQL. This can be done using tools like `sqlite3` and `psql`, or you can write a simple Python script using both storage implementations to migrate the data.
+
+## Performance Considerations
+
+PostgreSQL generally offers better performance and reliability for:
+
+- Concurrent access from multiple processes or servers
+- Larger datasets
+- Production environments
+- Distributed applications
+
+SQLite is still a good choice for:
+- Development and testing
+- Single-user applications
+- Simpler deployment (no separate database server required)
+
+## Cleaning Up Resources
+
+If you're using connection pooling, it's good practice to close the pool when your application shuts down:
+
+```python
+# Clean up resources when done
+postgres_storage.close()
+```
+
+This ensures that all database connections are properly closed and resources are released.
