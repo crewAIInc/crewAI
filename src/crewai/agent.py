@@ -256,16 +256,7 @@ class Agent(BaseAgent):
                 else:
                     print(f"Error during reasoning process: {str(e)}")
             
-        if self.inject_date:
-            from datetime import datetime
-            try:
-                current_date: str = datetime.now().strftime(self.date_format)
-                task.description += f"\n\nCurrent Date: {current_date}"
-            except Exception as e:
-                if hasattr(self, '_logger'):
-                    self._logger.log("warning", f"Failed to inject date: {str(e)}")
-                else:
-                    print(f"Warning: Failed to inject date: {str(e)}")
+        self._inject_date_to_task(task)
             
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
@@ -626,6 +617,20 @@ class Agent(BaseAgent):
         )
 
         return description
+
+    def _inject_date_to_task(self, task):
+        """Inject the current date into the task description if inject_date is enabled."""
+        if self.inject_date:
+            from datetime import datetime
+            try:
+                current_date: str = datetime.now().strftime(self.date_format)
+                task.description += f"\n\nCurrent Date: {current_date}"
+            except Exception as e:
+                if hasattr(self, '_logger'):
+                    self._logger.log("warning", f"Failed to inject date: {str(e)}")
+                else:
+                    print(f"Warning: Failed to inject date: {str(e)}")
+
 
     def _validate_docker_installation(self) -> None:
         """Check if Docker is installed and running."""
