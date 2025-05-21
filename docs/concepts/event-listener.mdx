@@ -4,7 +4,7 @@ description: 'Tap into CrewAI events to build custom integrations and monitoring
 icon: spinner
 ---
 
-# Event Listeners
+## Overview
 
 CrewAI provides a powerful event system that allows you to listen for and react to various events that occur during the execution of your Crew. This feature enables you to build custom integrations, monitoring solutions, logging systems, or any other functionality that needs to be triggered based on CrewAI's internal events.
 
@@ -223,6 +223,15 @@ CrewAI provides a wide range of events that you can listen for:
 - **ToolValidateInputErrorEvent**: Emitted when a tool input validation encounters an error
 - **ToolExecutionErrorEvent**: Emitted when a tool execution encounters an error
 - **ToolSelectionErrorEvent**: Emitted when there's an error selecting a tool
+
+### Knowledge Events
+
+- **KnowledgeRetrievalStartedEvent**: Emitted when a knowledge retrieval is started
+- **KnowledgeRetrievalCompletedEvent**: Emitted when a knowledge retrieval is completed
+- **KnowledgeQueryStartedEvent**: Emitted when a knowledge query is started
+- **KnowledgeQueryCompletedEvent**: Emitted when a knowledge query is completed
+- **KnowledgeQueryFailedEvent**: Emitted when a knowledge query fails
+- **KnowledgeSearchQueryFailedEvent**: Emitted when a knowledge search query fails
 
 ### Flow Events
 
