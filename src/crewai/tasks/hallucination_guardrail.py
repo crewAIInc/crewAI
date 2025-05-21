@@ -66,7 +66,7 @@ class HallucinationGuardrail:
         self._logger = Logger(verbose=True)
         self._logger.log(
             "warning",
-            """Hallucination detection is only available in CrewAI Enterprise (https://www.crewai.com/enterprise) and is a no-op in open source, please consider upgrading.\n""",
+            """Hallucination detection is a no-op in open source, use it for free at https://app.crewai.com\n""",
             color="red",
         )
 
@@ -90,7 +90,7 @@ class HallucinationGuardrail:
         """
         self._logger.log(
             "warning",
-            "Premium hallucination detection skipped (enterprise feature)\n",
+            "Premium hallucination detection skipped (use for free at https://app.crewai.com)\n",
             color="red",
         )
         return True, task_output.raw
