@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-import jwt
 import requests
 from cryptography.fernet import Fernet
+import jwt
 from jwt import PyJWKClient
 
 from .constants import (

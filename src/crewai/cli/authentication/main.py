@@ -72,7 +72,7 @@ class AuthenticationCommand:
 
         # 5. Wrap up.
         console.print(
-            f"4. Done! You are now signed in to CrewAI enterprise. Welcome, [bold cyan]{user_info.get('name')}[/bold cyan].",
+            f"4. Done! You are now logged in.\n\n Welcome to CrewAI enterprise, [bold cyan]{user_info.get('name')}[/bold cyan].",
             style="bold green",
         )
         return None
