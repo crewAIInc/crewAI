@@ -57,6 +57,11 @@ from .tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from .reasoning_events import (
+    AgentReasoningStartedEvent,
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
+)
 
 
 class EventListener(BaseEventListener):
@@ -412,6 +417,31 @@ class EventListener(BaseEventListener):
         ):
             self.formatter.handle_knowledge_search_query_failed(
                 self.formatter.current_agent_branch,
+                event.error,
+                self.formatter.current_crew_tree,
+            )
+
+        # ----------- REASONING EVENTS -----------
+
+        @crewai_event_bus.on(AgentReasoningStartedEvent)
+        def on_agent_reasoning_started(source, event: AgentReasoningStartedEvent):
+            self.formatter.handle_reasoning_started(
+                self.formatter.current_agent_branch,
+                event.attempt,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(AgentReasoningCompletedEvent)
+        def on_agent_reasoning_completed(source, event: AgentReasoningCompletedEvent):
+            self.formatter.handle_reasoning_completed(
+                event.plan,
+                event.ready,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(AgentReasoningFailedEvent)
+        def on_agent_reasoning_failed(source, event: AgentReasoningFailedEvent):
+            self.formatter.handle_reasoning_failed(
                 event.error,
                 self.formatter.current_crew_tree,
             )

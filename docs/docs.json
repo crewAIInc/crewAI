@@ -74,6 +74,7 @@
               "concepts/collaboration",
               "concepts/training",
               "concepts/memory",
+              "concepts/reasoning",
               "concepts/planning",
               "concepts/testing",
               "concepts/cli",
@@ -138,6 +139,12 @@
               "tools/youtubechannelsearchtool",
               "tools/youtubevideosearchtool"
             ]
+          },
+          {
+            "group": "MCP Integration",
+            "pages": [
+              "mcp/crewai-mcp-integration"
+            ] 
           },
           {
             "group": "Agent Monitoring & Observability",
