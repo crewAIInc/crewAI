@@ -43,6 +43,11 @@ from .tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from .reasoning_events import (
+    AgentReasoningStartedEvent,
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
+)
 
 EventTypes = Union[
     CrewKickoffStartedEvent,
@@ -74,4 +79,7 @@ EventTypes = Union[
     LLMStreamChunkEvent,
     LLMGuardrailStartedEvent,
     LLMGuardrailCompletedEvent,
+    AgentReasoningStartedEvent,
+    AgentReasoningCompletedEvent,
+    AgentReasoningFailedEvent,
 ]
