@@ -3,8 +3,8 @@ import hashlib
 import secrets
 import textwrap
 import webbrowser
-from typing import Any, Dict
-
+import socket
+from urllib.parse import parse_qs, urlparse
 import requests
 from rich.console import Console
 
@@ -13,15 +13,11 @@ from crewai.cli.tools.main import ToolCommand
 from .constants import (
     WORKOS_AUTHORIZE_URL,
     WORKOS_CLIENT_ID,
-    WORKOS_DOMAIN,
     WORKOS_TOKEN_URL,
 )
 from .utils import TokenManager, validate_token
 
 console = Console()
-
-import socket
-from urllib.parse import parse_qs, urlparse
 
 
 class AuthenticationCommand:
@@ -151,7 +147,7 @@ class AuthenticationCommand:
 
         if response.status_code != 200:
             console.print(
-                f"❌ Failed to sign in to CrewAI enterprise. \nRun [bold]crewai login[/bold] and try logging in again.\n",
+                "❌ Failed to sign in to CrewAI enterprise. \nRun [bold]crewai login[/bold] and try logging in again.\n",
                 style="red",
             )
             raise SystemExit
