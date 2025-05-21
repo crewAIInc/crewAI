@@ -2,7 +2,6 @@ import datetime
 import inspect
 import json
 import logging
-import re
 import threading
 import uuid
 from concurrent.futures import Future
@@ -41,6 +40,7 @@ from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
+from crewai.utilities.constants import NOT_SPECIFIED
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.events import (
     TaskCompletedEvent,
@@ -97,7 +97,7 @@ class Task(BaseModel):
     )
     context: Optional[List["Task"]] = Field(
         description="Other tasks that will have their output used as context for this task.",
-        default=None,
+        default=NOT_SPECIFIED,
     )
     async_execution: Optional[bool] = Field(
         description="Whether the task should be executed asynchronously or not.",
@@ -133,6 +133,10 @@ class Task(BaseModel):
     )
     human_input: Optional[bool] = Field(
         description="Whether the task should have a human review the final answer of the agent",
+        default=False,
+    )
+    markdown: Optional[bool] = Field(
+        description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
         default=False,
     )
     converter_cls: Optional[Type[Converter]] = Field(
@@ -522,10 +526,14 @@ class Task(BaseModel):
         return guardrail_result
 
     def prompt(self) -> str:
-        """Prompt the task.
-
+        """Generates the task prompt with optional markdown formatting.
+        
+        When the markdown attribute is True, instructions for formatting the
+        response in Markdown syntax will be added to the prompt.
+        
         Returns:
-            Prompt of the task.
+            str: The formatted prompt string containing the task description,
+                 expected output, and optional markdown formatting instructions.
         """
         tasks_slices = [self.description]
 
@@ -533,6 +541,17 @@ class Task(BaseModel):
             expected_output=self.expected_output
         )
         tasks_slices = [self.description, output]
+        
+        if self.markdown:
+            markdown_instruction = """Your final answer MUST be formatted in Markdown syntax.
+Follow these guidelines:
+- Use # for headers
+- Use ** for bold text
+- Use * for italic text
+- Use - or * for bullet points
+- Use `code` for inline code
+- Use ```language for code blocks"""
+            tasks_slices.append(markdown_instruction)
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(
@@ -643,7 +662,7 @@ class Task(BaseModel):
 
         cloned_context = (
             [task_mapping[context_task.key] for context_task in self.context]
-            if self.context
+            if isinstance(self.context, list)
             else None
         )
 

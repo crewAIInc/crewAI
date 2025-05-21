@@ -129,6 +129,7 @@
               "tools/seleniumscrapingtool",
               "tools/snowflakesearchtool",
               "tools/spidertool",
+              "tools/stagehandtool",
               "tools/txtsearchtool",
               "tools/visiontool",
               "tools/weaviatevectorsearchtool",
@@ -137,6 +138,12 @@
               "tools/youtubechannelsearchtool",
               "tools/youtubevideosearchtool"
             ]
+          },
+          {
+            "group": "MCP Integration",
+            "pages": [
+              "mcp/crewai-mcp-integration"
+            ] 
           },
           {
             "group": "Agent Monitoring & Observability",
