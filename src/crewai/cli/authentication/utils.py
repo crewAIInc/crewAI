@@ -10,7 +10,12 @@ import requests
 from cryptography.fernet import Fernet
 from jwt import PyJWKClient
 
-from .constants import WORKOS_CLIENT_ID, WORKOS_DOMAIN, WORKOS_ENVIRONMENT_ID
+from .constants import (
+    WORKOS_CLIENT_ID,
+    WORKOS_DOMAIN,
+    WORKOS_ENVIRONMENT_ID,
+    WORKOS_TOKEN_URL,
+)
 
 
 def get_auth_token_with_refresh_token(refresh_token: str) -> dict:
