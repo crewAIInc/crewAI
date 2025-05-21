@@ -26,7 +26,7 @@ def in_temp_dir():
 
 @pytest.fixture
 def tool_command():
-    TokenManager().save_tokens("test-token", 36000)
+    TokenManager().save_access_token("test-token", 36000)
     tool_command = ToolCommand()
     with patch.object(tool_command, "login"):
         yield tool_command

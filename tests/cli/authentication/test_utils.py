@@ -60,11 +60,11 @@ class TestTokenManager(unittest.TestCase):
         mock_save.assert_called_once_with("secret.key", mock_key)
 
     @patch("crewai.cli.authentication.utils.TokenManager.save_secure_file")
-    def test_save_tokens(self, mock_save):
+    def test_save_access_token(self, mock_save):
         access_token = "test_token"
         expires_in = 3600
 
-        self.token_manager.save_tokens(access_token, expires_in)
+        self.token_manager.save_access_token(access_token, expires_in)
 
         mock_save.assert_called_once()
         args = mock_save.call_args[0]
