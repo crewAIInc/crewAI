@@ -591,6 +591,13 @@ class ConsoleFormatter:
 
         # Remove the thinking status node when complete
         if "Thinking" in str(tool_branch.label):
+            # Define branch_to_use here to fix the undefined name issue
+            branch_to_use = (
+                self.current_lite_agent_branch
+                or agent_branch
+                or self.current_task_branch
+            )
+            
             parents = [
                 branch_to_use if 'branch_to_use' in locals() else None,
                 self.current_lite_agent_branch,
