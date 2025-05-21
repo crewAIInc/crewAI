@@ -4,6 +4,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 from rich.tree import Tree
+from rich.live import Live
 
 
 class ConsoleFormatter:
@@ -20,6 +21,12 @@ class ConsoleFormatter:
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
         self.verbose = verbose
+        # Live instance to dynamically update a Tree renderable (e.g. the Crew tree)
+        # When multiple Tree objects are printed sequentially we reuse this Live
+        # instance so the previous render is replaced instead of writing a new one.
+        # Once any non-Tree renderable is printed we stop the Live session so the
+        # final Tree persists on the terminal.
+        self._live: Optional[Live] = None
 
     def create_panel(self, content: Text, title: str, style: str = "blue") -> Panel:
         """Create a standardized panel with consistent styling."""
@@ -60,7 +67,7 @@ class ConsoleFormatter:
         label.append(f"{prefix} ", style=f"{style} bold")
         label.append(name, style=style)
         if status:
-            label.append("\n    Status: ", style="white")
+            label.append("\nStatus: ", style="white")
             label.append(status, style=f"{style} bold")
         tree.label = label
 
@@ -69,7 +76,46 @@ class ConsoleFormatter:
         return parent.add(Text(text, style=style))
 
     def print(self, *args, **kwargs) -> None:
-        """Print to console with consistent formatting if verbose is enabled."""
+        """Custom print that replaces consecutive Tree renders.
+
+        * If the argument is a single ``Tree`` instance, we either start a
+          ``Live`` session (first tree) or update the existing one (subsequent
+          trees). This results in the tree being rendered in-place instead of
+          being appended repeatedly to the log.
+
+        * A blank call (no positional arguments) is ignored while a Live
+          session is active so it does not prematurely terminate the tree
+          rendering.
+
+        * Any other renderable will terminate the Live session (if one is
+          active) so the last tree stays on screen and the new content is
+          printed normally.
+        """
+
+        # Case 1: updating / starting live Tree rendering
+        if len(args) == 1 and isinstance(args[0], Tree):
+            tree = args[0]
+
+            if not self._live:
+                # Start a new Live session for the first tree
+                self._live = Live(tree, console=self.console, refresh_per_second=4)
+                self._live.start()
+            else:
+                # Update existing Live session
+                self._live.update(tree, refresh=True)
+            return  # Nothing else to do
+
+        # Case 2: blank line while a live session is running – ignore so we
+        # don't break the in-place rendering behaviour
+        if len(args) == 0 and self._live:
+            return
+
+        # Case 3: printing something other than a Tree → terminate live session
+        if self._live:
+            self._live.stop()
+            self._live = None
+
+        # Finally, pass through to the regular Console.print implementation
         self.console.print(*args, **kwargs)
 
     def print_panel(
@@ -157,7 +203,7 @@ class ConsoleFormatter:
 
         task_content = Text()
         task_content.append(f"📋 Task: {task_id}", style="yellow bold")
-        task_content.append("\n   Status: ", style="white")
+        task_content.append("\nStatus: ", style="white")
         task_content.append("Executing Task...", style="yellow dim")
 
         task_branch = None
@@ -197,11 +243,17 @@ class ConsoleFormatter:
         # Update tree label
         for branch in crew_tree.children:
             if str(task_id) in str(branch.label):
+                # Build label without introducing stray blank lines
                 task_content = Text()
+                # First line: Task ID
                 task_content.append(f"📋 Task: {task_id}", style=f"{style} bold")
-                task_content.append("\n   Assigned to: ", style="white")
+
+                # Second line: Assigned to
+                task_content.append("\nAssigned to: ", style="white")
                 task_content.append(agent_role, style=style)
-                task_content.append("\n   Status: ", style="white")
+
+                # Third line: Status
+                task_content.append("Status: ", style="white")
                 task_content.append(status_text, style=f"{style} bold")
                 branch.label = task_content
                 self.print(crew_tree)
@@ -220,18 +272,16 @@ class ConsoleFormatter:
         if not self.verbose or not task_branch or not crew_tree:
             return None
 
-        agent_branch = task_branch.add("")
-        self.update_tree_label(
-            agent_branch, "🤖 Agent:", agent_role, "green", "In Progress"
-        )
+        # Instead of creating a separate Agent node, we treat the task branch
+        # itself as the logical agent branch so that Reasoning/Tool nodes are
+        # nested under the task without an extra visual level.
 
-        self.print(crew_tree)
-        self.print()
+        # Store the task branch as the current_agent_branch for future nesting.
+        self.current_agent_branch = task_branch
 
-        # Set the current_agent_branch attribute directly
-        self.current_agent_branch = agent_branch
-
-        return agent_branch
+        # No additional tree modification needed; return the task branch so
+        # caller logic remains unchanged.
+        return task_branch
 
     def update_agent_status(
         self,
@@ -241,19 +291,10 @@ class ConsoleFormatter:
         status: str = "completed",
     ) -> None:
         """Update agent status in the tree."""
-        if not self.verbose or agent_branch is None or crew_tree is None:
-            return
-
-        self.update_tree_label(
-            agent_branch,
-            "🤖 Agent:",
-            agent_role,
-            "green",
-            "✅ Completed" if status == "completed" else "❌ Failed",
-        )
-
-        self.print(crew_tree)
-        self.print()
+        # We no longer render a separate agent branch, so this method simply
+        # updates the stored branch reference (already the task branch) without
+        # altering the tree. Keeping it a no-op avoids duplicate status lines.
+        return
 
     def create_flow_tree(self, flow_name: str, flow_id: str) -> Optional[Tree]:
         """Create and initialize a flow tree."""
@@ -266,7 +307,7 @@ class ConsoleFormatter:
         flow_label = Text()
         flow_label.append("🌊 Flow: ", style="blue bold")
         flow_label.append(flow_name, style="blue")
-        flow_label.append("\n    ID: ", style="white")
+        flow_label.append("\nID: ", style="white")
         flow_label.append(flow_id, style="blue")
 
         flow_tree = Tree(flow_label)
@@ -281,7 +322,7 @@ class ConsoleFormatter:
         flow_label = Text()
         flow_label.append("🌊 Flow: ", style="blue bold")
         flow_label.append(flow_name, style="blue")
-        flow_label.append("\n    ID: ", style="white")
+        flow_label.append("\nID: ", style="white")
         flow_label.append(flow_id, style="blue")
         flow_tree.label = flow_label
 
@@ -395,9 +436,15 @@ class ConsoleFormatter:
         if not self.verbose:
             return None
 
-        # Use LiteAgent branch if available, otherwise use regular agent branch
-        branch_to_use = self.current_lite_agent_branch or agent_branch
-        tree_to_use = branch_to_use or crew_tree
+        # Parent for tool usage: LiteAgent > Agent > Task
+        branch_to_use = (
+            self.current_lite_agent_branch
+            or agent_branch
+            or self.current_task_branch
+        )
+
+        # Render full crew tree when available for consistent live updates
+        tree_to_use = self.current_crew_tree or crew_tree or branch_to_use
 
         if branch_to_use is None or tree_to_use is None:
             # If we don't have a valid branch, default to crew_tree if provided
@@ -423,10 +470,9 @@ class ConsoleFormatter:
             "yellow",
         )
 
-        # Only print if this is a new tool usage
-        if tool_branch not in branch_to_use.children:
-            self.print(tree_to_use)
-            self.print()
+        # Print updated tree immediately
+        self.print(tree_to_use)
+        self.print()
 
         return tool_branch
 
@@ -440,8 +486,8 @@ class ConsoleFormatter:
         if not self.verbose or tool_branch is None:
             return
 
-        # Use LiteAgent branch if available, otherwise use crew tree
-        tree_to_use = self.current_lite_agent_branch or crew_tree
+        # Decide which tree to render: prefer full crew tree, else parent branch
+        tree_to_use = self.current_crew_tree or crew_tree or self.current_task_branch
         if tree_to_use is None:
             return
 
@@ -472,8 +518,8 @@ class ConsoleFormatter:
         if not self.verbose:
             return
 
-        # Use LiteAgent branch if available, otherwise use crew tree
-        tree_to_use = self.current_lite_agent_branch or crew_tree
+        # Decide which tree to render: prefer full crew tree, else parent branch
+        tree_to_use = self.current_crew_tree or crew_tree or self.current_task_branch
 
         if tool_branch:
             self.update_tree_label(
@@ -501,9 +547,15 @@ class ConsoleFormatter:
         if not self.verbose:
             return None
 
-        # Use LiteAgent branch if available, otherwise use regular agent branch
-        branch_to_use = self.current_lite_agent_branch or agent_branch
-        tree_to_use = branch_to_use or crew_tree
+        # Parent for tool usage: LiteAgent > Agent > Task
+        branch_to_use = (
+            self.current_lite_agent_branch
+            or agent_branch
+            or self.current_task_branch
+        )
+
+        # Render full crew tree when available for consistent live updates
+        tree_to_use = self.current_crew_tree or crew_tree or branch_to_use
 
         if branch_to_use is None or tree_to_use is None:
             # If we don't have a valid branch, default to crew_tree if provided
@@ -532,24 +584,33 @@ class ConsoleFormatter:
         if not self.verbose or tool_branch is None:
             return
 
-        # Use LiteAgent branch if available, otherwise use regular agent branch
-        branch_to_use = self.current_lite_agent_branch or agent_branch
-        tree_to_use = branch_to_use or crew_tree
-
-        if branch_to_use is None or tree_to_use is None:
+        # Decide which tree to render: prefer full crew tree, else parent branch
+        tree_to_use = self.current_crew_tree or crew_tree or self.current_task_branch
+        if tree_to_use is None:
             return
 
-        # Remove the thinking status node when complete, but only if it exists
+        # Remove the thinking status node when complete
         if "Thinking" in str(tool_branch.label):
-            try:
-                # Check if the node is actually in the children list
-                if tool_branch in branch_to_use.children:
-                    branch_to_use.children.remove(tool_branch)
-                    self.print(tree_to_use)
-                    self.print()
-            except Exception:
-                # If any error occurs during removal, just continue without removing
-                pass
+            parents = [
+                self.current_lite_agent_branch,
+                self.current_agent_branch,
+                self.current_task_branch,
+                tree_to_use,
+            ]
+            removed = False
+            for parent in parents:
+                if isinstance(parent, Tree) and tool_branch in parent.children:
+                    parent.children.remove(tool_branch)
+                    removed = True
+                    break
+
+            # Clear pointer if we just removed the current_tool_branch
+            if self.current_tool_branch is tool_branch:
+                self.current_tool_branch = None
+
+            if removed:
+                self.print(tree_to_use)
+                self.print()
 
     def handle_llm_call_failed(
         self, tool_branch: Optional[Tree], error: str, crew_tree: Optional[Tree]
@@ -558,8 +619,8 @@ class ConsoleFormatter:
         if not self.verbose:
             return
 
-        # Use LiteAgent branch if available, otherwise use crew tree
-        tree_to_use = self.current_lite_agent_branch or crew_tree
+        # Decide which tree to render: prefer full crew tree, else parent branch
+        tree_to_use = self.current_crew_tree or crew_tree or self.current_task_branch
 
         # Update tool branch if it exists
         if tool_branch:
@@ -601,7 +662,7 @@ class ConsoleFormatter:
         test_label = Text()
         test_label.append("🧪 Test: ", style="blue bold")
         test_label.append(crew_name or "Crew", style="blue")
-        test_label.append("\n    Status: ", style="white")
+        test_label.append("\nStatus: ", style="white")
         test_label.append("In Progress", style="yellow")
 
         test_tree = Tree(test_label)
@@ -623,7 +684,7 @@ class ConsoleFormatter:
             test_label = Text()
             test_label.append("✅ Test: ", style="green bold")
             test_label.append(crew_name or "Crew", style="green")
-            test_label.append("\n    Status: ", style="white")
+            test_label.append("\nStatus: ", style="white")
             test_label.append("Completed", style="green bold")
             flow_tree.label = test_label
 
@@ -712,7 +773,7 @@ class ConsoleFormatter:
             lite_agent_label = Text()
             lite_agent_label.append("🤖 LiteAgent: ", style="cyan bold")
             lite_agent_label.append(lite_agent_role, style="cyan")
-            lite_agent_label.append("\n    Status: ", style="white")
+            lite_agent_label.append("\nStatus: ", style="white")
             lite_agent_label.append("In Progress", style="yellow")
 
             lite_agent_tree = Tree(lite_agent_label)
@@ -751,7 +812,7 @@ class ConsoleFormatter:
         lite_agent_label = Text()
         lite_agent_label.append(f"{prefix} ", style=f"{style} bold")
         lite_agent_label.append(lite_agent_role, style=style)
-        lite_agent_label.append("\n    Status: ", style="white")
+        lite_agent_label.append("Status: ", style="white")
         lite_agent_label.append(status_text, style=f"{style} bold")
         lite_agent_branch.label = lite_agent_label
 
@@ -1004,16 +1065,20 @@ class ConsoleFormatter:
         if not self.verbose:
             return None
 
-        # Prefer LiteAgent branch if we are within a LiteAgent context
-        branch_to_use = self.current_lite_agent_branch or agent_branch
-        tree_to_use = branch_to_use or crew_tree
+        # Prefer LiteAgent > Agent > Task branch as the parent for reasoning
+        branch_to_use = (
+            self.current_lite_agent_branch
+            or agent_branch
+            or self.current_task_branch
+        )
 
-        if branch_to_use is None or tree_to_use is None:
-            # If we don't have a valid branch, default to crew_tree if provided
-            if crew_tree is not None:
-                branch_to_use = tree_to_use = crew_tree
-            else:
-                return None
+        # We always want to render the full crew tree when possible so the
+        # Live view updates coherently. Fallbacks: crew tree → branch itself.
+        tree_to_use = self.current_crew_tree or crew_tree or branch_to_use
+
+        if branch_to_use is None:
+            # Nothing to attach to, abort
+            return None
 
         # Reuse existing reasoning branch if present
         reasoning_branch = self.current_reasoning_branch
@@ -1044,8 +1109,9 @@ class ConsoleFormatter:
 
         reasoning_branch = self.current_reasoning_branch
         tree_to_use = (
-            self.current_lite_agent_branch
-            or self.current_agent_branch
+            self.current_crew_tree
+            or self.current_lite_agent_branch
+            or self.current_task_branch
             or crew_tree
         )
 
@@ -1084,8 +1150,9 @@ class ConsoleFormatter:
 
         reasoning_branch = self.current_reasoning_branch
         tree_to_use = (
-            self.current_lite_agent_branch
-            or self.current_agent_branch
+            self.current_crew_tree
+            or self.current_lite_agent_branch
+            or self.current_task_branch
             or crew_tree
         )
 
