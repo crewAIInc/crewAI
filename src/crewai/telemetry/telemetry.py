@@ -9,6 +9,7 @@ import warnings
 from contextlib import contextmanager
 from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Optional
+import threading
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
@@ -65,11 +66,14 @@ class Telemetry:
     """
 
     _instance = None
+    _lock = threading.Lock()
 
     def __new__(cls):
-        if not hasattr(cls, "instance"):
-            cls.instance = super(Telemetry, cls).__new__(cls)
-        return cls.instance
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(Telemetry, cls).__new__(cls)
+        return cls._instance
 
     def __init__(self):
         self.ready: bool = False
