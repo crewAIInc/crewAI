@@ -599,7 +599,6 @@ class ConsoleFormatter:
             )
             
             parents = [
-                branch_to_use if 'branch_to_use' in locals() else None,
                 self.current_lite_agent_branch,
                 self.current_agent_branch,
                 self.current_task_branch,

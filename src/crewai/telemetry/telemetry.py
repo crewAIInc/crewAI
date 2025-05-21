@@ -64,7 +64,7 @@ class Telemetry:
     attribute in the Crew class.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ready: bool = False
         self.trace_set: bool = False
 
