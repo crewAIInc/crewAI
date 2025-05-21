@@ -33,6 +33,7 @@ def get_auth_token_with_refresh_token(refresh_token: str) -> dict:
             "refresh_token": refresh_token,
             "client_id": WORKOS_CLIENT_ID,
         },
+        timeout=10,
     )
 
     if response.status_code != 200:

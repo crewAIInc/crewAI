@@ -29,7 +29,7 @@ class AuthenticationCommand:
     )
     NONCE = secrets.token_hex(6)
     STATE = secrets.token_hex(9)
-    SOCKET_HOST = "0.0.0.0"
+    SOCKET_HOST = "0.0.0.0"  # nosec: B104
     SOCKET_PORT = 49152
 
     def __init__(self):
@@ -142,6 +142,7 @@ class AuthenticationCommand:
                 "redirect_uri": f"http://localhost:{self.SOCKET_PORT}",
                 "code_verifier": self.CODE_VERIFIER,
             },
+            timeout=10,
         )
 
         if response.status_code != 200:
