@@ -623,6 +623,12 @@ class Agent(BaseAgent):
         if self.inject_date:
             from datetime import datetime
             try:
+                valid_format_codes = ['%Y', '%m', '%d', '%H', '%M', '%S', '%B', '%b', '%A', '%a']
+                is_valid = any(code in self.date_format for code in valid_format_codes)
+                
+                if not is_valid:
+                    raise ValueError(f"Invalid date format: {self.date_format}")
+                
                 current_date: str = datetime.now().strftime(self.date_format)
                 task.description += f"\n\nCurrent Date: {current_date}"
             except Exception as e:
