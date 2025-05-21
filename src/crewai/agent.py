@@ -115,6 +115,10 @@ class Agent(BaseAgent):
         default=False,
         description="Whether the agent is multimodal.",
     )
+    inject_date: bool = Field(
+        default=False,
+        description="Whether to automatically inject the current date into tasks.",
+    )
     code_execution_mode: Literal["safe", "unsafe"] = Field(
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
@@ -247,6 +251,11 @@ class Agent(BaseAgent):
                     self._logger.log("error", f"Error during reasoning process: {str(e)}")
                 else:
                     print(f"Error during reasoning process: {str(e)}")
+            
+        if self.inject_date:
+            from datetime import datetime
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            task.description += f"\n\nCurrent Date: {current_date}"
             
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
