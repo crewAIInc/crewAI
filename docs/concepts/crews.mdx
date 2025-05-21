@@ -4,7 +4,7 @@ description: Understanding and utilizing crews in the crewAI framework with comp
 icon: people-group
 ---
 
-## What is a Crew?
+## Overview
 
 A crew in crewAI represents a collaborative group of agents working together to achieve a set of tasks. Each crew defines the strategy for task execution, agent collaboration, and the overall workflow.
 
@@ -27,7 +27,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Step Callback** _(optional)_        | `step_callback`        | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations; it won't override the agent-specific `step_callback`.                                                               |
 | **Task Callback** _(optional)_        | `task_callback`        | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution.                                                                                                                          |
 | **Share Crew** _(optional)_           | `share_crew`           | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models.                                                                                                      |
-| **Output Log File** _(optional)_      | `output_log_file`      | Set to True to save logs as logs.txt in the current directory or provide a file path. Logs will be in JSON format if the filename ends in .json, otherwise .txt. Defautls to `None`.                                                                      |
+| **Output Log File** _(optional)_      | `output_log_file`      | Set to True to save logs as logs.txt in the current directory or provide a file path. Logs will be in JSON format if the filename ends in .json, otherwise .txt. Defaults to `None`.                                                                      |
 | **Manager Agent** _(optional)_        | `manager_agent`        | `manager` sets a custom agent that will be used as a manager.                                                                                                                                                                                             |
 | **Prompt File** _(optional)_          | `prompt_file`          | Path to the prompt JSON file to be used for the crew.                                                                                                                                                                                                     |
 | **Planning** *(optional)*             | `planning`             | Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.                                                     |
@@ -117,6 +117,12 @@ class YourCrewName:
         )
 ```
 
+How to run the above code:
+
+```python code
+YourCrewName().crew().kickoff(inputs={"any": "input here"})
+```
+
 <Note>
 Tasks will be executed in the order they are defined.
 </Note>
@@ -184,6 +190,11 @@ class YourCrewName:
             verbose=True
         )
 ```
+How to run the above code:
+
+```python code
+YourCrewName().crew().kickoff(inputs={})
+```
 
 In this example:
 
@@ -246,7 +257,7 @@ print(f"Token Usage: {crew_output.token_usage}")
 You can see real time log of the crew execution, by setting `output_log_file` as a `True(Boolean)` or a `file_name(str)`. Supports logging of events as both `file_name.txt` and `file_name.json`.
 In case of `True(Boolean)` will save as `logs.txt`.
 
-In case of `output_log_file` is set as `False(Booelan)` or `None`, the logs will not be populated.
+In case of `output_log_file` is set as `False(Boolean)` or `None`, the logs will not be populated.
 
 ```python Code
 # Save crew logs

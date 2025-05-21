@@ -9,6 +9,19 @@ import warnings
 from contextlib import contextmanager
 from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Optional
+import threading
+
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter,
+)
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    SpanExportResult,
+)
+from opentelemetry.trace import Span, Status, StatusCode
 
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
@@ -24,18 +37,6 @@ def suppress_warnings():
         warnings.filterwarnings("ignore")
         yield
 
-
-from opentelemetry import trace  # noqa: E402
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,  # noqa: E402
-)
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
-from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
-from opentelemetry.sdk.trace.export import (  # noqa: E402
-    BatchSpanProcessor,
-    SpanExportResult,
-)
-from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
@@ -64,7 +65,17 @@ class Telemetry:
     attribute in the Crew class.
     """
 
-    def __init__(self):
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(Telemetry, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self) -> None:
         self.ready: bool = False
         self.trace_set: bool = False
 
@@ -232,7 +243,7 @@ class Telemetry:
                                 "agent_key": task.agent.key if task.agent else None,
                                 "context": (
                                     [task.description for task in task.context]
-                                    if task.context
+                                    if isinstance(task.context, list)
                                     else None
                                 ),
                                 "tools_names": [
@@ -748,7 +759,7 @@ class Telemetry:
                             "agent_key": task.agent.key if task.agent else None,
                             "context": (
                                 [task.description for task in task.context]
-                                if task.context
+                                if isinstance(task.context, list)
                                 else None
                             ),
                             "tools_names": [

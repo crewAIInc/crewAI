@@ -4,8 +4,6 @@ description: Learn how to create structured, event-driven workflows with precise
 icon: diagram-project
 ---
 
-# Build Your First Flow
-
 ## Taking Control of AI Workflows with Flows
 
 CrewAI Flows represent the next level in AI orchestration - combining the collaborative power of AI agent crews with the precision and flexibility of procedural programming. While crews excel at agent collaboration, flows give you fine-grained control over exactly how and when different components of your AI system interact.
@@ -45,7 +43,8 @@ Let's dive in and build your first flow!
 Before starting, make sure you have:
 
 1. Installed CrewAI following the [installation guide](/installation)
-2. Set up your OpenAI API key in your environment variables
+2. Set up your LLM API key in your environment, following the [LLM setup
+   guide](/concepts/llms#setting-up-your-llm)
 3. Basic understanding of Python
 
 ## Step 1: Create a New CrewAI Flow Project
@@ -107,6 +106,8 @@ Now, let's modify the generated files for the content writer crew. We'll set up 
 
 1. First, update the agents configuration file to define our content creation team:
 
+   Remember to set `llm` to the provider you are using.
+
 ```yaml
 # src/guide_creator_flow/crews/content_crew/config/agents.yaml
 content_writer:
@@ -119,7 +120,7 @@ content_writer:
     You are a talented educational writer with expertise in creating clear, engaging
     content. You have a gift for explaining complex concepts in accessible language
     and organizing information in a way that helps readers build their understanding.
-  llm: openai/gpt-4o-mini
+  llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
 
 content_reviewer:
   role: >
@@ -132,7 +133,7 @@ content_reviewer:
     content. You have an eye for detail, clarity, and coherence. You excel at
     improving content while maintaining the original author's voice and ensuring
     consistent quality across multiple sections.
-  llm: openai/gpt-4o-mini
+  llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
 ```
 
 These agent definitions establish the specialized roles and perspectives that will shape how our AI agents approach content creation. Notice how each agent has a distinct purpose and expertise.
@@ -441,10 +442,15 @@ This is the power of flows - combining different types of processing (user inter
 
 ## Step 6: Set Up Your Environment Variables
 
-Create a `.env` file in your project root with your API keys:
+Create a `.env` file in your project root with your API keys. See the [LLM setup
+guide](/concepts/llms#setting-up-your-llm) for details on configuring a provider.
 
-```
+```sh .env
 OPENAI_API_KEY=your_openai_api_key
+# or
+GEMINI_API_KEY=your_gemini_api_key
+# or
+ANTHROPIC_API_KEY=your_anthropic_api_key
 ```
 
 ## Step 7: Install Dependencies
@@ -547,7 +553,10 @@ Let's break down the key components of flows to help you understand how to build
 Flows allow you to make direct calls to language models when you need simple, structured responses:
 
 ```python
-llm = LLM(model="openai/gpt-4o-mini", response_format=GuideOutline)
+llm = LLM(
+    model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+    response_format=GuideOutline
+)
 response = llm.call(messages=messages)
 ```
 

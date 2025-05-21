@@ -4,8 +4,6 @@ description: Step-by-step tutorial to create a collaborative AI team that works 
 icon: users-gear
 ---
 
-# Build Your First Crew
-
 ## Unleashing the Power of Collaborative AI
 
 Imagine having a team of specialized AI agents working together seamlessly to solve complex problems, each contributing their unique skills to achieve a common goal. This is the power of CrewAI - a framework that enables you to create collaborative AI systems that can accomplish tasks far beyond what a single AI could achieve alone.
@@ -35,7 +33,8 @@ Let's get started building your first crew!
 Before starting, make sure you have:
 
 1. Installed CrewAI following the [installation guide](/installation)
-2. Set up your OpenAI API key in your environment variables
+2. Set up your LLM API key in your environment, following the [LLM setup
+   guide](/concepts/llms#setting-up-your-llm)
 3. Basic understanding of Python
 
 ## Step 1: Create a New CrewAI Project
@@ -92,7 +91,8 @@ For our research crew, we'll create two agents:
 1. A **researcher** who excels at finding and organizing information
 2. An **analyst** who can interpret research findings and create insightful reports
 
-Let's modify the `agents.yaml` file to define these specialized agents:
+Let's modify the `agents.yaml` file to define these specialized agents. Be sure
+to set `llm` to the provider you are using.
 
 ```yaml
 # src/research_crew/config/agents.yaml
@@ -107,7 +107,7 @@ researcher:
     finding relevant information from various sources. You excel at
     organizing information in a clear and structured manner, making
     complex topics accessible to others.
-  llm: openai/gpt-4o-mini
+  llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
 
 analyst:
   role: >
@@ -120,7 +120,7 @@ analyst:
     and technical writing. You have a talent for identifying patterns
     and extracting meaningful insights from research data, then
     communicating those insights effectively through well-crafted reports.
-  llm: openai/gpt-4o-mini
+  llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
 ```
 
 Notice how each agent has a distinct role, goal, and backstory. These elements aren't just descriptive - they actively shape how the agent approaches its tasks. By crafting these carefully, you can create agents with specialized skills and perspectives that complement each other.
@@ -282,12 +282,12 @@ This script prepares the environment, specifies our research topic, and kicks of
 
 Create a `.env` file in your project root with your API keys:
 
-```
-OPENAI_API_KEY=your_openai_api_key
+```sh
 SERPER_API_KEY=your_serper_api_key
+# Add your provider's API key here too.
 ```
 
-You can get a Serper API key from [Serper.dev](https://serper.dev/).
+See the [LLM Setup guide](/concepts/llms#setting-up-your-llm) for details on configuring your provider of choice. You can get a Serper API key from [Serper.dev](https://serper.dev/).
 
 ## Step 8: Install Dependencies
 

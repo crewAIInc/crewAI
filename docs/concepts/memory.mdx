@@ -4,7 +4,7 @@ description: Leveraging memory systems in the CrewAI framework to enhance agent 
 icon: database
 ---
 
-## Introduction to Memory Systems in CrewAI
+## Overview
 
 The crewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents. 
 This system comprises `short-term memory`, `long-term memory`, `entity memory`, and `contextual memory`, each serving a unique purpose in aiding agents to remember, 
@@ -679,6 +679,7 @@ crewai reset-memories [OPTIONS]
 | `-e`, `--entities` | Reset ENTITIES memory.           | Flag (boolean) | False   |
 | `-k`, `--kickoff-outputs` | Reset LATEST KICKOFF TASK OUTPUTS. | Flag (boolean) | False   |
 | `-kn`, `--knowledge` | Reset KNOWLEDEGE storage | Flag (boolean) | False   |
+| `-akn`, `--agent-knowledge` | Reset AGENT KNOWLEDGE storage | Flag (boolean) | False   |
 | `-a`, `--all`      | Reset ALL memories.              | Flag (boolean) | False   |
 
 Note: To use the cli command you need to have your crew in a file called crew.py in the same directory.
@@ -716,7 +717,9 @@ my_crew.reset_memories(command_type = 'all') # Resets all the memory
 | `entities`         | Reset ENTITIES memory.           | 
 | `kickoff_outputs`  | Reset LATEST KICKOFF TASK OUTPUTS. |
 | `knowledge`        | Reset KNOWLEDGE memory.          |
+| `agent_knowledge`  | Reset AGENT KNOWLEDGE memory.    |
 | `all`              | Reset ALL memories.              |
+
 
 
 ## Benefits of Using CrewAI's Memory System

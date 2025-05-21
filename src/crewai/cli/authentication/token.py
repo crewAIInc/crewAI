@@ -18,5 +18,5 @@ def get_auth_token() -> str:
             TokenManager().save_refresh_token(refresh_token)
 
     if not access_token:
-        raise Exception("Access token could not be obtained. Please sign in again.")
+        raise Exception("Session expired. Please sign in again with 'crewai login'.")
     return access_token
