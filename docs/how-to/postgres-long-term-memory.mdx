@@ -1,0 +1,730 @@
+# Using PostgreSQL for Long-Term Memory
+
+CrewAI supports both SQLite and PostgreSQL as database backends for the long-term memory storage system. This guide explains how to configure and use PostgreSQL for storing agent memories, which is especially useful for production environments and when working with Amazon RDS or other managed database services.
+
+## Important Configuration Notes
+
+**Setting `memory=True` alone on a Crew will create SQLite-based memory storage by default.** To use PostgreSQL, you must explicitly configure it using one of the methods below. Simply having PostgreSQL environment variables set is not sufficient - you need to explicitly create and pass a PostgreSQL `LongTermMemory` instance to your crew.
+
+**For automatic memory saving to work, you need both `long_term_memory` AND `entity_memory` configured.** CrewAI's automatic task evaluation and memory saving only occurs when both memory systems are enabled. If you only configure `long_term_memory`, you'll need to save memories manually.
+
+## Prerequisites
+
+To use PostgreSQL as your long-term memory storage, you'll need to install the `postgres` extras:
+
+```bash
+pip install 'crewai[postgres]'
+```
+
+This will install the required `psycopg[pool]` dependency, which is a modern PostgreSQL client for Python with connection pooling support.
+
+**Note:** If you see warnings about "psycopg pool module not available", ensure you have the pool extras installed:
+
+```bash
+pip install 'psycopg[pool]'
+```
+
+## Configuration
+
+You can configure a crew to use PostgreSQL for long-term memory storage in several ways:
+
+### Option 1: Direct Storage Configuration
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.storage.ltm_postgres_storage import LTMPostgresStorage
+from crewai.memory.entity.entity_memory import EntityMemory
+
+# Initialize PostgreSQL storage
+postgres_storage = LTMPostgresStorage(
+    connection_string="postgresql://username:password@hostname:5432/database",
+    schema="public",                  # Optional, defaults to "public"
+    table_name="long_term_memories",  # Optional, defaults to "long_term_memories"
+    use_connection_pool=True,         # Optional, defaults to True
+    min_pool_size=1,                  # Optional, defaults to 1
+    max_pool_size=5                   # Optional, defaults to 5
+)
+
+# Create long-term memory with the PostgreSQL storage
+long_term_memory = LongTermMemory(storage=postgres_storage)
+
+# Create a crew with the configured memory (including entity memory for automatic saving)
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,                    # Enable memory system
+    long_term_memory=long_term_memory,  # Use PostgreSQL for long-term memory
+    entity_memory=EntityMemory()    # Required for automatic memory saving
+)
+```
+
+### Option 2: Using the LongTermMemory Configuration
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.entity.entity_memory import EntityMemory
+
+# Create long-term memory with PostgreSQL configuration
+long_term_memory = LongTermMemory(
+    storage_type="postgres",
+    postgres_connection_string="postgresql://username:password@hostname:5432/database",
+    postgres_schema="public",                # Optional, defaults to "public"
+    postgres_table_name="agent_memories"     # Optional, defaults to "long_term_memories"
+)
+
+# Create a crew with the configured memory (including entity memory for automatic saving)
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,                    # Enable memory system
+    long_term_memory=long_term_memory,  # Use PostgreSQL for long-term memory
+    entity_memory=EntityMemory()    # Required for automatic memory saving
+)
+```
+
+### Option 3: Using Environment Variables
+
+CrewAI supports configuring PostgreSQL through environment variables, which is recommended for production environments:
+
+```python
+# Set environment variables in your deployment environment or .env file:
+# CREWAI_PG_CONNECTION_STRING=postgresql://username:password@hostname:5432/database
+# or individual components:
+# CREWAI_PG_HOST=hostname
+# CREWAI_PG_PORT=5432
+# CREWAI_PG_USER=username
+# CREWAI_PG_PASSWORD=password
+# CREWAI_PG_DB=database
+# CREWAI_PG_SCHEMA=public
+# CREWAI_PG_TABLE=long_term_memories
+# CREWAI_PG_MIN_POOL=1
+# CREWAI_PG_MAX_POOL=5
+# CREWAI_PG_ENABLE_POOL=true
+
+from crewai import Agent, Crew, Task
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.entity.entity_memory import EntityMemory
+
+# Create long-term memory with PostgreSQL configured from environment variables
+long_term_memory = LongTermMemory(storage_type="postgres")
+
+# Create a crew with the configured memory (including entity memory for automatic saving)
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,                    # Enable memory system
+    long_term_memory=long_term_memory,  # Use PostgreSQL for long-term memory
+    entity_memory=EntityMemory()    # Required for automatic memory saving
+)
+```
+
+## Environment Variables
+
+CrewAI supports the following environment variables for PostgreSQL configuration:
+
+| Environment Variable        | Description                            | Default Value       |
+|-----------------------------|----------------------------------------|---------------------|
+| CREWAI_PG_CONNECTION_STRING | Full connection string (takes priority) | None                |
+| CREWAI_PG_HOST              | PostgreSQL host                        | localhost           |
+| CREWAI_PG_PORT              | PostgreSQL port                        | 5432                |
+| CREWAI_PG_USER              | PostgreSQL username                    | postgres            |
+| CREWAI_PG_PASSWORD          | PostgreSQL password                    | (empty string)      |
+| CREWAI_PG_DB                | PostgreSQL database name               | crewai              |
+| CREWAI_PG_SCHEMA            | PostgreSQL schema                      | public              |
+| CREWAI_PG_TABLE             | PostgreSQL table name                  | long_term_memories  |
+| CREWAI_PG_MIN_POOL          | Minimum connection pool size           | 1                   |
+| CREWAI_PG_MAX_POOL          | Maximum connection pool size           | 5                   |
+| CREWAI_PG_ENABLE_POOL       | Enable connection pooling              | true                |
+
+If `CREWAI_PG_CONNECTION_STRING` is set, it will be used directly and other component variables will be ignored.
+
+## Understanding Memory Saving Behavior
+
+CrewAI provides two types of memory saving:
+
+### Automatic Memory Saving
+
+**Requires both `long_term_memory` AND `entity_memory` configured**
+
+CrewAI automatically evaluates and saves task completions when both memory systems are enabled. This includes:
+
+- Quality scoring (0-10) based on task performance
+- Improvement suggestions from the TaskEvaluator
+- Entity extraction and relationship mapping
+- Automatic metadata enrichment
+
+```python
+from crewai.memory.entity.entity_memory import EntityMemory
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,                    # Enable memory system
+    long_term_memory=postgres_memory,  # PostgreSQL storage
+    entity_memory=EntityMemory()    # Required for automatic saving
+)
+```
+
+### Manual Memory Saving
+
+You can also save memories manually for custom events or specific moments:
+
+```python
+from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
+import time
+
+# Create a custom memory item
+memory_item = LongTermMemoryItem(
+    agent="CustomAgent",
+    task="Custom task description",
+    expected_output="Expected result",
+    datetime=str(time.time()),
+    quality=0.8,
+    metadata={
+        "custom_field": "custom_value",
+        "session_id": "session_123"
+    }
+)
+
+# Save manually
+crew._long_term_memory.save(memory_item)
+```
+
+### Using Decorators for Session Events
+
+You can use CrewAI's decorators to save memories at specific lifecycle events:
+
+```python
+from crewai.project import before_kickoff, after_kickoff
+
+@CrewBase
+class MyCrewClass:
+    
+    @before_kickoff
+    def log_session_start(self, inputs):
+        """Save memory when crew session starts"""
+        if hasattr(self, '_long_term_memory'):
+            memory_item = LongTermMemoryItem(
+                agent="SYSTEM",
+                task="Session started",
+                expected_output=f"Crew initialized with inputs: {inputs}",
+                datetime=str(time.time()),
+                quality=1.0,
+                metadata={"event": "session_start", "inputs": inputs}
+            )
+            self._long_term_memory.save(memory_item)
+    
+    @after_kickoff
+    def log_session_end(self, result):
+        """Save memory when crew session completes"""
+        if hasattr(self, '_long_term_memory'):
+            memory_item = LongTermMemoryItem(
+                agent="SYSTEM", 
+                task="Session completed",
+                expected_output="Crew execution finished successfully",
+                datetime=str(time.time()),
+                quality=0.9,
+                metadata={"event": "session_end", "result_summary": str(result)[:200]}
+            )
+            self._long_term_memory.save(memory_item)
+```
+
+## Connection Pooling
+
+CrewAI supports connection pooling for PostgreSQL, which is highly recommended for production environments as it:
+
+- Reduces the overhead of creating new connections for each database operation
+- Improves performance and throughput for high-volume applications
+- Handles connection errors and reconnection automatically
+
+Connection pooling is enabled by default but can be disabled if needed:
+
+```python
+# Disable connection pooling
+postgres_storage = LTMPostgresStorage(
+    connection_string="postgresql://username:password@hostname:5432/database",
+    use_connection_pool=False
+)
+```
+
+You can also configure the pool size to match your application's requirements:
+
+```python
+# Configure pool size for high-volume applications
+postgres_storage = LTMPostgresStorage(
+    connection_string="postgresql://username:password@hostname:5432/database",
+    min_pool_size=5,   # Maintain at least 5 connections
+    max_pool_size=20   # Allow up to 20 connections when needed
+)
+```
+
+### Installing Pool Support
+
+To use connection pooling, you'll need to install the PostgreSQL pool extras:
+
+```bash
+pip install 'psycopg[pool]'
+```
+
+CrewAI will automatically detect and use connection pooling if available, or fall back to direct connections if not installed.
+
+## Batch Operations
+
+The PostgreSQL storage implementation supports batch operations for improved performance when saving multiple memory items at once:
+
+```python
+# Get the storage from your memory instance
+postgres_storage = crew.memory.storage
+
+# Example batch items
+batch_items = [
+    {
+        "task_description": "Task 1",
+        "metadata": {"key": "value1", "quality": 0.9},
+        "datetime": "2023-01-01T12:00:00",
+        "score": 0.9
+    },
+    {
+        "task_description": "Task 2",
+        "metadata": {"key": "value2", "quality": 0.8},
+        "datetime": "2023-01-01T12:01:00",
+        "score": 0.8
+    }
+]
+
+# Save multiple items in a single transaction
+postgres_storage.save_many(batch_items)
+```
+
+## Connection String Format
+
+The PostgreSQL connection string should follow this format:
+
+```
+postgresql://username:password@hostname:port/database
+```
+
+Examples:
+
+- Local PostgreSQL: `postgresql://postgres:password@localhost:5432/crewai_db`
+- Amazon RDS: `postgresql://myuser:mypassword@myinstance.abc123xyz.us-east-1.rds.amazonaws.com:5432/mydb`
+- Azure Database for PostgreSQL: `postgresql://myuser@myserver:mypassword@myserver.postgres.database.azure.com:5432/mydb`
+
+## Configuration Validation
+
+CrewAI performs automatic validation of your PostgreSQL configuration to help prevent common setup issues:
+
+- **Connection String Format**: Must start with `postgresql://`
+- **Pool Sizes**: `min_pool_size` must be at least 1 and cannot be greater than `max_pool_size`
+- **Schema and Table Names**: Cannot be empty strings
+
+If validation fails, CrewAI will raise a clear error message indicating what needs to be fixed.
+
+## Security Considerations
+
+CrewAI implements several security features to protect your database and ensure secure operations:
+
+### Credential Protection
+
+- **Environment Variables**: Store your database credentials in environment variables:
+
+```python
+import os
+
+# Set these in your environment, not in code
+# export CREWAI_PG_CONNECTION_STRING="postgresql://user:password@hostname:5432/database"
+
+# Then in your code
+long_term_memory = LongTermMemory(storage_type="postgres")  # Uses environment variables
+```
+
+- **Sanitized Logging**: Credentials are automatically sanitized in error messages and logs:
+
+```python
+# Original: postgresql://myuser:mypassword@hostname:5432/database
+# Sanitized: postgresql://****:****@hostname:5432/database
+```
+
+### SQL Injection Prevention
+
+- **Parameterized Queries**: All database queries use parameterized statements to prevent SQL injection
+- **Input Validation**: Schema and table names are validated to ensure they contain only safe characters
+- **Safe Task Description Handling**: Task descriptions are properly escaped when used in query conditions
+
+### Error Handling
+
+- **Detailed Internal Logs**: Full error details are logged for troubleshooting (with sanitized credentials)
+- **Generic Public Errors**: User-facing errors provide minimal details to prevent information disclosure
+- **Safe JSON Parsing**: Metadata is parsed with error handling to prevent failures from malformed data
+
+### Additional Protections
+
+- **Connection Pooling**: Built-in connection pooling reduces the risk of connection exhaustion attacks
+- **Resource Cleanup**: Automatic resource cleanup through context managers prevents connection leaks
+
+## Using with Amazon RDS
+
+When using Amazon RDS for PostgreSQL, make sure to:
+
+1. Configure your RDS security group to allow connections from your application
+2. Use SSL connections for security (`postgresql://user:password@hostname:5432/database?sslmode=require`)
+3. Consider using AWS Secrets Manager for managing the database credentials
+
+## Database Structure
+
+When you use PostgreSQL storage, CrewAI automatically creates:
+
+1. The specified schema (if it doesn't exist)
+2. A table called `long_term_memories` (or your custom table name) with the following structure:
+   - `id`: Serial primary key
+   - `task_description`: Text field containing the task description
+   - `metadata`: JSONB field containing all memory metadata
+   - `datetime`: Text field with the ISO-formatted timestamp
+   - `score`: Real number field for the memory score
+3. An index on the `task_description` column for faster lookups
+
+## Migrating from SQLite
+
+If you've been using SQLite and want to migrate to PostgreSQL, you'll need to export your data from SQLite and import it into PostgreSQL. This can be done using tools like `sqlite3` and `psql`, or you can write a simple Python script using both storage implementations to migrate the data.
+
+## Complete Working Example
+
+Here's a complete example showing PostgreSQL memory setup with both automatic and manual saving:
+
+```python
+import os
+import time
+from crewai import Agent, Crew, Task
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
+from crewai.memory.entity.entity_memory import EntityMemory
+from crewai.project import CrewBase, agent, crew, task, before_kickoff, after_kickoff
+
+# Set up PostgreSQL connection
+os.environ["CREWAI_PG_CONNECTION_STRING"] = "postgresql://username:password@localhost:5432/my_database"
+
+@CrewBase
+class ExampleCrew:
+    """Example crew with PostgreSQL memory"""
+    
+    @before_kickoff
+    def log_session_start(self, inputs):
+        """Save custom memory when session starts"""
+        if hasattr(self, '_postgres_memory'):
+            memory_item = LongTermMemoryItem(
+                agent="SYSTEM",
+                task="Session initialization",
+                expected_output=f"Crew started with inputs: {list(inputs.keys())}",
+                datetime=str(time.time()),
+                quality=1.0,
+                metadata={"event": "session_start", "input_keys": list(inputs.keys())}
+            )
+            self._postgres_memory.save(memory_item)
+            print("💾 Saved session start memory")
+    
+    @after_kickoff
+    def log_session_end(self, result):
+        """Save custom memory when session completes"""
+        if hasattr(self, '_postgres_memory'):
+            memory_item = LongTermMemoryItem(
+                agent="SYSTEM",
+                task="Session completion",
+                expected_output="Crew execution completed successfully",
+                datetime=str(time.time()),
+                quality=0.9,
+                metadata={"event": "session_end", "result_type": type(result).__name__}
+            )
+            self._postgres_memory.save(memory_item)
+            print("💾 Saved session end memory")
+    
+    @agent
+    def researcher(self) -> Agent:
+        return Agent(
+            role='Research Specialist',
+            goal='Gather and analyze information',
+            backstory='Expert at finding and synthesizing information',
+            verbose=True
+        )
+    
+    @task
+    def research_task(self) -> Task:
+        return Task(
+            description='Research the given topic and provide key insights',
+            expected_output='A summary with 3-5 key insights',
+            agent=self.researcher()
+        )
+    
+    @crew
+    def crew(self) -> Crew:
+        """Create crew with PostgreSQL memory"""
+        
+        # Create PostgreSQL memory instances
+        postgres_memory = LongTermMemory(
+            storage_type="postgres",
+            postgres_table_name="example_crew_memories"  # Custom table name
+        )
+        entity_memory = EntityMemory()  # Required for automatic saving
+        
+        # Store reference for manual saving in decorators
+        self._postgres_memory = postgres_memory
+        
+        return Crew(
+            agents=[self.researcher()],
+            tasks=[self.research_task()],
+            memory=True,                    # Enable memory system
+            long_term_memory=postgres_memory,  # PostgreSQL for long-term memory
+            entity_memory=entity_memory,    # Required for automatic saving
+            verbose=True
+        )
+
+# Usage
+if __name__ == "__main__":
+    # Create and run the crew
+    example_crew = ExampleCrew()
+    
+    # Verify PostgreSQL setup
+    crew_instance = example_crew.crew()
+    print(f"Storage type: {type(crew_instance._long_term_memory.storage).__name__}")
+    print(f"Table name: {crew_instance._long_term_memory.storage.full_table_name}")
+    
+    # Run the crew
+    result = crew_instance.kickoff(inputs={"topic": "AI trends in 2024"})
+    
+    # Query recent memories (you can run this in your database)
+    # SELECT task_description, score, metadata->>'event' as event_type 
+    # FROM example_crew_memories 
+    # ORDER BY datetime DESC LIMIT 10;
+```
+
+This example demonstrates:
+- Environment variable configuration
+- Custom table naming
+- Both automatic and manual memory saving
+- Session lifecycle tracking
+- Proper entity memory setup for automatic evaluation
+
+## Performance Considerations
+
+PostgreSQL generally offers better performance and reliability for:
+
+- Concurrent access from multiple processes or servers
+- Larger datasets
+- Production environments
+- Distributed applications
+
+SQLite is still a good choice for:
+- Development and testing
+- Single-user applications
+- Simpler deployment (no separate database server required)
+
+## Cleaning Up Resources
+
+When using connection pooling, it's crucial to properly close connections to avoid resource leaks. Both `LTMPostgresStorage` and `LongTermMemory` support context managers for automatic resource cleanup.
+
+### Using the Context Manager Pattern (Recommended)
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+
+# Using with statement ensures resources are automatically cleaned up
+with LongTermMemory(storage_type="postgres", 
+                    postgres_connection_string="postgresql://user:pass@host:5432/db") as memory:
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        memory=True,
+        long_term_memory=memory
+    )
+    result = crew.kickoff()
+    
+# No need to call cleanup() - resources are automatically released after the with block
+```
+
+### Manual Resource Cleanup
+
+If you can't use a context manager, make sure to clean up the memory resources manually:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+
+# Create the memory object
+memory = LongTermMemory(storage_type="postgres", 
+                        postgres_connection_string="postgresql://user:pass@host:5432/db")
+
+try:
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        memory=True,
+        long_term_memory=memory
+    )
+    result = crew.kickoff()
+finally:
+    # Always clean up resources, even if an error occurs
+    memory.cleanup()  # You can also use memory.close() for backward compatibility
+```
+
+### Resource Cleanup in Different Scenarios
+
+CrewAI provides different methods for resource cleanup:
+
+1. **Context Manager (Preferred)**: Using `with` statements automatically cleans up resources
+2. **cleanup() Method**: Explicit resource cleanup that handles connection errors gracefully 
+3. **close() Method**: Alias for cleanup() maintained for backward compatibility
+
+Example using direct PostgreSQL storage:
+
+```python
+from crewai.memory.storage.ltm_postgres_storage import LTMPostgresStorage
+
+# Using context manager
+with LTMPostgresStorage(connection_string="postgresql://user:pass@host:5432/db") as storage:
+    # Do operations with storage
+    # Resources automatically cleaned up when exiting this block
+    
+# Manual cleanup
+storage = LTMPostgresStorage(connection_string="postgresql://user:pass@host:5432/db")
+try:
+    # Do operations with storage
+finally:
+    storage.cleanup()  # Ensures connections are closed properly
+```
+
+Proper resource cleanup ensures that all database connections are properly closed and resources are released, preventing connection leaks in long-running applications.
+
+## Troubleshooting
+
+### Common Issue: Memory Not Saving to PostgreSQL
+
+**Problem**: You've set PostgreSQL environment variables and enabled `memory=True` on your crew, but memories are being saved to SQLite instead of PostgreSQL.
+
+**Solution**: You need to explicitly create and configure a PostgreSQL `LongTermMemory` instance. Setting `memory=True` alone creates SQLite storage by default.
+
+```python
+# ❌ This creates SQLite memory, NOT PostgreSQL
+crew = Crew(
+    agents=[...],
+    tasks=[...], 
+    memory=True  # Creates default SQLite memory
+)
+
+# ✅ This creates PostgreSQL memory
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+
+postgres_memory = LongTermMemory(storage_type="postgres")
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,                    # Enable memory system
+    long_term_memory=postgres_memory  # Use PostgreSQL storage
+)
+```
+
+### Verifying Your Storage Type
+
+You can check what storage type your crew is using:
+
+```python
+# Check the storage type being used
+print(f"Storage type: {type(crew._long_term_memory.storage).__name__}")
+# Should print: "LTMPostgresStorage" for PostgreSQL
+# Would print: "LTMSQLiteStorage" for SQLite
+```
+
+### Debugging Memory Storage
+
+If memories aren't appearing in your database queries, here are debugging steps:
+
+**1. Verify Database Connection:**
+```python
+# Check connection details
+storage = crew._long_term_memory.storage
+print(f"Table name: {storage.table_name}")
+print(f"Full table name: {storage.full_table_name}")
+print(f"Schema: {storage.schema}")
+print(f"Connection string (sanitized): {storage._safe_conn_string}")
+```
+
+**2. Check Database Name:**
+Make sure you're querying the correct database. The connection string determines which database is used:
+
+```bash
+# If your connection string is: postgresql://user:pass@host:5432/my_database
+# Then query with: psql -d my_database -c "SELECT * FROM your_table_name;"
+```
+
+**3. Verify Table Structure:**
+CrewAI creates tables with specific column types. Check your table structure:
+
+```sql
+-- Check table structure
+\d your_table_name
+
+-- Should show:
+-- datetime column as TEXT (not TIMESTAMP)
+-- metadata column as JSONB
+-- score column as REAL/FLOAT
+```
+
+**4. Test Manual Memory Saving:**
+Create a simple test to verify memory saving works:
+
+```python
+from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
+import time
+
+# Test saving a simple memory
+test_item = LongTermMemoryItem(
+    agent="TEST",
+    task="Debug test",
+    expected_output="Verify saving works",
+    datetime=str(time.time()),
+    quality=0.9,
+    metadata={"debug": True}
+)
+
+crew._long_term_memory.save(test_item)
+
+# Immediately search for it
+results = crew._long_term_memory.search("Debug test", 1)
+print(f"Search results: {results}")
+```
+
+**5. Check for Entity Memory:**
+Automatic saving requires entity memory:
+
+```python
+# Check if entity memory is configured
+if hasattr(crew, '_entity_memory') and crew._entity_memory:
+    print("✅ Entity memory is configured")
+else:
+    print("❌ Entity memory missing - automatic saving won't work")
+```
+
+### Common Issue: Table Structure Mismatch
+
+**Problem**: Manual table creation with wrong column types can cause silent failures.
+
+**Solution**: Drop the table and let CrewAI recreate it with the correct structure:
+
+```sql
+-- Drop the incorrectly structured table
+DROP TABLE your_table_name;
+
+-- Let CrewAI recreate it by running your crew or saving a test memory
+```
+
+The correct table structure should be:
+```sql
+CREATE TABLE your_table_name (
+    id SERIAL PRIMARY KEY,
+    task_description TEXT,
+    metadata JSONB,
+    datetime TEXT,        -- Note: TEXT, not TIMESTAMP
+    score REAL
+);
+```

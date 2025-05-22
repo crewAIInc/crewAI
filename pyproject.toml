@@ -67,6 +67,9 @@ docling = [
 aisuite = [
     "aisuite>=0.1.10",
 ]
+postgres = [
+    "psycopg[pool]>=3.1.12",
+]
 
 [tool.uv]
 dev-dependencies = [
@@ -87,6 +90,7 @@ dev-dependencies = [
     "pytest-recording>=0.13.2",
     "pytest-randomly>=3.16.0",
     "pytest-timeout>=2.3.1",
+    "psycopg[pool]>=3.1.12",
 ]
 
 [project.scripts]
