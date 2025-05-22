@@ -23,7 +23,7 @@ AI hallucinations occur when language models generate content that appears plaus
 
 ```python
 from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
-from crewai.llm import LLM
+from crewai import LLM
 
 # Initialize the guardrail with reference context
 guardrail = HallucinationGuardrail(
