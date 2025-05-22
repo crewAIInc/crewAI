@@ -55,7 +55,11 @@ The Visual Agent Builder enables:
 | **Max Retry Limit** _(optional)_        | `max_retry_limit`        | `int`                         | Maximum number of retries when an error occurs. Default is 2.                                                         |
 | **Respect Context Window** _(optional)_ | `respect_context_window` | `bool`                        | Keep messages under context window size by summarizing. Default is True.                                              |
 | **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`   | Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct). Default is 'safe'.                               |
-| **Embedder** _(optional)_               | `embedder`               | `Optional[Dict[str, Any]]`    | Configuration for the embedder used by the agent.                                                                     |
+| **Multimodal** _(optional)_             | `multimodal`             | `bool`                        | Whether the agent supports multimodal capabilities. Default is False.                                                  |
+| **Allow Feedback** _(optional)_         | `allow_feedback`         | `bool`                        | Enable agent to receive and process feedback during execution. Default is False.                                       |
+| **Allow Conflict** _(optional)_         | `allow_conflict`         | `bool`                        | Enable agent to handle conflicts with other agents during execution. Default is False.                                 |
+| **Allow Iteration** _(optional)_        | `allow_iteration`        | `bool`                        | Enable agent to iterate on its solutions based on feedback and validation. Default is False.                          |
+| **Embedder Config** _(optional)_        | `embedder_config`        | `Optional[Dict[str, Any]]`    | Configuration for the embedder used by the agent.                                                                     |
 | **Knowledge Sources** _(optional)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | Knowledge sources available to the agent.                                                                     |
 | **Use System Prompt** _(optional)_      | `use_system_prompt`      | `Optional[bool]`              | Whether to use system prompt (for o1 model support). Default is True.                                                 |
 | **Inject Date** _(optional)_           | `inject_date`            | `bool`                        | Whether to automatically inject the current date into tasks. Default is False.                                         |
@@ -164,9 +168,13 @@ agent = Agent(
     code_execution_mode="safe",  # Default: "safe" (options: "safe", "unsafe")
     respect_context_window=True,  # Default: True
     use_system_prompt=True,  # Default: True
+    multimodal=False,  # Default: False
+    allow_feedback=False,  # Default: False
+    allow_conflict=False,  # Default: False
+    allow_iteration=False,  # Default: False
     tools=[SerperDevTool()],  # Optional: List of tools
     knowledge_sources=None,  # Optional: List of knowledge sources
-    embedder=None,  # Optional: Custom embedder configuration
+    embedder_config=None,  # Optional: Custom embedder configuration
     system_template=None,  # Optional: Custom system prompt template
     prompt_template=None,  # Optional: Custom prompt template
     response_template=None,  # Optional: Custom response template
@@ -240,6 +248,31 @@ date_aware_agent = Agent(
 )
 ```
 
+#### Collaborative Agent with Feedback
+```python Code
+collaborative_agent = Agent(
+    role="Senior Researcher",
+    goal="Conduct comprehensive research with iterative improvements",
+    backstory="Expert researcher who values feedback and collaborative refinement",
+    allow_feedback=True,  # Enable feedback processing
+    allow_conflict=True,  # Handle disagreements with other agents
+    allow_iteration=True,  # Improve solutions based on feedback
+    max_iter=30,  # Allow more iterations for complex collaboration
+    verbose=True
+)
+```
+
+#### Multimodal Agent
+```python Code
+multimodal_agent = Agent(
+    role="Visual Content Analyst",
+    goal="Analyze and process both text and visual content",
+    backstory="Specialized in multimodal analysis combining text and image understanding",
+    multimodal=True,  # Enable multimodal capabilities
+    verbose=True
+)
+```
+
 ### Parameter Details
 
 #### Critical Parameters
@@ -262,6 +295,12 @@ date_aware_agent = Agent(
 - `code_execution_mode`:
   - `"safe"`: Uses Docker (recommended for production)
   - `"unsafe"`: Direct execution (use only in trusted environments)
+
+#### Advanced Collaboration
+- `allow_feedback`: Enable agent to receive and process feedback during execution
+- `allow_conflict`: Enable agent to handle conflicts with other agents
+- `allow_iteration`: Enable agent to iterate on solutions based on feedback
+- `multimodal`: Enable multimodal capabilities for processing text and visual content
 
 #### Templates
 - `system_template`: Defines agent's core behavior
@@ -338,6 +377,13 @@ When `memory` is enabled, the agent will maintain context across multiple intera
 - Leverage `knowledge_sources` for domain-specific information
 - Configure `embedder_config` when using custom embedding models
 - Use custom templates (`system_template`, `prompt_template`, `response_template`) for fine-grained control over agent behavior
+
+### Advanced Collaboration Features
+- Enable `allow_feedback: true` for agents that need to receive and process feedback during execution
+- Use `allow_conflict: true` when agents need to handle disagreements or conflicts with other agents
+- Set `allow_iteration: true` to allow agents to improve their solutions based on feedback and validation
+- Enable `multimodal: true` for agents that need to process both text and visual content
+- Consider increasing `max_iter` when using collaborative features to allow for more iteration cycles
 
 ### Agent Collaboration
 - Enable `allow_delegation: true` when agents need to work together
