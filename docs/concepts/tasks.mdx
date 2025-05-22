@@ -51,6 +51,7 @@ crew = Crew(
 | **Context** _(optional)_         | `context`         | `Optional[List["Task"]]`      | Other tasks whose outputs will be used as context for this task.                                                     |
 | **Async Execution** _(optional)_ | `async_execution` | `Optional[bool]`              | Whether the task should be executed asynchronously. Defaults to False.                                               |
 | **Human Input** _(optional)_     | `human_input`     | `Optional[bool]`              | Whether the task should have a human review the final answer of the agent. Defaults to False.                        |
+| **Markdown** _(optional)_        | `markdown`        | `Optional[bool]`              | Whether the task should instruct the agent to return the final answer formatted in Markdown. Defaults to False.      |
 | **Config** _(optional)_          | `config`          | `Optional[Dict[str, Any]]`    | Task-specific configuration parameters.                                                                              |
 | **Output File** _(optional)_     | `output_file`     | `Optional[str]`               | File path for storing the task output.                                                                               |
 | **Output JSON** _(optional)_     | `output_json`     | `Optional[Type[BaseModel]]`   | A Pydantic model to structure the JSON output.                                                                       |
@@ -94,6 +95,7 @@ reporting_task:
     A fully fledge reports with the mains topics, each with a full section of information.
     Formatted as markdown without '```'
   agent: reporting_analyst
+  markdown: true
   output_file: report.md
 ```
 
@@ -182,9 +184,9 @@ reporting_task = Task(
     """,
     expected_output="""
         A fully fledge reports with the mains topics, each with a full section of information.
-        Formatted as markdown without '```'
     """,
     agent=reporting_analyst,
+    markdown=True,  # Enable markdown formatting for the final output
     output_file="report.md"
 )
 ```
@@ -256,6 +258,54 @@ if task_output.json_dict:
 if task_output.pydantic:
     print(f"Pydantic Output: {task_output.pydantic}")
 ```
+
+## Markdown Output Formatting
+
+The `markdown` parameter enables automatic markdown formatting for task outputs. When set to `True`, the task will instruct the agent to format the final answer using proper Markdown syntax.
+
+### Using Markdown Formatting
+
+```python Code
+# Example task with markdown formatting enabled
+formatted_task = Task(
+    description="Create a comprehensive report on AI trends",
+    expected_output="A well-structured report with headers, sections, and bullet points",
+    agent=reporter_agent,
+    markdown=True  # Enable automatic markdown formatting
+)
+```
+
+When `markdown=True`, the agent will receive additional instructions to format the output using:
+- `#` for headers
+- `**text**` for bold text  
+- `*text*` for italic text
+- `-` or `*` for bullet points
+- `` `code` `` for inline code
+- ``` ```language ``` for code blocks
+
+### YAML Configuration with Markdown
+
+```yaml tasks.yaml
+analysis_task:
+  description: >
+    Analyze the market data and create a detailed report
+  expected_output: >
+    A comprehensive analysis with charts and key findings
+  agent: analyst
+  markdown: true  # Enable markdown formatting
+  output_file: analysis.md
+```
+
+### Benefits of Markdown Output
+
+- **Consistent Formatting**: Ensures all outputs follow proper markdown conventions
+- **Better Readability**: Structured content with headers, lists, and emphasis
+- **Documentation Ready**: Output can be directly used in documentation systems
+- **Cross-Platform Compatibility**: Markdown is universally supported
+
+<Note>
+The markdown formatting instructions are automatically added to the task prompt when `markdown=True`, so you don't need to specify formatting requirements in your task description.
+</Note>
 
 ## Task Dependencies and Context
 
