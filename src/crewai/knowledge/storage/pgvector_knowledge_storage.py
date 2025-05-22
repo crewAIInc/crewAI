@@ -2,24 +2,34 @@ from typing import Any, Dict, List, Optional
 import hashlib
 import logging
 import os
-from sqlalchemy import create_engine, Column, String, Text, Float
+from sqlalchemy import create_engine, Column, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from pgvector.sqlalchemy import Vector
+from sqlalchemy.sql import text
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
 
+try:
+    from pgvector.sqlalchemy import Vector
+    HAS_PGVECTOR = True
+except ImportError:
+    HAS_PGVECTOR = False
+    class VectorType:
+        def __init__(self, dimensions: int):
+            self.dimensions = dimensions
+    Vector = VectorType  # type: ignore
+
 Base = declarative_base()
 
-class Document(Base):
+class Document(Base):  # type: ignore
     """SQLAlchemy model for document storage with pgvector."""
     __tablename__ = "documents"
     
     id = Column(String, primary_key=True)
     content = Column(Text)
     metadata = Column(Text)  # JSON serialized metadata
-    embedding = Column(Vector(1536))  # Adjust dimension based on embedding model
+    embedding: Column = Column(Vector(1536))  # Adjust dimension based on embedding model
 
 class PGVectorKnowledgeStorage(BaseKnowledgeStorage):
     """
@@ -45,6 +55,11 @@ class PGVectorKnowledgeStorage(BaseKnowledgeStorage):
             table_name: Name of the table to store documents
             embedding_dimension: Dimension of the embedding vectors
         """
+        if not HAS_PGVECTOR:
+            raise ImportError(
+                "pgvector is not installed. Please install it with: pip install pgvector"
+            )
+            
         self.connection_string = connection_string
         self.table_name = table_name
         self.embedding_dimension = embedding_dimension
@@ -94,14 +109,17 @@ class PGVectorKnowledgeStorage(BaseKnowledgeStorage):
         try:
             query_embedding = self.embedder([query[0]])[0]
             
-            sql_query = f"""
-            SELECT id, content, metadata, 1 - (embedding <=> '{query_embedding}') as similarity
+            sql_query = text(f"""
+            SELECT id, content, metadata, 1 - (embedding <=> :query_embedding) as similarity
             FROM {self.table_name}
-            ORDER BY embedding <=> '{query_embedding}'
-            LIMIT {limit}
-            """
+            ORDER BY embedding <=> :query_embedding
+            LIMIT :limit
+            """)
             
-            results = session.execute(sql_query).fetchall()
+            results = session.execute(
+                sql_query, 
+                {"query_embedding": query_embedding, "limit": limit}
+            ).fetchall()
             
             formatted_results = []
             for row in results:
@@ -154,9 +172,9 @@ class PGVectorKnowledgeStorage(BaseKnowledgeStorage):
                 existing = session.query(Document).filter(Document.id == doc_id).first()
                 
                 if existing:
-                    existing.content = doc
-                    existing.metadata = str(meta) if meta else None
-                    existing.embedding = embedding
+                    setattr(existing, "content", doc)
+                    setattr(existing, "metadata", str(meta) if meta else None)
+                    setattr(existing, "embedding", embedding)
                 else:
                     new_doc = Document(
                         id=doc_id,
