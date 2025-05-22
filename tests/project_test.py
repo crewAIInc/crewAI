@@ -234,3 +234,7 @@ def test_multiple_before_after_kickoff():
     assert "plants" in result.raw, "First before_kickoff not executed"
     assert "processed first" in result.raw, "First after_kickoff not executed"
     assert "processed second" in result.raw, "Second after_kickoff not executed"
+
+def test_crew_name():
+    crew = InternalCrew()
+    assert crew._crew_name == "InternalCrew"
