@@ -52,6 +52,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         respect_context_window: bool = False,
         request_within_rpm_limit: Any = None,
         callbacks: List[Any] = [],
+        allow_feedback: bool = False,
+        allow_conflict: bool = False,
+        allow_iteration: bool = False,
     ):
         self._i18n: I18N = I18N()
         self.llm = llm
@@ -73,6 +76,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
+        self.allow_feedback = allow_feedback
+        self.allow_conflict = allow_conflict
+        self.allow_iteration = allow_iteration
         self.ask_for_human_input = False
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0

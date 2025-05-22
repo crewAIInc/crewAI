@@ -1625,3 +1625,30 @@ def test_agent_with_knowledge_sources():
 
         # Assert that the agent provides the correct information
         assert "red" in result.raw.lower()
+
+
+def test_agent_with_feedback_conflict_iteration_params():
+    """Test that the agent correctly handles the allow_feedback, allow_conflict, and allow_iteration parameters."""
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        allow_feedback=True,
+        allow_conflict=True,
+        allow_iteration=True,
+    )
+
+    assert agent.allow_feedback is True
+    assert agent.allow_conflict is True
+    assert agent.allow_iteration is True
+    
+    # Create another agent with default values
+    default_agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    
+    assert default_agent.allow_feedback is False
+    assert default_agent.allow_conflict is False
+    assert default_agent.allow_iteration is False

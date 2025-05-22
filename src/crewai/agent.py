@@ -123,6 +123,18 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
+    allow_feedback: bool = Field(
+        default=False,
+        description="Enable agent to receive and process feedback during execution.",
+    )
+    allow_conflict: bool = Field(
+        default=False,
+        description="Enable agent to handle conflicts with other agents during execution.",
+    )
+    allow_iteration: bool = Field(
+        default=False,
+        description="Enable agent to iterate on its solutions based on feedback and validation.",
+    )
     embedder_config: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
@@ -400,6 +412,9 @@ class Agent(BaseAgent):
             step_callback=self.step_callback,
             function_calling_llm=self.function_calling_llm,
             respect_context_window=self.respect_context_window,
+            allow_feedback=self.allow_feedback,
+            allow_conflict=self.allow_conflict,
+            allow_iteration=self.allow_iteration,
             request_within_rpm_limit=(
                 self._rpm_controller.check_or_wait if self._rpm_controller else None
             ),
