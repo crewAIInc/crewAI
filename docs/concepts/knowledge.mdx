@@ -736,6 +736,214 @@ recent_news = SpaceNewsKnowledgeSource(
 )
 ```
 
+## Custom Knowledge Storage with pgvector
+
+CrewAI allows you to use custom knowledge storage backends to store and retrieve knowledge. One powerful option is using PostgreSQL with the pgvector extension, which provides efficient vector similarity search capabilities.
+
+### Prerequisites
+
+Before using pgvector as your knowledge storage backend, you need to:
+
+1. Set up a PostgreSQL database with the pgvector extension installed
+2. Install the required Python packages
+
+#### PostgreSQL Setup
+
+```bash
+# Install PostgreSQL (Ubuntu example)
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+
+# Connect to PostgreSQL
+sudo -u postgres psql
+
+# Create a database
+CREATE DATABASE crewai_knowledge;
+
+# Connect to the database
+\c crewai_knowledge
+
+# Install the pgvector extension
+CREATE EXTENSION vector;
+
+# Create a user (optional)
+CREATE USER crewai WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE crewai_knowledge TO crewai;
+```
+
+#### Python Dependencies
+
+Add these dependencies to your project:
+
+```bash
+# Install required packages
+uv add sqlalchemy pgvector psycopg2-binary
+```
+
+### Using pgvector Knowledge Storage
+
+Here's how to use pgvector as your knowledge storage backend in CrewAI:
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai.knowledge.storage.pgvector_knowledge_storage import PGVectorKnowledgeStorage
+
+# Create a connection string for PostgreSQL
+connection_string = "postgresql://username:password@localhost:5432/crewai_knowledge"
+
+# Create a custom knowledge storage
+pgvector_storage = PGVectorKnowledgeStorage(
+    connection_string=connection_string,
+    embedding_dimension=1536,  # Dimension for OpenAI embeddings
+)
+
+# Create a knowledge source
+content = "CrewAI is a framework for orchestrating role-playing autonomous agents."
+string_source = StringKnowledgeSource(
+    content=content,
+    storage=pgvector_storage  # Use pgvector storage
+)
+
+# Create an agent with the knowledge store
+agent = Agent(
+    role="CrewAI Expert",
+    goal="Explain CrewAI concepts accurately.",
+    backstory="You are an expert in the CrewAI framework.",
+    knowledge_sources=[string_source],
+)
+
+# Create a task
+task = Task(
+    description="Answer this question about CrewAI: {question}",
+    expected_output="A detailed answer about CrewAI.",
+    agent=agent,
+)
+
+# Create a crew with the knowledge sources
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+)
+
+# Run the crew
+result = crew.kickoff(inputs={"question": "What is CrewAI?"})
+```
+
+### Configuration Options
+
+The `PGVectorKnowledgeStorage` class supports the following configuration options:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `connection_string` | PostgreSQL connection string | Required |
+| `embedder` | Embedding configuration | OpenAI embeddings |
+| `table_name` | Name of the table to store documents | "documents" |
+| `embedding_dimension` | Dimension of the embedding vectors | 1536 |
+
+#### Connection String Format
+
+The PostgreSQL connection string follows this format:
+```
+postgresql://username:password@hostname:port/database_name
+```
+
+#### Custom Embedding Models
+
+You can configure custom embedding models just like with the default knowledge storage:
+
+```python
+pgvector_storage = PGVectorKnowledgeStorage(
+    connection_string="postgresql://username:password@localhost:5432/crewai_knowledge",
+    embedder={
+        "provider": "openai",
+        "config": {
+            "model": "text-embedding-3-large"
+        }
+    },
+    embedding_dimension=3072,  # Dimension for text-embedding-3-large
+)
+```
+
+### Advanced Usage
+
+#### Custom Table Names
+
+You can specify a custom table name to store your documents:
+
+```python
+pgvector_storage = PGVectorKnowledgeStorage(
+    connection_string="postgresql://username:password@localhost:5432/crewai_knowledge",
+    table_name="my_custom_documents_table"
+)
+```
+
+#### Multiple Knowledge Collections
+
+You can create multiple knowledge collections by using different table names:
+
+```python
+# Create a storage for product knowledge
+product_storage = PGVectorKnowledgeStorage(
+    connection_string="postgresql://username:password@localhost:5432/crewai_knowledge",
+    table_name="product_knowledge"
+)
+
+# Create a storage for customer knowledge
+customer_storage = PGVectorKnowledgeStorage(
+    connection_string="postgresql://username:password@localhost:5432/crewai_knowledge",
+    table_name="customer_knowledge"
+)
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **pgvector Extension Not Found**
+
+   Error: `ERROR: could not load library "/usr/local/lib/postgresql/pgvector.so"`
+   
+   Solution: Make sure the pgvector extension is properly installed in your PostgreSQL instance:
+   ```sql
+   CREATE EXTENSION vector;
+   ```
+
+2. **Dimension Mismatch**
+
+   Error: `ERROR: vector dimensions do not match`
+   
+   Solution: Ensure that the `embedding_dimension` parameter matches the dimension of your embedding model.
+
+3. **Connection Issues**
+
+   Error: `Could not connect to PostgreSQL server`
+   
+   Solution: Check your connection string and make sure the PostgreSQL server is running and accessible.
+
+#### Performance Tips
+
+1. **Create an Index**
+
+   For better performance with large datasets, create an index on the embedding column:
+   
+   ```sql
+   CREATE INDEX ON documents USING hnsw (embedding vector_l2_ops);
+   ```
+
+2. **Batch Processing**
+
+   When saving large numbers of documents, process them in batches to avoid memory issues:
+   
+   ```python
+   batch_size = 100
+   for i in range(0, len(documents), batch_size):
+       batch = documents[i:i+batch_size]
+       pgvector_storage.save(batch)
+   ```
+
 ## Best Practices
 
 <AccordionGroup>
