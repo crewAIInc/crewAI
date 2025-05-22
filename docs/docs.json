@@ -144,7 +144,7 @@
             "group": "MCP Integration",
             "pages": [
               "mcp/crewai-mcp-integration"
-            ] 
+            ]
           },
           {
             "group": "Agent Monitoring & Observability",
@@ -213,7 +213,8 @@
             "pages": [
               "enterprise/features/tool-repository",
               "enterprise/features/webhook-streaming",
-              "enterprise/features/traces"
+              "enterprise/features/traces",
+              "enterprise/features/hallucination-guardrail"
             ]
           },
           {
