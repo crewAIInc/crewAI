@@ -63,8 +63,6 @@ The Visual Agent Builder enables:
 | **Embedder** _(optional)_               | `embedder`               | `Optional[Dict[str, Any]]`    | Configuration for the embedder used by the agent.                                                                     |
 | **Knowledge Sources** _(optional)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | Knowledge sources available to the agent.                                                                     |
 | **Use System Prompt** _(optional)_      | `use_system_prompt`      | `Optional[bool]`              | Whether to use system prompt (for o1 model support). Default is True.                                                 |
-| **Inject Date** _(optional)_           | `inject_date`            | `bool`                        | Whether to automatically inject the current date into tasks. Default is False.                                         |
-| **Date Format** _(optional)_           | `date_format`            | `str`                         | Format string for date when inject_date is enabled. Default is "%Y-%m-%d" (ISO format).                                |
 
 ## Creating Agents
 
@@ -361,6 +359,170 @@ analyst = Agent(
 When `memory` is enabled, the agent will maintain context across multiple interactions, improving its ability to handle complex, multi-step tasks.
 </Note>
 
+## Context Window Management
+
+CrewAI includes sophisticated automatic context window management to handle situations where conversations exceed the language model's token limits. This powerful feature is controlled by the `respect_context_window` parameter.
+
+### How Context Window Management Works
+
+When an agent's conversation history grows too large for the LLM's context window, CrewAI automatically detects this situation and can either:
+
+1. **Automatically summarize content** (when `respect_context_window=True`)
+2. **Stop execution with an error** (when `respect_context_window=False`)
+
+### Automatic Context Handling (`respect_context_window=True`)
+
+This is the **default and recommended setting** for most use cases. When enabled, CrewAI will:
+
+```python Code
+# Agent with automatic context management (default)
+smart_agent = Agent(
+    role="Research Analyst",
+    goal="Analyze large documents and datasets",
+    backstory="Expert at processing extensive information",
+    respect_context_window=True,  # 🔑 Default: auto-handle context limits
+    verbose=True
+)
+```
+
+**What happens when context limits are exceeded:**
+- ⚠️ **Warning message**: `"Context length exceeded. Summarizing content to fit the model context window."`
+- 🔄 **Automatic summarization**: CrewAI intelligently summarizes the conversation history
+- ✅ **Continued execution**: Task execution continues seamlessly with the summarized context
+- 📝 **Preserved information**: Key information is retained while reducing token count
+
+### Strict Context Limits (`respect_context_window=False`)
+
+When you need precise control and prefer execution to stop rather than lose any information:
+
+```python Code
+# Agent with strict context limits
+strict_agent = Agent(
+    role="Legal Document Reviewer",
+    goal="Provide precise legal analysis without information loss",
+    backstory="Legal expert requiring complete context for accurate analysis",
+    respect_context_window=False,  # ❌ Stop execution on context limit
+    verbose=True
+)
+```
+
+**What happens when context limits are exceeded:**
+- ❌ **Error message**: `"Context length exceeded. Consider using smaller text or RAG tools from crewai_tools."`
+- 🛑 **Execution stops**: Task execution halts immediately
+- 🔧 **Manual intervention required**: You need to modify your approach
+
+### Choosing the Right Setting
+
+#### Use `respect_context_window=True` (Default) when:
+- **Processing large documents** that might exceed context limits
+- **Long-running conversations** where some summarization is acceptable
+- **Research tasks** where general context is more important than exact details
+- **Prototyping and development** where you want robust execution
+
+```python Code
+# Perfect for document processing
+document_processor = Agent(
+    role="Document Analyst", 
+    goal="Extract insights from large research papers",
+    backstory="Expert at analyzing extensive documentation",
+    respect_context_window=True,  # Handle large documents gracefully
+    max_iter=50,  # Allow more iterations for complex analysis
+    verbose=True
+)
+```
+
+#### Use `respect_context_window=False` when:
+- **Precision is critical** and information loss is unacceptable
+- **Legal or medical tasks** requiring complete context
+- **Code review** where missing details could introduce bugs
+- **Financial analysis** where accuracy is paramount
+
+```python Code
+# Perfect for precision tasks
+precision_agent = Agent(
+    role="Code Security Auditor",
+    goal="Identify security vulnerabilities in code",
+    backstory="Security expert requiring complete code context",
+    respect_context_window=False,  # Prefer failure over incomplete analysis
+    max_retry_limit=1,  # Fail fast on context issues
+    verbose=True
+)
+```
+
+### Alternative Approaches for Large Data
+
+When dealing with very large datasets, consider these strategies:
+
+#### 1. Use RAG Tools
+```python Code
+from crewai_tools import RagTool
+
+# Create RAG tool for large document processing
+rag_tool = RagTool()
+
+rag_agent = Agent(
+    role="Research Assistant",
+    goal="Query large knowledge bases efficiently",
+    backstory="Expert at using RAG tools for information retrieval",
+    tools=[rag_tool],  # Use RAG instead of large context windows
+    respect_context_window=True,
+    verbose=True
+)
+```
+
+#### 2. Use Knowledge Sources
+```python Code
+# Use knowledge sources instead of large prompts
+knowledge_agent = Agent(
+    role="Knowledge Expert",
+    goal="Answer questions using curated knowledge",
+    backstory="Expert at leveraging structured knowledge sources",
+    knowledge_sources=[your_knowledge_sources],  # Pre-processed knowledge
+    respect_context_window=True,
+    verbose=True
+)
+```
+
+### Context Window Best Practices
+
+1. **Monitor Context Usage**: Enable `verbose=True` to see context management in action
+2. **Design for Efficiency**: Structure tasks to minimize context accumulation
+3. **Use Appropriate Models**: Choose LLMs with context windows suitable for your tasks
+4. **Test Both Settings**: Try both `True` and `False` to see which works better for your use case
+5. **Combine with RAG**: Use RAG tools for very large datasets instead of relying solely on context windows
+
+### Troubleshooting Context Issues
+
+**If you're getting context limit errors:**
+```python Code
+# Quick fix: Enable automatic handling
+agent.respect_context_window = True
+
+# Better solution: Use RAG tools for large data
+from crewai_tools import RagTool
+agent.tools = [RagTool()]
+
+# Alternative: Break tasks into smaller pieces
+# Or use knowledge sources instead of large prompts
+```
+
+**If automatic summarization loses important information:**
+```python Code
+# Disable auto-summarization and use RAG instead
+agent = Agent(
+    role="Detailed Analyst",
+    goal="Maintain complete information accuracy",
+    backstory="Expert requiring full context",
+    respect_context_window=False,  # No summarization
+    tools=[RagTool()],  # Use RAG for large data
+    verbose=True
+)
+```
+
+<Note>
+The context window management feature works automatically in the background. You don't need to call any special functions - just set `respect_context_window` to your preferred behavior and CrewAI handles the rest!
+</Note>
+
 ## Important Considerations and Best Practices
 
 ### Security and Code Execution
@@ -377,7 +539,7 @@ When `memory` is enabled, the agent will maintain context across multiple intera
 ### Memory and Context Management
 - Use `memory: true` for tasks requiring historical context
 - Leverage `knowledge_sources` for domain-specific information
-- Configure `embedder_config` when using custom embedding models
+- Configure `embedder` when using custom embedding models
 - Use custom templates (`system_template`, `prompt_template`, `response_template`) for fine-grained control over agent behavior
 
 ### Advanced Features
