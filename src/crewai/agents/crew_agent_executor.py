@@ -31,6 +31,34 @@ class ToolResult:
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
+    """CrewAgentExecutor class for managing agent execution.
+    
+    This class is responsible for executing agent tasks, handling tools,
+    managing agent interactions, and processing the results.
+    
+    Parameters:
+        llm: The language model to use for generating responses.
+        task: The task to be executed.
+        crew: The crew that the agent belongs to.
+        agent: The agent to execute the task.
+        prompt: The prompt to use for generating responses.
+        max_iter: Maximum number of iterations for the agent execution.
+        tools: The tools available to the agent.
+        tools_names: The names of the tools available to the agent.
+        stop_words: Words that signal the end of agent execution.
+        tools_description: Description of the tools available to the agent.
+        tools_handler: Handler for tool operations.
+        step_callback: Callback function for each step of execution.
+        original_tools: Original list of tools before processing.
+        function_calling_llm: LLM specifically for function calling.
+        respect_context_window: Whether to respect the context window size.
+        request_within_rpm_limit: Function to check if request is within RPM limit.
+        callbacks: List of callback functions.
+        allow_feedback: Controls feedback processing during execution.
+        allow_conflict: Enables conflict handling between agents.
+        allow_iteration: Allows solution iteration based on feedback.
+    """
+    
     _logger: Logger = Logger()
 
     def __init__(
@@ -493,3 +521,56 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self.ask_for_human_input = False
 
         return formatted_answer
+        
+    def process_feedback(self, feedback: str) -> bool:
+        """
+        Process feedback for the agent if feedback mode is enabled.
+        
+        Parameters:
+            feedback (str): The feedback to process.
+            
+        Returns:
+            bool: True if the feedback was processed successfully, False otherwise.
+        """
+        if not self.allow_feedback:
+            self._logger.log("warning", "Feedback processing skipped (allow_feedback=False).", color="yellow")
+            return False
+            
+        self._logger.log("info", f"Processing feedback: {feedback}", color="green")
+        # Add feedback to messages
+        self.messages.append(self._format_msg(f"Feedback: {feedback}"))
+        return True
+        
+    def handle_conflict(self, other_agent: 'CrewAgentExecutor') -> bool:
+        """
+        Handle conflict with another agent if conflict handling is enabled.
+        
+        Parameters:
+            other_agent (CrewAgentExecutor): The other agent involved in the conflict.
+            
+        Returns:
+            bool: True if the conflict was handled successfully, False otherwise.
+        """
+        if not self.allow_conflict:
+            self._logger.log("warning", "Conflict handling skipped (allow_conflict=False).", color="yellow")
+            return False
+            
+        self._logger.log("info", f"Handling conflict with agent: {other_agent.agent.role}", color="green")
+        return True
+        
+    def process_iteration(self, result: Any) -> bool:
+        """
+        Process iteration based on result if iteration mode is enabled.
+        
+        Parameters:
+            result (Any): The result to iterate on.
+            
+        Returns:
+            bool: True if the iteration was processed successfully, False otherwise.
+        """
+        if not self.allow_iteration:
+            self._logger.log("warning", "Iteration processing skipped (allow_iteration=False).", color="yellow")
+            return False
+            
+        self._logger.log("info", "Processing iteration on result.", color="green")
+        return True

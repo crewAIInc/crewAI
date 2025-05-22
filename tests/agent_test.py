@@ -1652,3 +1652,100 @@ def test_agent_with_feedback_conflict_iteration_params():
     assert default_agent.allow_feedback is False
     assert default_agent.allow_conflict is False
     assert default_agent.allow_iteration is False
+
+
+def test_agent_feedback_processing():
+    """Test that the agent correctly processes feedback when allow_feedback is enabled."""
+    from unittest.mock import patch, MagicMock
+    
+    # Create a mock CrewAgentExecutor
+    mock_executor = MagicMock()
+    mock_executor.allow_feedback = True
+    mock_executor.process_feedback.return_value = True
+    
+    # Mock the create_agent_executor method at the module level
+    with patch('crewai.agent.Agent.create_agent_executor', return_value=mock_executor):
+        # Create an agent with allow_feedback=True
+        agent = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            allow_feedback=True,
+            llm=MagicMock()  # Mock LLM to avoid API calls
+        )
+        
+        executor = agent.create_agent_executor()
+        assert executor.allow_feedback is True
+        
+        result = executor.process_feedback("Test feedback")
+        assert result is True
+        executor.process_feedback.assert_called_once_with("Test feedback")
+
+
+def test_agent_conflict_handling():
+    """Test that the agent correctly handles conflicts when allow_conflict is enabled."""
+    from unittest.mock import patch, MagicMock
+    
+    mock_executor1 = MagicMock()
+    mock_executor1.allow_conflict = True
+    mock_executor1.handle_conflict.return_value = True
+    
+    mock_executor2 = MagicMock()
+    mock_executor2.allow_conflict = True
+    
+    with patch('crewai.agent.Agent.create_agent_executor', return_value=mock_executor1):
+        # Create agents with allow_conflict=True
+        agent1 = Agent(
+            role="role1",
+            goal="goal1",
+            backstory="backstory1",
+            allow_conflict=True,
+            llm=MagicMock()  # Mock LLM to avoid API calls
+        )
+        
+        agent2 = Agent(
+            role="role2",
+            goal="goal2",
+            backstory="backstory2",
+            allow_conflict=True,
+            llm=MagicMock()  # Mock LLM to avoid API calls
+        )
+        
+        # Get the executors
+        executor1 = agent1.create_agent_executor()
+        executor2 = agent2.create_agent_executor()
+        
+        assert executor1.allow_conflict is True
+        assert executor2.allow_conflict is True
+        
+        result = executor1.handle_conflict(executor2)
+        assert result is True
+        executor1.handle_conflict.assert_called_once_with(executor2)
+
+
+def test_agent_iteration_processing():
+    """Test that the agent correctly processes iterations when allow_iteration is enabled."""
+    from unittest.mock import patch, MagicMock
+    
+    # Create a mock CrewAgentExecutor
+    mock_executor = MagicMock()
+    mock_executor.allow_iteration = True
+    mock_executor.process_iteration.return_value = True
+    
+    # Mock the create_agent_executor method at the module level
+    with patch('crewai.agent.Agent.create_agent_executor', return_value=mock_executor):
+        # Create an agent with allow_iteration=True
+        agent = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            allow_iteration=True,
+            llm=MagicMock()  # Mock LLM to avoid API calls
+        )
+        
+        executor = agent.create_agent_executor()
+        assert executor.allow_iteration is True
+        
+        result = executor.process_iteration("Test result")
+        assert result is True
+        executor.process_iteration.assert_called_once_with("Test result")

@@ -9,6 +9,7 @@ from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.cli.constants import ENV_VARS, LITELLM_PARAMS
+from crewai.utilities import Logger
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
@@ -62,8 +63,12 @@ class Agent(BaseAgent):
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             knowledge_sources: Knowledge sources for the agent.
+            allow_feedback: Whether the agent can receive and process feedback during execution.
+            allow_conflict: Whether the agent can handle conflicts with other agents during execution.
+            allow_iteration: Whether the agent can iterate on its solutions based on feedback and validation.
     """
-
+    
+    _logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _times_executed: int = PrivateAttr(default=0)
     max_execution_time: Optional[int] = Field(
         default=None,
@@ -151,6 +156,19 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self._set_knowledge()
         self.agent_ops_agent_name = self.role
+        
+        if self.allow_feedback:
+            self._logger.log("info", "Feedback mode enabled for agent.", color="bold_green")
+        if self.allow_conflict:
+            self._logger.log("info", "Conflict handling enabled for agent.", color="bold_green")
+        if self.allow_iteration:
+            self._logger.log("info", "Iteration mode enabled for agent.", color="bold_green")
+            
+        # Validate boolean parameters
+        for param in ['allow_feedback', 'allow_conflict', 'allow_iteration']:
+            if not isinstance(getattr(self, param), bool):
+                raise ValueError(f"Parameter '{param}' must be a boolean value.")
+                
         unaccepted_attributes = [
             "AWS_ACCESS_KEY_ID",
             "AWS_SECRET_ACCESS_KEY",
