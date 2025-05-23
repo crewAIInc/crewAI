@@ -37,6 +37,7 @@ class Mem0Storage(Storage):
         mem0_org_id = config.get("org_id")
         mem0_project_id = config.get("project_id")
         mem0_local_config = config.get("local_mem0_config")
+        self.mem0_run_id = config.get("run_id")
 
         # Initialize MemoryClient or Memory based on the presence of the mem0_api_key
         if mem0_api_key:
@@ -89,7 +90,10 @@ class Mem0Storage(Storage):
 
         if params:
             if isinstance(self.memory, MemoryClient):
-                params["output_format"] = "v1.1"
+                params["output_format"] = "v2"
+
+                if self.mem0_run_id:
+                    params["run_id"] = self.mem0_run_id
             self.memory.add(value, **params)
 
     def search(
@@ -98,7 +102,8 @@ class Mem0Storage(Storage):
         limit: int = 3,
         score_threshold: float = 0.35,
     ) -> List[Any]:
-        params = {"query": query, "limit": limit, "output_format": "v1.1"}
+        params = {"query": query, "limit": limit, "output_format": "v2", "run_id": self.mem0_run_id}
+        
         if user_id := self._get_user_id():
             params["user_id"] = user_id
 
@@ -119,7 +124,7 @@ class Mem0Storage(Storage):
         # Discard the filters for now since we create the filters
         # automatically when the crew is created.
         if isinstance(self.memory, Memory):
-            del params["metadata"], params["output_format"]
+            del params["metadata"], params["output_format"], params["run_id"]
             
         results = self.memory.search(**params)
         return [r for r in results["results"] if r["score"] >= score_threshold]
