@@ -253,7 +253,7 @@ class ConsoleFormatter:
                 task_content.append(agent_role, style=style)
 
                 # Third line: Status
-                task_content.append("Status: ", style="white")
+                task_content.append("\nStatus: ", style="white")
                 task_content.append(status_text, style=f"{style} bold")
                 branch.label = task_content
                 self.print(crew_tree)
@@ -702,7 +702,7 @@ class ConsoleFormatter:
         completion_content.append("Test Execution Completed\n", style="green bold")
         completion_content.append("Crew: ", style="white")
         completion_content.append(f"{crew_name}\n", style="green")
-        completion_content.append("Status: ", style="white")
+        completion_content.append("\nStatus: ", style="white")
         completion_content.append("Completed", style="green")
 
         self.print_panel(completion_content, "Test Completion", "green")
@@ -812,7 +812,7 @@ class ConsoleFormatter:
         lite_agent_label = Text()
         lite_agent_label.append(f"{prefix} ", style=f"{style} bold")
         lite_agent_label.append(lite_agent_role, style=style)
-        lite_agent_label.append("Status: ", style="white")
+        lite_agent_label.append("\nStatus: ", style="white")
         lite_agent_label.append(status_text, style=f"{style} bold")
         lite_agent_branch.label = lite_agent_label
 
