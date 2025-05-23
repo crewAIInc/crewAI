@@ -201,6 +201,15 @@
             ]
           },
           {
+            "group": "Features",
+            "pages": [
+              "enterprise/features/tool-repository",
+              "enterprise/features/webhook-streaming",
+              "enterprise/features/traces",
+              "enterprise/features/hallucination-guardrail"
+            ]
+          },
+          {
             "group": "How-To Guides",
             "pages": [
               "enterprise/guides/build-crew",
@@ -217,15 +226,6 @@
               "enterprise/guides/team-management",
               "enterprise/guides/webhook-automation",
               "enterprise/guides/zapier-integration"
-            ]
-          },
-          {
-            "group": "Features",
-            "pages": [
-              "enterprise/features/tool-repository",
-              "enterprise/features/webhook-streaming",
-              "enterprise/features/traces",
-              "enterprise/features/hallucination-guardrail"
             ]
           },
           {
