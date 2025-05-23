@@ -21,7 +21,7 @@ Maxim AI provides comprehensive agent monitoring, evaluation, and observability 
 
 ### Prerequisites
 
-- Python 3.7 or later (Python 3.9+ recommended)
+- Python version >=3.10
 - A Maxim account ([sign up here](https://getmaxim.ai/))
 - A CrewAI project
 
@@ -88,6 +88,7 @@ researcher = Agent(
 # Define the task
 research_task = Task(
     description="Research the latest AI advancements...",
+    expected_output="",
     agent=researcher
 )
 
@@ -148,5 +149,4 @@ After running your CrewAI application:
 If you encounter any issues:
 
 - Check the [Maxim Documentation](https://getmaxim.ai/docs)
-- Join our [Community Discord](https://discord.gg/rZUhKF8u)
-- Schedule a demo with us [Book a Demo](https://www.getmaxim.ai/demo)
+- Maxim Github [Link](https://github.com/maximhq)
