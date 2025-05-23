@@ -195,7 +195,7 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
-        output_format="v1.1"
+        output_format="v2"
     )
 
 
@@ -232,7 +232,7 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
         agent_id="Test_Agent", 
         metadata={"type": "short_term"},
         user_id="test_user",
-        output_format='v1.1'
+        output_format='v2'
     )
 
     assert len(results) == 1
