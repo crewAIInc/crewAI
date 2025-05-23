@@ -369,7 +369,7 @@ blog_task = Task(
    - Type hints are recommended but optional
 
 2. **Return Values**:
-   - On success: it returns a tuple of `(bool, Any)`. For example: `(True, validated_result)` 
+   - On success: it returns a tuple of `(bool, Any)`. For example: `(True, validated_result)`
    - On Failure: it returns a tuple of `(bool, str)`. For example: `(False, "Error message explain the failure")`
 
 ### LLMGuardrail
@@ -380,7 +380,7 @@ The `LLMGuardrail` class offers a robust mechanism for validating task outputs.
 
 1. **Structured Error Responses**:
 ```python Code
-from crewai import TaskOutput
+from crewai import TaskOutput, LLMGuardrail
 
 def validate_with_context(result: TaskOutput) -> Tuple[bool, Any]:
     try:
