@@ -4,7 +4,7 @@ description: What is knowledge in CrewAI and how to use it.
 icon: book
 ---
 
-## What is Knowledge?
+## Overview
 
 Knowledge in CrewAI is a powerful system that allows AI agents to access and utilize external information sources during their tasks.
 Think of it as giving your agents a reference library they can consult while working.
@@ -36,12 +36,15 @@ CrewAI supports various types of knowledge sources out of the box:
 
 ## Supported Knowledge Parameters
 
-| Parameter                    | Type                                | Required | Description                                                                                                                                           |
-| :--------------------------- | :---------------------------------- | :------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sources`                  | **List[BaseKnowledgeSource]**        | Yes      | List of knowledge sources that provide content to be stored and queried. Can include PDF, CSV, Excel, JSON, text files, or string content.           |
-| `collection_name`          | **str**                              | No       | Name of the collection where the knowledge will be stored. Used to identify different sets of knowledge. Defaults to "knowledge" if not provided.     |
-| `storage`                  | **Optional[KnowledgeStorage]**       | No       | Custom storage configuration for managing how the knowledge is stored and retrieved. If not provided, a default storage will be created.              |
-
+<ParamField body="sources" type="List[BaseKnowledgeSource]" required="Yes"> 
+    List of knowledge sources that provide content to be stored and queried. Can include PDF, CSV, Excel, JSON, text files, or string content. 
+</ParamField>
+<ParamField body="collection_name" type="str"> 
+    Name of the collection where the knowledge will be stored. Used to identify different sets of knowledge. Defaults to \"knowledge\" if not provided. 
+</ParamField>
+<ParamField body="storage" type="Optional[KnowledgeStorage]"> 
+Custom storage configuration for managing how the knowledge is stored and retrieved. If not provided, a default storage will be created. 
+</ParamField>
 
 <Tip>
 Unlike retrieval from a vector database using a tool, agents preloaded with knowledge will not need a retrieval persona or task.
@@ -432,6 +435,46 @@ Query rewriting happens transparently using a system prompt that instructs the L
   This mechanism is fully automatic and requires no configuration from users. The agent's LLM is used to perform the query rewriting, so using a more capable LLM can improve the quality of rewritten queries.
 </Tip>
 
+## Knowledge Events
+
+CrewAI emits events during the knowledge retrieval process that you can listen for using the event system. These events allow you to monitor, debug, and analyze how knowledge is being retrieved and used by your agents.
+
+### Available Knowledge Events
+
+- **KnowledgeRetrievalStartedEvent**: Emitted when an agent starts retrieving knowledge from sources
+- **KnowledgeRetrievalCompletedEvent**: Emitted when knowledge retrieval is completed, including the query used and the retrieved content
+- **KnowledgeQueryStartedEvent**: Emitted when a query to knowledge sources begins
+- **KnowledgeQueryCompletedEvent**: Emitted when a query completes successfully
+- **KnowledgeQueryFailedEvent**: Emitted when a query to knowledge sources fails
+- **KnowledgeSearchQueryFailedEvent**: Emitted when a search query fails
+
+### Example: Monitoring Knowledge Retrieval
+
+```python
+from crewai.utilities.events import (
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+)
+from crewai.utilities.events.base_event_listener import BaseEventListener
+
+class KnowledgeMonitorListener(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(KnowledgeRetrievalStartedEvent)
+        def on_knowledge_retrieval_started(source, event):
+            print(f"Agent '{event.agent.role}' started retrieving knowledge")
+            
+        @crewai_event_bus.on(KnowledgeRetrievalCompletedEvent)
+        def on_knowledge_retrieval_completed(source, event):
+            print(f"Agent '{event.agent.role}' completed knowledge retrieval")
+            print(f"Query: {event.query}")
+            print(f"Retrieved {len(event.retrieved_knowledge)} knowledge chunks")
+
+# Create an instance of your listener
+knowledge_monitor = KnowledgeMonitorListener()
+```
+
+For more information on using events, see the [Event Listeners](https://docs.crewai.com/concepts/event-listener) documentation.
+
 ### Example
 
 ```python
@@ -497,6 +540,13 @@ crew = Crew(
 result = crew.kickoff(
     inputs={"question": "What is the storage capacity of the XPS 13?"}
 )
+
+# Resetting the agent specific knowledge via crew object
+crew.reset_memories(command_type = 'agent_knowledge')
+
+# Resetting the agent specific knowledge via CLI
+crewai reset-memories --agent-knowledge 
+crewai reset-memories -akn
 ```
 
 <Info>

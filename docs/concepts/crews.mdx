@@ -4,7 +4,7 @@ description: Understanding and utilizing crews in the crewAI framework with comp
 icon: people-group
 ---
 
-## What is a Crew?
+## Overview
 
 A crew in crewAI represents a collaborative group of agents working together to achieve a set of tasks. Each crew defines the strategy for task execution, agent collaboration, and the overall workflow.
 
@@ -117,6 +117,12 @@ class YourCrewName:
         )
 ```
 
+How to run the above code:
+
+```python code
+YourCrewName().crew().kickoff(inputs={"any": "input here"})
+```
+
 <Note>
 Tasks will be executed in the order they are defined.
 </Note>
@@ -183,6 +189,11 @@ class YourCrewName:
             process=Process.sequential,
             verbose=True
         )
+```
+How to run the above code:
+
+```python code
+YourCrewName().crew().kickoff(inputs={})
 ```
 
 In this example:

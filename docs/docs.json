@@ -74,6 +74,7 @@
               "concepts/collaboration",
               "concepts/training",
               "concepts/memory",
+              "concepts/reasoning",
               "concepts/planning",
               "concepts/testing",
               "concepts/cli",
@@ -129,6 +130,7 @@
               "tools/seleniumscrapingtool",
               "tools/snowflakesearchtool",
               "tools/spidertool",
+              "tools/stagehandtool",
               "tools/txtsearchtool",
               "tools/visiontool",
               "tools/weaviatevectorsearchtool",
@@ -136,6 +138,12 @@
               "tools/xmlsearchtool",
               "tools/youtubechannelsearchtool",
               "tools/youtubevideosearchtool"
+            ]
+          },
+          {
+            "group": "MCP Integration",
+            "pages": [
+              "mcp/crewai-mcp-integration"
             ]
           },
           {
@@ -205,7 +213,8 @@
             "pages": [
               "enterprise/features/tool-repository",
               "enterprise/features/webhook-streaming",
-              "enterprise/features/traces"
+              "enterprise/features/traces",
+              "enterprise/features/hallucination-guardrail"
             ]
           },
           {

@@ -4,9 +4,10 @@ description: 'A comprehensive guide to configuring and using Large Language Mode
 icon: 'microchip-ai'
 ---
 
-<Note>
-  CrewAI integrates with multiple LLM providers through LiteLLM, giving you the flexibility to choose the right model for your specific use case. This guide will help you understand how to configure and use different LLM providers in your CrewAI projects.
-</Note>
+## Overview
+
+CrewAI integrates with multiple LLM providers through LiteLLM, giving you the flexibility to choose the right model for your specific use case. This guide will help you understand how to configure and use different LLM providers in your CrewAI projects.
+
 
 ## What are LLMs?
 
@@ -710,18 +711,24 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
     CrewAI emits events for each chunk received during streaming:
 
     ```python
-    from crewai import LLM
-    from crewai.utilities.events import EventHandler, LLMStreamChunkEvent
+    from crewai.utilities.events import (
+      LLMStreamChunkEvent
+    )
+    from crewai.utilities.events.base_event_listener import BaseEventListener
 
-    class MyEventHandler(EventHandler):
-        def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
-            # Process each chunk as it arrives
-            print(f"Received chunk: {event.chunk}")
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
+              # Process each chunk as it arrives
+              print(f"Received chunk: {event.chunk}")
 
-    # Register the event handler
-    from crewai.utilities.events import crewai_event_bus
-    crewai_event_bus.register_handler(MyEventHandler())
+    my_listener = MyCustomListener()
     ```
+
+    <Tip>
+      [Click here](https://docs.crewai.com/concepts/event-listener#event-listeners) for more details 
+    </Tip>
   </Tab>
 </Tabs>
 
@@ -817,6 +824,24 @@ Learn how to get the most out of your LLM configuration:
     <Info>
       Remember to regularly monitor your token usage and adjust your configuration as needed to optimize costs and performance.
     </Info>
+  </Accordion>
+  
+  <Accordion title="Drop Additional Parameters">
+    CrewAI internally uses Litellm for LLM calls, which allows you to drop additional parameters that are not needed for your specific use case. This can help simplify your code and reduce the complexity of your LLM configuration.
+    For example, if you don't need to send the <code>stop</code> parameter, you can simply omit it from your LLM call:
+
+    ```python
+    from crewai import LLM
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "<api-key>"
+
+    o3_llm = LLM(
+        model="o3",
+        drop_params=True,
+        additional_drop_params=["stop"]
+    )
+    ```
   </Accordion>
 </AccordionGroup>
 
