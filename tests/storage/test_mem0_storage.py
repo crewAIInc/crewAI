@@ -1,14 +1,10 @@
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from mem0.client.main import MemoryClient
 from mem0.memory.main import Memory
 
-from crewai.agent import Agent
-from crewai.crew import Crew
 from crewai.memory.storage.mem0_storage import Mem0Storage
-from crewai.task import Task
 
 
 # Define the class (if not already defined)
@@ -99,6 +95,7 @@ def mem0_storage_with_memory_client_using_config_from_crew(mock_mem0_memory_clie
                     "api_key": "ABCDEFGH",
                     "org_id": "my_org_id",
                     "project_id": "my_project_id",
+                    "run_id": "my_run_id",
                 },
             }
         )
@@ -195,7 +192,8 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
-        output_format="v2"
+        output_format="v2",
+        run_id="my_run_id",
     )
 
 
@@ -232,7 +230,8 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
         agent_id="Test_Agent", 
         metadata={"type": "short_term"},
         user_id="test_user",
-        output_format='v2'
+        output_format='v2',
+        run_id="my_run_id",
     )
 
     assert len(results) == 1
