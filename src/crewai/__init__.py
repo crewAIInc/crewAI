@@ -9,6 +9,7 @@ from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 
 warnings.filterwarnings(
@@ -29,4 +30,5 @@ __all__ = [
     "Flow",
     "Knowledge",
     "TaskOutput",
+    "LLMGuardrail",
 ]
