@@ -261,13 +261,13 @@
               "enterprise/guides/update-crew",
               "enterprise/guides/enable-crew-studio",
               "enterprise/guides/azure-openai-setup",
-              "enterprise/guides/hubspot-integration",
+              "enterprise/guides/hubspot-trigger",
               "enterprise/guides/react-component-export",
-              "enterprise/guides/salesforce-integration",
-              "enterprise/guides/slack-integration",
+              "enterprise/guides/salesforce-trigger",
+              "enterprise/guides/slack-trigger",
               "enterprise/guides/team-management",
               "enterprise/guides/webhook-automation",
-              "enterprise/guides/zapier-integration"
+              "enterprise/guides/zapier-trigger"
             ]
           },
           {
