@@ -51,8 +51,15 @@ from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
+import logging
+
 
 load_dotenv()
+
+# Patch: Gemini key fallback
+if "GEMINI_API_KEY" not in os.environ and "GOOGLE_API_KEY" in os.environ:
+    os.environ["GEMINI_API_KEY"] = os.environ["GOOGLE_API_KEY"]
+    logging.info("[CrewAI Gemini Patch] Set GEMINI_API_KEY from GOOGLE_API_KEY")
 
 
 class FilteredStream(io.TextIOBase):
@@ -248,6 +255,17 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
+    """
+    LLM class for handling language model interactions via LiteLLM.
+
+    Features:
+    - Supports multiple model providers (e.g., OpenAI, Gemini, Anthropic)
+    - Automatically uses GOOGLE_API_KEY if GEMINI_API_KEY is not explicitly set
+    - Injects the resolved API key directly into the LLM completion parameters
+    - Ensures compatibility with both legacy and AI Studio-style key environments
+    - Designed for use in CrewAI agent workflows and tool-based LLM interactions
+    """
+
     def __init__(
         self,
         model: str,
@@ -309,6 +327,15 @@ class LLM(BaseLLM):
         else:
             self.stop = stop
 
+        #  Fallback logic
+        if "GEMINI_API_KEY" in os.environ:
+            api_key = os.environ["GEMINI_API_KEY"]
+        elif "GOOGLE_API_KEY" in os.environ:
+            api_key = os.environ["GOOGLE_API_KEY"]
+            os.environ["GEMINI_API_KEY"] = api_key
+
+        self.api_key = api_key
+
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
 
@@ -328,19 +355,26 @@ class LLM(BaseLLM):
         self,
         messages: Union[str, List[Dict[str, str]]],
         tools: Optional[List[dict]] = None,
+        **kwargs: Any,
     ) -> Dict[str, Any]:
-        """Prepare parameters for the completion call.
+        """
+        Prepare parameters for the LLM completion API call.
+
+        This method:
+        - Formats input messages for the model provider
+        - Accepts optional tool definitions
+        - Injects API key into the request (fallback to GOOGLE_API_KEY if GEMINI_API_KEY is not set)
+        - Merges additional keyword arguments passed to support flexibility
 
         Args:
-            messages: Input messages for the LLM
-            tools: Optional list of tool schemas
-            callbacks: Optional list of callback functions
-            available_functions: Optional dict of available functions
+            messages (Union[str, List[Dict[str, str]]]): Prompt or structured messages to send to the LLM.
+            tools (Optional[List[dict]]): Optional tool definitions (for function calling).
+            **kwargs (Any): Additional optional parameters for the completion call.
 
         Returns:
-            Dict[str, Any]: Parameters for the completion call
+            Dict[str, Any]: Final parameters dictionary to be passed to `litellm.completion(...)`.
         """
-        # --- 1) Format messages according to provider requirements
+        # Format messages
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
         formatted_messages = self._format_messages_for_provider(messages)
@@ -372,8 +406,10 @@ class LLM(BaseLLM):
             **self.additional_params,
         }
 
-        # Remove None values from params
-        return {k: v for k, v in params.items() if v is not None}
+        # Remove None values
+        params = {k: v for k, v in params.items() if v is not None}
+
+        return params
 
     def _handle_streaming_response(
         self,
