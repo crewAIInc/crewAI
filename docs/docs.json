@@ -7,7 +7,7 @@
     "light": "#F3A78B",
     "dark": "#C94C3C"
   },
-  "favicon": "favicon.svg",
+  "favicon": "images/favicon.svg",
   "contextual": {
     "options": ["copy", "view", "chatgpt", "claude"]
   },
@@ -328,8 +328,8 @@
     }
   },
   "logo": {
-    "light": "crew_only_logo.png",
-    "dark": "crew_only_logo.png"
+    "light": "images/crew_only_logo.png",
+    "dark": "images/crew_only_logo.png"
   },
   "appearance": {
     "default": "dark",
