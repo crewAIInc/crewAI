@@ -1,0 +1,61 @@
+---
+title: "Slack Integration"
+description: "Learn how to kickoff crews directly from Slack using CrewAI Enterprise"
+icon: "slack"
+---
+
+This guide explains how to start a crew directly from Slack using the CrewAI integration.
+
+## Prerequisites
+
+- CrewAI integration installed and connected to your Slack workspace
+- At least one crew configured in CrewAI
+
+## Setup Steps
+
+<Steps>
+    <Step title="Ensure the CrewAI Slack integration is set up">
+        In the CrewAI dashboard, navigate to the **Integrations** section.
+
+        <Frame>
+            <img src="/images/enterprise/slack-integration.png" alt="CrewAI Slack Integration" />
+        </Frame>
+
+        Verify that Slack is listed and is connected.
+    </Step>
+    <Step title="Open your Slack channel">
+        - Navigate to the channel where you want to kickoff the crew.
+        - Type the slash command "**/kickoff**" to initiate the crew kickoff process.
+        - You should see a  "**Kickoff crew**" appear as you type:
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew.png" alt="Kickoff crew" />
+            </Frame>
+        - Press Enter or select the "**Kickoff crew**" option. A dialog box titled "**Kickoff an AI Crew**" will appear.
+    </Step>
+    <Step title="Select the crew you want to start">
+        - In the dropdown menu labeled "**Select of the crews online:**", choose the crew you want to start.
+        - In the example below, "**prep-for-meeting**" is selected:
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-dropdown.png" alt="Kickoff crew dropdown" />
+            </Frame>
+        - If your crew requires any inputs, click the "**Add Inputs**" button to provide them.
+            <Note>
+                The "**Add Inputs**" button is shown in the example above but is not yet clicked.
+            </Note>
+    </Step>
+    <Step title="Click Kickoff and wait for the crew to complete">
+        - Once you've selected the crew and added any necessary inputs, click "**Kickoff**" to start the crew.
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-kickoff.png" alt="Kickoff crew" />
+            </Frame>
+        - The crew will start executing and you will see the results in the Slack channel.
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-results.png" alt="Kickoff crew results" />
+            </Frame>
+    </Step>
+</Steps>
+
+## Tips
+
+- Make sure you have the necessary permissions to use the `/kickoff` command in your Slack workspace.
+- If you don't see your desired crew in the dropdown, ensure it's properly configured and online in CrewAI. 

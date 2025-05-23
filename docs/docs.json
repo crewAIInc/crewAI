@@ -83,6 +83,12 @@
             ]
           },
           {
+            "group": "MCP Integration",
+            "pages": [
+              "mcp/crewai-mcp-integration"
+            ]
+          },
+          {
             "group": "Tools",
             "pages": [
               "tools/aimindtool",
@@ -141,12 +147,6 @@
             ]
           },
           {
-            "group": "MCP Integration",
-            "pages": [
-              "mcp/crewai-mcp-integration"
-            ]
-          },
-          {
             "group": "Agent Monitoring & Observability",
             "pages": [
               "how-to/agentops-observability",
@@ -169,15 +169,18 @@
               "how-to/custom-llm",
               "how-to/custom-manager-agent",
               "how-to/customizing-agents",
+              "how-to/dalle-image-generation",
               "how-to/force-tool-output-as-result",
               "how-to/hierarchical-process",
+              "how-to/human-in-the-loop",
               "how-to/human-input-on-execution",
               "how-to/kickoff-async",
               "how-to/kickoff-for-each",
               "how-to/llm-connections",
               "how-to/multimodal-agents",
               "how-to/replay-tasks-from-latest-crew-kickoff",
-              "how-to/sequential-process"
+              "how-to/sequential-process",
+              "how-to/using-annotations"
             ]
           },
           {
@@ -205,7 +208,15 @@
               "enterprise/guides/kickoff-crew",
               "enterprise/guides/update-crew",
               "enterprise/guides/use-crew-api",
-              "enterprise/guides/enable-crew-studio"
+              "enterprise/guides/enable-crew-studio",
+              "enterprise/guides/azure-openai-setup",
+              "enterprise/guides/hubspot-integration",
+              "enterprise/guides/react-component-export",
+              "enterprise/guides/salesforce-integration",
+              "enterprise/guides/slack-integration",
+              "enterprise/guides/team-management",
+              "enterprise/guides/webhook-automation",
+              "enterprise/guides/zapier-integration"
             ]
           },
           {
@@ -259,6 +270,11 @@
           "anchor": "Forum",
           "href": "https://community.crewai.com",
           "icon": "discourse"
+        },
+        {
+          "anchor": "Crew GPT",
+          "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+          "icon": "robot"
         },
         {
           "anchor": "Get Help",
