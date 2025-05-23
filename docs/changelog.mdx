@@ -4,23 +4,136 @@ description: View the latest updates and changes to CrewAI
 icon: timeline
 ---
 
-<Update label="2025-04-30" description="v0.117.1">
+<Update label="2024-05-22" description="v0.121.0" tags={["Latest"]}>
   ## Release Highlights
   <Frame>
-    <img src="/images/releases/v01171.png" />
+    <img src="/images/releases/v01210.png" />
   </Frame>
   
   <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.117.1">View on GitHub</a>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.121.0">View on GitHub</a>
   </div>
 
   **Core Improvements & Fixes**
-  - Upgraded **crewai-tools** to latest version
-  - Upgraded **liteLLM** to latest version
-  - Fixed **Mem0 OSS**
+  - Fixed encoding error when creating tools
+  - Fixed failing llama test
+  - Updated logging configuration for consistency
+  - Enhanced telemetry initialization and event handling
+
+  **New Features & Enhancements**
+  - Added **markdown attribute** to the Task class
+  - Added **reasoning attribute** to the Agent class
+  - Added **inject_date flag** to Agent for automatic date injection
+  - Implemented **HallucinationGuardrail** (no-op with test coverage)
+
+  **Documentation & Guides**
+  - Added documentation for **StagehandTool** and improved MDX structure
+  - Added documentation for **MCP integration** and updated enterprise docs
+  - Documented knowledge events and updated reasoning docs
+  - Added stop parameter documentation
+  - Fixed import references in doc examples (before_kickoff, after_kickoff)
+  - General docs updates and restructuring for clarity
 </Update>
 
-<Update label="2025-04-28" description="v0.117.0">
+<Update label="2024-05-15" description="v0.120.1">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01201.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.120.1">View on GitHub</a>
+  </div>
+
+  **Core Improvements & Fixes**
+  - Fixed **interpolation with hyphens**
+</Update>
+
+<Update label="2024-05-14" description="v0.120.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01200.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.120.0">View on GitHub</a>
+  </div>
+
+  **Core Improvements & Fixes**
+  - Enabled **full Ruff rule set** by default for stricter linting
+  - Addressed race condition in FilteredStream using context managers
+  - Fixed agent knowledge reset issue
+  - Refactored agent fetching logic into utility module
+
+  **New Features & Enhancements**
+  - Added support for **loading an Agent directly from a repository**
+  - Enabled setting an empty context for Task
+  - Enhanced Agent repository feedback and fixed Tool auto-import behavior
+  - Introduced direct initialization of knowledge (bypassing knowledge_sources)
+
+  **Documentation & Guides**
+  - Updated security.md for current security practices
+  - Cleaned up Google setup section for clarity
+  - Added link to AI Studio when entering Gemini key
+  - Updated Arize Phoenix observability guide
+  - Refreshed flow documentation
+</Update>
+
+<Update label="2024-05-08" description="v0.119.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01190.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.119.0">View on GitHub</a>
+  </div>
+
+  **Core Improvements & Fixes**
+  - Improved test reliability by enhancing pytest handling for flaky tests
+  - Fixed memory reset crash when embedding dimensions mismatch
+  - Enabled parent flow identification for Crew and LiteAgent
+  - Prevented telemetry-related crashes when unavailable
+  - Upgraded **LiteLLM version** for better compatibility
+  - Fixed llama converter tests by removing skip_external_api
+
+  **New Features & Enhancements**
+  - Introduced **knowledge retrieval prompt re-writing** in Agent for improved tracking and debugging
+  - Made LLM setup and quickstart guides model-agnostic
+
+  **Documentation & Guides**
+  - Added advanced configuration docs for the RAG tool
+  - Updated Windows troubleshooting guide
+  - Refined documentation examples for better clarity
+  - Fixed typos across docs and config files
+</Update>
+
+<Update label="2024-04-28" description="v0.118.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01180.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.118.0">View on GitHub</a>
+  </div>
+
+  **Core Improvements & Fixes**
+  - Fixed issues with missing prompt or system templates
+  - Removed global logging configuration to avoid unintended overrides
+  - Renamed **TaskGuardrail to LLMGuardrail** for improved clarity
+  - Downgraded litellm to version 1.167.1 for compatibility
+  - Added missing init.py files to ensure proper module initialization
+
+  **New Features & Enhancements**
+  - Added support for **no-code Guardrail creation** to simplify AI behavior controls
+
+  **Documentation & Guides**
+  - Removed CrewStructuredTool from public documentation to reflect internal usage
+  - Updated enterprise documentation and YouTube embed for improved onboarding experience
+</Update>
+
+<Update label="2024-04-20" description="v0.117.0">
   ## Release Highlights
   <Frame>
     <img src="/images/releases/v01170.png" />
@@ -57,7 +170,23 @@ icon: timeline
   - Improved SEO, contextual navigation, and error handling for documentation pages.
 </Update>
 
-<Update label="2025-04-07" description="v0.114.0">
+<Update label="2024-04-25" description="v0.117.1">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01171.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.117.1">View on GitHub</a>
+  </div>
+
+  **Core Improvements & Fixes**
+  - Upgraded **crewai-tools** to latest version
+  - Upgraded **liteLLM** to latest version
+  - Fixed **Mem0 OSS**
+</Update>
+
+<Update label="2024-04-07" description="v0.114.0">
   ## Release Highlights
   <Frame>
     <img src="/images/releases/v01140.png" />
@@ -91,7 +220,7 @@ icon: timeline
   - Guide on using singular agents within Flows.
 </Update>
 
-<Update label="2025-03-17" description="v0.108.0">
+<Update label="2024-03-17" description="v0.108.0">
   ## Release Highlights
   <Frame>
     <img src="/images/releases/v01080.png" />
@@ -120,7 +249,16 @@ icon: timeline
   - Added documentation for `ApifyActorsTool`
 </Update>
 
-<Update label="2025-03-10" description="v0.105.0">
+<Update label="2024-03-10" description="v0.105.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01050.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.105.0">View on GitHub</a>
+  </div>
+
   **Core Improvements & Fixes**
   - Fixed issues with missing template variables and user memory configuration
   - Improved async flow support and addressed agent response formatting
@@ -141,7 +279,16 @@ icon: timeline
   - Fixed typos in prompts and updated Amazon Bedrock model listings
 </Update>
 
-<Update label="2025-02-12" description="v0.102.0">
+<Update label="2024-02-12" description="v0.102.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01020.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.102.0">View on GitHub</a>
+  </div>
+
   **Core Improvements & Fixes**
   - Enhanced LLM Support: Improved structured LLM output, parameter handling, and formatting for Anthropic models
   - Crew & Agent Stability: Fixed issues with cloning agents/crews using knowledge sources, multiple task outputs in conditional tasks, and ignored Crew task callbacks
@@ -161,7 +308,16 @@ icon: timeline
   - Fixed Various Typos & Formatting Issues
 </Update>
 
-<Update label="2025-01-28" description="v0.100.0">
+<Update label="2024-01-28" description="v0.100.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v01000.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.100.0">View on GitHub</a>
+  </div>
+
   **Features**
   - Add Composio docs
   - Add SageMaker as a LLM provider
@@ -176,7 +332,16 @@ icon: timeline
   - Improve formatting and clarity in CLI and Composio Tool docs
 </Update>
 
-<Update label="2025-01-20" description="v0.98.0">
+<Update label="2024-01-20" description="v0.98.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v0980.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.98.0">View on GitHub</a>
+  </div>
+
   **Features**
   - Conversation crew v1
   - Add unique ID to flow states
@@ -197,7 +362,16 @@ icon: timeline
   - Fixed typos, nested pydantic model issue, and docling issues
 </Update>
 
-<Update label="2025-01-04" description="v0.95.0">
+<Update label="2024-01-04" description="v0.95.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v0950.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.95.0">View on GitHub</a>
+  </div>
+
   **New Features**
   - Adding Multimodal Abilities to Crew
   - Programatic Guardrails
@@ -228,6 +402,14 @@ icon: timeline
 </Update>
 
 <Update label="2024-12-05" description="v0.86.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v0860.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.86.0">View on GitHub</a>
+  </div>
   **Changes**
   - Remove all references to pipeline and pipeline router
   - Add Nvidia NIM as provider in Custom LLM
@@ -238,6 +420,14 @@ icon: timeline
 </Update>
 
 <Update label="2024-12-04" description="v0.85.0">
+  ## Release Highlights
+  <Frame>
+    <img src="/images/releases/v0850.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.85.0">View on GitHub</a>
+  </div>
   **Features**
   - Added knowledge to agent level
   - Feat/remove langchain
