@@ -259,7 +259,6 @@
               "enterprise/guides/deploy-crew",
               "enterprise/guides/kickoff-crew",
               "enterprise/guides/update-crew",
-              "enterprise/guides/use-crew-api",
               "enterprise/guides/enable-crew-studio",
               "enterprise/guides/azure-openai-setup",
               "enterprise/guides/hubspot-integration",
@@ -276,6 +275,21 @@
             "pages": [
               "enterprise/resources/frequently-asked-questions"
             ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "openapi": "enterprise-api.yaml"
           }
         ]
       },
@@ -349,6 +363,16 @@
   },
   "search": {
     "prompt": "Search CrewAI docs"
+  },
+  "api": {
+    "baseUrl": "https://your-actual-crew-name.crewai.com",
+    "auth": {
+      "method": "bearer",
+      "name": "Authorization"
+    },
+    "playground": {
+      "mode": "simple"
+    }
   },
   "seo": {
     "indexing": "all"
