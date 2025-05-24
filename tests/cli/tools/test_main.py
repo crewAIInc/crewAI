@@ -85,6 +85,36 @@ def test_install_success(mock_get, mock_subprocess_run, capsys, tool_command):
         env=unittest.mock.ANY,
     )
 
+@patch("crewai.cli.tools.main.subprocess.run")
+@patch("crewai.cli.plus_api.PlusAPI.get_tool")
+def test_install_success_from_pypi(mock_get, mock_subprocess_run, capsys, tool_command):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "handle": "sample-tool",
+        "repository": {"handle": "sample-repo", "url": "https://example.com/repo"},
+        "source": "pypi",
+    }
+    mock_get.return_value = mock_get_response
+    mock_subprocess_run.return_value = MagicMock(stderr=None)
+
+    tool_command.install("sample-tool")
+    output = capsys.readouterr().out
+    assert "Successfully installed sample-tool" in output
+
+    mock_get.assert_has_calls([mock.call("sample-tool"), mock.call().json()])
+    mock_subprocess_run.assert_any_call(
+        [
+            "uv",
+            "add",
+            "sample-tool",
+        ],
+        capture_output=False,
+        text=True,
+        check=True,
+        env=unittest.mock.ANY,
+    )
+
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
 def test_install_tool_not_found(mock_get, capsys, tool_command):

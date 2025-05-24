@@ -3,6 +3,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -178,7 +179,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             "Successfully authenticated to the tool repository.", style="bold green"
         )
 
-    def _add_package(self, tool_details):
+    def _add_package(self, tool_details: dict[str, Any]):
+        is_from_pypi = tool_details.get("source", None) == "pypi"
         tool_handle = tool_details["handle"]
         repository_handle = tool_details["repository"]["handle"]
         repository_url = tool_details["repository"]["url"]
@@ -187,10 +189,13 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         add_package_command = [
             "uv",
             "add",
-            "--index",
-            index,
-            tool_handle,
         ]
+
+        if is_from_pypi:
+            add_package_command.append(tool_handle)
+        else:
+            add_package_command.extend(["--index", index, tool_handle])
+
         add_package_result = subprocess.run(
             add_package_command,
             capture_output=False,
