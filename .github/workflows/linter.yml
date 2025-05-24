@@ -30,4 +30,7 @@ jobs:
       - name: Run Ruff on Changed Files
         if: ${{ steps.changed-files.outputs.files != '' }}
         run: |
-          echo "${{ steps.changed-files.outputs.files }}" | tr " " "\n" | xargs -I{} ruff check "{}"
+          echo "${{ steps.changed-files.outputs.files }}" \
+            | tr ' ' '\n' \
+            | grep -v 'src/crewai/cli/templates/' \
+            | xargs -I{} ruff check "{}"
