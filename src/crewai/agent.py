@@ -225,6 +225,7 @@ class Agent(BaseAgent):
         task: Task,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        recursion_depth: int = 0,
     ) -> str:
         """Execute a task with the agent.
 
