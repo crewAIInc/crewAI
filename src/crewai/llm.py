@@ -56,16 +56,11 @@ load_dotenv()
 
 
 class FilteredStream(io.TextIOBase):
-    _lock = None
-
     def __init__(self, original_stream: TextIO):
         self._original_stream = original_stream
         self._lock = threading.Lock()
 
     def write(self, s: str) -> int:
-        if not self._lock:
-            self._lock = threading.Lock()
-
         with self._lock:
             # Filter out extraneous messages from LiteLLM
             if (
