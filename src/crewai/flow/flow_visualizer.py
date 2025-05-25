@@ -1,14 +1,13 @@
 # flow_visualizer.py
 
 import os
-from pathlib import Path
 
 from pyvis.network import Network
 
 from crewai.flow.config import COLORS, NODE_STYLES
 from crewai.flow.html_template_handler import HTMLTemplateHandler
 from crewai.flow.legend_generator import generate_legend_items_html, get_legend_items
-from crewai.flow.path_utils import safe_path_join, validate_path_exists
+from crewai.flow.path_utils import safe_path_join
 from crewai.flow.utils import calculate_node_levels
 from crewai.flow.visualization_utils import (
     add_edges,
