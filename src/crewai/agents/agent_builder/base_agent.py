@@ -254,6 +254,7 @@ class BaseAgent(ABC, BaseModel):
         task: Any,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        recursion_depth: int = 0,
     ) -> str:
         pass
 
