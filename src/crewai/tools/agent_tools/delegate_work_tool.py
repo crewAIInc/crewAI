@@ -27,4 +27,5 @@ class DelegateWorkTool(BaseAgentTool):
         **kwargs,
     ) -> str:
         coworker = self._get_coworker(coworker, **kwargs)
-        return self._execute(coworker, task, context)
+        tools = getattr(self, '_agent_tools', None) or kwargs.get('tools')
+        return self._execute(coworker, task, context, tools)

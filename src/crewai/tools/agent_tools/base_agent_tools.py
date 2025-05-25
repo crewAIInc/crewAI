@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Any, List, Optional
 
 from pydantic import Field
 
@@ -50,7 +50,8 @@ class BaseAgentTool(BaseTool):
         self,
         agent_name: Optional[str],
         task: str,
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        tools: Optional[List[Any]] = None
     ) -> str:
         """
         Execute delegation to an agent with case-insensitive and whitespace-tolerant matching.
@@ -59,6 +60,7 @@ class BaseAgentTool(BaseTool):
             agent_name: Name/role of the agent to delegate to (case-insensitive)
             task: The specific question or task to delegate
             context: Optional additional context for the task execution
+            tools: Optional tools to pass to the delegated agent for recursive invocation
 
         Returns:
             str: The execution result from the delegated agent or an error message
@@ -113,9 +115,10 @@ class BaseAgentTool(BaseTool):
                 agent=agent,
                 expected_output=agent.i18n.slice("manager_request"),
                 i18n=agent.i18n,
+                tools=tools,
             )
             logger.debug(f"Created task for agent '{self.sanitize_agent_name(agent.role)}': {task}")
-            return agent.execute_task(task_with_assigned_agent, context)
+            return agent.execute_task(task_with_assigned_agent, context, tools)
         except Exception as e:
             # Handle task creation or execution errors
             return self.i18n.errors("agent_tool_execution_error").format(
