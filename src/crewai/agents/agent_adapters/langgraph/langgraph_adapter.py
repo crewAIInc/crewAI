@@ -125,6 +125,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         task: Any,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        recursion_depth: int = 0,
     ) -> str:
         """Execute a task using the LangGraph workflow."""
         self.create_agent_executor(tools)
