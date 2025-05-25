@@ -172,33 +172,15 @@ agent = Agent(
 
 ### Debugging with Observability Tools
 
-For production transparency, integrate with observability platforms to see all prompts:
+For production transparency, integrate with observability platforms to monitor all prompts and LLM interactions. This allows you to see exactly what prompts (including default instructions) are being sent to your LLMs.
 
-```python
-# Using Langfuse for prompt visibility
-import os
-from crewai import Agent, Crew, Task
-
-# Set up Langfuse (see Langfuse integration docs)
-os.environ["LANGFUSE_PUBLIC_KEY"] = "your-key"
-os.environ["LANGFUSE_SECRET_KEY"] = "your-secret"
-
-# Your crew will now trace all prompts to Langfuse
-crew = Crew(
-    agents=[agent],
-    tasks=[task],
-    verbose=True
-)
-
-# All prompts, including default instructions, will be visible in Langfuse dashboard
-result = crew.kickoff()
-```
+See our [Observability documentation](/how-to/observability) for detailed integration guides with various platforms including Langfuse, MLflow, Weights & Biases, and custom logging solutions.
 
 ### Best Practices for Production
 
 1. **Always inspect generated prompts** before deploying to production
 2. **Use custom templates** when you need full control over prompt content
-3. **Integrate observability tools** like Langfuse or MLflow for ongoing prompt monitoring
+3. **Integrate observability tools** for ongoing prompt monitoring (see [Observability docs](/how-to/observability))
 4. **Test with different LLMs** as default instructions may work differently across models
 5. **Document your prompt customizations** for team transparency
 
