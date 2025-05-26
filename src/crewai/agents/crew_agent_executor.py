@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -84,7 +84,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
             tool.name: tool for tool in self.tools
         }
-        self.tools_used: deque = deque(maxlen=100)  # Limit history size
+        self.tools_used: deque[str] = deque(maxlen=100)  # Limit history size
         self.steps_since_reasoning = 0
         existing_stop = self.llm.stop or []
         self.llm.stop = list(
@@ -473,9 +473,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.steps_since_reasoning += 1
 
-        if hasattr(self.agent, "reasoning_interval") and self.agent.reasoning_interval:
+        if hasattr(self.agent, "reasoning_interval") and self.agent.reasoning_interval is not None:
             if self.steps_since_reasoning >= self.agent.reasoning_interval:
                 return True
+            return False  # If interval is set but not reached, don't check adaptive
 
         if hasattr(self.agent, "adaptive_reasoning") and self.agent.adaptive_reasoning:
             return self._should_adaptive_reason()
@@ -528,11 +529,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
             current_progress = self._summarize_current_progress()
 
-            reasoning_handler = AgentReasoning(task=self.task, agent=self.agent)
+            from crewai.agent import Agent
+
+            reasoning_handler = AgentReasoning(task=self.task, agent=cast(Agent, self.agent))
 
             reasoning_output = reasoning_handler.handle_mid_execution_reasoning(
                 current_steps=self.iterations,
-                tools_used=self.tools_used,
+                tools_used=list(self.tools_used),
                 current_progress=current_progress,
                 iteration_messages=self.messages
             )
