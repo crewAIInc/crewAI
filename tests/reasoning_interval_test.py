@@ -22,17 +22,21 @@ def mock_llm_responses():
 
 def test_agent_with_reasoning_interval(mock_llm_responses):
     """Test agent with reasoning interval."""
-    llm = LLM("gpt-3.5-turbo")
-    
-    agent = Agent(
-        role="Test Agent",
-        goal="To test the reasoning interval feature",
-        backstory="I am a test agent created to verify the reasoning interval feature works correctly.",
-        llm=llm,
-        reasoning=True,
-        reasoning_interval=2,  # Reason every 2 steps
-        verbose=True
-    )
+    with patch('crewai.llm.LLM.call') as mock_llm_call:
+        mock_llm_call.return_value = mock_llm_responses["initial_reasoning"]
+        
+        llm = MagicMock()
+        llm.call.return_value = mock_llm_responses["initial_reasoning"]
+        
+        agent = Agent(
+            role="Test Agent",
+            goal="To test the reasoning interval feature",
+            backstory="I am a test agent created to verify the reasoning interval feature works correctly.",
+            llm=llm,
+            reasoning=True,
+            reasoning_interval=2,  # Reason every 2 steps
+            verbose=True
+        )
     
     task = Task(
         description="Multi-step task that requires periodic reasoning.",
@@ -55,17 +59,21 @@ def test_agent_with_reasoning_interval(mock_llm_responses):
 
 def test_agent_with_adaptive_reasoning(mock_llm_responses):
     """Test agent with adaptive reasoning."""
-    llm = LLM("gpt-3.5-turbo")
-    
-    agent = Agent(
-        role="Test Agent",
-        goal="To test the adaptive reasoning feature",
-        backstory="I am a test agent created to verify the adaptive reasoning feature works correctly.",
-        llm=llm,
-        reasoning=True,
-        adaptive_reasoning=True,
-        verbose=True
-    )
+    with patch('crewai.llm.LLM.call') as mock_llm_call:
+        mock_llm_call.return_value = mock_llm_responses["initial_reasoning"]
+        
+        llm = MagicMock()
+        llm.call.return_value = mock_llm_responses["initial_reasoning"]
+        
+        agent = Agent(
+            role="Test Agent",
+            goal="To test the adaptive reasoning feature",
+            backstory="I am a test agent created to verify the adaptive reasoning feature works correctly.",
+            llm=llm,
+            reasoning=True,
+            adaptive_reasoning=True,
+            verbose=True
+        )
     
     task = Task(
         description="Complex task that requires adaptive reasoning.",
@@ -91,7 +99,8 @@ def test_agent_with_adaptive_reasoning(mock_llm_responses):
 
 def test_mid_execution_reasoning_handler():
     """Test the mid-execution reasoning handler."""
-    llm = LLM("gpt-3.5-turbo")
+    llm = MagicMock()
+    llm.call.return_value = "Based on progress, I'll adjust my approach.\n\nREADY: I am ready to continue executing the task."
     
     agent = Agent(
         role="Test Agent",
