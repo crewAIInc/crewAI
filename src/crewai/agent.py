@@ -135,6 +135,14 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
     )
+    reasoning_interval: Optional[int] = Field(
+        default=None,
+        description="Interval of steps after which the agent should reason again during execution. If None, reasoning only happens before execution.",
+    )
+    adaptive_reasoning: bool = Field(
+        default=False,
+        description="Whether the agent should adaptively decide when to reason during execution based on context.",
+    )
     embedder: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",

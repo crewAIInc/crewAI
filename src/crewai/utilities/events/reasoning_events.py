@@ -29,3 +29,24 @@ class AgentReasoningFailedEvent(BaseEvent):
     task_id: str
     error: str
     attempt: int = 1
+
+
+class AgentMidExecutionReasoningStartedEvent(BaseEvent):
+    """Event emitted when an agent starts mid-execution reasoning."""
+    
+    type: str = "agent_mid_execution_reasoning_started"
+    agent_role: str
+    task_id: str
+    current_step: int
+    reasoning_trigger: str  # "interval" or "adaptive"
+
+
+class AgentMidExecutionReasoningCompletedEvent(BaseEvent):
+    """Event emitted when an agent completes mid-execution reasoning."""
+    
+    type: str = "agent_mid_execution_reasoning_completed"
+    agent_role: str
+    task_id: str
+    current_step: int
+    updated_plan: str
+    reasoning_trigger: str
