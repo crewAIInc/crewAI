@@ -193,6 +193,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 if self._should_trigger_reasoning():
                     self._handle_mid_execution_reasoning()
+                else:
+                    self.steps_since_reasoning += 1
                 
                 self._invoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text, role="assistant")
@@ -471,12 +473,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if not hasattr(self.agent, "reasoning") or not self.agent.reasoning:
             return False
             
-        self.steps_since_reasoning += 1
-        
         if hasattr(self.agent, "reasoning_interval") and self.agent.reasoning_interval is not None:
-            if self.steps_since_reasoning >= self.agent.reasoning_interval:
-                return True
-            return False  # If interval is set but not reached, don't check adaptive
+            return self.steps_since_reasoning >= self.agent.reasoning_interval
                 
         if hasattr(self.agent, "adaptive_reasoning") and self.agent.adaptive_reasoning:
             return self._should_adaptive_reason()
