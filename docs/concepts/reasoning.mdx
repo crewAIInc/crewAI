@@ -6,11 +6,11 @@ icon: brain
 
 ## Overview
 
-Agent reasoning is a feature that allows agents to reflect on a task and create a plan before execution. This helps agents approach tasks more methodically and ensures they're ready to perform the assigned work.
+Agent reasoning is a feature that allows agents to reflect on a task and create a plan before and during execution. This helps agents approach tasks more methodically and adapt their strategy as they progress through complex tasks.
 
 ## Usage
 
-To enable reasoning for an agent, simply set `reasoning=True` when creating the agent:
+To enable reasoning for an agent, set `reasoning=True` when creating the agent:
 
 ```python
 from crewai import Agent
@@ -19,12 +19,42 @@ agent = Agent(
     role="Data Analyst",
     goal="Analyze complex datasets and provide insights",
     backstory="You are an experienced data analyst with expertise in finding patterns in complex data.",
-    reasoning=True,  # Enable reasoning
+    reasoning=True,  # Enable basic reasoning
     max_reasoning_attempts=3  # Optional: Set a maximum number of reasoning attempts
 )
 ```
 
+### Interval-based Reasoning
+
+To enable periodic reasoning during task execution, set `reasoning_interval` to specify how often the agent should re-evaluate its plan:
+
+```python
+agent = Agent(
+    role="Research Analyst",
+    goal="Find comprehensive information about a topic",
+    backstory="You are a skilled research analyst who methodically approaches information gathering.",
+    reasoning=True,
+    reasoning_interval=3,  # Re-evaluate plan every 3 steps
+)
+```
+
+### Adaptive Reasoning
+
+For more dynamic reasoning that adapts to the execution context, enable `adaptive_reasoning`:
+
+```python
+agent = Agent(
+    role="Strategic Advisor",
+    goal="Provide strategic advice based on market research",
+    backstory="You are an experienced strategic advisor who adapts your approach based on the information you discover.",
+    reasoning=True,
+    adaptive_reasoning=True,  # Agent decides when to reason based on context
+)
+```
+
 ## How It Works
+
+### Initial Reasoning
 
 When reasoning is enabled, before executing a task, the agent will:
 
@@ -33,7 +63,17 @@ When reasoning is enabled, before executing a task, the agent will:
 3. Refine the plan as necessary until it's ready or max_reasoning_attempts is reached
 4. Inject the reasoning plan into the task description before execution
 
-This process helps the agent break down complex tasks into manageable steps and identify potential challenges before starting.
+### Mid-execution Reasoning
+
+During task execution, the agent can re-evaluate and adjust its plan based on:
+
+1. **Interval-based reasoning**: The agent reasons after a fixed number of steps (specified by `reasoning_interval`)
+2. **Adaptive reasoning**: The agent decides when to reason based on execution context:
+   - When multiple different tools are used recently (indicating a change in approach)
+   - When the task is taking longer than expected (iterations > max_iter/2)
+   - When recent errors or failures are detected in the execution
+
+This mid-execution reasoning helps agents adapt to new information, overcome obstacles, and optimize their approach as they work through complex tasks.
 
 ## Configuration Options
 
@@ -45,35 +85,45 @@ This process helps the agent break down complex tasks into manageable steps and 
     Maximum number of attempts to refine the plan before proceeding with execution. If None (default), the agent will continue refining until it's ready. 
 </ParamField>
 
-## Example
+<ParamField body="reasoning_interval" type="int" default="None"> 
+    Interval of steps after which the agent should reason again during execution. If None, reasoning only happens before execution.
+</ParamField>
 
-Here's a complete example:
+<ParamField body="adaptive_reasoning" type="bool" default="False"> 
+    Whether the agent should adaptively decide when to reason during execution based on context.
+</ParamField>
 
-```python
-from crewai import Agent, Task, Crew
+## Technical Implementation
 
-# Create an agent with reasoning enabled
-analyst = Agent(
-    role="Data Analyst",
-    goal="Analyze data and provide insights",
-    backstory="You are an expert data analyst.",
-    reasoning=True,
-    max_reasoning_attempts=3  # Optional: Set a limit on reasoning attempts
-)
+### Interval-based Reasoning
 
-# Create a task
-analysis_task = Task(
-    description="Analyze the provided sales data and identify key trends.",
-    expected_output="A report highlighting the top 3 sales trends.",
-    agent=analyst
-)
+The interval-based reasoning feature works by:
 
-# Create a crew and run the task
-crew = Crew(agents=[analyst], tasks=[analysis_task])
-result = crew.kickoff()
+1. Tracking the number of steps since the last reasoning event
+2. Triggering reasoning when `steps_since_reasoning >= reasoning_interval`
+3. Resetting the counter after each reasoning event
+4. Generating an updated plan based on current progress
 
-print(result)
-```
+This creates a predictable pattern of reflection during task execution, which is useful for complex tasks where periodic reassessment is beneficial.
+
+### Adaptive Reasoning
+
+The adaptive reasoning feature uses contextual triggers to determine when reasoning should occur:
+
+1. **Multiple tools used**: When the agent has used multiple different tools in recent steps, indicating a change in approach
+2. **Long execution**: When the task is taking longer than expected (iterations > max_iter/2)
+3. **Error detection**: When recent messages contain error indicators like "error", "exception", "failed", etc.
+
+This creates a more dynamic reasoning pattern that adapts to the task's needs, allowing the agent to be more responsive to changing conditions.
+
+### Mid-execution Reasoning Process
+
+When mid-execution reasoning is triggered, the agent:
+
+1. Summarizes current progress (steps taken, tools used, recent actions)
+2. Evaluates the effectiveness of the current approach
+3. Adjusts the plan based on new information and challenges encountered
+4. Continues execution with the updated plan
 
 ## Error Handling
 
@@ -93,7 +143,7 @@ agent = Agent(
     role="Data Analyst",
     goal="Analyze data and provide insights",
     reasoning=True,
-    max_reasoning_attempts=3
+    reasoning_interval=5  # Re-evaluate plan every 5 steps
 )
 
 # Create a task
@@ -144,4 +194,33 @@ I'll analyze the sales data to identify the top 3 trends.
 READY: I am ready to execute the task.
 ```
 
-This reasoning plan helps the agent organize its approach to the task, consider potential challenges, and ensure it delivers the expected output.
+During execution, the agent might generate an updated plan:
+
+```
+Based on progress so far (3 steps completed):
+
+Updated Reasoning Plan:
+After examining the data structure and initial exploratory analysis, I need to adjust my approach:
+
+1. Current findings:
+   - The data shows seasonal patterns that need deeper investigation
+   - Customer segments show varying purchasing behaviors
+   - There are outliers in the luxury product category
+
+2. Adjusted approach:
+   - Focus more on seasonal analysis with year-over-year comparisons
+   - Segment analysis by both demographics and purchasing frequency
+   - Investigate the luxury product category anomalies
+
+3. Next steps:
+   - Apply time series analysis to better quantify seasonal patterns
+   - Create customer cohorts for more precise segmentation
+   - Perform statistical tests on the luxury category data
+
+4. Expected outcome:
+   Still on track to deliver the top 3 sales trends, but with more precise quantification and actionable insights.
+
+READY: I am ready to continue executing the task.
+```
+
+This mid-execution reasoning helps the agent adapt its approach based on what it has learned during the initial steps of the task.
