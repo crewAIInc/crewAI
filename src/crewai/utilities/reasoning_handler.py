@@ -385,3 +385,186 @@ class AgentReasoning:
             "The _handle_agent_reasoning method is deprecated. Use handle_agent_reasoning instead."
         )
         return self.handle_agent_reasoning()
+        
+    def handle_mid_execution_reasoning(
+        self, 
+        current_steps: int,
+        tools_used: list,
+        current_progress: str,
+        iteration_messages: list
+    ) -> AgentReasoningOutput:
+        """
+        Handle reasoning during task execution with context about current progress.
+        
+        Args:
+            current_steps: Number of steps executed so far
+            tools_used: List of tools that have been used
+            current_progress: Summary of progress made so far
+            iteration_messages: Recent conversation messages
+            
+        Returns:
+            AgentReasoningOutput: Updated reasoning plan based on current context
+        """
+        try:
+            from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningStartedEvent
+            
+            reasoning_trigger = "interval"
+            if self.agent.adaptive_reasoning:
+                reasoning_trigger = "adaptive"
+                
+            crewai_event_bus.emit(
+                self.agent,
+                AgentMidExecutionReasoningStartedEvent(
+                    agent_role=self.agent.role,
+                    task_id=str(self.task.id),
+                    current_step=current_steps,
+                    reasoning_trigger=reasoning_trigger,
+                ),
+            )
+        except Exception:
+            # Ignore event bus errors to avoid breaking execution
+            pass
+
+        try:
+            output = self.__handle_mid_execution_reasoning(
+                current_steps, tools_used, current_progress, iteration_messages
+            )
+
+            # Emit reasoning completed event
+            try:
+                from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningCompletedEvent
+                
+                reasoning_trigger = "interval"
+                if self.agent.adaptive_reasoning:
+                    reasoning_trigger = "adaptive"
+                    
+                crewai_event_bus.emit(
+                    self.agent,
+                    AgentMidExecutionReasoningCompletedEvent(
+                        agent_role=self.agent.role,
+                        task_id=str(self.task.id),
+                        current_step=current_steps,
+                        updated_plan=output.plan.plan,
+                        reasoning_trigger=reasoning_trigger,
+                    ),
+                )
+            except Exception:
+                pass
+
+            return output
+        except Exception as e:
+            # Emit reasoning failed event
+            try:
+                from crewai.utilities.events.reasoning_events import AgentReasoningFailedEvent
+                
+                crewai_event_bus.emit(
+                    self.agent,
+                    AgentReasoningFailedEvent(
+                        agent_role=self.agent.role,
+                        task_id=str(self.task.id),
+                        error=str(e),
+                        attempt=1,
+                    ),
+                )
+            except Exception:
+                pass
+
+            raise
+            
+    def __handle_mid_execution_reasoning(
+        self, 
+        current_steps: int,
+        tools_used: list,
+        current_progress: str,
+        iteration_messages: list
+    ) -> AgentReasoningOutput:
+        """
+        Private method that handles the mid-execution reasoning process.
+        
+        Args:
+            current_steps: Number of steps executed so far
+            tools_used: List of tools that have been used
+            current_progress: Summary of progress made so far
+            iteration_messages: Recent conversation messages
+            
+        Returns:
+            AgentReasoningOutput: The output of the mid-execution reasoning process.
+        """
+        mid_execution_prompt = self.__create_mid_execution_prompt(
+            current_steps, tools_used, current_progress, iteration_messages
+        )
+
+        if self.llm.supports_function_calling():
+            plan, ready = self.__call_with_function(mid_execution_prompt, "mid_execution_plan")
+        else:
+            system_prompt = self.i18n.retrieve("reasoning", "mid_execution_plan").format(
+                role=self.agent.role,
+                goal=self.agent.goal,
+                backstory=self.__get_agent_backstory()
+            )
+
+            response = self.llm.call(
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": mid_execution_prompt}
+                ]
+            )
+
+            plan, ready = self.__parse_reasoning_response(str(response))
+
+        reasoning_plan = ReasoningPlan(plan=plan, ready=ready)
+        return AgentReasoningOutput(plan=reasoning_plan)
+        
+    def __create_mid_execution_prompt(
+        self, 
+        current_steps: int,
+        tools_used: list,
+        current_progress: str,
+        iteration_messages: list
+    ) -> str:
+        """
+        Creates a prompt for the agent to reason during task execution.
+        
+        Args:
+            current_steps: Number of steps executed so far
+            tools_used: List of tools that have been used
+            current_progress: Summary of progress made so far
+            iteration_messages: Recent conversation messages
+            
+        Returns:
+            str: The mid-execution reasoning prompt.
+        """
+        tools_used_str = ", ".join(tools_used) if tools_used else "No tools used yet"
+        
+        recent_messages = ""
+        if iteration_messages:
+            recent_msgs = iteration_messages[-6:] if len(iteration_messages) > 6 else iteration_messages
+            for msg in recent_msgs:
+                role = msg.get("role", "unknown")
+                content = msg.get("content", "")
+                if content:
+                    recent_messages += f"{role.upper()}: {content[:200]}...\n\n"
+        
+        return f"""You are currently executing a task and need to reassess your plan based on progress so far.
+
+TASK DESCRIPTION:
+{self.task.description}
+
+EXPECTED OUTPUT:
+{self.task.expected_output}
+
+CURRENT PROGRESS:
+Steps completed: {current_steps}
+Tools used: {tools_used_str}
+Progress summary: {current_progress}
+
+RECENT CONVERSATION:
+{recent_messages}
+
+Based on the current progress and context, please reassess your plan for completing this task.
+Consider what has been accomplished, what challenges you've encountered, and what steps remain.
+Adjust your strategy if needed or confirm your current approach is still optimal.
+
+Provide a detailed updated plan for completing the task.
+End with "READY: I am ready to continue executing the task." if you're confident in your plan.
+"""
