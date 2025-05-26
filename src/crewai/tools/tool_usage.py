@@ -200,16 +200,16 @@ class ToolUsage:
             None,
         )
 
-        if available_tool and hasattr(available_tool, 'max_usage_count') and available_tool.max_usage_count is not None:
-            if available_tool.current_usage_count >= available_tool.max_usage_count:
-                try:
-                    result = f"Tool '{tool.name}' has reached its usage limit of {available_tool.max_usage_count} times and cannot be used anymore."
-                    self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                    result = self._format_result(result=result)
-                    return result
-                except Exception:
-                    if self.task:
-                        self.task.increment_tools_errors()
+        usage_limit_error = self._check_usage_limit(available_tool, tool.name)
+        if usage_limit_error:
+            try:
+                result = usage_limit_error
+                self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                result = self._format_result(result=result)
+                return result
+            except Exception:
+                if self.task:
+                    self.task.increment_tools_errors()
 
         if result is None:
             try:
@@ -313,6 +313,11 @@ class ToolUsage:
 
         if available_tool and hasattr(available_tool, 'current_usage_count'):
             available_tool.current_usage_count += 1
+            if hasattr(available_tool, 'max_usage_count') and available_tool.max_usage_count is not None:
+                self._printer.print(
+                    content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                    color="blue"
+                )
 
         return result
 
@@ -345,6 +350,24 @@ class ToolUsage:
                 calling.arguments == last_tool_usage.arguments
             )
         return False
+        
+    def _check_usage_limit(self, tool: Any, tool_name: str) -> str | None:
+        """Check if tool has reached its usage limit.
+        
+        Args:
+            tool: The tool to check
+            tool_name: The name of the tool (used for error message)
+            
+        Returns:
+            Error message if limit reached, None otherwise
+        """
+        if (
+            hasattr(tool, 'max_usage_count') 
+            and tool.max_usage_count is not None 
+            and tool.current_usage_count >= tool.max_usage_count
+        ):
+            return f"Tool '{tool_name}' has reached its usage limit of {tool.max_usage_count} times and cannot be used anymore."
+        return None
 
     def _select_tool(self, tool_name: str) -> Any:
         order_tools = sorted(

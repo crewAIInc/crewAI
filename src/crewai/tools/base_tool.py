@@ -1,5 +1,4 @@
 import asyncio
-import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
 from typing import Any, Callable, Type, get_args, get_origin
@@ -58,6 +57,13 @@ class BaseTool(BaseModel, ABC):
                 },
             },
         )
+        
+    @field_validator("max_usage_count", mode="before")
+    @classmethod
+    def validate_max_usage_count(cls, v: int | None) -> int | None:
+        if v is not None and v <= 0:
+            raise ValueError("max_usage_count must be a positive integer")
+        return v
 
     def model_post_init(self, __context: Any) -> None:
         self._generate_description()
@@ -74,9 +80,15 @@ class BaseTool(BaseModel, ABC):
 
         # If _run is async, we safely run it
         if asyncio.iscoroutine(result):
-            return asyncio.run(result)
-
+            result = asyncio.run(result)
+            
+        self.current_usage_count += 1
+        
         return result
+        
+    def reset_usage_count(self) -> None:
+        """Reset the current usage count to zero."""
+        self.current_usage_count = 0
 
     @abstractmethod
     def _run(
@@ -95,6 +107,8 @@ class BaseTool(BaseModel, ABC):
             args_schema=self.args_schema,
             func=self._run,
             result_as_answer=self.result_as_answer,
+            max_usage_count=self.max_usage_count,
+            current_usage_count=self.current_usage_count,
         )
 
     @classmethod
@@ -255,7 +269,7 @@ def to_langchain(
     return [t.to_structured_tool() if isinstance(t, BaseTool) else t for t in tools]
 
 
-def tool(*args, result_as_answer=False, max_usage_count=None):
+def tool(*args, result_as_answer: bool = False, max_usage_count: int | None = None) -> Callable:
     """
     Decorator to create a tool from a function.
     
