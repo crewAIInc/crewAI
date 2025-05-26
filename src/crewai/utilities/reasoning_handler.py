@@ -386,6 +386,26 @@ class AgentReasoning:
         )
         return self.handle_agent_reasoning()
         
+    def _emit_reasoning_event(self, event_class, **kwargs):
+        """Centralized method for emitting reasoning events."""
+        try:
+            reasoning_trigger = "interval"
+            if hasattr(self.agent, 'adaptive_reasoning') and self.agent.adaptive_reasoning:
+                reasoning_trigger = "adaptive"
+                
+            crewai_event_bus.emit(
+                self.agent,
+                event_class(
+                    agent_role=self.agent.role,
+                    task_id=str(self.task.id),
+                    reasoning_trigger=reasoning_trigger,
+                    **kwargs
+                ),
+            )
+        except Exception:
+            # Ignore event bus errors to avoid breaking execution
+            pass
+        
     def handle_mid_execution_reasoning(
         self, 
         current_steps: int,
@@ -405,69 +425,37 @@ class AgentReasoning:
         Returns:
             AgentReasoningOutput: Updated reasoning plan based on current context
         """
-        try:
-            from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningStartedEvent
-            
-            reasoning_trigger = "interval"
-            if self.agent.adaptive_reasoning:
-                reasoning_trigger = "adaptive"
-                
-            crewai_event_bus.emit(
-                self.agent,
-                AgentMidExecutionReasoningStartedEvent(
-                    agent_role=self.agent.role,
-                    task_id=str(self.task.id),
-                    current_step=current_steps,
-                    reasoning_trigger=reasoning_trigger,
-                ),
-            )
-        except Exception:
-            # Ignore event bus errors to avoid breaking execution
-            pass
+        from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningStartedEvent
+        
+        self._emit_reasoning_event(
+            AgentMidExecutionReasoningStartedEvent,
+            current_step=current_steps
+        )
 
         try:
             output = self.__handle_mid_execution_reasoning(
                 current_steps, tools_used, current_progress, iteration_messages
             )
 
-            # Emit reasoning completed event
-            try:
-                from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningCompletedEvent
-                
-                reasoning_trigger = "interval"
-                if self.agent.adaptive_reasoning:
-                    reasoning_trigger = "adaptive"
-                    
-                crewai_event_bus.emit(
-                    self.agent,
-                    AgentMidExecutionReasoningCompletedEvent(
-                        agent_role=self.agent.role,
-                        task_id=str(self.task.id),
-                        current_step=current_steps,
-                        updated_plan=output.plan.plan,
-                        reasoning_trigger=reasoning_trigger,
-                    ),
-                )
-            except Exception:
-                pass
+            # Emit completed event
+            from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningCompletedEvent
+            
+            self._emit_reasoning_event(
+                AgentMidExecutionReasoningCompletedEvent,
+                current_step=current_steps,
+                updated_plan=output.plan.plan
+            )
 
             return output
         except Exception as e:
-            # Emit reasoning failed event
-            try:
-                from crewai.utilities.events.reasoning_events import AgentReasoningFailedEvent
-                
-                crewai_event_bus.emit(
-                    self.agent,
-                    AgentReasoningFailedEvent(
-                        agent_role=self.agent.role,
-                        task_id=str(self.task.id),
-                        error=str(e),
-                        attempt=1,
-                    ),
-                )
-            except Exception:
-                pass
+            # Emit failed event
+            from crewai.utilities.events.reasoning_events import AgentReasoningFailedEvent
+            
+            self._emit_reasoning_event(
+                AgentReasoningFailedEvent,
+                error=str(e),
+                attempt=1
+            )
 
             raise
             

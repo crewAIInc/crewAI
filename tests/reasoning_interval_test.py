@@ -1,6 +1,5 @@
 """Tests for reasoning interval and adaptive reasoning in agents."""
 
-import json
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -211,3 +210,35 @@ def test_should_trigger_adaptive_reasoning():
         {"role": "assistant", "content": "Let me continue with the next step."}
     ]
     assert executor._should_adaptive_reason() is False
+
+
+@pytest.mark.parametrize("interval,steps,should_reason", [
+    (None, 5, False),
+    (3, 2, False),
+    (3, 3, True),
+    (1, 1, True),
+    (5, 10, True),
+])
+def test_reasoning_interval_scenarios(interval, steps, should_reason):
+    """Test various reasoning interval scenarios."""
+    agent = MagicMock()
+    agent.reasoning = True
+    agent.reasoning_interval = interval
+    agent.adaptive_reasoning = False
+    
+    executor = CrewAgentExecutor(
+        llm=MagicMock(),
+        task=MagicMock(),
+        crew=MagicMock(),
+        agent=agent,
+        prompt={},
+        max_iter=10,
+        tools=[],
+        tools_names="",
+        stop_words=[],
+        tools_description="",
+        tools_handler=MagicMock()
+    )
+    
+    executor.steps_since_reasoning = steps
+    assert executor._should_trigger_reasoning() is should_reason

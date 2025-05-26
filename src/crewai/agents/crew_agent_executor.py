@@ -1,5 +1,4 @@
-import json
-import re
+from collections import deque
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -85,7 +84,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
             tool.name: tool for tool in self.tools
         }
-        self.tools_used: List[str] = []
+        self.tools_used: deque = deque(maxlen=100)  # Limit history size
         self.steps_since_reasoning = 0
         existing_stop = self.llm.stop or []
         self.llm.stop = list(
@@ -490,13 +489,24 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             bool: True if adaptive reasoning should be triggered, False otherwise.
         """
-        
-        if len(set(self.tools_used[-3:])) > 1 and len(self.tools_used) >= 3:
-            return True
-            
-        if self.iterations > self.max_iter // 2:
-            return True
-            
+        return (
+            self._has_used_multiple_tools_recently() or
+            self._is_taking_too_long() or
+            self._has_recent_errors()
+        )
+    
+    def _has_used_multiple_tools_recently(self) -> bool:
+        """Check if multiple different tools were used in recent steps."""
+        if len(self.tools_used) < 3:
+            return False
+        return len(set(list(self.tools_used)[-3:])) > 1
+    
+    def _is_taking_too_long(self) -> bool:
+        """Check if iterations exceed expected duration."""
+        return self.iterations > self.max_iter // 2
+    
+    def _has_recent_errors(self) -> bool:
+        """Check for error indicators in recent messages."""
         error_indicators = ["error", "exception", "failed", "unable to", "couldn't"]
         recent_messages = self.messages[-3:] if len(self.messages) >= 3 else self.messages
         
@@ -504,7 +514,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             content = message.get("content", "").lower()
             if any(indicator in content for indicator in error_indicators):
                 return True
-                
         return False
         
     def _handle_mid_execution_reasoning(self) -> None:
