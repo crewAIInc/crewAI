@@ -48,6 +48,14 @@ from .reasoning_events import (
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
 )
+from .knowledge_events import (
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeQueryStartedEvent,
+    KnowledgeQueryCompletedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeSearchQueryFailedEvent,
+)
 
 EventTypes = Union[
     CrewKickoffStartedEvent,
@@ -82,4 +90,10 @@ EventTypes = Union[
     AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeQueryStartedEvent,
+    KnowledgeQueryCompletedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeSearchQueryFailedEvent,
 ]

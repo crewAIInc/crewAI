@@ -4,9 +4,10 @@ description: 'A comprehensive guide to configuring and using Large Language Mode
 icon: 'microchip-ai'
 ---
 
-<Note>
-  CrewAI integrates with multiple LLM providers through LiteLLM, giving you the flexibility to choose the right model for your specific use case. This guide will help you understand how to configure and use different LLM providers in your CrewAI projects.
-</Note>
+## Overview
+
+CrewAI integrates with multiple LLM providers through LiteLLM, giving you the flexibility to choose the right model for your specific use case. This guide will help you understand how to configure and use different LLM providers in your CrewAI projects.
+
 
 ## What are LLMs?
 
@@ -149,6 +150,39 @@ In this section, you'll find detailed examples that help you select, configure, 
     | o1-mini             | 128,000 tokens   | Fast reasoning, complex reasoning             |
     | o1-preview          | 128,000 tokens   | Fast reasoning, complex reasoning             |
     | o1                  | 200,000 tokens   | Fast reasoning, complex reasoning             |
+  </Accordion>
+
+  <Accordion title="Meta-Llama">
+    Meta's Llama API provides access to Meta's family of large language models.
+    The API is available through the [Meta Llama API](https://llama.developer.meta.com?utm_source=partner-crewai&utm_medium=website).
+    Set the following environment variables in your `.env` file:
+
+    ```toml Code
+    # Meta Llama API Key Configuration
+    LLAMA_API_KEY=LLM|your_api_key_here
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    from crewai import LLM
+
+    # Initialize Meta Llama LLM
+    llm = LLM(
+        model="meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8",
+        temperature=0.8,
+        stop=["END"],
+        seed=42
+    )
+    ```
+
+    All models listed here https://llama.developer.meta.com/docs/models/ are supported.
+
+    | Model ID | Input context length | Output context length | Input Modalities | Output Modalities |
+    | --- | --- | --- | --- | --- |
+    | `meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8` | 128k | 4028 | Text, Image | Text |
+    | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | Text, Image | Text |
+    | `meta_llama/Llama-3.3-70B-Instruct` | 128k | 4028 | Text | Text |
+    | `meta_llama/Llama-3.3-8B-Instruct` | 128k | 4028 | Text | Text |
   </Accordion>
 
   <Accordion title="Anthropic">

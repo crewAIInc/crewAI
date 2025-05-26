@@ -1,46 +1,42 @@
 ---
 title: FAQs
 description: "Frequently asked questions about CrewAI Enterprise"
-icon: "code"
+icon: "circle-question"
 ---
 
 <AccordionGroup>
     <Accordion title="How is task execution handled in the hierarchical process?">
-        In the hierarchical process, a manager agent is automatically created and coordinates the workflow, delegating tasks and validating outcomes for
-        streamlined and effective execution. The manager agent utilizes tools to facilitate task delegation and execution by agents under the manager's guidance.
-        The manager LLM is crucial for the hierarchical process and must be set up correctly for proper function.
+        In the hierarchical process, a manager agent is automatically created and coordinates the workflow, delegating tasks and validating outcomes for streamlined and effective execution. The manager agent utilizes tools to facilitate task delegation and execution by agents under the manager's guidance. The manager LLM is crucial for the hierarchical process and must be set up correctly for proper function.
     </Accordion>
 
     <Accordion title="Where can I get the latest CrewAI documentation?">
-        The most up-to-date documentation for CrewAI is available on our official documentation website; https://docs.crewai.com/
+        The most up-to-date documentation for CrewAI is available on our official documentation website: https://docs.crewai.com/
         <Card href="https://docs.crewai.com/" icon="books">CrewAI Docs</Card>
     </Accordion>
 
     <Accordion title="What are the key differences between Hierarchical and Sequential Processes in CrewAI?">
         #### Hierarchical Process:
-        Tasks are delegated and executed based on a structured chain of command.
-        A manager language model (`manager_llm`) must be specified for the manager agent.
-        Manager agent oversees task execution, planning, delegation, and validation.
-        Tasks are not pre-assigned; the manager allocates tasks to agents based on their capabilities.
+        - Tasks are delegated and executed based on a structured chain of command
+        - A manager language model (`manager_llm`) must be specified for the manager agent
+        - Manager agent oversees task execution, planning, delegation, and validation
+        - Tasks are not pre-assigned; the manager allocates tasks to agents based on their capabilities
 
         #### Sequential Process:
-        Tasks are executed one after another, ensuring tasks are completed in an orderly progression.
-        Output of one task serves as context for the next.
-        Task execution follows the predefined order in the task list.
+        - Tasks are executed one after another, ensuring tasks are completed in an orderly progression
+        - Output of one task serves as context for the next
+        - Task execution follows the predefined order in the task list
 
-        #### Which Process is Better Suited for Complex Projects?
-
+        #### Which Process is Better for Complex Projects?
         The hierarchical process is better suited for complex projects because it allows for:
-
-        - **Dynamic task allocation and delegation**: Manager agent can assign tasks based on agent capabilities, allowing for efficient resource utilization.
-        - **Structured validation and oversight**: Manager agent reviews task outputs and ensures task completion, increasing reliability and accuracy.
-        - **Complex task management**: Assigning tools at the agent level allows for precise control over tool availability, facilitating the execution of intricate tasks.
+        - **Dynamic task allocation and delegation**: Manager agent can assign tasks based on agent capabilities
+        - **Structured validation and oversight**: Manager agent reviews task outputs and ensures completion
+        - **Complex task management**: Precise control over tool availability at the agent level
     </Accordion>
 
     <Accordion title="What are the benefits of using memory in the CrewAI framework?">
-        - **Adaptive Learning**: Crews become more efficient over time, adapting to new information and refining their approach to tasks.
-        - **Enhanced Personalization**: Memory enables agents to remember user preferences and historical interactions, leading to personalized experiences.
-        - **Improved Problem Solving**: Access to a rich memory store aids agents in making more informed decisions, drawing on past learnings and contextual insights.
+        - **Adaptive Learning**: Crews become more efficient over time, adapting to new information and refining their approach to tasks
+        - **Enhanced Personalization**: Memory enables agents to remember user preferences and historical interactions, leading to personalized experiences
+        - **Improved Problem Solving**: Access to a rich memory store aids agents in making more informed decisions, drawing on past learnings and contextual insights
     </Accordion>
 
     <Accordion title="What is the purpose of setting a maximum RPM limit for an agent?">
@@ -48,57 +44,50 @@ icon: "code"
     </Accordion>
 
     <Accordion title="What role does human input play in the execution of tasks within a CrewAI crew?">
-        It allows agents to request additional information or clarification when necessary.
-        This feature is crucial in complex decision-making processes or when agents require more details to complete a task effectively.
+        Human input allows agents to request additional information or clarification when necessary. This feature is crucial in complex decision-making processes or when agents require more details to complete a task effectively.
 
-        To integrate human input into agent execution, set the `human_input` flag in the task definition. When enabled, the agent prompts the user for input before delivering its final answer. 
-        This input can provide extra context, clarify ambiguities, or validate the agent's output.
+        To integrate human input into agent execution, set the `human_input` flag in the task definition. When enabled, the agent prompts the user for input before delivering its final answer. This input can provide extra context, clarify ambiguities, or validate the agent's output.
+
+        For detailed implementation guidance, see our [Human-in-the-Loop guide](/how-to/human-in-the-loop).
     </Accordion>
 
     <Accordion title="What advanced customization options are available for tailoring and enhancing agent behavior and capabilities in CrewAI?">
-        CrewAI provides a range of advanced customization options to tailor and enhance agent behavior and capabilities:
+        CrewAI provides a range of advanced customization options:
         
-        - **Language Model Customization**: Agents can be customized with specific language models (`llm`) and function-calling language models (`function_calling_llm`), offering advanced control over their processing and decision-making abilities.
-
-        - **Performance and Debugging Settings**: Adjust an agent's performance and monitor its operations for efficient task execution.
-
-        - **Verbose Mode**: Enables detailed logging of an agent's actions, useful for debugging and optimization.
-
-        - **RPM Limit**: Sets the maximum number of requests per minute (`max_rpm`).
-
-        - **Maximum Iterations for Task Execution**: The `max_iter` attribute allows users to define the maximum number of iterations an agent can perform for a single task, preventing infinite loops or excessively long executions.
-
-        - **Delegation and Autonomy**: Control an agent's ability to delegate or ask questions, tailoring its autonomy and collaborative dynamics within the CrewAI framework. By default, the `allow_delegation` attribute is set to True, enabling agents to seek assistance or delegate tasks as needed. This default behavior promotes collaborative problem-solving and efficiency within the CrewAI ecosystem. If needed, delegation can be disabled to suit specific operational requirements.
-
-        - **Human Input in Agent Execution**: Human input is critical in several agent execution scenarios, allowing agents to request additional information or clarification when necessary. This feature is especially useful in complex decision-making processes or when agents require more details to complete a task effectively.
+        - **Language Model Customization**: Agents can be customized with specific language models (`llm`) and function-calling language models (`function_calling_llm`)
+        - **Performance and Debugging Settings**: Adjust an agent's performance and monitor its operations
+        - **Verbose Mode**: Enables detailed logging of an agent's actions, useful for debugging and optimization
+        - **RPM Limit**: Sets the maximum number of requests per minute (`max_rpm`)
+        - **Maximum Iterations**: The `max_iter` attribute allows users to define the maximum number of iterations an agent can perform for a single task
+        - **Delegation and Autonomy**: Control an agent's ability to delegate or ask questions with the `allow_delegation` attribute (default: True)
+        - **Human Input Integration**: Agents can request additional information or clarification when necessary
     </Accordion>
 
     <Accordion title="In what scenarios is human input particularly useful in agent execution?">
-        Human input is particularly useful in agent execution when:
-        - **Agents require additional information or clarification**: When agents encounter ambiguity or incomplete data, human input can provide the necessary context to complete the task effectively.
-        - **Agents need to make complex or sensitive decisions**: Human input can assist agents in ethical or nuanced decision-making, ensuring responsible and informed outcomes.
-        - **Oversight and validation of agent output**: Human input can help validate the results generated by agents, ensuring accuracy and preventing any misinterpretation or errors.
-        - **Customizing agent behavior**: Human input can provide feedback on agent responses, allowing users to refine the agent's behavior and responses over time.
-        - **Identifying and resolving errors or limitations**: Human input can help identify and address any errors or limitations in the agent's capabilities, enabling continuous improvement and optimization.
+        Human input is particularly useful when:
+        - **Agents require additional information or clarification**: When agents encounter ambiguity or incomplete data
+        - **Agents need to make complex or sensitive decisions**: Human input can assist in ethical or nuanced decision-making
+        - **Oversight and validation of agent output**: Human input can help validate results and prevent errors
+        - **Customizing agent behavior**: Human input can provide feedback to refine agent responses over time
+        - **Identifying and resolving errors or limitations**: Human input helps address agent capability gaps
     </Accordion>
 
     <Accordion title="What are the different types of memory that are available in crewAI?">
         The different types of memory available in CrewAI are:
-        - `short-term memory`
-        - `long-term memory`
-        - `entity memory`
-        - `contextual memory`
+        - **Short-term memory**: Temporary storage for immediate context
+        - **Long-term memory**: Persistent storage for learned patterns and information
+        - **Entity memory**: Focused storage for specific entities and their attributes
+        - **Contextual memory**: Memory that maintains context across interactions
 
-        Learn more about the different types of memory here:
+        Learn more about the different types of memory:
         <Card href="https://docs.crewai.com/concepts/memory" icon="brain">CrewAI Memory</Card>
     </Accordion>
 
     <Accordion title="How do I use Output Pydantic in a Task?">
-        To use Output Pydantic in a task, you need to define the expected output of the task as a Pydantic model. Here's an example:
+        To use Output Pydantic in a task, you need to define the expected output of the task as a Pydantic model. Here's a quick example:
+
         <Steps>
             <Step title="Define a Pydantic model">
-                First, you need to define a Pydantic model. For instance, let's create a simple model for a user:
-
                 ```python
                 from pydantic import BaseModel
 
@@ -108,15 +97,11 @@ icon: "code"
                 ```
             </Step>
 
-            <Step title="Then, when creating a task, specify the expected output as this Pydantic model:">
-
+            <Step title="Create a task with Output Pydantic">
                 ```python
                 from crewai import Task, Crew, Agent
-
-                # Import the User model
                 from my_models import User
 
-                # Create a task with Output Pydantic
                 task = Task(
                     description="Create a user with the provided name and age",
                     expected_output=User,  # This is the Pydantic model
@@ -126,15 +111,11 @@ icon: "code"
                 ```
             </Step>
 
-            <Step title="In your agent, make sure to set the output_pydantic attribute to the Pydantic model you're using:">
-
+            <Step title="Set the output_pydantic attribute in your agent">
                 ```python
                 from crewai import Agent
-
-                # Import the User model
                 from my_models import User
 
-                # Create an agent with Output Pydantic
                 agent = Agent(
                     role='User Creator',
                     goal='Create users',
@@ -144,818 +125,24 @@ icon: "code"
                 )
                 ```
             </Step>
-
-            <Step title="When executing the crew, the output of the task will be a User object:">
-
-                ```python
-                from crewai import Crew
-
-                # Create a crew with the agent and task
-                crew = Crew(agents=[agent], tasks=[task])
-
-                # Kick off the crew
-                result = crew.kickoff()
-
-                # The output of the task will be a User object
-                print(result.tasks[0].output)
-                ``` 
-            </Step>
         </Steps>
+
         Here's a tutorial on how to consistently get structured outputs from your agents:
-            <Frame>
-                <iframe 
-                height="400"
-                width="100%"
-                src="https://www.youtube.com/embed/dNpKQk5uxHw" 
-                title="YouTube video player" frameborder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowfullscreen></iframe>
-            </Frame>
+        <Frame>
+            <iframe 
+            height="400"
+            width="100%"
+            src="https://www.youtube.com/embed/dNpKQk5uxHw" 
+            title="YouTube video player" frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen></iframe>
+        </Frame>
     </Accordion>
 
     <Accordion title="How can I create custom tools for my CrewAI agents?">
         You can create custom tools by subclassing the `BaseTool` class provided by CrewAI or by using the tool decorator. Subclassing involves defining a new class that inherits from `BaseTool`, specifying the name, description, and the `_run` method for operational logic. The tool decorator allows you to create a `Tool` object directly with the required attributes and a functional logic.
-        Click here for more details:
-        <Card href="https://docs.crewai.com/how-to/create-custom-tools" icon="code">CrewAI Tools</Card>
-    </Accordion>
 
-    <Accordion title="How to Kickoff a Crew from Slack">
-        This guide explains how to start a crew directly from Slack using the CrewAI integration.
-
-        **Prerequisites:**
-        <ul>
-            <li>CrewAI integration installed and connected to your Slack workspace</li>
-            <li>At least one crew configured in CrewAI</li>
-        </ul>
-
-        **Steps:**
-        <Steps>
-            <Step title="Ensure the CrewAI Slack integration is set up">
-                In the CrewAI dashboard, navigate to the **Integrations** section.
-
-                <Frame>
-                    <img src="/images/enterprise/slack-integration.png" alt="CrewAI Slack Integration" />
-                </Frame>
-
-                Verify that Slack is listed and is connected.
-            </Step>
-            <Step title="Open your Slack channel">
-                - Navigate to the channel where you want to kickoff the crew.
-                - Type the slash command "**/kickoff**" to initiate the crew kickoff process.
-                - You should see a  "**Kickoff crew**" appear as you type:
-                    <Frame>
-                        <img src="/images/enterprise/kickoff-slack-crew.png" alt="Kickoff crew" />
-                    </Frame>
-                - Press Enter or select the "**Kickoff crew**" option. A dialog box titled "**Kickoff an AI Crew**" will appear.
-        </Step>
-            <Step title="Select the crew you want to start">
-                - In the dropdown menu labeled "**Select of the crews online:**", choose the crew you want to start.
-                - In the example below, "**prep-for-meeting**" is selected:
-                    <Frame>
-                        <img src="/images/enterprise/kickoff-slack-crew-dropdown.png" alt="Kickoff crew dropdown" />
-                    </Frame>
-                - If your crew requires any inputs, click the "**Add Inputs**" button to provide them.
-                    <Note>
-                        The "**Add Inputs**" button is shown in the example above but is not yet clicked.
-                    </Note>
-            </Step>
-            <Step title="Click Kickoff and wait for the crew to complete">
-                - Once you've selected the crew and added any necessary inputs, click "**Kickoff**" to start the crew.
-                    <Frame>
-                        <img src="/images/enterprise/kickoff-slack-crew-kickoff.png" alt="Kickoff crew" />
-                    </Frame>
-                - The crew will start executing and you will see the results in the Slack channel.
-                    <Frame>
-                        <img src="/images/enterprise/kickoff-slack-crew-results.png" alt="Kickoff crew results" />
-                    </Frame>
-            </Step>
-        </Steps>
-
-        <Tip>
-            - Make sure you have the necessary permissions to use the `/kickoff` command in your Slack workspace.
-
-            - If you don't see your desired crew in the dropdown, ensure it's properly configured and online in CrewAI.
-        </Tip>
-    </Accordion>
-
-    <Accordion title="How to export and use a React Component">
-        Click on the ellipsis (three dots on the right of your deployed crew) and select the export option and save the file locally. We will be using `CrewLead.jsx` for our example.
-
-        <Frame>
-            <img src="/images/enterprise/export-react-component.png" alt="Export React Component" />
-        </Frame>
-
-        To run this React component locally, you'll need to set up a React development environment and integrate this component into a React project. Here's a step-by-step guide to get you started:
-
-        <Steps>
-            <Step title="Install Node.js">
-                - Download and install Node.js from the official website: https://nodejs.org/
-                - Choose the LTS (Long Term Support) version for stability.
-            </Step>
-
-            <Step title="Create a new React project">
-                - Open Command Prompt or PowerShell
-                - Navigate to the directory where you want to create your project
-                - Run the following command to create a new React project:
-
-                    ```bash
-                    npx create-react-app my-crew-app
-                    ```
-                - Change into the project directory:
-                
-                    ```bash
-                    cd my-crew-app
-                    ```
-            </Step>
-
-            <Step title="Install necessary dependencies">
-
-                    ```bash
-                    npm install react-dom
-                    ```
-            </Step>
-
-            <Step title="Create the CrewLead component">
-                - Move the downloaded file `CrewLead.jsx` into the `src` folder of your project,
-            </Step>
-
-            <Step title="Modify your `App.js` to use the `CrewLead` component">
-                    - Open `src/App.js`
-                    - Replace its contents with something like this:
-
-                    ```jsx
-                    import React from 'react';
-                    import CrewLead from './CrewLead';
-
-                    function App() {
-                        return (
-                            <div className="App">
-                                <CrewLead baseUrl="YOUR_API_BASE_URL" bearerToken="YOUR_BEARER_TOKEN" />
-                            </div>
-                        );
-                    }
-
-                    export default App;
-                    ```
-                - Replace `YOUR_API_BASE_URL` and `YOUR_BEARER_TOKEN` with the actual values for your API.
-            </Step>
-
-            <Step title="Start the development server">
-                - In your project directory, run:
-                
-                    ```bash
-                    npm start
-                    ```
-                - This will start the development server, and your default web browser should open automatically to http://localhost:3000, where you'll see your React app running.
-            </Step>
-        </Steps>
-
-        You can then customise the `CrewLead.jsx` to add color, title etc
-
-        <Frame>
-            <img src="/images/enterprise/customise-react-component.png" alt="Customise React Component" />
-        </Frame>
-        <Frame>
-            <img src="/images/enterprise/customise-react-component-2.png" alt="Customise React Component" />
-        </Frame>
-    </Accordion>
-
-    <Accordion title="How to Invite Team Members to Your CrewAI Enterprise Organization">
-        As an administrator of a CrewAI Enterprise account, you can easily invite new team members to join your organization. This article will guide you through the process step-by-step.
-        <Steps>
-            <Step title="Access the Settings Page">
-                - Log in to your CrewAI Enterprise account
-                - Look for the gear icon (⚙️) in the top right corner of the dashboard
-                - Click on the gear icon to access the **Settings** page:
-                    <Frame>
-                        <img src="/images/enterprise/settings-page.png" alt="Settings Page" />
-                    </Frame>
-            </Step>
-            <Step title="Navigate to the Members Section">
-                - On the Settings page, you'll see a `General configuration` header
-                - Below this, find and click on the `Members` tab
-            </Step>
-            <Step title="Invite New Members">
-                - In the Members section, you'll see a list of current members (including yourself)
-                - At the bottom of the list, locate the `Email` input field
-                - Enter the email address of the person you want to invite
-                - Click the `Invite` button next to the email field
-            </Step>
-            <Step title="Repeat as Needed">
-                - You can repeat this process to invite multiple team members
-                - Each invited member will receive an email invitation to join your organization
-            </Step>
-            <Step title="Important Notes">
-                - Only users with administrative privileges can invite new members
-                - Ensure you have the correct email addresses for your team members
-                - Invited members will need to accept the invitation to join your organization
-                - You may want to inform your team members to check their email (including spam folders) for the invitation
-            </Step>
-        </Steps>
-        By following these steps, you can easily expand your team and collaborate more effectively within your CrewAI Enterprise organization.
-    </Accordion>
-
-    <Accordion title="Using Webhooks in CrewAI Enterprise">
-        CrewAI Enterprise allows you to automate your workflow using webhooks.
-        This article will guide you through the process of setting up and using webhooks to kickoff your crew execution, with a focus on integration with ActivePieces, 
-        a workflow automation platform similar to Zapier and Make.com. We will be setting up webhooks in the CrewAI Enterprise UI.
-
-        <Steps>
-            <Step title="Accessing the Kickoff Interface">
-                - Navigate to the CrewAI Enterprise dashboard
-                - Look for the `/kickoff` section, which is used to start the crew execution
-                    <Frame>
-                        <img src="/images/enterprise/kickoff-interface.png" alt="Kickoff Interface" />
-                    </Frame>
-            </Step>
-
-            <Step title="Configuring the JSON Content">
-                In the JSON Content section, you'll need to provide the following information:
-
-                - **inputs**: A JSON object containing:
-                    - `company`: The name of the company (e.g., "tesla")
-                    - `product_name`: The name of the product (e.g., "crewai")
-                    - `form_response`: The type of response (e.g., "financial")
-                    - `icp_description`: A brief description of the Ideal Customer Profile
-                    - `product_description`: A short description of the product
-                    - `taskWebhookUrl`, `stepWebhookUrl`, `crewWebhookUrl`: URLs for various webhook endpoints (ActivePieces, Zapier, Make.com or another compatible platform)
-            </Step>
-
-            <Step title="Integrating with ActivePieces">
-                In this example we will be using ActivePieces. You can use other platforms such as Zapier and Make.com
-
-                To integrate with ActivePieces:
-
-                1. Set up a new flow in ActivePieces
-                2. Add a trigger (e.g., `Every Day` schedule)
-                    <Frame>
-                        <img src="/images/enterprise/activepieces-trigger.png" alt="ActivePieces Trigger" />
-                    </Frame>
-
-                3. Add an HTTP action step
-                    - Set the action to `Send HTTP request`
-                    - Use `POST` as the method
-                    - Set the URL to your CrewAI Enterprise kickoff endpoint
-                    - Add necessary headers (e.g., `Bearer Token`)
-                        <Frame>
-                            <img src="/images/enterprise/activepieces-headers.png" alt="ActivePieces Headers" />
-                        </Frame>
-
-                    - In the body, include the JSON content as configured in step 2
-                        <Frame>
-                            <img src="/images/enterprise/activepieces-body.png" alt="ActivePieces Body" />
-                        </Frame>
-
-                    - The crew will then kickoff at the pre-defined time.
-            </Step>
-
-            <Step title="Setting Up the Webhook">
-                1. Create a new flow in ActivePieces and name it 
-                    <Frame>
-                        <img src="/images/enterprise/activepieces-flow.png" alt="ActivePieces Flow" />
-                    </Frame>
-
-                2. Add a webhook step as the trigger:
-                    - Select `Catch Webhook` as the trigger type
-                    - This will generate a unique URL that will receive HTTP requests and trigger your flow
-                        <Frame>
-                            <img src="/images/enterprise/activepieces-webhook.png" alt="ActivePieces Webhook" />
-                        </Frame>
-
-                    - Configure the email to use crew webhook body text
-                        <Frame>
-                            <img src="/images/enterprise/activepieces-email.png" alt="ActivePieces Email" />
-                        </Frame>
-            </Step>
-            <Step title="Generated output">
-                1. `stepWebhookUrl` - Callback that will be executed upon each agent inner thought
-
-                        ```json
-                        {
-                            "action": "**Preliminary Research Report on the Financial Industry for crewai Enterprise Solution**\n1. Industry Overview and Trends\nThe financial industry in ....\nConclusion:\nThe financial industry presents a fertile ground for implementing AI solutions like crewai, particularly in areas such as digital customer engagement, risk management, and regulatory compliance. Further engagement with the lead is recommended to better tailor the crewai solution to their specific needs and scale.",
-                            "task_id": "97eba64f-958c-40a0-b61c-625fe635a3c0"
-                        }
-                        ```
-
-                2. `taskWebhookUrl` - Callback that will be executed upon the end of each task
-
-                        ```json
-                        {
-                            "description": "Using the information gathered from the lead's data, conduct preliminary research on the lead's industry, company background, and potential use cases for crewai. Focus on finding relevant data that can aid in scoring the lead and planning a strategy to pitch them crewai.The financial industry presents a fertile ground for implementing AI solutions like crewai, particularly in areas such as digital customer engagement, risk management, and regulatory compliance. Further engagement with the lead is recommended to better tailor the crewai solution to their specific needs and scale.",
-                            "task_id": "97eba64f-958c-40a0-b61c-625fe635a3c0"
-                        }
-                        ```
-
-                3. `crewWebhookUrl` - Callback that will be executed upon the end of the crew execution
-
-                        ```json
-                        {
-                            "task_id": "97eba64f-958c-40a0-b61c-625fe635a3c0",
-                            "result": {
-                                "lead_score": "Customer service enhancement, and compliance are particularly relevant.",
-                                "talking_points": [
-                                    "Highlight how crewai's AI solutions can transform customer service with automated, personalized experiences and 24/7 support, improving both customer satisfaction and operational efficiency.",
-                                    "Discuss crewai's potential to help the institution achieve its sustainability goals through better data analysis and decision-making, contributing to responsible investing and green initiatives.",
-                                    "Emphasize crewai's ability to enhance compliance with evolving regulations through efficient data processing and reporting, reducing the risk of non-compliance penalties.",
-                                    "Stress the adaptability of crewai to support both extensive multinational operations and smaller, targeted projects, ensuring the solution grows with the institution's needs."
-                                ]
-                            }
-                        }
-                        ```
-            </Step>
-        </Steps>
-    </Accordion>
-
-    <Accordion title="How to use the crewai custom GPT to create a crew">
-        <Steps>
-            <Step title="Navigate to the CrewAI custom GPT">
-                Click here https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant to access the CrewAI custom GPT
-                <Card href="https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant" icon="comments">CrewAI custom GPT</Card>
-            </Step>
-            <Step title="Describe your project idea">
-                For example:
-                ```text
-                Suggest some agents and tasks to retrieve LinkedIn profile details for a given person and a domain.
-                ```
-            </Step>
-            <Step title="The GPT will provide you with a list of suggested agents and tasks">
-                Here's an example of the response you will get:
-                <Frame>
-                    <img src="/images/enterprise/crewai-custom-gpt-1.png" alt="CrewAI custom GPT 1" />
-                </Frame>
-            </Step>
-            <Step title="Create the project structure in your terminal by entering:">
-                ```bash
-                crewai create crew linkedin-profile
-                ```
-                This will create a new crew called `linkedin-profile` in the current directory.
-
-                Follow the full instructions in the https://docs.crewai.com/quickstart to create a crew.
-                <Card href="https://docs.crewai.com/quickstart" icon="code">CrewAI Docs</Card>
-            </Step>
-            <Step title="Ask the GPT to convert the agents and tasks to YAML format.">
-                Here's an example of the final output you will have to save in the `agents.yaml` and `tasks.yaml` files:
-                <Frame>
-                    <img src="/images/enterprise/crewai-custom-gpt-2.png" alt="CrewAI custom GPT 2" />
-                </Frame>
-                - Now replace the `agents.yaml` and `tasks.yaml` with the above code
-                - Ask GPT to create the custom LinkedIn Tool
-                - Ask the GPT to put everything together into the `crew.py` file
-                - You will now have a fully working crew.
-            </Step>
-        </Steps>
-    </Accordion>
-
-    <Accordion title="How to generate images using Dall-E">
-        CrewAI supports integration with OpenAI's DALL-E, allowing your AI agents to generate images as part of their tasks. This guide will walk you through how to set up and use the DALL-E tool in your CrewAI projects.
-
-        **Prerequisites**
-            - crewAI installed (latest version)
-            - OpenAI API key with access to DALL-E
-
-        **Setting Up the DALL-E Tool**
-            To use the DALL-E tool in your CrewAI project, follow these steps:
-            <Steps>
-                <Step title="Import the DALL-E tool">
-
-                    ```python
-                    from crewai_tools import DallETool
-                    ```
-                </Step>
-
-                <Step title="Add the DALL-E tool to your agent configuration">
-
-                    ```python
-                    @agent
-                    def researcher(self) -> Agent:
-                        return Agent(
-                            config=self.agents_config['researcher'],
-                            tools=[SerperDevTool(), DallETool()],  # Add DallETool to the list of tools
-                            allow_delegation=False,
-                            verbose=True
-                        )
-                    ```
-                </Step>
-            </Steps>
-
-        **Using the DALL-E Tool**
-
-        Once you've added the DALL-E tool to your agent, it can generate images based on text prompts. 
-        The tool will return a URL to the generated image, which can be used in the agent's output or passed to other agents for further processing.
-
-        Example usage within a task:
-            ```YAML
-            role: >
-                LinkedIn Profile Senior Data Researcher
-            goal: >
-                Uncover detailed LinkedIn profiles based on provided name {name} and domain {domain}
-                Generate a Dall-e image based on domain {domain}
-            backstory: >
-                You're a seasoned researcher with a knack for uncovering the most relevant LinkedIn profiles.
-                Known for your ability to navigate LinkedIn efficiently, you excel at gathering and presenting
-                professional information clearly and concisely.
-            ```
-
-        The agent with the DALL-E tool will be able to generate the image and provide a URL in its response. You can then download the image.
-        <Frame>
-            <img src="/images/enterprise/dall-e-image.png" alt="DALL-E Image" />
-        </Frame>
-
-        **Best Practices**
-
-        1. Be specific in your image generation prompts to get the best results.
-        2. Remember that image generation can take some time, so factor this into your task planning.
-        3. Always comply with OpenAI's usage policies when generating images.
-
-        **Troubleshooting**
-        1. Ensure your OpenAI API key has access to DALL-E.
-        2. Check that you're using the latest version of crewAI and crewai-tools.
-        3. Verify that the DALL-E tool is correctly added to the agent's tool list.
-    </Accordion>
-
-    <Accordion title="How to use Annotations in crew.py">
-        This guide explains how to use annotations to properly reference **agents**, **tasks**, and other components in the `crew.py` file.
-
-        **Introduction**
-
-        Annotations in the framework are used to decorate classes and methods, providing metadata and functionality to various components of your crew. 
-        These annotations help in organizing and structuring your code, making it more readable and maintainable.
-
-        **Available Annotations**
-
-        The CrewAI framework provides the following annotations:
-
-            - `@CrewBase`: Used to decorate the main crew class.
-            - `@agent`: Decorates methods that define and return Agent objects.
-            - `@task`: Decorates methods that define and return Task objects.
-            - `@crew`: Decorates the method that creates and returns the Crew object.
-            - `@llm`: Decorates methods that initialize and return Language Model objects.
-            - `@tool`: Decorates methods that initialize and return Tool objects.
-            - `@callback`: (Not shown in the example, but available) Used for defining callback methods.
-            - `@output_json`: (Not shown in the example, but available) Used for methods that output JSON data.
-            - `@output_pydantic`: (Not shown in the example, but available) Used for methods that output Pydantic models.
-            - `@cache_handler`: (Not shown in the example, but available) Used for defining cache handling methods.
-
-        **Usage Examples**
-
-        Let's go through examples of how to use these annotations based on the provided LinkedinProfileCrew class:
-
-        **1. Crew Base Class**
-            ```python
-            @CrewBase
-            class LinkedinProfileCrew():
-                """LinkedinProfile crew"""
-                agents_config = 'config/agents.yaml'
-                tasks_config = 'config/tasks.yaml'
-            ```
-
-            The `@CrewBase` annotation is used to decorate the main crew class. 
-            This class typically contains configurations and methods for creating agents, tasks, and the crew itself.
-
-        **2. Tool Definition**
-            ```python
-            @tool
-                def myLinkedInProfileTool(self):
-                    return LinkedInProfileTool()
-                ```
-
-            The `@tool` annotation is used to decorate methods that return tool objects. These tools can be used by agents to perform specific tasks.
-
-        **3. LLM Definition**
-            ```python
-            @llm
-            def groq_llm(self):
-                api_key = os.getenv('api_key')
-                return ChatGroq(api_key=api_key, temperature=0, model_name="mixtral-8x7b-32768")
-            ```
-
-            The `@llm` annotation is used to decorate methods that initialize and return Language Model objects. These LLMs are used by agents for natural language processing tasks.
-
-        **4. Agent Definition**
-            ```python
-            @agent
-            def researcher(self) -> Agent:
-                return Agent(
-                    config=self.agents_config['researcher']
-                )
-            ```
-
-            The `@agent` annotation is used to decorate methods that define and return Agent objects. 
-
-        **5. Task Definition**
-            ```python
-            @task
-            def research_task(self) -> Task:
-                return Task(
-                    config=self.tasks_config['research_linkedin_task'],
-                    agent=self.researcher()
-                )
-            ```
-
-            The `@task` annotation is used to decorate methods that define and return Task objects. These methods specify the task configuration and the agent responsible for the task.
-
-        **6. Crew Creation**
-            ```python
-            @crew
-            def crew(self) -> Crew:
-                """Creates the LinkedinProfile crew"""
-                return Crew(
-                    agents=self.agents,
-                            tasks=self.tasks,
-                            process=Process.sequential,
-                            verbose=True
-                )
-            ``` 
-
-            The `@crew` annotation is used to decorate the method that creates and returns the `Crew` object. This method assembles all the components (agents and tasks) into a functional crew.
-
-        **YAML Configuration**
-
-        The agent configurations are typically stored in a YAML file. Here's an example of how the `agents.yaml` file might look for the researcher agent:
-
-            ```yaml
-            researcher:
-                role: >
-                    LinkedIn Profile Senior Data Researcher
-                goal: >
-                    Uncover detailed LinkedIn profiles based on provided name {name} and domain {domain}
-                    Generate a Dall-E image based on domain {domain}
-                backstory: >
-                    You're a seasoned researcher with a knack for uncovering the most relevant      LinkedIn profiles.
-                    Known for your ability to navigate LinkedIn efficiently, you excel at            gathering and presenting
-                    professional information clearly and concisely.
-                allow_delegation: False
-                verbose: True
-                llm: groq_llm
-                tools:
-                    - myLinkedInProfileTool
-                    - mySerperDevTool
-                    - myDallETool
-            ```
-
-        This YAML configuration corresponds to the researcher agent defined in the `LinkedinProfileCrew` class. The configuration specifies the agent's role, goal, backstory, and other properties such as the LLM and tools it uses.
-
-        Note how the `llm` and `tools` in the YAML file correspond to the methods decorated with `@llm` and `@tool` in the Python class. This connection allows for a flexible and modular design where you can easily update agent configurations without changing the core code.
-
-        **Best Practices**
-            - **Consistent Naming**: Use clear and consistent naming conventions for your methods. For example, agent methods could be named after their roles (e.g., researcher, reporting_analyst).
-            - **Environment Variables**: Use environment variables for sensitive information like API keys.
-            - **Flexibility**: Design your crew to be flexible by allowing easy addition or removal of agents and tasks.
-            - **YAML-Code Correspondence**: Ensure that the names and structures in your YAML files correspond correctly to the decorated methods in your Python code.
-
-        By following these guidelines and properly using annotations, you can create well-structured and maintainable crews using the CrewAI framework.
-    </Accordion>
-
-    <Accordion title="How to Integrate CrewAI Enterprise with Zapier">
-        This guide will walk you through the process of integrating CrewAI Enterprise with Zapier, allowing you to automate workflows between CrewAI Enterprise and other applications.
-
-        **Prerequisites**
-        - A CrewAI Enterprise account
-        - A Zapier account
-        - A Slack account (for this specific integration)
-
-        **Step-by-Step Guide**
-        <Steps>
-            <Step title="Set Up the Slack Trigger">
-
-                - In Zapier, create a new Zap.
-
-                <Frame>
-                    <img src="/images/enterprise/zapier-1.png" alt="Zapier 1" />
-                </Frame>
-
-            </Step>
-
-            <Step title="Choose Slack as your trigger app.">
-
-                <Frame>
-                    <img src="/images/enterprise/zapier-2.png" alt="Zapier 2" />
-                </Frame>
-                - Select `New Pushed Message` as the Trigger Event.
-                - Connect your Slack account if you haven't already.
-
-            </Step>
-
-            <Step title="Configure the CrewAI Enterprise Action">
-
-                - Add a new action step to your Zap.
-                - Choose CrewAI+ as your action app and Kickoff as the Action Event
-
-                <Frame>
-                    <img src="/images/enterprise/zapier-3.png" alt="Zapier 5" />
-                </Frame>
-
-            </Step>
-
-            <Step title="Connect your CrewAI Enterprise account.">
-
-                - Connect your CrewAI Enterprise account.
-                - Select the appropriate Crew for your workflow.
-
-                <Frame>
-                    <img src="/images/enterprise/zapier-4.png" alt="Zapier 6" />
-                </Frame>
-                - Configure the inputs for the Crew using the data from the Slack message.
-            </Step>
-
-            <Step title="Format the CrewAI Enterprise Output">
-
-                - Add another action step to format the text output from CrewAI Enterprise.
-                - Use Zapier's formatting tools to convert the Markdown output to HTML.
-
-                <Frame>
-                    <img src="/images/enterprise/zapier-5.png" alt="Zapier 8" />
-                </Frame>
-                <Frame>
-                    <img src="/images/enterprise/zapier-6.png" alt="Zapier 9" />
-                </Frame>
-
-            </Step>
-
-            <Step title="Send the Output via Email">
-                - Add a final action step to send the formatted output via email.
-                - Choose your preferred email service (e.g., Gmail, Outlook).
-                - Configure the email details, including recipient, subject, and body.
-                - Insert the formatted CrewAI Enterprise output into the email body.
-
-                <Frame>
-                    <img src="/images/enterprise/zapier-7.png" alt="Zapier 7" />
-                </Frame>
-
-            </Step>
-
-            <Step title="Kick Off the crew from Slack">
-
-                - Enter the text in your Slack channel
-
-                <Frame>
-                    <img src="/images/enterprise/zapier-7b.png" alt="Zapier 10" />
-                </Frame>
-
-                - Select the 3 ellipsis button and then chose Push to Zapier
-
-                <Frame>
-                    <img src="/images/enterprise/zapier-8.png" alt="Zapier 11" />
-                </Frame>
-
-            </Step>
-
-            <Step title="Select the crew and then Push to Kick Off">
-
-                <Frame>
-                    <img src="/images/enterprise/zapier-9.png" alt="Zapier 12" />
-                </Frame>
-
-            </Step>
-
-        </Steps>
-
-        **Tips for Success**
-
-        - Ensure that your CrewAI Enterprise inputs are correctly mapped from the Slack message.
-        - Test your Zap thoroughly before turning it on to catch any potential issues.
-        - Consider adding error handling steps to manage potential failures in the workflow.
-
-        By following these steps, you'll have successfully integrated CrewAI Enterprise with Zapier, allowing for automated workflows triggered by Slack messages and resulting in email notifications with CrewAI Enterprise output.
-    </Accordion>
-
-    <Accordion title="How to Integrate CrewAI Enterprise with HubSpot">
-        This guide provides a step-by-step process to integrate CrewAI Enterprise with HubSpot, enabling you to initiate crews directly from HubSpot Workflows.
-
-        **Prerequisites**
-
-            - A CrewAI Enterprise account
-            - A HubSpot account with the [HubSpot Workflows](https://knowledge.hubspot.com/workflows/create-workflows) feature
-
-        **Step-by-Step Guide**
-        <Steps>
-            <Step title="Connect your HubSpot account with CrewAI Enterprise">
-
-                - Log in to your `CrewAI Enterprise account > Integrations`
-                - Select `HubSpot` from the list of available integrations
-                - Choose the HubSpot account you want to integrate with CrewAI Enterprise
-                - Follow the on-screen prompts to authorize CrewAI Enterprise access to your HubSpot account
-                - A confirmation message will appear once HubSpot is successfully linked with CrewAI Enterprise
-
-            </Step>
-            <Step title="Create a HubSpot Workflow">
-
-                - Log in to your `HubSpot account > Automations > Workflows > New workflow`
-                - Select the workflow type that fits your needs (e.g., Start from scratch)
-                - In the workflow builder, click the Plus (+) icon to add a new action.
-                - Choose `Integrated apps > CrewAI > Kickoff a Crew`.
-                - Select the Crew you want to initiate.
-                - Click `Save` to add the action to your workflow
-                <Frame>
-                    <img src="/images/enterprise/hubspot-workflow-1.png" alt="HubSpot Workflow 1" />
-                </Frame>
-
-            </Step>
-            <Step title="Use Crew results with other actions">
-
-                - After the Kickoff a Crew step, click the Plus (+) icon to add a new action.
-                - For example, to send an internal email notification, choose `Communications > Send internal email notification`
-                - In the Body field, click `Insert data`, select `View properties or action outputs from > Action outputs > Crew Result` to include Crew data in the email
-                    <Frame>
-                        <img src="/images/enterprise/hubspot-workflow-2.png" alt="HubSpot Workflow 2" />
-                    </Frame>
-                - Configure any additional actions as needed
-                - Review your workflow steps to ensure everything is set up correctly
-                - Activate the workflow
-                    <Frame>
-                        <img src="/images/enterprise/hubspot-workflow-3.png" alt="HubSpot Workflow 3" />
-                    </Frame>
-
-            </Step>
-        </Steps>
-        For more detailed information on available actions and customization options, refer to the [HubSpot Workflows Documentation](https://knowledge.hubspot.com/workflows/create-workflows).
-    </Accordion>
-
-    <Accordion title="How to connect Azure OpenAI with Crew Studio?">
-        1. In Azure, go to `Azure AI Services > select your deployment > open Azure OpenAI Studio`.
-        2. On the left menu, click `Deployments`. If you don’t have one, create a deployment with your desired model.
-        3. Once created, select your deployment and locate the `Target URI` and `Key` on the right side of the page. Keep this page open, as you’ll need this information.
-            <Frame>
-                <img src="/images/enterprise/azure-openai-studio.png" alt="Azure OpenAI Studio" />
-            </Frame>
-        4. In another tab, open `CrewAI Enterprise > LLM Connections`. Name your LLM Connection, select Azure as the provider, and choose the same model you selected in Azure.
-        5. On the same page, add environment variables from step 3:
-            - One named `AZURE_DEPLOYMENT_TARGET_URL` (using the Target URI). The URL should look like this: https://your-deployment.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview
-            - Another named `AZURE_API_KEY` (using the Key).
-        6. Click `Add Connection` to save your LLM Connection.
-        7. In `CrewAI Enterprise > Settings > Defaults > Crew Studio LLM Settings`, set the new LLM Connection and model as defaults.
-        8. Ensure network access settings:
-            - In Azure, go to `Azure OpenAI > select your deployment`.
-            - Navigate to `Resource Management > Networking`.
-            - Ensure that `Allow access from all networks` is enabled. If this setting is restricted, CrewAI may be blocked from accessing your Azure OpenAI endpoint.
-
-        You're all set! Crew Studio will now use your Azure OpenAI connection.
-    </Accordion>
-
-    <Accordion title="How to use HITL?">
-        Human-in-the-Loop (HITL) Instructions
-        HITL is a powerful approach that combines artificial intelligence with human expertise to enhance decision-making and improve task outcomes. Follow these steps to implement HITL within CrewAI:
-        <Steps>
-            <Step title="Configure Your Task">
-                Set up your task with human input enabled:
-                <Frame>
-                    <img src="/images/enterprise/crew-human-input.png" alt="Crew Human Input" />
-                </Frame>
-            </Step>
-
-            <Step title="Provide Webhook URL">
-                When kicking off your crew, include a webhook URL for human input:
-                <Frame>
-                    <img src="/images/enterprise/crew-webhook-url.png" alt="Crew Webhook URL" />
-                </Frame>
-            </Step>
-
-            <Step title="Receive Webhook Notification">
-                Once the crew completes the task requiring human input, you'll receive a webhook notification containing:
-                    - Execution ID
-                    - Task ID
-                    - Task output
-            </Step>
-
-            <Step title="Review Task Output">
-                The system will pause in the `Pending Human Input` state. Review the task output carefully.
-            </Step>
-
-            <Step title="Submit Human Feedback">
-                Call the resume endpoint of your crew with the following information:
-                <Frame>
-                    <img src="/images/enterprise/crew-resume-endpoint.png" alt="Crew Resume Endpoint" />
-                </Frame>
-                <Warning>
-                    **Feedback Impact on Task Execution**:
-                    It's crucial to exercise care when providing feedback, as the entire feedback content will be incorporated as additional context for further task executions.
-                </Warning>
-                This means:
-                - All information in your feedback becomes part of the task's context.
-                - Irrelevant details may negatively influence it.
-                - Concise, relevant feedback helps maintain task focus and efficiency.
-                - Always review your feedback carefully before submission to ensure it contains only pertinent information that will positively guide the task's execution.
-            </Step>
-            <Step title="Handle Negative Feedback">
-                If you provide negative feedback:
-                - The crew will retry the task with added context from your feedback.
-                - You'll receive another webhook notification for further review.
-                - Repeat steps 4-6 until satisfied.
-            </Step>
-
-            <Step title="Execution Continuation">
-                When you submit positive feedback, the execution will proceed to the next steps.
-            </Step>
-        </Steps>
-    </Accordion>
-
-    <Accordion title="How to configure Salesforce with CrewAI Enterprise">
-        **Salesforce Demo**
-
-        Salesforce is a leading customer relationship management (CRM) platform that helps businesses streamline their sales, service, and marketing operations.
-        <Frame>
-            <iframe width="100%" height="400" src="https://www.youtube.com/embed/oJunVqjjfu4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        </Frame>
+        <Card href="https://docs.crewai.com/how-to/create-custom-tools" icon="code">CrewAI Tools Guide</Card>
     </Accordion>
 
     <Accordion title="How can you control the maximum number of requests per minute that the entire crew can perform?">

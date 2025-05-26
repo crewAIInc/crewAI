@@ -1,12 +1,14 @@
 ---
-title: "Agent Reasoning"
+title: Reasoning
+description: "Learn how to enable and use agent reasoning to improve task execution."
+icon: brain
 ---
 
-# Agent Reasoning
+## Overview
 
 Agent reasoning is a feature that allows agents to reflect on a task and create a plan before execution. This helps agents approach tasks more methodically and ensures they're ready to perform the assigned work.
 
-## How to Use Agent Reasoning
+## Usage
 
 To enable reasoning for an agent, simply set `reasoning=True` when creating the agent:
 
@@ -35,8 +37,13 @@ This process helps the agent break down complex tasks into manageable steps and 
 
 ## Configuration Options
 
-- `reasoning` (bool): Enable or disable reasoning (default: False)
-- `max_reasoning_attempts` (int, optional): Maximum number of attempts to refine the plan before proceeding with execution. If None (default), the agent will continue refining until it's ready.
+<ParamField body="reasoning" type="bool" default="False"> 
+    Enable or disable reasoning 
+</ParamField>
+
+<ParamField body="max_reasoning_attempts" type="int" default="None"> 
+    Maximum number of attempts to refine the plan before proceeding with execution. If None (default), the agent will continue refining until it's ready. 
+</ParamField>
 
 ## Example
 
@@ -109,7 +116,7 @@ Here's an example of what a reasoning plan might look like for a data analysis t
 Task: Analyze the provided sales data and identify key trends.
 
 Reasoning Plan:
-I'll analyze the sales data to identify the top 3 trends. 
+I'll analyze the sales data to identify the top 3 trends.
 
 1. Understanding of the task:
    I need to analyze sales data to identify key trends that would be valuable for business decision-making.

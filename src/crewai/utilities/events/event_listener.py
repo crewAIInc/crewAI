@@ -37,6 +37,7 @@ from .crew_events import (
     CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
     CrewTestFailedEvent,
+    CrewTestResultEvent,
     CrewTestStartedEvent,
     CrewTrainCompletedEvent,
     CrewTrainFailedEvent,
@@ -133,6 +134,15 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(CrewTrainFailedEvent)
         def on_crew_train_failed(source, event: CrewTrainFailedEvent):
             self.formatter.handle_crew_train_failed(event.crew_name or "Crew")
+
+        @crewai_event_bus.on(CrewTestResultEvent)
+        def on_crew_test_result(source, event: CrewTestResultEvent):
+            self._telemetry.individual_test_result_span(
+                source.crew,
+                event.quality,
+                int(event.execution_duration),
+                event.model,
+            )
 
         # ----------- TASK EVENTS -----------
 
