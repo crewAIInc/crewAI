@@ -36,6 +36,10 @@ class BaseTool(BaseModel, ABC):
     """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
     result_as_answer: bool = False
     """Flag to check if the tool should be the final agent answer."""
+    max_usage_count: int | None = None
+    """Maximum number of times this tool can be used. None means unlimited usage."""
+    current_usage_count: int = 0
+    """Current number of times this tool has been used."""
 
     @field_validator("args_schema", mode="before")
     @classmethod
@@ -251,13 +255,14 @@ def to_langchain(
     return [t.to_structured_tool() if isinstance(t, BaseTool) else t for t in tools]
 
 
-def tool(*args, result_as_answer=False):
+def tool(*args, result_as_answer=False, max_usage_count=None):
     """
     Decorator to create a tool from a function.
     
     Args:
         *args: Positional arguments, either the function to decorate or the tool name.
         result_as_answer: Flag to indicate if the tool result should be used as the final agent answer.
+        max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
     """
 
     def _make_with_name(tool_name: str) -> Callable:
@@ -284,6 +289,8 @@ def tool(*args, result_as_answer=False):
                 func=f,
                 args_schema=args_schema,
                 result_as_answer=result_as_answer,
+                max_usage_count=max_usage_count,
+                current_usage_count=0,
             )
 
         return _make_tool

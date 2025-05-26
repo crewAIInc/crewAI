@@ -200,6 +200,17 @@ class ToolUsage:
             None,
         )
 
+        if available_tool and hasattr(available_tool, 'max_usage_count') and available_tool.max_usage_count is not None:
+            if available_tool.current_usage_count >= available_tool.max_usage_count:
+                try:
+                    result = f"Tool '{tool.name}' has reached its usage limit of {available_tool.max_usage_count} times and cannot be used anymore."
+                    self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                    result = self._format_result(result=result)
+                    return result
+                except Exception:
+                    if self.task:
+                        self.task.increment_tools_errors()
+
         if result is None:
             try:
                 if calling.tool_name in [
@@ -299,6 +310,9 @@ class ToolUsage:
 
         if self.agent and hasattr(self.agent, "tools_results"):
             self.agent.tools_results.append(data)
+
+        if available_tool and hasattr(available_tool, 'current_usage_count'):
+            available_tool.current_usage_count += 1
 
         return result
 
