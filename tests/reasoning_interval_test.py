@@ -4,7 +4,6 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from crewai import Agent, Task
-from crewai.llm import LLM
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.utilities.reasoning_handler import AgentReasoning
 
