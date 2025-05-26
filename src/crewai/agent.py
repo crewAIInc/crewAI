@@ -2,7 +2,7 @@ import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Sequence, Type, Union
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import Field, InstanceOf, PrivateAttr, field_validator, model_validator
 
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -139,6 +139,13 @@ class Agent(BaseAgent):
         default=None,
         description="Interval of steps after which the agent should reason again during execution. If None, reasoning only happens before execution.",
     )
+    
+    @field_validator('reasoning_interval')
+    @classmethod
+    def validate_reasoning_interval(cls, v):
+        if v is not None and v < 1:
+            raise ValueError("reasoning_interval must be >= 1")
+        return v
     adaptive_reasoning: bool = Field(
         default=False,
         description="Whether the agent should adaptively decide when to reason during execution based on context.",

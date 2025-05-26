@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -83,7 +84,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
             tool.name: tool for tool in self.tools
         }
-        self.tools_used: List[str] = []
+        self.tools_used: deque = deque(maxlen=100)  # Limit history size
         self.steps_since_reasoning = 0
         existing_stop = self.llm.stop or []
         self.llm.stop = list(
@@ -192,7 +193,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 if self._should_trigger_reasoning():
                     self._handle_mid_execution_reasoning()
-                
+
                 self._invoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text, role="assistant")
 
@@ -240,7 +241,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if hasattr(formatted_answer, 'tool') and formatted_answer.tool:
             if formatted_answer.tool not in self.tools_used:
                 self.tools_used.append(formatted_answer.tool)
-                
+
         # Special case for add_image_tool
         add_image_tool = self._i18n.tools("add_image")
         if (
@@ -459,107 +460,117 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ),
             color="red",
         )
-        
+
     def _should_trigger_reasoning(self) -> bool:
         """
         Determine if mid-execution reasoning should be triggered.
-        
+
         Returns:
             bool: True if reasoning should be triggered, False otherwise.
         """
         if not hasattr(self.agent, "reasoning") or not self.agent.reasoning:
             return False
-            
+
         self.steps_since_reasoning += 1
-        
+
         if hasattr(self.agent, "reasoning_interval") and self.agent.reasoning_interval:
             if self.steps_since_reasoning >= self.agent.reasoning_interval:
                 return True
-                
+
         if hasattr(self.agent, "adaptive_reasoning") and self.agent.adaptive_reasoning:
             return self._should_adaptive_reason()
-            
+
         return False
-        
+
     def _should_adaptive_reason(self) -> bool:
         """
         Determine if adaptive reasoning should be triggered based on execution context.
-        
+
         Returns:
             bool: True if adaptive reasoning should be triggered, False otherwise.
         """
-        
-        if len(set(self.tools_used[-3:])) > 1 and len(self.tools_used) >= 3:
-            return True
-            
-        if self.iterations > self.max_iter // 2:
-            return True
-            
+        return (
+            self._has_used_multiple_tools_recently() or
+            self._is_taking_too_long() or
+            self._has_recent_errors()
+        )
+
+    def _has_used_multiple_tools_recently(self) -> bool:
+        """Check if multiple different tools were used in recent steps."""
+        if len(self.tools_used) < 3:
+            return False
+        return len(set(list(self.tools_used)[-3:])) > 1
+
+    def _is_taking_too_long(self) -> bool:
+        """Check if iterations exceed expected duration."""
+        return self.iterations > self.max_iter // 2
+
+    def _has_recent_errors(self) -> bool:
+        """Check for error indicators in recent messages."""
         error_indicators = ["error", "exception", "failed", "unable to", "couldn't"]
         recent_messages = self.messages[-3:] if len(self.messages) >= 3 else self.messages
-        
+
         for message in recent_messages:
             content = message.get("content", "").lower()
             if any(indicator in content for indicator in error_indicators):
                 return True
-                
         return False
-        
+
     def _handle_mid_execution_reasoning(self) -> None:
         """
         Handle mid-execution reasoning by calling the reasoning handler.
         """
         if not hasattr(self.agent, "reasoning") or not self.agent.reasoning:
             return
-            
+
         try:
             from crewai.utilities.reasoning_handler import AgentReasoning
-            
+
             current_progress = self._summarize_current_progress()
-            
+
             reasoning_handler = AgentReasoning(task=self.task, agent=self.agent)
-            
+
             reasoning_output = reasoning_handler.handle_mid_execution_reasoning(
                 current_steps=self.iterations,
                 tools_used=self.tools_used,
                 current_progress=current_progress,
                 iteration_messages=self.messages
             )
-            
+
             self.messages.append({
                 "role": "system",
                 "content": f"I've reassessed my approach based on progress so far. Updated plan:\n\n{reasoning_output.plan.plan}"
             })
-            
+
             self.steps_since_reasoning = 0
-            
+
         except Exception as e:
             self._printer.print(
                 content=f"Error during mid-execution reasoning: {str(e)}",
                 color="red",
             )
-            
+
     def _summarize_current_progress(self) -> str:
         """
         Create a summary of the current execution progress.
-        
+
         Returns:
             str: A summary of the current progress.
         """
         recent_messages = self.messages[-5:] if len(self.messages) >= 5 else self.messages
-        
+
         summary = f"After {self.iterations} steps, "
-        
+
         if self.tools_used:
             unique_tools = set(self.tools_used)
             summary += f"I've used {len(self.tools_used)} tools ({', '.join(unique_tools)}). "
         else:
             summary += "I haven't used any tools yet. "
-            
+
         if recent_messages:
             last_message = recent_messages[-1].get("content", "")
             if len(last_message) > 100:
                 last_message = last_message[:100] + "..."
             summary += f"Most recent action: {last_message}"
-            
+
         return summary
