@@ -68,10 +68,10 @@ When reasoning is enabled, before executing a task, the agent will:
 During task execution, the agent can re-evaluate and adjust its plan based on:
 
 1. **Interval-based reasoning**: The agent reasons after a fixed number of steps (specified by `reasoning_interval`)
-2. **Adaptive reasoning**: The agent decides when to reason based on execution context:
-   - When multiple different tools are used recently (indicating a change in approach)
-   - When the task is taking longer than expected (iterations > max_iter/2)
-   - When recent errors or failures are detected in the execution
+2. **Adaptive reasoning**: The agent uses its LLM to intelligently decide when reasoning is needed based on:
+   - Current execution context (task description, expected output, steps taken)
+   - The agent's own judgment about whether strategic reassessment would be beneficial
+   - Automatic fallback when recent errors or failures are detected in the execution
 
 This mid-execution reasoning helps agents adapt to new information, overcome obstacles, and optimize their approach as they work through complex tasks.
 
