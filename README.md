@@ -1,27 +1,70 @@
-<div align="center">
+<p align="center">
+  <a href="https://github.com/crewAIInc/crewAI">
+    <img src="docs/images/crewai_logo.png" width="600px" alt="Open source Multi-AI Agent orchestration framework">
+  </a>
+</p>
+<p align="center" style="display: flex; justify-content: center; gap: 20px; align-items: center;">
+  <a href="https://trendshift.io/repositories/11239" target="_blank">
+    <img src="https://trendshift.io/api/badge/repositories/11239" alt="crewAIInc%2FcrewAI | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
+  </a>
+</p>
 
-![Logo of CrewAI](./docs/images/crewai_logo.png)
+<p align="center">
+  <a href="https://crewai.com">Homepage</a>
+  ·
+  <a href="https://docs.crewai.com">Docs</a>
+  ·
+  <a href="https://app.crewai.com">Start Cloud Trial</a>
+  ·
+  <a href="https://blog.crewai.com">Blog</a>
+  ·
+  <a href="https://community.crewai.com">Forum</a>
+</p>
 
-</div>
+<p align="center">
+  <a href="https://github.com/crewAIInc/crewAI">
+    <img src="https://img.shields.io/github/stars/crewAIInc/crewAI" alt="GitHub Repo stars">
+  </a>
+  <a href="https://github.com/crewAIInc/crewAI/network/members">
+    <img src="https://img.shields.io/github/forks/crewAIInc/crewAI" alt="GitHub forks">
+  </a>
+  <a href="https://github.com/crewAIInc/crewAI/issues">
+    <img src="https://img.shields.io/github/issues/crewAIInc/crewAI" alt="GitHub issues">
+  </a>
+  <a href="https://github.com/crewAIInc/crewAI/pulls">
+    <img src="https://img.shields.io/github/issues-pr/crewAIInc/crewAI" alt="GitHub pull requests">
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/crewai/">
+    <img src="https://img.shields.io/pypi/v/crewai" alt="PyPI version">
+  </a>
+  <a href="https://pypi.org/project/crewai/">
+    <img src="https://img.shields.io/pypi/dm/crewai" alt="PyPI downloads">
+  </a>
+  <a href="https://twitter.com/crewAIInc">
+    <img src="https://img.shields.io/twitter/follow/crewAIInc?style=social" alt="Twitter Follow">
+  </a>
+</p>
 
 ### Fast and Flexible Multi-Agent Automation Framework
 
-CrewAI is a lean, lightning-fast Python framework built entirely from
-scratch—completely **independent of LangChain or other agent frameworks**.
-It empowers developers with both high-level simplicity and precise low-level
-control, ideal for creating autonomous AI agents tailored to any scenario.
+> CrewAI is a lean, lightning-fast Python framework built entirely from scratch—completely **independent of LangChain or other agent frameworks**.
+> It empowers developers with both high-level simplicity and precise low-level control, ideal for creating autonomous AI agents tailored to any scenario.
 
 - **CrewAI Crews**: Optimize for autonomy and collaborative intelligence.
 - **CrewAI Flows**: Enable granular, event-driven control, single LLM calls for precise task orchestration and supports Crews natively
 
-With over 100,000 developers certified through our community courses at
-[learn.crewai.com](https://learn.crewai.com), CrewAI is rapidly becoming the
+With over 100,000 developers certified through our community courses at [learn.crewai.com](https://learn.crewai.com), CrewAI is rapidly becoming the
 standard for enterprise-ready AI automation.
 
 # CrewAI Enterprise Suite
 
-CrewAI Enterprise Suite is a comprehensive bundle tailored for organizations
-that require secure, scalable, and easy-to-manage agent-driven automation.
+CrewAI Enterprise Suite is a comprehensive bundle tailored for organizations that require secure, scalable, and easy-to-manage agent-driven automation.
 
 You can try one part of the suite the [Crew Control Plane for free](https://app.crewai.com)
 
@@ -35,20 +78,8 @@ You can try one part of the suite the [Crew Control Plane for free](https://app.
 - **24/7 Support**: Dedicated enterprise support to ensure uninterrupted operation and quick resolution of issues.
 - **On-premise and Cloud Deployment Options**: Deploy CrewAI Enterprise on-premise or in the cloud, depending on your security and compliance requirements.
 
-CrewAI Enterprise is designed for enterprises seeking a powerful,
-reliable solution to transform complex business processes into efficient,
+CrewAI Enterprise is designed for enterprises seeking a powerful, reliable solution to transform complex business processes into efficient,
 intelligent automations.
-
-<h3>
-
-[Homepage](https://www.crewai.com/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Discourse](https://community.crewai.com)
-
-</h3>
-
-[![GitHub Repo stars](https://img.shields.io/github/stars/joaomdmoura/crewAI)](https://github.com/crewAIInc/crewAI)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-
-</div>
 
 ## Table of contents
 
@@ -88,7 +119,12 @@ CrewAI empowers developers and enterprises to confidently build intelligent auto
 
 ## Getting Started
 
-### Learning Resources
+Setup and run your first CrewAI agents by following this tutorial.
+
+[![CrewAI Getting Started Tutorial](https://img.youtube.com/vi/-kSOTtYzgEw/hqdefault.jpg)](https://www.youtube.com/watch?v=-kSOTtYzgEw "CrewAI Getting Started Tutorial")
+
+###
+ Learning Resources
 
 Learn CrewAI through our comprehensive courses:
 

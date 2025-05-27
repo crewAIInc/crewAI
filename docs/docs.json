@@ -164,8 +164,7 @@
                   "tools/ai-ml/llamaindextool",
                   "tools/ai-ml/langchaintool",
                   "tools/ai-ml/ragtool",
-                  "tools/ai-ml/codeinterpretertool",
-                  "tools/ai-ml/patronustools"
+                  "tools/ai-ml/codeinterpretertool"
                 ]
               },
               {
@@ -190,40 +189,43 @@
             ]
           },
           {
-            "group": "Agent Monitoring & Observability",
+            "group": "Observability",
             "pages": [
-              "how-to/agentops-observability",
-              "how-to/arize-phoenix-observability",
-              "how-to/langfuse-observability",
-              "how-to/langtrace-observability",
-              "how-to/mlflow-observability",
-              "how-to/openlit-observability",
-              "how-to/opik-observability",
-              "how-to/portkey-observability",
-              "how-to/weave-integration"
+              "observability/overview",
+              "observability/agentops",
+              "observability/arize-phoenix",
+              "observability/langfuse",
+              "observability/langtrace",
+              "observability/mlflow",
+              "observability/openlit",
+              "observability/opik",
+              "observability/patronus-evaluation",
+              "observability/portkey",
+              "observability/weave"
             ]
           },
           {
             "group": "Learn",
             "pages": [
-              "how-to/conditional-tasks",
-              "how-to/coding-agents",
-              "how-to/create-custom-tools",
-              "how-to/custom-llm",
-              "how-to/custom-manager-agent",
-              "how-to/customizing-agents",
-              "how-to/dalle-image-generation",
-              "how-to/force-tool-output-as-result",
-              "how-to/hierarchical-process",
-              "how-to/human-in-the-loop",
-              "how-to/human-input-on-execution",
-              "how-to/kickoff-async",
-              "how-to/kickoff-for-each",
-              "how-to/llm-connections",
-              "how-to/multimodal-agents",
-              "how-to/replay-tasks-from-latest-crew-kickoff",
-              "how-to/sequential-process",
-              "how-to/using-annotations"
+              "learn/overview",
+              "learn/conditional-tasks",
+              "learn/coding-agents",
+              "learn/create-custom-tools",
+              "learn/custom-llm",
+              "learn/custom-manager-agent",
+              "learn/customizing-agents",
+              "learn/dalle-image-generation",
+              "learn/force-tool-output-as-result",
+              "learn/hierarchical-process",
+              "learn/human-in-the-loop",
+              "learn/human-input-on-execution",
+              "learn/kickoff-async",
+              "learn/kickoff-for-each",
+              "learn/llm-connections",
+              "learn/multimodal-agents",
+              "learn/replay-tasks-from-latest-crew-kickoff",
+              "learn/sequential-process",
+              "learn/using-annotations"
             ]
           },
           {
@@ -352,7 +354,7 @@
   "navbar": {
     "links": [
       {
-        "label": "Start Free Trial",
+        "label": "Start Cloud Trial",
         "href": "https://app.crewai.com"
       }
     ],
