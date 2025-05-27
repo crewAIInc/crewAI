@@ -4418,7 +4418,7 @@ def test_reset_knowledge_with_no_crew_knowledge(researcher,writer):
 
     with pytest.raises(RuntimeError) as excinfo:
         crew.reset_memories(command_type='knowledge')
-        
+
         # Optionally, you can also check the error message
     assert "Crew Knowledge and Agent Knowledge memory system is not initialized" in str(excinfo.value)  # Replace with the expected message
 
@@ -4497,7 +4497,7 @@ def test_reset_agent_knowledge_with_no_agent_knowledge(researcher,writer):
 
     with pytest.raises(RuntimeError) as excinfo:
         crew.reset_memories(command_type='agent_knowledge')
-    
+
     # Optionally, you can also check the error message
     assert "Agent Knowledge memory system is not initialized" in str(excinfo.value)  # Replace with the expected message
 
@@ -4517,7 +4517,7 @@ def test_reset_agent_knowledge_with_only_crew_knowledge(researcher,writer):
 
     with pytest.raises(RuntimeError) as excinfo:
         crew.reset_memories(command_type='agent_knowledge')
-    
+
     # Optionally, you can also check the error message
     assert "Agent Knowledge memory system is not initialized" in str(excinfo.value)  # Replace with the expected message
 
