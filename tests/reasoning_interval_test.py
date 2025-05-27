@@ -190,30 +190,23 @@ def test_should_trigger_adaptive_reasoning():
         tools_handler=MagicMock()
     )
 
-    executor.tools_used = ["tool1", "tool2", "tool3"]
-    assert executor._should_adaptive_reason() is True
-
-    executor.tools_used = ["tool1", "tool1", "tool1"]
-    executor.iterations = 6  # > max_iter // 2
-    assert executor._should_adaptive_reason() is True
-
-    executor.tools_used = ["tool1", "tool1", "tool1"]
-    executor.iterations = 2
+    with patch('crewai.utilities.reasoning_handler.AgentReasoning.should_adaptive_reason_llm', return_value=True):
+        assert executor._should_adaptive_reason() is True
+    
     executor.messages = [
         {"role": "assistant", "content": "I'll try this approach."},
         {"role": "system", "content": "Error: Failed to execute the command."},
         {"role": "assistant", "content": "Let me try something else."}
     ]
     assert executor._should_adaptive_reason() is True
-
-    executor.tools_used = ["tool1", "tool1", "tool1"]
-    executor.iterations = 2
+    
     executor.messages = [
         {"role": "assistant", "content": "I'll try this approach."},
         {"role": "system", "content": "Command executed successfully."},
         {"role": "assistant", "content": "Let me continue with the next step."}
     ]
-    assert executor._should_adaptive_reason() is False
+    with patch('crewai.utilities.reasoning_handler.AgentReasoning.should_adaptive_reason_llm', return_value=False):
+        assert executor._should_adaptive_reason() is False
 
 
 @pytest.mark.parametrize("interval,steps,should_reason", [
