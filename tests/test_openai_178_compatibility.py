@@ -54,5 +54,5 @@ def test_openai_178_compatibility_with_multimodal():
     assert result is not None, "Crew execution returned None"
     assert len(result.tasks_output) == 1, "Expected exactly one task output"
     task_output = result.tasks_output[0]
-    assert isinstance(task_output, TaskOutput), f"Expected TaskOutput, got {type(task_output)}"
+    assert isinstance(task_output, TaskOutput), "Expected TaskOutput, got {}".format(type(task_output))
     assert len(task_output.raw) > 0, "Task output should contain content"
