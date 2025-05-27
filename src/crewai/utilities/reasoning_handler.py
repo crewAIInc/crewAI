@@ -533,29 +533,14 @@ class AgentReasoning:
                 if content:
                     recent_messages += f"{role.upper()}: {content[:200]}...\n\n"
         
-        return f"""You are currently executing a task and need to reassess your plan based on progress so far.
-
-TASK DESCRIPTION:
-{self.task.description}
-
-EXPECTED OUTPUT:
-{self.task.expected_output}
-
-CURRENT PROGRESS:
-Steps completed: {current_steps}
-Tools used: {tools_used_str}
-Progress summary: {current_progress}
-
-RECENT CONVERSATION:
-{recent_messages}
-
-Based on the current progress and context, please reassess your plan for completing this task.
-Consider what has been accomplished, what challenges you've encountered, and what steps remain.
-Adjust your strategy if needed or confirm your current approach is still optimal.
-
-Provide a detailed updated plan for completing the task.
-End with "READY: I am ready to continue executing the task." if you're confident in your plan.
-"""
+        return self.i18n.retrieve("reasoning", "mid_execution_reasoning").format(
+            description=self.task.description,
+            expected_output=self.task.expected_output,
+            current_steps=current_steps,
+            tools_used=tools_used_str,
+            current_progress=current_progress,
+            recent_messages=recent_messages
+        )
         
     def should_adaptive_reason_llm(
         self, 
@@ -662,9 +647,14 @@ End with "READY: I am ready to continue executing the task." if you're confident
         """Create prompt for adaptive reasoning decision."""
         tools_used_str = ", ".join(tools_used) if tools_used else "No tools used yet"
         
-        return f"""You are currently executing a task. Based on the information below, decide whether you should pause to reassess and update your plan.
-
-TASK DESCRIPTION:
+        # Use the prompt from i18n and format it with the current context
+        prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_decision").format(
+            role=self.agent.role,
+            goal=self.agent.goal,
+            backstory=self.__get_agent_backstory()
+        )
+        
+        prompt += f"""\n\nTASK DESCRIPTION:
 {self.task.description}
 
 EXPECTED OUTPUT:
@@ -682,3 +672,5 @@ Consider whether the current approach is optimal or if a strategic pause to reas
 - The progress suggests you need to reconsider your approach
 
 Decide whether reasoning/re-planning is needed at this point."""
+        
+        return prompt
