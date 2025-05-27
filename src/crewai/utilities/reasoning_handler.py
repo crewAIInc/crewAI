@@ -368,7 +368,7 @@ class AgentReasoning:
         plan = response
         ready = False
 
-        if "READY: I am ready to execute the task." in response:
+        if "READY: I am ready to execute the task." in response or "READY: I am ready to continue executing the task." in response:
             ready = True
 
         return plan, ready
