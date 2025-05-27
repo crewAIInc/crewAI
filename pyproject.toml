@@ -11,6 +11,8 @@ dependencies = [
     # Core Dependencies
     "pydantic>=2.4.2",
     "openai>=1.13.3",
+    # litellm: v1.68.0+ required for OpenAI 1.78 compatibility
+    # Upper bound <1.72.0 to ensure stability and prevent issues with breaking changes
     "litellm>=1.68.0,<1.72.0",
     "instructor>=1.3.3",
     # Text Processing
