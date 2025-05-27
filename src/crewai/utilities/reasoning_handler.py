@@ -55,6 +55,9 @@ class AgentReasoning:
         Returns:
             AgentReasoningOutput: The output of the agent reasoning process.
         """
+        import time
+        start_time = time.time()
+        
         # Emit a reasoning started event (attempt 1)
         try:
             crewai_event_bus.emit(
@@ -71,6 +74,8 @@ class AgentReasoning:
 
         try:
             output = self.__handle_agent_reasoning()
+            
+            duration_seconds = time.time() - start_time
 
             # Emit reasoning completed event
             try:
@@ -82,6 +87,7 @@ class AgentReasoning:
                         plan=output.plan.plan,
                         ready=output.plan.ready,
                         attempt=1,
+                        duration_seconds=duration_seconds,
                     ),
                 )
             except Exception:
@@ -425,6 +431,9 @@ class AgentReasoning:
         Returns:
             AgentReasoningOutput: Updated reasoning plan based on current context
         """
+        import time
+        start_time = time.time()
+        
         from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningStartedEvent
         
         self._emit_reasoning_event(
@@ -436,6 +445,8 @@ class AgentReasoning:
             output = self.__handle_mid_execution_reasoning(
                 current_steps, tools_used, current_progress, iteration_messages
             )
+            
+            duration_seconds = time.time() - start_time
 
             # Emit completed event
             from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningCompletedEvent
@@ -443,7 +454,8 @@ class AgentReasoning:
             self._emit_reasoning_event(
                 AgentMidExecutionReasoningCompletedEvent,
                 current_step=current_steps,
-                updated_plan=output.plan.plan
+                updated_plan=output.plan.plan,
+                duration_seconds=duration_seconds
             )
 
             return output
