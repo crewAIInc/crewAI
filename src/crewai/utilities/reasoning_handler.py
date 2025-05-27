@@ -485,6 +485,7 @@ class AgentReasoning:
         if self.llm.supports_function_calling():
             plan, ready = self.__call_with_function(mid_execution_prompt, "mid_execution_plan")
         else:
+            # Use the same prompt for system context
             system_prompt = self.i18n.retrieve("reasoning", "mid_execution_plan").format(
                 role=self.agent.role,
                 goal=self.agent.goal,
