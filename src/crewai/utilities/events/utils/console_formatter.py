@@ -1060,6 +1060,8 @@ class ConsoleFormatter:
         agent_branch: Optional[Tree],
         attempt: int,
         crew_tree: Optional[Tree],
+        current_step: Optional[int] = None,
+        reasoning_trigger: Optional[str] = None,
     ) -> Optional[Tree]:
         """Handle agent reasoning started (or refinement) event."""
         if not self.verbose:
@@ -1086,10 +1088,14 @@ class ConsoleFormatter:
             reasoning_branch = branch_to_use.add("")
             self.current_reasoning_branch = reasoning_branch
 
-        # Build label text depending on attempt
-        status_text = (
-            f"Reasoning (Attempt {attempt})" if attempt > 1 else "Reasoning..."
-        )
+        # Build label text depending on attempt and whether it's mid-execution
+        if current_step is not None:
+            trigger_text = f" ({reasoning_trigger})" if reasoning_trigger else ""
+            status_text = f"Mid-Execution Reasoning at step {current_step}{trigger_text}"
+        else:
+            status_text = (
+                f"Reasoning (Attempt {attempt})" if attempt > 1 else "Reasoning..."
+            )
         self.update_tree_label(reasoning_branch, "🧠", status_text, "blue")
 
         self.print(tree_to_use)
@@ -1102,6 +1108,9 @@ class ConsoleFormatter:
         plan: str,
         ready: bool,
         crew_tree: Optional[Tree],
+        duration_seconds: float = 0.0,
+        current_step: Optional[int] = None,
+        reasoning_trigger: Optional[str] = None,
     ) -> None:
         """Handle agent reasoning completed event."""
         if not self.verbose:
@@ -1116,7 +1125,13 @@ class ConsoleFormatter:
         )
 
         style = "green" if ready else "yellow"
-        status_text = "Reasoning Completed" if ready else "Reasoning Completed (Not Ready)"
+        duration_text = f" ({duration_seconds:.2f}s)" if duration_seconds > 0 else ""
+        
+        if current_step is not None:
+            trigger_text = f" ({reasoning_trigger})" if reasoning_trigger else ""
+            status_text = f"Mid-Execution Reasoning Completed at step {current_step}{trigger_text}{duration_text}"
+        else:
+            status_text = f"Reasoning Completed{duration_text}" if ready else f"Reasoning Completed (Not Ready){duration_text}"
 
         if reasoning_branch is not None:
             self.update_tree_label(reasoning_branch, "✅", status_text, style)
@@ -1126,9 +1141,14 @@ class ConsoleFormatter:
 
         # Show plan in a panel (trim very long plans)
         if plan:
+            if current_step is not None:
+                title = f"🧠 Mid-Execution Reasoning Plan (Step {current_step}){duration_text}"
+            else:
+                title = f"🧠 Reasoning Plan{duration_text}"
+                
             plan_panel = Panel(
                 Text(plan, style="white"),
-                title="🧠 Reasoning Plan",
+                title=title,
                 border_style=style,
                 padding=(1, 2),
             )

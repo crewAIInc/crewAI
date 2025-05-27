@@ -19,6 +19,7 @@ class AgentReasoningCompletedEvent(BaseEvent):
     plan: str
     ready: bool
     attempt: int = 1
+    duration_seconds: float = 0.0  # Time taken for reasoning in seconds
 
 
 class AgentReasoningFailedEvent(BaseEvent):
@@ -50,3 +51,4 @@ class AgentMidExecutionReasoningCompletedEvent(BaseEvent):
     current_step: int
     updated_plan: str
     reasoning_trigger: str
+    duration_seconds: float = 0.0  # Time taken for reasoning in seconds
