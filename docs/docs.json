@@ -164,8 +164,7 @@
                   "tools/ai-ml/llamaindextool",
                   "tools/ai-ml/langchaintool",
                   "tools/ai-ml/ragtool",
-                  "tools/ai-ml/codeinterpretertool",
-                  "tools/ai-ml/patronustools"
+                  "tools/ai-ml/codeinterpretertool"
                 ]
               },
               {
@@ -190,17 +189,19 @@
             ]
           },
           {
-            "group": "Agent Monitoring & Observability",
+            "group": "Observability",
             "pages": [
-              "how-to/agentops-observability",
-              "how-to/arize-phoenix-observability",
-              "how-to/langfuse-observability",
-              "how-to/langtrace-observability",
-              "how-to/mlflow-observability",
-              "how-to/openlit-observability",
-              "how-to/opik-observability",
-              "how-to/portkey-observability",
-              "how-to/weave-integration"
+              "observability/overview",
+              "observability/agentops",
+              "observability/arize-phoenix",
+              "observability/langfuse",
+              "observability/langtrace",
+              "observability/mlflow",
+              "observability/openlit",
+              "observability/opik",
+              "observability/patronus-evaluation",
+              "observability/portkey",
+              "observability/weave"
             ]
           },
           {
