@@ -483,26 +483,34 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         
     def _should_adaptive_reason(self) -> bool:
         """
-        Determine if adaptive reasoning should be triggered based on execution context.
+        Determine if adaptive reasoning should be triggered using LLM decision.
+        Fallback to error detection if LLM decision fails.
         
         Returns:
             bool: True if adaptive reasoning should be triggered, False otherwise.
         """
-        return (
-            self._has_used_multiple_tools_recently() or
-            self._is_taking_too_long() or
-            self._has_recent_errors()
-        )
-    
-    def _has_used_multiple_tools_recently(self) -> bool:
-        """Check if multiple different tools were used in recent steps."""
-        if len(self.tools_used) < 3:
+        if self._has_recent_errors():
+            return True
+            
+        try:
+            from crewai.utilities.reasoning_handler import AgentReasoning
+            from crewai.agent import Agent
+            
+            current_progress = self._summarize_current_progress()
+            
+            reasoning_handler = AgentReasoning(task=self.task, agent=cast(Agent, self.agent))
+            
+            return reasoning_handler.should_adaptive_reason_llm(
+                current_steps=self.iterations,
+                tools_used=list(self.tools_used),
+                current_progress=current_progress
+            )
+        except Exception as e:
+            self._printer.print(
+                content=f"Error during adaptive reasoning decision: {str(e)}. Using fallback error detection.",
+                color="yellow",
+            )
             return False
-        return len(set(list(self.tools_used)[-3:])) > 1
-    
-    def _is_taking_too_long(self) -> bool:
-        """Check if iterations exceed expected duration."""
-        return self.iterations > self.max_iter // 2
     
     def _has_recent_errors(self) -> bool:
         """Check for error indicators in recent messages."""

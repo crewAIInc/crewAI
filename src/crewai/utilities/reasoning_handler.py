@@ -556,3 +556,129 @@ Adjust your strategy if needed or confirm your current approach is still optimal
 Provide a detailed updated plan for completing the task.
 End with "READY: I am ready to continue executing the task." if you're confident in your plan.
 """
+        
+    def should_adaptive_reason_llm(
+        self, 
+        current_steps: int,
+        tools_used: list,
+        current_progress: str
+    ) -> bool:
+        """
+        Use LLM function calling to determine if adaptive reasoning should be triggered.
+        
+        Args:
+            current_steps: Number of steps executed so far
+            tools_used: List of tools that have been used
+            current_progress: Summary of progress made so far
+            
+        Returns:
+            bool: True if reasoning should be triggered, False otherwise.
+        """
+        try:
+            decision_prompt = self.__create_adaptive_reasoning_decision_prompt(
+                current_steps, tools_used, current_progress
+            )
+
+            if self.llm.supports_function_calling():
+                should_reason = self.__call_adaptive_reasoning_function(decision_prompt)
+            else:
+                should_reason = self.__call_adaptive_reasoning_text(decision_prompt)
+                
+            return should_reason
+        except Exception as e:
+            self.logger.warning(f"Error during adaptive reasoning decision: {str(e)}. Defaulting to no reasoning.")
+            return False
+            
+    def __call_adaptive_reasoning_function(self, prompt: str) -> bool:
+        """Call LLM with function calling for adaptive reasoning decision."""
+        function_schema = {
+            "type": "function",
+            "function": {
+                "name": "decide_reasoning_need",
+                "description": "Decide whether reasoning is needed based on current task execution context",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "should_reason": {
+                            "type": "boolean",
+                            "description": "Whether reasoning/re-planning is needed at this point in task execution."
+                        },
+                        "reasoning": {
+                            "type": "string", 
+                            "description": "Brief explanation of why reasoning is or isn't needed."
+                        }
+                    },
+                    "required": ["should_reason", "reasoning"]
+                }
+            }
+        }
+
+        def _decide_reasoning_need(should_reason: bool, reasoning: str):
+            """Return the reasoning decision result in JSON string form."""
+            return json.dumps({"should_reason": should_reason, "reasoning": reasoning})
+
+        system_prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_decision").format(
+            role=self.agent.role,
+            goal=self.agent.goal,
+            backstory=self.__get_agent_backstory()
+        )
+
+        response = self.llm.call(
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            tools=[function_schema],
+            available_functions={"decide_reasoning_need": _decide_reasoning_need},
+        )
+
+        try:
+            result = json.loads(response)
+            return result.get("should_reason", False)
+        except (json.JSONDecodeError, KeyError):
+            return False
+
+    def __call_adaptive_reasoning_text(self, prompt: str) -> bool:
+        """Fallback text-based adaptive reasoning decision."""
+        system_prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_decision").format(
+            role=self.agent.role,
+            goal=self.agent.goal,
+            backstory=self.__get_agent_backstory()
+        )
+
+        response = self.llm.call([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt + "\n\nRespond with 'YES' if reasoning is needed, 'NO' if not."}
+        ])
+
+        return "YES" in str(response).upper()
+        
+    def __create_adaptive_reasoning_decision_prompt(
+        self, 
+        current_steps: int,
+        tools_used: list,
+        current_progress: str
+    ) -> str:
+        """Create prompt for adaptive reasoning decision."""
+        tools_used_str = ", ".join(tools_used) if tools_used else "No tools used yet"
+        
+        return f"""You are currently executing a task. Based on the information below, decide whether you should pause to reassess and update your plan.
+
+TASK DESCRIPTION:
+{self.task.description}
+
+EXPECTED OUTPUT:
+{self.task.expected_output}
+
+CURRENT EXECUTION CONTEXT:
+- Steps completed: {current_steps}
+- Tools used: {tools_used_str}
+- Progress summary: {current_progress}
+
+Consider whether the current approach is optimal or if a strategic pause to reassess would be beneficial. You should reason when:
+- You might be approaching the task inefficiently
+- The context suggests a different strategy might be better
+- You're uncertain about the next steps
+- The progress suggests you need to reconsider your approach
+
+Decide whether reasoning/re-planning is needed at this point."""

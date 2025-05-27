@@ -108,13 +108,12 @@ This creates a predictable pattern of reflection during task execution, which is
 
 ### Adaptive Reasoning
 
-The adaptive reasoning feature uses contextual triggers to determine when reasoning should occur:
+The adaptive reasoning feature uses LLM function calling to determine when reasoning should occur:
 
-1. **Multiple tools used**: When the agent has used multiple different tools in recent steps, indicating a change in approach
-2. **Long execution**: When the task is taking longer than expected (iterations > max_iter/2)
-3. **Error detection**: When recent messages contain error indicators like "error", "exception", "failed", etc.
+1. **LLM-based decision**: The agent's LLM evaluates the current execution context (task description, expected output, steps taken so far) to decide if reasoning is needed
+2. **Error detection fallback**: When recent messages contain error indicators like "error", "exception", "failed", etc., reasoning is automatically triggered
 
-This creates a more dynamic reasoning pattern that adapts to the task's needs, allowing the agent to be more responsive to changing conditions.
+This creates an intelligent reasoning pattern where the agent uses its own judgment to determine when strategic reassessment would be most beneficial, while maintaining automatic error recovery.
 
 ### Mid-execution Reasoning Process
 
