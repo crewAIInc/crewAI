@@ -217,7 +217,6 @@
               "learn/dalle-image-generation",
               "learn/force-tool-output-as-result",
               "learn/hierarchical-process",
-              "learn/human-in-the-loop",
               "learn/human-input-on-execution",
               "learn/kickoff-async",
               "learn/kickoff-for-each",
@@ -269,6 +268,7 @@
               "enterprise/guides/slack-trigger",
               "enterprise/guides/team-management",
               "enterprise/guides/webhook-automation",
+              "enterprise/guides/human-in-the-loop",
               "enterprise/guides/zapier-trigger"
             ]
           },
