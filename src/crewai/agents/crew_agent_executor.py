@@ -548,7 +548,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
             self.messages.append({
                 "role": "system",
-                "content": f"I've reassessed my approach based on progress so far. Updated plan:\n\n{reasoning_output.plan.plan}"
+                "content": self._i18n.retrieve("reasoning", "mid_execution_reasoning_update").format(plan=reasoning_output.plan.plan)
             })
 
             self.steps_since_reasoning = 0
