@@ -661,29 +661,20 @@ class AgentReasoning:
         tools_used_str = ", ".join(tools_used) if tools_used else "No tools used yet"
         
         # Use the prompt from i18n and format it with the current context
-        prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_decision").format(
+        base_prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_decision").format(
             role=self.agent.role,
             goal=self.agent.goal,
             backstory=self.__get_agent_backstory()
         )
         
-        prompt += f"""\n\nTASK DESCRIPTION:
-{self.task.description}
-
-EXPECTED OUTPUT:
-{self.task.expected_output}
-
-CURRENT EXECUTION CONTEXT:
-- Steps completed: {current_steps}
-- Tools used: {tools_used_str}
-- Progress summary: {current_progress}
-
-Consider whether the current approach is optimal or if a strategic pause to reassess would be beneficial. You should reason when:
-- You might be approaching the task inefficiently
-- The context suggests a different strategy might be better
-- You're uncertain about the next steps
-- The progress suggests you need to reconsider your approach
-
-Decide whether reasoning/re-planning is needed at this point."""
+        context_prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_context").format(
+            description=self.task.description,
+            expected_output=self.task.expected_output,
+            current_steps=current_steps,
+            tools_used=tools_used_str,
+            current_progress=current_progress
+        )
+        
+        prompt = base_prompt + context_prompt
         
         return prompt
