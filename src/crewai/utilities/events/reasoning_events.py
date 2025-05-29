@@ -34,7 +34,7 @@ class AgentReasoningFailedEvent(BaseEvent):
 
 class AgentMidExecutionReasoningStartedEvent(BaseEvent):
     """Event emitted when an agent starts mid-execution reasoning."""
-    
+
     type: str = "agent_mid_execution_reasoning_started"
     agent_role: str
     task_id: str
@@ -44,7 +44,7 @@ class AgentMidExecutionReasoningStartedEvent(BaseEvent):
 
 class AgentMidExecutionReasoningCompletedEvent(BaseEvent):
     """Event emitted when an agent completes mid-execution reasoning."""
-    
+
     type: str = "agent_mid_execution_reasoning_completed"
     agent_role: str
     task_id: str
@@ -52,3 +52,14 @@ class AgentMidExecutionReasoningCompletedEvent(BaseEvent):
     updated_plan: str
     reasoning_trigger: str
     duration_seconds: float = 0.0  # Time taken for reasoning in seconds
+
+
+class AgentAdaptiveReasoningDecisionEvent(BaseEvent):
+    """Event emitted after the agent decides whether to trigger adaptive reasoning."""
+
+    type: str = "agent_adaptive_reasoning_decision"
+    agent_role: str
+    task_id: str
+    should_reason: bool  # Whether the agent decided to reason
+    reasoning: str  # Brief explanation / rationale from the LLM
+    reasoning_trigger: str = "adaptive"  # Always adaptive for this event

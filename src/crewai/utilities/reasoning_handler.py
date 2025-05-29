@@ -57,7 +57,7 @@ class AgentReasoning:
         """
         import time
         start_time = time.time()
-        
+
         # Emit a reasoning started event (attempt 1)
         try:
             crewai_event_bus.emit(
@@ -74,7 +74,7 @@ class AgentReasoning:
 
         try:
             output = self.__handle_agent_reasoning()
-            
+
             duration_seconds = time.time() - start_time
 
             # Emit reasoning completed event
@@ -391,14 +391,14 @@ class AgentReasoning:
             "The _handle_agent_reasoning method is deprecated. Use handle_agent_reasoning instead."
         )
         return self.handle_agent_reasoning()
-        
+
     def _emit_reasoning_event(self, event_class, **kwargs):
         """Centralized method for emitting reasoning events."""
         try:
             reasoning_trigger = "interval"
             if hasattr(self.agent, 'adaptive_reasoning') and self.agent.adaptive_reasoning:
                 reasoning_trigger = "adaptive"
-                
+
             crewai_event_bus.emit(
                 self.agent,
                 event_class(
@@ -411,9 +411,9 @@ class AgentReasoning:
         except Exception:
             # Ignore event bus errors to avoid breaking execution
             pass
-        
+
     def handle_mid_execution_reasoning(
-        self, 
+        self,
         current_steps: int,
         tools_used: list,
         current_progress: str,
@@ -421,21 +421,21 @@ class AgentReasoning:
     ) -> AgentReasoningOutput:
         """
         Handle reasoning during task execution with context about current progress.
-        
+
         Args:
             current_steps: Number of steps executed so far
             tools_used: List of tools that have been used
             current_progress: Summary of progress made so far
             iteration_messages: Recent conversation messages
-            
+
         Returns:
             AgentReasoningOutput: Updated reasoning plan based on current context
         """
         import time
         start_time = time.time()
-        
+
         from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningStartedEvent
-        
+
         self._emit_reasoning_event(
             AgentMidExecutionReasoningStartedEvent,
             current_step=current_steps
@@ -445,12 +445,12 @@ class AgentReasoning:
             output = self.__handle_mid_execution_reasoning(
                 current_steps, tools_used, current_progress, iteration_messages
             )
-            
+
             duration_seconds = time.time() - start_time
 
             # Emit completed event
             from crewai.utilities.events.reasoning_events import AgentMidExecutionReasoningCompletedEvent
-            
+
             self._emit_reasoning_event(
                 AgentMidExecutionReasoningCompletedEvent,
                 current_step=current_steps,
@@ -462,7 +462,7 @@ class AgentReasoning:
         except Exception as e:
             # Emit failed event
             from crewai.utilities.events.reasoning_events import AgentReasoningFailedEvent
-            
+
             self._emit_reasoning_event(
                 AgentReasoningFailedEvent,
                 error=str(e),
@@ -470,9 +470,9 @@ class AgentReasoning:
             )
 
             raise
-            
+
     def __handle_mid_execution_reasoning(
-        self, 
+        self,
         current_steps: int,
         tools_used: list,
         current_progress: str,
@@ -480,13 +480,13 @@ class AgentReasoning:
     ) -> AgentReasoningOutput:
         """
         Private method that handles the mid-execution reasoning process.
-        
+
         Args:
             current_steps: Number of steps executed so far
             tools_used: List of tools that have been used
             current_progress: Summary of progress made so far
             iteration_messages: Recent conversation messages
-            
+
         Returns:
             AgentReasoningOutput: The output of the mid-execution reasoning process.
         """
@@ -515,9 +515,9 @@ class AgentReasoning:
 
         reasoning_plan = ReasoningPlan(plan=plan, ready=ready)
         return AgentReasoningOutput(plan=reasoning_plan)
-        
+
     def __create_mid_execution_prompt(
-        self, 
+        self,
         current_steps: int,
         tools_used: list,
         current_progress: str,
@@ -525,18 +525,18 @@ class AgentReasoning:
     ) -> str:
         """
         Creates a prompt for the agent to reason during task execution.
-        
+
         Args:
             current_steps: Number of steps executed so far
             tools_used: List of tools that have been used
             current_progress: Summary of progress made so far
             iteration_messages: Recent conversation messages
-            
+
         Returns:
             str: The mid-execution reasoning prompt.
         """
         tools_used_str = ", ".join(tools_used) if tools_used else "No tools used yet"
-        
+
         recent_messages = ""
         if iteration_messages:
             recent_msgs = iteration_messages[-6:] if len(iteration_messages) > 6 else iteration_messages
@@ -545,7 +545,7 @@ class AgentReasoning:
                 content = msg.get("content", "")
                 if content:
                     recent_messages += f"{role.upper()}: {content[:200]}...\n\n"
-        
+
         return self.i18n.retrieve("reasoning", "mid_execution_reasoning").format(
             description=self.task.description,
             expected_output=self.task.expected_output,
@@ -554,21 +554,21 @@ class AgentReasoning:
             current_progress=current_progress,
             recent_messages=recent_messages
         )
-        
+
     def should_adaptive_reason_llm(
-        self, 
+        self,
         current_steps: int,
         tools_used: list,
         current_progress: str
     ) -> bool:
         """
         Use LLM function calling to determine if adaptive reasoning should be triggered.
-        
+
         Args:
             current_steps: Number of steps executed so far
             tools_used: List of tools that have been used
             current_progress: Summary of progress made so far
-            
+
         Returns:
             bool: True if reasoning should be triggered, False otherwise.
         """
@@ -578,16 +578,29 @@ class AgentReasoning:
             )
 
             if self.llm.supports_function_calling():
-                should_reason = self.__call_adaptive_reasoning_function(decision_prompt)
+                should_reason, reasoning_expl = self.__call_adaptive_reasoning_function(decision_prompt)
             else:
-                should_reason = self.__call_adaptive_reasoning_text(decision_prompt)
-                
+                should_reason, reasoning_expl = self.__call_adaptive_reasoning_text(decision_prompt)
+
+            # Emit an event so the UI/console can display the decision
+            try:
+                from crewai.utilities.events.reasoning_events import AgentAdaptiveReasoningDecisionEvent
+
+                self._emit_reasoning_event(
+                    AgentAdaptiveReasoningDecisionEvent,
+                    should_reason=should_reason,
+                    reasoning=reasoning_expl,
+                )
+            except Exception:
+                # Ignore event bus errors to avoid breaking execution
+                pass
+
             return should_reason
         except Exception as e:
             self.logger.warning(f"Error during adaptive reasoning decision: {str(e)}. Defaulting to no reasoning.")
             return False
-            
-    def __call_adaptive_reasoning_function(self, prompt: str) -> bool:
+
+    def __call_adaptive_reasoning_function(self, prompt: str) -> tuple[bool, str]:
         """Call LLM with function calling for adaptive reasoning decision."""
         function_schema = {
             "type": "function",
@@ -602,7 +615,7 @@ class AgentReasoning:
                             "description": "Whether reasoning/re-planning is needed at this point in task execution."
                         },
                         "reasoning": {
-                            "type": "string", 
+                            "type": "string",
                             "description": "Brief explanation of why reasoning is or isn't needed."
                         }
                     },
@@ -632,11 +645,11 @@ class AgentReasoning:
 
         try:
             result = json.loads(response)
-            return result.get("should_reason", False)
+            return result.get("should_reason", False), result.get("reasoning", "No explanation provided")
         except (json.JSONDecodeError, KeyError):
-            return False
+            return False, "No explanation provided"
 
-    def __call_adaptive_reasoning_text(self, prompt: str) -> bool:
+    def __call_adaptive_reasoning_text(self, prompt: str) -> tuple[bool, str]:
         """Fallback text-based adaptive reasoning decision."""
         system_prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_decision").format(
             role=self.agent.role,
@@ -649,24 +662,24 @@ class AgentReasoning:
             {"role": "user", "content": prompt + "\n\nRespond with 'YES' if reasoning is needed, 'NO' if not."}
         ])
 
-        return "YES" in str(response).upper()
-        
+        return "YES" in str(response).upper(), "No explanation provided"
+
     def __create_adaptive_reasoning_decision_prompt(
-        self, 
+        self,
         current_steps: int,
         tools_used: list,
         current_progress: str
     ) -> str:
         """Create prompt for adaptive reasoning decision."""
         tools_used_str = ", ".join(tools_used) if tools_used else "No tools used yet"
-        
+
         # Use the prompt from i18n and format it with the current context
         base_prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_decision").format(
             role=self.agent.role,
             goal=self.agent.goal,
             backstory=self.__get_agent_backstory()
         )
-        
+
         context_prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_context").format(
             description=self.task.description,
             expected_output=self.task.expected_output,
@@ -674,7 +687,7 @@ class AgentReasoning:
             tools_used=tools_used_str,
             current_progress=current_progress
         )
-        
+
         prompt = base_prompt + context_prompt
-        
+
         return prompt

@@ -139,7 +139,7 @@ class Agent(BaseAgent):
         default=None,
         description="Interval of steps after which the agent should reason again during execution. If None, reasoning only happens before execution.",
     )
-    
+
     @field_validator('reasoning_interval')
     @classmethod
     def validate_reasoning_interval(cls, v):
@@ -180,6 +180,9 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
+
+        if getattr(self, "adaptive_reasoning", False) and not getattr(self, "reasoning", False):
+            self.reasoning = True
 
         self.llm = create_llm(self.llm)
         if self.function_calling_llm and not isinstance(

@@ -61,6 +61,8 @@ from .reasoning_events import (
     AgentReasoningStartedEvent,
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
+    AgentMidExecutionReasoningStartedEvent,
+    AgentMidExecutionReasoningCompletedEvent,
 )
 
 
@@ -437,8 +439,6 @@ class EventListener(BaseEventListener):
                 self.formatter.current_crew_tree,
             )
 
-        # ----------- REASONING EVENTS -----------
-
         @crewai_event_bus.on(AgentReasoningStartedEvent)
         def on_agent_reasoning_started(source, event: AgentReasoningStartedEvent):
             self.formatter.handle_reasoning_started(
@@ -459,6 +459,38 @@ class EventListener(BaseEventListener):
         def on_agent_reasoning_failed(source, event: AgentReasoningFailedEvent):
             self.formatter.handle_reasoning_failed(
                 event.error,
+                self.formatter.current_crew_tree,
+            )
+
+        @crewai_event_bus.on(AgentMidExecutionReasoningStartedEvent)
+        def on_mid_execution_reasoning_started(source, event: AgentMidExecutionReasoningStartedEvent):
+            self.formatter.handle_reasoning_started(
+                self.formatter.current_agent_branch,
+                event.attempt if hasattr(event, "attempt") else 1,
+                self.formatter.current_crew_tree,
+                current_step=event.current_step,
+                reasoning_trigger=event.reasoning_trigger,
+            )
+
+        @crewai_event_bus.on(AgentMidExecutionReasoningCompletedEvent)
+        def on_mid_execution_reasoning_completed(source, event: AgentMidExecutionReasoningCompletedEvent):
+            self.formatter.handle_reasoning_completed(
+                event.updated_plan,
+                True,
+                self.formatter.current_crew_tree,
+                duration_seconds=event.duration_seconds,
+                current_step=event.current_step,
+                reasoning_trigger=event.reasoning_trigger,
+            )
+
+        from crewai.utilities.events.reasoning_events import AgentAdaptiveReasoningDecisionEvent
+
+        @crewai_event_bus.on(AgentAdaptiveReasoningDecisionEvent)
+        def on_adaptive_reasoning_decision(source, event: AgentAdaptiveReasoningDecisionEvent):
+            self.formatter.handle_adaptive_reasoning_decision(
+                self.formatter.current_agent_branch,
+                event.should_reason,
+                event.reasoning,
                 self.formatter.current_crew_tree,
             )
 

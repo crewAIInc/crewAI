@@ -490,6 +490,21 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             bool: True if adaptive reasoning should be triggered, False otherwise.
         """
         if self._has_recent_errors():
+            try:
+                from crewai.utilities.events.reasoning_events import AgentAdaptiveReasoningDecisionEvent
+                from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+
+                crewai_event_bus.emit(
+                    self.agent,
+                    AgentAdaptiveReasoningDecisionEvent(
+                        agent_role=self.agent.role,
+                        task_id=str(self.task.id),
+                        should_reason=True,
+                        reasoning="Recent error indicators detected in previous messages.",
+                    ),
+                )
+            except Exception:
+                pass
             return True
 
         try:
@@ -503,7 +518,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             return reasoning_handler.should_adaptive_reason_llm(
                 current_steps=self.iterations,
                 tools_used=list(self.tools_used),
-                current_progress=current_progress
+                current_progress=current_progress,
             )
         except Exception as e:
             self._printer.print(
@@ -546,10 +561,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 iteration_messages=self.messages
             )
 
-            self.messages.append({
-                "role": "system",
-                "content": self._i18n.retrieve("reasoning", "mid_execution_reasoning_update").format(plan=reasoning_output.plan.plan)
-            })
+            self._append_message(
+                self._i18n.retrieve("reasoning", "mid_execution_reasoning_update").format(
+                    plan=reasoning_output.plan.plan
+                ),
+                role="assistant",
+            )
 
             self.steps_since_reasoning = 0
 
