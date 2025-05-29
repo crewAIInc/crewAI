@@ -720,7 +720,16 @@ crew = Crew(
 ```
 
 ### Advanced Mem0 Configuration
+When using Mem0 Client, you can customize the memory configuration further, by using parameters like 'includes', 'excludes', 'custom_categories' and 'run_id' (this is only for short-term memory).
+You can find more details in the [Mem0 documentation](https://docs.mem0.ai/).
 ```python
+
+new_categories = [
+    {"lifestyle_management_concerns": "Tracks daily routines, habits, hobbies and interests including cooking, time management and work-life balance"},
+    {"seeking_structure": "Documents goals around creating routines, schedules, and organized systems in various life areas"},
+    {"personal_information": "Basic information about the user including name, preferences, and personality traits"}
+]
+
 crew = Crew(
     agents=[...],
     tasks=[...],
@@ -732,6 +741,10 @@ crew = Crew(
             "org_id": "my_org_id",        # Optional
             "project_id": "my_project_id", # Optional
             "api_key": "custom-api-key"    # Optional - overrides env var
+            "run_id": "my_run_id",        # Optional - for short-term memory
+            "includes": "include1",       # Optional 
+            "excludes": "exclude1",       # Optional
+            "custom_categories": new_categories  # Optional - custom categories for user memory
         },
         "user_memory": {}
     }

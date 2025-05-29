@@ -156,6 +156,36 @@ def test_mem0_storage_with_explict_config(
     )
 
 
+def test_mem0_storage_updates_project_with_custom_categories(mock_mem0_memory_client):
+    mock_mem0_memory_client.update_project = MagicMock()
+
+    new_categories = [
+    {"lifestyle_management_concerns": "Tracks daily routines, habits, hobbies and interests including cooking, time management and work-life balance"},
+    ]
+
+    crew = MockCrew(
+        memory_config={
+            "provider": "mem0",
+            "config": {
+                "user_id": "test_user",
+                "api_key": "ABCDEFGH",
+                "org_id": "my_org_id",
+                "project_id": "my_project_id",
+                "custom_categories": new_categories,
+            },
+        }
+    )
+
+    with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client):
+        _ = Mem0Storage(type="short_term", crew=crew)
+
+    mock_mem0_memory_client.update_project.assert_called_once_with(
+        custom_categories=new_categories
+    )
+
+
+
+
 def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
     """Test save method for different memory types"""
     mem0_storage, _, _ = mem0_storage_with_mocked_config
