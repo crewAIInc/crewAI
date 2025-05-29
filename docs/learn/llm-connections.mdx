@@ -9,7 +9,7 @@ icon: brain-circuit
 CrewAI uses LiteLLM to connect to a wide variety of Language Models (LLMs). This integration provides extensive versatility, allowing you to use models from numerous providers with a simple, unified interface.
 
 <Note>
-    By default, CrewAI uses the `gpt-4o-mini` model. This is determined by the `OPENAI_MODEL_NAME` environment variable, which defaults to "gpt-4o-mini" if not set. 
+    By default, CrewAI uses the `gpt-4o-mini` model. This is determined by the `OPENAI_MODEL_NAME` environment variable, which defaults to "gpt-4o-mini" if not set.
     You can easily configure your agents to use a different model or provider as described in this guide.
 </Note>
 
@@ -117,22 +117,41 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
 <Tabs>
     <Tab title="Using Environment Variables">
         <CodeGroup>
-        ```python Code
+        ```python Generic
         import os
 
         os.environ["OPENAI_API_KEY"] = "your-api-key"
         os.environ["OPENAI_API_BASE"] = "https://api.your-provider.com/v1"
         os.environ["OPENAI_MODEL_NAME"] = "your-model-name"
         ```
+
+        ```python Google
+        import os
+
+        # Example using Gemini's OpenAI-compatible API.
+        os.environ["OPENAI_API_KEY"] = "your-gemini-key"  # Should start with AIza...
+        os.environ["OPENAI_API_BASE"] = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-2.0-flash"  # Add your Gemini model here, under openai/
+        ```
         </CodeGroup>
     </Tab>
     <Tab title="Using LLM Class Attributes">
         <CodeGroup>
-            ```python Code
+            ```python Generic
             llm = LLM(
                 model="custom-model-name",
                 api_key="your-api-key",
                 base_url="https://api.your-provider.com/v1"
+            )
+            agent = Agent(llm=llm, ...)
+            ```
+
+            ```python Google
+            # Example using Gemini's OpenAI-compatible API
+            llm = LLM(
+                model="openai/gemini-2.0-flash",
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                api_key="your-gemini-key",  # Should start with AIza...
             )
             agent = Agent(llm=llm, ...)
             ```
@@ -169,7 +188,7 @@ For local models like those provided by Ollama:
 
 You can change the base API URL for any LLM provider by setting the `base_url` parameter:
 
-```python Code  
+```python Code
 llm = LLM(
     model="custom-model-name",
     base_url="https://api.your-provider.com/v1",
