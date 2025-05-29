@@ -55,10 +55,11 @@ def mem0_storage_with_mocked_config(mock_mem0_memory):
         }
 
         # Instantiate the class with memory_config
+        # Parameters like run_id, includes, and excludes doesn't matter in Memory OSS
         crew = MockCrew(
             memory_config={
                 "provider": "mem0",
-                "config": {"user_id": "test_user", "local_mem0_config": config, "run_id": "my_run_id"},
+                "config": {"user_id": "test_user", "local_mem0_config": config, "run_id": "my_run_id", "includes": "include1","excludes": "exclude1"},
             }
         )
 
@@ -171,7 +172,6 @@ def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
-        run_id= "my_run_id"
     )
 
 
