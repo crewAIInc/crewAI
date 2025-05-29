@@ -2,7 +2,7 @@ import shutil
 import subprocess
 from typing import Any, Dict, List, Literal, Optional, Sequence, Type, Union
 
-from pydantic import Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import Field, InstanceOf, PrivateAttr, field_validator, model_validator
 
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -135,6 +135,21 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
     )
+    reasoning_interval: Optional[int] = Field(
+        default=None,
+        description="Interval of steps after which the agent should reason again during execution. If None, reasoning only happens before execution.",
+    )
+
+    @field_validator('reasoning_interval')
+    @classmethod
+    def validate_reasoning_interval(cls, v):
+        if v is not None and v < 1:
+            raise ValueError("reasoning_interval must be >= 1")
+        return v
+    adaptive_reasoning: bool = Field(
+        default=False,
+        description="Whether the agent should adaptively decide when to reason during execution based on context.",
+    )
     embedder: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
@@ -165,6 +180,9 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
+
+        if getattr(self, "adaptive_reasoning", False) and not getattr(self, "reasoning", False):
+            self.reasoning = True
 
         self.llm = create_llm(self.llm)
         if self.function_calling_llm and not isinstance(
@@ -244,10 +262,10 @@ class Agent(BaseAgent):
         if self.reasoning:
             try:
                 from crewai.utilities.reasoning_handler import AgentReasoning, AgentReasoningOutput
-                
+
                 reasoning_handler = AgentReasoning(task=task, agent=self)
                 reasoning_output: AgentReasoningOutput = reasoning_handler.handle_agent_reasoning()
-                
+
                 # Add the reasoning plan to the task description
                 task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
             except Exception as e:
@@ -255,9 +273,9 @@ class Agent(BaseAgent):
                     self._logger.log("error", f"Error during reasoning process: {str(e)}")
                 else:
                     print(f"Error during reasoning process: {str(e)}")
-            
+
         self._inject_date_to_task(task)
-            
+
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
@@ -625,10 +643,10 @@ class Agent(BaseAgent):
             try:
                 valid_format_codes = ['%Y', '%m', '%d', '%H', '%M', '%S', '%B', '%b', '%A', '%a']
                 is_valid = any(code in self.date_format for code in valid_format_codes)
-                
+
                 if not is_valid:
                     raise ValueError(f"Invalid date format: {self.date_format}")
-                
+
                 current_date: str = datetime.now().strftime(self.date_format)
                 task.description += f"\n\nCurrent Date: {current_date}"
             except Exception as e:
