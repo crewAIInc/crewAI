@@ -17,6 +17,10 @@ class ConsoleFormatter:
     current_lite_agent_branch: Optional[Tree] = None
     tool_usage_counts: Dict[str, int] = {}
     current_reasoning_branch: Optional[Tree] = None  # Track reasoning status
+    current_adaptive_decision_branch: Optional[Tree] = None  # Track last adaptive decision branch
+    # Spinner support
+    _spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+    _spinner_index: int = 0
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -218,6 +222,13 @@ class ConsoleFormatter:
         # Set the current_task_branch attribute directly
         self.current_task_branch = task_branch
 
+        # When a new task starts, clear pointers to previous agent, reasoning,
+        # and tool branches so that any upcoming Reasoning / Tool logs attach
+        # to the correct task.
+        self.current_agent_branch = None
+        self.current_reasoning_branch = None
+        self.current_tool_branch = None
+
         return task_branch
 
     def update_task_status(
@@ -264,6 +275,14 @@ class ConsoleFormatter:
             f"Task {status.title()}", str(task_id), style, Agent=agent_role
         )
         self.print_panel(content, panel_title, style)
+
+        # Clear task-scoped pointers after the task is finished so subsequent
+        # events don't mistakenly attach to the old task branch.
+        if status in {"completed", "failed"}:
+            self.current_task_branch = None
+            self.current_agent_branch = None
+            self.current_tool_branch = None
+            self.current_reasoning_branch = None
 
     def create_agent_branch(
         self, task_branch: Optional[Tree], agent_role: str, crew_tree: Optional[Tree]
@@ -463,9 +482,10 @@ class ConsoleFormatter:
             self.current_tool_branch = tool_branch
 
         # Update label with current count
+        spinner = self._next_spinner()
         self.update_tree_label(
             tool_branch,
-            "🔧",
+            f"🔧 {spinner}",
             f"Using {tool_name} ({self.tool_usage_counts[tool_name]})",
             "yellow",
         )
@@ -494,7 +514,7 @@ class ConsoleFormatter:
         # Update the existing tool node's label
         self.update_tree_label(
             tool_branch,
-            "🔧",
+            "🔧 ⠋",
             f"Used {tool_name} ({self.tool_usage_counts[tool_name]})",
             "green",
         )
@@ -567,7 +587,8 @@ class ConsoleFormatter:
         # Only add thinking status if we don't have a current tool branch
         if self.current_tool_branch is None:
             tool_branch = branch_to_use.add("")
-            self.update_tree_label(tool_branch, "🧠", "Thinking...", "blue")
+            spinner = self._next_spinner()
+            self.update_tree_label(tool_branch, f"🧠 {spinner}", "Thinking...", "blue")
             self.current_tool_branch = tool_branch
             self.print(tree_to_use)
             self.print()
@@ -1067,12 +1088,16 @@ class ConsoleFormatter:
         if not self.verbose:
             return None
 
-        # Prefer LiteAgent > Agent > Task branch as the parent for reasoning
-        branch_to_use = (
-            self.current_lite_agent_branch
-            or agent_branch
-            or self.current_task_branch
-        )
+        # Prefer to nest under the latest adaptive decision branch when this is a
+        # mid-execution reasoning cycle so the tree indents nicely.
+        if current_step is not None and self.current_adaptive_decision_branch is not None:
+            branch_to_use = self.current_adaptive_decision_branch
+        else:
+            branch_to_use = (
+                self.current_lite_agent_branch
+                or agent_branch
+                or self.current_task_branch
+            )
 
         # We always want to render the full crew tree when possible so the
         # Live view updates coherently. Fallbacks: crew tree → branch itself.
@@ -1091,12 +1116,16 @@ class ConsoleFormatter:
         # Build label text depending on attempt and whether it's mid-execution
         if current_step is not None:
             trigger_text = f" ({reasoning_trigger})" if reasoning_trigger else ""
-            status_text = f"Mid-Execution Reasoning at step {current_step}{trigger_text}"
+            status_text = f"Mid-Execution Reasoning{trigger_text}"
         else:
             status_text = (
                 f"Reasoning (Attempt {attempt})" if attempt > 1 else "Reasoning..."
             )
-        self.update_tree_label(reasoning_branch, "🧠", status_text, "blue")
+
+        # ⠋ is the first frame of a braille spinner – visually hints progress even
+        # without true animation.
+        spinner = self._next_spinner()
+        self.update_tree_label(reasoning_branch, f"🧠 {spinner}", status_text, "yellow")
 
         self.print(tree_to_use)
         self.print()
@@ -1125,15 +1154,29 @@ class ConsoleFormatter:
         )
 
         style = "green" if ready else "yellow"
-        duration_text = f" ({duration_seconds:.2f}s)" if duration_seconds > 0 else ""
-        
-        if current_step is not None:
-            trigger_text = f" ({reasoning_trigger})" if reasoning_trigger else ""
-            status_text = f"Mid-Execution Reasoning Completed at step {current_step}{trigger_text}{duration_text}"
-        else:
-            status_text = f"Reasoning Completed{duration_text}" if ready else f"Reasoning Completed (Not Ready){duration_text}"
+        # Build duration part separately for cleaner formatting
+        duration_part = f"{duration_seconds:.2f}s" if duration_seconds > 0 else ""
 
-        if reasoning_branch is not None:
+        if current_step is not None:
+            # Build label manually to style duration differently and omit trigger info.
+            if reasoning_branch is not None:
+                label = Text()
+                label.append("✅ ", style=f"{style} bold")
+                label.append("Mid-Execution Reasoning Completed", style=style)
+                if duration_part:
+                    label.append(f" ({duration_part})", style="cyan")
+                reasoning_branch.label = label
+
+            status_text = None  # Already set label manually
+        else:
+            status_text = (
+                f"Reasoning Completed ({duration_part})" if duration_part else "Reasoning Completed"
+            ) if ready else (
+                f"Reasoning Completed (Not Ready • {duration_part})" if duration_part else "Reasoning Completed (Not Ready)"
+            )
+
+        # If we didn't build a custom label (non-mid-execution case), use helper
+        if status_text and reasoning_branch is not None:
             self.update_tree_label(reasoning_branch, "✅", status_text, style)
 
         if tree_to_use is not None:
@@ -1141,11 +1184,14 @@ class ConsoleFormatter:
 
         # Show plan in a panel (trim very long plans)
         if plan:
+            # Derive duration text for panel title
+            duration_text = f" ({duration_part})" if duration_part else ""
+
             if current_step is not None:
-                title = f"🧠 Mid-Execution Reasoning Plan (Step {current_step}){duration_text}"
+                title = f"🧠 Mid-Execution Reasoning Plan{duration_text}"
             else:
                 title = f"🧠 Reasoning Plan{duration_text}"
-                
+
             plan_panel = Panel(
                 Text(plan, style="white"),
                 title=title,
@@ -1158,6 +1204,10 @@ class ConsoleFormatter:
 
         # Clear stored branch after completion
         self.current_reasoning_branch = None
+
+        # After reasoning finished, we also clear the adaptive decision branch to
+        # avoid nesting unrelated future nodes.
+        self.current_adaptive_decision_branch = None
 
     def handle_reasoning_failed(
         self,
@@ -1193,3 +1243,70 @@ class ConsoleFormatter:
 
         # Clear stored branch after failure
         self.current_reasoning_branch = None
+
+    # ----------- ADAPTIVE REASONING DECISION EVENTS -----------
+
+    def handle_adaptive_reasoning_decision(
+        self,
+        agent_branch: Optional[Tree],
+        should_reason: bool,
+        reasoning: str,
+        crew_tree: Optional[Tree],
+    ) -> None:
+        """Render the decision on whether to trigger adaptive reasoning."""
+        if not self.verbose:
+            return
+
+        # Prefer LiteAgent > Agent > Task as parent
+        branch_to_use = (
+            self.current_lite_agent_branch
+            or agent_branch
+            or self.current_task_branch
+        )
+
+        tree_to_use = self.current_crew_tree or crew_tree or branch_to_use
+
+        if branch_to_use is None or tree_to_use is None:
+            return
+
+        decision_branch = branch_to_use.add("")
+
+        decision_text = "YES" if should_reason else "NO"
+        style = "green" if should_reason else "yellow"
+
+        self.update_tree_label(
+            decision_branch,
+            "🤔",
+            f"Adaptive Reasoning Decision: {decision_text}",
+            style,
+        )
+
+        # Print tree first (live update)
+        self.print(tree_to_use)
+
+        # Also show explanation if available
+        if reasoning:
+            truncated_reasoning = reasoning[:500] + "..." if len(reasoning) > 500 else reasoning
+            panel = Panel(
+                Text(truncated_reasoning, style="white"),
+                title="🤔 Adaptive Reasoning Rationale",
+                border_style=style,
+                padding=(1, 2),
+            )
+            self.print(panel)
+
+        self.print()
+
+        # Store the decision branch so that subsequent mid-execution reasoning nodes
+        # can be rendered as children of this decision (for better indentation).
+        self.current_adaptive_decision_branch = decision_branch
+
+    # ------------------------------------------------------------------
+    # Spinner helpers
+    # ------------------------------------------------------------------
+
+    def _next_spinner(self) -> str:
+        """Return next spinner frame."""
+        frame = self._spinner_frames[self._spinner_index]
+        self._spinner_index = (self._spinner_index + 1) % len(self._spinner_frames)
+        return frame
