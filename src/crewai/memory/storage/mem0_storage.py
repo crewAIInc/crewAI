@@ -88,7 +88,7 @@ class Mem0Storage(Storage):
         }
 
         # Shared base params
-        params = {
+        params: dict[str, Any] = {
             "agent_id": agent_name,
             "metadata": {"type": base_metadata[self.memory_type], **metadata}
         }
@@ -96,7 +96,6 @@ class Mem0Storage(Storage):
         # Type-specific overrides
         if self.memory_type == "short_term":
             params["infer"] = False
-            params["run_id"] = self.mem0_run_id
         elif self.memory_type == "long_term":
             params["infer"] = False
         elif self.memory_type == "entities":
@@ -111,6 +110,9 @@ class Mem0Storage(Storage):
                 params["version"] = "v2"
                 params["includes"] = self.includes
                 params["excludes"] = self.excludes
+
+                if self.memory_type == "short_term":
+                    params["run_id"] = self.mem0_run_id
 
             self.memory.add(value, **params)
 
