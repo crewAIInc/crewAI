@@ -2,7 +2,7 @@ from io import StringIO
 from typing import Any, Dict
 
 from pydantic import Field, PrivateAttr
-
+from crewai.llm import LLM
 from crewai.task import Task
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import Logger
@@ -283,27 +283,43 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(ToolUsageStartedEvent)
         def on_tool_usage_started(source, event: ToolUsageStartedEvent):
-            self.formatter.handle_tool_usage_started(
-                self.formatter.current_agent_branch,
-                event.tool_name,
+            if isinstance(source, LLM):
+                self.formatter.handle_llm_tool_usage_started(
+                    event.tool_name,
+                )
+            else:
+                self.formatter.handle_tool_usage_started(
+                    self.formatter.current_agent_branch,
+                    event.tool_name,
                 self.formatter.current_crew_tree,
             )
 
         @crewai_event_bus.on(ToolUsageFinishedEvent)
         def on_tool_usage_finished(source, event: ToolUsageFinishedEvent):
-            self.formatter.handle_tool_usage_finished(
-                self.formatter.current_tool_branch,
-                event.tool_name,
-                self.formatter.current_crew_tree,
-            )
+            if isinstance(source, LLM):
+                self.formatter.handle_llm_tool_usage_finished(
+                    event.tool_name,
+                )
+            else:
+                self.formatter.handle_tool_usage_finished(
+                    self.formatter.current_tool_branch,
+                    event.tool_name,
+                    self.formatter.current_crew_tree,
+                )
 
         @crewai_event_bus.on(ToolUsageErrorEvent)
         def on_tool_usage_error(source, event: ToolUsageErrorEvent):
-            self.formatter.handle_tool_usage_error(
-                self.formatter.current_tool_branch,
-                event.tool_name,
-                event.error,
-                self.formatter.current_crew_tree,
+            if isinstance(source, LLM):
+                self.formatter.handle_llm_tool_usage_error(
+                    event.tool_name,
+                    event.error,
+                )
+            else:
+                self.formatter.handle_tool_usage_error(
+                    self.formatter.current_tool_branch,
+                    event.tool_name,
+                    event.error,
+                    self.formatter.current_crew_tree,
             )
 
         # ----------- LLM EVENTS -----------
