@@ -9,8 +9,8 @@ icon: brain-circuit
 CrewAI uses LiteLLM to connect to a wide variety of Language Models (LLMs). This integration provides extensive versatility, allowing you to use models from numerous providers with a simple, unified interface.
 
 <Note>
-    By default, CrewAI uses the `gpt-4o-mini` model. This is determined by the `OPENAI_MODEL_NAME` environment variable, which defaults to "gpt-4o-mini" if not set. 
-    You can easily configure your agents to use a different model or provider as described in this guide.
+    By default, CrewAI uses the `gpt-4o-mini` model. This is determined by the `OPENAI_MODEL_NAME` environment variable, which defaults to "gpt-4o-mini" if not set.
+    You can easily configure your agents to use a different model or provider as described in this guide or the [Setting up your LLM](/concepts/llms#setting-up-your-llm) guide.
 </Note>
 
 ## Supported Providers
@@ -47,7 +47,19 @@ To use a different LLM with your CrewAI agents, you have several options:
     <Tab title="Using a String Identifier">
     Pass the model name as a string when initializing the agent:
         <CodeGroup>
-            ```python Code
+            ```python Generic {8}
+            from crewai import Agent
+
+            # Basic configuration
+            agent = Agent(
+                role='Research Expert',
+                goal='Find all of the things...',
+                backstory="You're a clever researcher...",
+                llm='model-id-here',  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+            )
+            ```
+
+            ```python OpenAI
             from crewai import Agent
 
             # Using OpenAI's GPT-4
@@ -57,6 +69,22 @@ To use a different LLM with your CrewAI agents, you have several options:
                 backstory="An AI assistant powered by OpenAI's latest model.",
                 llm='gpt-4'
             )
+            ```
+
+            ```python Google
+            from crewai import Agent
+
+            # Using Google's Gemini
+            gemini_agent = Agent(
+                role='Gemini Expert',
+                goal='Provide insights using Gemini',
+                backstory="An AI assistant powered by Google's latest model.",
+                llm='gemini-2.0-flash'
+            )
+            ```
+
+            ```python Anthropic
+            from crewai import Agent
 
             # Using Anthropic's Claude
             claude_agent = Agent(
@@ -69,16 +97,17 @@ To use a different LLM with your CrewAI agents, you have several options:
         </CodeGroup>
     </Tab>
     <Tab title="Using the LLM Class">
-    For more detailed configuration, use the LLM class:
+    For more detailed configuration, use the LLM class. See [Setting up your
+    LLM](/concepts/llms#setting-up-your-llm).
         <CodeGroup>
             ```python Code
             from crewai import Agent, LLM
 
             llm = LLM(
-                model="gpt-4",
+                model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+                api_key="your-api-key-here",
+                base_url="url-if-needed",
                 temperature=0.7,
-                base_url="https://api.openai.com/v1",
-                api_key="your-api-key-here"
             )
 
             agent = Agent(
@@ -169,7 +198,7 @@ For local models like those provided by Ollama:
 
 You can change the base API URL for any LLM provider by setting the `base_url` parameter:
 
-```python Code  
+```python Code
 llm = LLM(
     model="custom-model-name",
     base_url="https://api.your-provider.com/v1",
