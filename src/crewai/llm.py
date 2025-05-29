@@ -5,7 +5,7 @@ import sys
 import threading
 import warnings
 from collections import defaultdict
-from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from contextlib import contextmanager
 from typing import (
     Any,
     DefaultDict,
@@ -18,7 +18,7 @@ from typing import (
     Union,
     cast,
 )
-
+from datetime import datetime
 from dotenv import load_dotenv
 from litellm.types.utils import ChatCompletionDeltaToolCall
 from pydantic import BaseModel, Field
@@ -29,6 +29,11 @@ from crewai.utilities.events.llm_events import (
     LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
+)
+from crewai.utilities.events.tool_usage_events import (
+    ToolUsageStartedEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageErrorEvent,
 )
 
 with warnings.catch_warnings():
@@ -833,7 +838,26 @@ class LLM(BaseLLM):
                 fn = available_functions[function_name]
 
                 # --- 3.2) Execute function
+                assert hasattr(crewai_event_bus, "emit")
+                started_at = datetime.now()
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageStartedEvent(
+                        tool_name=function_name,
+                        tool_args=function_args,
+                    ),
+                )
                 result = fn(**function_args)
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageFinishedEvent(
+                        output=result,
+                        tool_name=function_name,
+                        tool_args=function_args,
+                        started_at=started_at,
+                        finished_at=datetime.now(),
+                    ),
+                )
 
                 # --- 3.3) Emit success event
                 self._handle_emit_call_events(result, LLMCallType.TOOL_CALL)
@@ -848,6 +872,14 @@ class LLM(BaseLLM):
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),
+                )
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(
+                        tool_name=function_name,
+                        tool_args=function_args,
+                        error=f"Tool execution error: {str(e)}"
+                    ),
                 )
         return None
 
