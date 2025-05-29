@@ -58,7 +58,7 @@ def mem0_storage_with_mocked_config(mock_mem0_memory):
         crew = MockCrew(
             memory_config={
                 "provider": "mem0",
-                "config": {"user_id": "test_user", "local_mem0_config": config},
+                "config": {"user_id": "test_user", "local_mem0_config": config, "run_id": "my_run_id"},
             }
         )
 
@@ -96,6 +96,8 @@ def mem0_storage_with_memory_client_using_config_from_crew(mock_mem0_memory_clie
                     "org_id": "my_org_id",
                     "project_id": "my_project_id",
                     "run_id": "my_run_id",
+                    "includes": "include1",
+                    "excludes": "exclude1",
                 },
             }
         )
@@ -151,10 +153,6 @@ def test_mem0_storage_with_explict_config(
     assert (
         mem0_storage_with_memory_client_using_explictly_config.config == expected_config
     )
-    assert (
-        mem0_storage_with_memory_client_using_explictly_config.memory_config
-        == expected_config
-    )
 
 
 def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
@@ -173,6 +171,7 @@ def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
+        run_id= "my_run_id"
     )
 
 
@@ -192,8 +191,10 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
-        output_format="v2",
+        version="v2",
         run_id="my_run_id",
+        includes="include1",
+        excludes="exclude1",
     )
 
 
@@ -230,7 +231,7 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
         agent_id="Test_Agent", 
         metadata={"type": "short_term"},
         user_id="test_user",
-        output_format='v2',
+        version='v2',
         run_id="my_run_id",
     )
 
