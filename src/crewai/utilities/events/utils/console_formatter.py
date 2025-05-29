@@ -26,6 +26,7 @@ class ConsoleFormatter:
     _spinner_thread: Optional[threading.Thread] = None
     _stop_spinner_event: Optional[threading.Event] = None
     _spinner_running: bool = False
+    current_llm_tool_tree: Optional[Tree] = None
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -468,6 +469,51 @@ class ConsoleFormatter:
         self.print(flow_tree)
         self.print()
         return method_branch
+
+    def get_llm_tree(self, tool_name: str):
+        text = Text()
+        text.append(f"🔧 Using {tool_name} from LLM available_function", style="yellow")
+
+        tree = self.current_flow_tree or self.current_crew_tree
+
+        if tree:
+            tree.add(text)
+
+        return tree or Tree(text)
+
+    def handle_llm_tool_usage_started(
+        self,
+        tool_name: str,
+    ):
+        tree = self.get_llm_tree(tool_name)
+        self.add_tree_node(tree, "🔄 Tool Usage Started", "green")
+        self.print(tree)
+        self.print()
+        return tree
+
+    def handle_llm_tool_usage_finished(
+        self,
+        tool_name: str,
+    ):
+        tree = self.get_llm_tree(tool_name)
+        self.add_tree_node(tree, "✅ Tool Usage Completed", "green")
+        self.print(tree)
+        self.print()
+
+    def handle_llm_tool_usage_error(
+        self,
+        tool_name: str,
+        error: str,
+    ):
+        tree = self.get_llm_tree(tool_name)
+        self.add_tree_node(tree, "❌ Tool Usage Failed", "red")
+        self.print(tree)
+        self.print()
+
+        error_content = self.create_status_content(
+            "Tool Usage Failed", tool_name, "red", Error=error
+        )
+        self.print_panel(error_content, "Tool Error", "red")
 
     def handle_tool_usage_started(
         self,
