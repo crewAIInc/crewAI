@@ -14,13 +14,11 @@ def test_import_without_chromadb():
         if "crewai.utilities.embedding_configurator" in sys.modules:
             importlib.reload(sys.modules["crewai.utilities.embedding_configurator"])
             
-        import crewai
-        
         from crewai import Agent, Task, Crew, Process
         
         agent = Agent(role="Test Agent", goal="Test Goal", backstory="Test Backstory")
         task = Task(description="Test Task", agent=agent)
-        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+        _ = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
 
 def test_memory_storage_without_chromadb():
