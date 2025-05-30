@@ -91,9 +91,16 @@ class SeleniumScrapingTool(BaseTool):
                     "`selenium` and `webdriver-manager` package not found, please run `uv add selenium webdriver-manager`"
                 )
 
-        options: Options = Options()
-        options.add_argument("--headless")
-        self.driver = webdriver.Chrome(options=options)
+        if 'driver' not in kwargs:
+            if 'options' not in kwargs:
+                options: Options = Options()
+                options.add_argument("--headless")
+            else:
+                options = kwargs['options']
+            self.driver = webdriver.Chrome(options=options)
+        else:
+            self.driver = kwargs['driver']
+
         self._by = By
         if cookie is not None:
             self.cookie = cookie
