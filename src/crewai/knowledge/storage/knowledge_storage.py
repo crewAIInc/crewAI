@@ -24,6 +24,7 @@ from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.chromadb import sanitize_collection_name
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
+from crewai.utilities.errors import ChromaDBRequiredError
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
 
@@ -71,10 +72,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         score_threshold: float = 0.35,
     ) -> List[Dict[str, Any]]:
         if not HAS_CHROMADB:
-            raise ImportError(
-                "ChromaDB is required for knowledge storage features. "
-                "Please install it with 'pip install crewai[storage]'"
-            )
+            raise ChromaDBRequiredError("knowledge storage")
             
         with suppress_logging():
             if self.collection:
@@ -99,10 +97,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def initialize_knowledge_storage(self):
         if not HAS_CHROMADB:
-            raise ImportError(
-                "ChromaDB is required for knowledge storage features. "
-                "Please install it with 'pip install crewai[storage]'"
-            )
+            raise ChromaDBRequiredError("knowledge storage")
             
         base_path = os.path.join(db_storage_path(), "knowledge")
         try:
@@ -129,17 +124,11 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             except Exception:
                 raise Exception("Failed to create or get collection")
         except ImportError:
-            raise ImportError(
-                "ChromaDB is required for knowledge storage features. "
-                "Please install it with 'pip install crewai[storage]'"
-            )
+            raise ChromaDBRequiredError("knowledge storage")
 
     def reset(self):
         if not HAS_CHROMADB:
-            raise ImportError(
-                "ChromaDB is required for knowledge storage features. "
-                "Please install it with 'pip install crewai[storage]'"
-            )
+            raise ChromaDBRequiredError("knowledge storage")
             
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
         try:
@@ -154,10 +143,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             self.app = None
             self.collection = None
         except ImportError:
-            raise ImportError(
-                "ChromaDB is required for knowledge storage features. "
-                "Please install it with 'pip install crewai[storage]'"
-            )
+            raise ChromaDBRequiredError("knowledge storage")
 
     def save(
         self,
@@ -165,10 +151,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
         if not HAS_CHROMADB:
-            raise ImportError(
-                "ChromaDB is required for knowledge storage features. "
-                "Please install it with 'pip install crewai[storage]'"
-            )
+            raise ChromaDBRequiredError("knowledge storage")
             
         if not self.collection:
             raise Exception("Collection not initialized")
@@ -210,10 +193,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 ids=filtered_ids,
             )
         except ImportError:
-            raise ImportError(
-                "ChromaDB is required for knowledge storage features. "
-                "Please install it with 'pip install crewai[storage]'"
-            )
+            raise ChromaDBRequiredError("knowledge storage")
         except Exception as e:
             if HAS_CHROMADB and isinstance(e, chromadb.errors.InvalidDimensionException):
                 Logger(verbose=True).log(
@@ -232,10 +212,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def _create_default_embedding_function(self):
         if not HAS_CHROMADB:
-            raise ImportError(
-                "ChromaDB is required for knowledge storage features. "
-                "Please install it with 'pip install crewai[storage]'"
-            )
+            raise ChromaDBRequiredError("knowledge storage")
             
         try:
             from chromadb.utils.embedding_functions.openai_embedding_function import (
@@ -246,10 +223,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
             )
         except ImportError:
-            raise ImportError(
-                "ChromaDB is required for knowledge storage features. "
-                "Please install it with 'pip install crewai[storage]'"
-            )
+            raise ChromaDBRequiredError("knowledge storage")
 
     def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.
