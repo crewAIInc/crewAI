@@ -8,12 +8,13 @@ icon: 'plug'
 
 The [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) provides a standardized way for AI agents to provide context to LLMs by communicating with external services, known as MCP Servers. 
 The `crewai-tools` library extends CrewAI's capabilities by allowing you to seamlessly integrate tools from these MCP servers into your agents. 
-This gives your crews access to a vast ecosystem of functionalities. For now, we support **Standard Input/Output** (Stdio) and **Server-Sent Events** (SSE) transport mechanisms. 
+This gives your crews access to a vast ecosystem of functionalities. 
 
-<Info>
-We will also be integrating **Streamable HTTP** transport in the near future. 
-Streamable HTTP is designed for efficient, bi-directional communication over a single HTTP connection.
-</Info>
+We currently support the following transport mechanisms: 
+
+- **Stdio**: for local servers (communication via standard input/output between processes on the same machine)
+- **Server-Sent Events (SSE)**: for remote servers (unidirectional, real-time data streaming from server to client over HTTP)
+- **Streamable HTTP**: for remote servers (flexible, potentially bi-directional communication over HTTP, often utilizing SSE for server-to-client streams)
 
 ## Video Tutorial
 Watch this video tutorial for a comprehensive guide on MCP integration with CrewAI:
@@ -40,7 +41,7 @@ uv pip install 'crewai-tools[mcp]'
 ### Integrating MCP Tools with `MCPServerAdapter`
 
 The `MCPServerAdapter` class from `crewai-tools` is the primary way to connect to an MCP server and make its tools available to your CrewAI agents. 
-It supports different transport mechanisms, primarily **Stdio** (for local servers) and **SSE** (Server-Sent Events).You have two main options for managing the connection lifecycle:
+It supports different transport mechanisms, including **Stdio** (for local servers), **SSE** (Server-Sent Events), and **Streamable HTTP** (for remote servers). You have two main options for managing the connection lifecycle:
 
 ### Option 1: Fully Managed Connection (Recommended)
 
@@ -55,8 +56,8 @@ from mcp import StdioServerParameters
 import os
 
 server_params=StdioServerParameters(
-    command="uxv", # Or your python3 executable i.e. "python3"
-    args=["mock_server.py"],
+    command="python3", # Or your specific python interpreter e.g., "python"
+    args=["path/to/your/stdio_server_script.py"], # Replace with the actual path to your server script
     env={"UV_PYTHON": "3.12", **os.environ},
 )
 
@@ -118,6 +119,53 @@ with MCPServerAdapter(server_params) as tools:
     print(result)
 ```
 
+**For a Streamable HTTP-based MCP server:**
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import MCPServerAdapter
+
+# Define parameters for the Streamable HTTP MCP server
+server_params = {
+    "url": "http://localhost:8001/mcp",  # Ensure this matches your server's URL
+    "transport": "streamable-http"
+}
+
+# Use MCPServerAdapter with a context manager
+with MCPServerAdapter(server_params) as tools:
+    print(f"Available tools from Streamable HTTP MCP server: {[tool.name for tool in tools]}")
+
+    # Example: Using a tool from the server (e.g., a 'hello' tool)
+    hello_agent = Agent(
+        role="Greeter",
+        goal="Greet the user warmly.",
+        backstory="An expert in providing friendly greetings.",
+        tools=tools,  # Assuming one of the tools is 'hello_tool' or similar
+        verbose=True
+    )
+
+    greeting_task = Task(
+        description="Greet the user named '{user}'.",
+        agent=hello_agent,
+        expected_output="A personalized and friendly greeting message.",
+        # If your tool or agent produces markdown, you can set markdown=True
+        # markdown=True 
+    )
+
+    # Create the crew
+    greeting_crew = Crew(
+        agents=[hello_agent],
+        tasks=[greeting_task],
+        verbose=True
+    )
+
+    # Get user input for the task
+    user_name = input("What is your name? ")
+    result = greeting_crew.kickoff(inputs={"user": user_name})
+
+    print("\nFinal Greeting Output:\n", result)
+```
+
 ### Option 2: More control over the MCP server connection lifecycle
 
 If you need finer-grained control over the MCP server connection lifecycle, you can instantiate `MCPServerAdapter` directly and manage its `start()` and `stop()` methods.
@@ -135,8 +183,8 @@ from crewai import Agent, Task, Crew
 import os
 
 stdio_params = StdioServerParameters(
-    command="uvx", # Or your python3 executable i.e. "python3"
-    args=["--quiet", "your-mcp-server@0.1.3"],
+    command="python3", # Or your specific python interpreter e.g., "python"
+    args=["path/to/your/stdio_server_script.py"], # Replace with the actual path to your server script
     env={"UV_PYTHON": "3.12", **os.environ},
 )
 
@@ -219,6 +267,138 @@ finally:
     print("Stopping SSE MCP server connection (manual)...")
     mcp_server_adapter.stop() # **Crucial: Ensure stop is called**
 ```
+
+#### Streamable HTTP Transport Example (Manual)
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import MCPServerAdapter
+
+# Define parameters for the Streamable HTTP MCP server
+server_params = {
+    "url": "http://localhost:8001/mcp",  # Ensure this matches your server's URL
+    "transport": "streamable-http"
+}
+
+mcp_server_adapter = None  # Initialize to ensure it's defined for the finally block
+try:
+    mcp_server_adapter = MCPServerAdapter(server_params)
+    mcp_server_adapter.start()
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual Streamable HTTP): {[tool.name for tool in tools]}")
+
+    hello_agent = Agent(
+        role="Greeter",
+        goal="Greet the user warmly using a manually managed Streamable HTTP connection.",
+        backstory="An expert in providing friendly greetings.",
+        tools=tools,
+        verbose=True
+    )
+
+    greeting_task = Task(
+        description="Greet the user named '{user}'.",
+        agent=hello_agent,
+        expected_output="A personalized and friendly greeting message."
+    )
+
+    greeting_crew = Crew(
+        agents=[hello_agent],
+        tasks=[greeting_task],
+        verbose=True
+    )
+
+    user_name = input("What is your name for the manual Streamable HTTP demo? ")
+    result = greeting_crew.kickoff(inputs={"user": user_name})
+    print("\nFinal Greeting Output (manual Streamable HTTP):\n", result)
+
+finally:
+    if mcp_server_adapter:
+        print("Stopping Streamable HTTP MCP server connection (manual)...")
+        mcp_server_adapter.stop() # **Crucial: Ensure stop is called**
+```
+
+
+### Connecting to Multiple MCP Servers
+
+`MCPServerAdapter` also supports connecting to multiple MCP servers simultaneously. This is useful when your agents need to access tools from different services, each exposed through its own MCP server (e.g., one for math operations, another for web searching, and a third for a specific API).
+
+To connect to multiple servers, you can pass a list of server parameter objects directly to `MCPServerAdapter`. Each element in the list should be a valid server parameter configuration, such as a dictionary for HTTP/SSE servers or an `StdioServerParameters` object for Stdio-based servers.
+
+The adapter will attempt to connect to all specified servers. The `tools` object obtained (e.g., via the context manager) will contain a combined list of all tools available from all successfully connected servers. This combined list of tools can then be provided to your CrewAI agents, allowing them to leverage capabilities from all connected MCP sources.
+
+**Example:**
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters
+import os
+
+# Define configurations for multiple MCP servers (replace with actual details)
+server_configurations = [
+    # Streamable HTTP Server
+    {
+        "url": "http://localhost:8001/mcp", 
+        "transport": "streamable-http"
+    },
+    # SSE (Server-Sent Events) Server
+    {
+        "url": "http://localhost:8000/sse",
+        "transport": "sse"
+    },
+    # StdIO (Standard Input/Output) Server
+    StdioServerParameters(
+        command="python3",
+        args=["path/to/your/stdio_mcp_server.py"],
+        env={"PYTHONPATH": ".", **os.environ}
+    )
+]
+
+try:
+    with MCPServerAdapter(server_configurations) as all_tools:
+        print(f"Connected. Available tools: {[tool.name for tool in all_tools]}\n")
+
+        multi_tool_agent = Agent(
+            role="Versatile Assistant",
+            goal="Leverage diverse tools from multiple MCP servers.",
+            backstory="An AI agent skilled in using various tool sources.",
+            tools=all_tools,
+            verbose=True,
+            allow_delegation=False
+        )
+
+        # Generic task to demonstrate tool usage
+        reporting_task = Task(
+            description="List the names of all available tools.",
+            agent=multi_tool_agent,
+            expected_output="A list of tool names."
+        )
+
+        utility_crew = Crew(
+            agents=[multi_tool_agent],
+            tasks=[reporting_task],
+            verbose=True
+        )
+
+        result = utility_crew.kickoff()
+        print("\nCrew Task Result:\n", result)
+
+except Exception as e:
+    print(f"An error occurred: {e}")
+    print("Ensure configured MCP servers are running and accessible.")
+```
+This approach allows for a flexible and centralized way to manage tool sources for your CrewAI agents. Remember to ensure that each MCP server is running and accessible when your CrewAI application starts.
+
+Checkout this repository for full demos and examples of MCP integration with CrewAI! 👇
+
+<Card 
+title="GitHub Repository"
+icon="github"
+href="https://github.com/tonykipkemboi/crewai-mcp-demo"
+target="_blank"
+>
+CrewAI MCP Demo
+</Card>
 
 ## Staying Safe with MCP
 <Warning>
