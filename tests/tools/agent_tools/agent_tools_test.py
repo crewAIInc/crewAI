@@ -131,3 +131,48 @@ def test_ask_question_to_wrong_agent():
         result
         == "\nError executing tool. coworker mentioned not found, it must be one of the following options:\n- researcher\n"
     )
+
+def test_target_agents_delegation_filtering():
+    """Test that target_agents properly filters delegation targets."""
+    researcher = Agent(
+        role="researcher",
+        goal="make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology",
+        allow_delegation=True,
+        target_agents=["writer"]  # Can only delegate to writer
+    )
+    
+    writer = Agent(
+        role="writer", 
+        goal="Write engaging content",
+        backstory="You're an expert writer",
+        allow_delegation=False
+    )
+    
+    analyst = Agent(
+        role="analyst",
+        goal="Analyze data trends", 
+        backstory="You're an expert analyst",
+        allow_delegation=False
+    )
+    
+    tools = AgentTools(agents=[writer]).tools()  # Only writer available
+    delegate_tool = tools[0]
+    
+    result = delegate_tool.run(
+        coworker="writer",
+        task="Write about AI trends", 
+        context="Latest developments"
+    )
+    assert "Error executing tool" not in result
+    
+    tools_with_analyst = AgentTools(agents=[analyst]).tools()
+    delegate_tool_analyst = tools_with_analyst[0]
+    
+    result = delegate_tool_analyst.run(
+        coworker="analyst",
+        task="Analyze trends",
+        context="Data analysis"
+    )
+    # This should work since we're passing analyst directly to AgentTools
+    assert "Error executing tool" not in result

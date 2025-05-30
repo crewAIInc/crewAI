@@ -155,6 +155,10 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
+    target_agents: Optional[List[str]] = Field(
+        default=None,
+        description="List of agent roles that this agent can delegate tasks to. If None, can delegate to all agents.",
+    )
 
     @model_validator(mode="before")
     def validate_from_repository(cls, v):
@@ -549,6 +553,18 @@ class Agent(BaseAgent):
         )
 
     def get_delegation_tools(self, agents: List[BaseAgent]):
+        if hasattr(self, 'target_agents') and self.target_agents is not None:
+            filtered_agents = [
+                agent for agent in agents 
+                if agent.role in self.target_agents
+            ]
+            if len(filtered_agents) < len(self.target_agents):
+                available_roles = [agent.role for agent in agents]
+                missing_roles = set(self.target_agents) - set(available_roles)
+                if hasattr(self, '_logger'):
+                    self._logger.log("warning", f"Some target agents not found for delegation: {missing_roles}")
+            agents = filtered_agents
+        
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
