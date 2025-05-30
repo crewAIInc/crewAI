@@ -3,6 +3,8 @@ import importlib
 import sys
 from unittest.mock import patch
 
+from crewai.utilities.errors import ChromaDBRequiredError
+
 
 def test_import_without_chromadb():
     """Test that crewai can be imported without chromadb."""
@@ -31,7 +33,7 @@ def test_memory_storage_without_chromadb():
         
         assert not HAS_CHROMADB
         
-        with pytest.raises(ImportError) as excinfo:
+        with pytest.raises(ChromaDBRequiredError) as excinfo:
             storage = RAGStorage()
             storage._initialize_app()
             
@@ -48,7 +50,7 @@ def test_knowledge_storage_without_chromadb():
         
         assert not HAS_CHROMADB
         
-        with pytest.raises(ImportError) as excinfo:
+        with pytest.raises(ChromaDBRequiredError) as excinfo:
             storage = KnowledgeStorage()
             storage.initialize_knowledge_storage()
             
@@ -65,7 +67,7 @@ def test_embedding_configurator_without_chromadb():
         
         assert not HAS_CHROMADB
         
-        with pytest.raises(ImportError) as excinfo:
+        with pytest.raises(ChromaDBRequiredError) as excinfo:
             configurator = EmbeddingConfigurator()
             configurator.configure_embedder()
             

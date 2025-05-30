@@ -1,27 +1,27 @@
 import os
-from typing import Any, Dict, Optional, cast, Protocol, TypeVar, Sequence
+from typing import Any, Dict, Optional, cast, Protocol, Sequence, TYPE_CHECKING, TypeVar, List, Union
 
 from crewai.utilities.errors import ChromaDBRequiredError
 
-T = TypeVar('T')
+if TYPE_CHECKING:
+    from numpy import ndarray
+    from numpy import dtype, floating, signedinteger, unsignedinteger
 
 try:
-    from chromadb import Documents, EmbeddingFunction as ChromaEmbeddingFunction, Embeddings
+    from chromadb import Documents, EmbeddingFunction, Embeddings
     from chromadb.api.types import validate_embedding_function
     HAS_CHROMADB = True
-    
-    EmbeddingFunction = ChromaEmbeddingFunction
 except ImportError:
     HAS_CHROMADB = False
     
-    class EmbeddingFunction(Protocol[T]):
-        """Protocol for embedding functions when ChromaDB is not available."""
-        def __call__(self, input: Sequence[str]) -> Sequence[Sequence[float]]: ...
-        
-    Documents = Any
-    Embeddings = Any
+    Documents = List[str]  # type: ignore
+    Embeddings = List[List[float]]  # type: ignore
     
-    def validate_embedding_function(func: Any) -> None:
+    class EmbeddingFunction(Protocol):  # type: ignore
+        """Protocol for embedding functions when ChromaDB is not available."""
+        def __call__(self, input: List[str]) -> List[List[float]]: ...
+    
+    def validate_embedding_function(func: Any) -> None:  # type: ignore
         """Stub for validate_embedding_function when ChromaDB is not available."""
         pass
 
@@ -266,7 +266,7 @@ class EmbeddingConfigurator:
                 "IBM Watson dependencies are not installed. Please install them to use Watson embedding."
             ) from e
 
-        class WatsonEmbeddingFunction(EmbeddingFunction):
+        class WatsonEmbeddingFunction:
             def __call__(self, input: Documents) -> Embeddings:
                 if isinstance(input, str):
                     input = [input]
