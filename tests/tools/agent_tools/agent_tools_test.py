@@ -134,7 +134,8 @@ def test_ask_question_to_wrong_agent():
 
 def test_target_agents_delegation_filtering():
     """Test that target_agents properly filters delegation targets."""
-    researcher = Agent(
+    # that an agent with target_agents=["writer"] would only delegate to writer
+    Agent(
         role="researcher",
         goal="make the best research and analysis on content about AI and AI agents",
         backstory="You're an expert researcher, specialized in technology",
