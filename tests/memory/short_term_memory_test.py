@@ -12,6 +12,15 @@ from crewai.task import Task
 @pytest.fixture
 def short_term_memory():
     """Fixture to create a ShortTermMemory instance"""
+    try:
+        import chromadb
+        HAS_CHROMADB = True
+    except ImportError:
+        HAS_CHROMADB = False
+        
+    if not HAS_CHROMADB:
+        pytest.skip("ChromaDB is required for this test")
+        
     agent = Agent(
         role="Researcher",
         goal="Search relevant data and provide results",
@@ -29,6 +38,15 @@ def short_term_memory():
 
 
 def test_save_and_search(short_term_memory):
+    try:
+        import chromadb
+        HAS_CHROMADB = True
+    except ImportError:
+        HAS_CHROMADB = False
+        
+    if not HAS_CHROMADB:
+        pytest.skip("ChromaDB is required for this test")
+        
     memory = ShortTermMemoryItem(
         data="""test value test value test value test value test value test value
         test value test value test value test value test value test value

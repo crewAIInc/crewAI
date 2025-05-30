@@ -2384,6 +2384,16 @@ def test_multiple_conditional_tasks(researcher, writer):
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory():
     from unittest.mock import patch
+    
+    # Check if ChromaDB is available
+    try:
+        import chromadb
+        HAS_CHROMADB = True
+    except ImportError:
+        HAS_CHROMADB = False
+        
+    if not HAS_CHROMADB:
+        pytest.skip("ChromaDB is required for this test")
 
     math_researcher = Agent(
         role="Researcher",
@@ -2412,6 +2422,16 @@ def test_using_contextual_memory():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory_with_long_term_memory():
     from unittest.mock import patch
+    
+    # Check if ChromaDB is available
+    try:
+        import chromadb
+        HAS_CHROMADB = True
+    except ImportError:
+        HAS_CHROMADB = False
+        
+    if not HAS_CHROMADB:
+        pytest.skip("ChromaDB is required for this test")
 
     math_researcher = Agent(
         role="Researcher",
@@ -2441,6 +2461,16 @@ def test_using_contextual_memory_with_long_term_memory():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_warning_long_term_memory_without_entity_memory():
     from unittest.mock import patch
+    
+    # Check if ChromaDB is available
+    try:
+        import chromadb
+        HAS_CHROMADB = True
+    except ImportError:
+        HAS_CHROMADB = False
+        
+    if not HAS_CHROMADB:
+        pytest.skip("ChromaDB is required for this test")
 
     math_researcher = Agent(
         role="Researcher",
@@ -2478,6 +2508,16 @@ def test_warning_long_term_memory_without_entity_memory():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_long_term_memory_with_memory_flag():
     from unittest.mock import patch
+    
+    # Check if ChromaDB is available
+    try:
+        import chromadb
+        HAS_CHROMADB = True
+    except ImportError:
+        HAS_CHROMADB = False
+        
+    if not HAS_CHROMADB:
+        pytest.skip("ChromaDB is required for this test")
 
     math_researcher = Agent(
         role="Researcher",
@@ -2513,6 +2553,16 @@ def test_long_term_memory_with_memory_flag():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory_with_short_term_memory():
     from unittest.mock import patch
+    
+    # Check if ChromaDB is available
+    try:
+        import chromadb
+        HAS_CHROMADB = True
+    except ImportError:
+        HAS_CHROMADB = False
+        
+    if not HAS_CHROMADB:
+        pytest.skip("ChromaDB is required for this test")
 
     math_researcher = Agent(
         role="Researcher",
@@ -2542,6 +2592,16 @@ def test_using_contextual_memory_with_short_term_memory():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_disabled_memory_using_contextual_memory():
     from unittest.mock import patch
+    
+    # Check if ChromaDB is available
+    try:
+        import chromadb
+        HAS_CHROMADB = True
+    except ImportError:
+        HAS_CHROMADB = False
+        
+    if not HAS_CHROMADB:
+        pytest.skip("ChromaDB is required for this test")
 
     math_researcher = Agent(
         role="Researcher",
