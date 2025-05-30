@@ -395,6 +395,41 @@ class Agent(BaseAgent):
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
 
+        if self.reasoning:
+            try:
+                from crewai.utilities.reasoning_handler import (
+                    AgentReasoning,
+                    AgentReasoningOutput,
+                )
+
+                reasoning_handler = AgentReasoning(
+                    task=task,
+                    agent=self,
+                    extra_context=context or "",
+                )
+
+                reasoning_output: AgentReasoningOutput = reasoning_handler.handle_agent_reasoning()
+
+                plan_text = reasoning_output.plan.plan
+
+                internal_plan_msg = (
+                    "### INTERNAL PLAN (do NOT reveal or repeat)\n" + plan_text
+                )
+
+                task_prompt = (
+                    task_prompt
+                    + "\n\n"
+                    + internal_plan_msg
+                )
+
+            except Exception as e:
+                if hasattr(self, "_logger"):
+                    self._logger.log(
+                        "error", f"Error during reasoning process: {str(e)}"
+                    )
+                else:
+                    print(f"Error during reasoning process: {str(e)}")
+
         try:
             crewai_event_bus.emit(
                 self,

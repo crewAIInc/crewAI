@@ -220,6 +220,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                         i18n=self._i18n,
+                        task_description=getattr(self.task, "description", None),
+                        expected_output=getattr(self.task, "expected_output", None),
                     )
                     continue
                 else:
@@ -296,39 +298,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             verbose=self.agent.verbose
             or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
         )
-
-    def _summarize_messages(self) -> None:
-        messages_groups = []
-        for message in self.messages:
-            content = message["content"]
-            cut_size = self.llm.get_context_window_size()
-            for i in range(0, len(content), cut_size):
-                messages_groups.append({"content": content[i : i + cut_size]})
-
-        summarized_contents = []
-        for group in messages_groups:
-            summary = self.llm.call(
-                [
-                    format_message_for_llm(
-                        self._i18n.slice("summarizer_system_message"), role="system"
-                    ),
-                    format_message_for_llm(
-                        self._i18n.slice("summarize_instruction").format(
-                            group=group["content"]
-                        ),
-                    ),
-                ],
-                callbacks=self.callbacks,
-            )
-            summarized_contents.append({"content": str(summary)})
-
-        merged_summary = " ".join(content["content"] for content in summarized_contents)
-
-        self.messages = [
-            format_message_for_llm(
-                self._i18n.slice("summary").format(merged_summary=merged_summary)
-            )
-        ]
 
     def _handle_crew_training_output(
         self, result: AgentFinish, human_feedback: Optional[str] = None
@@ -470,6 +439,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             bool: True if reasoning should be triggered, False otherwise.
         """
+        if self.iterations == 0:
+            return False
+
         if not hasattr(self.agent, "reasoning") or not self.agent.reasoning:
             return False
 
@@ -561,12 +533,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 iteration_messages=self.messages
             )
 
-            self._append_message(
+            updated_plan_msg = (
                 self._i18n.retrieve("reasoning", "mid_execution_reasoning_update").format(
                     plan=reasoning_output.plan.plan
-                ),
-                role="assistant",
+                ) +
+                "\n\nRemember: strictly follow the updated plan above and ensure the final answer fully meets the EXPECTED OUTPUT criteria."
             )
+
+            self._append_message(updated_plan_msg, role="assistant")
 
             self.steps_since_reasoning = 0
 

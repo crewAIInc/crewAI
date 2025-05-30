@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional
+import threading
 
 from rich.console import Console
 from rich.panel import Panel
@@ -19,9 +20,13 @@ class ConsoleFormatter:
     current_reasoning_branch: Optional[Tree] = None  # Track reasoning status
     current_llm_tool_tree: Optional[Tree] = None
     current_adaptive_decision_branch: Optional[Tree] = None  # Track last adaptive decision branch
-    # Spinner support
+    # Spinner support ---------------------------------------------------
     _spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
     _spinner_index: int = 0
+    _spinner_branches: Dict[Tree, tuple[str, str, str]] = {}  # branch -> (icon, name, style)
+    _spinner_thread: Optional[threading.Thread] = None
+    _stop_spinner_event: Optional[threading.Event] = None
+    _spinner_running: bool = False
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -53,6 +58,8 @@ class ConsoleFormatter:
 
         for label, value in fields.items():
             content.append(f"{label}: ", style="white")
+            if label == "Result":
+                content.append("\n")
             content.append(
                 f"{value}\n", style=fields.get(f"{label}_style", status_style)
             )
@@ -142,6 +149,7 @@ class ConsoleFormatter:
         crew_name: str,
         source_id: str,
         status: str = "completed",
+        final_result: Optional[str] = None,
     ) -> None:
         """Handle crew tree updates with consistent formatting."""
         if not self.verbose or tree is None:
@@ -167,11 +175,18 @@ class ConsoleFormatter:
             style,
         )
 
+        # Prepare additional fields for the completion panel
+        additional_fields: Dict[str, Any] = {"ID": source_id}
+
+        # Include the final result if provided and the status is completed
+        if status == "completed" and final_result is not None:
+            additional_fields["Result"] = final_result
+
         content = self.create_status_content(
             content_title,
             crew_name or "Crew",
             style,
-            ID=source_id,
+            **additional_fields,
         )
 
         self.print_panel(content, title, style)
@@ -227,7 +242,7 @@ class ConsoleFormatter:
         # and tool branches so that any upcoming Reasoning / Tool logs attach
         # to the correct task.
         self.current_agent_branch = None
-        self.current_reasoning_branch = None
+        # Keep current_reasoning_branch; reasoning may still be in progress
         self.current_tool_branch = None
 
         return task_branch
@@ -283,7 +298,10 @@ class ConsoleFormatter:
             self.current_task_branch = None
             self.current_agent_branch = None
             self.current_tool_branch = None
-            self.current_reasoning_branch = None
+            # Ensure spinner is stopped if reasoning branch exists
+            if self.current_reasoning_branch is not None:
+                self._unregister_spinner_branch(self.current_reasoning_branch)
+                self.current_reasoning_branch = None
 
     def create_agent_branch(
         self, task_branch: Optional[Tree], agent_role: str, crew_tree: Optional[Tree]
@@ -521,20 +539,20 @@ class ConsoleFormatter:
         # Update tool usage count
         self.tool_usage_counts[tool_name] = self.tool_usage_counts.get(tool_name, 0) + 1
 
-        # Find or create tool node
-        tool_branch = self.current_tool_branch
-        if tool_branch is None:
-            tool_branch = branch_to_use.add("")
-            self.current_tool_branch = tool_branch
+        # Always create a new branch for each tool invocation so that previous
+        # tool usages remain visible in the tree.
+        tool_branch = branch_to_use.add("")
+        self.current_tool_branch = tool_branch
 
         # Update label with current count
-        spinner = self._next_spinner()
+        spinner_char = self._next_spinner()
         self.update_tree_label(
             tool_branch,
-            f"🔧 {spinner}",
+            f"🔧 {spinner_char}",
             f"Using {tool_name} ({self.tool_usage_counts[tool_name]})",
             "yellow",
         )
+        self._register_spinner_branch(tool_branch, "🔧", f"Using {tool_name} ({self.tool_usage_counts[tool_name]})", "yellow")
 
         # Print updated tree immediately
         self.print(tree_to_use)
@@ -560,13 +578,11 @@ class ConsoleFormatter:
         # Update the existing tool node's label
         self.update_tree_label(
             tool_branch,
-            "🔧 ⠋",
+            "🔧",
             f"Used {tool_name} ({self.tool_usage_counts[tool_name]})",
             "green",
         )
-
-        # Clear the current tool branch as we're done with it
-        self.current_tool_branch = None
+        self._unregister_spinner_branch(tool_branch)
 
         # Only print if we have a valid tree and the tool node is still in it
         if isinstance(tree_to_use, Tree) and tool_branch in tree_to_use.children:
@@ -633,8 +649,9 @@ class ConsoleFormatter:
         # Only add thinking status if we don't have a current tool branch
         if self.current_tool_branch is None:
             tool_branch = branch_to_use.add("")
-            spinner = self._next_spinner()
-            self.update_tree_label(tool_branch, f"🧠 {spinner}", "Thinking...", "blue")
+            spinner_char = self._next_spinner()
+            self.update_tree_label(tool_branch, f"🧠 {spinner_char}", "Thinking...", "blue")
+            self._register_spinner_branch(tool_branch, "🧠", "Thinking...", "blue")
             self.current_tool_branch = tool_branch
             self.print(tree_to_use)
             self.print()
@@ -668,6 +685,8 @@ class ConsoleFormatter:
             for parent in parents:
                 if isinstance(parent, Tree) and tool_branch in parent.children:
                     parent.children.remove(tool_branch)
+                    # Stop spinner for the thinking branch before removing
+                    self._unregister_spinner_branch(tool_branch)
                     removed = True
                     break
 
@@ -1161,8 +1180,7 @@ class ConsoleFormatter:
 
         # Build label text depending on attempt and whether it's mid-execution
         if current_step is not None:
-            trigger_text = f" ({reasoning_trigger})" if reasoning_trigger else ""
-            status_text = f"Mid-Execution Reasoning{trigger_text}"
+            status_text = "Mid-Execution Reasoning"
         else:
             status_text = (
                 f"Reasoning (Attempt {attempt})" if attempt > 1 else "Reasoning..."
@@ -1170,8 +1188,11 @@ class ConsoleFormatter:
 
         # ⠋ is the first frame of a braille spinner – visually hints progress even
         # without true animation.
-        spinner = self._next_spinner()
-        self.update_tree_label(reasoning_branch, f"🧠 {spinner}", status_text, "yellow")
+        spinner_char = self._next_spinner()
+        self.update_tree_label(reasoning_branch, f"🧠 {spinner_char}", status_text, "yellow")
+
+        # Register branch for continuous spinner
+        self._register_spinner_branch(reasoning_branch, "🧠", status_text, "yellow")
 
         self.print(tree_to_use)
         self.print()
@@ -1199,7 +1220,8 @@ class ConsoleFormatter:
             or crew_tree
         )
 
-        style = "green" if ready else "yellow"
+        # Completed reasoning should always display in green.
+        style = "green"
         # Build duration part separately for cleaner formatting
         duration_part = f"{duration_seconds:.2f}s" if duration_seconds > 0 else ""
 
@@ -1356,3 +1378,43 @@ class ConsoleFormatter:
         frame = self._spinner_frames[self._spinner_index]
         self._spinner_index = (self._spinner_index + 1) % len(self._spinner_frames)
         return frame
+
+    def _register_spinner_branch(self, branch: Tree, icon: str, name: str, style: str):
+        """Start animating spinner for given branch."""
+        self._spinner_branches[branch] = (icon, name, style)
+        if not self._spinner_running:
+            self._start_spinner_thread()
+
+    def _unregister_spinner_branch(self, branch: Optional[Tree]):
+        if branch is None:
+            return
+        self._spinner_branches.pop(branch, None)
+        if not self._spinner_branches:
+            self._stop_spinner_thread()
+
+    def _start_spinner_thread(self):
+        if self._spinner_running:
+            return
+        self._stop_spinner_event = threading.Event()
+        self._spinner_thread = threading.Thread(target=self._spinner_loop, daemon=True)
+        self._spinner_thread.start()
+        self._spinner_running = True
+
+    def _stop_spinner_thread(self):
+        if self._stop_spinner_event:
+            self._stop_spinner_event.set()
+        self._spinner_running = False
+
+    def _spinner_loop(self):
+        import time
+        while self._stop_spinner_event and not self._stop_spinner_event.is_set():
+            if self._live and self._spinner_branches:
+                for branch, (icon, name, style) in list(self._spinner_branches.items()):
+                    spinner_char = self._next_spinner()
+                    self.update_tree_label(branch, f"{icon} {spinner_char}", name, style)
+                # Refresh live view
+                try:
+                    self._live.update(self._live.renderable, refresh=True)
+                except Exception:
+                    pass
+            time.sleep(0.15)
