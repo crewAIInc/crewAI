@@ -52,7 +52,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
+    collection: Optional[Any] = None  # type: ignore
     collection_name: Optional[str] = "knowledge"
     app: Optional[ClientAPI] = None
 
