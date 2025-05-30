@@ -21,7 +21,6 @@ dependencies = [
     "opentelemetry-sdk>=1.30.0",
     "opentelemetry-exporter-otlp-proto-http>=1.30.0",
     # Data Handling
-    "chromadb>=0.5.23",
     "openpyxl>=3.1.5",
     "pyvis>=0.3.2",
     # Authentication and Security
@@ -48,6 +47,9 @@ Repository = "https://github.com/crewAIInc/crewAI"
 tools = ["crewai-tools~=0.45.0"]
 embeddings = [
     "tiktoken~=0.7.0"
+]
+storage = [
+    "chromadb>=0.5.23"
 ]
 agentops = ["agentops>=0.3.0"]
 fastembed = ["fastembed>=0.4.1"]

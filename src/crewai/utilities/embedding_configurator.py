@@ -1,8 +1,21 @@
 import os
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional, Union, cast, Protocol
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
-from chromadb.api.types import validate_embedding_function
+try:
+    from chromadb import Documents, EmbeddingFunction, Embeddings
+    from chromadb.api.types import validate_embedding_function
+    HAS_CHROMADB = True
+except ImportError:
+    HAS_CHROMADB = False
+    
+    class EmbeddingFunction(Protocol):
+        def __call__(self, input: Any) -> Any: ...
+        
+    Documents = Any
+    Embeddings = Any
+    
+    def validate_embedding_function(func: Any) -> None:
+        pass
 
 
 class EmbeddingConfigurator:
@@ -26,6 +39,12 @@ class EmbeddingConfigurator:
         embedder_config: Optional[Dict[str, Any]] = None,
     ) -> EmbeddingFunction:
         """Configures and returns an embedding function based on the provided config."""
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
         if embedder_config is None:
             return self._create_default_embedding_function()
 
@@ -47,129 +66,249 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _create_default_embedding_function():
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_openai(config, model_name):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
-            model_name=model_name,
-            api_base=config.get("api_base", None),
-            api_type=config.get("api_type", None),
-            api_version=config.get("api_version", None),
-            default_headers=config.get("default_headers", None),
-            dimensions=config.get("dimensions", None),
-            deployment_id=config.get("deployment_id", None),
-            organization_id=config.get("organization_id", None),
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
+                model_name=model_name,
+                api_base=config.get("api_base", None),
+                api_type=config.get("api_type", None),
+                api_version=config.get("api_version", None),
+                default_headers=config.get("default_headers", None),
+                dimensions=config.get("dimensions", None),
+                deployment_id=config.get("deployment_id", None),
+                organization_id=config.get("organization_id", None),
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_azure(config, model_name):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=config.get("api_key"),
-            api_base=config.get("api_base"),
-            api_type=config.get("api_type", "azure"),
-            api_version=config.get("api_version"),
-            model_name=model_name,
-            default_headers=config.get("default_headers"),
-            dimensions=config.get("dimensions"),
-            deployment_id=config.get("deployment_id"),
-            organization_id=config.get("organization_id"),
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=config.get("api_key"),
+                api_base=config.get("api_base"),
+                api_type=config.get("api_type", "azure"),
+                api_version=config.get("api_version"),
+                model_name=model_name,
+                default_headers=config.get("default_headers"),
+                dimensions=config.get("dimensions"),
+                deployment_id=config.get("deployment_id"),
+                organization_id=config.get("organization_id"),
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_ollama(config, model_name):
-        from chromadb.utils.embedding_functions.ollama_embedding_function import (
-            OllamaEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.ollama_embedding_function import (
+                OllamaEmbeddingFunction,
+            )
 
-        return OllamaEmbeddingFunction(
-            url=config.get("url", "http://localhost:11434/api/embeddings"),
-            model_name=model_name,
-        )
+            return OllamaEmbeddingFunction(
+                url=config.get("url", "http://localhost:11434/api/embeddings"),
+                model_name=model_name,
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_vertexai(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleVertexEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.google_embedding_function import (
+                GoogleVertexEmbeddingFunction,
+            )
 
-        return GoogleVertexEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            project_id=config.get("project_id"),
-            region=config.get("region"),
-        )
+            return GoogleVertexEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+                project_id=config.get("project_id"),
+                region=config.get("region"),
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_google(config, model_name):
-        from chromadb.utils.embedding_functions.google_embedding_function import (
-            GoogleGenerativeAiEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.google_embedding_function import (
+                GoogleGenerativeAiEmbeddingFunction,
+            )
 
-        return GoogleGenerativeAiEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-            task_type=config.get("task_type"),
-        )
+            return GoogleGenerativeAiEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+                task_type=config.get("task_type"),
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_cohere(config, model_name):
-        from chromadb.utils.embedding_functions.cohere_embedding_function import (
-            CohereEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.cohere_embedding_function import (
+                CohereEmbeddingFunction,
+            )
 
-        return CohereEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-        )
+            return CohereEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_voyageai(config, model_name):
-        from chromadb.utils.embedding_functions.voyageai_embedding_function import (
-            VoyageAIEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.voyageai_embedding_function import (
+                VoyageAIEmbeddingFunction,
+            )
 
-        return VoyageAIEmbeddingFunction(
-            model_name=model_name,
-            api_key=config.get("api_key"),
-        )
+            return VoyageAIEmbeddingFunction(
+                model_name=model_name,
+                api_key=config.get("api_key"),
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_bedrock(config, model_name):
-        from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
-            AmazonBedrockEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
+                AmazonBedrockEmbeddingFunction,
+            )
 
-        # Allow custom model_name override with backwards compatibility
-        kwargs = {"session": config.get("session")}
-        if model_name is not None:
-            kwargs["model_name"] = model_name
-        return AmazonBedrockEmbeddingFunction(**kwargs)
+            # Allow custom model_name override with backwards compatibility
+            kwargs = {"session": config.get("session")}
+            if model_name is not None:
+                kwargs["model_name"] = model_name
+            return AmazonBedrockEmbeddingFunction(**kwargs)
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_huggingface(config, model_name):
-        from chromadb.utils.embedding_functions.huggingface_embedding_function import (
-            HuggingFaceEmbeddingServer,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.huggingface_embedding_function import (
+                HuggingFaceEmbeddingServer,
+            )
 
-        return HuggingFaceEmbeddingServer(
-            url=config.get("api_url"),
-        )
+            return HuggingFaceEmbeddingServer(
+                url=config.get("api_url"),
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     @staticmethod
     def _configure_watson(config, model_name):
@@ -212,6 +351,12 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_custom(config):
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
         custom_embedder = config.get("embedder")
         if isinstance(custom_embedder, EmbeddingFunction):
             try:

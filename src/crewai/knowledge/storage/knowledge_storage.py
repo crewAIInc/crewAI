@@ -6,11 +6,19 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional, Union
 
-import chromadb
-import chromadb.errors
-from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
-from chromadb.config import Settings
+try:
+    import chromadb
+    import chromadb.errors
+    from chromadb.api import ClientAPI
+    from chromadb.api.types import OneOrMany
+    from chromadb.config import Settings
+    HAS_CHROMADB = True
+except ImportError:
+    chromadb = None  # type: ignore
+    ClientAPI = Any  # type: ignore
+    OneOrMany = Any  # type: ignore
+    Settings = Any  # type: ignore
+    HAS_CHROMADB = False
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -62,6 +70,12 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Dict[str, Any]]:
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage features. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
         with suppress_logging():
             if self.collection:
                 fetched = self.collection.query(
@@ -84,48 +98,78 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        chroma_client = chromadb.PersistentClient(
-            path=base_path,
-            settings=Settings(allow_reset=True),
-        )
-
-        self.app = chroma_client
-
-        try:
-            collection_name = (
-                f"knowledge_{self.collection_name}"
-                if self.collection_name
-                else "knowledge"
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage features. "
+                "Please install it with 'pip install crewai[storage]'"
             )
-            if self.app:
-                self.collection = self.app.get_or_create_collection(
-                    name=sanitize_collection_name(collection_name),
-                    embedding_function=self.embedder,
-                )
-            else:
-                raise Exception("Vector Database Client not initialized")
-        except Exception:
-            raise Exception("Failed to create or get collection")
-
-    def reset(self):
-        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
-        if not self.app:
-            self.app = chromadb.PersistentClient(
+            
+        base_path = os.path.join(db_storage_path(), "knowledge")
+        try:
+            chroma_client = chromadb.PersistentClient(
                 path=base_path,
                 settings=Settings(allow_reset=True),
             )
 
-        self.app.reset()
-        shutil.rmtree(base_path)
-        self.app = None
-        self.collection = None
+            self.app = chroma_client
+
+            try:
+                collection_name = (
+                    f"knowledge_{self.collection_name}"
+                    if self.collection_name
+                    else "knowledge"
+                )
+                if self.app:
+                    self.collection = self.app.get_or_create_collection(
+                        name=sanitize_collection_name(collection_name),
+                        embedding_function=self.embedder,
+                    )
+                else:
+                    raise Exception("Vector Database Client not initialized")
+            except Exception:
+                raise Exception("Failed to create or get collection")
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage features. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+
+    def reset(self):
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage features. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
+        try:
+            if not self.app:
+                self.app = chromadb.PersistentClient(
+                    path=base_path,
+                    settings=Settings(allow_reset=True),
+                )
+
+            self.app.reset()
+            shutil.rmtree(base_path)
+            self.app = None
+            self.collection = None
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage features. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     def save(
         self,
         documents: List[str],
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage features. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
         if not self.collection:
             raise Exception("Collection not initialized")
 
@@ -156,7 +200,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 filtered_ids.append(doc_id)
 
             # If we have no metadata at all, set it to None
-            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
+            final_metadata: Optional[OneOrMany[Any]] = (
                 None if all(m is None for m in filtered_metadata) else filtered_metadata
             )
 
@@ -165,29 +209,47 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 metadatas=final_metadata,
                 ids=filtered_ids,
             )
-        except chromadb.errors.InvalidDimensionException as e:
-            Logger(verbose=True).log(
-                "error",
-                "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
-                "red",
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage features. "
+                "Please install it with 'pip install crewai[storage]'"
             )
-            raise ValueError(
-                "Embedding dimension mismatch. Make sure you're using the same embedding model "
-                "across all operations with this collection."
-                "Try resetting the collection using `crewai reset-memories -a`"
-            ) from e
         except Exception as e:
-            Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
-            raise
+            if HAS_CHROMADB and isinstance(e, chromadb.errors.InvalidDimensionException):
+                Logger(verbose=True).log(
+                    "error",
+                    "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
+                    "red",
+                )
+                raise ValueError(
+                    "Embedding dimension mismatch. Make sure you're using the same embedding model "
+                    "across all operations with this collection."
+                    "Try resetting the collection using `crewai reset-memories -a`"
+                ) from e
+            else:
+                Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
+                raise
 
     def _create_default_embedding_function(self):
-        from chromadb.utils.embedding_functions.openai_embedding_function import (
-            OpenAIEmbeddingFunction,
-        )
+        if not HAS_CHROMADB:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage features. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
+            
+        try:
+            from chromadb.utils.embedding_functions.openai_embedding_function import (
+                OpenAIEmbeddingFunction,
+            )
 
-        return OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
+            return OpenAIEmbeddingFunction(
+                api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+            )
+        except ImportError:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage features. "
+                "Please install it with 'pip install crewai[storage]'"
+            )
 
     def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
         """Set the embedding configuration for the knowledge storage.
