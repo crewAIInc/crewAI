@@ -85,7 +85,12 @@
           {
             "group": "MCP Integration",
             "pages": [
-              "mcp/crewai-mcp-integration"
+              "mcp/overview",
+              "mcp/stdio",
+              "mcp/sse",
+              "mcp/streamable-http",
+              "mcp/multiple-servers",
+              "mcp/security"
             ]
           },
           {
