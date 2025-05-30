@@ -2387,7 +2387,7 @@ def test_using_contextual_memory():
     
     # Check if ChromaDB is available
     try:
-        import chromadb
+        import chromadb  # noqa: F401
         HAS_CHROMADB = True
     except ImportError:
         HAS_CHROMADB = False
@@ -2425,7 +2425,7 @@ def test_using_contextual_memory_with_long_term_memory():
     
     # Check if ChromaDB is available
     try:
-        import chromadb
+        import chromadb  # noqa: F401
         HAS_CHROMADB = True
     except ImportError:
         HAS_CHROMADB = False
@@ -2464,7 +2464,7 @@ def test_warning_long_term_memory_without_entity_memory():
     
     # Check if ChromaDB is available
     try:
-        import chromadb
+        import chromadb  # noqa: F401
         HAS_CHROMADB = True
     except ImportError:
         HAS_CHROMADB = False
@@ -2511,7 +2511,7 @@ def test_long_term_memory_with_memory_flag():
     
     # Check if ChromaDB is available
     try:
-        import chromadb
+        import chromadb  # noqa: F401
         HAS_CHROMADB = True
     except ImportError:
         HAS_CHROMADB = False
@@ -2556,7 +2556,7 @@ def test_using_contextual_memory_with_short_term_memory():
     
     # Check if ChromaDB is available
     try:
-        import chromadb
+        import chromadb  # noqa: F401
         HAS_CHROMADB = True
     except ImportError:
         HAS_CHROMADB = False
@@ -2595,7 +2595,7 @@ def test_disabled_memory_using_contextual_memory():
     
     # Check if ChromaDB is available
     try:
-        import chromadb
+        import chromadb  # noqa: F401
         HAS_CHROMADB = True
     except ImportError:
         HAS_CHROMADB = False
