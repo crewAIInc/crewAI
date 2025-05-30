@@ -296,6 +296,8 @@ def handle_context_length(
     llm: Any,
     callbacks: List[Any],
     i18n: Any,
+    task_description: Optional[str] = None,
+    expected_output: Optional[str] = None,
 ) -> None:
     """Handle context length exceeded by either summarizing or raising an error.
 
@@ -306,13 +308,22 @@ def handle_context_length(
         llm: LLM instance for summarization
         callbacks: List of callbacks for LLM
         i18n: I18N instance for messages
+        task_description: Optional original task description
+        expected_output: Optional expected output
     """
     if respect_context_window:
         printer.print(
             content="Context length exceeded. Summarizing content to fit the model context window. Might take a while...",
             color="yellow",
         )
-        summarize_messages(messages, llm, callbacks, i18n)
+        summarize_messages(
+            messages,
+            llm,
+            callbacks,
+            i18n,
+            task_description=task_description,
+            expected_output=expected_output,
+        )
     else:
         printer.print(
             content="Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
@@ -328,6 +339,8 @@ def summarize_messages(
     llm: Any,
     callbacks: List[Any],
     i18n: Any,
+    task_description: Optional[str] = None,
+    expected_output: Optional[str] = None,
 ) -> None:
     """Summarize messages to fit within context window.
 
@@ -336,6 +349,8 @@ def summarize_messages(
         llm: LLM instance for summarization
         callbacks: List of callbacks for LLM
         i18n: I18N instance for messages
+        task_description: Optional original task description
+        expected_output: Optional expected output
     """
     messages_string = " ".join([message["content"] for message in messages])
     messages_groups = []
@@ -368,12 +383,19 @@ def summarize_messages(
 
     merged_summary = " ".join(content["content"] for content in summarized_contents)
 
+    # Build the summary message and optionally inject the task reminder.
+    summary_message = i18n.slice("summary").format(merged_summary=merged_summary)
+
+    if task_description or expected_output:
+        summary_message += "\n\n"  # blank line before the reminder
+        if task_description:
+            summary_message += f"Original task: {task_description}\n"
+        if expected_output:
+            summary_message += f"Expected output: {expected_output}"
+
+    # Replace the conversation with the new summary message.
     messages.clear()
-    messages.append(
-        format_message_for_llm(
-            i18n.slice("summary").format(merged_summary=merged_summary)
-        )
-    )
+    messages.append(format_message_for_llm(summary_message))
 
 
 def show_agent_logs(

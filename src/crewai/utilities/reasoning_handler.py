@@ -38,7 +38,7 @@ class AgentReasoning:
     Handles the agent reasoning process, enabling an agent to reflect and create a plan
     before executing a task.
     """
-    def __init__(self, task: Task, agent: Agent):
+    def __init__(self, task: Task, agent: Agent, extra_context: str | None = None):
         if not task or not agent:
             raise ValueError("Both task and agent must be provided.")
         self.task = task
@@ -46,6 +46,7 @@ class AgentReasoning:
         self.llm = cast(LLM, agent.llm)
         self.logger = logging.getLogger(__name__)
         self.i18n = I18N()
+        self.extra_context = extra_context or ""
 
     def handle_agent_reasoning(self) -> AgentReasoningOutput:
         """
@@ -323,7 +324,7 @@ class AgentReasoning:
             role=self.agent.role,
             goal=self.agent.goal,
             backstory=self.__get_agent_backstory(),
-            description=self.task.description,
+            description=self.task.description + (f"\n\nContext:\n{self.extra_context}" if self.extra_context else ""),
             expected_output=self.task.expected_output,
             tools=available_tools
         )
@@ -547,7 +548,7 @@ class AgentReasoning:
                     recent_messages += f"{role.upper()}: {content[:200]}...\n\n"
 
         return self.i18n.retrieve("reasoning", "mid_execution_reasoning").format(
-            description=self.task.description,
+            description=self.task.description + (f"\n\nContext:\n{self.extra_context}" if self.extra_context else ""),
             expected_output=self.task.expected_output,
             current_steps=current_steps,
             tools_used=tools_used_str,
@@ -681,7 +682,7 @@ class AgentReasoning:
         )
 
         context_prompt = self.i18n.retrieve("reasoning", "adaptive_reasoning_context").format(
-            description=self.task.description,
+            description=self.task.description + (f"\n\nContext:\n{self.extra_context}" if self.extra_context else ""),
             expected_output=self.task.expected_output,
             current_steps=current_steps,
             tools_used=tools_used_str,

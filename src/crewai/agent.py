@@ -259,20 +259,6 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        if self.reasoning:
-            try:
-                from crewai.utilities.reasoning_handler import AgentReasoning, AgentReasoningOutput
-
-                reasoning_handler = AgentReasoning(task=task, agent=self)
-                reasoning_output: AgentReasoningOutput = reasoning_handler.handle_agent_reasoning()
-
-                # Add the reasoning plan to the task description
-                task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
-            except Exception as e:
-                if hasattr(self, '_logger'):
-                    self._logger.log("error", f"Error during reasoning process: {str(e)}")
-                else:
-                    print(f"Error during reasoning process: {str(e)}")
 
         self._inject_date_to_task(task)
 
@@ -386,6 +372,41 @@ class Agent(BaseAgent):
             task_prompt = self._training_handler(task_prompt=task_prompt)
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
+
+        if self.reasoning:
+            try:
+                from crewai.utilities.reasoning_handler import (
+                    AgentReasoning,
+                    AgentReasoningOutput,
+                )
+
+                reasoning_handler = AgentReasoning(
+                    task=task,
+                    agent=self,
+                    extra_context=context or "",
+                )
+
+                reasoning_output: AgentReasoningOutput = reasoning_handler.handle_agent_reasoning()
+
+                plan_text = reasoning_output.plan.plan
+
+                internal_plan_msg = (
+                    "### INTERNAL PLAN (do NOT reveal or repeat)\n" + plan_text
+                )
+
+                task_prompt = (
+                    task_prompt
+                    + "\n\n"
+                    + internal_plan_msg
+                )
+
+            except Exception as e:
+                if hasattr(self, "_logger"):
+                    self._logger.log(
+                        "error", f"Error during reasoning process: {str(e)}"
+                    )
+                else:
+                    print(f"Error during reasoning process: {str(e)}")
 
         try:
             crewai_event_bus.emit(

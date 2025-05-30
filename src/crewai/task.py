@@ -527,10 +527,10 @@ class Task(BaseModel):
 
     def prompt(self) -> str:
         """Generates the task prompt with optional markdown formatting.
-        
+
         When the markdown attribute is True, instructions for formatting the
         response in Markdown syntax will be added to the prompt.
-        
+
         Returns:
             str: The formatted prompt string containing the task description,
                  expected output, and optional markdown formatting instructions.
@@ -541,7 +541,7 @@ class Task(BaseModel):
             expected_output=self.expected_output
         )
         tasks_slices = [self.description, output]
-        
+
         if self.markdown:
             markdown_instruction = """Your final answer MUST be formatted in Markdown syntax.
 Follow these guidelines:
@@ -550,7 +550,8 @@ Follow these guidelines:
 - Use * for italic text
 - Use - or * for bullet points
 - Use `code` for inline code
-- Use ```language for code blocks"""
+- Use ```language for code blocks
+- Don't start your answer with a code block"""
             tasks_slices.append(markdown_instruction)
         return "\n".join(tasks_slices)
 

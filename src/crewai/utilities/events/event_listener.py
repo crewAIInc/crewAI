@@ -110,6 +110,7 @@ class EventListener(BaseEventListener):
                 event.crew_name or "Crew",
                 source.id,
                 "completed",
+                final_result=final_string_output,
             )
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
