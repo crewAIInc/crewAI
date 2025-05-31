@@ -182,7 +182,7 @@ class TestInterpolateOnly:
         template = "Hello, {name}!"
         inputs: Dict[str, Any] = {}
 
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             interpolate_only(template, inputs)
 
 
