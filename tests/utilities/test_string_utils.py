@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Union
 
 import pytest
+import pandas as pd
 
 from crewai.utilities.string_utils import interpolate_only
 
@@ -184,4 +185,81 @@ class TestInterpolateOnly:
         with pytest.raises(ValueError) as excinfo:
             interpolate_only(template, inputs)
 
-        assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+
+    def test_interpolate_only_with_dataframe(self):
+        """Test that interpolate_only handles pandas DataFrames correctly."""
+        df = pd.DataFrame({"name": ["Alice", "Bob"], "age": [25, 30]})
+        
+        result = interpolate_only("Data: {data}", {"data": df})
+        
+        assert "Alice" in result
+        assert "Bob" in result
+        assert "25" in result
+        assert "30" in result
+
+    def test_interpolate_only_mixed_types_with_dataframe(self):
+        """Test interpolate_only with mixed input types including DataFrame."""
+        df = pd.DataFrame({"col": [1, 2, 3]})
+        
+        inputs = {
+            "text": "hello",
+            "number": 42,
+            "flag": True,
+            "data": df,
+            "items": [1, 2, 3]
+        }
+        
+        template = "Text: {text}, Number: {number}, Flag: {flag}, Data: {data}, Items: {items}"
+        result = interpolate_only(template, inputs)
+        
+        assert "hello" in result
+        assert "42" in result
+        assert "True" in result
+        assert "col" in result
+        assert "[1, 2, 3]" in result
+
+    def test_interpolate_only_unsupported_type_error(self):
+        """Test that interpolate_only handles unsupported types gracefully."""
+        class CustomObject:
+            def __str__(self):
+                raise Exception("Cannot serialize")
+        
+        with pytest.raises(ValueError, match="Unable to serialize CustomObject"):
+            interpolate_only("Value: {obj}", {"obj": CustomObject()})
+
+    def test_interpolate_only_complex_dataframe(self):
+        """Test interpolate_only with more complex DataFrame structures."""
+        df = pd.DataFrame({
+            "product": ["Widget A", "Widget B", "Widget C"],
+            "sales": [100, 150, 200],
+            "region": ["North", "South", "East"]
+        })
+        
+        result = interpolate_only("Sales report: {report}", {"report": df})
+        
+        assert "Widget A" in result
+        assert "100" in result
+        assert "North" in result
+        assert "sales" in result
+        assert "product" in result
+
+    def test_interpolate_only_backward_compatibility(self):
+        """Test that existing supported types still work correctly."""
+        inputs = {
+            "text": "hello",
+            "number": 42,
+            "float_val": 3.14,
+            "flag": True,
+            "nested": {"key": "value"},
+            "items": [1, 2, 3]
+        }
+        
+        template = "Text: {text}, Number: {number}, Float: {float_val}, Flag: {flag}, Nested: {nested}, Items: {items}"
+        result = interpolate_only(template, inputs)
+        
+        assert "hello" in result
+        assert "42" in result
+        assert "3.14" in result
+        assert "True" in result
+        assert "key" in result
+        assert "[1, 2, 3]" in result

@@ -25,27 +25,42 @@ def interpolate_only(
         ValueError: If a value contains unsupported types or a template variable is missing
     """
 
-    # Validation function for recursive type checking
-    def validate_type(value: Any) -> None:
-        if value is None:
-            return
-        if isinstance(value, (str, int, float, bool)):
-            return
-        if isinstance(value, (dict, list)):
-            for item in value.values() if isinstance(value, dict) else value:
-                validate_type(item)
-            return
-        raise ValueError(
-            f"Unsupported type {type(value).__name__} in inputs. "
-            "Only str, int, float, bool, dict, and list are allowed."
-        )
-
-    # Validate all input values
+    from crewai.utilities.serialization import to_serializable
+    
+    processed_inputs = {}
+    supported_types = (str, int, float, bool, dict, list)
+    
     for key, value in inputs.items():
-        try:
-            validate_type(value)
-        except ValueError as e:
-            raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
+        if value is None or isinstance(value, supported_types):
+            def validate_type(val: Any) -> None:
+                if val is None:
+                    return
+                if isinstance(val, (str, int, float, bool)):
+                    return
+                if isinstance(val, (dict, list)):
+                    for item in val.values() if isinstance(val, dict) else val:
+                        validate_type(item)
+                    return
+                raise ValueError(
+                    f"Unsupported type {type(val).__name__} in inputs. "
+                    "Only str, int, float, bool, dict, and list are allowed."
+                )
+            
+            try:
+                validate_type(value)
+                processed_inputs[key] = value
+            except ValueError as e:
+                raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
+        else:
+            try:
+                processed_inputs[key] = to_serializable(value)
+            except Exception as e:
+                raise ValueError(
+                    f"Invalid value for key '{key}': Unable to serialize {type(value).__name__}. "
+                    f"Serialization error: {str(e)}"
+                )
+    
+    inputs = processed_inputs
 
     if input_string is None or not input_string:
         return ""
