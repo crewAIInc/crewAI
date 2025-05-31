@@ -1,0 +1,157 @@
+---
+title: Handling Pandas DataFrames with Custom Tools
+description: Learn how to effectively process pandas DataFrames in CrewAI by saving them to files and using custom tools for analysis.
+---
+
+Integrating pandas DataFrames into CrewAI workflows is a common need for data-centric applications. Since agents primarily operate on text and tools, directly passing a DataFrame object isn't feasible. This guide demonstrates the recommended approach: saving your DataFrame to a file and using a custom CrewAI tool to access and analyze its content.
+
+This method offers several advantages:
+-   **Manages Large Data:** Keeps potentially large DataFrame content out of LLM prompts, respecting context limits.
+-   **Leverages Pandas Power:** Allows you to use the full capabilities of pandas for data manipulation within a dedicated tool.
+-   **Structured Access:** Provides a clean and organized way for agents to interact with tabular data.
+
+## Step 1: Preparing and Saving Your DataFrame
+
+The first step is to have your pandas DataFrame ready and save it to a persistent file format, such as CSV. This file will then be accessed by your custom tool.
+
+```python
+import pandas as pd
+
+# Example: Create a sample DataFrame ( this can be also a dataframe from a dedicated database, but for this example, I have created this dataframe)
+data = {
+    'ID': range(1, 6),
+    'Product': ['Laptop', 'Mouse', 'Keyboard', 'Monitor', 'Webcam'],
+    'Sales':,
+    'Stock':
+}
+df = pd.DataFrame(data)
+
+# Define a file path and save the DataFrame
+
+file_path = 'product_data.csv'
+df.to_csv(file_path, index=False)
+
+print(f"DataFrame successfully saved to {file_path}")
+```
+In a typical workflow, you would run this script or a similar data preparation step to ensure product_data.csv (or your chosen file) is available before your crew starts.
+
+## Step 2: Creating a Custom DataFrame Analysis Tool
+
+Next, develop a custom tool using crewai-tools. This tool will be responsible for loading the DataFrame from the specified file path and performing analytical actions.
+
+Here's an example of a tool that can read a CSV, and provide information like its head, general info, descriptive statistics, or shape:
+
+```python
+
+from crewai_tools import BaseTool
+from typing import Type
+from pydantic.v1 import BaseModel, Field
+import pandas as pd
+import io # Required for capturing df.info()
+
+# Define the input schema for the tool's arguments
+
+class DataFrameToolSchema(BaseModel):
+    file_path: str = Field(description="The path to the CSV file containing the DataFrame.")
+    action: str = Field(description="The analysis action to perform. Options: 'head', 'info', 'describe', 'shape', 'summary'. Defaults to 'summary'.")
+
+class DataFrameAnalysisTool(BaseTool):
+    name: str = "DataFrame Analyzer from CSV"
+    description: str = (
+        "Loads a pandas DataFrame from a CSV file and performs specified analysis. "
+        "Valid actions: 'head', 'info', 'describe', 'shape', 'summary'."
+    )
+    args_schema: Type[BaseModel] = DataFrameToolSchema
+
+    def _run(self, file_path: str, action: str = "summary") -> str:
+        try:
+            df = pd.read_csv(file_path)
+            
+            if action == 'head':
+                return f"First 5 rows of '{file_path}':\n{df.head().to_markdown()}"
+            elif action == 'info':
+                buffer = io.StringIO()
+                df.info(buf=buffer)
+                return f"Info for '{file_path}':\n{buffer.getvalue()}"
+            elif action == 'describe':
+                return f"Statistics for '{file_path}':\n{df.describe().to_markdown()}"
+            elif action == 'shape':
+                return f"Shape of '{file_path}': {df.shape}"
+            elif action == 'summary':
+                # Combine key pieces of information for a general summary
+                summary_parts = [
+                    f"Summary for DataFrame from '{file_path}':",
+                    f"Shape: {df.shape}",
+                    f"Head:\n{df.head().to_markdown()}"
+                ]
+                buffer = io.StringIO()
+                df.info(buf=buffer)
+                summary_parts.append(f"Info:\n{buffer.getvalue()}")
+                summary_parts.append(f"Describe:\n{df.describe().to_markdown()}")
+                return "\n\n".join(summary_parts)
+            else:
+                return f"Error: Unknown action '{action}'. Valid actions are 'head', 'info', 'describe', 'shape', 'summary'."
+        except FileNotFoundError:
+            return f"Error: File not found at '{file_path}'."
+        except Exception as e:
+            return f"Error processing DataFrame from '{file_path}': {str(e)}"
+
+
+```
+
+This tool, DataFrameAnalysisTool, takes a file_path and an action as input. It then uses pandas to perform the requested operation and returns the result as a string.
+
+## Step 3: Integrating the Tool with an Agent and Task
+With the data file prepared and the custom tool defined, you can now integrate it into your CrewAI setup. Create an agent equipped with this tool and a task that directs the agent to use it.
+
+```python
+
+from crewai import Agent, Task, Crew, Process
+
+# Assume DataFrameAnalysisTool class is defined above or imported
+# Assume 'product_data.csv' exists
+
+# Instantiate your custom tool
+df_tool = DataFrameAnalysisTool()
+
+# Define an agent that can use the tool
+data_processing_agent = Agent(
+    role='Tabular Data Specialist',
+    goal="Load and analyze datasets from CSV files using the DataFrame Analyzer tool.",
+    backstory="An expert in data analysis, skilled at using specialized tools to inspect and summarize tabular data from CSV files.",
+    tools=[df_tool],
+    verbose=True
+)
+
+# Define a task for the agent
+# The {data_file} placeholder will be filled by the inputs to crew.kickoff()
+file_analysis_task = Task(
+    description=(
+        "Load the dataset from the file located at '{data_file}'.\n"
+        "First, report the 'shape' of the dataset. "
+        "Then, provide a 'summary' of the dataset using the DataFrame Analyzer tool."
+    ),
+    expected_output="A textual report including the dataset's shape, followed by its detailed summary (head, info, describe).",
+    agent=data_processing_agent
+)
+
+# Assemble the crew
+analysis_crew = Crew(
+    agents=[data_processing_agent],
+    tasks=[file_analysis_task],
+    process=Process.sequential
+)
+
+# Kick off the crew, providing the file path in the inputs
+# Make sure 'product_data.csv' is accessible
+crew_result = analysis_crew.kickoff(inputs={'data_file': 'product_data.csv'})
+
+print("\n--- Crew Execution Result ---")
+print(crew_result)
+
+```
+In this setup, the file_analysis_task instructs the data_processing_agent to use its tool on the product_data.csv file. The inputs dictionary in crew.kickoff() provides the actual file path.
+
+## Conclusion
+
+By saving pandas DataFrames to files and equipping your agents with custom tools to read and process these files, you can robustly handle tabular data within CrewAI. This approach maintains separation of concerns, allows for complex data operations using pandas, and ensures that your agents interact with data in a structured and efficient manner. This pattern is highly recommended for any workflow involving significant tabular data analysis.
