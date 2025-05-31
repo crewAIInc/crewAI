@@ -91,15 +91,18 @@ class TestInterpolateOnly:
         assert "name" in str(excinfo.value)
 
     def test_invalid_input_types(self):
-        """Test that an error is raised with invalid input types."""
+        """Test that an error is raised when serialization fails."""
+        class UnserializableObject:
+            def __str__(self):
+                raise Exception("Cannot convert to string")
+            def __repr__(self):
+                raise Exception("Cannot convert to string")
+        
         template = "Hello, {name}!"
-        # Using Any for this test since we're intentionally testing an invalid type
-        inputs: Dict[str, Any] = {"name": object()}  # Object is not a valid input type
+        inputs: Dict[str, Any] = {"name": UnserializableObject()}
 
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError, match="Unable to serialize UnserializableObject"):
             interpolate_only(template, inputs)
-
-        assert "unsupported type" in str(excinfo.value).lower()
 
     def test_empty_input_string(self):
         """Test handling of empty or None input string."""
@@ -222,6 +225,8 @@ class TestInterpolateOnly:
         """Test that interpolate_only handles unsupported types gracefully."""
         class CustomObject:
             def __str__(self):
+                raise Exception("Cannot serialize")
+            def __repr__(self):
                 raise Exception("Cannot serialize")
         
         with pytest.raises(ValueError, match="Unable to serialize CustomObject"):
