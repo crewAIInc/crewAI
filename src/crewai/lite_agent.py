@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Type, Union, cast
 
 from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
@@ -35,7 +34,7 @@ from crewai.utilities.agent_utils import (
     render_text_description_and_args,
     show_agent_logs,
 )
-from crewai.utilities.converter import convert_to_model, generate_model_description
+from crewai.utilities.converter import generate_model_description
 from crewai.utilities.events.agent_events import (
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,

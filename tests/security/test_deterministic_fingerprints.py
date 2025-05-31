@@ -1,8 +1,6 @@
 """Tests for deterministic fingerprints in CrewAI components."""
 
-from datetime import datetime
 
-import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.security import Fingerprint, SecurityConfig

@@ -1,6 +1,5 @@
 """Test integration of fingerprinting with Agent, Crew, and Task classes."""
 
-import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.security import Fingerprint, SecurityConfig

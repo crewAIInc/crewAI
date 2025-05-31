@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import Field
 
@@ -18,6 +18,7 @@ class BaseAgentTool(BaseTool):
     i18n: I18N = Field(
         default_factory=I18N, description="Internationalization settings"
     )
+    MAX_RECURSION_DEPTH: int = 5
 
     def sanitize_agent_name(self, name: str) -> str:
         """
@@ -46,11 +47,22 @@ class BaseAgentTool(BaseTool):
                 coworker = coworker[1:-1].split(",")[0]
         return coworker
 
+    def _get_tools(self, **kwargs) -> Optional[List[BaseTool]]:
+        """
+        Get tools from instance or kwargs.
+
+        Returns:
+            Optional[List[BaseTool]]: The tools to use for recursive invocation.
+        """
+        return getattr(self, "_agent_tools", None) or kwargs.get("tools")
+
     def _execute(
         self,
         agent_name: Optional[str],
         task: str,
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        tools: Optional[List[BaseTool]] = None,
+        recursion_depth: int = 0,
     ) -> str:
         """
         Execute delegation to an agent with case-insensitive and whitespace-tolerant matching.
@@ -59,11 +71,25 @@ class BaseAgentTool(BaseTool):
             agent_name: Name/role of the agent to delegate to (case-insensitive)
             task: The specific question or task to delegate
             context: Optional additional context for the task execution
+            tools: Optional tools to pass to the delegated agent for recursive invocation
+            recursion_depth: Current recursion depth to prevent infinite loops
 
         Returns:
             str: The execution result from the delegated agent or an error message
                  if the agent cannot be found
         """
+        if tools is not None and not all(isinstance(tool, BaseTool) for tool in tools):
+            return self.i18n.errors("agent_tool_execution_error").format(
+                agent_role="unknown",
+                error="Invalid tools provided: all tools must inherit from BaseTool",
+            )
+
+        if recursion_depth >= self.MAX_RECURSION_DEPTH:
+            return self.i18n.errors("agent_tool_execution_error").format(
+                agent_role="unknown",
+                error=f"Maximum recursion depth ({self.MAX_RECURSION_DEPTH}) exceeded",
+            )
+
         try:
             if agent_name is None:
                 agent_name = ""
@@ -82,12 +108,12 @@ class BaseAgentTool(BaseTool):
             available_agents = [agent.role for agent in self.agents]
             logger.debug(f"Available agents: {available_agents}")
 
-            agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
+            matching_agents = [
                 available_agent
                 for available_agent in self.agents
                 if self.sanitize_agent_name(available_agent.role) == sanitized_name
             ]
-            logger.debug(f"Found {len(agent)} matching agents for role '{sanitized_name}'")
+            logger.debug(f"Found {len(matching_agents)} matching agents for role '{sanitized_name}'")
         except (AttributeError, ValueError) as e:
             # Handle specific exceptions that might occur during role name processing
             return self.i18n.errors("agent_tool_unexisting_coworker").format(
@@ -97,7 +123,7 @@ class BaseAgentTool(BaseTool):
                 error=str(e)
             )
 
-        if not agent:
+        if not matching_agents:
             # No matching agent found after sanitization
             return self.i18n.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
@@ -106,16 +132,20 @@ class BaseAgentTool(BaseTool):
                 error=f"No agent found with role '{sanitized_name}'"
             )
 
-        agent = agent[0]
+        agent = matching_agents[0]
         try:
+            logger.debug(f"Executing task with {len(tools) if tools else 0} tools at recursion depth {recursion_depth}")
             task_with_assigned_agent = Task(
                 description=task,
                 agent=agent,
                 expected_output=agent.i18n.slice("manager_request"),
                 i18n=agent.i18n,
+                tools=tools,
             )
             logger.debug(f"Created task for agent '{self.sanitize_agent_name(agent.role)}': {task}")
-            return agent.execute_task(task_with_assigned_agent, context)
+            return agent.execute_task(
+                task_with_assigned_agent, context, tools, recursion_depth + 1
+            )
         except Exception as e:
             # Handle task creation or execution errors
             return self.i18n.errors("agent_tool_execution_error").format(

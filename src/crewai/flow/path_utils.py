@@ -5,7 +5,6 @@ This module provides utilities for secure path handling to prevent directory
 traversal attacks and ensure paths remain within allowed boundaries.
 """
 
-import os
 from pathlib import Path
 from typing import List, Union
 

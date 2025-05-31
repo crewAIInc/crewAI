@@ -1,8 +1,7 @@
 import base64
 import re
-from pathlib import Path
 
-from crewai.flow.path_utils import safe_path_join, validate_path_exists
+from crewai.flow.path_utils import validate_path_exists
 
 
 class HTMLTemplateHandler:

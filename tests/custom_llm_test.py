@@ -1,5 +1,4 @@
 from typing import Any, Dict, List, Optional, Union
-from unittest.mock import Mock
 
 import pytest
 

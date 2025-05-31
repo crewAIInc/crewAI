@@ -17,7 +17,7 @@ import ast
 import inspect
 import textwrap
 from collections import defaultdict, deque
-from typing import Any, Deque, Dict, List, Optional, Set, Union
+from typing import Any, Deque, Dict, List, Optional, Set
 
 
 def get_possible_return_constants(function: Any) -> Optional[List[str]]:

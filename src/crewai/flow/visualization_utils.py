@@ -17,7 +17,7 @@ Example
 
 import ast
 import inspect
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from .utils import (
     build_ancestor_dict,

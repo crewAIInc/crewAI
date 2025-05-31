@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from logging import Logger
 
 from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus, crewai_event_bus
 

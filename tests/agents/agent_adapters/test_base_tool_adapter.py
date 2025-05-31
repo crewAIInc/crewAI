@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import List
 from unittest.mock import Mock
 
 import pytest

@@ -1,6 +1,5 @@
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Union
-from urllib.parse import urlparse
+from typing import Dict, List, Optional, Union
 
 from pydantic import Field, field_validator
 

@@ -86,6 +86,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         task: Any,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        recursion_depth: int = 0,
     ) -> str:
         """Execute a task using the OpenAI Assistant"""
         self._converter_adapter.configure_structured_output(task)

@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
 from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
+from crewai.tools.base_tool import BaseTool
 
 
 class AskQuestionToolSchema(BaseModel):
@@ -16,6 +17,7 @@ class AskQuestionTool(BaseAgentTool):
 
     name: str = "Ask question to coworker"
     args_schema: type[BaseModel] = AskQuestionToolSchema
+    _agent_tools: Optional[List[BaseTool]] = None
 
     def _run(
         self,
@@ -25,4 +27,5 @@ class AskQuestionTool(BaseAgentTool):
         **kwargs,
     ) -> str:
         coworker = self._get_coworker(coworker, **kwargs)
-        return self._execute(coworker, question, context)
+        tools = self._get_tools(**kwargs)
+        return self._execute(coworker, question, context, tools)
