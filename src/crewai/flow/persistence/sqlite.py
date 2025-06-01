@@ -108,7 +108,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                         json.dumps(state_dict, cls=CrewJSONEncoder),
                     ),
                 )
-        except json.JSONEncodeError as e:
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
             raise RuntimeError(f"Failed to serialize flow state: {str(e)}") from e
 
     def load_state(self, flow_uuid: str) -> Optional[Dict[str, Any]]:
