@@ -41,7 +41,8 @@
     "wrong_tool_name": "You tried to use the tool {tool}, but it doesn't exist. You must use one of the following tools, use one at time: {tools}.",
     "tool_usage_exception": "I encountered an error while trying to use the tool. This was the error: {error}.\n Tool {tool} accepts these inputs: {tool_inputs}",
     "agent_tool_execution_error": "Error executing task with agent '{agent_role}'. Error: {error}",
-    "validation_error": "### Previous attempt failed validation: {guardrail_result_error}\n\n\n### Previous result:\n{task_output}\n\n\nTry again, making sure to address the validation error."
+    "validation_error": "### Previous attempt failed validation: {guardrail_result_error}\n\n\n### Previous result:\n{task_output}\n\n\nTry again, making sure to address the validation error.",
+    "criteria_validation_error": "### Your answer did not meet all acceptance criteria\n\n### Unmet criteria:\n{unmet_criteria}\n\n### Previous result:\n{task_output}\n\n\nPlease revise your answer to ensure ALL acceptance criteria are met. Use the 'Access Scratchpad Memory' tool if you need to retrieve any previously collected information."
   },
   "tools": {
     "delegate_work": "Delegate a specific task to one of the following coworkers: {coworkers}\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolutely everything you know, don't reference things but instead explain them.",

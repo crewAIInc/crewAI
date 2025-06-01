@@ -314,7 +314,7 @@ class Crew(FlowTrackable, BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Initialize private memory attributes."""
         self._external_memory = (
-            # External memory doesn’t support a default value since it was designed to be managed entirely externally
+            # External memory doesn't support a default value since it was designed to be managed entirely externally
             self.external_memory.set_crew(self) if self.external_memory else None
         )
 
@@ -1081,6 +1081,23 @@ class Crew(FlowTrackable, BaseModel):
             token_usage=token_usage,
         )
 
+    def _finish_execution(self, final_string_output: str) -> None:
+        if self.max_rpm:
+            self._rpm_controller.stop_rpm_counter()
+
+    def calculate_usage_metrics(self) -> UsageMetrics:
+        """Calculates and returns the usage metrics."""
+        total_usage_metrics = UsageMetrics()
+        for agent in self.agents:
+            if hasattr(agent, "_token_process"):
+                token_sum = agent._token_process.get_summary()
+                total_usage_metrics.add_usage_metrics(token_sum)
+        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
+            token_sum = self.manager_agent._token_process.get_summary()
+            total_usage_metrics.add_usage_metrics(token_sum)
+        self.usage_metrics = total_usage_metrics
+        return total_usage_metrics
+
     def _process_async_tasks(
         self,
         futures: List[Tuple[Task, Future[TaskOutput], int]],
@@ -1283,23 +1300,6 @@ class Crew(FlowTrackable, BaseModel):
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
         for agent in self.agents:
             agent.interpolate_inputs(inputs)
-
-    def _finish_execution(self, final_string_output: str) -> None:
-        if self.max_rpm:
-            self._rpm_controller.stop_rpm_counter()
-
-    def calculate_usage_metrics(self) -> UsageMetrics:
-        """Calculates and returns the usage metrics."""
-        total_usage_metrics = UsageMetrics()
-        for agent in self.agents:
-            if hasattr(agent, "_token_process"):
-                token_sum = agent._token_process.get_summary()
-                total_usage_metrics.add_usage_metrics(token_sum)
-        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
-            token_sum = self.manager_agent._token_process.get_summary()
-            total_usage_metrics.add_usage_metrics(token_sum)
-        self.usage_metrics = total_usage_metrics
-        return total_usage_metrics
 
     def test(
         self,

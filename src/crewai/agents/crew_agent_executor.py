@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Union, cast, Tuple
 import json
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -10,6 +10,7 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.tools.agent_tools.scratchpad_tool import ScratchpadTool
 from crewai.llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -19,6 +20,7 @@ from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
     get_llm_response,
+    get_tool_names,
     handle_agent_action_core,
     handle_context_length,
     handle_max_iterations_exceeded,
@@ -27,7 +29,9 @@ from crewai.utilities.agent_utils import (
     has_reached_max_iterations,
     is_context_length_exceeded,
     process_llm_response,
+    render_text_description_and_args,
     show_agent_logs,
+    parse_tools,
 )
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
 from crewai.utilities.logger import Logger
@@ -89,6 +93,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.agent_state: AgentState = AgentState(
             task_id=str(task.id) if task else None
         )
+        self.scratchpad_tool: Optional[ScratchpadTool] = None
         existing_stop = self.llm.stop or []
         self.llm.stop = list(
             set(
@@ -97,6 +102,30 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 else self.stop
             )
         )
+
+        # Initialize scratchpad tool if reasoning is enabled
+        if hasattr(self.agent, "reasoning") and self.agent.reasoning:
+            self._initialize_scratchpad_tool()
+
+    def _initialize_scratchpad_tool(self) -> None:
+        """Initialize the scratchpad tool and add it to available tools."""
+        self.scratchpad_tool = ScratchpadTool(scratchpad_data=self.agent_state.scratchpad)
+
+        # Add to tools list if not already present
+        tool_names = [tool.name for tool in self.tools]
+        if self.scratchpad_tool.name not in tool_names:
+            # Use parse_tools to convert to CrewStructuredTool
+            parsed_scratchpad_tools = parse_tools([self.scratchpad_tool])
+            if parsed_scratchpad_tools:
+                structured_scratchpad_tool = parsed_scratchpad_tools[0]
+                self.tools.append(structured_scratchpad_tool)
+
+                # Update tool mappings
+                self.tool_name_to_tool_map[self.scratchpad_tool.name] = structured_scratchpad_tool
+
+                # Update tools names and descriptions
+                self.tools_names = get_tool_names(self.tools)
+                self.tools_description = render_text_description_and_args(self.tools)
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         # Reset agent state for new task execution
@@ -204,7 +233,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         formatted_answer = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
+                print(f"\n[DEBUG] Starting iteration {self.iterations + 1}, max_iter: {self.max_iter}")
+
                 if has_reached_max_iterations(self.iterations, self.max_iter):
+                    print(f"[DEBUG] Max iterations reached")
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
                         printer=self._printer,
@@ -216,15 +248,67 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                print(f"[DEBUG] About to call LLM with {len(self.messages)} messages")
                 answer = get_llm_response(
                     llm=self.llm,
                     messages=self.messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
                 )
+                print(f"[DEBUG] LLM response received: {answer[:100]}..." if answer else "[DEBUG] No LLM response")
+
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
+                print(f"[DEBUG] Formatted answer type: {type(formatted_answer).__name__}")
+
+                # Check if agent is trying to finish but hasn't met criteria
+                if isinstance(formatted_answer, AgentFinish):
+                    print(f"[DEBUG] Agent trying to finish - checking acceptance criteria")
+                    # Validate acceptance criteria if reasoning is enabled and criteria exist
+                    if (hasattr(self.agent, "reasoning") and self.agent.reasoning
+                        and self.agent_state.acceptance_criteria):
+
+                        self._printer.print(
+                            content="\nValidating acceptance criteria before finalizing...",
+                            color="cyan"
+                        )
+
+                        print(f"[DEBUG] Starting validation of {len(self.agent_state.acceptance_criteria)} criteria")
+                        is_valid, unmet_criteria = self._validate_acceptance_criteria(formatted_answer.output)
+                        print(f"[DEBUG] Validation result: is_valid={is_valid}, unmet={len(unmet_criteria)}")
+
+                        if not is_valid:
+                            # Prevent task completion and force retry
+                            self._printer.print(
+                                content=f"\n❌ Cannot finalize - {len(unmet_criteria)} acceptance criteria not met:",
+                                color="red"
+                            )
+                            for criterion in unmet_criteria:
+                                self._printer.print(
+                                    content=f"   • {criterion}",
+                                    color="yellow"
+                                )
+
+                            # Create retry prompt
+                            print(f"[DEBUG] Creating criteria retry prompt")
+                            retry_prompt = self._create_criteria_retry_prompt(unmet_criteria)
+
+                            # Add retry prompt to messages
+                            self._append_message(retry_prompt, role="user")
+
+                            # Force another iteration by resetting formatted_answer
+                            formatted_answer = None
+                            print(f"[DEBUG] Forcing another iteration due to unmet criteria")
+
+                            # Continue the loop
+                            continue
+                        else:
+                            self._printer.print(
+                                content="\n✅ All acceptance criteria met!",
+                                color="green"
+                            )
 
                 if isinstance(formatted_answer, AgentAction):
+                    print(f"[DEBUG] Agent action: tool={formatted_answer.tool}")
                     # Extract agent fingerprint if available
                     fingerprint_context = {}
                     if (
@@ -238,6 +322,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             )
                         }
 
+                    print(f"[DEBUG] Executing tool: {formatted_answer.tool}")
                     tool_result = execute_tool_and_check_finality(
                         agent_action=formatted_answer,
                         fingerprint_context=fingerprint_context,
@@ -250,6 +335,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         agent=self.agent,
                         function_calling_llm=self.function_calling_llm,
                     )
+                    print(f"[DEBUG] Tool execution completed")
+
                     formatted_answer = self._handle_agent_action(
                         formatted_answer, tool_result
                     )
@@ -297,7 +384,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             hasattr(self.agent, "reasoning")
                             and self.agent.reasoning
                             and tool_result
+                            and formatted_answer.tool != "Access Scratchpad Memory"  # Skip scratchpad tool itself
+                            and self._is_tool_execution_successful(tool_result)  # Only for successful executions
                         ):
+                            print(f"[DEBUG] Starting scratchpad extraction for {formatted_answer.tool}")
                             self._extract_tool_result_to_scratchpad(
                                 tool_name=formatted_answer.tool,
                                 tool_args=tool_args,
@@ -319,8 +409,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 # Increment steps in agent state
                 self.agent_state.increment_steps()
 
+                # Update scratchpad tool if it exists
+                if self.scratchpad_tool and self.agent_state.scratchpad:
+                    print(f"[DEBUG] Updating scratchpad tool")
+                    self._update_scratchpad_tool()
+
                 if self._should_trigger_reasoning():
+                    print(f"[DEBUG] Triggering mid-execution reasoning")
                     self._handle_mid_execution_reasoning()
+                    print(f"[DEBUG] Mid-execution reasoning completed")
                 else:
                     self.steps_since_reasoning += 1
 
@@ -328,6 +425,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._append_message(formatted_answer.text, role="assistant")
 
             except OutputParserException as e:
+                print(f"[DEBUG] OutputParserException: {str(e)}")
                 formatted_answer = handle_output_parser_exception(
                     e=e,
                     messages=self.messages,
@@ -337,10 +435,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 )
 
             except Exception as e:
+                print(f"[DEBUG] Exception in invoke loop: {type(e).__name__}: {str(e)}")
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
                     raise e
                 if is_context_length_exceeded(e):
+                    print(f"[DEBUG] Context length exceeded, handling...")
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
                         printer=self._printer,
@@ -357,12 +457,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     raise e
             finally:
                 self.iterations += 1
+                print(f"[DEBUG] Iteration {self.iterations} completed")
 
         # During the invoke loop, formatted_answer alternates between AgentAction
         # (when the agent is using tools) and eventually becomes AgentFinish
         # (when the agent reaches a final answer). This assertion confirms we've
         # reached a final answer and helps type checking understand this transition.
         assert isinstance(formatted_answer, AgentFinish)
+
         self._show_logs(formatted_answer)
         return formatted_answer
 
@@ -846,8 +948,44 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             tool_args: Arguments that were passed to the tool
             tool_result: The result returned by the tool
         """
+        print(f"[DEBUG] _extract_tool_result_to_scratchpad started for tool: {tool_name}")
         try:
+            # Check result size and potentially skip LLM extraction for very large results
+            result_str = str(tool_result.result)
+            result_size = len(result_str)
+            print(f"[DEBUG] Tool result size: {result_size} characters")
+
+            # For very large results (>100KB), skip LLM extraction and store directly
+            if result_size > 100000:
+                print(f"[DEBUG] Result too large ({result_size} chars), storing directly without LLM extraction")
+                scratchpad_key = tool_name.replace("_", "")
+
+                # Try to parse as JSON if possible
+                try:
+                    if isinstance(tool_result.result, str):
+                        result_data = json.loads(tool_result.result)
+                    else:
+                        result_data = tool_result.result
+                except:
+                    result_data = tool_result.result
+
+                self.agent_state.add_to_scratchpad(
+                    scratchpad_key,
+                    {
+                        "data": result_data,
+                        "tool": tool_name,
+                        "tool_args": tool_args,
+                        "large_result": True,
+                        "size": result_size
+                    }
+                )
+                print(f"[DEBUG] Large result stored directly to scratchpad")
+                return
+
             # Create a prompt for the LLM to extract relevant information
+            result_preview = str(tool_result.result)[:200] + "..." if len(str(tool_result.result)) > 200 else str(tool_result.result)
+            print(f"[DEBUG] Tool result preview: {result_preview}")
+
             extraction_prompt = f"""Given the following tool execution result, extract and summarize the most relevant information that would be useful for completing the current task.
 
 Tool Name: {tool_name}
@@ -866,6 +1004,7 @@ Instructions:
 4. Summarize in a concise format (max 3-5 bullet points)
 5. Focus on information that will be useful for subsequent steps
 6. Generate a descriptive key name that explains what data is being stored (e.g., "email_and_thread_ids", "search_results", "file_contents", etc.)
+7. IMPORTANT: When extracting data_points, include ALL items from lists or collections, do not truncate or summarize the data
 
 Respond in the following JSON format:
 {{
@@ -874,24 +1013,30 @@ Respond in the following JSON format:
     "data_points": {{"key": "value", ...}} or [list of items],
     "issues": ["issue1", "issue2", ...] or null if none,
     "relevance_score": 1-10 (how relevant this result is to the task)
-}}"""
+}}
+
+Note: For data_points, preserve the complete data structure. If it's a list of items (like email IDs, search results, etc.), include ALL items."""
 
             # Create messages for LLM call
             messages = [format_message_for_llm(extraction_prompt, role="user")]
 
             # Call LLM to extract information
             try:
+                print(f"[DEBUG] Calling LLM for scratchpad extraction...")
                 extraction_response = get_llm_response(
                     llm=self.llm,
                     messages=messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
                 )
+                print(f"[DEBUG] LLM extraction response received, length: {len(extraction_response)}")
 
                 # Try to parse the JSON response directly
                 try:
                     extracted_info = json.loads(extraction_response)
+                    print(f"[DEBUG] Successfully parsed JSON directly")
                 except json.JSONDecodeError:
+                    print(f"[DEBUG] Failed to parse JSON directly, trying to extract from markdown...")
                     # If direct parsing fails, try to extract JSON from the response
                     # The LLM might have wrapped it in markdown code blocks or added extra text
                     json_match = None
@@ -903,16 +1048,19 @@ Respond in the following JSON format:
                     matches = re.findall(json_pattern, extraction_response, re.DOTALL)
 
                     if matches:
+                        print(f"[DEBUG] Found {len(matches)} JSON blocks in markdown")
                         # Try to parse the first match
                         for match in matches:
                             try:
                                 json_match = json.loads(match)
+                                print(f"[DEBUG] Successfully parsed JSON from markdown")
                                 break
                             except json.JSONDecodeError:
                                 continue
 
                     # If no markdown JSON found, try to find raw JSON object
                     if not json_match:
+                        print(f"[DEBUG] No markdown JSON found, looking for raw JSON...")
                         # Look for JSON object in the response
                         json_start = extraction_response.find("{")
                         json_end = extraction_response.rfind("}")
@@ -926,13 +1074,16 @@ Respond in the following JSON format:
                                     json_start : json_end + 1
                                 ]
                                 json_match = json.loads(potential_json)
+                                print(f"[DEBUG] Successfully extracted raw JSON")
                             except json.JSONDecodeError:
+                                print(f"[DEBUG] Failed to parse raw JSON")
                                 pass
 
                     if json_match:
                         extracted_info = json_match
                     else:
                         # Couldn't parse JSON, raise to trigger fallback
+                        print(f"[DEBUG] Could not extract any valid JSON, triggering fallback")
                         raise json.JSONDecodeError(
                             "Could not extract JSON", extraction_response, 0
                         )
@@ -945,6 +1096,7 @@ Respond in the following JSON format:
                 else:
                     # Generate a meaningful key from tool name
                     scratchpad_key = tool_name.replace("_", "")
+                print(f"[DEBUG] Using scratchpad key: {scratchpad_key}")
 
                 # Get the data points
                 data_points = extracted_info.get("data_points", {})
@@ -965,9 +1117,12 @@ Respond in the following JSON format:
 
                 # Store based on relevance score
                 relevance_score = extracted_info.get("relevance_score", 0)
+                print(f"[DEBUG] Relevance score: {relevance_score}")
+
                 if relevance_score >= 7:
                     # For high relevance, store just the data
                     self.agent_state.add_to_scratchpad(scratchpad_key, data_to_store)
+                    print(f"[DEBUG] Stored high relevance data to scratchpad")
                 else:
                     # For lower relevance, include more context
                     self.agent_state.add_to_scratchpad(
@@ -979,6 +1134,7 @@ Respond in the following JSON format:
                             "relevance": relevance_score,
                         },
                     )
+                    print(f"[DEBUG] Stored lower relevance data with context to scratchpad")
 
                 # Also store key findings if present and relevance is high
                 if relevance_score >= 7 and extracted_info.get("key_findings"):
@@ -989,39 +1145,304 @@ Respond in the following JSON format:
                     self.agent_state.add_to_scratchpad(
                         "key_findings", current_findings[-10:]
                     )
+                    print(f"[DEBUG] Updated key findings in scratchpad")
 
-            except (json.JSONDecodeError, KeyError, TypeError):
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                print(f"[DEBUG] Exception during extraction: {type(e).__name__}: {str(e)}")
                 # Fallback for when we can't extract structured data
                 # Try to generate a meaningful key name from tool name
                 scratchpad_key = tool_name.replace("_", "")
 
-                # Store a preview of the result
+                # Store the complete result without truncation
                 self.agent_state.add_to_scratchpad(
                     scratchpad_key,
                     {
-                        "raw_response": extraction_response[:500] + "..."
-                        if len(extraction_response) > 500
-                        else extraction_response,
-                        "tool_result_preview": str(tool_result.result)[:300] + "..."
-                        if len(str(tool_result.result)) > 300
-                        else str(tool_result.result),
+                        "raw_response": extraction_response,  # Store complete response
+                        "tool_result": tool_result.result,  # Store complete result
+                        "extraction_failed": True,
+                        "tool_args": tool_args
                     },
                 )
+                print(f"[DEBUG] Stored fallback data to scratchpad")
 
         except Exception as e:
             # Log error but don't fail the entire execution
+            print(f"[DEBUG] Failed to extract tool result: {type(e).__name__}: {str(e)}")
             self._printer.print(
                 content=f"Failed to extract tool result to scratchpad: {str(e)}",
                 color="yellow",
             )
-            # Still store basic information even if extraction fails
+            # Still store complete information even if extraction fails
             fallback_key = f"{tool_name}_raw_{self.agent_state.steps_completed}"
             self.agent_state.add_to_scratchpad(
                 fallback_key,
                 {
                     "error": f"Extraction failed: {str(e)}",
-                    "raw_preview": str(tool_result.result)[:200] + "..."
-                    if len(str(tool_result.result)) > 200
-                    else str(tool_result.result),
+                    "tool_result": tool_result.result,  # Store complete result
+                    "tool_name": tool_name,
+                    "tool_args": tool_args,
+                    "raw_data": True
                 },
             )
+            print(f"[DEBUG] Stored error fallback data to scratchpad")
+
+        print(f"[DEBUG] _extract_tool_result_to_scratchpad completed")
+
+    def _update_scratchpad_tool(self) -> None:
+        """Update the scratchpad tool with current state data."""
+        if not self.scratchpad_tool:
+            return
+
+        # Update the tool's data
+        self.scratchpad_tool.update_scratchpad(self.agent_state.scratchpad)
+
+        # Find and update the tool in our tools list
+        for i, tool in enumerate(self.tools):
+            if hasattr(tool, 'name') and tool.name == self.scratchpad_tool.name:
+                # Update the description on the existing tool reference
+                if hasattr(tool, '_tool') and hasattr(tool._tool, 'description'):
+                    tool._tool.description = self.scratchpad_tool.description
+                elif hasattr(tool, 'description'):
+                    tool.description = self.scratchpad_tool.description
+                break
+
+        # Regenerate tools description to reflect the updated tool
+        self.tools_description = render_text_description_and_args(self.tools)
+
+    def _validate_acceptance_criteria(self, output: str) -> Tuple[bool, List[str]]:
+        """Validate if the output meets acceptance criteria.
+
+        Args:
+            output: The final output to validate
+
+        Returns:
+            Tuple[bool, List[str]]: (is_valid, list of unmet criteria)
+        """
+        print(f"[DEBUG] _validate_acceptance_criteria started")
+        if not self.agent_state.acceptance_criteria:
+            # No criteria to validate
+            print(f"[DEBUG] No acceptance criteria to validate")
+            return True, []
+
+        # Create a single prompt to check all criteria
+        criteria_list = "\n".join(
+            f"{i}. {criterion}"
+            for i, criterion in enumerate(self.agent_state.acceptance_criteria, 1)
+        )
+        print(f"[DEBUG] Validating {len(self.agent_state.acceptance_criteria)} criteria")
+
+        validation_prompt = f"""Given the following task output and acceptance criteria, identify which criteria have NOT been met.
+
+Task Output:
+{output}
+
+Expected Output Description:
+{self.task.expected_output if self.task else "Not specified"}
+
+Acceptance Criteria:
+{criteria_list}
+
+For each criterion, determine if it has been met or not met in the output.
+Respond with a JSON object where keys are criterion numbers (1, 2, 3, etc.) and values are:
+- "MET" if the criterion is satisfied
+- "NOT MET: <brief reason>" if the criterion is not satisfied
+
+Example response format:
+{{
+    "1": "MET",
+    "2": "NOT MET: Missing specific examples",
+    "3": "MET"
+}}
+"""
+
+        try:
+            print(f"[DEBUG] Calling LLM for criteria validation...")
+            response = self.llm.call([
+                {"role": "user", "content": validation_prompt}
+            ])
+            print(f"[DEBUG] LLM validation response received")
+
+            # Parse the response as JSON
+            import json
+            response_str = str(response).strip()
+
+            # Try to extract JSON from the response
+            json_start = response_str.find('{')
+            json_end = response_str.rfind('}') + 1
+            if json_start >= 0 and json_end > json_start:
+                json_str = response_str[json_start:json_end]
+                validation_results = json.loads(json_str)
+                print(f"[DEBUG] Successfully parsed validation JSON")
+            else:
+                # Fallback if JSON not found
+                self._logger.log("warning", f"Could not parse validation response as JSON: {response_str}")
+                print(f"[DEBUG] Failed to parse validation response as JSON")
+                # Assume all criteria not met if we can't parse
+                return False, self.agent_state.acceptance_criteria
+
+            # Process results
+            unmet_criteria = []
+            for i, criterion in enumerate(self.agent_state.acceptance_criteria, 1):
+                result = validation_results.get(str(i), "NOT MET")
+                if isinstance(result, str) and result.upper().startswith("NOT MET"):
+                    unmet_criteria.append(criterion)
+                    self._printer.print(
+                        content=f"✗ Criterion not met: {criterion}",
+                        color="yellow"
+                    )
+                else:
+                    self._printer.print(
+                        content=f"✓ Criterion met: {criterion}",
+                        color="green"
+                    )
+
+            print(f"[DEBUG] Validation complete: {len(unmet_criteria)} unmet criteria")
+            return len(unmet_criteria) == 0, unmet_criteria
+
+        except Exception as e:
+            print(f"[DEBUG] Error validating criteria: {type(e).__name__}: {str(e)}")
+            self._logger.log("warning", f"Error validating criteria: {str(e)}")
+            # If we can't validate, assume all criteria are not met to be safe
+            return False, self.agent_state.acceptance_criteria
+
+    def _create_criteria_retry_prompt(self, unmet_criteria: List[str]) -> str:
+        """Create a prompt to retry task with unmet criteria.
+
+        Args:
+            unmet_criteria: List of criteria that weren't met
+
+        Returns:
+            str: The retry prompt
+        """
+        # Get task context
+        task_description = self.task.description if self.task else "Not specified"
+        expected_output = self.task.expected_output if self.task else "Not specified"
+
+        # Build information about what's in the scratchpad
+        scratchpad_info = ""
+        scratchpad_data_summary = ""
+        if self.scratchpad_tool and self.agent_state.scratchpad:
+            scratchpad_keys = list(self.agent_state.scratchpad.keys())
+            scratchpad_info = f"""
+📦 YOUR SCRATCHPAD CONTAINS DATA:
+{chr(10).join(f"  • '{key}'" for key in scratchpad_keys)}
+
+TO ACCESS THIS DATA: Use the "Access Scratchpad Memory" tool with the key name.
+Example:
+Action: Access Scratchpad Memory
+Action Input: {{"key": "{scratchpad_keys[0] if scratchpad_keys else 'key_name'}"}}
+"""
+            # Add summary of what's in scratchpad
+            for key in scratchpad_keys[:3]:  # Show first 3 keys as examples
+                value = self.agent_state.scratchpad[key]
+                if isinstance(value, list):
+                    scratchpad_data_summary += f"\n  - '{key}': contains {len(value)} items"
+                elif isinstance(value, dict):
+                    scratchpad_data_summary += f"\n  - '{key}': contains data with {len(value)} fields"
+                else:
+                    scratchpad_data_summary += f"\n  - '{key}': contains stored data"
+
+        # Analyze what's missing based on criteria
+        missing_data_hints = []
+        for criterion in unmet_criteria:
+            criterion_lower = criterion.lower()
+            if "every email" in criterion_lower or "all" in criterion_lower:
+                missing_data_hints.append("You need to retrieve ALL emails, not just a summary")
+            if "date" in criterion_lower or "time" in criterion_lower:
+                missing_data_hints.append("Include complete date/time information for each record")
+            if "subject" in criterion_lower or "sender" in criterion_lower or "recipients" in criterion_lower:
+                missing_data_hints.append("Ensure all email metadata (subject, sender, recipients) is included")
+            if "format" in criterion_lower or "list" in criterion_lower:
+                missing_data_hints.append("Format the data properly as requested")
+            if "summary" in criterion_lower or "concise" in criterion_lower:
+                missing_data_hints.append("Include a concise summary/snippet for each email")
+
+        # Get available tools (excluding scratchpad tool)
+        available_tools = [tool for tool in self.tools_names.split(", ") if tool != "Access Scratchpad Memory"]
+        tools_hint = f"\n🛠️ AVAILABLE TOOLS: {', '.join(available_tools)}" if available_tools else ""
+
+        # Get progress summary
+        progress_summary = f"""
+📊 CURRENT PROGRESS:
+- Steps completed: {self.agent_state.steps_completed}
+- Tools used: {len(self.agent_state.tool_usage_history)} times"""
+
+        if self.agent_state.tool_usage_history:
+            recent_tools = self.agent_state.tool_usage_history[-3:]
+            progress_summary += f"\n- Recent tools: {', '.join(t.tool_name for t in recent_tools)}"
+
+        prompt = f"""❌ VALIDATION FAILED - YOU CANNOT PROVIDE A FINAL ANSWER YET!
+
+Your output is INCOMPLETE and missing critical information.
+
+🎯 ORIGINAL TASK:
+{task_description}
+
+📋 EXPECTED OUTPUT:
+{expected_output}
+
+❌ UNMET CRITERIA:
+{chr(10).join(f"❌ {criterion}" for criterion in unmet_criteria)}
+
+⚠️ CRITICAL: You MUST go back to using tools to gather the missing data!
+
+DO NOT attempt another "Final Answer" until you have ALL required data.
+{progress_summary}
+
+🔧 REQUIRED ACTIONS:
+1. STOP trying to provide a Final Answer
+2. Switch to using Action/Action Input format
+3. Use tools to gather the missing information
+{scratchpad_info}
+
+💡 WHAT YOU'RE MISSING:
+{chr(10).join(f"• {hint}" for hint in missing_data_hints) if missing_data_hints else "• Review the criteria and gather all required data"}
+{scratchpad_data_summary}
+
+📋 YOUR NEXT STEP:
+You MUST use the following format to continue:
+
+Thought: I need to gather the missing data using tools
+Action: [tool name]
+Action Input: {{"parameter": "value"}}
+{tools_hint}
+
+⚠️ IMPORTANT REMINDERS:
+- The task requires you to retrieve EVERY email, not just summaries
+- You already have data in your scratchpad - ACCESS IT FIRST with "Access Scratchpad Memory"
+- Each email needs: date, time, subject, sender, recipients, and content snippet
+- Continue retrieving details for ALL emails until complete
+- Only provide a Final Answer after you have gathered ALL required data
+
+CONTINUE WITH TOOL USAGE NOW - DO NOT ATTEMPT ANOTHER FINAL ANSWER."""
+
+        return prompt
+
+    def _is_tool_execution_successful(self, tool_result: ToolResult) -> bool:
+        """Check if a tool execution was successful based on the tool result."""
+        if tool_result.result is None or tool_result.result == "":
+            return False
+
+        # Check for common error indicators in the result
+        result_str = str(tool_result.result).lower()
+        error_indicators = [
+            "error",
+            "exception",
+            "failed",
+            "unable to",
+            "couldn't",
+            "not found",
+            "invalid",
+            "wrong tool name",
+            "don't exist",
+            "tool usage exception",
+            "moving on then",
+            "has reached its usage limit"
+        ]
+
+        # If any error indicator is found in the result, consider it a failure
+        for indicator in error_indicators:
+            if indicator in result_str:
+                return False
+
+        return True
