@@ -180,7 +180,7 @@ class ToolUsage:
                 event_data.update(self.agent.fingerprint)
 
             crewai_event_bus.emit(self,ToolUsageStartedEvent(**event_data))
-            
+
         started_at = time.time()
         from_cache = False
         result = None  # type: ignore
@@ -250,9 +250,54 @@ class ToolUsage:
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
                     self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                    error_message = self._i18n.errors("tool_usage_exception").format(
-                        error=e, tool=tool.name, tool_inputs=tool.description
-                    )
+
+                    # Check if this is a validation error with missing fields
+                    error_str = str(e)
+                    if "Arguments validation failed" in error_str and "Field required" in error_str:
+                        # Extract the field name that's missing
+                        import re
+                        field_match = re.search(r'(\w+)\s*Field required', error_str)
+                        if field_match:
+                            missing_field = field_match.group(1)
+
+                            # Create a more helpful error message
+                            error_message = (
+                                f"Tool validation error: The '{missing_field}' parameter is required but was not provided.\n\n"
+                                f"SOLUTION: Include ALL parameters in your tool call, even optional ones (use null for optional parameters):\n"
+                                f'{{"tool_name": "{tool.name}", "arguments": {{'
+                            )
+
+                            # Get all expected parameters from the tool schema
+                            if hasattr(tool, 'args_schema'):
+                                schema_props = tool.args_schema.model_json_schema().get('properties', {})
+                                param_examples = []
+                                for param_name, param_info in schema_props.items():
+                                    if param_name == missing_field:
+                                        param_examples.append(f'"{param_name}": "YOUR_VALUE_HERE"')
+                                    else:
+                                        # Check if it's optional by looking at required fields
+                                        is_required = param_name in tool.args_schema.model_json_schema().get('required', [])
+                                        if not is_required:
+                                            param_examples.append(f'"{param_name}": null')
+                                        else:
+                                            param_examples.append(f'"{param_name}": "value"')
+
+                                error_message += ', '.join(param_examples)
+                                error_message += '}}\n\n'
+
+                            error_message += f"Original error: {e}\n"
+                            error_message += f"Tool description: {tool.description}"
+                        else:
+                            # Use the original error message
+                            error_message = self._i18n.errors("tool_usage_exception").format(
+                                error=e, tool=tool.name, tool_inputs=tool.description
+                            )
+                    else:
+                        # Use the original error message for non-validation errors
+                        error_message = self._i18n.errors("tool_usage_exception").format(
+                            error=e, tool=tool.name, tool_inputs=tool.description
+                        )
+
                     error = ToolUsageErrorException(
                         f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                     ).message
@@ -281,45 +326,45 @@ class ToolUsage:
                 self.tools_handler.on_tool_use(
                     calling=calling, output=result, should_cache=should_cache
                 )
-        self._telemetry.tool_usage(
-            llm=self.function_calling_llm,
-            tool_name=tool.name,
-            attempts=self._run_attempts,
-        )
-        result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
-        data = {
-            "result": result,
-            "tool_name": tool.name,
-            "tool_args": calling.arguments,
-        }
+            self._telemetry.tool_usage(
+                llm=self.function_calling_llm,
+                tool_name=tool.name,
+                attempts=self._run_attempts,
+            )
+            result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
+            data = {
+                "result": result,
+                "tool_name": tool.name,
+                "tool_args": calling.arguments,
+            }
 
-        self.on_tool_use_finished(
-            tool=tool,
-            tool_calling=calling,
-            from_cache=from_cache,
-            started_at=started_at,
-            result=result,
-        )
+            self.on_tool_use_finished(
+                tool=tool,
+                tool_calling=calling,
+                from_cache=from_cache,
+                started_at=started_at,
+                result=result,
+            )
 
-        if (
-            hasattr(available_tool, "result_as_answer")
-            and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
-        ):
-            result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
-            data["result_as_answer"] = result_as_answer  # type: ignore
+            if (
+                hasattr(available_tool, "result_as_answer")
+                and available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+            ):
+                result_as_answer = available_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
+                data["result_as_answer"] = result_as_answer  # type: ignore
 
-        if self.agent and hasattr(self.agent, "tools_results"):
-            self.agent.tools_results.append(data)
+            if self.agent and hasattr(self.agent, "tools_results"):
+                self.agent.tools_results.append(data)
 
-        if available_tool and hasattr(available_tool, 'current_usage_count'):
-            available_tool.current_usage_count += 1
-            if hasattr(available_tool, 'max_usage_count') and available_tool.max_usage_count is not None:
-                self._printer.print(
-                    content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                    color="blue"
-                )
+            if available_tool and hasattr(available_tool, 'current_usage_count'):
+                available_tool.current_usage_count += 1
+                if hasattr(available_tool, 'max_usage_count') and available_tool.max_usage_count is not None:
+                    self._printer.print(
+                        content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                        color="blue"
+                    )
 
-        return result
+            return result
 
     def _format_result(self, result: Any) -> str:
         if self.task:
@@ -350,20 +395,20 @@ class ToolUsage:
                 calling.arguments == last_tool_usage.arguments
             )
         return False
-        
+
     def _check_usage_limit(self, tool: Any, tool_name: str) -> str | None:
         """Check if tool has reached its usage limit.
-        
+
         Args:
             tool: The tool to check
             tool_name: The name of the tool (used for error message)
-            
+
         Returns:
             Error message if limit reached, None otherwise
         """
         if (
-            hasattr(tool, 'max_usage_count') 
-            and tool.max_usage_count is not None 
+            hasattr(tool, 'max_usage_count')
+            and tool.max_usage_count is not None
             and tool.current_usage_count >= tool.max_usage_count
         ):
             return f"Tool '{tool_name}' has reached its usage limit of {tool.max_usage_count} times and cannot be used anymore."

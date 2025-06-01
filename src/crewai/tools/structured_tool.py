@@ -197,6 +197,42 @@ class CrewStructuredTool:
             validated_args = self.args_schema.model_validate(raw_args)
             return validated_args.model_dump()
         except Exception as e:
+            # Check if this is a "Field required" error and try to fix it
+            error_str = str(e)
+            if "Field required" in error_str:
+                # Try to parse missing fields from the error
+                import re
+                from pydantic import ValidationError
+
+                if isinstance(e, ValidationError):
+                    # Extract missing fields from validation error
+                    missing_fields = []
+                    for error_detail in e.errors():
+                        if error_detail.get('type') == 'missing':
+                            field_path = error_detail.get('loc', ())
+                            if field_path:
+                                missing_fields.append(field_path[0])
+
+                    if missing_fields:
+                        # Create a copy of raw_args and add missing fields with None
+                        fixed_args = dict(raw_args) if isinstance(raw_args, dict) else {}
+                        for field in missing_fields:
+                            if field not in fixed_args:
+                                fixed_args[field] = None
+
+                        # Try validation again with fixed args
+                        try:
+                            self._logger.log("debug", f"Auto-fixing missing fields: {missing_fields}")
+                            validated_args = self.args_schema.model_validate(fixed_args)
+                            return validated_args.model_dump()
+                        except Exception as retry_e:
+                            # If it still fails, raise the original error with additional context
+                            raise ValueError(
+                                f"Arguments validation failed: {e}\n"
+                                f"Attempted to auto-fix missing fields {missing_fields} but still failed: {retry_e}"
+                            )
+
+            # For other validation errors, raise as before
             raise ValueError(f"Arguments validation failed: {e}")
 
     async def ainvoke(
