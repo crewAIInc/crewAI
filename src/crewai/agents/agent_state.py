@@ -23,24 +23,14 @@ class AgentState(BaseModel):
     """
 
     # Core fields
-    completed: bool = Field(
-        default=False,
-        description="Whether the current task is finished"
-    )
-
     original_plan: List[str] = Field(
         default_factory=list,
         description="The initial plan from first reasoning pass. Never overwrite unless user requests complete replan"
     )
 
-    last_plan: List[str] = Field(
-        default_factory=list,
-        description="The most recent plan (original or mid-execution update)"
-    )
-
     acceptance_criteria: List[str] = Field(
         default_factory=list,
-        description="Concrete goals to satisfy before marking completed=true"
+        description="Concrete goals to satisfy for task completion"
     )
 
     scratchpad: Dict[str, Any] = Field(
@@ -74,16 +64,10 @@ class AgentState(BaseModel):
         description="Number of execution steps completed"
     )
 
-    def update_last_plan(self, new_plan: List[str]) -> None:
-        """Update the last plan and timestamp."""
-        self.last_plan = new_plan
-        self.last_updated = datetime.now()
-
     def set_original_plan(self, plan: List[str]) -> None:
         """Set the original plan (only if not already set)."""
         if not self.original_plan:
             self.original_plan = plan
-            self.last_plan = plan
             self.last_updated = datetime.now()
 
     def add_to_scratchpad(self, key: str, value: Any) -> None:
@@ -132,16 +116,9 @@ class AgentState(BaseModel):
         self.steps_completed += 1
         self.last_updated = datetime.now()
 
-    def mark_completed(self) -> None:
-        """Mark the task as completed."""
-        self.completed = True
-        self.last_updated = datetime.now()
-
     def reset(self, task_id: Optional[str] = None) -> None:
         """Reset state for a new task."""
-        self.completed = False
         self.original_plan = []
-        self.last_plan = []
         self.acceptance_criteria = []
         self.scratchpad = {}
         self.tool_usage_history = []
@@ -154,16 +131,15 @@ class AgentState(BaseModel):
         """Generate a concise string representation for LLM context."""
         context = f"Current State (Step {self.steps_completed}):\n"
         context += f"- Task ID: {self.task_id}\n"
-        context += f"- Completed: {self.completed}\n"
 
         if self.acceptance_criteria:
             context += "- Acceptance Criteria:\n"
             for criterion in self.acceptance_criteria:
                 context += f"  • {criterion}\n"
 
-        if self.last_plan:
-            context += "- Current Plan:\n"
-            for i, step in enumerate(self.last_plan, 1):
+        if self.original_plan:
+            context += "- Plan:\n"
+            for i, step in enumerate(self.original_plan, 1):
                 context += f"  {i}. {step}\n"
 
         if self.tool_usage_history:

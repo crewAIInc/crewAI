@@ -138,9 +138,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
 
-        # Mark task as completed in agent state
-        self.agent_state.mark_completed()
-
         self._create_short_term_memory(formatted_answer)
         self._create_long_term_memory(formatted_answer)
         self._create_external_memory(formatted_answer)
@@ -312,6 +309,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                                 f"Agent State:\n"
                                 f"Raw: {self.agent_state.model_dump_json()}\n"
                                 f"[AGENT STATE] Step {self.agent_state.steps_completed}:\n"
+                                f"Original Plan: {getattr(self.agent_state, 'original_plan', None)}\n"
                                 f"Tool: {formatted_answer.tool}\n"
                                 f"Scratchpad: {self.agent_state.scratchpad}\n"
                                 f"Tool History: {len(self.agent_state.tool_usage_history)} entries\n"
@@ -749,12 +747,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 iteration_messages=self.messages,
             )
 
-            # Update agent state with new plan if available
+            # Update acceptance criteria if they changed from the reasoning output
             if reasoning_output.plan.structured_plan:
-                self.agent_state.update_last_plan(
-                    reasoning_output.plan.structured_plan.steps
-                )
-                # Update acceptance criteria if they changed
                 if reasoning_output.plan.structured_plan.acceptance_criteria:
                     self.agent_state.acceptance_criteria = (
                         reasoning_output.plan.structured_plan.acceptance_criteria
