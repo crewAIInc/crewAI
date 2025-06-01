@@ -191,6 +191,10 @@ class ConsoleFormatter:
 
         self.print_panel(content, title, style)
 
+        # Clear all spinners when crew completes or fails
+        if status in {"completed", "failed"}:
+            self._clear_all_spinners()
+
     def create_crew_tree(self, crew_name: str, source_id: str) -> Optional[Tree]:
         """Create and initialize a new crew tree with initial status."""
         if not self.verbose:
@@ -241,6 +245,8 @@ class ConsoleFormatter:
         # When a new task starts, clear pointers to previous agent, reasoning,
         # and tool branches so that any upcoming Reasoning / Tool logs attach
         # to the correct task.
+        if self.current_tool_branch:
+            self._unregister_spinner_branch(self.current_tool_branch)
         self.current_agent_branch = None
         # Keep current_reasoning_branch; reasoning may still be in progress
         self.current_tool_branch = None
@@ -610,6 +616,7 @@ class ConsoleFormatter:
                 f"{tool_name} ({self.tool_usage_counts[tool_name]})",
                 "red",
             )
+            self._unregister_spinner_branch(tool_branch)
             if tree_to_use:
                 self.print(tree_to_use)
                 self.print()
@@ -711,6 +718,7 @@ class ConsoleFormatter:
         # Update tool branch if it exists
         if tool_branch:
             tool_branch.label = Text("❌ LLM Failed", style="red bold")
+            self._unregister_spinner_branch(tool_branch)
             if tree_to_use:
                 self.print(tree_to_use)
                 self.print()
@@ -1270,6 +1278,10 @@ class ConsoleFormatter:
 
         self.print()
 
+        # Unregister spinner before clearing
+        if reasoning_branch is not None:
+            self._unregister_spinner_branch(reasoning_branch)
+
         # Clear stored branch after completion
         self.current_reasoning_branch = None
 
@@ -1296,6 +1308,7 @@ class ConsoleFormatter:
 
         if reasoning_branch is not None:
             self.update_tree_label(reasoning_branch, "❌", "Reasoning Failed", "red")
+            self._unregister_spinner_branch(reasoning_branch)
 
         if tree_to_use is not None:
             self.print(tree_to_use)
@@ -1404,6 +1417,11 @@ class ConsoleFormatter:
         if self._stop_spinner_event:
             self._stop_spinner_event.set()
         self._spinner_running = False
+
+    def _clear_all_spinners(self):
+        """Clear all active spinners. Used as a safety mechanism."""
+        self._spinner_branches.clear()
+        self._stop_spinner_thread()
 
     def _spinner_loop(self):
         import time
