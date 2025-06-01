@@ -1,8 +1,8 @@
-from collections import deque
 from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.agent_state import AgentState
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -84,8 +84,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
             tool.name: tool for tool in self.tools
         }
-        self.tools_used: deque[str] = deque(maxlen=100)  # Limit history size
         self.steps_since_reasoning = 0
+        self.agent_state: AgentState = AgentState(task_id=str(task.id) if task else None)
         existing_stop = self.llm.stop or []
         self.llm.stop = list(
             set(
@@ -96,6 +96,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
+        # Reset agent state for new task execution
+        self.agent_state.reset(task_id=str(self.task.id) if self.task else None)
+
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
@@ -110,6 +113,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
 
         try:
+            # Populate agent state from reasoning output if available
+            if hasattr(self.agent, "reasoning") and self.agent.reasoning:
+                self._populate_state_from_reasoning()
+
             formatted_answer = self._invoke_loop()
         except AssertionError:
             self._printer.print(
@@ -128,10 +135,51 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
 
+        # Mark task as completed in agent state
+        self.agent_state.mark_completed()
+
         self._create_short_term_memory(formatted_answer)
         self._create_long_term_memory(formatted_answer)
         self._create_external_memory(formatted_answer)
         return {"output": formatted_answer.output}
+
+    def _populate_state_from_reasoning(self) -> None:
+        """Populate agent state from the reasoning output if available."""
+        try:
+            # Check if the agent has reasoning output from the initial reasoning
+            if hasattr(self.agent, '_last_reasoning_output') and self.agent._last_reasoning_output:
+                reasoning_output = self.agent._last_reasoning_output
+
+                # Extract structured plan if available
+                if reasoning_output.plan.structured_plan:
+                    self.agent_state.set_original_plan(reasoning_output.plan.structured_plan.steps)
+                    self.agent_state.acceptance_criteria = reasoning_output.plan.structured_plan.acceptance_criteria
+                elif reasoning_output.plan.plan:
+                    # Fallback: try to extract steps from unstructured plan
+                    plan_lines = [line.strip() for line in reasoning_output.plan.plan.split('\n') if line.strip()]
+                    # Take meaningful lines that look like steps (skip headers, empty lines, etc.)
+                    steps = []
+                    for line in plan_lines:
+                        if line and not line.startswith('###') and not line.startswith('**'):
+                            steps.append(line)
+                        if len(steps) >= 10:  # Limit to 10 steps
+                            break
+                    if steps:
+                        self.agent_state.set_original_plan(steps)
+
+                # Add state context to messages for coherence
+                if self.agent_state.original_plan:
+                    state_context = f"Initial plan loaded with {len(self.agent_state.original_plan)} steps."
+                    self._append_message(state_context, role="assistant")
+
+                # Clear the reasoning output to avoid using it again
+                self.agent._last_reasoning_output = None
+
+        except Exception as e:
+            self._printer.print(
+                content=f"Error populating state from reasoning: {str(e)}",
+                color="yellow",
+            )
 
     def _invoke_loop(self) -> AgentFinish:
         """
@@ -191,6 +239,37 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         formatted_answer, tool_result
                     )
 
+                    # Record detailed tool usage in agent state
+                    if hasattr(formatted_answer, 'tool') and formatted_answer.tool:
+                        # Extract tool arguments from the agent action
+                        tool_args = {}
+                        if hasattr(formatted_answer, 'tool_input') and formatted_answer.tool_input:
+                            if isinstance(formatted_answer.tool_input, dict):
+                                tool_args = formatted_answer.tool_input
+                            elif isinstance(formatted_answer.tool_input, str):
+                                # Try to parse JSON if it's a string
+                                try:
+                                    import json
+                                    tool_args = json.loads(formatted_answer.tool_input)
+                                except (json.JSONDecodeError, TypeError):
+                                    tool_args = {"input": formatted_answer.tool_input}
+
+                        # Truncate result for summary
+                        result_summary = None
+                        if tool_result and hasattr(tool_result, 'result'):
+                            result_str = str(tool_result.result)
+                            result_summary = result_str[:200] + "..." if len(result_str) > 200 else result_str
+
+                        # Record the tool usage with arguments
+                        self.agent_state.record_tool_usage(
+                            tool_name=formatted_answer.tool,
+                            arguments=tool_args,
+                            result_summary=result_summary
+                        )
+
+                # Increment steps in agent state
+                self.agent_state.increment_steps()
+
                 if self._should_trigger_reasoning():
                     self._handle_mid_execution_reasoning()
                 else:
@@ -242,10 +321,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self, formatted_answer: AgentAction, tool_result: ToolResult
     ) -> Union[AgentAction, AgentFinish]:
         """Handle the AgentAction, execute tools, and process the results."""
-        if hasattr(formatted_answer, 'tool') and formatted_answer.tool:
-            if formatted_answer.tool not in self.tools_used:
-                self.tools_used.append(formatted_answer.tool)
-
         # Special case for add_image_tool
         add_image_tool = self._i18n.tools("add_image")
         if (
@@ -485,12 +560,30 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
             current_progress = self._summarize_current_progress()
 
+            # Build detailed tools used list from agent state
+            tools_used_detailed = []
+            for usage in self.agent_state.tool_usage_history:
+                tool_desc = f"{usage.tool_name}"
+                if usage.arguments:
+                    args_preview = ", ".join(f"{k}={v}" for k, v in list(usage.arguments.items())[:2])
+                    tool_desc += f"({args_preview})"
+                tools_used_detailed.append(tool_desc)
+
+            # Get tool usage statistics and patterns
+            tool_stats = self.agent_state.get_tools_summary()
+
+            # Detect patterns in tool usage
+            tool_patterns = self._detect_tool_patterns()
+            if tool_patterns:
+                tool_stats['recent_patterns'] = tool_patterns
+
             reasoning_handler = AgentReasoning(task=self.task, agent=cast(Agent, self.agent))
 
             return reasoning_handler.should_adaptive_reason_llm(
                 current_steps=self.iterations,
-                tools_used=list(self.tools_used),
+                tools_used=tools_used_detailed,
                 current_progress=current_progress,
+                tool_usage_stats=tool_stats
             )
         except Exception as e:
             self._printer.print(
@@ -499,16 +592,47 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
             return False
 
-    def _has_recent_errors(self) -> bool:
-        """Check for error indicators in recent messages."""
-        error_indicators = ["error", "exception", "failed", "unable to", "couldn't"]
-        recent_messages = self.messages[-3:] if len(self.messages) >= 3 else self.messages
+    def _detect_tool_patterns(self) -> Optional[str]:
+        """
+        Detect patterns in recent tool usage that might indicate issues.
 
-        for message in recent_messages:
-            content = message.get("content", "").lower()
-            if any(indicator in content for indicator in error_indicators):
-                return True
-        return False
+        Returns:
+            Optional[str]: Description of detected patterns, or None
+        """
+        if not self.agent_state.tool_usage_history:
+            return None
+
+        patterns = []
+
+        # Check for repeated use of the same tool with similar arguments
+        recent_tools = self.agent_state.tool_usage_history[-5:] if len(self.agent_state.tool_usage_history) >= 5 else self.agent_state.tool_usage_history
+
+        # Count consecutive uses of the same tool
+        if len(recent_tools) >= 2:
+            consecutive_count = 1
+            for i in range(1, len(recent_tools)):
+                if recent_tools[i].tool_name == recent_tools[i-1].tool_name:
+                    consecutive_count += 1
+                    if consecutive_count >= 3:
+                        patterns.append(f"Same tool ({recent_tools[i].tool_name}) used {consecutive_count} times consecutively")
+                else:
+                    consecutive_count = 1
+
+        # Check for tools with empty or error results
+        error_count = 0
+        for usage in recent_tools:
+            if usage.result_summary and any(keyword in usage.result_summary.lower()
+                                           for keyword in ['error', 'failed', 'not found', 'empty']):
+                error_count += 1
+
+        if error_count >= 2:
+            patterns.append(f"{error_count} tools returned errors or empty results recently")
+
+        # Check for rapid tool switching (might indicate confusion)
+        if len(set(usage.tool_name for usage in recent_tools)) == len(recent_tools) and len(recent_tools) >= 4:
+            patterns.append("Rapid switching between different tools without repetition")
+
+        return "; ".join(patterns) if patterns else None
 
     def _handle_mid_execution_reasoning(self) -> None:
         """
@@ -522,21 +646,51 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
             current_progress = self._summarize_current_progress()
 
+            # Include agent state in progress summary
+            state_info = f"\n\n{self.agent_state.to_context_string()}"
+            current_progress += state_info
+
             from crewai.agent import Agent
 
             reasoning_handler = AgentReasoning(task=self.task, agent=cast(Agent, self.agent))
 
+            # Build detailed tools used list from agent state
+            tools_used_detailed = []
+            for usage in self.agent_state.tool_usage_history:
+                tool_desc = f"{usage.tool_name}"
+                if usage.arguments:
+                    args_preview = ", ".join(f"{k}={v}" for k, v in list(usage.arguments.items())[:2])
+                    tool_desc += f"({args_preview})"
+                tools_used_detailed.append(tool_desc)
+
             reasoning_output = reasoning_handler.handle_mid_execution_reasoning(
                 current_steps=self.iterations,
-                tools_used=list(self.tools_used),
+                tools_used=tools_used_detailed,
                 current_progress=current_progress,
                 iteration_messages=self.messages
+            )
+
+            # Update agent state with new plan if available
+            if reasoning_output.plan.structured_plan:
+                self.agent_state.update_last_plan(reasoning_output.plan.structured_plan.steps)
+                # Update acceptance criteria if they changed
+                if reasoning_output.plan.structured_plan.acceptance_criteria:
+                    self.agent_state.acceptance_criteria = reasoning_output.plan.structured_plan.acceptance_criteria
+
+            # Add a note about the reasoning update to scratchpad
+            self.agent_state.add_to_scratchpad(
+                f"reasoning_update_{self.iterations}",
+                {
+                    "reason": "Mid-execution reasoning triggered",
+                    "updated_plan": bool(reasoning_output.plan.structured_plan)
+                }
             )
 
             updated_plan_msg = (
                 self._i18n.retrieve("reasoning", "mid_execution_reasoning_update").format(
                     plan=reasoning_output.plan.plan
                 ) +
+                f"\n\nUpdated State:\n{self.agent_state.to_context_string()}" +
                 "\n\nRemember: strictly follow the updated plan above and ensure the final answer fully meets the EXPECTED OUTPUT criteria."
             )
 
@@ -561,9 +715,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         summary = f"After {self.iterations} steps, "
 
-        if self.tools_used:
-            unique_tools = set(self.tools_used)
-            summary += f"I've used {len(self.tools_used)} tools ({', '.join(unique_tools)}). "
+        # Use tool usage history from agent state for better context
+        if self.agent_state.tool_usage_history:
+            tool_summary = self.agent_state.get_tools_summary()
+            summary += f"I've used {tool_summary['total_tool_uses']} tools ({tool_summary['unique_tools']} unique). "
+
+            # Include most frequently used tools
+            if tool_summary['tools_by_frequency']:
+                top_tools = list(tool_summary['tools_by_frequency'].items())[:3]
+                tools_str = ", ".join(f"{tool} ({count}x)" for tool, count in top_tools)
+                summary += f"Most used: {tools_str}. "
+
+            # Include details of the last tool use
+            if self.agent_state.tool_usage_history:
+                last_tool = self.agent_state.tool_usage_history[-1]
+                summary += f"Last tool: {last_tool.tool_name}"
+                if last_tool.arguments:
+                    args_str = ", ".join(f"{k}={v}" for k, v in list(last_tool.arguments.items())[:2])
+                    summary += f" with args ({args_str})"
+                summary += ". "
         else:
             summary += "I haven't used any tools yet. "
 
@@ -574,3 +744,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             summary += f"Most recent action: {last_message}"
 
         return summary
+
+    def _has_recent_errors(self) -> bool:
+        """Check for error indicators in recent messages."""
+        error_indicators = ["error", "exception", "failed", "unable to", "couldn't"]
+        recent_messages = self.messages[-3:] if len(self.messages) >= 3 else self.messages
+
+        for message in recent_messages:
+            content = message.get("content", "").lower()
+            if any(indicator in content for indicator in error_indicators):
+                return True
+        return False

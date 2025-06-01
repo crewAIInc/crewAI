@@ -71,6 +71,7 @@ class Agent(BaseAgent):
     """
 
     _times_executed: int = PrivateAttr(default=0)
+    _last_reasoning_output: Optional[Any] = PrivateAttr(default=None)
     max_execution_time: Optional[int] = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -388,6 +389,9 @@ class Agent(BaseAgent):
 
                 reasoning_output: AgentReasoningOutput = reasoning_handler.handle_agent_reasoning()
 
+                # Store the reasoning output for the executor to use
+                self._last_reasoning_output = reasoning_output
+
                 plan_text = reasoning_output.plan.plan
 
                 internal_plan_msg = (
@@ -483,6 +487,10 @@ class Agent(BaseAgent):
             self,
             event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
         )
+
+        # Clean up reasoning output after task completion
+        self._last_reasoning_output = None
+
         return result
 
     def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> str:
