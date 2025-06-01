@@ -3,7 +3,6 @@
 import os
 from typing import Dict
 
-import pytest
 from pydantic import BaseModel
 
 from crewai.flow.flow import Flow, FlowState, listen, start
