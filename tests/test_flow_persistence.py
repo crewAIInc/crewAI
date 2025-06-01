@@ -208,3 +208,47 @@ def test_persist_decorator_verbose_logging(tmp_path, caplog):
     flow = VerboseFlow(persistence=persistence)
     flow.kickoff()
     assert "Saving flow state" in caplog.text
+
+
+def test_nested_pydantic_model_persistence(tmp_path):
+    """Test persistence with nested Pydantic models (issue #2929)."""
+    from pydantic import Field
+    
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class CustomObject(BaseModel):
+        field_x: float | None = Field(description="foo bar", default=None)
+
+    class CustomState(FlowState):
+        custom_field: CustomObject | None = None
+
+    class NestedPydanticFlow(Flow[CustomState]):
+        initial_state = CustomState
+
+        @start()
+        @persist(persistence, verbose=True)
+        def set_nested_object(self):
+            self.state.custom_field = CustomObject(field_x=42.0)
+
+    flow = NestedPydanticFlow(persistence=persistence)
+    flow.kickoff()
+
+    saved_state = persistence.load_state(flow.state.id)
+    assert saved_state is not None
+    assert saved_state["custom_field"] is not None
+    assert saved_state["custom_field"]["field_x"] == 42.0
+
+    class NullNestedFlow(Flow[CustomState]):
+        initial_state = CustomState
+
+        @start()
+        @persist(persistence)
+        def set_null_nested(self):
+            self.state.custom_field = None
+
+    flow2 = NullNestedFlow(persistence=persistence)
+    flow2.kickoff()
+    saved_state2 = persistence.load_state(flow2.state.id)
+    assert saved_state2 is not None
+    assert saved_state2["custom_field"] is None

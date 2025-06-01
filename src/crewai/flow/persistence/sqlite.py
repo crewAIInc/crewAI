@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional, Union
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
+from crewai.utilities.crew_json_encoder import CrewJSONEncoder
 
 
 class SQLiteFlowPersistence(FlowPersistence):
@@ -103,7 +104,7 @@ class SQLiteFlowPersistence(FlowPersistence):
                     flow_uuid,
                     method_name,
                     datetime.now(timezone.utc).isoformat(),
-                    json.dumps(state_dict),
+                    json.dumps(state_dict, cls=CrewJSONEncoder),
                 ),
             )
 
