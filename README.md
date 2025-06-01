@@ -403,7 +403,7 @@ In addition to the sequential process, you can use the hierarchical process, whi
 
 ## Key Features
 
-CrewAI stands apart as a lean, standalone, high-performance framework delivering simplicity, flexibility, and precise control—free from the complexity and limitations found in other agent frameworks.
+CrewAI stands apart as a lean, standalone, high-performance multi-AI Agent framework delivering simplicity, flexibility, and precise control—free from the complexity and limitations found in other agent frameworks.
 
 - **Standalone & Lean**: Completely independent from other frameworks like LangChain, offering faster execution and lighter resource demands.
 - **Flexible & Precise**: Easily orchestrate autonomous agents through intuitive [Crews](https://docs.crewai.com/concepts/crews) or precise [Flows](https://docs.crewai.com/concepts/flows), achieving perfect balance for your needs.
