@@ -1,0 +1,57 @@
+---
+title: "Overview"
+description: "Connect to databases, vector stores, and data warehouses for comprehensive data access"
+icon: "face-smile"
+---
+
+These tools enable your agents to interact with various database systems, from traditional SQL databases to modern vector stores and data warehouses.
+
+## **Available Tools**
+
+<CardGroup cols={2}>
+  <Card title="MySQL Tool" icon="database" href="/tools/database-data/mysqltool">
+    Connect to and query MySQL databases with SQL operations.
+  </Card>
+
+  <Card title="PostgreSQL Search" icon="elephant" href="/tools/database-data/pgsearchtool">
+    Search and query PostgreSQL databases efficiently.
+  </Card>
+
+  <Card title="Snowflake Search" icon="snowflake" href="/tools/database-data/snowflakesearchtool">
+    Access Snowflake data warehouse for analytics and reporting.
+  </Card>
+
+  <Card title="NL2SQL Tool" icon="language" href="/tools/database-data/nl2sqltool">
+    Convert natural language queries to SQL statements automatically.
+  </Card>
+
+  <Card title="Qdrant Vector Search" icon="vector-square" href="/tools/database-data/qdrantvectorsearchtool">
+    Search vector embeddings using Qdrant vector database.
+  </Card>
+
+  <Card title="Weaviate Vector Search" icon="network-wired" href="/tools/database-data/weaviatevectorsearchtool">
+    Perform semantic search with Weaviate vector database.
+  </Card>
+</CardGroup>
+
+## **Common Use Cases**
+
+- **Data Analysis**: Query databases for business intelligence and reporting
+- **Vector Search**: Find similar content using semantic embeddings
+- **ETL Operations**: Extract, transform, and load data between systems
+- **Real-time Analytics**: Access live data for decision making
+
+```python
+from crewai_tools import MySQLTool, QdrantVectorSearchTool, NL2SQLTool
+
+# Create database tools
+mysql_db = MySQLTool()
+vector_search = QdrantVectorSearchTool()
+nl_to_sql = NL2SQLTool()
+
+# Add to your agent
+agent = Agent(
+    role="Data Analyst",
+    tools=[mysql_db, vector_search, nl_to_sql],
+    goal="Extract insights from various data sources"
+) 
