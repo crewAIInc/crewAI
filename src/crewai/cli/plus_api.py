@@ -9,7 +9,7 @@ from crewai.cli.version import get_crewai_version
 
 class PlusAPI:
     """
-    This class exposes methods for working with the CrewAI+ API.
+    This class exposes methods for working with the CrewAI Enterprise API.
     """
 
     TOOLS_RESOURCE = "/crewai_plus/api/v1/tools"
