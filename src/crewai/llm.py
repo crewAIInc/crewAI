@@ -74,7 +74,7 @@ class FilteredStream(io.TextIOBase):
                 "give feedback / get help" in lower_s
                 or "litellm.info:" in lower_s
                 or "litellm" in lower_s
-                or "Consider using a smaller input or implementing a text splitting strategy" in lower_s
+                or "consider using a smaller input or implementing a text splitting strategy" in lower_s
             ):
                 return 0
 

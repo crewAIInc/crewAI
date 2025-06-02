@@ -1,6 +1,6 @@
 """Tool for accessing data stored in the agent's scratchpad during reasoning."""
 
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type, Union, Callable
 from pydantic import BaseModel, Field
 from crewai.tools import BaseTool
 
@@ -29,6 +29,10 @@ class ScratchpadTool(BaseTool):
     args_schema: Type[BaseModel] = ScratchpadToolSchema
     scratchpad_data: Dict[str, Any] = Field(default_factory=dict)
 
+    # Allow repeated usage of this tool - scratchpad access should not be limited
+    cache_function: Callable = lambda _args, _result: False  # Don't cache scratchpad access
+    allow_repeated_usage: bool = True  # Allow accessing the same key multiple times
+
     def __init__(self, scratchpad_data: Optional[Dict[str, Any]] = None, **kwargs):
         """Initialize the scratchpad tool with optional initial data.
 
@@ -53,25 +57,46 @@ class ScratchpadTool(BaseTool):
         Returns:
             The value associated with the key, or an error message if not found
         """
+        print(f"[DEBUG] ScratchpadTool._run called with key: '{key}'")
+        print(f"[DEBUG] Current scratchpad keys: {list(self.scratchpad_data.keys())}")
+        print(f"[DEBUG] Scratchpad data size: {len(self.scratchpad_data)}")
+
         if not self.scratchpad_data:
             return (
                 "❌ SCRATCHPAD IS EMPTY\n\n"
                 "The scratchpad does not contain any data yet.\n"
                 "Data will be automatically stored here as you use other tools.\n"
-                "Try executing other tools first to gather information."
+                "Try executing other tools first to gather information.\n\n"
+                "💡 TIP: Tools like search, read, or fetch operations will automatically store their results in the scratchpad."
             )
 
         if key not in self.scratchpad_data:
             available_keys = list(self.scratchpad_data.keys())
             keys_formatted = "\n".join(f"  - '{k}'" for k in available_keys)
 
+            # Create more helpful examples based on actual keys
+            example_key = available_keys[0] if available_keys else 'example_key'
+
+            # Check if the user tried a similar key (case-insensitive or partial match)
+            similar_keys = [k for k in available_keys if key.lower() in k.lower() or k.lower() in key.lower()]
+            similarity_hint = ""
+            if similar_keys:
+                similarity_hint = f"\n\n🔍 Did you mean one of these?\n" + "\n".join(f"  - '{k}'" for k in similar_keys)
+
             return (
-                f"❌ KEY NOT FOUND: '{key}'\n\n"
+                f"❌ KEY NOT FOUND: '{key}'\n"
+                f"{'='*50}\n\n"
                 f"The key '{key}' does not exist in the scratchpad.\n\n"
-                f"Available keys:\n{keys_formatted}\n\n"
-                f"To retrieve data, use the EXACT key name from the list above.\n"
-                f"Example Action Input: {{\"key\": \"{available_keys[0] if available_keys else 'example_key'}\"}}\n\n"
-                f"Remember: Keys are case-sensitive and must match exactly!"
+                f"📦 AVAILABLE KEYS IN SCRATCHPAD:\n{keys_formatted}\n"
+                f"{similarity_hint}\n\n"
+                f"✅ CORRECT USAGE EXAMPLE:\n"
+                f"Action: Access Scratchpad Memory\n"
+                f"Action Input: {{\"key\": \"{example_key}\"}}\n\n"
+                f"⚠️ IMPORTANT:\n"
+                f"- Keys are case-sensitive and must match EXACTLY\n"
+                f"- Use the exact key name from the list above\n"
+                f"- Do NOT modify or guess key names\n\n"
+                f"{'='*50}"
             )
 
         value = self.scratchpad_data[key]
@@ -79,12 +104,16 @@ class ScratchpadTool(BaseTool):
         # Format the output nicely based on the type
         if isinstance(value, dict):
             import json
-            return json.dumps(value, indent=2)
+            formatted_output = f"✅ Successfully retrieved data for key '{key}':\n\n"
+            formatted_output += json.dumps(value, indent=2)
+            return formatted_output
         elif isinstance(value, list):
             import json
-            return json.dumps(value, indent=2)
+            formatted_output = f"✅ Successfully retrieved data for key '{key}':\n\n"
+            formatted_output += json.dumps(value, indent=2)
+            return formatted_output
         else:
-            return str(value)
+            return f"✅ Successfully retrieved data for key '{key}':\n\n{str(value)}"
 
     def update_scratchpad(self, new_data: Dict[str, Any]) -> None:
         """Update the scratchpad data and refresh the tool description.

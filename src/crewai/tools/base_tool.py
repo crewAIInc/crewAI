@@ -39,6 +39,8 @@ class BaseTool(BaseModel, ABC):
     """Maximum number of times this tool can be used. None means unlimited usage."""
     current_usage_count: int = 0
     """Current number of times this tool has been used."""
+    allow_repeated_usage: bool = False
+    """Flag to allow this tool to be used repeatedly with the same arguments."""
 
     @field_validator("args_schema", mode="before")
     @classmethod
@@ -57,7 +59,7 @@ class BaseTool(BaseModel, ABC):
                 },
             },
         )
-        
+
     @field_validator("max_usage_count", mode="before")
     @classmethod
     def validate_max_usage_count(cls, v: int | None) -> int | None:
@@ -81,11 +83,11 @@ class BaseTool(BaseModel, ABC):
         # If _run is async, we safely run it
         if asyncio.iscoroutine(result):
             result = asyncio.run(result)
-            
+
         self.current_usage_count += 1
-        
+
         return result
-        
+
     def reset_usage_count(self) -> None:
         """Reset the current usage count to zero."""
         self.current_usage_count = 0
@@ -109,6 +111,8 @@ class BaseTool(BaseModel, ABC):
             result_as_answer=self.result_as_answer,
             max_usage_count=self.max_usage_count,
             current_usage_count=self.current_usage_count,
+            allow_repeated_usage=self.allow_repeated_usage,
+            cache_function=self.cache_function,
         )
 
     @classmethod
@@ -272,7 +276,7 @@ def to_langchain(
 def tool(*args, result_as_answer: bool = False, max_usage_count: int | None = None) -> Callable:
     """
     Decorator to create a tool from a function.
-    
+
     Args:
         *args: Positional arguments, either the function to decorate or the tool name.
         result_as_answer: Flag to indicate if the tool result should be used as the final agent answer.

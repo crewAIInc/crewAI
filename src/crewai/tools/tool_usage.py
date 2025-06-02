@@ -149,7 +149,13 @@ class ToolUsage:
         tool: CrewStructuredTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:
-        if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
+        # Check if tool allows repeated usage before blocking
+        allows_repeated = False
+        if hasattr(tool, 'allow_repeated_usage'):
+            allows_repeated = tool.allow_repeated_usage
+        elif hasattr(tool, '_tool') and hasattr(tool._tool, 'allow_repeated_usage'):
+            allows_repeated = tool._tool.allow_repeated_usage
+        if not allows_repeated and self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
@@ -369,6 +375,11 @@ class ToolUsage:
     def _format_result(self, result: Any) -> str:
         if self.task:
             self.task.used_tools += 1
+
+        # Handle None results explicitly
+        if result is None:
+            result = "No result returned from tool"
+
         if self._should_remember_format():
             result = self._remember_format(result=result)
         return str(result)
@@ -391,9 +402,19 @@ class ToolUsage:
         if not self.tools_handler:
             return False
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (
+            # Add debug logging
+            print(f"[DEBUG] _check_tool_repeated_usage:")
+            print(f"  Current tool: {calling.tool_name}")
+            print(f"  Current args: {calling.arguments}")
+            print(f"  Last tool: {last_tool_usage.tool_name}")
+            print(f"  Last args: {last_tool_usage.arguments}")
+
+            is_repeated = (calling.tool_name == last_tool_usage.tool_name) and (
                 calling.arguments == last_tool_usage.arguments
             )
+            print(f"  Is repeated: {is_repeated}")
+
+            return is_repeated
         return False
 
     def _check_usage_limit(self, tool: Any, tool_name: str) -> str | None:

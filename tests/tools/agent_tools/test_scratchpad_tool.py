@@ -23,6 +23,8 @@ class TestScratchpadTool:
         assert "❌ SCRATCHPAD IS EMPTY" in result
         assert "does not contain any data yet" in result
         assert "Try executing other tools first" in result
+        assert "💡 TIP:" in result
+        assert "search, read, or fetch operations" in result
 
     def test_key_not_found_error_message(self):
         """Test error message when key is not found."""
@@ -34,11 +36,14 @@ class TestScratchpadTool:
         result = tool._run(key="wrong_key")
 
         assert "❌ KEY NOT FOUND: 'wrong_key'" in result
-        assert "Available keys:" in result
+        assert "📦 AVAILABLE KEYS IN SCRATCHPAD:" in result
         assert "- 'existing_key'" in result
         assert "- 'another_key'" in result
-        assert 'Example Action Input: {"key": "existing_key"}' in result
-        assert "Keys are case-sensitive" in result
+        assert '✅ CORRECT USAGE EXAMPLE:' in result
+        assert 'Action: Access Scratchpad Memory' in result
+        assert 'Action Input: {"key": "existing_key"}' in result
+        assert "⚠️ IMPORTANT:" in result
+        assert "Keys are case-sensitive and must match EXACTLY" in result
 
     def test_successful_retrieval_string(self):
         """Test successful retrieval of string data."""
@@ -47,7 +52,8 @@ class TestScratchpadTool:
         })
 
         result = tool._run(key="message")
-        assert result == "Hello, World!"
+        assert "✅ Successfully retrieved data for key 'message':" in result
+        assert "Hello, World!" in result
 
     def test_successful_retrieval_dict(self):
         """Test successful retrieval of dictionary data."""
@@ -57,6 +63,7 @@ class TestScratchpadTool:
         })
 
         result = tool._run(key="user_data")
+        assert "✅ Successfully retrieved data for key 'user_data':" in result
         assert '"name": "John"' in result
         assert '"age": 30' in result
 
@@ -68,6 +75,7 @@ class TestScratchpadTool:
         })
 
         result = tool._run(key="items")
+        assert "✅ Successfully retrieved data for key 'items':" in result
         assert '"item1"' in result
         assert '"item2"' in result
         assert '"item3"' in result
@@ -135,3 +143,34 @@ class TestScratchpadTool:
         assert "📌 'empty_list': list of 0 items" in desc
         assert "📌 'boolean_value': bool" in desc
         assert "📌 'number': int" in desc
+
+    def test_similar_key_suggestion(self):
+        """Test that similar keys are suggested when a wrong key is used."""
+        tool = ScratchpadTool(scratchpad_data={
+            "email_search_results": ["email1", "email2"],
+            "email_details": {"id": "123"},
+            "user_preferences": {"theme": "dark"}
+        })
+
+        # Test partial match
+        result = tool._run(key="email")
+        assert "🔍 Did you mean one of these?" in result
+
+        # Check that similar keys are in the suggestions
+        # Extract just the "Did you mean" section
+        did_you_mean_section = result.split("🔍 Did you mean one of these?")[1].split("✅ CORRECT USAGE EXAMPLE:")[0]
+        assert "- 'email_search_results'" in did_you_mean_section
+        assert "- 'email_details'" in did_you_mean_section
+        assert "- 'user_preferences'" not in did_you_mean_section
+
+        # But user_preferences should still be in the full list
+        assert "- 'user_preferences'" in result
+
+        # Test case-insensitive match
+        result = tool._run(key="EMAIL_DETAILS")
+        assert "🔍 Did you mean one of these?" in result
+        assert "- 'email_details'" in result
+
+        # Test no similar keys
+        result = tool._run(key="completely_different")
+        assert "🔍 Did you mean one of these?" not in result

@@ -25,6 +25,8 @@ class CrewStructuredTool:
         result_as_answer: bool = False,
         max_usage_count: int | None = None,
         current_usage_count: int = 0,
+        allow_repeated_usage: bool = False,
+        cache_function: Optional[Callable] = None,
     ) -> None:
         """Initialize the structured tool.
 
@@ -36,6 +38,8 @@ class CrewStructuredTool:
             result_as_answer: Whether to return the output directly
             max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
             current_usage_count: Current number of times this tool has been used.
+            allow_repeated_usage: Whether to allow this tool to be used repeatedly with the same arguments.
+            cache_function: Function that will be used to determine if the tool should be cached.
         """
         self.name = name
         self.description = description
@@ -45,6 +49,8 @@ class CrewStructuredTool:
         self.result_as_answer = result_as_answer
         self.max_usage_count = max_usage_count
         self.current_usage_count = current_usage_count
+        self.allow_repeated_usage = allow_repeated_usage
+        self.cache_function = cache_function if cache_function is not None else lambda _args=None, _result=None: True
 
         # Validate the function signature matches the schema
         self._validate_function_signature()
