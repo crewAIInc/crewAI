@@ -29,7 +29,7 @@ def test_agent_without_custom_execution_image():
     assert agent.execution_image is None
 
 
-@patch('crewai.agent.CodeInterpreterTool')
+@patch('crewai_tools.CodeInterpreterTool')
 def test_get_code_execution_tools_with_custom_image(mock_code_interpreter):
     """Test that get_code_execution_tools passes custom image to CodeInterpreterTool."""
     agent = Agent(
@@ -48,7 +48,7 @@ def test_get_code_execution_tools_with_custom_image(mock_code_interpreter):
     )
 
 
-@patch('crewai.agent.CodeInterpreterTool')
+@patch('crewai_tools.CodeInterpreterTool')
 def test_get_code_execution_tools_without_custom_image(mock_code_interpreter):
     """Test that get_code_execution_tools works without custom image."""
     agent = Agent(
@@ -63,7 +63,7 @@ def test_get_code_execution_tools_without_custom_image(mock_code_interpreter):
     mock_code_interpreter.assert_called_once_with(unsafe_mode=False)
 
 
-@patch('crewai.agent.CodeInterpreterTool')
+@patch('crewai_tools.CodeInterpreterTool')
 def test_get_code_execution_tools_with_unsafe_mode_and_custom_image(mock_code_interpreter):
     """Test that both unsafe_mode and custom image work together."""
     agent = Agent(

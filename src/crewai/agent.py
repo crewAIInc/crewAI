@@ -130,7 +130,7 @@ class Agent(BaseAgent):
     execution_image: Optional[str] = Field(
         default=None,
         description="Custom Docker image to use for code execution. If not specified, uses the default image.",
-        pattern=r"^[a-zA-Z0-9._/-]+(?::[a-zA-Z0-9._-]+)?$",
+        pattern=r"^[a-zA-Z0-9._/-]+(?:\:[0-9]+)?(?:/[a-zA-Z0-9._/-]+)*(?:\:[a-zA-Z0-9._-]+)?$",
     )
     reasoning: bool = Field(
         default=False,
