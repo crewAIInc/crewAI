@@ -1,6 +1,7 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from crewai import Agent
+from pydantic import ValidationError
 
 
 def test_agent_with_custom_execution_image():
@@ -39,7 +40,7 @@ def test_get_code_execution_tools_with_custom_image(mock_code_interpreter):
         execution_image="my-custom-image:latest"
     )
     
-    tools = agent.get_code_execution_tools()
+    agent.get_code_execution_tools()
     
     mock_code_interpreter.assert_called_once_with(
         unsafe_mode=False,
@@ -57,7 +58,7 @@ def test_get_code_execution_tools_without_custom_image(mock_code_interpreter):
         allow_code_execution=True
     )
     
-    tools = agent.get_code_execution_tools()
+    agent.get_code_execution_tools()
     
     mock_code_interpreter.assert_called_once_with(unsafe_mode=False)
 
@@ -74,9 +75,44 @@ def test_get_code_execution_tools_with_unsafe_mode_and_custom_image(mock_code_in
         execution_image="my-custom-image:latest"
     )
     
-    tools = agent.get_code_execution_tools()
+    agent.get_code_execution_tools()
     
     mock_code_interpreter.assert_called_once_with(
         unsafe_mode=True,
         default_image_tag="my-custom-image:latest"
     )
+
+
+def test_agent_with_invalid_execution_image():
+    """Test that Agent validates execution image format."""
+    with pytest.raises(ValidationError, match="String should match pattern"):
+        Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            allow_code_execution=True,
+            execution_image="invalid@@image"
+        )
+
+
+def test_agent_with_valid_execution_image_formats():
+    """Test that Agent accepts various valid Docker image formats."""
+    valid_images = [
+        "python:3.11",
+        "python:3.11-slim",
+        "registry.example.com/python:3.11",
+        "my-registry.com:5000/python:latest",
+        "python",
+        "ubuntu:20.04",
+        "gcr.io/project/image:tag"
+    ]
+    
+    for image in valid_images:
+        agent = Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            allow_code_execution=True,
+            execution_image=image
+        )
+        assert agent.execution_image == image

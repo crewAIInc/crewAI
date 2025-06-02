@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch, MagicMock
 from crewai import Agent, Task, Crew
 
@@ -28,7 +27,7 @@ def test_crew_with_custom_execution_image_integration(mock_code_interpreter_clas
         tasks=[task]
     )
     
-    tools = crew._prepare_tools(task, agent)
+    crew._prepare_tools(task, agent)
     
     mock_code_interpreter_class.assert_called_with(
         unsafe_mode=False,

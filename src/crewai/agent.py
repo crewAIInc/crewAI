@@ -130,6 +130,7 @@ class Agent(BaseAgent):
     execution_image: Optional[str] = Field(
         default=None,
         description="Custom Docker image to use for code execution. If not specified, uses the default image.",
+        pattern=r"^[a-zA-Z0-9._/-]+(?::[a-zA-Z0-9._-]+)?$",
     )
     reasoning: bool = Field(
         default=False,
@@ -569,10 +570,10 @@ class Agent(BaseAgent):
             # Set the unsafe_mode based on the code_execution_mode attribute
             unsafe_mode = self.code_execution_mode == "unsafe"
             
+            tool_kwargs = {"unsafe_mode": unsafe_mode}
             if self.execution_image:
-                return [CodeInterpreterTool(unsafe_mode=unsafe_mode, default_image_tag=self.execution_image)]
-            else:
-                return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
+                tool_kwargs["default_image_tag"] = self.execution_image
+            return [CodeInterpreterTool(**tool_kwargs)]
         except ModuleNotFoundError:
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "
