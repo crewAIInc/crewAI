@@ -101,6 +101,27 @@ exclude = ["cli/templates"]
 [tool.bandit]
 exclude_dirs = ["src/crewai/cli/templates"]
 
+# PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
+[[tool.uv.index]]
+name = "pytorch-nightly"
+url = "https://download.pytorch.org/whl/nightly/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
+  { index = "pytorch", marker = "python_version < '3.13'" },
+]
+torchvision = [
+  { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
+  { index = "pytorch", marker = "python_version < '3.13'" },
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
