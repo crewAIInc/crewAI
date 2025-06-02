@@ -127,6 +127,10 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
+    execution_image: Optional[str] = Field(
+        default=None,
+        description="Custom Docker image to use for code execution. If not specified, uses the default image.",
+    )
     reasoning: bool = Field(
         default=False,
         description="Whether the agent should reflect and create a plan before executing a task.",
@@ -564,7 +568,11 @@ class Agent(BaseAgent):
 
             # Set the unsafe_mode based on the code_execution_mode attribute
             unsafe_mode = self.code_execution_mode == "unsafe"
-            return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
+            
+            if self.execution_image:
+                return [CodeInterpreterTool(unsafe_mode=unsafe_mode, default_image_tag=self.execution_image)]
+            else:
+                return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
         except ModuleNotFoundError:
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "

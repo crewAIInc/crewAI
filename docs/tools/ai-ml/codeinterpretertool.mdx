@@ -92,6 +92,22 @@ programmer_agent = Agent(
 )
 ```
 
+You can also specify a custom Docker image for code execution:
+
+```python Code
+from crewai import Agent
+
+# Create an agent with code execution enabled and custom Docker image
+programmer_agent = Agent(
+    role="Python Programmer",
+    goal="Write and execute Python code to solve problems",
+    backstory="An expert Python programmer who can write efficient code to solve complex problems.",
+    allow_code_execution=True,  # This automatically adds the CodeInterpreterTool
+    execution_image="python:3.11-slim",  # Custom Docker image with specific Python version
+    verbose=True,
+)
+```
+
 ### Enabling `unsafe_mode`
 
 ```python Code
