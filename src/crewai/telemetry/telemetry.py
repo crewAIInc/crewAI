@@ -77,14 +77,14 @@ class Telemetry:
         return cls._instance
 
     def __init__(self) -> None:
-        if self._initialized:
+        if hasattr(self, '_initialized') and self._initialized:
             return
         
         self.ready: bool = False
         self.trace_set: bool = False
+        self._initialized: bool = True
 
         if self._is_telemetry_disabled():
-            self._initialized = True
             return
 
         try:
@@ -110,8 +110,6 @@ class Telemetry:
             ):
                 raise  # Re-raise the exception to not interfere with system signals
             self.ready = False
-        finally:
-            self._initialized = True
 
     def _is_telemetry_disabled(self) -> bool:
         """Check if telemetry should be disabled based on environment variables."""
@@ -435,7 +433,8 @@ class Telemetry:
 
             return span
 
-        return self._safe_telemetry_operation(operation)
+        self._safe_telemetry_operation(operation)
+        return None
 
     def task_ended(self, span: Span, task: Task, crew: Crew):
         """Records the completion of a task execution in a crew.
@@ -785,7 +784,8 @@ class Telemetry:
             return span
 
         if crew.share_crew:
-            return self._safe_telemetry_operation(operation)
+            self._safe_telemetry_operation(operation)
+            return operation()
         return None
 
     def end_crew(self, crew, final_string_output):
