@@ -76,10 +76,14 @@ class Telemetry:
         return cls._instance
 
     def __init__(self) -> None:
+        if hasattr(self, '_initialized'):
+            return
+        
         self.ready: bool = False
         self.trace_set: bool = False
 
         if self._is_telemetry_disabled():
+            self._initialized: bool = True
             return
 
         try:
@@ -105,6 +109,8 @@ class Telemetry:
             ):
                 raise  # Re-raise the exception to not interfere with system signals
             self.ready = False
+        finally:
+            self._initialized = True
 
     def _is_telemetry_disabled(self) -> bool:
         """Check if telemetry should be disabled based on environment variables."""
@@ -124,7 +130,7 @@ class Telemetry:
                 self.trace_set = False
 
     def _safe_telemetry_operation(self, operation):
-        if not self.ready:
+        if not self.ready or self._is_telemetry_disabled():
             return
         try:
             operation()
