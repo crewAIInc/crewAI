@@ -28,27 +28,92 @@ Portkey adds 4 core production capabilities to any CrewAI agent:
     - **Portkey API Key**: Sign up on the [Portkey app](https://app.portkey.ai/?utm_source=crewai&utm_medium=crewai&utm_campaign=crewai) and copy your API key
     - **Virtual Key**: Virtual Keys securely manage your LLM API keys in one place. Store your LLM provider API keys securely in Portkey's vault
 
+    ### Environment Variable Validation
+    Before setting up your LLM, validate your Portkey configuration to prevent runtime issues:
+
+    ```python
+    import os
+    from typing import Dict, List
+
+    class PortkeyConfigurationError(Exception):
+        """Raised when Portkey configuration is invalid or incomplete"""
+        pass
+
+    def validate_portkey_configuration() -> None:
+        """
+        Validates that all required Portkey environment variables are set.
+        
+        Raises:
+            PortkeyConfigurationError: If any required variables are missing
+        """
+        required_vars: Dict[str, str] = {
+            "PORTKEY_API_KEY": "Get from https://app.portkey.ai",
+            "PORTKEY_VIRTUAL_KEY": "Create in Portkey dashboard"
+        }
+        
+        missing_vars: List[str] = []
+        for var, help_text in required_vars.items():
+            if not os.getenv(var):
+                missing_vars.append(f"{var} ({help_text})")
+        
+        if missing_vars:
+            raise PortkeyConfigurationError(
+                "Missing required Portkey configuration:\n" +
+                "\n".join(f"- {var}" for var in missing_vars)
+            )
+    ```
+
     ### Modern Integration (Recommended)
     The latest Portkey SDK (v1.13.0+) is built directly on top of the OpenAI SDK, providing seamless compatibility:
 
     ```python
     from crewai import LLM
     import os
+    from typing import Optional
+
+    # Validate configuration before proceeding
+    validate_portkey_configuration()
 
     # Set environment variables
     os.environ["PORTKEY_API_KEY"] = "YOUR_PORTKEY_API_KEY"
     os.environ["PORTKEY_VIRTUAL_KEY"] = "YOUR_VIRTUAL_KEY"
 
-    # Modern Portkey integration with CrewAI
-    gpt_llm = LLM(
-        model="gpt-4",
-        base_url="https://api.portkey.ai/v1",
-        api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
-        extra_headers={
-            "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
-            "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"]
-        }
-    )
+    def create_portkey_llm(
+        model: str = "gpt-4",
+        api_key: Optional[str] = None,
+        virtual_key: Optional[str] = None
+    ) -> LLM:
+        """
+        Create a CrewAI LLM instance configured with Portkey.
+        
+        Args:
+            model: The model name to use (e.g., "gpt-4", "claude-3-sonnet")
+            api_key: Portkey API key (defaults to PORTKEY_API_KEY env var)
+            virtual_key: Portkey Virtual key (defaults to PORTKEY_VIRTUAL_KEY env var)
+            
+        Returns:
+            Configured LLM instance with Portkey integration
+            
+        Example:
+            >>> llm = create_portkey_llm("gpt-4")
+            >>> # Use with CrewAI agents
+            >>> agent = Agent(llm=llm, ...)
+        """
+        portkey_api_key = api_key or os.environ["PORTKEY_API_KEY"]
+        portkey_virtual_key = virtual_key or os.environ["PORTKEY_VIRTUAL_KEY"]
+        
+        return LLM(
+            model=model,
+            base_url="https://api.portkey.ai/v1",
+            api_key=portkey_virtual_key,
+            extra_headers={
+                "x-portkey-api-key": portkey_api_key,
+                "x-portkey-virtual-key": portkey_virtual_key
+            }
+        )
+
+    # Create LLM instance
+    gpt_llm = create_portkey_llm("gpt-4")
     ```
 
     ### Legacy Integration (Deprecated)
@@ -561,51 +626,438 @@ tool_aware_agent = Agent(
 )
 ```
 
+## Enhanced Configuration Management
+
+### PortkeyConfig Class
+For complex deployments, use a structured configuration approach:
+
+```python
+import os
+import json
+from dataclasses import dataclass
+from typing import Optional, Dict, Any, List
+
+@dataclass
+class PortkeyConfig:
+    """
+    Configuration management for Portkey integration with CrewAI.
+    
+    Attributes:
+        api_key: Portkey API key
+        virtual_key: Portkey Virtual key for LLM provider
+        environment: Deployment environment (development, staging, production)
+        budget_limit_usd: Maximum spend limit in USD
+        rate_limit_rpm: Requests per minute limit
+        enable_caching: Whether to enable semantic caching
+        fallback_models: List of fallback models if primary fails
+        custom_metadata: Additional metadata for tracking
+    """
+    api_key: str
+    virtual_key: str
+    environment: str = "development"
+    budget_limit_usd: float = 100.0
+    rate_limit_rpm: int = 60
+    enable_caching: bool = True
+    fallback_models: Optional[List[str]] = None
+    custom_metadata: Optional[Dict[str, Any]] = None
+    
+    @classmethod
+    def from_environment(cls, environment: str = "development") -> "PortkeyConfig":
+        """
+        Create configuration from environment variables.
+        
+        Args:
+            environment: Target environment
+            
+        Returns:
+            PortkeyConfig instance
+            
+        Raises:
+            PortkeyConfigurationError: If required variables are missing
+        """
+        validate_portkey_configuration()
+        
+        return cls(
+            api_key=os.environ["PORTKEY_API_KEY"],
+            virtual_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+            environment=environment,
+            budget_limit_usd=float(os.environ.get("PORTKEY_BUDGET_LIMIT", "100.0")),
+            rate_limit_rpm=int(os.environ.get("PORTKEY_RATE_LIMIT", "60")),
+            enable_caching=os.environ.get("PORTKEY_ENABLE_CACHE", "true").lower() == "true"
+        )
+    
+    def to_llm_config(self, model: str = "gpt-4") -> Dict[str, Any]:
+        """
+        Convert to LLM configuration dictionary.
+        
+        Args:
+            model: Model name to use
+            
+        Returns:
+            Dictionary suitable for LLM initialization
+        """
+        config = {
+            "retry": {"attempts": 3, "on_status_codes": [429, 500, 502, 503, 504]},
+            "request_timeout": 30000
+        }
+        
+        if self.budget_limit_usd:
+            config["budget_limit"] = self.budget_limit_usd
+        
+        if self.rate_limit_rpm:
+            config["rate_limit"] = {"requests_per_minute": self.rate_limit_rpm}
+        
+        if self.enable_caching:
+            config["cache"] = {"mode": "semantic"}
+        
+        if self.fallback_models:
+            config["fallbacks"] = [{"model": m} for m in self.fallback_models]
+        
+        headers = {
+            "x-portkey-api-key": self.api_key,
+            "x-portkey-virtual-key": self.virtual_key,
+            "x-portkey-config": json.dumps(config)
+        }
+        
+        if self.custom_metadata:
+            headers["x-portkey-metadata"] = json.dumps(self.custom_metadata)
+        
+        return {
+            "model": model,
+            "base_url": "https://api.portkey.ai/v1",
+            "api_key": self.virtual_key,
+            "extra_headers": headers
+        }
+
+# Usage example
+config = PortkeyConfig.from_environment("production")
+config.custom_metadata = {"team": "ai-research", "project": "customer-support"}
+llm_config = config.to_llm_config("gpt-4")
+production_llm = LLM(**llm_config)
+```
+
+## Version Compatibility Matrix
+
+| Component | Minimum Version | Recommended Version | Notes |
+|-----------|----------------|-------------------|-------|
+| **CrewAI** | 0.80.0 | 0.90.0+ | Latest features require 0.90.0+ |
+| **Portkey SDK** | 1.13.0 | 1.13.0+ | Built on OpenAI SDK compatibility |
+| **Python** | 3.8 | 3.10+ | Type hints require 3.9+, async features optimized for 3.10+ |
+| **OpenAI SDK** | 1.0.0 | 1.50.0+ | Required for Portkey compatibility |
+
+### Migration Guide
+
+#### From Legacy Portkey Integration (< 1.13.0)
+If you're upgrading from an older Portkey integration:
+
+```python
+# OLD: Legacy pattern (deprecated)
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+gpt_llm = LLM(
+    model="gpt-4",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_VIRTUAL_KEY"
+    )
+)
+
+# NEW: Modern pattern (recommended)
+from crewai import LLM
+import os
+
+gpt_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"]
+    }
+)
+```
+
+#### Migration Checklist
+- [ ] Update Portkey SDK to 1.13.0+: `pip install -U portkey-ai`
+- [ ] Replace `createHeaders` and `PORTKEY_GATEWAY_URL` imports
+- [ ] Update header format to use `x-portkey-*` prefixes
+- [ ] Add environment variable validation
+- [ ] Test with your existing CrewAI workflows
+- [ ] Update CI/CD pipelines with new environment variables
+- [ ] Review and update any custom error handling
+
 ## Troubleshooting and Best Practices
+
+### Enhanced Error Handling
+
+```python
+import logging
+from typing import Dict, Any, Optional
+from crewai import Crew
+
+class PortkeyError(Exception):
+    """Base exception for Portkey integration errors"""
+    pass
+
+class PortkeyConfigurationError(PortkeyError):
+    """Raised when Portkey configuration is invalid"""
+    pass
+
+class PortkeyAPIError(PortkeyError):
+    """Raised when Portkey API calls fail"""
+    pass
+
+class PortkeyLogger:
+    """Structured logging for Portkey operations"""
+    
+    def __init__(self, name: str = "portkey"):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+        
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+    
+    def log_request(self, model: str, tokens: Optional[int] = None) -> None:
+        """Log successful API request"""
+        self.logger.info(f"Portkey request successful - Model: {model}, Tokens: {tokens}")
+    
+    def log_error(self, error: Exception, context: Dict[str, Any]) -> None:
+        """Log API errors with context"""
+        self.logger.error(f"Portkey error: {error}, Context: {context}")
+
+def execute_crew_with_error_handling(
+    crew: Crew,
+    inputs: Optional[Dict[str, Any]] = None,
+    max_retries: int = 3
+) -> Any:
+    """
+    Execute CrewAI crew with robust error handling.
+    
+    Args:
+        crew: CrewAI crew instance
+        inputs: Input parameters for crew execution
+        max_retries: Maximum number of retry attempts
+        
+    Returns:
+        Crew execution result
+        
+    Raises:
+        PortkeyAPIError: If all retry attempts fail
+    """
+    logger = PortkeyLogger()
+    
+    for attempt in range(max_retries):
+        try:
+            if inputs:
+                result = crew.kickoff(inputs=inputs)
+            else:
+                result = crew.kickoff()
+            
+            logger.log_request("crew_execution", None)
+            return result
+            
+        except Exception as e:
+            context = {
+                "attempt": attempt + 1,
+                "max_retries": max_retries,
+                "crew_agents": len(crew.agents),
+                "crew_tasks": len(crew.tasks)
+            }
+            logger.log_error(e, context)
+            
+            if attempt == max_retries - 1:
+                raise PortkeyAPIError(f"Crew execution failed after {max_retries} attempts: {e}")
+            
+            # Wait before retry (exponential backoff)
+            import time
+            time.sleep(2 ** attempt)
+
+# Usage example
+try:
+    result = execute_crew_with_error_handling(
+        crew=research_crew,
+        inputs={"topic": "AI in healthcare"},
+        max_retries=3
+    )
+except PortkeyAPIError as e:
+    print(f"Crew execution failed: {e}")
+    # Implement fallback logic here
+```
 
 ### Common Integration Issues
 
 #### API Key Configuration
 ```python
-# Ensure proper environment variable setup
-import os
-
-required_vars = [
-    "PORTKEY_API_KEY",
-    "PORTKEY_VIRTUAL_KEY"
-]
-
-for var in required_vars:
-    if not os.getenv(var):
-        raise ValueError(f"Missing required environment variable: {var}")
-```
-
-#### Error Handling
-```python
-# Implement robust error handling for production deployments
-try:
-    result = crew.kickoff()
-except Exception as e:
-    # Portkey will automatically log the error with full context
-    print(f"Crew execution failed: {e}")
-    # Implement fallback logic here
+def validate_portkey_environment() -> None:
+    """
+    Comprehensive environment validation for Portkey integration.
+    
+    Raises:
+        PortkeyConfigurationError: If configuration is invalid
+    """
+    required_vars = {
+        "PORTKEY_API_KEY": "Get from https://app.portkey.ai",
+        "PORTKEY_VIRTUAL_KEY": "Create in Portkey dashboard"
+    }
+    
+    missing_vars = []
+    for var, help_text in required_vars.items():
+        value = os.getenv(var)
+        if not value:
+            missing_vars.append(f"{var} ({help_text})")
+        elif len(value.strip()) < 10:  # Basic validation
+            missing_vars.append(f"{var} appears to be invalid (too short)")
+    
+    if missing_vars:
+        raise PortkeyConfigurationError(
+            "Invalid Portkey configuration:\n" +
+            "\n".join(f"- {var}" for var in missing_vars) +
+            "\n\nPlease check your environment variables."
+        )
+    
+    # Test API connectivity
+    try:
+        test_llm = LLM(
+            model="gpt-3.5-turbo",
+            base_url="https://api.portkey.ai/v1",
+            api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+            extra_headers={
+                "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+                "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"]
+            }
+        )
+        # Note: Actual connectivity test would require a real API call
+        print("✅ Portkey configuration validated successfully")
+    except Exception as e:
+        raise PortkeyConfigurationError(f"Failed to initialize Portkey LLM: {e}")
 ```
 
 ### Performance Optimization Tips
 
-1. **Use Caching**: Enable semantic caching for repetitive tasks
-2. **Load Balancing**: Distribute requests across multiple providers
-3. **Batch Operations**: Group similar requests when possible
-4. **Monitor Metrics**: Regularly review performance dashboards
-5. **Optimize Prompts**: Use Portkey's prompt analytics to improve efficiency
+#### 1. Caching Strategy
+```python
+# Configure semantic caching for repetitive CrewAI tasks
+optimized_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"],
+        "x-portkey-config": json.dumps({
+            "cache": {
+                "mode": "semantic",
+                "max_age": 3600  # 1 hour cache
+            }
+        })
+    }
+)
+```
+
+#### 2. Load Balancing
+```python
+# Distribute load across multiple providers
+load_balanced_config = {
+    "strategy": {
+        "mode": "loadbalance"
+    },
+    "targets": [
+        {"virtual_key": os.environ["OPENAI_VIRTUAL_KEY"], "weight": 70},
+        {"virtual_key": os.environ["ANTHROPIC_VIRTUAL_KEY"], "weight": 30}
+    ]
+}
+```
+
+#### 3. Performance Monitoring
+- **Monitor Metrics**: Regularly review performance dashboards
+- **Optimize Prompts**: Use Portkey's prompt analytics to improve efficiency
+- **Batch Operations**: Group similar requests when possible
+- **Track Latency**: Monitor response times across different models
+- **Cost Analysis**: Review token usage and costs per agent/task
 
 ### Security Best Practices
 
-1. **Environment Variables**: Never hardcode API keys in source code
-2. **Virtual Keys**: Use Virtual Keys instead of direct provider keys
-3. **Budget Limits**: Set appropriate spending limits for production
-4. **Access Control**: Implement role-based access for team members
-5. **Regular Rotation**: Rotate API keys periodically
+#### 1. Environment-Based Configuration
+```python
+import os
+from typing import Dict
+
+def get_secure_config(environment: str) -> Dict[str, str]:
+    """
+    Get environment-specific secure configuration.
+    
+    Args:
+        environment: Target environment (dev, staging, prod)
+        
+    Returns:
+        Secure configuration dictionary
+    """
+    configs = {
+        "development": {
+            "api_key_var": "PORTKEY_API_KEY_DEV",
+            "virtual_key_var": "PORTKEY_VIRTUAL_KEY_DEV",
+            "budget_limit": "50.0"
+        },
+        "staging": {
+            "api_key_var": "PORTKEY_API_KEY_STAGING", 
+            "virtual_key_var": "PORTKEY_VIRTUAL_KEY_STAGING",
+            "budget_limit": "200.0"
+        },
+        "production": {
+            "api_key_var": "PORTKEY_API_KEY_PROD",
+            "virtual_key_var": "PORTKEY_VIRTUAL_KEY_PROD", 
+            "budget_limit": "1000.0"
+        }
+    }
+    
+    if environment not in configs:
+        raise ValueError(f"Invalid environment: {environment}")
+    
+    config = configs[environment]
+    return {
+        "api_key": os.environ[config["api_key_var"]],
+        "virtual_key": os.environ[config["virtual_key_var"]],
+        "budget_limit": config["budget_limit"]
+    }
+```
+
+#### 2. API Key Rotation
+```python
+def rotate_api_keys(old_key: str, new_key: str) -> None:
+    """
+    Safely rotate Portkey API keys with zero downtime.
+    
+    Args:
+        old_key: Current API key
+        new_key: New API key to rotate to
+    """
+    # Implementation would depend on your deployment strategy
+    # This is a conceptual example
+    print(f"Rotating from {old_key[:8]}... to {new_key[:8]}...")
+    # Update environment variables
+    # Restart services with new keys
+    # Verify connectivity
+    # Deactivate old keys
+```
+
+#### 3. Security Checklist
+- [ ] **Environment Variables**: Never hardcode API keys in source code
+- [ ] **Virtual Keys**: Use Virtual Keys instead of direct provider keys  
+- [ ] **Budget Limits**: Set appropriate spending limits for production
+- [ ] **Access Control**: Implement role-based access for team members
+- [ ] **Regular Rotation**: Rotate API keys every 90 days
+- [ ] **Audit Logging**: Enable comprehensive audit trails
+- [ ] **Network Security**: Use HTTPS and validate SSL certificates
+- [ ] **Monitoring**: Set up alerts for unusual usage patterns
+- [ ] **Backup Keys**: Maintain secure backup of Virtual Keys
+- [ ] **Team Training**: Ensure team understands security practices
 
 For detailed information on creating and managing Configs, visit the [Portkey documentation](https://portkey.ai/docs/product/ai-gateway/configs).
 
