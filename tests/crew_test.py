@@ -110,6 +110,40 @@ def test_crew_config_conditional_requirement():
     with pytest.raises(ValueError):
         Crew(process=Process.sequential)
 
+
+def test_crew_creation_with_memory_true_no_openai_key():
+    """Test that crew can be created with memory=True when no OpenAI API key is available."""
+    import os
+    from unittest.mock import patch
+    
+    with patch.dict(os.environ, {}, clear=True):
+        if 'OPENAI_API_KEY' in os.environ:
+            del os.environ['OPENAI_API_KEY']
+        
+        agent = Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory"
+        )
+        
+        task = Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=agent
+        )
+        
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            process=Process.sequential,
+            memory=True
+        )
+        
+        assert crew.memory is True
+        assert crew._short_term_memory is not None
+        assert crew._entity_memory is not None
+        assert crew._long_term_memory is not None
+
     config = json.dumps(
         {
             "agents": [

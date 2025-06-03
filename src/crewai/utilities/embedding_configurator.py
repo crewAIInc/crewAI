@@ -55,6 +55,29 @@ class EmbeddingConfigurator:
             api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
         )
 
+    def create_default_embedding_with_fallback(self) -> EmbeddingFunction:
+        """Create an embedding function with fallback providers when OpenAI API key is not available."""
+        if os.getenv("OPENAI_API_KEY"):
+            return self._create_default_embedding_function()
+        
+        try:
+            return self.configure_embedder({
+                "provider": "ollama",
+                "config": {"url": "http://localhost:11434/api/embeddings"},
+                "model": "nomic-embed-text"
+            })
+        except Exception:
+            try:
+                return self.configure_embedder({
+                    "provider": "huggingface",
+                    "config": {"api_url": "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"}
+                })
+            except Exception:
+                from chromadb.utils.embedding_functions.sentence_transformer_embedding_function import (
+                    SentenceTransformerEmbeddingFunction,
+                )
+                return SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
+
     @staticmethod
     def _configure_openai(config, model_name):
         from chromadb.utils.embedding_functions.openai_embedding_function import (
