@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import Mock, patch
 import sys
 
@@ -46,9 +45,7 @@ class TestMLflowIntegration:
         with patch('crewai.integrations.mlflow.mlflow') as mock_mlflow:
             mock_mlflow.tracing.start_span.return_value = Mock()
             
-            import mlflow
-            mlflow.crewai.autolog()
-            
+            autolog()
             assert mlflow_listener._autolog_enabled is True
             
             from crewai import Agent, Task, Crew
