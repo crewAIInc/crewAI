@@ -139,6 +139,10 @@ class Task(BaseModel):
         description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
         default=False,
     )
+    tags: Optional[List[str]] = Field(
+        default=None,
+        description="Tags to categorize this task for selective execution.",
+    )
     converter_cls: Optional[Type[Converter]] = Field(
         description="A converter class used to export structured output",
         default=None,

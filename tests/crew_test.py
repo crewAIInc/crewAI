@@ -1538,6 +1538,172 @@ def test_set_agents_step_callback():
         assert researcher_agent.step_callback is not None
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_selective_execution_with_tags(researcher, writer):
+    """Test selective task execution based on tags and input action."""
+    
+    forecast_task = Task(
+        description="Analyze forecast data",
+        expected_output="Forecast analysis",
+        agent=researcher,
+        tags=["forecast", "analysis"]
+    )
+    
+    news_task = Task(
+        description="Summarize news",
+        expected_output="News summary", 
+        agent=writer,
+        tags=["news", "summary"]
+    )
+    
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[forecast_task, news_task],
+        task_selector=Crew.create_tag_selector()
+    )
+    
+    result = crew.kickoff(inputs={"action": "forecast"})
+    assert result is not None
+
+
+def test_selective_process_type(researcher):
+    """Test selective process type."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher,
+        tags=["test"]
+    )
+    
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        process=Process.selective,
+        task_selector=Crew.create_tag_selector()
+    )
+    
+    result = crew.kickoff(inputs={"action": "test"})
+    assert result is not None
+
+
+def test_selective_execution_no_matching_tasks_error(researcher):
+    """Test error when no tasks match selection criteria."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output", 
+        agent=researcher,
+        tags=["other"]
+    )
+    
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        task_selector=Crew.create_tag_selector()
+    )
+    
+    with pytest.raises(ValueError, match="No tasks match the selection criteria"):
+        crew.kickoff(inputs={"action": "nonexistent"})
+
+
+def test_selective_process_missing_selector_error(researcher):
+    """Test error when selective process lacks task_selector."""
+    from pydantic import ValidationError
+    
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=researcher
+    )
+    
+    with pytest.raises(ValidationError, match="Selective process requires a task_selector"):
+        Crew(
+            agents=[researcher],
+            tasks=[task],
+            process=Process.selective
+        )
+
+
+def test_tag_selector_with_mapping(researcher, writer):
+    """Test tag selector with custom tag mapping."""
+    task1 = Task(
+        description="Task 1",
+        expected_output="Output 1",
+        agent=researcher,
+        tags=["data_analysis"]
+    )
+    
+    task2 = Task(
+        description="Task 2", 
+        expected_output="Output 2",
+        agent=writer,
+        tags=["reporting"]
+    )
+    
+    tag_mapping = {
+        "analyze": ["data_analysis", "research"],
+        "report": ["reporting", "writing"]
+    }
+    
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+        task_selector=Crew.create_tag_selector(tag_mapping=tag_mapping)
+    )
+    
+    result = crew.kickoff(inputs={"action": "analyze"})
+    assert result is not None
+
+
+def test_selective_execution_no_action_executes_all(researcher, writer):
+    """Test that when no action is specified, all tasks execute."""
+    task1 = Task(
+        description="Task 1",
+        expected_output="Output 1",
+        agent=researcher,
+        tags=["tag1"]
+    )
+    
+    task2 = Task(
+        description="Task 2",
+        expected_output="Output 2", 
+        agent=writer,
+        tags=["tag2"]
+    )
+    
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+        task_selector=Crew.create_tag_selector()
+    )
+    
+    result = crew.kickoff(inputs={})
+    assert result is not None
+
+
+def test_selective_execution_no_tags_executes_all(researcher, writer):
+    """Test that tasks without tags execute when using selective execution."""
+    task1 = Task(
+        description="Task 1",
+        expected_output="Output 1",
+        agent=researcher
+    )
+    
+    task2 = Task(
+        description="Task 2",
+        expected_output="Output 2",
+        agent=writer
+    )
+    
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+        task_selector=Crew.create_tag_selector()
+    )
+    
+    result = crew.kickoff(inputs={"action": "anything"})
+    assert result is not None
+
+
 def test_dont_set_agents_step_callback_if_already_set():
     from unittest.mock import patch
 
