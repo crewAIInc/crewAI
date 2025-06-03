@@ -7,13 +7,13 @@ icon: key
 <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/main/Portkey-CrewAI.png" alt="Portkey CrewAI Header Image" width="70%" />
 
 
-[Portkey](https://portkey.ai/?utm_source=crewai&utm_medium=crewai&utm_campaign=crewai) is a 2-line upgrade to make your CrewAI agents reliable, cost-efficient, and fast.
+[Portkey](https://portkey.ai/?utm_source=crewai&utm_medium=crewai&utm_campaign=crewai) is a comprehensive AI gateway that enhances CrewAI agents with production-ready capabilities for reliability, cost-efficiency, and performance optimization.
 
 Portkey adds 4 core production capabilities to any CrewAI agent:
-1. Routing to **200+ LLMs**
-2. Making each LLM call more robust
-3. Full-stack tracing & cost, performance analytics
-4. Real-time guardrails to enforce behavior
+1. Routing to **250+ LLMs** with unified API
+2. Enhanced reliability with retries, fallbacks, and load balancing
+3. Comprehensive observability with 40+ metrics and detailed tracing
+4. Advanced security controls and real-time guardrails
 
 ## Getting Started
 
@@ -28,6 +28,97 @@ Portkey adds 4 core production capabilities to any CrewAI agent:
     - **Portkey API Key**: Sign up on the [Portkey app](https://app.portkey.ai/?utm_source=crewai&utm_medium=crewai&utm_campaign=crewai) and copy your API key
     - **Virtual Key**: Virtual Keys securely manage your LLM API keys in one place. Store your LLM provider API keys securely in Portkey's vault
 
+    ### Environment Variable Validation
+    Before setting up your LLM, validate your Portkey configuration to prevent runtime issues:
+
+    ```python
+    import os
+    from typing import Dict, List
+
+    class PortkeyConfigurationError(Exception):
+        """Raised when Portkey configuration is invalid or incomplete"""
+        pass
+
+    def validate_portkey_configuration() -> None:
+        """
+        Validates that all required Portkey environment variables are set.
+        
+        Raises:
+            PortkeyConfigurationError: If any required variables are missing
+        """
+        required_vars: Dict[str, str] = {
+            "PORTKEY_API_KEY": "Get from https://app.portkey.ai",
+            "PORTKEY_VIRTUAL_KEY": "Create in Portkey dashboard"
+        }
+        
+        missing_vars: List[str] = []
+        for var, help_text in required_vars.items():
+            if not os.getenv(var):
+                missing_vars.append(f"{var} ({help_text})")
+        
+        if missing_vars:
+            raise PortkeyConfigurationError(
+                "Missing required Portkey configuration:\n" +
+                "\n".join(f"- {var}" for var in missing_vars)
+            )
+    ```
+
+    ### Modern Integration (Recommended)
+    The latest Portkey SDK (v1.13.0+) is built directly on top of the OpenAI SDK, providing seamless compatibility:
+
+    ```python
+    from crewai import LLM
+    import os
+    from typing import Optional
+
+    # Validate configuration before proceeding
+    validate_portkey_configuration()
+
+    # Set environment variables
+    os.environ["PORTKEY_API_KEY"] = "YOUR_PORTKEY_API_KEY"
+    os.environ["PORTKEY_VIRTUAL_KEY"] = "YOUR_VIRTUAL_KEY"
+
+    def create_portkey_llm(
+        model: str = "gpt-4",
+        api_key: Optional[str] = None,
+        virtual_key: Optional[str] = None
+    ) -> LLM:
+        """
+        Create a CrewAI LLM instance configured with Portkey.
+        
+        Args:
+            model: The model name to use (e.g., "gpt-4", "claude-3-sonnet")
+            api_key: Portkey API key (defaults to PORTKEY_API_KEY env var)
+            virtual_key: Portkey Virtual key (defaults to PORTKEY_VIRTUAL_KEY env var)
+            
+        Returns:
+            Configured LLM instance with Portkey integration
+            
+        Example:
+            >>> llm = create_portkey_llm("gpt-4")
+            >>> # Use with CrewAI agents
+            >>> agent = Agent(llm=llm, ...)
+        """
+        portkey_api_key = api_key or os.environ["PORTKEY_API_KEY"]
+        portkey_virtual_key = virtual_key or os.environ["PORTKEY_VIRTUAL_KEY"]
+        
+        return LLM(
+            model=model,
+            base_url="https://api.portkey.ai/v1",
+            api_key=portkey_virtual_key,
+            extra_headers={
+                "x-portkey-api-key": portkey_api_key,
+                "x-portkey-virtual-key": portkey_virtual_key
+            }
+        )
+
+    # Create LLM instance
+    gpt_llm = create_portkey_llm("gpt-4")
+    ```
+
+    ### Legacy Integration (Deprecated)
+    For backward compatibility, the older pattern is still supported but not recommended:
+
     ```python
     from crewai import LLM
     from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
@@ -35,10 +126,10 @@ Portkey adds 4 core production capabilities to any CrewAI agent:
     gpt_llm = LLM(
         model="gpt-4",
         base_url=PORTKEY_GATEWAY_URL,
-        api_key="dummy", # We are using Virtual key
+        api_key="dummy",
         extra_headers=createHeaders(
             api_key="YOUR_PORTKEY_API_KEY",
-            virtual_key="YOUR_VIRTUAL_KEY", # Enter your Virtual key from Portkey
+            virtual_key="YOUR_VIRTUAL_KEY"
         )
     )
     ```
@@ -62,7 +153,7 @@ Portkey adds 4 core production capabilities to any CrewAI agent:
         agent=coder
     )
 
-    # Instantiate your crew
+    # Instantiate your crew with Portkey observability
     crew = Crew(
         agents=[coder],
         tasks=[task1],
@@ -73,6 +164,48 @@ Portkey adds 4 core production capabilities to any CrewAI agent:
     ```
     </Step>
 </Steps>
+
+## Async Support
+
+Portkey fully supports async operations with CrewAI for high-performance applications:
+
+```python
+import asyncio
+from crewai import Agent, Task, Crew, LLM
+import os
+
+# Configure async LLM with Portkey
+async_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"]
+    }
+)
+
+async def run_async_crew():
+    agent = Agent(
+        role='Data Analyst',
+        goal='Analyze data efficiently',
+        backstory='Expert in data analysis and insights.',
+        llm=async_llm
+    )
+    
+    task = Task(
+        description="Analyze the latest market trends",
+        expected_output="Comprehensive market analysis report",
+        agent=agent
+    )
+    
+    crew = Crew(agents=[agent], tasks=[task])
+    result = await crew.kickoff_async()
+    return result
+
+# Run async crew
+result = asyncio.run(run_async_crew())
+```
 
 ## Key Features
 
@@ -99,32 +232,57 @@ All features mentioned below are through Portkey's Config system. Portkey's Conf
 ### 1. Use 250+ LLMs
 Access various LLMs like Anthropic, Gemini, Mistral, Azure OpenAI, and more with minimal code changes. Switch between providers or use them together seamlessly. [Learn more about Universal API](https://portkey.ai/docs/product/ai-gateway/universal-api)
 
-
-Easily switch between different LLM providers:
+Easily switch between different LLM providers using the modern integration pattern:
 
 ```python
+import os
+
 # Anthropic Configuration
 anthropic_llm = LLM(
     model="claude-3-5-sonnet-latest",
-    base_url=PORTKEY_GATEWAY_URL,
-    api_key="dummy",
-    extra_headers=createHeaders(
-        api_key="YOUR_PORTKEY_API_KEY",
-        virtual_key="YOUR_ANTHROPIC_VIRTUAL_KEY", #You don't need provider when using Virtual keys
-        trace_id="anthropic_agent"
-    )
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["ANTHROPIC_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["ANTHROPIC_VIRTUAL_KEY"],
+        "x-portkey-trace-id": "anthropic_agent"
+    }
 )
 
 # Azure OpenAI Configuration
 azure_llm = LLM(
     model="gpt-4",
-    base_url=PORTKEY_GATEWAY_URL,
-    api_key="dummy",
-    extra_headers=createHeaders(
-        api_key="YOUR_PORTKEY_API_KEY",
-        virtual_key="YOUR_AZURE_VIRTUAL_KEY", #You don't need provider when using Virtual keys
-        trace_id="azure_agent"
-    )
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["AZURE_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["AZURE_VIRTUAL_KEY"],
+        "x-portkey-trace-id": "azure_agent"
+    }
+)
+
+# Google Gemini Configuration
+gemini_llm = LLM(
+    model="gemini-2.0-flash-exp",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["GEMINI_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["GEMINI_VIRTUAL_KEY"],
+        "x-portkey-trace-id": "gemini_agent"
+    }
+)
+
+# Mistral Configuration
+mistral_llm = LLM(
+    model="mistral-large-latest",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["MISTRAL_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["MISTRAL_VIRTUAL_KEY"],
+        "x-portkey-trace-id": "mistral_agent"
+    }
 )
 ```
 
@@ -135,44 +293,191 @@ Improve response times and reduce costs with two powerful caching modes:
 - **Semantic Cache**: Matches responses for requests that are semantically similar
 [Learn more about Caching](https://portkey.ai/docs/product/ai-gateway/cache-simple-and-semantic)
 
-```py
-config = {
-    "cache": {
-        "mode": "semantic",  # or "simple" for exact matching
+```python
+import json
+
+# Enable caching for CrewAI agents
+cached_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"],
+        "x-portkey-config": json.dumps({
+            "cache": {
+                "mode": "semantic",  # or "simple" for exact matching
+                "max_age": 3600  # Cache for 1 hour
+            }
+        })
     }
-}
+)
+
+# Use with CrewAI agents for improved performance
+research_agent = Agent(
+    role='Research Analyst',
+    goal='Conduct thorough research with cached responses',
+    backstory='Expert researcher who values efficiency.',
+    llm=cached_llm
+)
 ```
 
 ### 3. Production Reliability
-Portkey provides comprehensive reliability features:
-- **Automatic Retries**: Handle temporary failures gracefully
-- **Request Timeouts**: Prevent hanging operations
-- **Conditional Routing**: Route requests based on specific conditions
-- **Fallbacks**: Set up automatic provider failovers
-- **Load Balancing**: Distribute requests efficiently
+Portkey provides comprehensive reliability features essential for production CrewAI deployments:
+
+#### Automatic Retries and Fallbacks
+```python
+import json
+
+# Configure LLM with automatic retries and fallbacks
+reliable_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-config": json.dumps({
+            "retry": {
+                "attempts": 3,
+                "on_status_codes": [429, 500, 502, 503, 504]
+            },
+            "fallbacks": [
+                {"virtual_key": os.environ["OPENAI_VIRTUAL_KEY"]},
+                {"virtual_key": os.environ["ANTHROPIC_VIRTUAL_KEY"]}
+            ]
+        })
+    }
+)
+```
+
+#### Load Balancing
+```python
+# Distribute requests across multiple models for optimal performance
+load_balanced_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-config": json.dumps({
+            "strategy": {
+                "mode": "loadbalance",
+                "targets": [
+                    {"virtual_key": os.environ["OPENAI_VIRTUAL_KEY"], "weight": 70},
+                    {"virtual_key": os.environ["ANTHROPIC_VIRTUAL_KEY"], "weight": 30}
+                ]
+            }
+        })
+    }
+)
+```
+
+#### Request Timeouts and Conditional Routing
+```python
+# Configure timeouts and conditional routing for CrewAI workflows
+production_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-config": json.dumps({
+            "request_timeout": 30000,  # 30 seconds
+            "conditional_routing": {
+                "rules": [
+                    {
+                        "condition": "request.model == 'gpt-4'",
+                        "target": {"virtual_key": os.environ["OPENAI_VIRTUAL_KEY"]}
+                    }
+                ]
+            }
+        })
+    }
+)
+```
 
 [Learn more about Reliability Features](https://portkey.ai/docs/product/ai-gateway/)
 
 
 
-### 4. Metrics
+### 4. Comprehensive Observability
 
-Agent runs are complex. Portkey automatically logs **40+ comprehensive metrics** for your AI agents, including cost, tokens used, latency, etc. Whether you need a broad overview or granular insights into your agent runs, Portkey's customizable filters provide the metrics you need.
+CrewAI workflows involve complex multi-agent interactions. Portkey automatically logs **40+ comprehensive metrics** for your AI agents, providing deep insights into agent behavior, performance, and costs.
 
+#### Key Metrics for CrewAI Workflows
+- **Agent Performance**: Individual agent response times and success rates
+- **Task Execution**: Time spent on each task and completion rates
+- **Cost Analysis**: Token usage and costs per agent, task, and crew
+- **Multi-Agent Coordination**: Communication patterns between agents
+- **Tool Usage**: Frequency and success rates of tool calls
+- **Memory Operations**: Knowledge retrieval and storage metrics
+- **Cache Efficiency**: Hit rates and performance improvements
 
-- Cost per agent interaction
-- Response times and latency
-- Token usage and efficiency
-- Success/failure rates
-- Cache hit rates
+#### Custom Metadata for CrewAI
+```python
+import json
+
+# Add custom metadata to track CrewAI-specific metrics
+crew_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"],
+        "x-portkey-metadata": json.dumps({
+            "crew_id": "marketing_crew_v1",
+            "agent_role": "content_writer",
+            "task_type": "blog_generation",
+            "environment": "production"
+        })
+    }
+)
+```
 
 <img src="https://github.com/siddharthsambharia-portkey/Portkey-Product-Images/blob/main/Portkey-Dashboard.png?raw=true" width="70%" alt="Portkey Dashboard" />
 
-### 5. Detailed Logging
-Logs are essential for understanding agent behavior, diagnosing issues, and improving performance. They provide a detailed record of agent activities and tool use, which is crucial for debugging and optimizing processes.
+### 5. Advanced Logging and Tracing
 
+Portkey provides comprehensive logging capabilities specifically designed for complex multi-agent systems like CrewAI. Track every interaction, decision, and outcome across your entire crew workflow.
 
-Access a dedicated section to view records of agent executions, including parameters, outcomes, function calls, and errors. Filter logs based on multiple parameters such as trace ID, model, tokens used, and metadata.
+#### CrewAI-Specific Logging Features
+- **Agent Conversation Flows**: Complete conversation history between agents
+- **Task Execution Traces**: Step-by-step task completion with timing
+- **Tool Call Monitoring**: Detailed logs of all tool invocations and results
+- **Memory Access Patterns**: Track knowledge retrieval and storage operations
+- **Error Propagation**: Trace how errors flow through multi-agent workflows
+
+#### Implementing Structured Logging
+```python
+import json
+import os
+from datetime import datetime
+
+# Configure detailed logging for CrewAI workflows
+logged_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"],
+        "x-portkey-trace-id": f"crew_execution_{datetime.now().isoformat()}",
+        "x-portkey-metadata": json.dumps({
+            "workflow_type": "multi_agent_research",
+            "crew_size": 3,
+            "expected_duration": "5_minutes"
+        })
+    }
+)
+
+# Use with CrewAI for comprehensive observability
+research_crew = Crew(
+    agents=[researcher, writer, reviewer],
+    tasks=[research_task, writing_task, review_task],
+    verbose=True  # Enable CrewAI's built-in logging
+)
+```
 
 <details>
   <summary><b>Traces</b></summary>
@@ -185,18 +490,583 @@ Access a dedicated section to view records of agent executions, including parame
 </details>
 
 ### 6. Enterprise Security Features
-- Set budget limit and rate limts per Virtual Key (disposable API keys)
-- Implement role-based access control
-- Track system changes with audit logs
-- Configure data retention policies
+- **Budget Controls**: Set spending limits per Virtual Key to prevent cost overruns
+- **Rate Limiting**: Control request frequency to prevent abuse
+- **Role-Based Access**: Implement fine-grained permissions for team members
+- **Audit Logging**: Track all system changes and access patterns
+- **Data Retention**: Configure policies for log and metric retention
+- **API Key Rotation**: Automated rotation of Virtual Keys for enhanced security
 
+```python
+import json
+import os
 
+# Example of budget-controlled LLM for production CrewAI deployments
+budget_controlled_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"],
+        "x-portkey-config": json.dumps({
+            "budget": {
+                "limit": 100.0,  # $100 monthly limit
+                "period": "monthly"
+            },
+            "rate_limit": {
+                "requests_per_minute": 60
+            }
+        })
+    }
+)
+```
 
-For detailed information on creating and managing Configs, visit the [Portkey documentation](https://docs.portkey.ai/product/ai-gateway/configs).
+## CrewAI-Specific Integration Patterns
+
+### Integration with CrewAI Flows
+Portkey seamlessly integrates with CrewAI's Flow system for event-driven workflows:
+
+```python
+import json
+import os
+from crewai.flow.flow import Flow, listen, start
+from crewai import Agent, Task
+
+class ResearchFlow(Flow):
+    
+    @start()
+    def initiate_research(self):
+        researcher = Agent(
+            role='Senior Researcher',
+            goal='Conduct comprehensive research',
+            backstory='Expert researcher with access to multiple data sources.',
+            llm=reliable_llm  # Using Portkey-configured LLM
+        )
+        
+        research_task = Task(
+            description="Research the latest trends in {topic}",
+            expected_output="Comprehensive research report",
+            agent=researcher
+        )
+        
+        return research_task.execute()
+    
+    @listen(initiate_research)
+    def analyze_findings(self, research_result):
+        analyst = Agent(
+            role='Data Analyst',
+            goal='Analyze research findings',
+            backstory='Expert in data analysis and pattern recognition.',
+            llm=cached_llm  # Using cached LLM for efficiency
+        )
+        
+        analysis_task = Task(
+            description="Analyze the research findings: {research_result}",
+            expected_output="Detailed analysis with insights",
+            agent=analyst
+        )
+        
+        return analysis_task.execute()
+
+# Run the flow with Portkey observability
+flow = ResearchFlow()
+result = flow.kickoff(inputs={"topic": "AI in healthcare"})
+```
+
+### Integration with CrewAI Memory Systems
+Enhance CrewAI's memory capabilities with Portkey's observability:
+
+```python
+import json
+import os
+from crewai.memory import LongTermMemory, ShortTermMemory
+
+# Configure memory-aware agents with Portkey tracking
+memory_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"],
+        "x-portkey-metadata": json.dumps({
+            "memory_enabled": True,
+            "memory_type": "long_term"
+        })
+    }
+)
+
+# Create crew with memory and Portkey observability
+memory_crew = Crew(
+    agents=[knowledge_agent],
+    tasks=[learning_task],
+    memory=True,  # Enable CrewAI memory
+    verbose=True
+)
+```
+
+### Tool Integration Monitoring
+Track tool usage across your CrewAI workflows:
+
+```python
+import os
+from crewai_tools import SerperDevTool, FileReadTool
+
+# Configure tools with Portkey tracking
+search_tool = SerperDevTool()
+file_tool = FileReadTool()
+
+tool_aware_agent = Agent(
+    role='Research Assistant',
+    goal='Use tools effectively for research',
+    backstory='Expert in using various research tools.',
+    llm=logged_llm,  # Portkey will track all tool calls
+    tools=[search_tool, file_tool]
+)
+```
+
+## Enhanced Configuration Management
+
+### PortkeyConfig Class
+For complex deployments, use a structured configuration approach:
+
+```python
+import os
+import json
+from dataclasses import dataclass
+from typing import Optional, Dict, Any, List
+
+@dataclass
+class PortkeyConfig:
+    """
+    Configuration management for Portkey integration with CrewAI.
+    
+    Attributes:
+        api_key: Portkey API key
+        virtual_key: Portkey Virtual key for LLM provider
+        environment: Deployment environment (development, staging, production)
+        budget_limit_usd: Maximum spend limit in USD
+        rate_limit_rpm: Requests per minute limit
+        enable_caching: Whether to enable semantic caching
+        fallback_models: List of fallback models if primary fails
+        custom_metadata: Additional metadata for tracking
+    """
+    api_key: str
+    virtual_key: str
+    environment: str = "development"
+    budget_limit_usd: float = 100.0
+    rate_limit_rpm: int = 60
+    enable_caching: bool = True
+    fallback_models: Optional[List[str]] = None
+    custom_metadata: Optional[Dict[str, Any]] = None
+    
+    @classmethod
+    def from_environment(cls, environment: str = "development") -> "PortkeyConfig":
+        """
+        Create configuration from environment variables.
+        
+        Args:
+            environment: Target environment
+            
+        Returns:
+            PortkeyConfig instance
+            
+        Raises:
+            PortkeyConfigurationError: If required variables are missing
+        """
+        validate_portkey_configuration()
+        
+        return cls(
+            api_key=os.environ["PORTKEY_API_KEY"],
+            virtual_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+            environment=environment,
+            budget_limit_usd=float(os.environ.get("PORTKEY_BUDGET_LIMIT", "100.0")),
+            rate_limit_rpm=int(os.environ.get("PORTKEY_RATE_LIMIT", "60")),
+            enable_caching=os.environ.get("PORTKEY_ENABLE_CACHE", "true").lower() == "true"
+        )
+    
+    def to_llm_config(self, model: str = "gpt-4") -> Dict[str, Any]:
+        """
+        Convert to LLM configuration dictionary.
+        
+        Args:
+            model: Model name to use
+            
+        Returns:
+            Dictionary suitable for LLM initialization
+        """
+        config = {
+            "retry": {"attempts": 3, "on_status_codes": [429, 500, 502, 503, 504]},
+            "request_timeout": 30000
+        }
+        
+        if self.budget_limit_usd:
+            config["budget_limit"] = self.budget_limit_usd
+        
+        if self.rate_limit_rpm:
+            config["rate_limit"] = {"requests_per_minute": self.rate_limit_rpm}
+        
+        if self.enable_caching:
+            config["cache"] = {"mode": "semantic"}
+        
+        if self.fallback_models:
+            config["fallbacks"] = [{"model": m} for m in self.fallback_models]
+        
+        headers = {
+            "x-portkey-api-key": self.api_key,
+            "x-portkey-virtual-key": self.virtual_key,
+            "x-portkey-config": json.dumps(config)
+        }
+        
+        if self.custom_metadata:
+            headers["x-portkey-metadata"] = json.dumps(self.custom_metadata)
+        
+        return {
+            "model": model,
+            "base_url": "https://api.portkey.ai/v1",
+            "api_key": self.virtual_key,
+            "extra_headers": headers
+        }
+
+# Usage example
+config = PortkeyConfig.from_environment("production")
+config.custom_metadata = {"team": "ai-research", "project": "customer-support"}
+llm_config = config.to_llm_config("gpt-4")
+production_llm = LLM(**llm_config)
+```
+
+## Version Compatibility Matrix
+
+| Component | Minimum Version | Recommended Version | Notes |
+|-----------|----------------|-------------------|-------|
+| **CrewAI** | 0.80.0 | 0.90.0+ | Latest features require 0.90.0+ |
+| **Portkey SDK** | 1.13.0 | 1.13.0+ | Built on OpenAI SDK compatibility |
+| **Python** | 3.8 | 3.10+ | Type hints require 3.9+, async features optimized for 3.10+ |
+| **OpenAI SDK** | 1.0.0 | 1.50.0+ | Required for Portkey compatibility |
+
+### Migration Guide
+
+#### From Legacy Portkey Integration (< 1.13.0)
+If you're upgrading from an older Portkey integration:
+
+```python
+# OLD: Legacy pattern (deprecated)
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+gpt_llm = LLM(
+    model="gpt-4",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_VIRTUAL_KEY"
+    )
+)
+
+# NEW: Modern pattern (recommended)
+from crewai import LLM
+import os
+
+gpt_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"]
+    }
+)
+```
+
+#### Migration Checklist
+- [ ] Update Portkey SDK to 1.13.0+: `pip install -U portkey-ai`
+- [ ] Replace `createHeaders` and `PORTKEY_GATEWAY_URL` imports
+- [ ] Update header format to use `x-portkey-*` prefixes
+- [ ] Add environment variable validation
+- [ ] Test with your existing CrewAI workflows
+- [ ] Update CI/CD pipelines with new environment variables
+- [ ] Review and update any custom error handling
+
+## Troubleshooting and Best Practices
+
+### Enhanced Error Handling
+
+```python
+import logging
+from typing import Dict, Any, Optional
+from crewai import Crew
+
+class PortkeyError(Exception):
+    """Base exception for Portkey integration errors"""
+    pass
+
+class PortkeyConfigurationError(PortkeyError):
+    """Raised when Portkey configuration is invalid"""
+    pass
+
+class PortkeyAPIError(PortkeyError):
+    """Raised when Portkey API calls fail"""
+    pass
+
+class PortkeyLogger:
+    """Structured logging for Portkey operations"""
+    
+    def __init__(self, name: str = "portkey"):
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+        
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+    
+    def log_request(self, model: str, tokens: Optional[int] = None) -> None:
+        """Log successful API request"""
+        self.logger.info(f"Portkey request successful - Model: {model}, Tokens: {tokens}")
+    
+    def log_error(self, error: Exception, context: Dict[str, Any]) -> None:
+        """Log API errors with context"""
+        self.logger.error(f"Portkey error: {error}, Context: {context}")
+
+def execute_crew_with_error_handling(
+    crew: Crew,
+    inputs: Optional[Dict[str, Any]] = None,
+    max_retries: int = 3
+) -> Any:
+    """
+    Execute CrewAI crew with robust error handling.
+    
+    Args:
+        crew: CrewAI crew instance
+        inputs: Input parameters for crew execution
+        max_retries: Maximum number of retry attempts
+        
+    Returns:
+        Crew execution result
+        
+    Raises:
+        PortkeyAPIError: If all retry attempts fail
+    """
+    logger = PortkeyLogger()
+    
+    for attempt in range(max_retries):
+        try:
+            if inputs:
+                result = crew.kickoff(inputs=inputs)
+            else:
+                result = crew.kickoff()
+            
+            logger.log_request("crew_execution", None)
+            return result
+            
+        except Exception as e:
+            context = {
+                "attempt": attempt + 1,
+                "max_retries": max_retries,
+                "crew_agents": len(crew.agents),
+                "crew_tasks": len(crew.tasks)
+            }
+            logger.log_error(e, context)
+            
+            if attempt == max_retries - 1:
+                raise PortkeyAPIError(f"Crew execution failed after {max_retries} attempts: {e}")
+            
+            # Wait before retry (exponential backoff)
+            import time
+            time.sleep(2 ** attempt)
+
+# Usage example
+try:
+    result = execute_crew_with_error_handling(
+        crew=research_crew,
+        inputs={"topic": "AI in healthcare"},
+        max_retries=3
+    )
+except PortkeyAPIError as e:
+    print(f"Crew execution failed: {e}")
+    # Implement fallback logic here
+```
+
+### Common Integration Issues
+
+#### API Key Configuration
+```python
+def validate_portkey_environment() -> None:
+    """
+    Comprehensive environment validation for Portkey integration.
+    
+    Raises:
+        PortkeyConfigurationError: If configuration is invalid
+    """
+    required_vars = {
+        "PORTKEY_API_KEY": "Get from https://app.portkey.ai",
+        "PORTKEY_VIRTUAL_KEY": "Create in Portkey dashboard"
+    }
+    
+    missing_vars = []
+    for var, help_text in required_vars.items():
+        value = os.getenv(var)
+        if not value:
+            missing_vars.append(f"{var} ({help_text})")
+        elif len(value.strip()) < 10:  # Basic validation
+            missing_vars.append(f"{var} appears to be invalid (too short)")
+    
+    if missing_vars:
+        raise PortkeyConfigurationError(
+            "Invalid Portkey configuration:\n" +
+            "\n".join(f"- {var}" for var in missing_vars) +
+            "\n\nPlease check your environment variables."
+        )
+    
+    # Test API connectivity
+    try:
+        test_llm = LLM(
+            model="gpt-3.5-turbo",
+            base_url="https://api.portkey.ai/v1",
+            api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+            extra_headers={
+                "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+                "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"]
+            }
+        )
+        # Note: Actual connectivity test would require a real API call
+        print("✅ Portkey configuration validated successfully")
+    except Exception as e:
+        raise PortkeyConfigurationError(f"Failed to initialize Portkey LLM: {e}")
+```
+
+### Performance Optimization Tips
+
+#### 1. Caching Strategy
+```python
+# Configure semantic caching for repetitive CrewAI tasks
+optimized_llm = LLM(
+    model="gpt-4",
+    base_url="https://api.portkey.ai/v1",
+    api_key=os.environ["PORTKEY_VIRTUAL_KEY"],
+    extra_headers={
+        "x-portkey-api-key": os.environ["PORTKEY_API_KEY"],
+        "x-portkey-virtual-key": os.environ["PORTKEY_VIRTUAL_KEY"],
+        "x-portkey-config": json.dumps({
+            "cache": {
+                "mode": "semantic",
+                "max_age": 3600  # 1 hour cache
+            }
+        })
+    }
+)
+```
+
+#### 2. Load Balancing
+```python
+# Distribute load across multiple providers
+load_balanced_config = {
+    "strategy": {
+        "mode": "loadbalance"
+    },
+    "targets": [
+        {"virtual_key": os.environ["OPENAI_VIRTUAL_KEY"], "weight": 70},
+        {"virtual_key": os.environ["ANTHROPIC_VIRTUAL_KEY"], "weight": 30}
+    ]
+}
+```
+
+#### 3. Performance Monitoring
+- **Monitor Metrics**: Regularly review performance dashboards
+- **Optimize Prompts**: Use Portkey's prompt analytics to improve efficiency
+- **Batch Operations**: Group similar requests when possible
+- **Track Latency**: Monitor response times across different models
+- **Cost Analysis**: Review token usage and costs per agent/task
+
+### Security Best Practices
+
+#### 1. Environment-Based Configuration
+```python
+import os
+from typing import Dict
+
+def get_secure_config(environment: str) -> Dict[str, str]:
+    """
+    Get environment-specific secure configuration.
+    
+    Args:
+        environment: Target environment (dev, staging, prod)
+        
+    Returns:
+        Secure configuration dictionary
+    """
+    configs = {
+        "development": {
+            "api_key_var": "PORTKEY_API_KEY_DEV",
+            "virtual_key_var": "PORTKEY_VIRTUAL_KEY_DEV",
+            "budget_limit": "50.0"
+        },
+        "staging": {
+            "api_key_var": "PORTKEY_API_KEY_STAGING", 
+            "virtual_key_var": "PORTKEY_VIRTUAL_KEY_STAGING",
+            "budget_limit": "200.0"
+        },
+        "production": {
+            "api_key_var": "PORTKEY_API_KEY_PROD",
+            "virtual_key_var": "PORTKEY_VIRTUAL_KEY_PROD", 
+            "budget_limit": "1000.0"
+        }
+    }
+    
+    if environment not in configs:
+        raise ValueError(f"Invalid environment: {environment}")
+    
+    config = configs[environment]
+    return {
+        "api_key": os.environ[config["api_key_var"]],
+        "virtual_key": os.environ[config["virtual_key_var"]],
+        "budget_limit": config["budget_limit"]
+    }
+```
+
+#### 2. API Key Rotation
+```python
+def rotate_api_keys(old_key: str, new_key: str) -> None:
+    """
+    Safely rotate Portkey API keys with zero downtime.
+    
+    Args:
+        old_key: Current API key
+        new_key: New API key to rotate to
+    """
+    # Implementation would depend on your deployment strategy
+    # This is a conceptual example
+    print(f"Rotating from {old_key[:8]}... to {new_key[:8]}...")
+    # Update environment variables
+    # Restart services with new keys
+    # Verify connectivity
+    # Deactivate old keys
+```
+
+#### 3. Security Checklist
+- [ ] **Environment Variables**: Never hardcode API keys in source code
+- [ ] **Virtual Keys**: Use Virtual Keys instead of direct provider keys  
+- [ ] **Budget Limits**: Set appropriate spending limits for production
+- [ ] **Access Control**: Implement role-based access for team members
+- [ ] **Regular Rotation**: Rotate API keys every 90 days
+- [ ] **Audit Logging**: Enable comprehensive audit trails
+- [ ] **Network Security**: Use HTTPS and validate SSL certificates
+- [ ] **Monitoring**: Set up alerts for unusual usage patterns
+- [ ] **Backup Keys**: Maintain secure backup of Virtual Keys
+- [ ] **Team Training**: Ensure team understands security practices
+
+For detailed information on creating and managing Configs, visit the [Portkey documentation](https://portkey.ai/docs/product/ai-gateway/configs).
 
 ## Resources
 
-- [📘 Portkey Documentation](https://docs.portkey.ai)
+- [📘 Portkey Documentation](https://portkey.ai/docs)
 - [📊 Portkey Dashboard](https://app.portkey.ai/?utm_source=crewai&utm_medium=crewai&utm_campaign=crewai)
+- [🔧 Portkey Python SDK](https://github.com/Portkey-AI/portkey-python-sdk)
+- [📦 PyPI Package](https://pypi.org/project/portkey-ai/)
 - [🐦 Twitter](https://twitter.com/portkeyai)
 - [💬 Discord Community](https://discord.gg/DD7vgKK299)
+- [📚 CrewAI Examples with Portkey](https://github.com/crewAIInc/crewAI-examples)
