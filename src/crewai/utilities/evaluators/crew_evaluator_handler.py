@@ -10,13 +10,10 @@ from crewai.agent import Agent
 from crewai.llm import BaseLLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
-<<<<<<< HEAD
-from crewai.types.crew_types import CrewType
-from crewai.utilities.logger import Logger
-=======
+### from crewai.types.crew_types import CrewType
+### from crewai.utilities.logger import Logger
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.crew_events import CrewTestResultEvent
->>>>>>> upstream/main
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
