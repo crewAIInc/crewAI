@@ -2,10 +2,10 @@ import datetime
 import json
 import logging
 import os
-from typing import Any, Optional, Type
+from typing import Any, List, Optional, Type
 
 import requests
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,9 @@ class SerperDevTool(BaseTool):
     country: Optional[str] = ""
     location: Optional[str] = ""
     locale: Optional[str] = ""
+    env_vars: List[EnvVar] = [
+        EnvVar(name="SERPER_API_KEY", description="API key for Serper", required=True),
+    ]
 
     def _get_search_url(self, search_type: str) -> str:
         """Get the appropriate endpoint URL based on search type."""
