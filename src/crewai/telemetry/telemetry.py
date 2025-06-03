@@ -8,7 +8,7 @@ import platform
 import warnings
 from contextlib import contextmanager
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 import threading
 
 from opentelemetry import trace
@@ -73,17 +73,18 @@ class Telemetry:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super(Telemetry, cls).__new__(cls)
+                    cls._instance._initialized = False
         return cls._instance
 
     def __init__(self) -> None:
-        if hasattr(self, '_initialized'):
+        if self._initialized:
             return
         
         self.ready: bool = False
         self.trace_set: bool = False
 
         if self._is_telemetry_disabled():
-            self._initialized: bool = True
+            self._initialized = True
             return
 
         try:
@@ -119,6 +120,10 @@ class Telemetry:
             or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
         )
 
+    def _should_execute_telemetry(self) -> bool:
+        """Check if telemetry operations should be executed."""
+        return self.ready and not self._is_telemetry_disabled()
+
     def set_tracer(self):
         if self.ready and not self.trace_set:
             try:
@@ -129,8 +134,9 @@ class Telemetry:
                 self.ready = False
                 self.trace_set = False
 
-    def _safe_telemetry_operation(self, operation):
-        if not self.ready or self._is_telemetry_disabled():
+    def _safe_telemetry_operation(self, operation: Callable[[], None]) -> None:
+        """Execute telemetry operation safely, checking both readiness and environment variables."""
+        if not self._should_execute_telemetry():
             return
         try:
             operation()

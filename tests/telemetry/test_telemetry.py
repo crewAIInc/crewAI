@@ -9,6 +9,14 @@ from crewai.telemetry import Telemetry
 from opentelemetry import trace
 
 
+@pytest.fixture(autouse=True)
+def cleanup_telemetry():
+    """Automatically clean up Telemetry singleton between tests."""
+    Telemetry._instance = None
+    yield
+    Telemetry._instance = None
+
+
 @pytest.mark.parametrize(
     "env_var,value,expected_ready",
     [
@@ -22,7 +30,6 @@ from opentelemetry import trace
 )
 def test_telemetry_environment_variables(env_var, value, expected_ready):
     """Test telemetry state with different environment variable configurations."""
-    Telemetry._instance = None
     with patch.dict(os.environ, {env_var: value}):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()
@@ -31,7 +38,6 @@ def test_telemetry_environment_variables(env_var, value, expected_ready):
 
 def test_telemetry_enabled_by_default():
     """Test that telemetry is enabled by default."""
-    Telemetry._instance = None
     with patch.dict(os.environ, {}, clear=True):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()

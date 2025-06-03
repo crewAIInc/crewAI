@@ -6,6 +6,14 @@ import pytest
 from crewai.telemetry import Telemetry
 
 
+@pytest.fixture(autouse=True)
+def cleanup_telemetry():
+    """Automatically clean up Telemetry singleton between tests."""
+    Telemetry._instance = None
+    yield
+    Telemetry._instance = None
+
+
 @pytest.mark.parametrize("env_var,value,expected_ready", [
     ("OTEL_SDK_DISABLED", "true", False),
     ("OTEL_SDK_DISABLED", "TRUE", False),
@@ -16,7 +24,6 @@ from crewai.telemetry import Telemetry
 ])
 def test_telemetry_environment_variables(env_var, value, expected_ready):
     """Test telemetry state with different environment variable configurations."""
-    Telemetry._instance = None
     with patch.dict(os.environ, {env_var: value}):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()
@@ -25,7 +32,6 @@ def test_telemetry_environment_variables(env_var, value, expected_ready):
 
 def test_telemetry_enabled_by_default():
     """Test that telemetry is enabled by default."""
-    Telemetry._instance = None
     with patch.dict(os.environ, {}, clear=True):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()
@@ -34,8 +40,6 @@ def test_telemetry_enabled_by_default():
 
 def test_telemetry_disable_after_singleton_creation():
     """Test that telemetry operations are disabled when env var is set after singleton creation."""
-    Telemetry._instance = None
-    
     with patch.dict(os.environ, {}, clear=True):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()
@@ -55,8 +59,6 @@ def test_telemetry_disable_after_singleton_creation():
 
 def test_telemetry_disable_with_multiple_instances():
     """Test that multiple telemetry instances respect dynamically changed env vars."""
-    Telemetry._instance = None
-    
     with patch.dict(os.environ, {}, clear=True):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry1 = Telemetry()
@@ -75,8 +77,6 @@ def test_telemetry_disable_with_multiple_instances():
 
 def test_telemetry_otel_sdk_disabled_after_creation():
     """Test that OTEL_SDK_DISABLED also works when set after singleton creation."""
-    Telemetry._instance = None
-    
     with patch.dict(os.environ, {}, clear=True):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()
