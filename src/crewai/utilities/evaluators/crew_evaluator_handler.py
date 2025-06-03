@@ -10,8 +10,13 @@ from crewai.agent import Agent
 from crewai.llm import BaseLLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
+<<<<<<< HEAD
 from crewai.types.crew_types import CrewType
 from crewai.utilities.logger import Logger
+=======
+from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.crew_events import CrewTestResultEvent
+>>>>>>> upstream/main
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
@@ -38,7 +43,6 @@ class CrewEvaluator:
     def __init__(self, crew, eval_llm: InstanceOf[BaseLLM]):
         self.crew = crew
         self.llm = eval_llm
-        self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
     def _setup_for_evaluating(self) -> None:
@@ -180,11 +184,15 @@ class CrewEvaluator:
         evaluation_result = evaluation_task.execute_sync()
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
-            self._test_result_span = self._telemetry.individual_test_result_span(
+            crewai_event_bus.emit(
                 self.crew,
-                evaluation_result.pydantic.quality,
-                current_task.execution_duration,
-                self.llm.model,
+                CrewTestResultEvent(
+                    quality=evaluation_result.pydantic.quality,
+                    execution_duration=current_task.execution_duration,
+                    model=self.llm.model,
+                    crew_name=self.crew.name,
+                    crew=self.crew,
+                ),
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(

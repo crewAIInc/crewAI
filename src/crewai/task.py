@@ -135,6 +135,10 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    markdown: Optional[bool] = Field(
+        description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
+        default=False,
+    )
     converter_cls: Optional[Type[Converter]] = Field(
         description="A converter class used to export structured output",
         default=None,
@@ -536,10 +540,14 @@ class Task(BaseModel):
         return guardrail_result
 
     def prompt(self) -> str:
-        """Prompt the task.
-
+        """Generates the task prompt with optional markdown formatting.
+        
+        When the markdown attribute is True, instructions for formatting the
+        response in Markdown syntax will be added to the prompt.
+        
         Returns:
-            Prompt of the task.
+            str: The formatted prompt string containing the task description,
+                 expected output, and optional markdown formatting instructions.
         """
         tasks_slices = [self.description]
 
@@ -547,6 +555,17 @@ class Task(BaseModel):
             expected_output=self.expected_output
         )
         tasks_slices = [self.description, output]
+        
+        if self.markdown:
+            markdown_instruction = """Your final answer MUST be formatted in Markdown syntax.
+Follow these guidelines:
+- Use # for headers
+- Use ** for bold text
+- Use * for italic text
+- Use - or * for bullet points
+- Use `code` for inline code
+- Use ```language for code blocks"""
+            tasks_slices.append(markdown_instruction)
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(
