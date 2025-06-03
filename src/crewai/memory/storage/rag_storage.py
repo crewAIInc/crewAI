@@ -1,7 +1,6 @@
 import contextlib
 import io
 import logging
-import os
 import shutil
 import uuid
 from typing import Any, Dict, List, Optional

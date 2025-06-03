@@ -1,5 +1,4 @@
 import os
-import pytest
 from unittest.mock import patch
 
 from crewai import Agent, Task, Crew, Process

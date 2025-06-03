@@ -57,25 +57,36 @@ class EmbeddingConfigurator:
 
     def create_default_embedding_with_fallback(self) -> EmbeddingFunction:
         """Create an embedding function with fallback providers when OpenAI API key is not available."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if os.getenv("OPENAI_API_KEY"):
+            logger.info("Using OpenAI embeddings")
             return self._create_default_embedding_function()
         
+        logger.warning("OpenAI API key not found, attempting fallback providers")
+        
         try:
+            logger.info("Attempting Ollama embedding provider")
             return self.configure_embedder({
                 "provider": "ollama",
                 "config": {"url": "http://localhost:11434/api/embeddings"},
                 "model": "nomic-embed-text"
             })
-        except Exception:
+        except (ConnectionError, ImportError, ValueError) as e:
+            logger.warning(f"Ollama fallback failed: {str(e)}, trying HuggingFace")
             try:
+                logger.info("Attempting HuggingFace embedding provider")
                 return self.configure_embedder({
                     "provider": "huggingface",
                     "config": {"api_url": "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"}
                 })
-            except Exception:
+            except (ConnectionError, ImportError, ValueError) as e:
+                logger.warning(f"HuggingFace fallback failed: {str(e)}, using local SentenceTransformers")
                 from chromadb.utils.embedding_functions.sentence_transformer_embedding_function import (
                     SentenceTransformerEmbeddingFunction,
                 )
+                logger.info("Using local SentenceTransformers embedding provider")
                 return SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
 
     @staticmethod
