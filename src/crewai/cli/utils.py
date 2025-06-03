@@ -406,8 +406,6 @@ def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
             )
             raise SystemExit(1)
 
-        # TODO: Security check: prevent any inject malicious code, or stuff like that
-
         return [
             {
                 "name": name,
