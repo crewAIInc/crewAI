@@ -7,7 +7,7 @@
     "light": "#F3A78B",
     "dark": "#C94C3C"
   },
-  "favicon": "favicon.svg",
+  "favicon": "images/favicon.svg",
   "contextual": {
     "options": ["copy", "view", "chatgpt", "claude"]
   },
@@ -74,6 +74,7 @@
               "concepts/collaboration",
               "concepts/training",
               "concepts/memory",
+              "concepts/reasoning",
               "concepts/planning",
               "concepts/testing",
               "concepts/cli",
@@ -82,95 +83,153 @@
             ]
           },
           {
-            "group": "Tools",
+            "group": "MCP Integration",
             "pages": [
-              "tools/aimindtool",
-              "tools/apifyactorstool",
-              "tools/bedrockinvokeagenttool",
-              "tools/bedrockkbretriever",
-              "tools/bravesearchtool",
-              "tools/browserbaseloadtool",
-              "tools/codedocssearchtool",
-              "tools/codeinterpretertool",
-              "tools/composiotool",
-              "tools/csvsearchtool",
-              "tools/dalletool",
-              "tools/directorysearchtool",
-              "tools/directoryreadtool",
-              "tools/docxsearchtool",
-              "tools/exasearchtool",
-              "tools/filereadtool",
-              "tools/filewritetool",
-              "tools/firecrawlcrawlwebsitetool",
-              "tools/firecrawlscrapewebsitetool",
-              "tools/firecrawlsearchtool",
-              "tools/githubsearchtool",
-              "tools/hyperbrowserloadtool",
-              "tools/linkupsearchtool",
-              "tools/llamaindextool",
-              "tools/langchaintool",
-              "tools/serperdevtool",
-              "tools/s3readertool",
-              "tools/s3writertool",
-              "tools/scrapegraphscrapetool",
-              "tools/scrapeelementfromwebsitetool",
-              "tools/jsonsearchtool",
-              "tools/mdxsearchtool",
-              "tools/mysqltool",
-              "tools/multiontool",
-              "tools/nl2sqltool",
-              "tools/patronustools",
-              "tools/pdfsearchtool",
-              "tools/pgsearchtool",
-              "tools/qdrantvectorsearchtool",
-              "tools/ragtool",
-              "tools/scrapewebsitetool",
-              "tools/scrapflyscrapetool",
-              "tools/seleniumscrapingtool",
-              "tools/snowflakesearchtool",
-              "tools/spidertool",
-              "tools/stagehandtool",
-              "tools/txtsearchtool",
-              "tools/visiontool",
-              "tools/weaviatevectorsearchtool",
-              "tools/websitesearchtool",
-              "tools/xmlsearchtool",
-              "tools/youtubechannelsearchtool",
-              "tools/youtubevideosearchtool"
+              "mcp/overview",
+              "mcp/stdio",
+              "mcp/sse",
+              "mcp/streamable-http",
+              "mcp/multiple-servers",
+              "mcp/security"
             ]
           },
           {
-            "group": "Agent Monitoring & Observability",
+            "group": "Tools",
             "pages": [
-              "how-to/agentops-observability",
-              "how-to/arize-phoenix-observability",
-              "how-to/langfuse-observability",
-              "how-to/langtrace-observability",
-              "how-to/mlflow-observability",
-              "how-to/openlit-observability",
-              "how-to/opik-observability",
-              "how-to/portkey-observability",
-              "how-to/weave-integration"
+              "tools/overview",
+              {
+                "group": "File & Document",
+                "pages": [
+                  "tools/file-document/overview",
+                  "tools/file-document/filereadtool",
+                  "tools/file-document/filewritetool",
+                  "tools/file-document/pdfsearchtool",
+                  "tools/file-document/docxsearchtool",
+                  "tools/file-document/mdxsearchtool",
+                  "tools/file-document/xmlsearchtool",
+                  "tools/file-document/txtsearchtool",
+                  "tools/file-document/jsonsearchtool",
+                  "tools/file-document/csvsearchtool",
+                  "tools/file-document/directorysearchtool",
+                  "tools/file-document/directoryreadtool"
+                ]
+              },
+              {
+                "group": "Web Scraping & Browsing",
+                "pages": [
+                  "tools/web-scraping/overview",
+                  "tools/web-scraping/scrapewebsitetool",
+                  "tools/web-scraping/scrapeelementfromwebsitetool",
+                  "tools/web-scraping/scrapflyscrapetool",
+                  "tools/web-scraping/seleniumscrapingtool",
+                  "tools/web-scraping/scrapegraphscrapetool",
+                  "tools/web-scraping/spidertool",
+                  "tools/web-scraping/browserbaseloadtool",
+                  "tools/web-scraping/hyperbrowserloadtool",
+                  "tools/web-scraping/stagehandtool",
+                  "tools/web-scraping/firecrawlcrawlwebsitetool",
+                  "tools/web-scraping/firecrawlscrapewebsitetool",
+                  "tools/web-scraping/firecrawlsearchtool"
+                ]
+              },
+              {
+                "group": "Search & Research",
+                "pages": [
+                  "tools/search-research/overview",
+                  "tools/search-research/serperdevtool",
+                  "tools/search-research/bravesearchtool",
+                  "tools/search-research/exasearchtool",
+                  "tools/search-research/linkupsearchtool",
+                  "tools/search-research/githubsearchtool",
+                  "tools/search-research/websitesearchtool",
+                  "tools/search-research/codedocssearchtool",
+                  "tools/search-research/youtubechannelsearchtool",
+                  "tools/search-research/youtubevideosearchtool"
+                ]
+              },
+              {
+                "group": "Database & Data",
+                "pages": [
+                  "tools/database-data/overview",
+                  "tools/database-data/mysqltool",
+                  "tools/database-data/pgsearchtool",
+                  "tools/database-data/snowflakesearchtool",
+                  "tools/database-data/nl2sqltool",
+                  "tools/database-data/qdrantvectorsearchtool",
+                  "tools/database-data/weaviatevectorsearchtool"
+                ]
+              },
+              {
+                "group": "AI & Machine Learning",
+                "pages": [
+                  "tools/ai-ml/overview",
+                  "tools/ai-ml/dalletool",
+                  "tools/ai-ml/visiontool",
+                  "tools/ai-ml/aimindtool",
+                  "tools/ai-ml/llamaindextool",
+                  "tools/ai-ml/langchaintool",
+                  "tools/ai-ml/ragtool",
+                  "tools/ai-ml/codeinterpretertool"
+                ]
+              },
+              {
+                "group": "Cloud & Storage",
+                "pages": [
+                  "tools/cloud-storage/overview",
+                  "tools/cloud-storage/s3readertool",
+                  "tools/cloud-storage/s3writertool",
+                  "tools/cloud-storage/bedrockinvokeagenttool",
+                  "tools/cloud-storage/bedrockkbretriever"
+                ]
+              },
+              {
+                "group": "Automation & Integration",
+                "pages": [
+                  "tools/automation/overview",
+                  "tools/automation/apifyactorstool",
+                  "tools/automation/composiotool",
+                  "tools/automation/multiontool"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Observability",
+            "pages": [
+              "observability/overview",
+              "observability/agentops",
+              "observability/arize-phoenix",
+              "observability/langfuse",
+              "observability/langtrace",
+              "observability/mlflow",
+              "observability/openlit",
+              "observability/opik",
+              "observability/patronus-evaluation",
+              "observability/portkey",
+              "observability/weave"
             ]
           },
           {
             "group": "Learn",
             "pages": [
-              "how-to/conditional-tasks",
-              "how-to/coding-agents",
-              "how-to/create-custom-tools",
-              "how-to/custom-llm",
-              "how-to/custom-manager-agent",
-              "how-to/customizing-agents",
-              "how-to/force-tool-output-as-result",
-              "how-to/hierarchical-process",
-              "how-to/human-input-on-execution",
-              "how-to/kickoff-async",
-              "how-to/kickoff-for-each",
-              "how-to/llm-connections",
-              "how-to/multimodal-agents",
-              "how-to/replay-tasks-from-latest-crew-kickoff",
-              "how-to/sequential-process"
+              "learn/overview",
+              "learn/conditional-tasks",
+              "learn/coding-agents",
+              "learn/create-custom-tools",
+              "learn/custom-llm",
+              "learn/custom-manager-agent",
+              "learn/customizing-agents",
+              "learn/dalle-image-generation",
+              "learn/force-tool-output-as-result",
+              "learn/hierarchical-process",
+              "learn/human-input-on-execution",
+              "learn/kickoff-async",
+              "learn/kickoff-for-each",
+              "learn/llm-connections",
+              "learn/multimodal-agents",
+              "learn/replay-tasks-from-latest-crew-kickoff",
+              "learn/sequential-process",
+              "learn/using-annotations"
             ]
           },
           {
@@ -191,22 +250,31 @@
             ]
           },
           {
+            "group": "Features",
+            "pages": [
+              "enterprise/features/tool-repository",
+              "enterprise/features/webhook-streaming",
+              "enterprise/features/traces",
+              "enterprise/features/hallucination-guardrail"
+            ]
+          },
+          {
             "group": "How-To Guides",
             "pages": [
               "enterprise/guides/build-crew",
               "enterprise/guides/deploy-crew",
               "enterprise/guides/kickoff-crew",
               "enterprise/guides/update-crew",
-              "enterprise/guides/use-crew-api",
-              "enterprise/guides/enable-crew-studio"
-            ]
-          },
-          {
-            "group": "Features",
-            "pages": [
-              "enterprise/features/tool-repository",
-              "enterprise/features/webhook-streaming",
-              "enterprise/features/traces"
+              "enterprise/guides/enable-crew-studio",
+              "enterprise/guides/azure-openai-setup",
+              "enterprise/guides/hubspot-trigger",
+              "enterprise/guides/react-component-export",
+              "enterprise/guides/salesforce-trigger",
+              "enterprise/guides/slack-trigger",
+              "enterprise/guides/team-management",
+              "enterprise/guides/webhook-automation",
+              "enterprise/guides/human-in-the-loop",
+              "enterprise/guides/zapier-trigger"
             ]
           },
           {
@@ -214,6 +282,21 @@
             "pages": [
               "enterprise/resources/frequently-asked-questions"
             ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "api-reference/introduction"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "openapi": "enterprise-api.yaml"
           }
         ]
       },
@@ -253,6 +336,11 @@
           "icon": "discourse"
         },
         {
+          "anchor": "Crew GPT",
+          "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+          "icon": "robot"
+        },
+        {
           "anchor": "Get Help",
           "href": "mailto:support@crewai.com",
           "icon": "headset"
@@ -261,8 +349,8 @@
     }
   },
   "logo": {
-    "light": "crew_only_logo.png",
-    "dark": "crew_only_logo.png"
+    "light": "images/crew_only_logo.png",
+    "dark": "images/crew_only_logo.png"
   },
   "appearance": {
     "default": "dark",
@@ -271,7 +359,7 @@
   "navbar": {
     "links": [
       {
-        "label": "Start Free Trial",
+        "label": "Start Cloud Trial",
         "href": "https://app.crewai.com"
       }
     ],
@@ -282,6 +370,16 @@
   },
   "search": {
     "prompt": "Search CrewAI docs"
+  },
+  "api": {
+    "baseUrl": "https://your-actual-crew-name.crewai.com",
+    "auth": {
+      "method": "bearer",
+      "name": "Authorization"
+    },
+    "playground": {
+      "mode": "simple"
+    }
   },
   "seo": {
     "indexing": "all"

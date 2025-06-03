@@ -1,5 +1,4 @@
 import asyncio
-import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
 from typing import Any, Callable, Type, get_args, get_origin
@@ -36,6 +35,10 @@ class BaseTool(BaseModel, ABC):
     """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
     result_as_answer: bool = False
     """Flag to check if the tool should be the final agent answer."""
+    max_usage_count: int | None = None
+    """Maximum number of times this tool can be used. None means unlimited usage."""
+    current_usage_count: int = 0
+    """Current number of times this tool has been used."""
 
     @field_validator("args_schema", mode="before")
     @classmethod
@@ -54,6 +57,13 @@ class BaseTool(BaseModel, ABC):
                 },
             },
         )
+        
+    @field_validator("max_usage_count", mode="before")
+    @classmethod
+    def validate_max_usage_count(cls, v: int | None) -> int | None:
+        if v is not None and v <= 0:
+            raise ValueError("max_usage_count must be a positive integer")
+        return v
 
     def model_post_init(self, __context: Any) -> None:
         self._generate_description()
@@ -70,9 +80,15 @@ class BaseTool(BaseModel, ABC):
 
         # If _run is async, we safely run it
         if asyncio.iscoroutine(result):
-            return asyncio.run(result)
-
+            result = asyncio.run(result)
+            
+        self.current_usage_count += 1
+        
         return result
+        
+    def reset_usage_count(self) -> None:
+        """Reset the current usage count to zero."""
+        self.current_usage_count = 0
 
     @abstractmethod
     def _run(
@@ -91,6 +107,8 @@ class BaseTool(BaseModel, ABC):
             args_schema=self.args_schema,
             func=self._run,
             result_as_answer=self.result_as_answer,
+            max_usage_count=self.max_usage_count,
+            current_usage_count=self.current_usage_count,
         )
 
     @classmethod
@@ -251,13 +269,14 @@ def to_langchain(
     return [t.to_structured_tool() if isinstance(t, BaseTool) else t for t in tools]
 
 
-def tool(*args, result_as_answer=False):
+def tool(*args, result_as_answer: bool = False, max_usage_count: int | None = None) -> Callable:
     """
     Decorator to create a tool from a function.
     
     Args:
         *args: Positional arguments, either the function to decorate or the tool name.
         result_as_answer: Flag to indicate if the tool result should be used as the final agent answer.
+        max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
     """
 
     def _make_with_name(tool_name: str) -> Callable:
@@ -284,6 +303,8 @@ def tool(*args, result_as_answer=False):
                 func=f,
                 args_schema=args_schema,
                 result_as_answer=result_as_answer,
+                max_usage_count=max_usage_count,
+                current_usage_count=0,
             )
 
         return _make_tool

@@ -1,0 +1,121 @@
+---
+title: "Webhook Automation"
+description: "Automate CrewAI Enterprise workflows using webhooks with platforms like ActivePieces, Zapier, and Make.com"
+icon: "webhook"
+---
+
+CrewAI Enterprise allows you to automate your workflow using webhooks. This article will guide you through the process of setting up and using webhooks to kickoff your crew execution, with a focus on integration with ActivePieces, a workflow automation platform similar to Zapier and Make.com.
+
+## Setting Up Webhooks
+
+<Steps>
+    <Step title="Accessing the Kickoff Interface">
+        - Navigate to the CrewAI Enterprise dashboard
+        - Look for the `/kickoff` section, which is used to start the crew execution
+            <Frame>
+                <img src="/images/enterprise/kickoff-interface.png" alt="Kickoff Interface" />
+            </Frame>
+    </Step>
+
+    <Step title="Configuring the JSON Content">
+        In the JSON Content section, you'll need to provide the following information:
+
+        - **inputs**: A JSON object containing:
+            - `company`: The name of the company (e.g., "tesla")
+            - `product_name`: The name of the product (e.g., "crewai")
+            - `form_response`: The type of response (e.g., "financial")
+            - `icp_description`: A brief description of the Ideal Customer Profile
+            - `product_description`: A short description of the product
+            - `taskWebhookUrl`, `stepWebhookUrl`, `crewWebhookUrl`: URLs for various webhook endpoints (ActivePieces, Zapier, Make.com or another compatible platform)
+    </Step>
+
+    <Step title="Integrating with ActivePieces">
+        In this example we will be using ActivePieces. You can use other platforms such as Zapier and Make.com
+
+        To integrate with ActivePieces:
+
+        1. Set up a new flow in ActivePieces
+        2. Add a trigger (e.g., `Every Day` schedule)
+            <Frame>
+                <img src="/images/enterprise/activepieces-trigger.png" alt="ActivePieces Trigger" />
+            </Frame>
+
+        3. Add an HTTP action step
+            - Set the action to `Send HTTP request`
+            - Use `POST` as the method
+            - Set the URL to your CrewAI Enterprise kickoff endpoint
+            - Add necessary headers (e.g., `Bearer Token`)
+                <Frame>
+                    <img src="/images/enterprise/activepieces-headers.png" alt="ActivePieces Headers" />
+                </Frame>
+
+            - In the body, include the JSON content as configured in step 2
+                <Frame>
+                    <img src="/images/enterprise/activepieces-body.png" alt="ActivePieces Body" />
+                </Frame>
+
+            - The crew will then kickoff at the pre-defined time.
+    </Step>
+
+    <Step title="Setting Up the Webhook">
+        1. Create a new flow in ActivePieces and name it 
+            <Frame>
+                <img src="/images/enterprise/activepieces-flow.png" alt="ActivePieces Flow" />
+            </Frame>
+
+        2. Add a webhook step as the trigger:
+            - Select `Catch Webhook` as the trigger type
+            - This will generate a unique URL that will receive HTTP requests and trigger your flow
+                <Frame>
+                    <img src="/images/enterprise/activepieces-webhook.png" alt="ActivePieces Webhook" />
+                </Frame>
+
+            - Configure the email to use crew webhook body text
+                <Frame>
+                    <img src="/images/enterprise/activepieces-email.png" alt="ActivePieces Email" />
+                </Frame>
+    </Step>
+</Steps>
+
+## Webhook Output Examples
+
+<Tabs>
+    <Tab title="Step Webhook">
+        `stepWebhookUrl` - Callback that will be executed upon each agent inner thought
+
+        ```json
+        {
+            "action": "**Preliminary Research Report on the Financial Industry for crewai Enterprise Solution**\n1. Industry Overview and Trends\nThe financial industry in ....\nConclusion:\nThe financial industry presents a fertile ground for implementing AI solutions like crewai, particularly in areas such as digital customer engagement, risk management, and regulatory compliance. Further engagement with the lead is recommended to better tailor the crewai solution to their specific needs and scale.",
+            "task_id": "97eba64f-958c-40a0-b61c-625fe635a3c0"
+        }
+        ```
+    </Tab>
+    <Tab title="Task Webhook">
+        `taskWebhookUrl` - Callback that will be executed upon the end of each task
+
+        ```json
+        {
+            "description": "Using the information gathered from the lead's data, conduct preliminary research on the lead's industry, company background, and potential use cases for crewai. Focus on finding relevant data that can aid in scoring the lead and planning a strategy to pitch them crewai.The financial industry presents a fertile ground for implementing AI solutions like crewai, particularly in areas such as digital customer engagement, risk management, and regulatory compliance. Further engagement with the lead is recommended to better tailor the crewai solution to their specific needs and scale.",
+            "task_id": "97eba64f-958c-40a0-b61c-625fe635a3c0"
+        }
+        ```
+    </Tab>
+    <Tab title="Crew Webhook">
+        `crewWebhookUrl` - Callback that will be executed upon the end of the crew execution
+
+        ```json
+        {
+            "task_id": "97eba64f-958c-40a0-b61c-625fe635a3c0",
+            "result": {
+                "lead_score": "Customer service enhancement, and compliance are particularly relevant.",
+                "talking_points": [
+                    "Highlight how crewai's AI solutions can transform customer service with automated, personalized experiences and 24/7 support, improving both customer satisfaction and operational efficiency.",
+                    "Discuss crewai's potential to help the institution achieve its sustainability goals through better data analysis and decision-making, contributing to responsible investing and green initiatives.",
+                    "Emphasize crewai's ability to enhance compliance with evolving regulations through efficient data processing and reporting, reducing the risk of non-compliance penalties.",
+                    "Stress the adaptability of crewai to support both extensive multinational operations and smaller, targeted projects, ensuring the solution grows with the institution's needs."
+                ]
+            }
+        }
+        ```
+    </Tab>
+</Tabs> 

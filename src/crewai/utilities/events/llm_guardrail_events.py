@@ -19,10 +19,13 @@ class LLMGuardrailStartedEvent(BaseEvent):
         from inspect import getsource
 
         from crewai.tasks.llm_guardrail import LLMGuardrail
+        from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
 
         super().__init__(**data)
 
-        if isinstance(self.guardrail, LLMGuardrail):
+        if isinstance(self.guardrail, LLMGuardrail) or isinstance(
+            self.guardrail, HallucinationGuardrail
+        ):
             self.guardrail = self.guardrail.description.strip()
         elif isinstance(self.guardrail, Callable):
             self.guardrail = getsource(self.guardrail).strip()
