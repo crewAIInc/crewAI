@@ -1564,8 +1564,8 @@ def test_selective_execution_with_tags(researcher, writer):
     selector = crew.task_selector
     inputs = {"action": "forecast"}
     
-    assert selector(inputs, forecast_task) == True
-    assert selector(inputs, news_task) == False
+    assert selector(inputs, forecast_task) is True
+    assert selector(inputs, news_task) is False
 
 
 def test_selective_process_type(researcher):
@@ -1607,7 +1607,7 @@ def test_selective_execution_no_matching_tasks_error(researcher):
     selector = crew.task_selector
     inputs = {"action": "nonexistent"}
     
-    assert selector(inputs, task) == False
+    assert selector(inputs, task) is False
 
 
 def test_selective_process_missing_selector_error(researcher):
@@ -1657,11 +1657,11 @@ def test_tag_selector_with_mapping(researcher, writer):
     
     selector = crew.task_selector
     
-    assert selector({"action": "analyze"}, task1) == True
-    assert selector({"action": "analyze"}, task2) == False
+    assert selector({"action": "analyze"}, task1) is True
+    assert selector({"action": "analyze"}, task2) is False
     
-    assert selector({"action": "report"}, task1) == False
-    assert selector({"action": "report"}, task2) == True
+    assert selector({"action": "report"}, task1) is False
+    assert selector({"action": "report"}, task2) is True
 
 
 def test_selective_execution_no_action_executes_all(researcher, writer):
@@ -1690,8 +1690,8 @@ def test_selective_execution_no_action_executes_all(researcher, writer):
     selector = crew.task_selector
     inputs = {}
     
-    assert selector(inputs, task1) == True
-    assert selector(inputs, task2) == True
+    assert selector(inputs, task1) is True
+    assert selector(inputs, task2) is True
 
 
 def test_selective_execution_no_tags_executes_all(researcher, writer):
@@ -1717,16 +1717,16 @@ def test_selective_execution_no_tags_executes_all(researcher, writer):
     # Test that tasks without tags are selected when no action or when action doesn't match
     selector = crew.task_selector
     
-    assert selector({}, task1) == True
-    assert selector({}, task2) == True
+    assert selector({}, task1) is True
+    assert selector({}, task2) is True
     
-    assert selector({"action": "anything"}, task1) == True
-    assert selector({"action": "anything"}, task2) == True
+    assert selector({"action": "anything"}, task1) is True
+    assert selector({"action": "anything"}, task2) is True
 
 
 def test_selective_execution_with_invalid_tags(researcher):
     """Test that invalid tag types raise validation errors."""
-    with pytest.raises(ValueError, match="All tags must be strings"):
+    with pytest.raises(ValueError, match="Input should be a valid string"):
         Task(
             description="Test task",
             expected_output="Test output",
