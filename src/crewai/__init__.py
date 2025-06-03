@@ -34,6 +34,6 @@ __all__ = [
 ]
 
 try:
-    from . import integrations
+    from . import integrations  # noqa: F401
 except ImportError:
     pass
