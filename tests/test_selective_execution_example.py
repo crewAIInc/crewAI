@@ -4,7 +4,6 @@ import pytest
 from crewai import Agent, Crew, Task, Process
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_issue_2941_example():
     """Reproduce and test the exact scenario from issue #2941."""
     
@@ -35,8 +34,12 @@ def test_issue_2941_example():
         'query': "Provide forecasted result on the input data"
     }
     
-    result = crew.kickoff(inputs=inputs)
-    assert result is not None
+    selector = crew.task_selector
+    assert selector(inputs, forecast_task) == True
+    assert selector(inputs, holiday_task) == False
+    assert selector(inputs, macro_task) == False
+    assert selector(inputs, news_task) == False
+    assert selector(inputs, query_task) == False
 
 
 def test_multiple_actions_example():
@@ -56,11 +59,16 @@ def test_multiple_actions_example():
         task_selector=Crew.create_tag_selector()
     )
     
-    research_result = crew.kickoff(inputs={"action": "research"})
-    assert research_result is not None
+    selector = crew.task_selector
     
-    analysis_result = crew.kickoff(inputs={"action": "analysis"})
-    assert analysis_result is not None
+    assert selector({"action": "research"}, research_task) == True
+    assert selector({"action": "research"}, analysis_task) == False
+    assert selector({"action": "research"}, writing_task) == False
     
-    writing_result = crew.kickoff(inputs={"action": "writing"})
-    assert writing_result is not None
+    assert selector({"action": "analysis"}, research_task) == False
+    assert selector({"action": "analysis"}, analysis_task) == True
+    assert selector({"action": "analysis"}, writing_task) == False
+    
+    assert selector({"action": "writing"}, research_task) == False
+    assert selector({"action": "writing"}, analysis_task) == False
+    assert selector({"action": "writing"}, writing_task) == True

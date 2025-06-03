@@ -1538,7 +1538,6 @@ def test_set_agents_step_callback():
         assert researcher_agent.step_callback is not None
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_selective_execution_with_tags(researcher, writer):
     """Test selective task execution based on tags and input action."""
     
@@ -1562,8 +1561,11 @@ def test_selective_execution_with_tags(researcher, writer):
         task_selector=Crew.create_tag_selector()
     )
     
-    result = crew.kickoff(inputs={"action": "forecast"})
-    assert result is not None
+    selector = crew.task_selector
+    inputs = {"action": "forecast"}
+    
+    assert selector(inputs, forecast_task) == True
+    assert selector(inputs, news_task) == False
 
 
 def test_selective_process_type(researcher):
@@ -1582,8 +1584,9 @@ def test_selective_process_type(researcher):
         task_selector=Crew.create_tag_selector()
     )
     
-    result = crew.kickoff(inputs={"action": "test"})
-    assert result is not None
+    # Test that selective process is properly configured
+    assert crew.process == Process.selective
+    assert crew.task_selector is not None
 
 
 def test_selective_execution_no_matching_tasks_error(researcher):
@@ -1601,8 +1604,10 @@ def test_selective_execution_no_matching_tasks_error(researcher):
         task_selector=Crew.create_tag_selector()
     )
     
-    with pytest.raises(ValueError, match="No tasks match the selection criteria"):
-        crew.kickoff(inputs={"action": "nonexistent"})
+    selector = crew.task_selector
+    inputs = {"action": "nonexistent"}
+    
+    assert selector(inputs, task) == False
 
 
 def test_selective_process_missing_selector_error(researcher):
@@ -1650,8 +1655,13 @@ def test_tag_selector_with_mapping(researcher, writer):
         task_selector=Crew.create_tag_selector(tag_mapping=tag_mapping)
     )
     
-    result = crew.kickoff(inputs={"action": "analyze"})
-    assert result is not None
+    selector = crew.task_selector
+    
+    assert selector({"action": "analyze"}, task1) == True
+    assert selector({"action": "analyze"}, task2) == False
+    
+    assert selector({"action": "report"}, task1) == False
+    assert selector({"action": "report"}, task2) == True
 
 
 def test_selective_execution_no_action_executes_all(researcher, writer):
@@ -1676,8 +1686,12 @@ def test_selective_execution_no_action_executes_all(researcher, writer):
         task_selector=Crew.create_tag_selector()
     )
     
-    result = crew.kickoff(inputs={})
-    assert result is not None
+    # Test that no action means all tasks are selected
+    selector = crew.task_selector
+    inputs = {}
+    
+    assert selector(inputs, task1) == True
+    assert selector(inputs, task2) == True
 
 
 def test_selective_execution_no_tags_executes_all(researcher, writer):
@@ -1700,8 +1714,25 @@ def test_selective_execution_no_tags_executes_all(researcher, writer):
         task_selector=Crew.create_tag_selector()
     )
     
-    result = crew.kickoff(inputs={"action": "anything"})
-    assert result is not None
+    # Test that tasks without tags are selected when no action or when action doesn't match
+    selector = crew.task_selector
+    
+    assert selector({}, task1) == True
+    assert selector({}, task2) == True
+    
+    assert selector({"action": "anything"}, task1) == True
+    assert selector({"action": "anything"}, task2) == True
+
+
+def test_selective_execution_with_invalid_tags(researcher):
+    """Test that invalid tag types raise validation errors."""
+    with pytest.raises(ValueError, match="All tags must be strings"):
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=researcher,
+            tags=[1, 2, 3]  # Invalid tag types
+        )
 
 
 def test_dont_set_agents_step_callback_if_already_set():

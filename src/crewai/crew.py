@@ -848,7 +848,12 @@ class Crew(FlowTrackable, BaseModel):
                 if self.task_selector(self._inputs, task)
             ]
             if not filtered_tasks:
-                raise ValueError("No tasks match the selection criteria. At least one task must be selected for execution.")
+                action = self._inputs.get('action', 'unknown')
+                available_tags = [task.tags for task in tasks if task.tags]
+                raise ValueError(
+                    f"No tasks match the selection criteria for action '{action}'. "
+                    f"Available tags: {available_tags}"
+                )
             tasks = filtered_tasks
 
         task_outputs: List[TaskOutput] = []
@@ -1553,13 +1558,14 @@ class Crew(FlowTrackable, BaseModel):
         """
         def selector(inputs: Dict[str, Any], task: Task) -> bool:
             action = inputs.get(action_key)
-            if not action or not task.tags:
+            if not action:
                 return True
+            if not task.tags:
+                return True  # Execute untagged tasks when action is specified
                 
             if tag_mapping and action in tag_mapping:
                 required_tags = tag_mapping[action]
                 return any(tag in task.tags for tag in required_tags)
-            else:
-                return action in task.tags
+            return action in task.tags
                 
         return selector
