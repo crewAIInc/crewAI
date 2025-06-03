@@ -89,6 +89,9 @@ dev-dependencies = [
     "pytest-randomly>=3.16.0",
     "pytest-timeout>=2.3.1",
 ]
+constraint-dependencies = [
+    "pytest-vcr; python_version>='0'",
+]
 
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
@@ -120,6 +123,17 @@ torch = [
 torchvision = [
   { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
   { index = "pytorch", marker = "python_version < '3.13'" },
+]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "--strict-markers --disable-warnings --tb=short"
+markers = [
+    "vcr: marks tests as using VCR.py for HTTP request recording",
 ]
 
 [build-system]

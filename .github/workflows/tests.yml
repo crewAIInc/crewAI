@@ -28,7 +28,9 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
-        run: uv sync --dev --all-extras
+        run: |
+          uv sync --dev --all-extras
+          uv pip uninstall pytest-vcr --quiet || true
 
       - name: Run tests
         run: uv run pytest --block-network --timeout=60 -vv
