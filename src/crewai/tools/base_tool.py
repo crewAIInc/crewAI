@@ -1,7 +1,7 @@
 import asyncio
 from abc import ABC, abstractmethod
 from inspect import signature
-from typing import Any, Callable, Type, get_args, get_origin
+from typing import Any, Callable, Type, get_args, get_origin, Optional, List
 
 from pydantic import (
     BaseModel,
@@ -14,6 +14,11 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
 
+class EnvVar(BaseModel):
+    name: str
+    description: str
+    required: bool = True
+    default: Optional[str] = None
 
 class BaseTool(BaseModel, ABC):
     class _ArgsSchemaPlaceholder(PydanticBaseModel):
@@ -25,6 +30,8 @@ class BaseTool(BaseModel, ABC):
     """The unique name of the tool that clearly communicates its purpose."""
     description: str
     """Used to tell the model how/when/why to use the tool."""
+    env_vars: List[EnvVar] = []
+    """List of environment variables used by the tool."""
     args_schema: Type[PydanticBaseModel] = Field(
         default_factory=_ArgsSchemaPlaceholder, validate_default=True
     )
