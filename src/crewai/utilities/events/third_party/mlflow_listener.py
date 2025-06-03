@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 import logging
 
 from crewai.utilities.events.crew_events import (

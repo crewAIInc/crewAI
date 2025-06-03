@@ -1,8 +1,7 @@
 """
 Final test for MLflow integration issue #2947
 """
-import pytest
-from unittest.mock import Mock, patch
+
 
 
 def test_mlflow_autolog_availability():

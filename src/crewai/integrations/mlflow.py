@@ -1,6 +1,5 @@
 """MLflow integration for CrewAI"""
 import logging
-from typing import Optional
 
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.third_party.mlflow_listener import mlflow_listener
@@ -18,9 +17,14 @@ def autolog(
     Args:
         disable: If True, disable autologging. If False, enable it.
         silent: If True, suppress logging messages.
+        
+    Raises:
+        TypeError: If disable or silent are not boolean values.
     """
+    if not isinstance(disable, bool) or not isinstance(silent, bool):
+        raise TypeError("Parameters 'disable' and 'silent' must be boolean")
     try:
-        import mlflow
+        import mlflow  # noqa: F401
     except ImportError:
         if not silent:
             logger.warning(
