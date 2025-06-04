@@ -96,6 +96,7 @@ def test_streaming_with_multiple_agents():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Agent response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent1 = Agent(

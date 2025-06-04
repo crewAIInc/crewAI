@@ -187,6 +187,7 @@ def test_streaming_integration_with_llm():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Here's a joke: Why did the robot cross the road? To get to the other side!"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(
