@@ -2038,7 +2038,7 @@ def mock_get_auth_token():
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
-    from crewai_tools import SerperDevTool
+    from crewai_tools import SerperDevTool, XMLSearchTool
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
@@ -2046,7 +2046,10 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "SerperDevTool"}],
+        "tools": [
+            {"module": "crewai_tools", "name": "SerperDevTool"},
+            {"module": "crewai_tools", "name": "XMLSearchTool"},
+        ],
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent")
@@ -2054,8 +2057,9 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     assert agent.role == "test role"
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
-    assert len(agent.tools) == 1
+    assert len(agent.tools) == 2
     assert isinstance(agent.tools[0], SerperDevTool)
+    assert isinstance(agent.tools[1], XMLSearchTool)
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
@@ -2068,7 +2072,7 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "SerperDevTool"}],
+        "tools": [{"name": "SerperDevTool", "module": "crewai_tools"}],
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent", role="Custom Role")
@@ -2088,7 +2092,7 @@ def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "DoesNotExist"}],
+        "tools": [{"name": "DoesNotExist", "module": "crewai_tools",}],
     }
     mock_get_agent.return_value = mock_get_response
     with pytest.raises(
