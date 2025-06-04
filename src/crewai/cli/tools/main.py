@@ -89,7 +89,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if available_exports:
             console.print(
-                f"[green]Found these tools to publish: {', '.join(available_exports)}[/green]"
+                f"[green]Found these tools to publish: {', '.join([e['name'] for e in available_exports])}[/green]"
             )
 
         with tempfile.TemporaryDirectory() as temp_build_dir:

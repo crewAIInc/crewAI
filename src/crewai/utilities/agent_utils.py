@@ -464,7 +464,7 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
-                        module = importlib.import_module("crewai_tools")
+                        module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
                         attributes[key].append(tool_class())
                     except Exception as e:
