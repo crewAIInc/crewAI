@@ -1,9 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from crewai import Agent, Task, Crew
-from crewai.llm import LLM
 from crewai.utilities.events.crew_events import CrewStreamChunkEvent, TaskStreamChunkEvent, AgentStreamChunkEvent
-from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
 
 @pytest.fixture
@@ -55,6 +53,7 @@ def test_crew_streaming_enabled():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(
@@ -93,6 +92,7 @@ def test_crew_streaming_disabled_by_default():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(
@@ -213,7 +213,7 @@ def test_streaming_integration_with_llm():
             mock_executor._stream_callback = None
             mock_executor._task_description = None
             
-            result = crew.kickoff(stream=True, stream_callback=stream_callback)
+            crew.kickoff(stream=True, stream_callback=stream_callback)
             
             assert hasattr(agent.agent_executor, '_stream_callback')
             assert hasattr(agent.agent_executor, '_task_description')
@@ -224,6 +224,7 @@ def test_streaming_parameters_propagation():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(

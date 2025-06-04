@@ -254,6 +254,8 @@ class BaseAgent(ABC, BaseModel):
         task: Any,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        stream: bool = False,
+        stream_callback: Optional[Callable[[str, str, str, str], None]] = None,
     ) -> str:
         pass
 

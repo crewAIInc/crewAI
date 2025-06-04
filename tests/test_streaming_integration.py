@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import Mock, patch
 from crewai import Agent, Task, Crew
 from crewai.utilities.events.crew_events import CrewStreamChunkEvent
@@ -21,6 +20,7 @@ def test_streaming_callback_integration():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(
@@ -132,7 +132,7 @@ def test_streaming_with_multiple_agents():
             verbose=False
         )
         
-        result = crew.kickoff(stream=True, stream_callback=stream_callback)
+        crew.kickoff(stream=True, stream_callback=stream_callback)
         
         assert hasattr(crew, '_stream_enabled')
         assert crew._stream_enabled is True
@@ -145,6 +145,7 @@ def test_streaming_disabled_by_default():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(
@@ -180,6 +181,7 @@ def test_streaming_parameters_propagation():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(

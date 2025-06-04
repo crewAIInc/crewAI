@@ -820,7 +820,7 @@ def test_crew_streaming_events():
         )
 
         # Execute with streaming enabled
-        result = crew.kickoff(stream=True)
+        crew.kickoff(stream=True)
 
         # Verify that we received crew stream chunks
         assert len(received_crew_chunks) > 0

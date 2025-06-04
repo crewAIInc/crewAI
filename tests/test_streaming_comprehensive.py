@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from crewai import Agent, Task, Crew
 from crewai.utilities.events.crew_events import CrewStreamChunkEvent
 from crewai.utilities.events.llm_events import LLMStreamChunkEvent
@@ -21,6 +20,7 @@ def test_streaming_callback_called():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(
@@ -78,6 +78,7 @@ def test_streaming_disabled_by_default():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(
@@ -113,6 +114,7 @@ def test_streaming_parameters_propagation():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(
@@ -155,6 +157,7 @@ def test_async_task_streaming():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Test response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent = Agent(
@@ -208,8 +211,8 @@ def test_llm_stream_chunk_to_crew_stream_chunk():
         
         llm_event = LLMStreamChunkEvent(chunk="test chunk")
         
-        from crewai.utilities.events.event_listener import event_listener
-        event_listener.on_llm_stream_chunk(mock_source, llm_event)
+        from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+        crewai_event_bus.emit(mock_source, llm_event)
         
         assert len(received_crew_chunks) == 1
         crew_event = received_crew_chunks[0]
@@ -263,7 +266,7 @@ def test_multiple_agents_streaming():
             verbose=False
         )
         
-        result = crew.kickoff(stream=True, stream_callback=stream_callback)
+        crew.kickoff(stream=True, stream_callback=stream_callback)
         
         assert hasattr(crew, '_stream_enabled')
         assert crew._stream_enabled is True
