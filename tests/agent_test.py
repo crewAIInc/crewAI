@@ -309,7 +309,9 @@ def test_cache_hitting():
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    with (patch.object(CacheHandler, "read") as read,):
+    with (
+        patch.object(CacheHandler, "read") as read,
+    ):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -1628,13 +1630,13 @@ def test_agent_execute_task_with_ollama():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
-    # Create a knowledge source with some content
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
     with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.search.return_value = [{"content": content}]
+        MockKnowledge.add_sources.return_value = [string_source]
 
         agent = Agent(
             role="Information Agent",
@@ -1644,7 +1646,6 @@ def test_agent_with_knowledge_sources():
             knowledge_sources=[string_source],
         )
 
-        # Create a task that requires the agent to use the knowledge
         task = Task(
             description="What is Brandon's favorite color?",
             expected_output="Brandon's favorite color.",
@@ -1652,10 +1653,11 @@ def test_agent_with_knowledge_sources():
         )
 
         crew = Crew(agents=[agent], tasks=[task])
-        result = crew.kickoff()
-
-        # Assert that the agent provides the correct information
-        assert "red" in result.raw.lower()
+        with patch.object(Knowledge, "add_sources") as mock_add_sources:
+            result = crew.kickoff()
+            assert mock_add_sources.called, "add_sources() should have been called"
+            mock_add_sources.assert_called_once()
+            assert "red" in result.raw.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
