@@ -211,7 +211,6 @@ def test_llm_stream_chunk_to_crew_stream_chunk():
         
         llm_event = LLMStreamChunkEvent(chunk="test chunk")
         
-        from crewai.utilities.events.crewai_event_bus import crewai_event_bus
         crewai_event_bus.emit(mock_source, llm_event)
         
         assert len(received_crew_chunks) == 1
@@ -230,6 +229,7 @@ def test_multiple_agents_streaming():
     with patch('crewai.llm.LLM') as mock_llm_class:
         mock_llm = Mock()
         mock_llm.call.return_value = "Agent response"
+        mock_llm.supports_stop_words = True
         mock_llm_class.return_value = mock_llm
         
         agent1 = Agent(

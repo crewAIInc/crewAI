@@ -1,4 +1,4 @@
-from typing import Any, AsyncIterable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import Field, PrivateAttr
 
@@ -22,7 +22,6 @@ from crewai.utilities.events.agent_events import (
 )
 
 try:
-    from langchain_core.messages import ToolMessage
     from langgraph.checkpoint.memory import MemorySaver
     from langgraph.prebuilt import create_react_agent
 
@@ -126,6 +125,8 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
         task: Any,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        stream: bool = False,
+        stream_callback: Optional[Any] = None,
     ) -> str:
         """Execute a task using the LangGraph workflow."""
         self.create_agent_executor(tools)
