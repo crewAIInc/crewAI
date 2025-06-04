@@ -3159,7 +3159,7 @@ def test_replay_with_context_set_to_nullable():
         )
         crew.kickoff()
 
-    mock_execute_task.assert_called_with(agent=ANY, context="", tools=ANY)
+    mock_execute_task.assert_called_with(agent=ANY, context="", tools=ANY, stream=False, stream_callback=None)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -4069,7 +4069,7 @@ def test_crew_guardrail_feedback_in_context():
 
     with patch.object(Agent, "execute_task") as mock_execute_task:
         # Define side_effect to capture context and return different responses
-        def side_effect(task, context=None, tools=None):
+        def side_effect(task, context=None, tools=None, stream=False, stream_callback=None):
             execution_contexts.append(context if context else "")
             if len(execution_contexts) == 1:
                 return "This is a test response"

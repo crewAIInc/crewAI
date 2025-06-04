@@ -89,7 +89,7 @@ def test_task_prompt_includes_expected_output():
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
         task.execute_sync(agent=researcher)
-        execute.assert_called_once_with(task=task, context=None, tools=[])
+        execute.assert_called_once_with(task=task, context=None, tools=[], stream=False, stream_callback=None)
 
 
 def test_task_callback():
@@ -181,7 +181,7 @@ def test_execute_with_agent():
 
     with patch.object(Agent, "execute_task", return_value="ok") as execute:
         task.execute_sync(agent=researcher)
-        execute.assert_called_once_with(task=task, context=None, tools=[])
+        execute.assert_called_once_with(task=task, context=None, tools=[], stream=False, stream_callback=None)
 
 
 def test_async_execution():
@@ -203,7 +203,7 @@ def test_async_execution():
         execution = task.execute_async(agent=researcher)
         result = execution.result()
         assert result.raw == "ok"
-        execute.assert_called_once_with(task=task, context=None, tools=[])
+        execute.assert_called_once_with(task=task, context=None, tools=[], stream=False, stream_callback=None)
 
 
 def test_multiple_output_type_error():
