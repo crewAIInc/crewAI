@@ -133,6 +133,47 @@ Choose the right model for your use case:
 - **For vision tasks**: Use Llama 3.2 Vision models
 - **For coding**: Consider DeepSeek or specialized coding models
 
+## Performance Considerations
+
+### Context Window Management
+
+AI/ML API models support large context windows, but be mindful of:
+
+- **Memory Usage**: Large context windows (>100K tokens) may require significant memory
+- **Processing Time**: Larger contexts take longer to process
+- **Cost Impact**: Most providers charge based on token usage
+
+### Rate Limiting Best Practices
+
+AI/ML API implements rate limiting to ensure fair usage:
+
+- **Implement Retry Logic**: Use exponential backoff for rate limit errors
+- **Monitor Usage**: Track your API usage through the AI/ML API dashboard
+- **Batch Requests**: Group multiple requests when possible to optimize throughput
+- **Cache Results**: Store frequently used responses to reduce API calls
+
+```python
+import time
+from crewai import LLM
+
+def create_llm_with_retry(model_name, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            return LLM(model=model_name)
+        except Exception as e:
+            if "rate limit" in str(e).lower() and attempt < max_retries - 1:
+                wait_time = 2 ** attempt  # Exponential backoff
+                time.sleep(wait_time)
+                continue
+            raise e
+```
+
+### Cost Optimization
+
+- **Model Selection**: Choose appropriate model size for your use case
+- **Context Management**: Trim unnecessary context to reduce token usage
+- **Streaming**: Use streaming for real-time applications to improve perceived performance
+
 ## Troubleshooting
 
 ### Common Issues
@@ -141,6 +182,7 @@ Choose the right model for your use case:
 2. **Model Not Found**: Verify the model name uses the correct `openai/` prefix
 3. **Rate Limits**: AI/ML API has rate limits; implement appropriate retry logic
 4. **Context Length**: Monitor context window usage for optimal performance
+5. **Memory Issues**: Large context windows may cause memory problems; monitor usage
 
 ### Getting Help
 

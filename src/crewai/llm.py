@@ -1119,7 +1119,7 @@ class LLM(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """
-        Returns the context window size, using 75% of the maximum to avoid
+        Returns the context window size, using 85% of the maximum to avoid
         cutting off messages mid-thread.
 
         Raises:
@@ -1130,6 +1130,7 @@ class LLM(BaseLLM):
 
         MIN_CONTEXT = 1024
         MAX_CONTEXT = 2097152  # Current max from gemini-1.5-pro
+        MAX_SAFE_CONTEXT = 100000  # Warn for very large context windows
 
         # Validate all context window sizes
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
@@ -1144,6 +1145,9 @@ class LLM(BaseLLM):
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
             if self.model.startswith(key):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
+                if value > MAX_SAFE_CONTEXT:
+                    import warnings
+                    warnings.warn(f"Model {self.model} uses large context window ({value}). Monitor memory usage.")
         return self.context_window_size
 
     def set_callbacks(self, callbacks: List[Any]):
