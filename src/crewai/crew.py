@@ -615,12 +615,29 @@ class Crew(FlowTrackable, BaseModel):
     def kickoff(
         self,
         inputs: Optional[Dict[str, Any]] = None,
+        stream: bool = False,
+        stream_callback: Optional[Callable[[str, str, str, str], None]] = None,
     ) -> CrewOutput:
+        """
+        Starts the crew to work on its assigned tasks.
+
+        Args:
+            inputs (dict): Inputs to be used by the crew.
+            stream (bool): Whether to enable streaming output.
+            stream_callback (callable): Callback function for streaming chunks.
+                                      Signature: (chunk, agent_role, task_description, step_type)
+
+        Returns:
+            CrewOutput: The output of the crew.
+        """
         try:
             for before_callback in self.before_kickoff_callbacks:
                 if inputs is None:
                     inputs = {}
                 inputs = before_callback(inputs)
+
+            self._stream_enabled = stream
+            self._stream_callback = stream_callback
 
             crewai_event_bus.emit(
                 self,
@@ -865,6 +882,8 @@ class Crew(FlowTrackable, BaseModel):
                     agent=agent_to_use,
                     context=context,
                     tools=cast(List[BaseTool], tools_for_task),
+                    stream=getattr(self, '_stream_enabled', False),
+                    stream_callback=getattr(self, '_stream_callback', None),
                 )
                 futures.append((task, future, task_index))
             else:
@@ -877,6 +896,8 @@ class Crew(FlowTrackable, BaseModel):
                     agent=agent_to_use,
                     context=context,
                     tools=cast(List[BaseTool], tools_for_task),
+                    stream=getattr(self, '_stream_enabled', False),
+                    stream_callback=getattr(self, '_stream_callback', None),
                 )
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)

@@ -779,3 +779,54 @@ def test_streaming_empty_response_handling():
         finally:
             # Restore the original method
             llm.call = original_call
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_streaming_events():
+    """Test that crew streaming events are emitted correctly."""
+    from crewai.utilities.events.crew_events import CrewStreamChunkEvent
+    received_crew_chunks = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(CrewStreamChunkEvent)
+        def handle_crew_stream_chunk(source, event):
+            received_crew_chunks.append(event)
+
+        # Create an LLM with streaming enabled
+        llm = LLM(model="gpt-4o-mini", stream=True)
+
+        # Create agent and task
+        from crewai import Agent, Task, Crew
+        
+        agent = Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm=llm,
+            verbose=False
+        )
+        
+        task = Task(
+            description="Tell me a short joke",
+            expected_output="A short joke",
+            agent=agent
+        )
+        
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            verbose=False
+        )
+
+        # Execute with streaming enabled
+        result = crew.kickoff(stream=True)
+
+        # Verify that we received crew stream chunks
+        assert len(received_crew_chunks) > 0
+        
+        for chunk_event in received_crew_chunks:
+            assert chunk_event.type == "crew_stream_chunk"
+            assert chunk_event.agent_role == "Test Agent"
+            assert chunk_event.step_type == "llm_response"
+            assert isinstance(chunk_event.chunk, str)
