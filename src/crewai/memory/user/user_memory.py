@@ -52,7 +52,10 @@ class UserMemory(Memory):
         return results
 
     def reset(self) -> None:
+        """Reset the user memory storage."""
         try:
             self.storage.reset()
+        except AttributeError as e:
+            raise AttributeError(f"Storage implementation does not support reset: {e}")
         except Exception as e:
-            raise Exception(f"An error occurred while resetting the user memory: {e}")
+            raise RuntimeError(f"An error occurred while resetting the user memory: {e}")
