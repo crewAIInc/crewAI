@@ -165,7 +165,7 @@ def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=["SampleTool"])
+@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
 def test_publish_when_not_in_sync_and_force(
     mock_available_exports,
     mock_is_synced,
@@ -200,7 +200,7 @@ def test_publish_when_not_in_sync_and_force(
         version="1.0.0",
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
-        available_exports=["SampleTool"],
+        available_exports=[{"name": "SampleTool"}],
     )
 
 
@@ -216,7 +216,7 @@ def test_publish_when_not_in_sync_and_force(
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=True)
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=["SampleTool"])
+@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
 def test_publish_success(
     mock_available_exports,
     mock_is_synced,
@@ -251,7 +251,7 @@ def test_publish_success(
         version="1.0.0",
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
-        available_exports=["SampleTool"],
+        available_exports=[{"name": "SampleTool"}],
     )
 
 
@@ -266,7 +266,7 @@ def test_publish_success(
     read_data=b"sample tarball content",
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=["SampleTool"])
+@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
 def test_publish_failure(
     mock_available_exports,
     mock_publish,
@@ -304,7 +304,7 @@ def test_publish_failure(
     read_data=b"sample tarball content",
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=["SampleTool"])
+@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
 def test_publish_api_error(
     mock_available_exports,
     mock_publish,
