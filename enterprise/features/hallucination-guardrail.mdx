@@ -1,0 +1,245 @@
+---
+title: Hallucination Guardrail
+description: "Prevent and detect AI hallucinations in your CrewAI tasks"
+icon: "shield-check"
+---
+
+## Overview
+
+The Hallucination Guardrail is an enterprise feature that validates AI-generated content to ensure it's grounded in facts and doesn't contain hallucinations. It analyzes task outputs against reference context and provides detailed feedback when potentially hallucinated content is detected.
+
+## What are Hallucinations?
+
+AI hallucinations occur when language models generate content that appears plausible but is factually incorrect or not supported by the provided context. The Hallucination Guardrail helps prevent these issues by:
+
+- Comparing outputs against reference context
+- Evaluating faithfulness to source material
+- Providing detailed feedback on problematic content
+- Supporting custom thresholds for validation strictness
+
+## Basic Usage
+
+### Setting Up the Guardrail
+
+```python
+from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
+from crewai import LLM
+
+# Initialize the guardrail with reference context
+guardrail = HallucinationGuardrail(
+    context="AI helps with various tasks including analysis and generation.",
+    llm=LLM(model="gpt-4o-mini")
+)
+```
+
+### Adding to Tasks
+
+```python
+from crewai import Task
+
+# Create your task with the guardrail
+task = Task(
+    description="Write a summary about AI capabilities",
+    expected_output="A factual summary based on the provided context",
+    agent=my_agent,
+    guardrail=guardrail  # Add the guardrail to validate output
+)
+```
+
+## Advanced Configuration
+
+### Custom Threshold Validation
+
+For stricter validation, you can set a custom faithfulness threshold (0-10 scale):
+
+```python
+# Strict guardrail requiring high faithfulness score
+strict_guardrail = HallucinationGuardrail(
+    context="Quantum computing uses qubits that exist in superposition states.",
+    llm=LLM(model="gpt-4o-mini"),
+    threshold=8.0  # Requires score >= 8 to pass validation
+)
+```
+
+### Including Tool Response Context
+
+When your task uses tools, you can include tool responses for more accurate validation:
+
+```python
+# Guardrail with tool response context
+weather_guardrail = HallucinationGuardrail(
+    context="Current weather information for the requested location",
+    llm=LLM(model="gpt-4o-mini"),
+    tool_response="Weather API returned: Temperature 22°C, Humidity 65%, Clear skies"
+)
+```
+
+## How It Works
+
+### Validation Process
+
+1. **Context Analysis**: The guardrail compares task output against the provided reference context
+2. **Faithfulness Scoring**: Uses an internal evaluator to assign a faithfulness score (0-10)
+3. **Verdict Determination**: Determines if content is faithful or contains hallucinations
+4. **Threshold Checking**: If a custom threshold is set, validates against that score
+5. **Feedback Generation**: Provides detailed reasons when validation fails
+
+### Validation Logic
+
+- **Default Mode**: Uses verdict-based validation (FAITHFUL vs HALLUCINATED)
+- **Threshold Mode**: Requires faithfulness score to meet or exceed the specified threshold
+- **Error Handling**: Gracefully handles evaluation errors and provides informative feedback
+
+## Guardrail Results
+
+The guardrail returns structured results indicating validation status:
+
+```python
+# Example of guardrail result structure
+{
+    "valid": False,
+    "feedback": "Content appears to be hallucinated (score: 4.2/10, verdict: HALLUCINATED). The output contains information not supported by the provided context."
+}
+```
+
+### Result Properties
+
+- **valid**: Boolean indicating whether the output passed validation
+- **feedback**: Detailed explanation when validation fails, including:
+  - Faithfulness score
+  - Verdict classification
+  - Specific reasons for failure
+
+## Integration with Task System
+
+### Automatic Validation
+
+When a guardrail is added to a task, it automatically validates the output before the task is marked as complete:
+
+```python
+# Task output validation flow
+task_output = agent.execute_task(task)
+validation_result = guardrail(task_output)
+
+if validation_result.valid:
+    # Task completes successfully
+    return task_output
+else:
+    # Task fails with validation feedback
+    raise ValidationError(validation_result.feedback)
+```
+
+### Event Tracking
+
+The guardrail integrates with CrewAI's event system to provide observability:
+
+- **Validation Started**: When guardrail evaluation begins
+- **Validation Completed**: When evaluation finishes with results
+- **Validation Failed**: When technical errors occur during evaluation
+
+## Best Practices
+
+### Context Guidelines
+
+<Steps>
+  <Step title="Provide Comprehensive Context">
+    Include all relevant factual information that the AI should base its output on:
+
+    ```python
+    context = """
+    Company XYZ was founded in 2020 and specializes in renewable energy solutions.
+    They have 150 employees and generated $50M revenue in 2023.
+    Their main products include solar panels and wind turbines.
+    """
+    ```
+  </Step>
+
+  <Step title="Keep Context Relevant">
+    Only include information directly related to the task to avoid confusion:
+
+    ```python
+    # Good: Focused context
+    context = "The current weather in New York is 18°C with light rain."
+
+    # Avoid: Unrelated information
+    context = "The weather is 18°C. The city has 8 million people. Traffic is heavy."
+    ```
+  </Step>
+
+  <Step title="Update Context Regularly">
+    Ensure your reference context reflects current, accurate information.
+  </Step>
+</Steps>
+
+### Threshold Selection
+
+<Steps>
+  <Step title="Start with Default Validation">
+    Begin without custom thresholds to understand baseline performance.
+  </Step>
+
+  <Step title="Adjust Based on Requirements">
+    - **High-stakes content**: Use threshold 8-10 for maximum accuracy
+    - **General content**: Use threshold 6-7 for balanced validation
+    - **Creative content**: Use threshold 4-5 or default verdict-based validation
+  </Step>
+
+  <Step title="Monitor and Iterate">
+    Track validation results and adjust thresholds based on false positives/negatives.
+  </Step>
+</Steps>
+
+## Performance Considerations
+
+### Impact on Execution Time
+
+- **Validation Overhead**: Each guardrail adds ~1-3 seconds per task
+- **LLM Efficiency**: Choose efficient models for evaluation (e.g., gpt-4o-mini)
+
+### Cost Optimization
+
+- **Model Selection**: Use smaller, efficient models for guardrail evaluation
+- **Context Size**: Keep reference context concise but comprehensive
+- **Caching**: Consider caching validation results for repeated content
+
+## Troubleshooting
+
+<Accordion title="Validation Always Fails">
+  **Possible Causes:**
+  - Context is too restrictive or unrelated to task output
+  - Threshold is set too high for the content type
+  - Reference context contains outdated information
+
+  **Solutions:**
+  - Review and update context to match task requirements
+  - Lower threshold or use default verdict-based validation
+  - Ensure context is current and accurate
+</Accordion>
+
+<Accordion title="False Positives (Valid Content Marked Invalid)">
+  **Possible Causes:**
+  - Threshold too high for creative or interpretive tasks
+  - Context doesn't cover all valid aspects of the output
+  - Evaluation model being overly conservative
+
+  **Solutions:**
+  - Lower threshold or use default validation
+  - Expand context to include broader acceptable content
+  - Test with different evaluation models
+</Accordion>
+
+<Accordion title="Evaluation Errors">
+  **Possible Causes:**
+  - Network connectivity issues
+  - LLM model unavailable or rate limited
+  - Malformed task output or context
+
+  **Solutions:**
+  - Check network connectivity and LLM service status
+  - Implement retry logic for transient failures
+  - Validate task output format before guardrail evaluation
+</Accordion>
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with hallucination guardrail configuration or troubleshooting.
+</Card>

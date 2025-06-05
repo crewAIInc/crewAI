@@ -1,0 +1,64 @@
+---
+title: "Overview"
+description: "Leverage AI services, generate images, process vision, and build intelligent systems"
+icon: "face-smile"
+---
+
+These tools integrate with AI and machine learning services to enhance your agents with advanced capabilities like image generation, vision processing, and intelligent code execution.
+
+## **Available Tools**
+
+<CardGroup cols={2}>
+  <Card title="DALL-E Tool" icon="image" href="/tools/ai-ml/dalletool">
+    Generate AI images using OpenAI's DALL-E model.
+  </Card>
+
+  <Card title="Vision Tool" icon="eye" href="/tools/ai-ml/visiontool">
+    Process and analyze images with computer vision capabilities.
+  </Card>
+
+  <Card title="AI Mind Tool" icon="brain" href="/tools/ai-ml/aimindtool">
+    Advanced AI reasoning and decision-making capabilities.
+  </Card>
+
+  <Card title="LlamaIndex Tool" icon="llama" href="/tools/ai-ml/llamaindextool">
+    Build knowledge bases and retrieval systems with LlamaIndex.
+  </Card>
+
+  <Card title="LangChain Tool" icon="link" href="/tools/ai-ml/langchaintool">
+    Integrate with LangChain for complex AI workflows.
+  </Card>
+
+  <Card title="RAG Tool" icon="database" href="/tools/ai-ml/ragtool">
+    Implement Retrieval-Augmented Generation systems.
+  </Card>
+
+  <Card title="Code Interpreter Tool" icon="code" href="/tools/ai-ml/codeinterpretertool">
+    Execute Python code and perform data analysis.
+  </Card>
+
+
+</CardGroup>
+
+## **Common Use Cases**
+
+- **Content Generation**: Create images, text, and multimedia content
+- **Data Analysis**: Execute code and analyze complex datasets  
+- **Knowledge Systems**: Build RAG systems and intelligent databases
+- **Computer Vision**: Process and understand visual content
+- **AI Safety**: Implement content moderation and safety checks
+
+```python
+from crewai_tools import DallETool, VisionTool, CodeInterpreterTool
+
+# Create AI tools
+image_generator = DallETool()
+vision_processor = VisionTool()
+code_executor = CodeInterpreterTool()
+
+# Add to your agent
+agent = Agent(
+    role="AI Specialist",
+    tools=[image_generator, vision_processor, code_executor],
+    goal="Create and analyze content using AI capabilities"
+) 
