@@ -140,7 +140,7 @@ def compute_positions(
     flow: Any,
     node_levels: Dict[str, int],
     y_spacing: float = 150,
-    x_spacing: float = 150
+    x_spacing: float = 300
 ) -> Dict[str, Tuple[float, float]]:
     """
     Compute the (x, y) positions for each node in the flow graph.
@@ -154,7 +154,7 @@ def compute_positions(
     y_spacing : float, optional
         Vertical spacing between levels, by default 150.
     x_spacing : float, optional
-        Horizontal spacing between nodes, by default 150.
+        Horizontal spacing between nodes, by default 300.
 
     Returns
     -------
