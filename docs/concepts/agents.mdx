@@ -43,7 +43,6 @@ The Visual Agent Builder enables:
 | **Max Iterations** _(optional)_         | `max_iter`               | `int`                         | Maximum iterations before the agent must provide its best answer. Default is 20.                                      |
 | **Max RPM** _(optional)_                | `max_rpm`                | `Optional[int]`               | Maximum requests per minute to avoid rate limits.                                                                     |
 | **Max Execution Time** _(optional)_     | `max_execution_time`     | `Optional[int]`               | Maximum time (in seconds) for task execution.                                                                         |
-| **Memory** _(optional)_                 | `memory`                 | `bool`                        | Whether the agent should maintain memory of interactions. Default is True.                                            |
 | **Verbose** _(optional)_                | `verbose`                | `bool`                        | Enable detailed execution logs for debugging. Default is False.                                                       |
 | **Allow Delegation** _(optional)_       | `allow_delegation`       | `bool`                        | Allow the agent to delegate tasks to other agents. Default is False.                                                  |
 | **Step Callback** _(optional)_          | `step_callback`          | `Optional[Any]`               | Function called after each agent step, overrides crew callback.                                                       |
@@ -156,7 +155,6 @@ agent = Agent(
               "you excel at finding patterns in complex datasets.",
     llm="gpt-4",  # Default: OPENAI_MODEL_NAME or "gpt-4"
     function_calling_llm=None,  # Optional: Separate LLM for tool calling
-    memory=True,  # Default: True
     verbose=False,  # Default: False
     allow_delegation=False,  # Default: False
     max_iter=20,  # Default: 20 iterations
@@ -537,7 +535,6 @@ The context window management feature works automatically in the background. You
 - Adjust `max_iter` and `max_retry_limit` based on task complexity
 
 ### Memory and Context Management
-- Use `memory: true` for tasks requiring historical context
 - Leverage `knowledge_sources` for domain-specific information
 - Configure `embedder` when using custom embedding models
 - Use custom templates (`system_template`, `prompt_template`, `response_template`) for fine-grained control over agent behavior
@@ -585,7 +582,6 @@ The context window management feature works automatically in the background. You
    - Review code sandbox settings
 
 4. **Memory Issues**: If agent responses seem inconsistent:
-   - Verify memory is enabled
    - Check knowledge source configuration
    - Review conversation history management
 
