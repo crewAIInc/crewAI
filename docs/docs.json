@@ -213,6 +213,7 @@
             "group": "Learn",
             "pages": [
               "learn/overview",
+              "learn/llm-selection-guide",
               "learn/conditional-tasks",
               "learn/coding-agents",
               "learn/create-custom-tools",
