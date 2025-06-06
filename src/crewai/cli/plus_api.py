@@ -26,6 +26,9 @@ class PlusAPI:
             "User-Agent": f"CrewAI-CLI/{get_crewai_version()}",
             "X-Crewai-Version": get_crewai_version(),
         }
+        settings = Settings()
+        if settings.org_uuid:
+            self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
         self.base_url = getenv("CREWAI_BASE_URL", "https://app.crewai.com")
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
@@ -35,25 +38,13 @@ class PlusAPI:
         return session.request(method, url, headers=self.headers, **kwargs)
 
     def login_to_tool_repository(self):
-        settings = Settings()
-        payload = {}
-        if settings.org_uuid:
-            payload["organization_uuid"] = settings.org_uuid
-        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login", json=payload)
+        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login")
 
     def get_tool(self, handle: str):
-        settings = Settings()
-        params = {}
-        if settings.org_uuid:
-            params["organization_uuid"] = settings.org_uuid
-        return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}", params=params)
+        return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
 
     def get_agent(self, handle: str):
-        settings = Settings()
-        params = {}
-        if settings.org_uuid:
-            params["organization_uuid"] = settings.org_uuid
-        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}", params=params)
+        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}")
 
     def publish_tool(
         self,
@@ -72,9 +63,6 @@ class PlusAPI:
             "description": description,
             "available_exports": available_exports,
         }
-        settings = Settings()
-        if settings.org_uuid:
-            params["organization_uuid"] = settings.org_uuid
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 
     def deploy_by_name(self, project_name: str) -> requests.Response:
