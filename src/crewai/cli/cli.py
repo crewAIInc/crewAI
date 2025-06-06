@@ -368,11 +368,11 @@ def list():
 
 
 @org.command()
-@click.argument("handle")
-def switch(handle):
+@click.argument("id")
+def switch(id):
     """Switch to a specific organization."""
     org_command = OrganizationCommand()
-    org_command.switch(handle)
+    org_command.switch(id)
 
 
 @org.command()

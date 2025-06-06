@@ -46,11 +46,11 @@ def test_org_switch_command(mock_org_command_class, runner):
     mock_org_instance = MagicMock()
     mock_org_command_class.return_value = mock_org_instance
     
-    result = runner.invoke(switch, ['test-handle'])
+    result = runner.invoke(switch, ['test-id'])
     
     assert result.exit_code == 0
     mock_org_command_class.assert_called_once()
-    mock_org_instance.switch.assert_called_once_with('test-handle')
+    mock_org_instance.switch.assert_called_once_with('test-id')
 
 
 @patch('crewai.cli.cli.OrganizationCommand')
@@ -91,7 +91,7 @@ class TestOrganizationCommand(unittest.TestCase):
         mock_table.assert_called_once_with(title="Your Organizations")
         mock_table.return_value.add_column.assert_has_calls([
             call("Name", style="cyan"),
-            call("Handle", style="green")
+            call("ID", style="green")
         ])
         mock_table.return_value.add_row.assert_has_calls([
             call("Org 1", "org-123"),
@@ -122,6 +122,7 @@ class TestOrganizationCommand(unittest.TestCase):
         with pytest.raises(SystemExit):
             self.org_command.list()
         
+
         self.org_command.plus_api_client.get_organizations.assert_called_once()
         mock_console.print.assert_called_once_with(
             "Failed to retrieve organization list: API Error", 
@@ -135,7 +136,7 @@ class TestOrganizationCommand(unittest.TestCase):
         mock_response.raise_for_status = MagicMock()
         mock_response.json.return_value = [
             {"name": "Org 1", "uuid": "org-123"},
-            {"name": "Test Org", "uuid": "test-handle"}
+            {"name": "Test Org", "uuid": "test-id"}
         ]
         self.org_command.plus_api_client = MagicMock()
         self.org_command.plus_api_client.get_organizations.return_value = mock_response
@@ -143,14 +144,14 @@ class TestOrganizationCommand(unittest.TestCase):
         mock_settings_instance = MagicMock()
         mock_settings_class.return_value = mock_settings_instance
         
-        self.org_command.switch("test-handle")
+        self.org_command.switch("test-id")
         
         self.org_command.plus_api_client.get_organizations.assert_called_once()
         mock_settings_instance.dump.assert_called_once()
         assert mock_settings_instance.org_name == "Test Org"
-        assert mock_settings_instance.org_uuid == "test-handle"
+        assert mock_settings_instance.org_uuid == "test-id"
         mock_console.print.assert_called_once_with(
-            "Successfully switched to Test Org (test-handle)", 
+            "Successfully switched to Test Org (test-id)",
             style="bold green"
         )
 
@@ -165,11 +166,11 @@ class TestOrganizationCommand(unittest.TestCase):
         self.org_command.plus_api_client = MagicMock()
         self.org_command.plus_api_client.get_organizations.return_value = mock_response
         
-        self.org_command.switch("non-existent-handle")
+        self.org_command.switch("non-existent-id")
         
         self.org_command.plus_api_client.get_organizations.assert_called_once()
         mock_console.print.assert_called_once_with(
-            "Organization with handle 'non-existent-handle' not found.", 
+            "Organization with id 'non-existent-id' not found.",
             style="bold red"
         )
 
@@ -178,14 +179,14 @@ class TestOrganizationCommand(unittest.TestCase):
     def test_current_organization_with_org(self, mock_settings_class, mock_console):
         mock_settings_instance = MagicMock()
         mock_settings_instance.org_name = "Test Org"
-        mock_settings_instance.org_uuid = "test-handle"
+        mock_settings_instance.org_uuid = "test-id"
         mock_settings_class.return_value = mock_settings_instance
         
         self.org_command.current()
         
         self.org_command.plus_api_client.get_organizations.assert_not_called()
         mock_console.print.assert_called_once_with(
-            "Currently logged in to organization Test Org (test-handle)", 
+            "Currently logged in to organization Test Org (test-id)",
             style="bold green"
         )
 

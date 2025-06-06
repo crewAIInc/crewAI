@@ -23,7 +23,7 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
 
             table = Table(title="Your Organizations")
             table.add_column("Name", style="cyan")
-            table.add_column("Handle", style="green")
+            table.add_column("ID", style="green")
             for org in orgs:
                 table.add_row(org["name"], org["uuid"])
             
@@ -32,15 +32,15 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
             console.print(f"Failed to retrieve organization list: {str(e)}", style="bold red")
             raise SystemExit(1)
 
-    def switch(self, org_handle):
+    def switch(self, org_id):
         try:
             response = self.plus_api_client.get_organizations()
             response.raise_for_status()
             orgs = response.json()
             
-            org = next((o for o in orgs if o["uuid"] == org_handle), None)
+            org = next((o for o in orgs if o["uuid"] == org_id), None)
             if not org:
-                console.print(f"Organization with handle '{org_handle}' not found.", style="bold red")
+                console.print(f"Organization with id '{org_id}' not found.", style="bold red")
                 return
             
             settings = Settings()
@@ -60,4 +60,4 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
         else:
             console.print("You're not currently logged in to any organization.", style="yellow")
             console.print("Use 'crewai org list' to see available organizations.", style="yellow")
-            console.print("Use 'crewai org switch <handle>' to switch to an organization.", style="yellow")
+            console.print("Use 'crewai org switch <id>' to switch to an organization.", style="yellow")
