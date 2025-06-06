@@ -2,7 +2,6 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from typing import Optional, List
 from crewai.cli.plus_api import PlusAPI
 
 
