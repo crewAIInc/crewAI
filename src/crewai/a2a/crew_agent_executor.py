@@ -5,7 +5,10 @@ to participate in the Agent-to-Agent protocol for remote interoperability.
 """
 
 import asyncio
+import json
 import logging
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from crewai import Crew
@@ -16,8 +19,6 @@ try:
     from a2a.server.agent_execution.context import RequestContext
     from a2a.server.events.event_queue import EventQueue
     from a2a.types import (
-        FilePart,
-        FileWithBytes,
         InvalidParamsError,
         Part,
         Task,
@@ -33,6 +34,29 @@ except ImportError:
     )
 
 logger = logging.getLogger(__name__)
+
+
+class A2AServerError(Exception):
+    """Base exception for A2A server errors."""
+    pass
+
+
+class TransportError(A2AServerError):
+    """Error related to transport configuration."""
+    pass
+
+
+class ExecutionError(A2AServerError):
+    """Error during crew execution."""
+    pass
+
+
+@dataclass
+class TaskInfo:
+    """Information about a running task."""
+    task: asyncio.Task
+    started_at: datetime
+    status: str = "running"
 
 
 class CrewAgentExecutor(AgentExecutor):
@@ -71,7 +95,7 @@ class CrewAgentExecutor(AgentExecutor):
         self.supported_content_types = supported_content_types or [
             'text', 'text/plain'
         ]
-        self._running_tasks: Dict[str, asyncio.Task] = {}
+        self._running_tasks: Dict[str, TaskInfo] = {}
     
     async def execute(
         self,
@@ -99,6 +123,9 @@ class CrewAgentExecutor(AgentExecutor):
         task_id = context.task_id
         context_id = context.context_id
         
+        if not task_id or not context_id:
+            raise ServerError(error=InvalidParamsError())
+        
         logger.info(f"Executing crew for task {task_id} with query: {query}")
         
         try:
@@ -107,7 +134,11 @@ class CrewAgentExecutor(AgentExecutor):
             execution_task = asyncio.create_task(
                 self._execute_crew_async(inputs)
             )
-            self._running_tasks[task_id] = execution_task
+            self._running_tasks[task_id] = TaskInfo(
+                task=execution_task,
+                started_at=datetime.now(),
+                status="running"
+            )
             
             result = await execution_task
             
@@ -117,12 +148,13 @@ class CrewAgentExecutor(AgentExecutor):
             
             parts = self._convert_output_to_parts(result)
             
+            messages = [context.message] if context.message else []
             event_queue.enqueue_event(
                 completed_task(
                     task_id,
                     context_id,
                     [new_artifact(parts, f"crew_output_{task_id}")],
-                    [context.message],
+                    messages,
                 )
             )
             
@@ -138,17 +170,18 @@ class CrewAgentExecutor(AgentExecutor):
                 Part(root=TextPart(text=f"Error executing crew: {str(e)}"))
             ]
             
+            messages = [context.message] if context.message else []
             event_queue.enqueue_event(
                 completed_task(
                     task_id,
                     context_id,
                     [new_artifact(error_parts, f"error_{task_id}")],
-                    [context.message],
+                    messages,
                 )
             )
             
             raise ServerError(
-                error=ValueError(f"Error executing crew: {e}")
+                error=InvalidParamsError()
             ) from e
     
     async def cancel(
@@ -171,11 +204,12 @@ class CrewAgentExecutor(AgentExecutor):
         task_id = request.task_id
         
         if task_id in self._running_tasks:
-            execution_task = self._running_tasks[task_id]
-            execution_task.cancel()
+            task_info = self._running_tasks[task_id]
+            task_info.task.cancel()
+            task_info.status = "cancelled"
             
             try:
-                await execution_task
+                await task_info.task
             except asyncio.CancelledError:
                 logger.info(f"Successfully cancelled task {task_id}")
                 pass
@@ -215,9 +249,8 @@ class CrewAgentExecutor(AgentExecutor):
             parts.append(Part(root=TextPart(text=str(result))))
         
         if hasattr(result, 'json_dict') and result.json_dict:
-            import json
             json_output = json.dumps(result.json_dict, indent=2)
-            parts.append(Part(root=TextPart(text=f"Structured Output:\n{json_output}")))
+            parts.append(Part(root=TextPart(text=json_output)))
         
         if not parts:
             parts.append(Part(root=TextPart(text="Crew execution completed successfully")))

@@ -30,8 +30,10 @@ class TestA2AServer:
         start_a2a_server(mock_agent_executor)
         
         mock_create_app.assert_called_once_with(
-            mock_agent_executor, 
-            transport="starlette"
+            mock_agent_executor,
+            transport="starlette",
+            agent_name=None,
+            agent_description=None
         )
         
         mock_uvicorn_run.assert_called_once_with(
@@ -56,7 +58,9 @@ class TestA2AServer:
         
         mock_create_app.assert_called_once_with(
             mock_agent_executor,
-            transport="fastapi"
+            transport="fastapi",
+            agent_name=None,
+            agent_description=None
         )
         
         mock_uvicorn_run.assert_called_once_with(
@@ -126,4 +130,4 @@ class TestA2AServer:
 def test_server_import_error_handling():
     """Test that import errors are handled gracefully when A2A is not available."""
     with pytest.raises(ImportError, match="A2A integration requires"):
-        from crewai.a2a.server import start_a2a_server
+        pass

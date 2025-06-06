@@ -5,6 +5,7 @@ crews, supporting multiple transport protocols and configurations.
 """
 
 import logging
+from dataclasses import dataclass
 from typing import Optional
 
 try:
@@ -22,11 +23,22 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class ServerConfig:
+    """Configuration for A2A server."""
+    host: str = "localhost"
+    port: int = 10001
+    transport: str = "starlette"
+    agent_name: Optional[str] = None
+    agent_description: Optional[str] = None
+
+
 def start_a2a_server(
     agent_executor: AgentExecutor,
     host: str = "localhost",
     port: int = 10001,
     transport: str = "starlette",
+    config: Optional[ServerConfig] = None,
     **kwargs
 ) -> None:
     """Start an A2A server with the given agent executor.
@@ -39,6 +51,7 @@ def start_a2a_server(
         host: Host address to bind the server to
         port: Port number to bind the server to  
         transport: Transport protocol to use ("starlette" or "fastapi")
+        config: Optional ServerConfig object to override individual parameters
         **kwargs: Additional arguments passed to the server
         
     Example:
@@ -52,7 +65,18 @@ def start_a2a_server(
         executor = CrewAgentExecutor(crew)
         start_a2a_server(executor, host="0.0.0.0", port=8080)
     """
-    app = create_a2a_app(agent_executor, transport=transport, **kwargs)
+    if config:
+        host = config.host
+        port = config.port
+        transport = config.transport
+    
+    app = create_a2a_app(
+        agent_executor, 
+        transport=transport,
+        agent_name=config.agent_name if config else None,
+        agent_description=config.agent_description if config else None,
+        **kwargs
+    )
     
     logger.info(f"Starting A2A server on {host}:{port} using {transport} transport")
     
@@ -102,7 +126,6 @@ def create_a2a_app(
         name=agent_name or "CrewAI Agent",
         description=agent_description or "A CrewAI agent exposed via A2A protocol",
         version="1.0.0",
-        supportedContentTypes=getattr(agent_executor, 'supported_content_types', ['text', 'text/plain']),
         capabilities=AgentCapabilities(
             streaming=True,
             pushNotifications=False

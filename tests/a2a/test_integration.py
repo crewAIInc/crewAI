@@ -3,7 +3,6 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from crewai import Agent, Crew, Task
 
 try:
     from crewai.a2a import CrewAgentExecutor, create_a2a_app
@@ -94,7 +93,9 @@ class TestA2AIntegration:
             
             mock_create_app.assert_called_once_with(
                 executor,
-                transport="starlette"
+                transport="starlette",
+                agent_name=None,
+                agent_description=None
             )
             mock_uvicorn_run.assert_called_once_with(
                 mock_app,

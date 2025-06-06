@@ -42,8 +42,8 @@ except ImportError as e:
             "Install with: pip install crewai[a2a]"
         )
     
-    CrewAgentExecutor = _missing_dependency
-    start_a2a_server = _missing_dependency
-    create_a2a_app = _missing_dependency
+    CrewAgentExecutor = _missing_dependency  # type: ignore
+    start_a2a_server = _missing_dependency  # type: ignore
+    create_a2a_app = _missing_dependency  # type: ignore
     
     __all__ = []
