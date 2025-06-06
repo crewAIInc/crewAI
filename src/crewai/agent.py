@@ -200,6 +200,7 @@ class Agent(BaseAgent):
                         collection_name=self.role,
                         storage=self.knowledge_storage or None,
                     )
+                    self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
@@ -243,21 +244,28 @@ class Agent(BaseAgent):
         """
         if self.reasoning:
             try:
-                from crewai.utilities.reasoning_handler import AgentReasoning, AgentReasoningOutput
-                
+                from crewai.utilities.reasoning_handler import (
+                    AgentReasoning,
+                    AgentReasoningOutput,
+                )
+
                 reasoning_handler = AgentReasoning(task=task, agent=self)
-                reasoning_output: AgentReasoningOutput = reasoning_handler.handle_agent_reasoning()
-                
+                reasoning_output: AgentReasoningOutput = (
+                    reasoning_handler.handle_agent_reasoning()
+                )
+
                 # Add the reasoning plan to the task description
                 task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
             except Exception as e:
-                if hasattr(self, '_logger'):
-                    self._logger.log("error", f"Error during reasoning process: {str(e)}")
+                if hasattr(self, "_logger"):
+                    self._logger.log(
+                        "error", f"Error during reasoning process: {str(e)}"
+                    )
                 else:
                     print(f"Error during reasoning process: {str(e)}")
-            
+
         self._inject_date_to_task(task)
-            
+
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
@@ -622,21 +630,32 @@ class Agent(BaseAgent):
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
             from datetime import datetime
+
             try:
-                valid_format_codes = ['%Y', '%m', '%d', '%H', '%M', '%S', '%B', '%b', '%A', '%a']
+                valid_format_codes = [
+                    "%Y",
+                    "%m",
+                    "%d",
+                    "%H",
+                    "%M",
+                    "%S",
+                    "%B",
+                    "%b",
+                    "%A",
+                    "%a",
+                ]
                 is_valid = any(code in self.date_format for code in valid_format_codes)
-                
+
                 if not is_valid:
                     raise ValueError(f"Invalid date format: {self.date_format}")
-                
+
                 current_date: str = datetime.now().strftime(self.date_format)
                 task.description += f"\n\nCurrent Date: {current_date}"
             except Exception as e:
-                if hasattr(self, '_logger'):
+                if hasattr(self, "_logger"):
                     self._logger.log("warning", f"Failed to inject date: {str(e)}")
                 else:
                     print(f"Warning: Failed to inject date: {str(e)}")
-
 
     def _validate_docker_installation(self) -> None:
         """Check if Docker is installed and running."""

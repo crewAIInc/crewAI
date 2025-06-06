@@ -309,7 +309,9 @@ def test_cache_hitting():
     def handle_tool_end(source, event):
         received_events.append(event)
 
-    with (patch.object(CacheHandler, "read") as read,):
+    with (
+        patch.object(CacheHandler, "read") as read,
+    ):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -1628,13 +1630,13 @@ def test_agent_execute_task_with_ollama():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
-    # Create a knowledge source with some content
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
     with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.search.return_value = [{"content": content}]
+        MockKnowledge.add_sources.return_value = [string_source]
 
         agent = Agent(
             role="Information Agent",
@@ -1644,7 +1646,6 @@ def test_agent_with_knowledge_sources():
             knowledge_sources=[string_source],
         )
 
-        # Create a task that requires the agent to use the knowledge
         task = Task(
             description="What is Brandon's favorite color?",
             expected_output="Brandon's favorite color.",
@@ -1652,10 +1653,11 @@ def test_agent_with_knowledge_sources():
         )
 
         crew = Crew(agents=[agent], tasks=[task])
-        result = crew.kickoff()
-
-        # Assert that the agent provides the correct information
-        assert "red" in result.raw.lower()
+        with patch.object(Knowledge, "add_sources") as mock_add_sources:
+            result = crew.kickoff()
+            assert mock_add_sources.called, "add_sources() should have been called"
+            mock_add_sources.assert_called_once()
+            assert "red" in result.raw.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -2036,7 +2038,7 @@ def mock_get_auth_token():
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
-    from crewai_tools import SerperDevTool
+    from crewai_tools import SerperDevTool, XMLSearchTool
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
@@ -2044,7 +2046,10 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "SerperDevTool"}],
+        "tools": [
+            {"module": "crewai_tools", "name": "SerperDevTool"},
+            {"module": "crewai_tools", "name": "XMLSearchTool"},
+        ],
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent")
@@ -2052,8 +2057,9 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     assert agent.role == "test role"
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
-    assert len(agent.tools) == 1
+    assert len(agent.tools) == 2
     assert isinstance(agent.tools[0], SerperDevTool)
+    assert isinstance(agent.tools[1], XMLSearchTool)
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
@@ -2066,7 +2072,7 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "SerperDevTool"}],
+        "tools": [{"name": "SerperDevTool", "module": "crewai_tools"}],
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent", role="Custom Role")
@@ -2086,7 +2092,7 @@ def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "DoesNotExist"}],
+        "tools": [{"name": "DoesNotExist", "module": "crewai_tools",}],
     }
     mock_get_agent.return_value = mock_get_response
     with pytest.raises(

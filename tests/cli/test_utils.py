@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -100,3 +101,163 @@ def test_tree_copy_to_existing_directory(temp_tree):
         assert os.path.isfile(os.path.join(dest_dir, "file1.txt"))
     finally:
         shutil.rmtree(dest_dir)
+
+
+@pytest.fixture
+def temp_project_dir():
+    """Create a temporary directory for testing tool extraction."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
+def create_init_file(directory, content):
+    return create_file(directory / "__init__.py", content)
+
+
+def test_extract_available_exports_empty_project(temp_project_dir, capsys):
+    with pytest.raises(SystemExit):
+        utils.extract_available_exports(dir_path=temp_project_dir)
+    captured = capsys.readouterr()
+
+    assert "No valid tools were exposed in your __init__.py file" in captured.out
+
+
+def test_extract_available_exports_no_init_file(temp_project_dir, capsys):
+    (temp_project_dir / "some_file.py").write_text("print('hello')")
+    with pytest.raises(SystemExit):
+        utils.extract_available_exports(dir_path=temp_project_dir)
+    captured = capsys.readouterr()
+
+    assert "No valid tools were exposed in your __init__.py file" in captured.out
+
+
+def test_extract_available_exports_empty_init_file(temp_project_dir, capsys):
+    create_init_file(temp_project_dir, "")
+    with pytest.raises(SystemExit):
+        utils.extract_available_exports(dir_path=temp_project_dir)
+    captured = capsys.readouterr()
+
+    assert "Warning: No __all__ defined in" in captured.out
+
+
+def test_extract_available_exports_no_all_variable(temp_project_dir, capsys):
+    create_init_file(
+        temp_project_dir,
+        "from crewai.tools import BaseTool\n\nclass MyTool(BaseTool):\n    pass",
+    )
+    with pytest.raises(SystemExit):
+        utils.extract_available_exports(dir_path=temp_project_dir)
+    captured = capsys.readouterr()
+
+    assert "Warning: No __all__ defined in" in captured.out
+
+
+def test_extract_available_exports_valid_base_tool_class(temp_project_dir):
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "A test tool"
+
+__all__ = ['MyTool']
+""",
+    )
+    tools = utils.extract_available_exports(dir_path=temp_project_dir)
+    assert [{"name": "MyTool"}] == tools
+
+
+def test_extract_available_exports_valid_tool_decorator(temp_project_dir):
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import tool
+
+@tool
+def my_tool_function(text: str) -> str:
+    \"\"\"A test tool function\"\"\"
+    return text
+
+__all__ = ['my_tool_function']
+""",
+    )
+    tools = utils.extract_available_exports(dir_path=temp_project_dir)
+    assert [{"name": "my_tool_function"}] == tools
+
+
+def test_extract_available_exports_multiple_valid_tools(temp_project_dir):
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool, tool
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "A test tool"
+
+@tool
+def my_tool_function(text: str) -> str:
+    \"\"\"A test tool function\"\"\"
+    return text
+
+__all__ = ['MyTool', 'my_tool_function']
+""",
+    )
+    tools = utils.extract_available_exports(dir_path=temp_project_dir)
+    assert [{"name": "MyTool"}, {"name": "my_tool_function"}] == tools
+
+
+def test_extract_available_exports_with_invalid_tool_decorator(temp_project_dir):
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "A test tool"
+
+def not_a_tool():
+    pass
+
+__all__ = ['MyTool', 'not_a_tool']
+""",
+    )
+    tools = utils.extract_available_exports(dir_path=temp_project_dir)
+    assert [{"name": "MyTool"}] == tools
+
+
+def test_extract_available_exports_import_error(temp_project_dir, capsys):
+    create_init_file(
+        temp_project_dir,
+        """from nonexistent_module import something
+
+class MyTool(BaseTool):
+    pass
+
+__all__ = ['MyTool']
+""",
+    )
+    with pytest.raises(SystemExit):
+        utils.extract_available_exports(dir_path=temp_project_dir)
+    captured = capsys.readouterr()
+
+    assert "nonexistent_module" in captured.out
+
+
+def test_extract_available_exports_syntax_error(temp_project_dir, capsys):
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+
+class MyTool(BaseTool):
+    # Missing closing parenthesis
+    def __init__(self, name:
+        pass
+
+__all__ = ['MyTool']
+""",
+    )
+    with pytest.raises(SystemExit):
+        utils.extract_available_exports(dir_path=temp_project_dir)
+    captured = capsys.readouterr()
+
+    assert "was never closed" in captured.out
