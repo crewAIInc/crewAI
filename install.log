@@ -1,0 +1,14 @@
+Looking in links: ., ../crewAI-tools, ../crewAI-tools/psutil_wheels, ./psutil_wheels, ./wheels
+Processing /Volumes/Extreme Pro/projects/crew/main_src/crewAI
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+WARNING: Location '../crewAI-tools/psutil_wheels' is ignored: it is either a non-existing path or lacks a specific scheme.
+WARNING: Location './psutil_wheels' is ignored: it is either a non-existing path or lacks a specific scheme.
+WARNING: Location './wheels' is ignored: it is either a non-existing path or lacks a specific scheme.
+INFO: pip is looking at multiple versions of crewai to determine which version is compatible with other requirements. This could take a while.
+ERROR: Could not find a version that satisfies the requirement appdirs>=1.4.4 (from crewai) (from versions: none)
+ERROR: No matching distribution found for appdirs>=1.4.4
