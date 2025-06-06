@@ -13,6 +13,7 @@ class PlusAPI:
     """
 
     TOOLS_RESOURCE = "/crewai_plus/api/v1/tools"
+    ORGANIZATIONS_RESOURCE = "/crewai_plus/api/v1/me/organizations"
     CREWS_RESOURCE = "/crewai_plus/api/v1/crews"
     AGENTS_RESOURCE = "/crewai_plus/api/v1/agents"
 
@@ -103,3 +104,7 @@ class PlusAPI:
 
     def create_crew(self, payload) -> requests.Response:
         return self._make_request("POST", self.CREWS_RESOURCE, json=payload)
+    
+    def get_organizations(self) -> requests.Response:
+        return self._make_request("GET", self.ORGANIZATIONS_RESOURCE)
+    
