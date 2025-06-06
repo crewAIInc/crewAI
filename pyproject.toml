@@ -65,8 +65,8 @@ mem0 = ["mem0ai>=0.1.94"]
 docling = [
     "docling>=2.12.0",
 ]
-aisuite = [
-    "aisuite>=0.1.10",
+a2a = [
+    "a2a-sdk>=0.0.1",
 ]
 
 [tool.uv]
