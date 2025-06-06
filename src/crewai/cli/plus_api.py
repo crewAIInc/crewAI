@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 
 import requests
 
+from crewai.cli.config import Settings
 from crewai.cli.version import get_crewai_version
 
 
@@ -34,13 +35,25 @@ class PlusAPI:
         return session.request(method, url, headers=self.headers, **kwargs)
 
     def login_to_tool_repository(self):
-        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login")
+        settings = Settings()
+        payload = {}
+        if settings.org_uuid:
+            payload["organization_uuid"] = settings.org_uuid
+        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login", json=payload)
 
     def get_tool(self, handle: str):
-        return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
+        settings = Settings()
+        params = {}
+        if settings.org_uuid:
+            params["organization_uuid"] = settings.org_uuid
+        return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}", params=params)
 
     def get_agent(self, handle: str):
-        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}")
+        settings = Settings()
+        params = {}
+        if settings.org_uuid:
+            params["organization_uuid"] = settings.org_uuid
+        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}", params=params)
 
     def publish_tool(
         self,
@@ -59,6 +72,9 @@ class PlusAPI:
             "description": description,
             "available_exports": available_exports,
         }
+        settings = Settings()
+        if settings.org_uuid:
+            params["organization_uuid"] = settings.org_uuid
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 
     def deploy_by_name(self, project_name: str) -> requests.Response:
