@@ -173,6 +173,12 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         settings.tool_repository_password = login_response_json["credential"][
             "password"
         ]
+        settings.org_uuid = login_response_json["current_organization"][
+            "uuid"
+        ]
+        settings.org_name = login_response_json["current_organization"][
+            "name"
+        ]
         settings.dump()
 
         console.print(
