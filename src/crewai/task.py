@@ -139,6 +139,21 @@ class Task(BaseModel):
         description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
         default=False,
     )
+    tags: Optional[List[str]] = Field(
+        default=None,
+        description="Tags to categorize this task for selective execution.",
+    )
+    
+    @field_validator('tags')
+    @classmethod
+    def validate_tags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        if v is not None:
+            if not all(isinstance(tag, str) for tag in v):
+                raise ValueError("All tags must be strings")
+            if not all(tag.strip() for tag in v):
+                raise ValueError("Tags cannot be empty strings")
+            return [tag.lower().strip() for tag in v]  # Normalize tags
+        return v
     converter_cls: Optional[Type[Converter]] = Field(
         description="A converter class used to export structured output",
         default=None,
