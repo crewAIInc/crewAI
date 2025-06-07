@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional, Union
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
+from crewai.utilities.crew_json_encoder import CrewJSONEncoder
 
 
 class SQLiteFlowPersistence(FlowPersistence):
@@ -89,23 +90,26 @@ class SQLiteFlowPersistence(FlowPersistence):
                 f"state_data must be either a Pydantic BaseModel or dict, got {type(state_data)}"
             )
 
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute(
-                """
-            INSERT INTO flow_states (
-                flow_uuid,
-                method_name,
-                timestamp,
-                state_json
-            ) VALUES (?, ?, ?, ?)
-            """,
-                (
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute(
+                    """
+                INSERT INTO flow_states (
                     flow_uuid,
                     method_name,
-                    datetime.now(timezone.utc).isoformat(),
-                    json.dumps(state_dict),
-                ),
-            )
+                    timestamp,
+                    state_json
+                ) VALUES (?, ?, ?, ?)
+                """,
+                    (
+                        flow_uuid,
+                        method_name,
+                        datetime.now(timezone.utc).isoformat(),
+                        json.dumps(state_dict, cls=CrewJSONEncoder),
+                    ),
+                )
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            raise RuntimeError(f"Failed to serialize flow state: {str(e)}") from e
 
     def load_state(self, flow_uuid: str) -> Optional[Dict[str, Any]]:
         """Load the most recent state for a given flow UUID.
