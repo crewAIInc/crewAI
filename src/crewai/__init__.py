@@ -32,3 +32,8 @@ __all__ = [
     "TaskOutput",
     "LLMGuardrail",
 ]
+
+try:
+    from . import integrations  # noqa: F401
+except ImportError:
+    pass
