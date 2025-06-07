@@ -5,8 +5,10 @@ crews, supporting multiple transport protocols and configurations.
 """
 
 import logging
-from dataclasses import dataclass
 from typing import Optional
+
+from .exceptions import TransportError
+from .server_config import ServerConfig
 
 try:
     from a2a.server.agent_execution.agent_executor import AgentExecutor
@@ -21,16 +23,6 @@ except ImportError:
     )
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ServerConfig:
-    """Configuration for A2A server."""
-    host: str = "localhost"
-    port: int = 10001
-    transport: str = "starlette"
-    agent_name: Optional[str] = None
-    agent_description: Optional[str] = None
 
 
 def start_a2a_server(
@@ -148,7 +140,7 @@ def create_a2a_app(
     request_handler = DefaultRequestHandler(agent_executor, task_store)
     
     if transport.lower() == "fastapi":
-        raise ValueError("FastAPI transport is not available in the current A2A SDK version")
+        raise TransportError("FastAPI transport is not available in the current A2A SDK version")
     else:
         app_instance = A2AStarletteApplication(
             agent_card=agent_card,

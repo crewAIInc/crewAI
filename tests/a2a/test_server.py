@@ -95,7 +95,8 @@ class TestA2AServer:
     
     def test_create_a2a_app_fastapi(self, mock_agent_executor):
         """Test creating A2A app with FastAPI transport raises error."""
-        with pytest.raises(ValueError, match="FastAPI transport is not available"):
+        from crewai.a2a.exceptions import TransportError
+        with pytest.raises(TransportError, match="FastAPI transport is not available"):
             create_a2a_app(
                 mock_agent_executor,
                 transport="fastapi",

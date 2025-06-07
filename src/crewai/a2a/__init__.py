@@ -22,11 +22,19 @@ Example:
 try:
     from .crew_agent_executor import CrewAgentExecutor
     from .server import start_a2a_server, create_a2a_app
+    from .server_config import ServerConfig
+    from .task_info import TaskInfo
+    from .exceptions import A2AServerError, TransportError, ExecutionError
     
     __all__ = [
         "CrewAgentExecutor",
         "start_a2a_server", 
-        "create_a2a_app"
+        "create_a2a_app",
+        "ServerConfig",
+        "TaskInfo",
+        "A2AServerError",
+        "TransportError", 
+        "ExecutionError"
     ]
 except ImportError:
     import warnings
@@ -45,5 +53,10 @@ except ImportError:
     CrewAgentExecutor = _missing_dependency  # type: ignore
     start_a2a_server = _missing_dependency  # type: ignore
     create_a2a_app = _missing_dependency  # type: ignore
+    ServerConfig = _missing_dependency  # type: ignore
+    TaskInfo = _missing_dependency  # type: ignore
+    A2AServerError = _missing_dependency  # type: ignore
+    TransportError = _missing_dependency  # type: ignore
+    ExecutionError = _missing_dependency  # type: ignore
     
     __all__ = []

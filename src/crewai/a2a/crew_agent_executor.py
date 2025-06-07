@@ -7,12 +7,12 @@ to participate in the Agent-to-Agent protocol for remote interoperability.
 import asyncio
 import json
 import logging
-from dataclasses import dataclass
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from crewai import Crew
 from crewai.crew import CrewOutput
+
+from .task_info import TaskInfo
 
 try:
     from a2a.server.agent_execution.agent_executor import AgentExecutor
@@ -34,29 +34,6 @@ except ImportError:
     )
 
 logger = logging.getLogger(__name__)
-
-
-class A2AServerError(Exception):
-    """Base exception for A2A server errors."""
-    pass
-
-
-class TransportError(A2AServerError):
-    """Error related to transport configuration."""
-    pass
-
-
-class ExecutionError(A2AServerError):
-    """Error during crew execution."""
-    pass
-
-
-@dataclass
-class TaskInfo:
-    """Information about a running task."""
-    task: asyncio.Task
-    started_at: datetime
-    status: str = "running"
 
 
 class CrewAgentExecutor(AgentExecutor):
@@ -134,6 +111,7 @@ class CrewAgentExecutor(AgentExecutor):
             execution_task = asyncio.create_task(
                 self._execute_crew_async(inputs)
             )
+            from datetime import datetime
             self._running_tasks[task_id] = TaskInfo(
                 task=execution_task,
                 started_at=datetime.now(),
@@ -206,7 +184,7 @@ class CrewAgentExecutor(AgentExecutor):
         if task_id in self._running_tasks:
             task_info = self._running_tasks[task_id]
             task_info.task.cancel()
-            task_info.status = "cancelled"
+            task_info.update_status("cancelled")
             
             try:
                 await task_info.task
