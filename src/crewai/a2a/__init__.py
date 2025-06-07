@@ -28,7 +28,7 @@ try:
         "start_a2a_server", 
         "create_a2a_app"
     ]
-except ImportError as e:
+except ImportError:
     import warnings
     warnings.warn(
         "A2A integration requires the 'a2a' extra dependency. "

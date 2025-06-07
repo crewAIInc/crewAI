@@ -34,7 +34,11 @@ __all__ = [
 ]
 
 try:
-    from crewai.a2a import CrewAgentExecutor, start_a2a_server, create_a2a_app
+    from crewai.a2a import (  # noqa: F401
+        CrewAgentExecutor,
+        start_a2a_server, 
+        create_a2a_app
+    )
     __all__.extend(["CrewAgentExecutor", "start_a2a_server", "create_a2a_app"])
 except ImportError:
     pass
