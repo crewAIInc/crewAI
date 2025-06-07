@@ -1279,54 +1279,40 @@ def test_interpolate_complex_combination():
 
 
 def test_interpolate_invalid_type_validation():
-    # Test with invalid top-level type
-    with pytest.raises(ValueError) as excinfo:
-        interpolate_only("{data}", {"data": set()})  # type: ignore we are purposely testing this failure
-
-    assert "Unsupported type set" in str(excinfo.value)
-
-    # Test with invalid nested type
-    invalid_nested = {
-        "profile": {
-            "name": "John",
-            "age": 30,
-            "tags": {"a", "b", "c"},  # Set is invalid
-        }
-    }
-    with pytest.raises(ValueError) as excinfo:
-        interpolate_only("{data}", {"data": invalid_nested})
-    assert "Unsupported type set" in str(excinfo.value)
+    # Test with type that fails serialization
+    class UnserializableObject:
+        def __str__(self):
+            raise Exception("Cannot serialize")
+        def __repr__(self):
+            raise Exception("Cannot serialize")
+    
+    with pytest.raises(ValueError, match="Unable to serialize UnserializableObject"):
+        interpolate_only("{data}", {"data": UnserializableObject()})
+    
+    result = interpolate_only("{data}", {"data": {1, 2, 3}})
+    assert "1" in result and "2" in result and "3" in result
 
 
 def test_interpolate_custom_object_validation():
-    class CustomObject:
+    class SerializableCustomObject:
         def __init__(self, value):
             self.value = value
-
         def __str__(self):
             return str(self.value)
-
-    # Test with custom object at top level
-    with pytest.raises(ValueError) as excinfo:
-        interpolate_only("{obj}", {"obj": CustomObject(5)})  # type: ignore we are purposely testing this failure
-    assert "Unsupported type CustomObject" in str(excinfo.value)
-
-    # Test with nested custom object in dictionary
-    with pytest.raises(ValueError) as excinfo:
-        interpolate_only("{data}", {"data": {"valid": 1, "invalid": CustomObject(5)}})
-    assert "Unsupported type CustomObject" in str(excinfo.value)
-
-    # Test with nested custom object in list
-    with pytest.raises(ValueError) as excinfo:
-        interpolate_only("{data}", {"data": [1, "valid", CustomObject(5)]})
-    assert "Unsupported type CustomObject" in str(excinfo.value)
-
-    # Test with deeply nested custom object
-    with pytest.raises(ValueError) as excinfo:
-        interpolate_only(
-            "{data}", {"data": {"level1": {"level2": [{"level3": CustomObject(5)}]}}}
-        )
-    assert "Unsupported type CustomObject" in str(excinfo.value)
+    
+    class UnserializableCustomObject:
+        def __init__(self, value):
+            self.value = value
+        def __str__(self):
+            raise Exception("Cannot serialize")
+        def __repr__(self):
+            raise Exception("Cannot serialize")
+    
+    result = interpolate_only("{obj}", {"obj": SerializableCustomObject(5)})
+    assert "5" in result
+    
+    with pytest.raises(ValueError, match="Unable to serialize UnserializableCustomObject"):
+        interpolate_only("{obj}", {"obj": UnserializableCustomObject(5)})
 
 
 def test_interpolate_valid_complex_types():

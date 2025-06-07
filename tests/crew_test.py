@@ -4566,3 +4566,96 @@ def test_reset_agent_knowledge_with_only_agent_knowledge(researcher,writer):
         mock_reset_agent_knowledge.assert_called_once_with([mock_ks_research,mock_ks_writer])
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_kickoff_with_pandas_dataframe():
+    """Test that crew.kickoff works with pandas DataFrame inputs."""
+    import pandas as pd
+    
+    df = pd.DataFrame({
+        "name": ["Alice", "Bob", "Charlie"],
+        "age": [25, 30, 35],
+        "city": ["New York", "London", "Tokyo"]
+    })
+    
+    agent = Agent(
+        role="Data Analyst",
+        goal="Analyze the provided data",
+        backstory="You are an expert data analyst",
+    )
+    
+    task = Task(
+        description="Analyze this dataset: {data}",
+        expected_output="A brief summary of the data",
+        agent=agent,
+    )
+    
+    crew = Crew(agents=[agent], tasks=[task])
+    
+    result = crew.kickoff(inputs={"data": df})
+    assert result is not None
+    assert "Alice" in str(result) or "Bob" in str(result)
+
+
+def test_crew_inputs_interpolate_with_dataframe():
+    """Test that input interpolation works with pandas DataFrames."""
+    import pandas as pd
+    
+    df = pd.DataFrame({"col1": [1, 2], "col2": [3, 4]})
+    
+    agent = Agent(
+        role="Analyst",
+        goal="Process {data_type} data",
+        backstory="Expert in {data_type} analysis",
+    )
+    
+    task = Task(
+        description="Process this data: {dataset}",
+        expected_output="Analysis of {dataset}",
+        agent=agent,
+    )
+    
+    crew = Crew(agents=[agent], tasks=[task])
+    inputs = {"data_type": "tabular", "dataset": df}
+    
+    crew._interpolate_inputs(inputs=inputs)
+    
+    assert "tabular" in crew.agents[0].goal
+    assert "tabular" in crew.agents[0].backstory
+    assert str(df) in crew.tasks[0].description
+    assert str(df) in crew.tasks[0].expected_output
+
+
+def test_crew_inputs_interpolate_mixed_types_with_dataframe():
+    """Test input interpolation with mixed types including DataFrames."""
+    import pandas as pd
+    
+    df = pd.DataFrame({"values": [10, 20, 30]})
+    
+    agent = Agent(
+        role="{role_name}",
+        goal="Analyze {count} records",
+        backstory="Expert with {dataset}",
+    )
+    
+    task = Task(
+        description="Process {dataset} with {count} records",
+        expected_output="{count} insights from {dataset}",
+        agent=agent,
+    )
+    
+    crew = Crew(agents=[agent], tasks=[task])
+    inputs = {
+        "role_name": "Data Scientist",
+        "count": 3,
+        "dataset": df
+    }
+    
+    crew._interpolate_inputs(inputs=inputs)
+    
+    assert crew.agents[0].role == "Data Scientist"
+    assert "3" in crew.agents[0].goal
+    assert str(df) in crew.agents[0].backstory
+    assert str(df) in crew.tasks[0].description
+    assert "3" in crew.tasks[0].expected_output
+
+

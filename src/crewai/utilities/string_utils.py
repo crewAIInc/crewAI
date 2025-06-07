@@ -1,10 +1,38 @@
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
+
+SUPPORTED_PRIMITIVE_TYPES = (str, int, float, bool)
+SUPPORTED_CONTAINER_TYPES = (dict, list)
+SUPPORTED_TYPES = SUPPORTED_PRIMITIVE_TYPES + SUPPORTED_CONTAINER_TYPES
+
+
+def _validate_input_type(val: Any) -> None:
+    """Validates input types recursively (str, int, float, bool, dict, list).
+    
+    Args:
+        val: The value to validate
+        
+    Raises:
+        ValueError: If the value contains unsupported types
+    """
+    if val is None:
+        return
+    if isinstance(val, SUPPORTED_PRIMITIVE_TYPES):
+        return
+    if isinstance(val, SUPPORTED_CONTAINER_TYPES):
+        for item in val.values() if isinstance(val, dict) else val:
+            _validate_input_type(item)
+        return
+    raise ValueError(
+        f"Unsupported type {type(val).__name__} in inputs. "
+        "Only str, int, float, bool, dict, and list are allowed."
+    )
 
 
 def interpolate_only(
     input_string: Optional[str],
-    inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]],
+    inputs: Dict[str, Any],
+    raise_on_missing: bool = True,
 ) -> str:
     """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
     Only interpolates placeholders that follow the pattern {variable_name} where
@@ -25,27 +53,27 @@ def interpolate_only(
         ValueError: If a value contains unsupported types or a template variable is missing
     """
 
-    # Validation function for recursive type checking
-    def validate_type(value: Any) -> None:
-        if value is None:
-            return
-        if isinstance(value, (str, int, float, bool)):
-            return
-        if isinstance(value, (dict, list)):
-            for item in value.values() if isinstance(value, dict) else value:
-                validate_type(item)
-            return
-        raise ValueError(
-            f"Unsupported type {type(value).__name__} in inputs. "
-            "Only str, int, float, bool, dict, and list are allowed."
-        )
-
-    # Validate all input values
+    from crewai.utilities.serialization import to_serializable
+    
+    processed_inputs = {}
+    
     for key, value in inputs.items():
-        try:
-            validate_type(value)
-        except ValueError as e:
-            raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
+        if value is None or isinstance(value, SUPPORTED_TYPES):
+            try:
+                _validate_input_type(value)
+                processed_inputs[key] = value
+            except ValueError as e:
+                raise ValueError(f"Invalid value for key '{key}': {str(e)}") from e
+        else:
+            try:
+                processed_inputs[key] = to_serializable(value)
+            except Exception as e:
+                raise ValueError(
+                    f"Invalid value for key '{key}': Unable to serialize {type(value).__name__}. "
+                    f"Serialization error: {str(e)}"
+                )
+    
+    inputs = processed_inputs
 
     if input_string is None or not input_string:
         return ""

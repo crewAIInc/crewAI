@@ -68,7 +68,7 @@ def to_serializable(
             _current_depth=_current_depth + 1,
         )
     else:
-        return repr(obj)
+        return str(obj)
 
 
 def _to_serializable_key(key: Any) -> str:
