@@ -109,3 +109,32 @@ class CrewTestResultEvent(CrewBaseEvent):
     execution_duration: float
     model: str
     type: str = "crew_test_result"
+
+
+class CrewStreamChunkEvent(CrewBaseEvent):
+    """Event emitted when a streaming chunk is received during crew execution"""
+    
+    type: str = "crew_stream_chunk"
+    chunk: str
+    agent_role: Optional[str] = None
+    task_description: Optional[str] = None
+    step_type: str
+
+
+class TaskStreamChunkEvent(BaseEvent):
+    """Event emitted when a streaming chunk is received during task execution"""
+    
+    type: str = "task_stream_chunk"
+    chunk: str
+    task_description: str
+    agent_role: str
+    step_type: str
+
+
+class AgentStreamChunkEvent(BaseEvent):
+    """Event emitted when a streaming chunk is received during agent execution"""
+    
+    type: str = "agent_stream_chunk"
+    chunk: str
+    agent_role: str
+    step_type: str

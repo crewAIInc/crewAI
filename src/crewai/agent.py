@@ -1,6 +1,6 @@
 import shutil
 import subprocess
-from typing import Any, Dict, List, Literal, Optional, Sequence, Type, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Type, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -226,6 +226,8 @@ class Agent(BaseAgent):
         task: Task,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        stream: bool = False,
+        stream_callback: Optional[Callable[[str, str, str, str], None]] = None,
     ) -> str:
         """Execute a task with the agent.
 
@@ -233,6 +235,8 @@ class Agent(BaseAgent):
             task: Task to execute.
             context: Context to execute the task in.
             tools: Tools to use for the task.
+            stream: Whether to enable streaming output.
+            stream_callback: Callback function for streaming chunks.
 
         Returns:
             Output of the agent
@@ -371,6 +375,10 @@ class Agent(BaseAgent):
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)
+        
+        if stream and stream_callback:
+            self.agent_executor._stream_callback = stream_callback
+            self.agent_executor._task_description = task.description
 
         if self.crew and self.crew._train:
             task_prompt = self._training_handler(task_prompt=task_prompt)
@@ -437,7 +445,7 @@ class Agent(BaseAgent):
                     ),
                 )
                 raise e
-            result = self.execute_task(task, context, tools)
+            result = self.execute_task(task, context, tools, stream, stream_callback)
 
         if self.max_rpm and self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()

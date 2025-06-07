@@ -119,7 +119,7 @@ def test_guardrail_error_in_context():
     # Mock execute_task to succeed on second attempt
     first_call = True
 
-    def execute_task(task, context, tools):
+    def execute_task(task, context, tools, stream=False, stream_callback=None):
         nonlocal first_call
         if first_call:
             first_call = False

@@ -357,6 +357,34 @@ class EventListener(BaseEventListener):
             content = self.text_stream.read()
             print(content, end="", flush=True)
             self.next_chunk = self.text_stream.tell()
+            
+            from crewai.utilities.events.crew_events import CrewStreamChunkEvent
+            from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+            
+            agent_role = "unknown"
+            task_description = "unknown"
+            
+            if hasattr(source, 'agent') and source.agent:
+                agent_role = source.agent.role
+            elif hasattr(source, 'role'):
+                agent_role = source.role
+                
+            if hasattr(source, 'task') and source.task:
+                task_description = source.task.description
+            elif hasattr(source, '_task_description'):
+                task_description = source._task_description
+                
+            crewai_event_bus.emit(
+                source,
+                CrewStreamChunkEvent(
+                    chunk=event.chunk,
+                    agent_role=agent_role,
+                    task_description=task_description,
+                    step_type="llm_response",
+                    crew=getattr(source, 'crew', None),
+                    crew_name=getattr(source, 'crew', {}).get('__class__', {}).get('__name__', None) if hasattr(source, 'crew') and source.crew else None
+                )
+            )
 
         @crewai_event_bus.on(CrewTestStartedEvent)
         def on_crew_test_started(source, event: CrewTestStartedEvent):

@@ -86,6 +86,8 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         task: Any,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        stream: bool = False,
+        stream_callback: Optional[Any] = None,
     ) -> str:
         """Execute a task using the OpenAI Assistant"""
         self._converter_adapter.configure_structured_output(task)

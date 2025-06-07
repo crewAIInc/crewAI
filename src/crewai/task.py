@@ -346,9 +346,11 @@ class Task(BaseModel):
         agent: Optional[BaseAgent] = None,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        stream: bool = False,
+        stream_callback: Optional[Callable[[str, str, str, str], None]] = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
-        return self._execute_core(agent, context, tools)
+        return self._execute_core(agent, context, tools, stream, stream_callback)
 
     @property
     def key(self) -> str:
@@ -369,13 +371,15 @@ class Task(BaseModel):
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
+        stream: bool = False,
+        stream_callback: Optional[Callable[[str, str, str, str], None]] = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
         threading.Thread(
             daemon=True,
             target=self._execute_task_async,
-            args=(agent, context, tools, future),
+            args=(agent, context, tools, future, stream, stream_callback),
         ).start()
         return future
 
@@ -385,9 +389,11 @@ class Task(BaseModel):
         context: Optional[str],
         tools: Optional[List[Any]],
         future: Future[TaskOutput],
+        stream: bool = False,
+        stream_callback: Optional[Callable[[str, str, str, str], None]] = None,
     ) -> None:
         """Execute the task asynchronously with context handling."""
-        result = self._execute_core(agent, context, tools)
+        result = self._execute_core(agent, context, tools, stream, stream_callback)
         future.set_result(result)
 
     def _execute_core(
@@ -395,6 +401,8 @@ class Task(BaseModel):
         agent: Optional[BaseAgent],
         context: Optional[str],
         tools: Optional[List[Any]],
+        stream: bool = False,
+        stream_callback: Optional[Callable[[str, str, str, str], None]] = None,
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
         try:
@@ -416,6 +424,8 @@ class Task(BaseModel):
                 task=self,
                 context=context,
                 tools=tools,
+                stream=stream,
+                stream_callback=stream_callback,
             )
 
             pydantic_output, json_output = self._export_output(result)
@@ -449,7 +459,7 @@ class Task(BaseModel):
                         content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
                         color="yellow",
                     )
-                    return self._execute_core(agent, context, tools)
+                    return self._execute_core(agent, context, tools, stream, stream_callback)
 
                 if guardrail_result.result is None:
                     raise Exception(

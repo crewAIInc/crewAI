@@ -80,6 +80,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
+        self._stream_callback = None
+        self._task_description = None
         self.tool_name_to_tool_map: Dict[str, Union[CrewStructuredTool, BaseTool]] = {
             tool.name: tool for tool in self.tools
         }
@@ -157,6 +159,23 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     printer=self._printer,
                 )
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
+                
+                if hasattr(self, '_stream_callback') and self._stream_callback:
+                    if hasattr(formatted_answer, 'text'):
+                        step_type = "agent_thinking" if hasattr(formatted_answer, 'tool') else "final_answer"
+                        self._stream_callback(
+                            formatted_answer.text,
+                            self.agent.role if self.agent else "unknown",
+                            getattr(self, '_task_description', "unknown"),
+                            step_type
+                        )
+                    elif isinstance(formatted_answer, str):
+                        self._stream_callback(
+                            formatted_answer,
+                            self.agent.role if self.agent else "unknown",
+                            getattr(self, '_task_description', "unknown"),
+                            "final_answer"
+                        )
 
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
