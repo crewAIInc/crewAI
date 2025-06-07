@@ -92,6 +92,46 @@ programmer_agent = Agent(
 )
 ```
 
+You can also specify a custom Docker image for code execution:
+
+```python Code
+from crewai import Agent
+
+# Create an agent with code execution enabled and custom Docker image
+programmer_agent = Agent(
+    role="Python Programmer",
+    goal="Write and execute Python code to solve problems",
+    backstory="An expert Python programmer who can write efficient code to solve complex problems.",
+    allow_code_execution=True,  # This automatically adds the CodeInterpreterTool
+    execution_image="python:3.11-slim",  # Custom Docker image with specific Python version
+    verbose=True,
+)
+```
+
+### Best Practices for Custom Docker Images
+
+When using custom Docker images for code execution, consider the following best practices:
+
+- **Use specific version tags**: Instead of `latest`, use specific version tags like `python:3.11-slim` for reproducible builds
+- **Security scanning**: Ensure your custom images are regularly scanned for security vulnerabilities
+- **Image size optimization**: Consider using slim or alpine variants to reduce image size and improve performance
+- **Pre-installed dependencies**: Include commonly used libraries in your custom image to avoid repeated installations
+- **Registry accessibility**: Ensure the Docker registry hosting your custom image is accessible from your execution environment
+
+Example with a custom image containing data science libraries:
+
+```python Code
+# Custom image with pre-installed data science packages
+data_scientist_agent = Agent(
+    role="Data Scientist",
+    goal="Analyze datasets and create visualizations",
+    backstory="Expert in data analysis with access to specialized tools",
+    allow_code_execution=True,
+    execution_image="my-registry.com/datascience:python3.11-pandas-numpy",
+    verbose=True,
+)
+```
+
 ### Enabling `unsafe_mode`
 
 ```python Code
