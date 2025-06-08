@@ -70,8 +70,8 @@ class ConsoleFormatter:
         self.console = Console(width=None)
         self.verbose = verbose
         self.spinner = SimpleSpinner()
-        self._spinning_branches = {}  # Track which branches are spinning
-        self._spinner_timer = None
+        self._spinning_branches: Dict[int, Dict[str, Any]] = {}  # Track which branches are spinning
+        self._spinner_timer: Optional[threading.Timer] = None
         # Live instance to dynamically update a Tree renderable (e.g. the Crew tree)
         # When multiple Tree objects are printed sequentially we reuse this Live
         # instance so the previous render is replaced instead of writing a new one.
@@ -1392,11 +1392,13 @@ class ConsoleFormatter:
                 self.print(tree_to_show)
 
             # Schedule next update
-            self._spinner_timer = threading.Timer(0.2, update_spinners)
-            self._spinner_timer.start()
+            timer = threading.Timer(0.2, update_spinners)
+            self._spinner_timer = timer
+            timer.start()
 
-        self._spinner_timer = threading.Timer(0.2, update_spinners)
-        self._spinner_timer.start()
+        timer = threading.Timer(0.2, update_spinners)
+        self._spinner_timer = timer
+        timer.start()
 
     def cleanup(self) -> None:
         """Clean up resources including stopping any running timers."""
@@ -1411,5 +1413,5 @@ class ConsoleFormatter:
         """Destructor to ensure cleanup on object deletion."""
         try:
             self.cleanup()
-        except:
+        except Exception:
             pass  # Ignore errors during cleanup
