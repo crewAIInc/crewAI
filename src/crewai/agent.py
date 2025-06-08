@@ -254,8 +254,11 @@ class Agent(BaseAgent):
                     reasoning_handler.handle_agent_reasoning()
                 )
 
-                # Add the reasoning plan to the task description
-                task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
+                # Only add reasoning plan to task description if verbose mode is disabled
+                # In verbose mode, the reasoning plan is already displayed in a panel
+                is_verbose = self.verbose or (hasattr(self, "crew") and getattr(self.crew, "verbose", False))
+                if not is_verbose:
+                    task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
             except Exception as e:
                 if hasattr(self, "_logger"):
                     self._logger.log(
