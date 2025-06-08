@@ -108,6 +108,7 @@ class EventListener(BaseEventListener):
                 event.crew_name or "Crew",
                 source.id,
                 "completed",
+                event.output,
             )
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
@@ -170,6 +171,7 @@ class EventListener(BaseEventListener):
                 source.id,
                 source.agent.role,
                 "completed",
+                event.output,
             )
 
             # Reset branch pointers for clean state management

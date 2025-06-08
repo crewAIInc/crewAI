@@ -188,6 +188,7 @@ class ConsoleFormatter:
         crew_name: str,
         source_id: str,
         status: str = "completed",
+        output: Optional[Any] = None,
     ) -> None:
         """Handle crew tree updates with consistent formatting."""
         if not self.verbose or tree is None:
@@ -219,6 +220,22 @@ class ConsoleFormatter:
             style,
             ID=source_id,
         )
+
+        # Add output content if available and not in starting state
+        if output is not None and status in ["completed", "failed"]:
+            # Extract the raw output text
+            output_text = ""
+            if hasattr(output, 'raw'):
+                output_text = output.raw
+            elif isinstance(output, str):
+                output_text = output
+            else:
+                output_text = str(output)
+
+            display_output = output_text
+
+            content.append("\n\nOutput:\n", style="white bold")
+            content.append(display_output, style="white")
 
         self.print_panel(content, title, style)
 
@@ -277,6 +294,7 @@ class ConsoleFormatter:
         task_id: str,
         agent_role: str,
         status: str = "completed",
+        output: Optional[Any] = None,
     ) -> None:
         """Update task status in the tree."""
         if not self.verbose or crew_tree is None:
@@ -314,6 +332,23 @@ class ConsoleFormatter:
         content = self.create_status_content(
             f"Task {status.title()}", str(task_id), style, Agent=agent_role
         )
+
+        # Add output content if available
+        if output is not None:
+            # Extract the raw output text
+            output_text = ""
+            if hasattr(output, 'raw'):
+                output_text = output.raw
+            elif isinstance(output, str):
+                output_text = output
+            else:
+                output_text = str(output)
+
+            display_output = output_text
+
+            content.append("\n\nOutput:\n", style="white bold")
+            content.append(display_output, style="white")
+
         self.print_panel(content, panel_title, style)
 
     def create_agent_branch(
