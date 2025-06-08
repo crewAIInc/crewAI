@@ -116,7 +116,7 @@ class Agent(BaseAgent):
         description="Whether the agent is multimodal.",
     )
     inject_date: bool = Field(
-        default=False,
+        default=True,
         description="Whether to automatically inject the current date into tasks.",
     )
     date_format: str = Field(
