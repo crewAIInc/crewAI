@@ -201,6 +201,7 @@
               "observability/arize-phoenix",
               "observability/langfuse",
               "observability/langtrace",
+              "observability/maxim",
               "observability/mlflow",
               "observability/openlit",
               "observability/opik",
