@@ -150,9 +150,12 @@ class EventListener(BaseEventListener):
         def on_task_started(source, event: TaskStartedEvent):
             span = self._telemetry.task_started(crew=source.agent.crew, task=source)
             self.execution_spans[source] = span
-            self.formatter.create_task_branch(
+            task_branch = self.formatter.create_task_branch(
                 self.formatter.current_crew_tree, source.id
             )
+            # Also update current_agent_branch since reasoning happens before agent execution starts
+            # and the agent branch is the same as the task branch anyway
+            self.formatter.current_agent_branch = task_branch
 
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source, event: TaskCompletedEvent):
@@ -169,6 +172,12 @@ class EventListener(BaseEventListener):
                 "completed",
             )
 
+            # Reset branch pointers for clean state management
+            self.formatter.current_task_branch = None
+            self.formatter.current_agent_branch = None
+            self.formatter.current_tool_branch = None
+            self.formatter.current_reasoning_branch = None
+
         @crewai_event_bus.on(TaskFailedEvent)
         def on_task_failed(source, event: TaskFailedEvent):
             span = self.execution_spans.get(source)
@@ -183,6 +192,12 @@ class EventListener(BaseEventListener):
                 source.agent.role,
                 "failed",
             )
+
+            # Reset branch pointers for clean state management
+            self.formatter.current_task_branch = None
+            self.formatter.current_agent_branch = None
+            self.formatter.current_tool_branch = None
+            self.formatter.current_reasoning_branch = None
 
         # ----------- AGENT EVENTS -----------
 

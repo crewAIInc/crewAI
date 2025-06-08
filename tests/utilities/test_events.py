@@ -48,6 +48,9 @@ from crewai.utilities.events.task_events import (
 from crewai.utilities.events.tool_usage_events import (
     ToolUsageErrorEvent,
 )
+from crewai.utilities.events.reasoning_events import (
+    AgentReasoningStartedEvent,
+)
 
 
 @pytest.fixture(scope="module")
@@ -779,3 +782,85 @@ def test_streaming_empty_response_handling():
         finally:
             # Restore the original method
             llm.call = original_call
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_reasoning_events_attach_to_correct_task():
+    """Test that reasoning events are attached to the correct task branch, not previous task's branch."""
+    received_events = []
+
+    @crewai_event_bus.on(TaskStartedEvent)
+    def handle_task_start(source, event):
+        received_events.append(('task_started', source.id))
+
+    @crewai_event_bus.on(AgentReasoningStartedEvent)
+    def handle_reasoning_start(source, event):
+        received_events.append(('reasoning_started', event.task_id))
+
+    @crewai_event_bus.on(TaskCompletedEvent)
+    def handle_task_complete(source, event):
+        received_events.append(('task_completed', source.id))
+
+    # Create agent with reasoning enabled
+    reasoning_agent = Agent(
+        role="Test Reasoning Agent",
+        goal="Test reasoning",
+        backstory="I test reasoning",
+        llm="gpt-4o-mini",
+        reasoning=True,
+        verbose=True
+    )
+
+    # Create two tasks
+    task1 = Task(
+        description="First task",
+        expected_output="First result",
+        agent=reasoning_agent
+    )
+
+    task2 = Task(
+        description="Second task",
+        expected_output="Second result",
+        agent=reasoning_agent
+    )
+
+    crew = Crew(agents=[reasoning_agent], tasks=[task1, task2], name="TestCrew")
+
+    # Mock the LLM to provide reasoning responses
+    def mock_llm_call(messages, *args, **kwargs):
+        if any("create a detailed plan" in str(msg) for msg in messages):
+            return "Test plan\n\nREADY: I'm ready to execute."
+        return "Test execution result"
+
+    reasoning_agent.llm.call = mock_llm_call
+
+    crew.kickoff()
+
+    # Verify events occurred in correct order and with correct task IDs
+    assert len(received_events) >= 4  # At least: task1_start, reasoning1, task1_complete, task2_start, reasoning2, task2_complete
+
+    # Find reasoning events and their associated task IDs
+    reasoning_events = [(event_type, task_id) for event_type, task_id in received_events if event_type == 'reasoning_started']
+    task_started_events = [(event_type, task_id) for event_type, task_id in received_events if event_type == 'task_started']
+
+    # Verify we have reasoning events for both tasks
+    assert len(reasoning_events) >= 2
+    assert len(task_started_events) == 2
+
+    # Verify that each reasoning event has the correct task ID
+    task1_id = str(task1.id)
+    task2_id = str(task2.id)
+
+    reasoning_task_ids = [task_id for _, task_id in reasoning_events]
+    assert task1_id in reasoning_task_ids
+    assert task2_id in reasoning_task_ids
+
+    # Verify that reasoning events match their respective tasks
+    for i, (event_type, task_id) in enumerate(received_events):
+        if event_type == 'reasoning_started':
+            # Find the preceding task_started event
+            preceding_task_events = [e for e in received_events[:i] if e[0] == 'task_started']
+            if preceding_task_events:
+                last_task_started_id = preceding_task_events[-1][1]
+                # The reasoning task_id should match the last started task
+                assert task_id == last_task_started_id, f"Reasoning event task_id {task_id} doesn't match last started task {last_task_started_id}"
