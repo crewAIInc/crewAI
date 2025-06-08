@@ -302,7 +302,11 @@ class AgentReasoning:
         Returns:
             str: The agent's backstory or a default value.
         """
-        return getattr(self.agent, "backstory", "No backstory provided")
+        try:
+            backstory = getattr(self.agent, "backstory", "No backstory provided")
+            return backstory
+        except Exception as e:
+            return "No backstory provided"
 
     def __create_reasoning_prompt(self) -> str:
         """
@@ -313,7 +317,7 @@ class AgentReasoning:
         """
         available_tools = self.__format_available_tools()
 
-        return self.i18n.retrieve("reasoning", "create_plan_prompt").format(
+        prompt = self.i18n.retrieve("reasoning", "create_plan_prompt").format(
             role=self.agent.role,
             goal=self.agent.goal,
             backstory=self.__get_agent_backstory(),
@@ -321,6 +325,7 @@ class AgentReasoning:
             expected_output=self.task.expected_output,
             tools=available_tools
         )
+        return prompt
 
     def __format_available_tools(self) -> str:
         """

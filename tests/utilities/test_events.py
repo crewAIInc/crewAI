@@ -791,7 +791,7 @@ def test_reasoning_events_attach_to_correct_task():
 
     @crewai_event_bus.on(TaskStartedEvent)
     def handle_task_start(source, event):
-        received_events.append(('task_started', source.id))
+        received_events.append(('task_started', str(source.id)))
 
     @crewai_event_bus.on(AgentReasoningStartedEvent)
     def handle_reasoning_start(source, event):
@@ -799,7 +799,7 @@ def test_reasoning_events_attach_to_correct_task():
 
     @crewai_event_bus.on(TaskCompletedEvent)
     def handle_task_complete(source, event):
-        received_events.append(('task_completed', source.id))
+        received_events.append(('task_completed', str(source.id)))
 
     # Create agent with reasoning enabled
     reasoning_agent = Agent(
@@ -829,7 +829,7 @@ def test_reasoning_events_attach_to_correct_task():
     # Mock the LLM to provide reasoning responses
     def mock_llm_call(messages, *args, **kwargs):
         if any("create a detailed plan" in str(msg) for msg in messages):
-            return "Test plan\n\nREADY: I'm ready to execute."
+            return "Test plan\n\nREADY: I am ready to execute the task."
         return "Test execution result"
 
     reasoning_agent.llm.call = mock_llm_call
