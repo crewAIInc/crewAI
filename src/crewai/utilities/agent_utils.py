@@ -400,8 +400,10 @@ def show_agent_logs(
             content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
         )
         if task_description:
+            # Filter out reasoning plan from display (but keep it in actual task for LLM)
+            display_description = _filter_reasoning_plan_from_display(task_description)
             printer.print(
-                content=f"\033[95m## Task:\033[00m \033[92m{task_description}\033[00m"
+                content=f"\033[95m## Task:\033[00m \033[92m{display_description}\033[00m"
             )
     else:
         # Execution logs
@@ -433,6 +435,24 @@ def show_agent_logs(
             printer.print(
                 content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
             )
+
+
+def _filter_reasoning_plan_from_display(task_description: str) -> str:
+    """Filter out reasoning plan from task description for display purposes only.
+
+    This keeps the reasoning plan in the actual task description for the LLM to use,
+    but removes it from the display logs to avoid duplication with reasoning panels.
+
+    Args:
+        task_description: The full task description that may contain a reasoning plan
+
+    Returns:
+        Task description with reasoning plan removed for display purposes
+    """
+    # Look for the reasoning plan section and remove it for display
+    if "\n\nReasoning Plan:\n" in task_description:
+        return task_description.split("\n\nReasoning Plan:\n")[0]
+    return task_description
 
 
 def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
