@@ -143,3 +143,88 @@ def test_default_values_in_schema():
         {"required_param": "test", "optional_param": "custom", "nullable_param": 42}
     )
     assert result == "test custom 42"
+
+@pytest.fixture
+def custom_tool_decorator():
+    from crewai.tools import tool
+
+    @tool("custom_tool", result_as_answer=True)
+    async def custom_tool():
+        """This is a tool that does something"""
+        return "Hello World from Custom Tool"
+
+    return custom_tool
+
+@pytest.fixture
+def custom_tool():
+    from crewai.tools import BaseTool
+
+    class CustomTool(BaseTool):
+        name: str = "my_tool"
+        description: str = "This is a tool that does something"
+        result_as_answer: bool = True
+
+        async def _run(self):
+            return "Hello World from Custom Tool"
+
+    return CustomTool()
+
+def build_simple_crew(tool):
+    from crewai import Agent, Task, Crew
+
+    agent1 = Agent(role="Simple role", goal="Simple goal", backstory="Simple backstory", tools=[tool])
+
+    say_hi_task = Task(
+        description="Use the custom tool result as answer.", agent=agent1, expected_output="Use the tool result"
+    )
+
+    crew = Crew(agents=[agent1], tasks=[say_hi_task])
+    return crew
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_async_tool_using_within_isolated_crew(custom_tool):
+    crew = build_simple_crew(custom_tool)
+    result = crew.kickoff()
+
+    assert result.raw == "Hello World from Custom Tool"
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_async_tool_using_decorator_within_isolated_crew(custom_tool_decorator):
+    crew = build_simple_crew(custom_tool_decorator)
+    result = crew.kickoff()
+
+    assert result.raw == "Hello World from Custom Tool"
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_async_tool_within_flow(custom_tool):
+    from crewai.flow.flow import Flow
+
+    class StructuredExampleFlow(Flow):
+        from crewai.flow.flow import start
+
+        @start()
+        async def start(self):
+            crew = build_simple_crew(custom_tool)
+            result = await crew.kickoff_async()
+            return result
+
+    flow = StructuredExampleFlow()
+    result = flow.kickoff()
+    assert result.raw == "Hello World from Custom Tool"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_async_tool_using_decorator_within_flow(custom_tool_decorator):
+    from crewai.flow.flow import Flow
+
+    class StructuredExampleFlow(Flow):
+        from crewai.flow.flow import start
+        @start()
+        async def start(self):
+            crew = build_simple_crew(custom_tool_decorator)
+            result = await crew.kickoff_async()
+            return result
+
+    flow = StructuredExampleFlow()
+    result = flow.kickoff()
+    assert result.raw == "Hello World from Custom Tool"
