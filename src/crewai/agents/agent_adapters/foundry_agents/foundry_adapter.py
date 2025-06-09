@@ -57,21 +57,20 @@ class FoundryAgentAdapter(BaseAgentAdapter):
             raise ImportError(
                 "Foundry Agent Dependencies are not installed. Please install it using `uv pip install azure-ai-projects azure-identity`"
             )
-        else:
-            role = kwargs.pop("role", None)
-            goal = kwargs.pop("goal", None)
-            backstory = kwargs.pop("backstory", None)
-            super().__init__(
-                role=role,
-                goal=goal,
-                backstory=backstory,
-                tools=tools,
-                agent_config=agent_config,
-                **kwargs,
-            )
-            self._tool_adapter = FoundryAgentToolAdapter(tools=tools)
-            self.llm = model
-            self._converter_adapter = FoundryConverterAdapter(self)
+        role = kwargs.pop("role", None)
+        goal = kwargs.pop("goal", None)
+        backstory = kwargs.pop("backstory", None)
+        super().__init__(
+            role=role,
+            goal=goal,
+            backstory=backstory,
+            tools=tools,
+            agent_config=agent_config,
+            **kwargs,
+        )
+        self._tool_adapter = FoundryAgentToolAdapter(tools=tools)
+        self.llm = model
+        self._converter_adapter = FoundryConverterAdapter(self)
 
     def _build_system_prompt(self) -> str:
         """Build a system prompt for the Foundry agent."""
