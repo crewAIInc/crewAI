@@ -305,7 +305,7 @@ class AgentReasoning:
         try:
             backstory = getattr(self.agent, "backstory", "No backstory provided")
             return backstory
-        except Exception as e:
+        except Exception:
             return "No backstory provided"
 
     def __create_reasoning_prompt(self) -> str:

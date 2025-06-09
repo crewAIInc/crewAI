@@ -304,7 +304,7 @@ def patch_rpm_controller():
         from crewai.utilities.rpm_controller import RPMController
         from unittest.mock import patch
 
-        original_reset_request_count = RPMController._reset_request_count
+        RPMController._reset_request_count
 
         def mock_reset_request_count(self):
             """Mock that prevents the recurring timer from being set up."""
