@@ -2150,7 +2150,7 @@ def test_agent_from_repository_displays_org_info(mock_console, mock_settings, mo
     agent = Agent(from_repository="test_agent")
 
     mock_console.print.assert_any_call(
-        f"Fetching agent from organization: Test Organization (test-org-uuid)",
+        "Fetching agent from organization: Test Organization (test-org-uuid)",
         style="bold blue"
     )
 
