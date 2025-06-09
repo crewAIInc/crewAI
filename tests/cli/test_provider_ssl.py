@@ -3,7 +3,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 import requests
 
 from crewai.cli.provider import fetch_provider_data, get_ssl_verify_config

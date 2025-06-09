@@ -159,8 +159,17 @@ def get_ssl_verify_config():
     """
     Get SSL verification configuration from environment variables or use certifi default.
     
+    Environment Variables (checked in order of precedence):
+        REQUESTS_CA_BUNDLE: Path to the primary CA bundle file.
+        SSL_CERT_FILE: Path to the secondary CA bundle file.
+        CURL_CA_BUNDLE: Path to the tertiary CA bundle file.
+    
     Returns:
-    - str: Path to CA bundle file or certifi default path
+        str: Path to CA bundle file or certifi default path.
+    
+    Example:
+        >>> get_ssl_verify_config()
+        '/path/to/ca-bundle.pem'
     """
     for env_var in ['REQUESTS_CA_BUNDLE', 'SSL_CERT_FILE', 'CURL_CA_BUNDLE']:
         ca_bundle = os.environ.get(env_var)
@@ -180,8 +189,9 @@ def fetch_provider_data(cache_file):
     Returns:
     - dict or None: The fetched provider data or None if the operation fails.
     """
+    ssl_config = get_ssl_verify_config()
     try:
-        response = requests.get(JSON_URL, stream=True, timeout=60, verify=get_ssl_verify_config())
+        response = requests.get(JSON_URL, stream=True, timeout=60, verify=ssl_config)
         response.raise_for_status()
         data = download_data(response)
         with open(cache_file, "w") as f:
@@ -189,7 +199,9 @@ def fetch_provider_data(cache_file):
         return data
     except requests.exceptions.SSLError as e:
         click.secho(f"SSL certificate verification failed: {e}", fg="red")
+        click.secho(f"Current CA bundle path: {ssl_config}", fg="yellow")
         click.secho("Try setting REQUESTS_CA_BUNDLE environment variable to your CA bundle path", fg="yellow")
+        return None
     except requests.RequestException as e:
         click.secho(f"Error fetching provider data: {e}", fg="red")
     except json.JSONDecodeError:
