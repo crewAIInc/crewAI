@@ -29,7 +29,8 @@ def test_agent_with_reasoning(mock_llm_responses):
         backstory="I am a test agent created to verify the reasoning feature works correctly.",
         llm=llm,
         reasoning=True,
-        verbose=True
+        verbose=True,
+        inject_date=False
     )
 
     task = Task(
@@ -61,7 +62,8 @@ def test_agent_with_reasoning_not_ready_initially(mock_llm_responses):
         llm=llm,
         reasoning=True,
         max_reasoning_attempts=2,
-        verbose=True
+        verbose=True,
+        inject_date=False
     )
 
     task = Task(
@@ -102,7 +104,8 @@ def test_agent_with_reasoning_max_attempts_reached():
         llm=llm,
         reasoning=True,
         max_reasoning_attempts=2,
-        verbose=True
+        verbose=True,
+        inject_date=False
     )
 
     task = Task(
@@ -138,7 +141,8 @@ def test_agent_reasoning_input_validation():
         goal="To test the reasoning feature",
         backstory="I am a test agent created to verify the reasoning feature works correctly.",
         llm=llm,
-        reasoning=True
+        reasoning=True,
+        inject_date=False
     )
 
     with pytest.raises(ValueError, match="Both task and agent must be provided"):
@@ -161,7 +165,8 @@ def test_agent_reasoning_error_handling():
         goal="To test the reasoning feature",
         backstory="I am a test agent created to verify the reasoning feature works correctly.",
         llm=llm,
-        reasoning=True
+        reasoning=True,
+        inject_date=False
     )
 
     task = Task(
@@ -196,7 +201,8 @@ def test_agent_with_function_calling():
         backstory="I am a test agent created to verify the reasoning feature works correctly.",
         llm=llm,
         reasoning=True,
-        verbose=True
+        verbose=True,
+        inject_date=False
     )
 
     task = Task(
@@ -234,7 +240,8 @@ def test_agent_with_function_calling_fallback():
         backstory="I am a test agent created to verify the reasoning feature works correctly.",
         llm=llm,
         reasoning=True,
-        verbose=True
+        verbose=True,
+        inject_date=False
     )
 
     task = Task(
@@ -270,7 +277,8 @@ def test_agent_with_reasoning_non_verbose_mode(mock_llm_responses):
         backstory="I am a test agent created to verify the reasoning feature works correctly.",
         llm=llm,
         reasoning=True,
-        verbose=False  # Non-verbose mode
+        verbose=False,  # Non-verbose mode
+        inject_date=False
     )
 
     task = Task(
