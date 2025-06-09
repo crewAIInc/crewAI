@@ -208,4 +208,38 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: !!binary |
+      CtwBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSswEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcAQoQ3zd9XQjp0DkAuJI0hIakURIIE3pbrPDhkHQqClRvb2wgVXNhZ2UwATkggA5g
+      WTNHGEFI0htgWTNHGEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEyNy4ySicKCXRvb2xfbmFtZRIa
+      ChhBc2sgcXVlc3Rpb24gdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '223'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 08 Jun 2025 22:57:23 GMT
+    status:
+      code: 200
+      message: OK
 version: 1

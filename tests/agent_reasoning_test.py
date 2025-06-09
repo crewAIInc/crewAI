@@ -48,7 +48,10 @@ def test_agent_with_reasoning(mock_llm_responses):
     result = agent.execute_task(task)
 
     assert result == mock_llm_responses["execution"]
-    assert "Reasoning Plan:" not in task.description
+    # The reasoning plan should be injected into the task description for the LLM
+    assert "Reasoning Plan:" in task.description
+    # Verify the plan content is included
+    assert "I'll solve this simple math problem" in task.description
 
 
 def test_agent_with_reasoning_not_ready_initially(mock_llm_responses):
@@ -90,7 +93,10 @@ def test_agent_with_reasoning_not_ready_initially(mock_llm_responses):
 
     assert result == "2x"
     assert call_count[0] == 2  # Should have made 2 reasoning calls
-    assert "Reasoning Plan:" not in task.description
+    # The reasoning plan should be injected into the task description for the LLM
+    assert "Reasoning Plan:" in task.description
+    # Should contain the final refined plan
+    assert "power rule for derivatives" in task.description
 
 
 def test_agent_with_reasoning_max_attempts_reached():
@@ -129,7 +135,10 @@ def test_agent_with_reasoning_max_attempts_reached():
 
     assert result == "This is an unsolved problem in mathematics."
     assert call_count[0] == 2  # Should have made exactly 2 reasoning calls (max_attempts)
-    assert "Reasoning Plan:" not in task.description
+    # The reasoning plan should be injected into the task description for the LLM
+    assert "Reasoning Plan:" in task.description
+    # Should contain the final attempt's plan
+    assert "Attempt 2: I need more time to think" in task.description
 
 
 def test_agent_reasoning_input_validation():
@@ -227,7 +236,10 @@ def test_agent_with_function_calling():
     result = agent.execute_task(task)
 
     assert result == "4"
-    assert "Reasoning Plan:" not in task.description
+    # The reasoning plan should be injected into the task description for the LLM
+    assert "Reasoning Plan:" in task.description
+    # Verify the plan content from function calling is included
+    assert "I'll solve this simple math problem: 2+2=4." in task.description
 
 
 def test_agent_with_function_calling_fallback():
@@ -263,8 +275,10 @@ def test_agent_with_function_calling_fallback():
     result = agent.execute_task(task)
 
     assert result == "4"
-    # In verbose mode, reasoning plan should NOT be added to task description
-    assert "Reasoning Plan:" not in task.description
+    # The reasoning plan should be injected into the task description for the LLM
+    assert "Reasoning Plan:" in task.description
+    # Verify that the fallback response is included in the plan
+    assert "Invalid JSON that will trigger fallback" in task.description
 
 
 def test_agent_with_reasoning_non_verbose_mode(mock_llm_responses):
