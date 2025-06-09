@@ -21,9 +21,8 @@ from crewai.utilities.events.agent_events import (
 
 try:
     from azure.ai.projects import AIProjectClient as FoundryClient
-    from azure.ai.projects.models import MessageTextContent
     from azure.identity import DefaultAzureCredential
-    from azure.ai.projects.models import FunctionTool
+    from azure.ai.agents.models import FunctionTool
 
 
     from .foundry_agent_tool_adapter import FoundryAgentToolAdapter

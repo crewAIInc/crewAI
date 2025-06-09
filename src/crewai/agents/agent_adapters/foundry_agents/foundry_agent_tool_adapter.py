@@ -2,7 +2,7 @@ import inspect
 import re
 from typing import Any, List, Optional
 
-from azure.ai.projects.models import FunctionTool
+from azure.ai.agents.models import FunctionTool
 from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
 from crewai.tools import BaseTool
 
