@@ -168,8 +168,7 @@ class FoundryAgentAdapter(BaseAgentAdapter):
         """Configure tools for the Foundry Assistant"""
         if tools:
             self._tool_adapter.configure_tools(tools)
-            if self._tool_adapter.converted_tools:
-                self._converted_tools = self._tool_adapter.converted_tools
+            self._converted_tools = self._tool_adapter.tools()
 
     def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """Implement delegation tools support"""
