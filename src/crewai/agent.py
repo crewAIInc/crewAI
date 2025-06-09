@@ -116,7 +116,7 @@ class Agent(BaseAgent):
         description="Whether the agent is multimodal.",
     )
     inject_date: bool = Field(
-        default=False,
+        default=True,
         description="Whether to automatically inject the current date into tasks.",
     )
     date_format: str = Field(
@@ -254,7 +254,6 @@ class Agent(BaseAgent):
                     reasoning_handler.handle_agent_reasoning()
                 )
 
-                # Add the reasoning plan to the task description
                 task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
             except Exception as e:
                 if hasattr(self, "_logger"):

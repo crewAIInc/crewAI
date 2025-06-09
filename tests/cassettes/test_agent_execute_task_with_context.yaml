@@ -103,4 +103,50 @@ interactions:
       - req_833406276d399714b624a32627fc5b4a
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: '{"batch": [{"properties": {"class": "App", "version": "0.1.125", "language":
+      "python", "pid": 80707, "$lib": "posthog-python", "$lib_version": "3.7.0", "$geoip_disable":
+      true}, "timestamp": "2025-06-09T03:31:59.725666+00:00", "context": {}, "distinct_id":
+      "1705ac2a-a4f7-4f22-ace2-72149d894808", "event": "init"}], "historical_migration":
+      false, "sentAt": "2025-06-09T03:32:00.224582+00:00", "api_key": "phc_PHQDA5KwztijnSojsxJ2c1DuJd52QCzJzT2xnSGvjN2"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '453'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - posthog-python/3.7.0
+    method: POST
+    uri: https://us.i.posthog.com/batch/
+  response:
+    body:
+      string: '{"status":"Ok"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '15'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 09 Jun 2025 03:32:00 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      access-control-allow-credentials:
+      - 'true'
+      server:
+      - envoy
+      vary:
+      - origin, access-control-request-method, access-control-request-headers
+      x-envoy-upstream-service-time:
+      - '41'
+    status:
+      code: 200
+      message: OK
 version: 1

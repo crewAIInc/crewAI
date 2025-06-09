@@ -90,6 +90,18 @@ dev-dependencies = [
     "pytest-timeout>=2.3.1",
 ]
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    # Suppress Pydantic field conflict warnings from StagehandTool in crewai_tools
+    "ignore:Field \"model_api_key\" in StagehandTool has conflict with protected namespace \"model_\".:UserWarning",
+    "ignore:Field \"model_name\" in StagehandTool has conflict with protected namespace \"model_\".:UserWarning",
+    # Suppress Pydantic V2 deprecation warning for json_encoders
+    "ignore:`json_encoders` is deprecated.*:pydantic.warnings.PydanticDeprecatedSince20",
+    # Suppress pytest-asyncio configuration warning
+    "ignore:The configuration option \"asyncio_default_fixture_loop_scope\" is unset.*:pytest.PytestDeprecationWarning",
+]
+asyncio_default_fixture_loop_scope = "function"
+
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
 

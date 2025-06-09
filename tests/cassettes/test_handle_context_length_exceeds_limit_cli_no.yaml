@@ -101,4 +101,54 @@ interactions:
       - req_cbc755853b8dcf3ec0ce3b4c9ddbdbb9
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      CuUICiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSvAgKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKlCAoQNFa/LDvJGLsr12vJMynhhRIICxeE529u9AkqDENyZXcgQ3JlYXRlZDABOZCD
+      bLxTQkcYQZDQdLxTQkcYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTI2LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIGFmYTBiODE5ODNhYjExYTBhMzA3NzE5M2U1
+      MTdkYWJlSjEKB2NyZXdfaWQSJgokOTFiNDdmZDEtN2M0Mi00MGMwLTk2NDUtZGU3ZWYwMzI4Y2Vi
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJGVmMDgxMTkwLTYxYjQtNGNkMy1iNGQwLTlhYzgwOWE1Mzc0NEo7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNi0wOFQyMDozMTo0Ny42NjYyOTlK
+      0gIKC2NyZXdfYWdlbnRzEsICCr8CW3sia2V5IjogIjg5NGI0ZWJiMmZlODc3OWEyMmFkZjEyMTRk
+      ZTljYTcyIiwgImlkIjogIjNmNTAwNDllLTY2OTQtNDRjMy04NDQ2LTlmZjcxNjhmMWE4ZiIsICJy
+      b2xlIjogIkluZm9ybWF0aW9uIEFnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6
+      IDI1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjog
+      ImdwdC00IiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0
+      aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUqG
+      AgoKY3Jld190YXNrcxL3AQr0AVt7ImtleSI6ICI4YjZmYTE5MDE2NDVkYzhlMGY2YzRiMTRlYWQ4
+      MTE0YSIsICJpZCI6ICJhODg2NmZjMi05YzRmLTQxZDgtYTc1YS0xZDFmODUyZjRmN2UiLCAiYXN5
+      bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xl
+      IjogIkluZm9ybWF0aW9uIEFnZW50IiwgImFnZW50X2tleSI6ICI4OTRiNGViYjJmZTg3NzlhMjJh
+      ZGYxMjE0ZGU5Y2E3MiIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1128'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 09 Jun 2025 03:31:50 GMT
+    status:
+      code: 200
+      message: OK
 version: 1

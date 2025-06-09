@@ -400,8 +400,10 @@ def show_agent_logs(
             content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
         )
         if task_description:
+            # Filter out reasoning plan from display (but keep it in actual task for LLM)
+            display_description = _filter_auxiliary_from_display(task_description)
             printer.print(
-                content=f"\033[95m## Task:\033[00m \033[92m{task_description}\033[00m"
+                content=f"\033[95m## Task:\033[00m \033[92m{display_description}\033[00m"
             )
     else:
         # Execution logs
@@ -433,6 +435,44 @@ def show_agent_logs(
             printer.print(
                 content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
             )
+
+
+def _filter_auxiliary_from_display(task_description: str) -> str:
+    """Remove standard auxiliary sections (e.g., date injection, reasoning plan) from task description for display.
+
+    This function standardizes the removal of auxiliary information such as the injected current date
+    and the reasoning plan from the task description, ensuring that only the core task is shown in display logs.
+    The actual task description (with all sections) is still used for LLM input.
+
+    Args:
+        task_description (str): The full task description, possibly containing auxiliary sections.
+
+    Returns:
+        str: The task description with auxiliary sections removed for display purposes.
+
+    Example:
+        >>> desc = "Do X\\n\\nCurrent Date: 2024-06-01\\n\\nReasoning Plan:\\nStep 1..."
+        >>> _filter_auxiliary_from_display(desc)
+        'Do X'
+    """
+    # Define patterns for auxiliary sections to remove, in order.
+    auxiliary_patterns = [
+        (r"\n\nCurrent Date: [^\n]*", "date injection"),
+        (r"\n\nReasoning Plan:\n.*", "reasoning plan"),
+    ]
+
+    cleaned_description = task_description
+
+    for pattern, _ in auxiliary_patterns:
+        # For the reasoning plan, remove everything from the marker to the end.
+        if "Reasoning Plan" in pattern:
+            match = re.search(r"\n\nReasoning Plan:\n", cleaned_description)
+            if match:
+                cleaned_description = cleaned_description[: match.start()]
+        else:
+            cleaned_description = re.sub(pattern, "", cleaned_description)
+
+    return cleaned_description.strip()
 
 
 def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:

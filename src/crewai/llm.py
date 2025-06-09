@@ -405,11 +405,16 @@ class LLM(BaseLLM):
             "base_url": self.base_url,
             "api_version": self.api_version,
             "api_key": self.api_key,
-            "stream": self.stream,
             "tools": tools,
             "reasoning_effort": self.reasoning_effort,
             **self.additional_params,
         }
+
+        # Only include stream parameter if we're actually streaming
+        # This maintains backward compatibility with VCR cassettes
+        # that were recorded without the stream parameter
+        if self.stream:
+            params["stream"] = True
 
         # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}

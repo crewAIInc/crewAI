@@ -1,3 +1,5 @@
+import threading
+import time
 from typing import Any, Dict, Optional
 
 from rich.console import Console
@@ -5,6 +7,51 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.tree import Tree
 from rich.live import Live
+
+
+class SimpleSpinner:
+    """A simple spinner using regular string characters."""
+
+    def __init__(self):
+        self.frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        self.current_frame = 0
+        self.is_spinning = False
+        self._stop_event = threading.Event()
+        self._thread = None
+
+    def start(self, text: str = "") -> None:
+        """Start the spinner with optional text."""
+        if self.is_spinning:
+            return
+
+        self.is_spinning = True
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._spin, args=(text,))
+        self._thread.daemon = True
+        self._thread.start()
+
+    def stop(self) -> None:
+        """Stop the spinner."""
+        if not self.is_spinning:
+            return
+
+        self.is_spinning = False
+        self._stop_event.set()
+        if self._thread:
+            self._thread.join(timeout=0.1)
+
+    def _spin(self, text: str) -> None:
+        """Internal spinning method."""
+        while not self._stop_event.is_set():
+            frame = self.frames[self.current_frame]
+            print(f"\r{frame} {text}", end="", flush=True)
+            self.current_frame = (self.current_frame + 1) % len(self.frames)
+            time.sleep(0.1)
+        print("\r" + " " * (len(text) + 10) + "\r", end="", flush=True)  # Clear the line
+
+    def get_current_frame(self) -> str:
+        """Get the current spinner frame."""
+        return self.frames[self.current_frame]
 
 
 class ConsoleFormatter:
@@ -22,6 +69,9 @@ class ConsoleFormatter:
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
         self.verbose = verbose
+        self.spinner = SimpleSpinner()
+        self._spinning_branches: Dict[int, Dict[str, Any]] = {}  # Track which branches are spinning
+        self._spinner_timer: Optional[threading.Timer] = None
         # Live instance to dynamically update a Tree renderable (e.g. the Crew tree)
         # When multiple Tree objects are printed sequentially we reuse this Live
         # instance so the previous render is replaced instead of writing a new one.
@@ -138,6 +188,7 @@ class ConsoleFormatter:
         crew_name: str,
         source_id: str,
         status: str = "completed",
+        output: Optional[Any] = None,
     ) -> None:
         """Handle crew tree updates with consistent formatting."""
         if not self.verbose or tree is None:
@@ -169,6 +220,22 @@ class ConsoleFormatter:
             style,
             ID=source_id,
         )
+
+        # Add output content if available and not in starting state
+        if output is not None and status in ["completed", "failed"]:
+            # Extract the raw output text
+            output_text = ""
+            if hasattr(output, 'raw'):
+                output_text = output.raw
+            elif isinstance(output, str):
+                output_text = output
+            else:
+                output_text = str(output)
+
+            display_output = output_text
+
+            content.append("\n\nOutput:\n", style="white bold")
+            content.append(display_output, style="white")
 
         self.print_panel(content, title, style)
 
@@ -227,6 +294,7 @@ class ConsoleFormatter:
         task_id: str,
         agent_role: str,
         status: str = "completed",
+        output: Optional[Any] = None,
     ) -> None:
         """Update task status in the tree."""
         if not self.verbose or crew_tree is None:
@@ -264,6 +332,23 @@ class ConsoleFormatter:
         content = self.create_status_content(
             f"Task {status.title()}", str(task_id), style, Agent=agent_role
         )
+
+        # Add output content if available
+        if output is not None:
+            # Extract the raw output text
+            output_text = ""
+            if hasattr(output, 'raw'):
+                output_text = output.raw
+            elif isinstance(output, str):
+                output_text = output
+            else:
+                output_text = str(output)
+
+            display_output = output_text
+
+            content.append("\n\nOutput:\n", style="white bold")
+            content.append(display_output, style="white")
+
         self.print_panel(content, panel_title, style)
 
     def create_agent_branch(
@@ -428,6 +513,10 @@ class ConsoleFormatter:
         return method_branch
 
     def get_llm_tree(self, tool_name: str):
+        # Skip displaying reasoning-related function calls as they have their own handlers
+        if tool_name == "create_reasoning_plan":
+            return None
+
         text = Text()
         text.append(f"🔧 Using {tool_name} from LLM available_function", style="yellow")
 
@@ -442,7 +531,14 @@ class ConsoleFormatter:
         self,
         tool_name: str,
     ):
+        # Skip reasoning functions as they have dedicated handlers
+        if tool_name == "create_reasoning_plan":
+            return None
+
         tree = self.get_llm_tree(tool_name)
+        if tree is None:
+            return None
+
         self.add_tree_node(tree, "🔄 Tool Usage Started", "green")
         self.print(tree)
         self.print()
@@ -452,7 +548,14 @@ class ConsoleFormatter:
         self,
         tool_name: str,
     ):
+        # Skip reasoning functions as they have dedicated handlers
+        if tool_name == "create_reasoning_plan":
+            return
+
         tree = self.get_llm_tree(tool_name)
+        if tree is None:
+            return
+
         self.add_tree_node(tree, "✅ Tool Usage Completed", "green")
         self.print(tree)
         self.print()
@@ -462,7 +565,14 @@ class ConsoleFormatter:
         tool_name: str,
         error: str,
     ):
+        # Skip reasoning functions as they have dedicated handlers
+        if tool_name == "create_reasoning_plan":
+            return
+
         tree = self.get_llm_tree(tool_name)
+        if tree is None:
+            return
+
         self.add_tree_node(tree, "❌ Tool Usage Failed", "red")
         self.print(tree)
         self.print()
@@ -508,17 +618,9 @@ class ConsoleFormatter:
             tool_branch = branch_to_use.add("")
             self.current_tool_branch = tool_branch
 
-        # Update label with current count
-        self.update_tree_label(
-            tool_branch,
-            "🔧",
-            f"Using {tool_name} ({self.tool_usage_counts[tool_name]})",
-            "yellow",
-        )
-
-        # Print updated tree immediately
-        self.print(tree_to_use)
-        self.print()
+        # Start animated spinner for tool usage
+        tool_text = f"Using {tool_name} ({self.tool_usage_counts[tool_name]})"
+        self._start_spinner_animation(tool_branch, "🔧", tool_text, "yellow")
 
         return tool_branch
 
@@ -531,6 +633,9 @@ class ConsoleFormatter:
         """Handle tool usage finished event."""
         if not self.verbose or tool_branch is None:
             return
+
+        # Stop spinner animation
+        self._stop_spinner_animation(tool_branch)
 
         # Decide which tree to render: prefer full crew tree, else parent branch
         tree_to_use = self.current_crew_tree or crew_tree or self.current_task_branch
@@ -613,10 +718,9 @@ class ConsoleFormatter:
         # Only add thinking status if we don't have a current tool branch
         if self.current_tool_branch is None:
             tool_branch = branch_to_use.add("")
-            self.update_tree_label(tool_branch, "🧠", "Thinking...", "blue")
             self.current_tool_branch = tool_branch
-            self.print(tree_to_use)
-            self.print()
+            # Start animated spinner for thinking
+            self._start_spinner_animation(tool_branch, "🧠", "Thinking...", "blue")
             return tool_branch
         return None
 
@@ -629,6 +733,9 @@ class ConsoleFormatter:
         """Handle LLM call completed event."""
         if not self.verbose or tool_branch is None:
             return
+
+        # Stop spinner animation for this branch
+        self._stop_spinner_animation(tool_branch)
 
         # Decide which tree to render: prefer full crew tree, else parent branch
         tree_to_use = self.current_crew_tree or crew_tree or self.current_task_branch
@@ -920,12 +1027,9 @@ class ConsoleFormatter:
                 return None
 
         knowledge_branch = branch_to_use.add("")
-        self.update_tree_label(
-            knowledge_branch, "🔍", "Knowledge Retrieval Started", "blue"
-        )
+        # Start animated spinner for knowledge retrieval
+        self._start_spinner_animation(knowledge_branch, "🔍", "Knowledge Retrieval Started", "blue")
 
-        self.print(tree_to_use)
-        self.print()
         return knowledge_branch
 
     def handle_knowledge_retrieval_completed(
@@ -963,6 +1067,8 @@ class ConsoleFormatter:
         knowledge_branch_found = False
         for child in branch_to_use.children:
             if "Knowledge Retrieval Started" in str(child.label):
+                # Stop spinner and update label
+                self._stop_spinner_animation(child)
                 self.update_tree_label(
                     child, "✅", "Knowledge Retrieval Completed", "green"
                 )
@@ -976,6 +1082,7 @@ class ConsoleFormatter:
                     and "Started" not in str(child.label)
                     and "Completed" not in str(child.label)
                 ):
+                    self._stop_spinner_animation(child)
                     self.update_tree_label(
                         child, "✅", "Knowledge Retrieval Completed", "green"
                     )
@@ -1132,12 +1239,13 @@ class ConsoleFormatter:
             reasoning_branch = branch_to_use.add("")
             self.current_reasoning_branch = reasoning_branch
 
-        # Build label text depending on attempt
+        # Build label text depending on attempt and start spinner
         status_text = (
             f"Reasoning (Attempt {attempt})" if attempt > 1 else "Reasoning..."
         )
-        self.update_tree_label(reasoning_branch, "🧠", status_text, "blue")
+        self._start_spinner_animation(reasoning_branch, "🧠", status_text, "blue")
 
+        # Show initial display
         self.print(tree_to_use)
         self.print()
 
@@ -1161,10 +1269,12 @@ class ConsoleFormatter:
             or crew_tree
         )
 
-        style = "green" if ready else "yellow"
-        status_text = "Reasoning Completed" if ready else "Reasoning Completed (Not Ready)"
-
         if reasoning_branch is not None:
+            # Stop spinner animation
+            self._stop_spinner_animation(reasoning_branch)
+
+            style = "green" if ready else "yellow"
+            status_text = "Reasoning Completed" if ready else "Reasoning Completed (Not Ready)"
             self.update_tree_label(reasoning_branch, "✅", status_text, style)
 
         if tree_to_use is not None:
@@ -1175,7 +1285,7 @@ class ConsoleFormatter:
             plan_panel = Panel(
                 Text(plan, style="white"),
                 title="🧠 Reasoning Plan",
-                border_style=style,
+                border_style="green" if ready else "yellow",
                 padding=(1, 2),
             )
             self.print(plan_panel)
@@ -1219,3 +1329,89 @@ class ConsoleFormatter:
 
         # Clear stored branch after failure
         self.current_reasoning_branch = None
+
+    def _start_spinner_animation(self, branch: Tree, prefix: str, text: str, style: str) -> None:
+        """Start animating a spinner for a specific branch."""
+        if not self.verbose:
+            return
+
+        self._spinning_branches[id(branch)] = {
+            'branch': branch,
+            'prefix': prefix,
+            'text': text,
+            'style': style,
+            'frame_index': 0
+        }
+
+        # Start the animation timer if not already running
+        if self._spinner_timer is None:
+            self._start_spinner_timer()
+
+    def _stop_spinner_animation(self, branch: Tree) -> None:
+        """Stop animating a spinner for a specific branch."""
+        if id(branch) in self._spinning_branches:
+            del self._spinning_branches[id(branch)]
+
+        # Stop the timer if no more spinners
+        if not self._spinning_branches and self._spinner_timer:
+            self._spinner_timer.cancel()
+            self._spinner_timer = None
+
+    def _start_spinner_timer(self) -> None:
+        """Start the spinner animation timer."""
+        if self._spinner_timer is not None:
+            return
+
+        def update_spinners():
+            if not self._spinning_branches:
+                self._spinner_timer = None
+                return
+
+            # Update all spinning branches
+            for branch_data in self._spinning_branches.values():
+                branch = branch_data['branch']
+                prefix = branch_data['prefix']
+                text = branch_data['text']
+                style = branch_data['style']
+
+                # Get next spinner frame
+                frame_index = branch_data['frame_index']
+                spinner_frame = self.spinner.frames[frame_index]
+                branch_data['frame_index'] = (frame_index + 1) % len(self.spinner.frames)
+
+                # Update tree label
+                self.update_tree_label(branch, f"{prefix} {spinner_frame}", text, style)
+
+            # Refresh the display if we have a tree to show
+            tree_to_show = (
+                self.current_crew_tree or
+                self.current_flow_tree or
+                self.current_lite_agent_branch
+            )
+            if tree_to_show:
+                self.print(tree_to_show)
+
+            # Schedule next update
+            timer = threading.Timer(0.2, update_spinners)
+            self._spinner_timer = timer
+            timer.start()
+
+        timer = threading.Timer(0.2, update_spinners)
+        self._spinner_timer = timer
+        timer.start()
+
+    def cleanup(self) -> None:
+        """Clean up resources including stopping any running timers."""
+        if self._spinner_timer:
+            self._spinner_timer.cancel()
+            self._spinner_timer = None
+        self._spinning_branches.clear()
+        if self.spinner.is_spinning:
+            self.spinner.stop()
+
+    def __del__(self) -> None:
+        """Destructor to ensure cleanup on object deletion."""
+        try:
+            self.cleanup()
+        except Exception:
+            pass  # Ignore errors during cleanup
