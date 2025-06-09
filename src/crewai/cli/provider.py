@@ -1,8 +1,10 @@
 import json
+import os
 import time
 from collections import defaultdict
 from pathlib import Path
 
+import certifi
 import click
 import requests
 
@@ -153,6 +155,21 @@ def read_cache_file(cache_file):
         return None
 
 
+def get_ssl_verify_config():
+    """
+    Get SSL verification configuration from environment variables or use certifi default.
+    
+    Returns:
+    - str: Path to CA bundle file or certifi default path
+    """
+    for env_var in ['REQUESTS_CA_BUNDLE', 'SSL_CERT_FILE', 'CURL_CA_BUNDLE']:
+        ca_bundle = os.environ.get(env_var)
+        if ca_bundle and os.path.isfile(ca_bundle):
+            return ca_bundle
+    
+    return certifi.where()
+
+
 def fetch_provider_data(cache_file):
     """
     Fetches provider data from a specified URL and caches it to a file.
@@ -164,12 +181,15 @@ def fetch_provider_data(cache_file):
     - dict or None: The fetched provider data or None if the operation fails.
     """
     try:
-        response = requests.get(JSON_URL, stream=True, timeout=60)
+        response = requests.get(JSON_URL, stream=True, timeout=60, verify=get_ssl_verify_config())
         response.raise_for_status()
         data = download_data(response)
         with open(cache_file, "w") as f:
             json.dump(data, f)
         return data
+    except requests.exceptions.SSLError as e:
+        click.secho(f"SSL certificate verification failed: {e}", fg="red")
+        click.secho("Try setting REQUESTS_CA_BUNDLE environment variable to your CA bundle path", fg="yellow")
     except requests.RequestException as e:
         click.secho(f"Error fetching provider data: {e}", fg="red")
     except json.JSONDecodeError:
