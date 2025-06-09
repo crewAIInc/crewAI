@@ -3,6 +3,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -11,6 +12,7 @@ from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.config import Settings
 from crewai.cli.utils import (
+    extract_available_exports,
     get_project_description,
     get_project_name,
     get_project_version,
@@ -82,6 +84,14 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         project_description = get_project_description(require=False)
         encoded_tarball = None
 
+        console.print("[bold blue]Discovering tools from your project...[/bold blue]")
+        available_exports = extract_available_exports()
+
+        if available_exports:
+            console.print(
+                f"[green]Found these tools to publish: {', '.join([e['name'] for e in available_exports])}[/green]"
+            )
+
         with tempfile.TemporaryDirectory() as temp_build_dir:
             subprocess.run(
                 ["uv", "build", "--sdist", "--out-dir", temp_build_dir],
@@ -105,12 +115,14 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
             encoded_tarball = base64.b64encode(tarball_contents).decode("utf-8")
 
+        console.print("[bold blue]Publishing tool to repository...[/bold blue]")
         publish_response = self.plus_api_client.publish_tool(
             handle=project_name,
             is_public=is_public,
             version=project_version,
             description=project_description,
             encoded_file=f"data:application/x-gzip;base64,{encoded_tarball}",
+            available_exports=available_exports,
         )
 
         self._validate_response(publish_response)
@@ -161,13 +173,20 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         settings.tool_repository_password = login_response_json["credential"][
             "password"
         ]
+        settings.org_uuid = login_response_json["current_organization"][
+            "uuid"
+        ]
+        settings.org_name = login_response_json["current_organization"][
+            "name"
+        ]
         settings.dump()
 
         console.print(
             "Successfully authenticated to the tool repository.", style="bold green"
         )
 
-    def _add_package(self, tool_details):
+    def _add_package(self, tool_details: dict[str, Any]):
+        is_from_pypi = tool_details.get("source", None) == "pypi"
         tool_handle = tool_details["handle"]
         repository_handle = tool_details["repository"]["handle"]
         repository_url = tool_details["repository"]["url"]
@@ -176,10 +195,13 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         add_package_command = [
             "uv",
             "add",
-            "--index",
-            index,
-            tool_handle,
         ]
+
+        if is_from_pypi:
+            add_package_command.append(tool_handle)
+        else:
+            add_package_command.extend(["--index", index, tool_handle])
+
         add_package_result = subprocess.run(
             add_package_command,
             capture_output=False,

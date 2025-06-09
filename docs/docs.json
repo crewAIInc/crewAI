@@ -201,6 +201,7 @@
               "observability/arize-phoenix",
               "observability/langfuse",
               "observability/langtrace",
+              "observability/maxim",
               "observability/mlflow",
               "observability/openlit",
               "observability/opik",
@@ -213,6 +214,7 @@
             "group": "Learn",
             "pages": [
               "learn/overview",
+              "learn/llm-selection-guide",
               "learn/conditional-tasks",
               "learn/coding-agents",
               "learn/create-custom-tools",

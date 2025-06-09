@@ -215,9 +215,6 @@ def handle_agent_action_core(
     if show_logs:
         show_logs(formatted_answer)
 
-    if messages is not None:
-        messages.append({"role": "assistant", "content": tool_result.result})
-
     return formatted_answer
 
 
@@ -464,7 +461,7 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
-                        module = importlib.import_module("crewai_tools")
+                        module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
                         attributes[key].append(tool_class())
                     except Exception as e:
