@@ -2131,7 +2131,7 @@ def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_tok
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 @patch("crewai.utilities.agent_utils.Settings")
 @patch("crewai.utilities.agent_utils.console")
-def test_agent_from_repository_displays_org_info(mock_console, mock_settings, mock_get_agent):
+def test_agent_from_repository_displays_org_info(mock_console, mock_settings, mock_get_agent, mock_get_auth_token):
     mock_settings_instance = MagicMock()
     mock_settings_instance.org_uuid = "test-org-uuid"
     mock_settings_instance.org_name = "Test Organization"
@@ -2162,7 +2162,7 @@ def test_agent_from_repository_displays_org_info(mock_console, mock_settings, mo
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 @patch("crewai.utilities.agent_utils.Settings")
 @patch("crewai.utilities.agent_utils.console")
-def test_agent_from_repository_without_org_set(mock_console, mock_settings, mock_get_agent):
+def test_agent_from_repository_without_org_set(mock_console, mock_settings, mock_get_agent, mock_get_auth_token):
     mock_settings_instance = MagicMock()
     mock_settings_instance.org_uuid = None
     mock_settings_instance.org_name = None
