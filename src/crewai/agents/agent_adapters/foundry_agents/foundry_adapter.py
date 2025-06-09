@@ -23,13 +23,15 @@ try:
     from azure.ai.projects import AIProjectClient as FoundryClient
     from azure.identity import DefaultAzureCredential
     from azure.ai.agents.models import FunctionTool
-
-
     from .foundry_agent_tool_adapter import FoundryAgentToolAdapter
 
+    # Ensure PROJECT_CONNECTION_STRING exists, or raise KeyError
+    _ = os.environ["PROJECT_CONNECTION_STRING"]
+
     FOUNDRY_AVAILABLE = True
-except ImportError:
+except (ImportError, KeyError) as e:
     FOUNDRY_AVAILABLE = False
+    raise e
 
 
 class FoundryAgentAdapter(BaseAgentAdapter):
