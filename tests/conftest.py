@@ -42,10 +42,58 @@ def setup_test_environment():
         # Cleanup is handled automatically when tempfile context exits
 
 
+def filter_stream_parameter(request):
+    """Filter out stream parameter from request body to maintain VCR compatibility."""
+    if hasattr(request, 'body') and request.body:
+        try:
+            import json
+            # Check if it's likely JSON content
+            if hasattr(request, 'headers') and request.headers:
+                content_type = request.headers.get('content-type', '').lower()
+                if 'application/json' not in content_type:
+                    return request
+
+            # Try to decode and parse the body
+            if isinstance(request.body, bytes):
+                try:
+                    body_str = request.body.decode('utf-8')
+                except UnicodeDecodeError:
+                    # If we can't decode it, it's probably binary data, leave it as is
+                    return request
+            else:
+                body_str = request.body
+
+            body = json.loads(body_str)
+            # Remove stream parameter to match original recordings
+            if 'stream' in body:
+                body.pop('stream')
+            request.body = json.dumps(body).encode() if isinstance(request.body, bytes) else json.dumps(body)
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            # If we can't parse the body, leave it as is
+            pass
+    return request
+
+
+@pytest.fixture(autouse=True)
+def configure_litellm_for_testing():
+    """Configure litellm to work better with VCR cassettes."""
+    import litellm
+
+    # Disable litellm's internal streaming optimizations that might conflict with VCR
+    original_drop_params = litellm.drop_params
+    litellm.drop_params = True
+
+    yield
+
+    # Restore original setting
+    litellm.drop_params = original_drop_params
+
+
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
     return {
         "cassette_library_dir": "tests/cassettes",
         "record_mode": "new_episodes",
         "filter_headers": [("authorization", "AUTHORIZATION-XXX")],
+        "before_record_request": filter_stream_parameter,
     }
