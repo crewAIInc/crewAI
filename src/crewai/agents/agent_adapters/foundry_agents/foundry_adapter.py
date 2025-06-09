@@ -45,10 +45,12 @@ class FoundryAgentAdapter(BaseAgentAdapter):
     _tool_adapter: "FoundryAgentToolAdapter" = PrivateAttr()
     _converter_adapter: FoundryConverterAdapter = PrivateAttr()
     _converted_tools: Optional[FunctionTool] = PrivateAttr(default=None)
+    
+    model: str = Field(default="gpt-4.1-mini")
 
     def __init__(
         self,
-        model: str = "gpt-4.1-mini",
+        llm: Any = None,
         tools: Optional[List[BaseTool]] = None,
         agent_config: Optional[dict] = None,
         **kwargs,
@@ -65,11 +67,11 @@ class FoundryAgentAdapter(BaseAgentAdapter):
             goal=goal,
             backstory=backstory,
             tools=tools,
+            llm=llm or self.model,
             agent_config=agent_config,
             **kwargs,
         )
         self._tool_adapter = FoundryAgentToolAdapter(tools=tools)
-        self.llm = model
         self._converter_adapter = FoundryConverterAdapter(self)
 
     def _build_system_prompt(self) -> str:
