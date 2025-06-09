@@ -14,6 +14,12 @@ class Settings(BaseModel):
     tool_repository_password: Optional[str] = Field(
         None, description="Password for interacting with the Tool Repository"
     )
+    org_name: Optional[str] = Field(
+        None, description="Name of the currently active organization"
+    )
+    org_uuid: Optional[str] = Field(
+        None, description="UUID of the currently active organization"
+    )
     config_path: Path = Field(default=DEFAULT_CONFIG_PATH, exclude=True)
 
     def __init__(self, config_path: Path = DEFAULT_CONFIG_PATH, **data):
