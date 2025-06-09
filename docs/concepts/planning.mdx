@@ -1,10 +1,10 @@
 ---
 title: Planning
 description: Learn how to add planning to your CrewAI Crew and improve their performance.
-icon: brain
+icon: ruler-combined
 ---
 
-## Introduction
+## Overview
 
 The planning feature in CrewAI allows you to add planning capability to your crew. When enabled, before each Crew iteration, 
 all Crew information is sent to an AgentPlanner that will plan the tasks step by step, and this plan will be added to each task description.
@@ -28,6 +28,10 @@ my_crew = Crew(
 </CodeGroup>
 
 From this point on, your crew will have planning enabled, and the tasks will be planned before each iteration.
+
+<Warning>
+When planning is enabled, crewAI will use `gpt-4o-mini` as the default LLM for planning, which requires a valid OpenAI API key. Since your agents might be using different LLMs, this could cause confusion if you don't have an OpenAI API key configured or if you're experiencing unexpected behavior related to LLM API calls.
+</Warning>
 
 #### Planning LLM
 

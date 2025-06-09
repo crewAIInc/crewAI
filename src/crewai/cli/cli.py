@@ -16,6 +16,7 @@ from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
 from .kickoff_flow import kickoff_flow
+from .organization.main import OrganizationCommand
 from .plot_flow import plot_flow
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
@@ -351,6 +352,34 @@ def chat():
     )
 
     run_chat()
+
+
+@crewai.group(invoke_without_command=True)
+def org():
+    """Organization management commands."""
+    pass
+
+
+@org.command()
+def list():
+    """List available organizations."""
+    org_command = OrganizationCommand()
+    org_command.list()
+
+
+@org.command()
+@click.argument("id")
+def switch(id):
+    """Switch to a specific organization."""
+    org_command = OrganizationCommand()
+    org_command.switch(id)
+
+
+@org.command()
+def current():
+    """Show current organization when 'crewai org' is called without subcommands."""
+    org_command = OrganizationCommand()
+    org_command.current()
 
 
 if __name__ == "__main__":
