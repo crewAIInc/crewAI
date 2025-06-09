@@ -200,6 +200,37 @@ Deploy the crew or flow to [CrewAI Enterprise](https://app.crewai.com).
     ```
     - Reads your local project configuration.
     - Prompts you to confirm the environment variables (like `OPENAI_API_KEY`, `SERPER_API_KEY`) found locally. These will be securely stored with the deployment on the Enterprise platform. Ensure your sensitive keys are correctly configured locally (e.g., in a `.env` file) before running this.
+
+### 11. Organization Management
+
+Manage your CrewAI Enterprise organizations.
+
+```shell Terminal
+crewai org [COMMAND] [OPTIONS]
+```
+
+#### Commands:
+
+- `list`: List all organizations you belong to
+```shell Terminal
+crewai org list
+```
+
+- `current`: Display your currently active organization
+```shell Terminal
+crewai org current
+```
+
+- `switch`: Switch to a specific organization
+```shell Terminal
+crewai org switch <organization_id>
+```
+
+<Note>
+You must be authenticated to CrewAI Enterprise to use these organization management commands.
+</Note>
+
+- **Create a deployment** (continued):
     - Links the deployment to the corresponding remote GitHub repository (it usually detects this automatically).
 
 - **Deploy the Crew**: Once you are authenticated, you can deploy your crew or flow to CrewAI Enterprise.
