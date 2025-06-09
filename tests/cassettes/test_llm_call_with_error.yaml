@@ -1,0 +1,62 @@
+interactions:
+- request:
+    body: !!binary |
+      Cv4MCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS1QwKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRK7CAoQPNyPkq5hnU2z3cS9/2GhdxIItoyJouVE3UEqDENyZXcgQ3JlYXRlZDABOcBv
+      xgljTEcYQSDK3gljTEcYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTI2LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIDQ5NGYzNjU3MjM3YWQ4YTMwMzViMmYxYmVl
+      Y2RjNjc3SjEKB2NyZXdfaWQSJgokNDEzZTJjYjktM2IxMC00N2IwLWFjOTYtNzI4OWRmNjQxM2Jm
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJGExODI0Mjk5LTdkNzAtNDExNC05ZjM1LThkOTgzNGExYTEyM0o7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNi0wOFQyMzozNjowOC41MDQzMzdK
+      4AIKC2NyZXdfYWdlbnRzEtACCs0CW3sia2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4MjZl
+      NzI1ODJiIiwgImlkIjogImJjMDlmMTVjLTVlMDQtNDkwOC1iMjhmLWRiMzQ0ZDhiMTdkNyIsICJy
+      b2xlIjogInRlc3Qgcm9sZSIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1h
+      eF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8t
+      bWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlv
+      bj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFsibGVhcm5f
+      YWJvdXRfYWkiXX1dSo4CCgpjcmV3X3Rhc2tzEv8BCvwBW3sia2V5IjogImYyNTk3Yzc4NjdmYmUz
+      MjRkYzY1ZGMwOGRmZGJmYzZjIiwgImlkIjogIjNjNWVhODU1LWNiZDYtNGM5YS1iNDgxLTdmYjRh
+      Nzk5OTdkOCIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxz
+      ZSwgImFnZW50X3JvbGUiOiAidGVzdCByb2xlIiwgImFnZW50X2tleSI6ICJlMTQ4ZTUzMjAyOTM0
+      OTlmOGNlYmVhODI2ZTcyNTgyYiIsICJ0b29sc19uYW1lcyI6IFsibGVhcm5fYWJvdXRfYWkiXX1d
+      egIYAYUBAAEAABKABAoQEXtq9urQETEwGfwvBw3UYRIIzZr4i3CiZdYqDFRhc2sgQ3JlYXRlZDAB
+      OfiENwpjTEcYQag4OApjTEcYSi4KCGNyZXdfa2V5EiIKIDQ5NGYzNjU3MjM3YWQ4YTMwMzViMmYx
+      YmVlY2RjNjc3SjEKB2NyZXdfaWQSJgokNDEzZTJjYjktM2IxMC00N2IwLWFjOTYtNzI4OWRmNjQx
+      M2JmSi4KCHRhc2tfa2V5EiIKIGYyNTk3Yzc4NjdmYmUzMjRkYzY1ZGMwOGRmZGJmYzZjSjEKB3Rh
+      c2tfaWQSJgokM2M1ZWE4NTUtY2JkNi00YzlhLWI0ODEtN2ZiNGE3OTk5N2Q4SjoKEGNyZXdfZmlu
+      Z2VycHJpbnQSJgokYTE4MjQyOTktN2Q3MC00MTE0LTlmMzUtOGQ5ODM0YTFhMTIzSjoKEHRhc2tf
+      ZmluZ2VycHJpbnQSJgokZTBjZDY5ZjQtZWE1NC00NjQ4LWE1NzgtN2JlYzdkOWY3ZjE3SjsKG3Rh
+      c2tfZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTA2LTA4VDIzOjM2OjA4LjUwNDE3Nko7
+      ChFhZ2VudF9maW5nZXJwcmludBImCiQwZmNkNTM1Yy0wNTlkLTQ0NGEtYjEyMy02OTMyOTI3Mjc3
+      NzN6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1665'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 09 Jun 2025 06:36:13 GMT
+    status:
+      code: 200
+      message: OK
+version: 1

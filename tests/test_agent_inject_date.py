@@ -46,7 +46,7 @@ def test_agent_without_inject_date():
         role="test_agent",
         goal="test_goal",
         backstory="test_backstory",
-        # inject_date is True by default
+        inject_date=False,
     )
 
     task = Task(

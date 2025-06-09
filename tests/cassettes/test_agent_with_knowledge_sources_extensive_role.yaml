@@ -765,4 +765,66 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: !!binary |
+      CvINCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSyQ0KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKvCQoQPNyPkq5hnU2z3cS9/2GhdxIItoyJouVE3UEqDENyZXcgQ3JlYXRlZDABOaCm
+      KpBhTEcYQZiDN5BhTEcYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTI2LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIDU1MjczOGJmMDQwZTcxZGEyMjJmOWQzNjU1
+      MjIzMjdjSjEKB2NyZXdfaWQSJgokYjMyODBhM2ItNDU5YS00MGE4LWE4OTEtMzMyMGIxMWZhMjE5
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUo6ChBjcmV3
+      X2ZpbmdlcnByaW50EiYKJGEzMmYwNmYxLWVjOTMtNGMyNS1hZWE3LTcwYTAwOWUxZTViM0o7Chtj
+      cmV3X2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoaMjAyNS0wNi0wOFQyMzozNjowMi4xNjk3MzJK
+      mgMKC2NyZXdfYWdlbnRzEooDCocDW3sia2V5IjogImE5NmE0MjIzNWNlNDNkYmQ4MDc3NGViMjg4
+      YTczNzM1IiwgImlkIjogImZmYmE4ZTYyLWUzMzYtNDZmMC1hZjMxLWZmYjc0ZDE4MTRkYiIsICJy
+      b2xlIjogIkluZm9ybWF0aW9uIEFnZW50IHdpdGggZXh0ZW5zaXZlIHJvbGUgZGVzY3JpcHRpb24g
+      dGhhdCBpcyBsb25nZXIgdGhhbiA4MCBjaGFyYWN0ZXJzIiwgInZlcmJvc2U/IjogZmFsc2UsICJt
+      YXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIi
+      LCAibGxtIjogImdwdC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFs
+      bG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xz
+      X25hbWVzIjogW119XUrIAgoKY3Jld190YXNrcxK5Agq2Alt7ImtleSI6ICI4NmZlNTU2N2QxZjQx
+      YjFmODQ0NWU0ZjhkNGJmNDBlNiIsICJpZCI6ICJmNmE0MjBhOC04OTg3LTRlZTQtOGI1Mi1hNzgz
+      NmIzNWNhMTkiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFs
+      c2UsICJhZ2VudF9yb2xlIjogIkluZm9ybWF0aW9uIEFnZW50IHdpdGggZXh0ZW5zaXZlIHJvbGUg
+      ZGVzY3JpcHRpb24gdGhhdCBpcyBsb25nZXIgdGhhbiA4MCBjaGFyYWN0ZXJzIiwgImFnZW50X2tl
+      eSI6ICJhOTZhNDIyMzVjZTQzZGJkODA3NzRlYjI4OGE3MzczNSIsICJ0b29sc19uYW1lcyI6IFtd
+      fV16AhgBhQEAAQAAEoAEChARe2r26tARMTAZ/C8HDdRhEgjNmviLcKJl1ioMVGFzayBDcmVhdGVk
+      MAE5QHdhk2FMRxhBQHFik2FMRxhKLgoIY3Jld19rZXkSIgogNTUyNzM4YmYwNDBlNzFkYTIyMmY5
+      ZDM2NTUyMjMyN2NKMQoHY3Jld19pZBImCiRiMzI4MGEzYi00NTlhLTQwYTgtYTg5MS0zMzIwYjEx
+      ZmEyMTlKLgoIdGFza19rZXkSIgogODZmZTU1NjdkMWY0MWIxZjg0NDVlNGY4ZDRiZjQwZTZKMQoH
+      dGFza19pZBImCiRmNmE0MjBhOC04OTg3LTRlZTQtOGI1Mi1hNzgzNmIzNWNhMTlKOgoQY3Jld19m
+      aW5nZXJwcmludBImCiRhMzJmMDZmMS1lYzkzLTRjMjUtYWVhNy03MGEwMDllMWU1YjNKOgoQdGFz
+      a19maW5nZXJwcmludBImCiQ3YmVkNjY4Yy04ZWFmLTQ1YTUtOTVhMy1jNmQ5ODZkZTMwODJKOwob
+      dGFza19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMDYtMDhUMjM6MzY6MDIuMTY5NjY4
+      SjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJDE5NzlkNGRlLTlmMDUtNDAwZi1hZDdlLTMyZDQ4ODE0
+      OGY2MHoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1781'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.31.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 09 Jun 2025 06:36:03 GMT
+    status:
+      code: 200
+      message: OK
 version: 1
