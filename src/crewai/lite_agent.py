@@ -1,7 +1,12 @@
 import asyncio
 import inspect
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast, get_args, get_origin, Self
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, cast, get_args, get_origin
+
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
 
 from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator, field_validator
 
