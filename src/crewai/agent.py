@@ -316,6 +316,7 @@ class Agent(BaseAgent):
             self.knowledge_config.model_dump() if self.knowledge_config else {}
         )
 
+
         if self.knowledge or (self.crew and self.crew.knowledge):
             crewai_event_bus.emit(
                 self,
