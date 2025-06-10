@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from crewai.cli.constants import MODELS
 from crewai.cli.provider import select_model
