@@ -35,7 +35,7 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.security import Fingerprint, SecurityConfig
-from crewai.tasks.guardrail_result import GuardrailResult
+from crewai.utilities.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
@@ -527,10 +527,10 @@ class Task(BaseModel):
 
     def prompt(self) -> str:
         """Generates the task prompt with optional markdown formatting.
-        
+
         When the markdown attribute is True, instructions for formatting the
         response in Markdown syntax will be added to the prompt.
-        
+
         Returns:
             str: The formatted prompt string containing the task description,
                  expected output, and optional markdown formatting instructions.
@@ -541,7 +541,7 @@ class Task(BaseModel):
             expected_output=self.expected_output
         )
         tasks_slices = [self.description, output]
-        
+
         if self.markdown:
             markdown_instruction = """Your final answer MUST be formatted in Markdown syntax.
 Follow these guidelines:
