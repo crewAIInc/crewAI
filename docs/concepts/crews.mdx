@@ -4,7 +4,7 @@ description: Understanding and utilizing crews in the crewAI framework with comp
 icon: people-group
 ---
 
-## What is a Crew?
+## Overview
 
 A crew in crewAI represents a collaborative group of agents working together to achieve a set of tasks. Each crew defines the strategy for task execution, agent collaboration, and the overall workflow.
 
@@ -325,12 +325,12 @@ for result in results:
 
 # Example of using kickoff_async
 inputs = {'topic': 'AI in healthcare'}
-async_result = my_crew.kickoff_async(inputs=inputs)
+async_result = await my_crew.kickoff_async(inputs=inputs)
 print(async_result)
 
 # Example of using kickoff_for_each_async
 inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
-async_results = my_crew.kickoff_for_each_async(inputs=inputs_array)
+async_results = await my_crew.kickoff_for_each_async(inputs=inputs_array)
 for async_result in async_results:
     print(async_result)
 ```

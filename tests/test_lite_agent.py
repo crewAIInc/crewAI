@@ -1,4 +1,4 @@
-import asyncio
+from collections import defaultdict
 from typing import cast
 from unittest.mock import Mock
 
@@ -313,5 +313,108 @@ def test_sets_parent_flow_when_inside_flow():
             nonlocal captured_agent
             captured_agent = source
 
-        result = flow.kickoff()
+        flow.kickoff()
         assert captured_agent.parent_flow is flow
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_guardrail_is_called_using_string():
+    guardrail_events = defaultdict(list)
+    from crewai.utilities.events import LLMGuardrailCompletedEvent, LLMGuardrailStartedEvent
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(LLMGuardrailStartedEvent)
+        def capture_guardrail_started(source, event):
+            guardrail_events["started"].append(event)
+
+        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+        def capture_guardrail_completed(source, event):
+            guardrail_events["completed"].append(event)
+
+        agent = Agent(
+            role="Sports Analyst",
+            goal="Gather information about the best soccer players",
+            backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
+            guardrail="""Only include Brazilian players, both women and men""",
+        )
+
+        result = agent.kickoff(messages="Top 10 best players in the world?")
+
+        assert len(guardrail_events['started']) == 2
+        assert len(guardrail_events['completed']) == 2
+        assert not guardrail_events['completed'][0].success
+        assert guardrail_events['completed'][1].success
+        assert "Here are the top 10 best soccer players in the world, focusing exclusively on Brazilian players" in result.raw
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_guardrail_is_called_using_callable():
+    guardrail_events = defaultdict(list)
+    from crewai.utilities.events import LLMGuardrailCompletedEvent, LLMGuardrailStartedEvent
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(LLMGuardrailStartedEvent)
+        def capture_guardrail_started(source, event):
+            guardrail_events["started"].append(event)
+
+        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+        def capture_guardrail_completed(source, event):
+            guardrail_events["completed"].append(event)
+
+        agent = Agent(
+            role="Sports Analyst",
+            goal="Gather information about the best soccer players",
+            backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
+            guardrail=lambda output: (True, "Pelé - Santos, 1958"),
+        )
+
+        result = agent.kickoff(messages="Top 1 best players in the world?")
+
+        assert len(guardrail_events['started']) == 1
+        assert len(guardrail_events['completed']) == 1
+        assert guardrail_events['completed'][0].success
+        assert "Pelé - Santos, 1958" in result.raw
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_guardrail_reached_attempt_limit():
+    guardrail_events = defaultdict(list)
+    from crewai.utilities.events import LLMGuardrailCompletedEvent, LLMGuardrailStartedEvent
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(LLMGuardrailStartedEvent)
+        def capture_guardrail_started(source, event):
+            guardrail_events["started"].append(event)
+
+        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+        def capture_guardrail_completed(source, event):
+            guardrail_events["completed"].append(event)
+
+        agent = Agent(
+            role="Sports Analyst",
+            goal="Gather information about the best soccer players",
+            backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
+            guardrail=lambda output: (False, "You are not allowed to include Brazilian players"),
+            guardrail_max_retries=2,
+        )
+
+        with pytest.raises(Exception, match="Agent's guardrail failed validation after 2 retries"):
+            agent.kickoff(messages="Top 10 best players in the world?")
+
+        assert len(guardrail_events['started']) == 3 # 2 retries + 1 initial call
+        assert len(guardrail_events['completed']) == 3 # 2 retries + 1 initial call
+        assert not guardrail_events['completed'][0].success
+        assert not guardrail_events['completed'][1].success
+        assert not guardrail_events['completed'][2].success
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_output_when_guardrail_returns_base_model():
+    class Player(BaseModel):
+        name: str
+        country: str
+
+    agent = Agent(
+        role="Sports Analyst",
+        goal="Gather information about the best soccer players",
+        backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
+        guardrail=lambda output: (True, Player(name="Lionel Messi", country="Argentina")),
+    )
+
+    result = agent.kickoff(messages="Top 10 best players in the world?")
+
+    assert result.pydantic == Player(name="Lionel Messi", country="Argentina")

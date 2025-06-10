@@ -315,9 +315,7 @@ class Crew(FlowTrackable, BaseModel):
         """Initialize private memory attributes."""
         self._external_memory = (
             # External memory doesn’t support a default value since it was designed to be managed entirely externally
-            self.external_memory.set_crew(self)
-            if self.external_memory
-            else None
+            self.external_memory.set_crew(self) if self.external_memory else None
         )
 
         self._long_term_memory = self.long_term_memory
@@ -657,8 +655,6 @@ class Crew(FlowTrackable, BaseModel):
             if self.planning:
                 self._handle_crew_planning()
 
-            metrics: List[UsageMetrics] = []
-
             if self.process == Process.sequential:
                 result = self._run_sequential_process()
             elif self.process == Process.hierarchical:
@@ -671,11 +667,8 @@ class Crew(FlowTrackable, BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
-            metrics += [agent._token_process.get_summary() for agent in self.agents]
+            self.usage_metrics = self.calculate_usage_metrics()
 
-            self.usage_metrics = UsageMetrics()
-            for metric in metrics:
-                self.usage_metrics.add_usage_metrics(metric)
             return result
         except Exception as e:
             crewai_event_bus.emit(
@@ -1204,7 +1197,6 @@ class Crew(FlowTrackable, BaseModel):
             "_long_term_memory",
             "_entity_memory",
             "_external_memory",
-            "_telemetry",
             "agents",
             "tasks",
             "knowledge_sources",
@@ -1397,10 +1389,10 @@ class Crew(FlowTrackable, BaseModel):
         memory_systems = self._get_memory_systems()
 
         for memory_type, config in memory_systems.items():
-            if (system := config.get('system')) is not None:
-                name = config.get('name')
+            if (system := config.get("system")) is not None:
+                name = config.get("name")
                 try:
-                    reset_fn: Callable = cast(Callable, config.get('reset'))
+                    reset_fn: Callable = cast(Callable, config.get("reset"))
                     reset_fn(system)
                     self._logger.log(
                         "info",
@@ -1422,14 +1414,14 @@ class Crew(FlowTrackable, BaseModel):
         """
         memory_systems = self._get_memory_systems()
         config = memory_systems[memory_type]
-        system = config.get('system')
-        name = config.get('name')
+        system = config.get("system")
+        name = config.get("name")
 
         if system is None:
             raise RuntimeError(f"{name} memory system is not initialized")
-        
+
         try:
-            reset_fn: Callable = cast(Callable, config.get('reset'))
+            reset_fn: Callable = cast(Callable, config.get("reset"))
             reset_fn(system)
             self._logger.log(
                 "info",
@@ -1442,58 +1434,67 @@ class Crew(FlowTrackable, BaseModel):
 
     def _get_memory_systems(self):
         """Get all available memory systems with their configuration.
-        
+
         Returns:
             Dict containing all memory systems with their reset functions and display names.
         """
+
         def default_reset(memory):
             return memory.reset()
+
         def knowledge_reset(memory):
             return self.reset_knowledge(memory)
-        
-        # Get knowledge for agents 
-        agent_knowledges = [getattr(agent, "knowledge", None) for agent in self.agents 
-                                    if getattr(agent, "knowledge", None) is not None]
+
+        # Get knowledge for agents
+        agent_knowledges = [
+            getattr(agent, "knowledge", None)
+            for agent in self.agents
+            if getattr(agent, "knowledge", None) is not None
+        ]
         # Get knowledge for crew and agents
         crew_knowledge = getattr(self, "knowledge", None)
-        crew_and_agent_knowledges = ([crew_knowledge] if crew_knowledge is not None else []) + agent_knowledges
+        crew_and_agent_knowledges = (
+            [crew_knowledge] if crew_knowledge is not None else []
+        ) + agent_knowledges
 
         return {
-            'short': {
-                'system': getattr(self, "_short_term_memory", None),
-                'reset': default_reset,
-                'name': 'Short Term'
+            "short": {
+                "system": getattr(self, "_short_term_memory", None),
+                "reset": default_reset,
+                "name": "Short Term",
             },
-            'entity': {
-                'system': getattr(self, "_entity_memory", None),
-                'reset': default_reset,
-                'name': 'Entity'
+            "entity": {
+                "system": getattr(self, "_entity_memory", None),
+                "reset": default_reset,
+                "name": "Entity",
             },
-            'external': {
-                'system': getattr(self, "_external_memory", None),
-                'reset': default_reset,
-                'name': 'External'
+            "external": {
+                "system": getattr(self, "_external_memory", None),
+                "reset": default_reset,
+                "name": "External",
             },
-            'long': {
-                'system': getattr(self, "_long_term_memory", None),
-                'reset': default_reset,
-                'name': 'Long Term'
+            "long": {
+                "system": getattr(self, "_long_term_memory", None),
+                "reset": default_reset,
+                "name": "Long Term",
             },
-            'kickoff_outputs': {
-                'system': getattr(self, "_task_output_handler", None),
-                'reset': default_reset,
-                'name': 'Task Output'
+            "kickoff_outputs": {
+                "system": getattr(self, "_task_output_handler", None),
+                "reset": default_reset,
+                "name": "Task Output",
             },
-            'knowledge': {
-                'system': crew_and_agent_knowledges if crew_and_agent_knowledges else None,
-                'reset': knowledge_reset,
-                'name': 'Crew Knowledge and Agent Knowledge'
+            "knowledge": {
+                "system": crew_and_agent_knowledges
+                if crew_and_agent_knowledges
+                else None,
+                "reset": knowledge_reset,
+                "name": "Crew Knowledge and Agent Knowledge",
             },
-            'agent_knowledge': {
-                'system': agent_knowledges if agent_knowledges else None,
-                'reset': knowledge_reset,
-                'name': 'Agent Knowledge'
-            }
+            "agent_knowledge": {
+                "system": agent_knowledges if agent_knowledges else None,
+                "reset": knowledge_reset,
+                "name": "Agent Knowledge",
+            },
         }
 
     def reset_knowledge(self, knowledges: List[Knowledge]) -> None:
