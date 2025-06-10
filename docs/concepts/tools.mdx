@@ -32,6 +32,7 @@ The Enterprise Tools Repository includes:
 - **Customizability**: Provides the flexibility to develop custom tools or utilize existing ones, catering to the specific needs of agents.
 - **Error Handling**: Incorporates robust error handling mechanisms to ensure smooth operation.
 - **Caching Mechanism**: Features intelligent caching to optimize performance and reduce redundant operations.
+- **Asynchronous Support**: Handles both synchronous and asynchronous tools, enabling non-blocking operations.
 
 ## Using CrewAI Tools
 
@@ -176,6 +177,62 @@ class MyCustomTool(BaseTool):
         # Your tool's logic here
         return "Tool's result"
 ```
+
+## Asynchronous Tool Support
+
+CrewAI supports asynchronous tools, allowing you to implement tools that perform non-blocking operations like network requests, file I/O, or other async operations without blocking the main execution thread.
+
+### Creating Async Tools
+
+You can create async tools in two ways:
+
+#### 1. Using the `tool` Decorator with Async Functions
+
+```python Code
+from crewai.tools import tool
+
+@tool("fetch_data_async")
+async def fetch_data_async(query: str) -> str:
+    """Asynchronously fetch data based on the query."""
+    # Simulate async operation
+    await asyncio.sleep(1)
+    return f"Data retrieved for {query}"
+```
+
+#### 2. Implementing Async Methods in Custom Tool Classes
+
+```python Code
+from crewai.tools import BaseTool
+
+class AsyncCustomTool(BaseTool):
+    name: str = "async_custom_tool"
+    description: str = "An asynchronous custom tool"
+    
+    async def _run(self, query: str = "") -> str:
+        """Asynchronously run the tool"""
+        # Your async implementation here
+        await asyncio.sleep(1)
+        return f"Processed {query} asynchronously"
+```
+
+### Using Async Tools
+
+Async tools work seamlessly in both standard Crew workflows and Flow-based workflows:
+
+```python Code
+# In standard Crew
+agent = Agent(role="researcher", tools=[async_custom_tool])
+
+# In Flow
+class MyFlow(Flow):
+    @start()
+    async def begin(self):
+        crew = Crew(agents=[agent])
+        result = await crew.kickoff_async()
+        return result
+```
+
+The CrewAI framework automatically handles the execution of both synchronous and asynchronous tools, so you don't need to worry about how to call them differently.
 
 ### Utilizing the `tool` Decorator
 
