@@ -89,8 +89,9 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if available_exports:
             console.print(
-                f"[green]Found these tools to publish: {', '.join(available_exports)}[/green]"
+                f"[green]Found these tools to publish: {', '.join([e['name'] for e in available_exports])}[/green]"
             )
+        self._print_current_organization()
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
             subprocess.run(
@@ -136,6 +137,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         )
 
     def install(self, handle: str):
+        self._print_current_organization()
         get_response = self.plus_api_client.get_tool(handle)
 
         if get_response.status_code == 404:
@@ -173,10 +175,16 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         settings.tool_repository_password = login_response_json["credential"][
             "password"
         ]
+        settings.org_uuid = login_response_json["current_organization"][
+            "uuid"
+        ]
+        settings.org_name = login_response_json["current_organization"][
+            "name"
+        ]
         settings.dump()
 
         console.print(
-            "Successfully authenticated to the tool repository.", style="bold green"
+            f"Successfully authenticated to the tool repository as {settings.org_name} ({settings.org_uuid}).", style="bold green"
         )
 
     def _add_package(self, tool_details: dict[str, Any]):
@@ -234,3 +242,10 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         )
 
         return env
+
+    def _print_current_organization(self):
+        settings = Settings()
+        if settings.org_uuid:
+            console.print(f"Current organization: {settings.org_name} ({settings.org_uuid})", style="bold blue")
+        else:
+            console.print("No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.", style="yellow")

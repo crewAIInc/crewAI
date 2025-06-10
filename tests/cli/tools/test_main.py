@@ -56,7 +56,8 @@ def test_create_success(mock_subprocess, capsys, tool_command):
 
 @patch("crewai.cli.tools.main.subprocess.run")
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_success(mock_get, mock_subprocess_run, capsys, tool_command):
+@patch("crewai.cli.tools.main.ToolCommand._print_current_organization")
+def test_install_success(mock_print_org, mock_get, mock_subprocess_run, capsys, tool_command):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
     mock_get_response.json.return_value = {
@@ -84,6 +85,9 @@ def test_install_success(mock_get, mock_subprocess_run, capsys, tool_command):
         check=True,
         env=unittest.mock.ANY,
     )
+
+    # Verify _print_current_organization was called
+    mock_print_org.assert_called_once()
 
 @patch("crewai.cli.tools.main.subprocess.run")
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
@@ -165,8 +169,10 @@ def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=["SampleTool"])
+@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
+@patch("crewai.cli.tools.main.ToolCommand._print_current_organization")
 def test_publish_when_not_in_sync_and_force(
+    mock_print_org,
     mock_available_exports,
     mock_is_synced,
     mock_publish,
@@ -200,8 +206,9 @@ def test_publish_when_not_in_sync_and_force(
         version="1.0.0",
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
-        available_exports=["SampleTool"],
+        available_exports=[{"name": "SampleTool"}],
     )
+    mock_print_org.assert_called_once()
 
 
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
@@ -216,7 +223,7 @@ def test_publish_when_not_in_sync_and_force(
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=True)
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=["SampleTool"])
+@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
 def test_publish_success(
     mock_available_exports,
     mock_is_synced,
@@ -251,7 +258,7 @@ def test_publish_success(
         version="1.0.0",
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
-        available_exports=["SampleTool"],
+        available_exports=[{"name": "SampleTool"}],
     )
 
 
@@ -266,7 +273,7 @@ def test_publish_success(
     read_data=b"sample tarball content",
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=["SampleTool"])
+@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
 def test_publish_failure(
     mock_available_exports,
     mock_publish,
@@ -304,7 +311,7 @@ def test_publish_failure(
     read_data=b"sample tarball content",
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=["SampleTool"])
+@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
 def test_publish_api_error(
     mock_available_exports,
     mock_publish,
@@ -329,3 +336,27 @@ def test_publish_api_error(
     assert "Request to Enterprise API failed" in output
 
     mock_publish.assert_called_once()
+
+
+
+@patch("crewai.cli.tools.main.Settings")
+def test_print_current_organization_with_org(mock_settings, capsys, tool_command):
+    mock_settings_instance = MagicMock()
+    mock_settings_instance.org_uuid = "test-org-uuid"
+    mock_settings_instance.org_name = "Test Organization"
+    mock_settings.return_value = mock_settings_instance
+    tool_command._print_current_organization()
+    output = capsys.readouterr().out
+    assert "Current organization: Test Organization (test-org-uuid)" in output
+
+
+@patch("crewai.cli.tools.main.Settings")
+def test_print_current_organization_without_org(mock_settings, capsys, tool_command):
+    mock_settings_instance = MagicMock()
+    mock_settings_instance.org_uuid = None
+    mock_settings_instance.org_name = None
+    mock_settings.return_value = mock_settings_instance
+    tool_command._print_current_organization()
+    output = capsys.readouterr().out
+    assert "No organization currently set" in output
+    assert "org switch <org_id>" in output

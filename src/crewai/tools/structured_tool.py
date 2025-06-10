@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import inspect
 import textwrap
 from typing import Any, Callable, Optional, Union, get_type_hints
@@ -239,7 +241,17 @@ class CrewStructuredTool:
     ) -> Any:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)
-        return self.func(**parsed_args, **kwargs)
+
+        if inspect.iscoroutinefunction(self.func):
+            result = asyncio.run(self.func(**parsed_args, **kwargs))
+            return result
+
+        result = self.func(**parsed_args, **kwargs)
+
+        if asyncio.iscoroutine(result):
+            return asyncio.run(result)
+
+        return result
 
     @property
     def args(self) -> dict:
