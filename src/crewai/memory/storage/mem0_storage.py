@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 from mem0 import Memory, MemoryClient
 
 from crewai.memory.storage.interface import Storage
+from crewai.utilities.mem0_storage import sanitize_agent_id_name
 
 
 class Mem0Storage(Storage):
@@ -134,7 +135,7 @@ class Mem0Storage(Storage):
         agents = self.crew.agents
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
-        return agents
+        return sanitize_agent_id_name(agents)
 
     def _get_config(self) -> Dict[str, Any]:
         return self.config or getattr(self, "memory_config", {}).get("config", {}) or {}
