@@ -35,12 +35,12 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.security import Fingerprint, SecurityConfig
-from crewai.utilities.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED
+from crewai.utilities.guardrail import process_guardrail, GuardrailResult
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.events import (
     TaskCompletedEvent,
@@ -431,7 +431,11 @@ class Task(BaseModel):
             )
 
             if self._guardrail:
-                guardrail_result = self._process_guardrail(task_output)
+                guardrail_result = process_guardrail(
+                    output=task_output,
+                    guardrail=self._guardrail,
+                    retry_count=self.retry_count
+                )
                 if not guardrail_result.success:
                     if self.retry_count >= self.max_retries:
                         raise Exception(
