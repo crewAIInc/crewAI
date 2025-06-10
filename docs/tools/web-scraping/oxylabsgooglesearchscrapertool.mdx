@@ -1,0 +1,66 @@
+---
+title: Oxylabs Google Search Scraper
+description: The `OxylabsGoogleSearchScraperTool` allows to scrape Google search results. It supports output parsing, rendered scraping, callback urls, pagination as well as different geolocation, domains, and user agent types.
+icon: globe
+---
+
+# `OxylabsGoogleSearchScraperTool`
+
+
+## Installation
+
+```shell
+pip install 'crewai[tools]' oxylabs
+```
+
+Get the credentials by creating an Oxylabs Account [here](https://oxylabs.io).
+
+## Example
+
+```python
+from crewai_tools import OxylabsGoogleSearchScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsGoogleSearchScraperTool()
+
+result = tool.run(query="iPhone 16")
+
+print(result)
+```
+
+## Parameters
+
+- `query` - search keyword.
+- `domain` - domain localization for Google. The full list of available domains can be found [here](https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FiwDdoZGfMbUe5cRL2417%2Fuploads%2FS6e9iUtXb5YkRLlfQdm6%2Flocale.json?alt=media&token=435886ac-6223-42d4-8204-1e7d53512a42).
+- `start_page` - starting page number.
+- `pages` - number of pages to retrieve.
+- `limit` - number of results to retrieve in each page.
+- `locale` - `Accept-Language` header value which changes your Google search page web interface language. Learn more [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/features/localization/domain-locale-results-language#locale-1).
+- `geo_location` - the geographical location that the result should be adapted for. Using this parameter correctly is extremely important to get the right data. For more information, read about our suggested geo_location parameter structures [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/features/localization/serp-localization#google).
+- `user_agent_type` - device type and browser. The full list can be found [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/features/http-context-and-job-management/user-agent-type).
+- `render` - enables JavaScript rendering when set to `html`. Learn more [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/features/js-rendering-and-browser-control/javascript-rendering).
+- `callback_url` - URL to your callback endpoint. Learn more [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/integration-methods/push-pull#callback).
+- `context` - Additional advanced settings and controls for specialized requirements. Learn more [here](https://developers.oxylabs.io/scraping-solutions/web-scraper-api/targets/google/search/search#other).
+- `parse` - returns parsed data when set to true. Explore output [data dictionary](https://developers.oxylabs.io/scraper-apis/web-scraper-api/targets/google/search/search#output-data-dictionary).
+- `parsing_instructions` - define your own parsing and data transformation logic that will be executed on an HTML scraping result. Learn more [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/features/result-processing-and-storage/custom-parser/parsing-instruction-examples).
+
+## Advanced example
+
+Check out the Oxylabs [documentation](https://developers.oxylabs.io/scraper-apis/web-scraper-api/targets/google/search/search) to get the full list of parameters.
+
+```python
+from crewai_tools import OxylabsGoogleSearchScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsGoogleSearchScraperTool(
+    config={
+        "parse": True,
+        "geo_location": "Paris, France",
+        "user_agent_type": "tablet",
+    }
+)
+
+result = tool.run(query="iPhone 16")
+
+print(result)
+```
