@@ -38,17 +38,17 @@ def test_wildcard_event_handler():
     mock_handler.assert_called_once_with("source_object", event)
 
 
-def test_event_bus_error_handling(capfd):
-    @crewai_event_bus.on(BaseEvent)
-    def broken_handler(source, event):
-        raise ValueError("Simulated handler failure")
+def test_event_bus_error_handling(caplog):
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(BaseEvent)
+        def broken_handler(source, event):
+            raise ValueError("Simulated handler failure")
 
-    event = TestEvent(type="test_event")
-    crewai_event_bus.emit("source_object", event)
+        event = TestEvent(type="test_event")
+        crewai_event_bus.emit("source_object", event)
 
-    out, err = capfd.readouterr()
-    assert "Simulated handler failure" in out
-    assert "Handler 'broken_handler' failed" in out
+        assert any("Handler execution failed" in record.message for record in caplog.records)
+        assert any("Simulated handler failure" in str(record.exc_info) if record.exc_info else False for record in caplog.records)
 
 
 def test_concurrent_event_emission_thread_safety():
@@ -165,40 +165,40 @@ def test_thread_safety_with_mixed_operations():
 def test_handler_deregistration_thread_safety():
     """Test that concurrent handler deregistration is thread-safe"""
     
-    handlers_to_remove = []
-    
-    for i in range(10):
-        def handler(source, event):
-            pass
-        handler.__name__ = f"handler_{i}"
-        crewai_event_bus.register_handler(TestEvent, handler)
-        handlers_to_remove.append(handler)
-    
-    initial_count = len(crewai_event_bus._handlers.get(TestEvent, []))
-    
-    def deregister_handler(handler):
-        """Deregister a handler from a specific thread"""
-        return crewai_event_bus.deregister_handler(TestEvent, handler)
-    
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = []
-        for handler in handlers_to_remove:
-            future = executor.submit(deregister_handler, handler)
-            futures.append(future)
+    with crewai_event_bus.scoped_handlers():
+        handlers_to_remove = []
         
-        results = [future.result() for future in futures]
-    
-    assert all(results), "All handlers should be successfully deregistered"
-    
-    remaining_count = len(crewai_event_bus._handlers.get(TestEvent, []))
-    assert remaining_count == 0, f"Expected 0 handlers remaining, got {remaining_count}"
+        for i in range(10):
+            def handler(source, event):
+                pass
+            handler.__name__ = f"handler_{i}"
+            crewai_event_bus.register_handler(TestEvent, handler)
+            handlers_to_remove.append(handler)
+        
+        def deregister_handler(handler):
+            """Deregister a handler from a specific thread"""
+            return crewai_event_bus.deregister_handler(TestEvent, handler)
+        
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = []
+            for handler in handlers_to_remove:
+                future = executor.submit(deregister_handler, handler)
+                futures.append(future)
+            
+            results = [future.result() for future in futures]
+        
+        assert all(results), "All handlers should be successfully deregistered"
+        
+        remaining_count = len(crewai_event_bus._handlers.get(TestEvent, []))
+        assert remaining_count == 0, f"Expected 0 handlers remaining, got {remaining_count}"
 
 
 def test_deregister_nonexistent_handler():
     """Test deregistering a handler that doesn't exist"""
     
-    def dummy_handler(source, event):
-        pass
-    
-    result = crewai_event_bus.deregister_handler(TestEvent, dummy_handler)
-    assert result is False, "Deregistering non-existent handler should return False"
+    with crewai_event_bus.scoped_handlers():
+        def dummy_handler(source, event):
+            pass
+        
+        result = crewai_event_bus.deregister_handler(TestEvent, dummy_handler)
+        assert result is False, "Deregistering non-existent handler should return False"
