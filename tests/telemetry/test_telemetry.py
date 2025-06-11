@@ -9,6 +9,14 @@ from crewai.telemetry import Telemetry
 from opentelemetry import trace
 
 
+@pytest.fixture(autouse=True)
+def cleanup_telemetry():
+    """Automatically clean up Telemetry singleton between tests."""
+    Telemetry._instance = None
+    yield
+    Telemetry._instance = None
+
+
 @pytest.mark.parametrize(
     "env_var,value,expected_ready",
     [
