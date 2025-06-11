@@ -1,3 +1,4 @@
+import contextlib
 import json
 import logging
 import os
@@ -60,69 +61,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 load_dotenv()
 
 
-class FilteredStream(io.TextIOBase):
-    _lock = None
 
-    def __init__(self, original_stream: TextIO):
-        self._original_stream = original_stream
-        self._lock = threading.Lock()
-
-    def write(self, s: str) -> int:
-        if not self._lock:
-            self._lock = threading.Lock()
-
-        with self._lock:
-            lower_s = s.lower()
-
-            # Skip common noisy LiteLLM banners and any other lines that contain "litellm"
-            if (
-                "give feedback / get help" in lower_s
-                or "litellm.info:" in lower_s
-                or "litellm" in lower_s
-                or "Consider using a smaller input or implementing a text splitting strategy" in lower_s
-            ):
-                return 0
-
-            return self._original_stream.write(s)
-
-    def flush(self):
-        with self._lock:
-            return self._original_stream.flush()
-
-    def __getattr__(self, name):
-        """Delegate attribute access to the wrapped original stream.
-
-        This ensures compatibility with libraries (e.g., Rich) that rely on
-        attributes such as `encoding`, `isatty`, `buffer`, etc., which may not
-        be explicitly defined on this proxy class.
-        """
-        return getattr(self._original_stream, name)
-
-    # Delegate common properties/methods explicitly so they aren't shadowed by
-    # the TextIOBase defaults (e.g., .encoding returns None by default, which
-    # confuses Rich). These explicit pass-throughs ensure the wrapped Console
-    # still sees a fully-featured stream.
-    @property
-    def encoding(self):
-        return getattr(self._original_stream, "encoding", "utf-8")
-
-    def isatty(self):
-        return self._original_stream.isatty()
-
-    def fileno(self):
-        return self._original_stream.fileno()
-
-    def writable(self):
-        return True
-
-
-# Apply the filtered stream globally so that any subsequent writes containing the filtered
-# keywords (e.g., "litellm") are hidden from terminal output. We guard against double
-# wrapping to ensure idempotency in environments where this module might be reloaded.
-if not isinstance(sys.stdout, FilteredStream):
-    sys.stdout = FilteredStream(sys.stdout)
-if not isinstance(sys.stderr, FilteredStream):
-    sys.stderr = FilteredStream(sys.stderr)
 
 
 LLM_CONTEXT_WINDOW_SIZES = {
@@ -264,6 +203,23 @@ def suppress_warnings():
         )
 
         yield
+
+
+@contextmanager
+def suppress_litellm_output():
+    """Contextually suppress litellm-related logging output during LLM calls."""
+    litellm_logger = logging.getLogger("litellm")
+    original_level = litellm_logger.level
+    
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*give feedback.*")
+        warnings.filterwarnings("ignore", message=".*Consider using a smaller input.*")
+        
+        try:
+            litellm_logger.setLevel(logging.WARNING)
+            yield
+        finally:
+            litellm_logger.setLevel(original_level)
 
 
 class Delta(TypedDict):
@@ -450,60 +406,61 @@ class LLM(BaseLLM):
 
         try:
             # --- 3) Process each chunk in the stream
-            for chunk in litellm.completion(**params):
-                chunk_count += 1
-                last_chunk = chunk
+            with suppress_litellm_output():
+                for chunk in litellm.completion(**params):
+                    chunk_count += 1
+                    last_chunk = chunk
 
-                # Extract content from the chunk
-                chunk_content = None
+                    # Extract content from the chunk
+                    chunk_content = None
 
-                # Safely extract content from various chunk formats
-                try:
-                    # Try to access choices safely
-                    choices = None
-                    if isinstance(chunk, dict) and "choices" in chunk:
-                        choices = chunk["choices"]
-                    elif hasattr(chunk, "choices"):
-                        # Check if choices is not a type but an actual attribute with value
-                        if not isinstance(getattr(chunk, "choices"), type):
-                            choices = getattr(chunk, "choices")
+                    # Safely extract content from various chunk formats
+                    try:
+                        # Try to access choices safely
+                        choices = None
+                        if isinstance(chunk, dict) and "choices" in chunk:
+                            choices = chunk["choices"]
+                        elif hasattr(chunk, "choices"):
+                            # Check if choices is not a type but an actual attribute with value
+                            if not isinstance(getattr(chunk, "choices"), type):
+                                choices = getattr(chunk, "choices")
 
-                    # Try to extract usage information if available
-                    if isinstance(chunk, dict) and "usage" in chunk:
-                        usage_info = chunk["usage"]
-                    elif hasattr(chunk, "usage"):
-                        # Check if usage is not a type but an actual attribute with value
-                        if not isinstance(getattr(chunk, "usage"), type):
-                            usage_info = getattr(chunk, "usage")
+                        # Try to extract usage information if available
+                        if isinstance(chunk, dict) and "usage" in chunk:
+                            usage_info = chunk["usage"]
+                        elif hasattr(chunk, "usage"):
+                            # Check if usage is not a type but an actual attribute with value
+                            if not isinstance(getattr(chunk, "usage"), type):
+                                usage_info = getattr(chunk, "usage")
 
-                    if choices and len(choices) > 0:
-                        choice = choices[0]
+                        if choices and len(choices) > 0:
+                            choice = choices[0]
 
-                        # Handle different delta formats
-                        delta = None
-                        if isinstance(choice, dict) and "delta" in choice:
-                            delta = choice["delta"]
-                        elif hasattr(choice, "delta"):
-                            delta = getattr(choice, "delta")
+                            # Handle different delta formats
+                            delta = None
+                            if isinstance(choice, dict) and "delta" in choice:
+                                delta = choice["delta"]
+                            elif hasattr(choice, "delta"):
+                                delta = getattr(choice, "delta")
 
-                        # Extract content from delta
-                        if delta:
-                            # Handle dict format
-                            if isinstance(delta, dict):
-                                if "content" in delta and delta["content"] is not None:
-                                    chunk_content = delta["content"]
-                            # Handle object format
-                            elif hasattr(delta, "content"):
-                                chunk_content = getattr(delta, "content")
+                            # Extract content from delta
+                            if delta:
+                                # Handle dict format
+                                if isinstance(delta, dict):
+                                    if "content" in delta and delta["content"] is not None:
+                                        chunk_content = delta["content"]
+                                # Handle object format
+                                elif hasattr(delta, "content"):
+                                    chunk_content = getattr(delta, "content")
 
-                            # Handle case where content might be None or empty
-                            if chunk_content is None and isinstance(delta, dict):
-                                # Some models might send empty content chunks
-                                chunk_content = ""
+                                # Handle case where content might be None or empty
+                                if chunk_content is None and isinstance(delta, dict):
+                                    # Some models might send empty content chunks
+                                    chunk_content = ""
 
-                            # Enable tool calls using streaming
-                            if "tool_calls" in delta:
-                                tool_calls = delta["tool_calls"]
+                                # Enable tool calls using streaming
+                                if "tool_calls" in delta:
+                                    tool_calls = delta["tool_calls"]
 
                                 if tool_calls:
                                     result = self._handle_streaming_tool_calls(
@@ -514,21 +471,21 @@ class LLM(BaseLLM):
                                     if result is not None:
                                         chunk_content = result
 
-                except Exception as e:
-                    logging.debug(f"Error extracting content from chunk: {e}")
-                    logging.debug(f"Chunk format: {type(chunk)}, content: {chunk}")
+                    except Exception as e:
+                        logging.debug(f"Error extracting content from chunk: {e}")
+                        logging.debug(f"Chunk format: {type(chunk)}, content: {chunk}")
 
-                # Only add non-None content to the response
-                if chunk_content is not None:
-                    # Add the chunk content to the full response
-                    full_response += chunk_content
+                    # Only add non-None content to the response
+                    if chunk_content is not None:
+                        # Add the chunk content to the full response
+                        full_response += chunk_content
 
-                    # Emit the chunk event
-                    assert hasattr(crewai_event_bus, "emit")
-                    crewai_event_bus.emit(
-                        self,
-                        event=LLMStreamChunkEvent(chunk=chunk_content),
-                    )
+                        # Emit the chunk event
+                        assert hasattr(crewai_event_bus, "emit")
+                        crewai_event_bus.emit(
+                            self,
+                            event=LLMStreamChunkEvent(chunk=chunk_content),
+                        )
             # --- 4) Fallback to non-streaming if no content received
             if not full_response.strip() and chunk_count == 0:
                 logging.warning(
@@ -765,7 +722,8 @@ class LLM(BaseLLM):
             # and convert them to our own exception type for consistent handling
             # across the codebase. This allows CrewAgentExecutor to handle context
             # length issues appropriately.
-            response = litellm.completion(**params)
+            with suppress_litellm_output():
+                response = litellm.completion(**params)
         except ContextWindowExceededError as e:
             # Convert litellm's context window error to our own exception type
             # for consistent handling in the rest of the codebase
