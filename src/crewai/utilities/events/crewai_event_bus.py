@@ -67,27 +67,29 @@ class CrewAIEventsBus:
             source: The object emitting the event
             event: The event instance to emit
         """
-        for event_type, handlers in self._handlers.items():
-            if isinstance(event, event_type):
-                for handler in handlers:
-                    try:
-                        handler(source, event)
-                    except Exception as e:
-                        print(
-                            f"[EventBus Error] Handler '{handler.__name__}' failed for event '{event_type.__name__}': {e}"
-                        )
+        with CrewAIEventsBus._lock:
+            for event_type, handlers in self._handlers.items():
+                if isinstance(event, event_type):
+                    for handler in handlers:
+                        try:
+                            handler(source, event)
+                        except Exception as e:
+                            print(
+                                f"[EventBus Error] Handler '{handler.__name__}' failed for event '{event_type.__name__}': {e}"
+                            )
 
-        self._signal.send(source, event=event)
+            self._signal.send(source, event=event)
 
     def register_handler(
         self, event_type: Type[EventTypes], handler: Callable[[Any, EventTypes], None]
     ) -> None:
         """Register an event handler for a specific event type"""
-        if event_type not in self._handlers:
-            self._handlers[event_type] = []
-        self._handlers[event_type].append(
-            cast(Callable[[Any, EventTypes], None], handler)
-        )
+        with CrewAIEventsBus._lock:
+            if event_type not in self._handlers:
+                self._handlers[event_type] = []
+            self._handlers[event_type].append(
+                cast(Callable[[Any, EventTypes], None], handler)
+            )
 
     @contextmanager
     def scoped_handlers(self):
