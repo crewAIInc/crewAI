@@ -4,7 +4,9 @@ from typing import Any, Dict, List
 from mem0 import Memory, MemoryClient
 
 from crewai.memory.storage.interface import Storage
-from crewai.utilities.mem0_storage import sanitize_agent_id_name
+from crewai.utilities.chromadb import sanitize_collection_name
+
+MAX_AGENT_ID_LENGTH_MEM0 = 255
 
 
 class Mem0Storage(Storage):
@@ -135,7 +137,7 @@ class Mem0Storage(Storage):
         agents = self.crew.agents
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
-        return sanitize_agent_id_name(agents)
+        return sanitize_collection_name(name=agents,max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)
 
     def _get_config(self) -> Dict[str, Any]:
         return self.config or getattr(self, "memory_config", {}).get("config", {}) or {}
