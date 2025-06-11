@@ -59,11 +59,13 @@ class FileReadTool(BaseTool):
 
     def _run(
         self,
-        **kwargs: Any,
+        file_path: Optional[str] = None,
+        start_line: Optional[int] = 1,
+        line_count: Optional[int] = None,
     ) -> str:
-        file_path = kwargs.get("file_path", self.file_path)
-        start_line = kwargs.get("start_line", 1)
-        line_count = kwargs.get("line_count", None)
+        file_path = file_path or self.file_path
+        start_line = start_line or 1
+        line_count = line_count or None
 
         if file_path is None:
             return (

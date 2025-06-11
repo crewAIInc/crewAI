@@ -139,6 +139,11 @@ def test_file_read_tool_zero_or_negative_start_line():
     with patch("builtins.open", mock_open(read_data=file_content)):
         tool = FileReadTool()
 
+        # Test with start_line = None
+        result = tool._run(file_path=test_file, start_line=None)
+        expected = "".join(lines)  # Should read the entire file
+        assert result == expected
+
         # Test with start_line = 0
         result = tool._run(file_path=test_file, start_line=0)
         expected = "".join(lines)  # Should read the entire file
