@@ -17,6 +17,7 @@ class ConsoleFormatter:
     current_lite_agent_branch: Optional[Tree] = None
     tool_usage_counts: Dict[str, int] = {}
     current_reasoning_branch: Optional[Tree] = None  # Track reasoning status
+    _live_paused: bool = False
     current_llm_tool_tree: Optional[Tree] = None
 
     def __init__(self, verbose: bool = False):
@@ -118,6 +119,19 @@ class ConsoleFormatter:
 
         # Finally, pass through to the regular Console.print implementation
         self.console.print(*args, **kwargs)
+
+    def pause_live_updates(self) -> None:
+        """Pause Live session updates to allow for human input without interference."""
+        if not self._live_paused:
+            if self._live:
+                self._live.stop()
+                self._live = None
+            self._live_paused = True
+
+    def resume_live_updates(self) -> None:
+        """Resume Live session updates after human input is complete."""
+        if self._live_paused:
+            self._live_paused = False
 
     def print_panel(
         self, content: Text, title: str, style: str = "blue", is_flow: bool = False
