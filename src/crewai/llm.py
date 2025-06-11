@@ -201,21 +201,36 @@ def suppress_warnings():
         yield
 
 
+_litellm_logger = None
+
 @contextmanager
 def suppress_litellm_output():
     """Contextually suppress litellm-related logging output during LLM calls."""
-    litellm_logger = logging.getLogger("litellm")
-    original_level = litellm_logger.level
+    global _litellm_logger
+    if _litellm_logger is None:
+        _litellm_logger = logging.getLogger("litellm")
+    
+    original_level = _litellm_logger.level
+    
+    warning_patterns = [
+        ".*give feedback.*",
+        ".*Consider using a smaller input.*",
+        ".*litellm\\.info:.*",
+        ".*text splitting strategy.*"
+    ]
     
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message=".*give feedback.*")
-        warnings.filterwarnings("ignore", message=".*Consider using a smaller input.*")
+        for pattern in warning_patterns:
+            warnings.filterwarnings("ignore", message=pattern)
         
         try:
-            litellm_logger.setLevel(logging.WARNING)
+            _litellm_logger.setLevel(logging.WARNING)
+            yield
+        except Exception as e:
+            logging.debug(f"Error in litellm output suppression: {e}")
             yield
         finally:
-            litellm_logger.setLevel(original_level)
+            _litellm_logger.setLevel(original_level)
 
 
 class Delta(TypedDict):
@@ -468,8 +483,9 @@ class LLM(BaseLLM):
                                         chunk_content = result
 
                     except Exception as e:
-                        logging.debug(f"Error extracting content from chunk: {e}")
+                        logging.error(f"Error extracting content from chunk: {e}", exc_info=True)
                         logging.debug(f"Chunk format: {type(chunk)}, content: {chunk}")
+                        continue
 
                     # Only add non-None content to the response
                     if chunk_content is not None:
