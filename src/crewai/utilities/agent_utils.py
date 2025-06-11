@@ -484,3 +484,16 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
             else:
                 attributes[key] = value
     return attributes
+
+def show_agent_llm_model(self):
+    """
+    Displays the LLM model information for the agent executor.
+
+    Args:
+        self: the agent executor instance
+    """
+    if (hasattr(self, "agent") and getattr(self.crew, "verbose", False)) or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)):
+      if hasattr(self, "llm") and getattr(self.llm, "model", None):
+          self._printer.print(
+              content=f"\033[95m## LLM:\033[00m \033[92m{self.llm.model}\033[00m"
+        )
