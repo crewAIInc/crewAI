@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock, patch
 from rich.tree import Tree
 from rich.live import Live
