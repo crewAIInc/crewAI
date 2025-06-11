@@ -1,0 +1,391 @@
+---
+title: Google Calendar Integration
+description: "Event and schedule management with Google Calendar integration for CrewAI."
+icon: "calendar"
+---
+
+## Overview
+
+Enable your agents to manage calendar events, schedules, and availability through Google Calendar. Create and update events, manage attendees, check availability, and streamline your scheduling workflows with AI-powered automation.
+
+## Prerequisites
+
+Before using the Google Calendar integration, ensure you have:
+
+- A [CrewAI Enterprise](https://app.crewai.com) account with an active subscription
+- A Google account with Google Calendar access
+- Connected your Google account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
+
+## Setting Up Google Calendar Integration
+
+### 1. Connect Your Google Account
+
+1. Navigate to [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Google Calendar** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for calendar and contact access
+5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+## Available Actions
+
+<AccordionGroup>
+  <Accordion title="GOOGLE_CALENDAR_CREATE_EVENT">
+    **Description:** Create an event in Google Calendar.
+
+    **Parameters:**
+    - `eventName` (string, required): Event name.
+    - `startTime` (string, required): Start time - Accepts Unix timestamp or ISO8601 date formats.
+    - `endTime` (string, optional): End time - Defaults to one hour after the start time if left blank.
+    - `calendar` (string, optional): Calendar - Use Connect Portal Workflow Settings to allow users to select which calendar the event will be added to. Defaults to the user's primary calendar if left blank.
+    - `attendees` (string, optional): Attendees - Accepts an array of email addresses or email addresses separated by commas.
+    - `eventLocation` (string, optional): Event location.
+    - `eventDescription` (string, optional): Event description.
+    - `eventId` (string, optional): Event ID - An ID from your application to associate this event with. You can use this ID to sync updates to this event later.
+    - `includeMeetLink` (boolean, optional): Include Google Meet link? - Automatically creates Google Meet conference link for this event.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_UPDATE_EVENT">
+    **Description:** Update an existing event in Google Calendar.
+
+    **Parameters:**
+    - `eventId` (string, required): Event ID - The ID of the event to update.
+    - `eventName` (string, optional): Event name.
+    - `startTime` (string, optional): Start time - Accepts Unix timestamp or ISO8601 date formats.
+    - `endTime` (string, optional): End time - Defaults to one hour after the start time if left blank.
+    - `calendar` (string, optional): Calendar - Use Connect Portal Workflow Settings to allow users to select which calendar the event will be added to. Defaults to the user's primary calendar if left blank.
+    - `attendees` (string, optional): Attendees - Accepts an array of email addresses or email addresses separated by commas.
+    - `eventLocation` (string, optional): Event location.
+    - `eventDescription` (string, optional): Event description.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_LIST_EVENTS">
+    **Description:** List events from Google Calendar.
+
+    **Parameters:**
+    - `calendar` (string, optional): Calendar - Use Connect Portal Workflow Settings to allow users to select which calendar the event will be added to. Defaults to the user's primary calendar if left blank.
+    - `after` (string, optional): After - Filters events that start after the provided date (Unix in milliseconds or ISO timestamp). (example: "2025-04-12T10:00:00Z or 1712908800000").
+    - `before` (string, optional): Before - Filters events that end before the provided date (Unix in milliseconds or ISO timestamp). (example: "2025-04-12T10:00:00Z or 1712908800000").
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_GET_EVENT_BY_ID">
+    **Description:** Get a specific event by ID from Google Calendar.
+
+    **Parameters:**
+    - `eventId` (string, required): Event ID.
+    - `calendar` (string, optional): Calendar - Use Connect Portal Workflow Settings to allow users to select which calendar the event will be added to. Defaults to the user's primary calendar if left blank.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_DELETE_EVENT">
+    **Description:** Delete an event from Google Calendar.
+
+    **Parameters:**
+    - `eventId` (string, required): Event ID - The ID of the calendar event to be deleted.
+    - `calendar` (string, optional): Calendar - Use Connect Portal Workflow Settings to allow users to select which calendar the event will be added to. Defaults to the user's primary calendar if left blank.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_GET_CONTACTS">
+    **Description:** Get contacts from Google Calendar.
+
+    **Parameters:**
+    - `paginationParameters` (object, optional): Pagination Parameters.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_SEARCH_CONTACTS">
+    **Description:** Search for contacts in Google Calendar.
+
+    **Parameters:**
+    - `query` (string, optional): Search query to search contacts.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_LIST_DIRECTORY_PEOPLE">
+    **Description:** List directory people.
+
+    **Parameters:**
+    - `paginationParameters` (object, optional): Pagination Parameters.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_SEARCH_DIRECTORY_PEOPLE">
+    **Description:** Search directory people.
+
+    **Parameters:**
+    - `query` (string, required): Search query to search contacts.
+    - `paginationParameters` (object, optional): Pagination Parameters.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_LIST_OTHER_CONTACTS">
+    **Description:** List other contacts.
+
+    **Parameters:**
+    - `paginationParameters` (object, optional): Pagination Parameters.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_SEARCH_OTHER_CONTACTS">
+    **Description:** Search other contacts.
+
+    **Parameters:**
+    - `query` (string, optional): Search query to search contacts.
+  </Accordion>
+
+  <Accordion title="GOOGLE_CALENDAR_GET_AVAILABILITY">
+    **Description:** Get availability information for calendars.
+
+    **Parameters:**
+    - `timeMin` (string, required): The start of the interval. In ISO format.
+    - `timeMax` (string, required): The end of the interval. In ISO format.
+    - `timeZone` (string, optional): Time zone used in the response. Optional. The default is UTC.
+    - `items` (array, optional): List of calendars and/or groups to query. Defaults to the user default calendar.
+      ```json
+      [
+        {
+          "id": "calendar_id_1"
+        },
+        {
+          "id": "calendar_id_2"
+        }
+      ]
+      ```
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic Calendar Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Google Calendar tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Google Calendar capabilities
+calendar_agent = Agent(
+    role="Schedule Manager",
+    goal="Manage calendar events and scheduling efficiently",
+    backstory="An AI assistant specialized in calendar management and scheduling coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a meeting
+create_meeting_task = Task(
+    description="Create a team standup meeting for tomorrow at 9 AM with the development team",
+    agent=calendar_agent,
+    expected_output="Meeting created successfully with Google Meet link"
+)
+
+# Run the task
+crew = Crew(
+    agents=[calendar_agent],
+    tasks=[create_meeting_task]
+)
+
+crew.kickoff()
+```
+
+### Filtering Specific Calendar Tools
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Google Calendar tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["google_calendar_create_event", "google_calendar_list_events", "google_calendar_get_availability"]
+)
+
+meeting_coordinator = Agent(
+    role="Meeting Coordinator",
+    goal="Coordinate meetings and check availability",
+    backstory="An AI assistant that focuses on meeting scheduling and availability management.",
+    tools=enterprise_tools
+)
+
+# Task to schedule a meeting with availability check
+schedule_meeting = Task(
+    description="Check availability for next week and schedule a project review meeting with stakeholders",
+    agent=meeting_coordinator,
+    expected_output="Meeting scheduled after checking availability of all participants"
+)
+
+crew = Crew(
+    agents=[meeting_coordinator],
+    tasks=[schedule_meeting]
+)
+
+crew.kickoff()
+```
+
+### Event Management and Updates
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+event_manager = Agent(
+    role="Event Manager",
+    goal="Manage and update calendar events efficiently",
+    backstory="An experienced event manager who handles event logistics and updates.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage event updates
+event_management = Task(
+    description="""
+    1. List all events for this week
+    2. Update any events that need location changes to include video conference links
+    3. Send calendar invitations to new team members for recurring meetings
+    """,
+    agent=event_manager,
+    expected_output="Weekly events updated with proper locations and new attendees added"
+)
+
+crew = Crew(
+    agents=[event_manager],
+    tasks=[event_management]
+)
+
+crew.kickoff()
+```
+
+### Contact and Availability Management
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+availability_coordinator = Agent(
+    role="Availability Coordinator",
+    goal="Coordinate availability and manage contacts for scheduling",
+    backstory="An AI assistant that specializes in availability management and contact coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to coordinate availability
+availability_task = Task(
+    description="""
+    1. Search for contacts in the engineering department
+    2. Check availability for all engineers next Friday afternoon
+    3. Create a team meeting for the first available 2-hour slot
+    4. Include Google Meet link and send invitations
+    """,
+    agent=availability_coordinator,
+    expected_output="Team meeting scheduled based on availability with all engineers invited"
+)
+
+crew = Crew(
+    agents=[availability_coordinator],
+    tasks=[availability_task]
+)
+
+crew.kickoff()
+```
+
+### Automated Scheduling Workflows
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+scheduling_automator = Agent(
+    role="Scheduling Automator",
+    goal="Automate scheduling workflows and calendar management",
+    backstory="An AI assistant that automates complex scheduling scenarios and calendar workflows.",
+    tools=[enterprise_tools]
+)
+
+# Complex scheduling automation task
+automation_task = Task(
+    description="""
+    1. List all upcoming events for the next two weeks
+    2. Identify any scheduling conflicts or back-to-back meetings
+    3. Suggest optimal meeting times by checking availability
+    4. Create buffer time between meetings where needed
+    5. Update event descriptions with agenda items and meeting links
+    """,
+    agent=scheduling_automator,
+    expected_output="Calendar optimized with resolved conflicts, buffer times, and updated meeting details"
+)
+
+crew = Crew(
+    agents=[scheduling_automator],
+    tasks=[automation_task]
+)
+
+crew.kickoff()
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Authentication Errors**
+- Ensure your Google account has the necessary permissions for calendar access
+- Verify that the OAuth connection includes all required scopes for Google Calendar API
+- Check if calendar sharing settings allow the required access level
+
+**Event Creation Issues**
+- Verify that time formats are correct (ISO8601 or Unix timestamps)
+- Ensure attendee email addresses are properly formatted
+- Check that the target calendar exists and is accessible
+- Verify time zones are correctly specified
+
+**Availability and Time Conflicts**
+- Use proper ISO format for time ranges when checking availability
+- Ensure time zones are consistent across all operations
+- Verify that calendar IDs are correct when checking multiple calendars
+
+**Contact and People Search**
+- Ensure search queries are properly formatted
+- Check that directory access permissions are granted
+- Verify that contact information is up to date and accessible
+
+**Event Updates and Deletions**
+- Verify that event IDs are correct and events exist
+- Ensure you have edit permissions for the events
+- Check that calendar ownership allows modifications
+
+### Getting Help
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with Google Calendar integration setup or troubleshooting.
+</Card>
