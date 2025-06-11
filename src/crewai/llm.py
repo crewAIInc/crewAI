@@ -1,9 +1,6 @@
-import contextlib
 import json
 import logging
 import os
-import sys
-import threading
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
@@ -49,8 +46,7 @@ with warnings.catch_warnings():
     from litellm.utils import supports_response_schema
 
 
-import io
-from typing import TextIO
+
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.events import crewai_event_bus
