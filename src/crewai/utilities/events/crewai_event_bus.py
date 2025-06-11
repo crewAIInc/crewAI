@@ -1,3 +1,4 @@
+import logging
 import threading
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Type, TypeVar, cast
@@ -12,12 +13,34 @@ EventT = TypeVar("EventT", bound=BaseEvent)
 
 class CrewAIEventsBus:
     """
-    A singleton event bus that uses blinker signals for event handling.
-    Allows both internal (Flow/Crew) and external event handling.
+    Thread-safe singleton event bus for CrewAI events.
+    
+    This class provides a centralized event handling system that allows components
+    to emit and listen for events throughout the CrewAI framework.
+    
+    Thread Safety:
+    - All public methods are thread-safe
+    - Uses a class-level lock to ensure synchronized access to shared resources
+    - Safe for concurrent event emission and handler registration/deregistration
+    - Prevents race conditions that could cause event mixing between sessions
+    
+    Usage:
+        @crewai_event_bus.on(SomeEvent)
+        def handle_event(source, event):
+            # Handle the event
+            pass
+        
+        # Emit an event
+        event = SomeEvent(type="example")
+        crewai_event_bus.emit(source_object, event)
+        
+        # Deregister a handler
+        crewai_event_bus.deregister_handler(SomeEvent, handle_event)
     """
 
     _instance = None
     _lock = threading.Lock()
+    _logger = logging.getLogger(__name__)
 
     def __new__(cls):
         if cls._instance is None:
@@ -74,8 +97,15 @@ class CrewAIEventsBus:
                         try:
                             handler(source, event)
                         except Exception as e:
-                            print(
-                                f"[EventBus Error] Handler '{handler.__name__}' failed for event '{event_type.__name__}': {e}"
+                            CrewAIEventsBus._logger.error(
+                                "Handler execution failed",
+                                extra={
+                                    "handler": handler.__name__,
+                                    "event_type": event_type.__name__,
+                                    "error": str(e),
+                                    "source": str(source)
+                                },
+                                exc_info=True
                             )
 
             self._signal.send(source, event=event)
@@ -90,6 +120,31 @@ class CrewAIEventsBus:
             self._handlers[event_type].append(
                 cast(Callable[[Any, EventTypes], None], handler)
             )
+
+    def deregister_handler(
+        self, event_type: Type[EventTypes], handler: Callable[[Any, EventTypes], None]
+    ) -> bool:
+        """
+        Deregister an event handler for a specific event type.
+        
+        Args:
+            event_type: The event type to deregister the handler from
+            handler: The handler function to remove
+            
+        Returns:
+            bool: True if the handler was found and removed, False otherwise
+        """
+        with CrewAIEventsBus._lock:
+            if event_type not in self._handlers:
+                return False
+            
+            try:
+                self._handlers[event_type].remove(handler)
+                if not self._handlers[event_type]:
+                    del self._handlers[event_type]
+                return True
+            except ValueError:
+                return False
 
     @contextmanager
     def scoped_handlers(self):

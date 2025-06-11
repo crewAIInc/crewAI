@@ -160,3 +160,45 @@ def test_thread_safety_with_mixed_operations():
                 future.result()
         
         assert len(received_events) >= 0
+
+
+def test_handler_deregistration_thread_safety():
+    """Test that concurrent handler deregistration is thread-safe"""
+    
+    handlers_to_remove = []
+    
+    for i in range(10):
+        def handler(source, event):
+            pass
+        handler.__name__ = f"handler_{i}"
+        crewai_event_bus.register_handler(TestEvent, handler)
+        handlers_to_remove.append(handler)
+    
+    initial_count = len(crewai_event_bus._handlers.get(TestEvent, []))
+    
+    def deregister_handler(handler):
+        """Deregister a handler from a specific thread"""
+        return crewai_event_bus.deregister_handler(TestEvent, handler)
+    
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = []
+        for handler in handlers_to_remove:
+            future = executor.submit(deregister_handler, handler)
+            futures.append(future)
+        
+        results = [future.result() for future in futures]
+    
+    assert all(results), "All handlers should be successfully deregistered"
+    
+    remaining_count = len(crewai_event_bus._handlers.get(TestEvent, []))
+    assert remaining_count == 0, f"Expected 0 handlers remaining, got {remaining_count}"
+
+
+def test_deregister_nonexistent_handler():
+    """Test deregistering a handler that doesn't exist"""
+    
+    def dummy_handler(source, event):
+        pass
+    
+    result = crewai_event_bus.deregister_handler(TestEvent, dummy_handler)
+    assert result is False, "Deregistering non-existent handler should return False"
