@@ -1835,7 +1835,7 @@ def test_agent_with_knowledge_sources_generate_search_query():
         assert "red" in result.raw.lower()
 
 
-@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"],filter_query_parameters=["key"])
+@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
 def test_agent_with_knowledge_with_no_crewai_knowledge():
     mock_knowledge = MagicMock(spec=Knowledge)
 
@@ -1843,7 +1843,7 @@ def test_agent_with_knowledge_with_no_crewai_knowledge():
         role="Information Agent",
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key='ABC'),
+        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
         knowledge = mock_knowledge
     )
 
@@ -1859,7 +1859,7 @@ def test_agent_with_knowledge_with_no_crewai_knowledge():
     mock_knowledge.query.assert_called_once()
 
 
-@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"],filter_query_parameters=["key"])
+@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
 def test_agent_with_only_crewai_knowledge():
     mock_knowledge = MagicMock(spec=Knowledge)
 
@@ -1867,7 +1867,7 @@ def test_agent_with_only_crewai_knowledge():
         role="Information Agent",
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key='abc')
+        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY'))
     )
 
     # Create a task that requires the agent to use the knowledge
@@ -1882,7 +1882,7 @@ def test_agent_with_only_crewai_knowledge():
     mock_knowledge.query.assert_called_once()
 
 
-@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"],filter_query_parameters=["key"])
+@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
 def test_agent_knowledege_with_crewai_knowledge():
     crew_knowledge = MagicMock(spec=Knowledge)
     agent_knowledge = MagicMock(spec=Knowledge)
@@ -1892,7 +1892,7 @@ def test_agent_knowledege_with_crewai_knowledge():
         role="Information Agent",
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key='abc'),
+        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
         knowledge = agent_knowledge
     )
 

@@ -342,16 +342,15 @@ class Agent(BaseAgent):
                                 task_prompt += self.agent_knowledge_context
 
                     # Quering crew specific knowledge
-                    if self.crew and self.crew.knowledge:
-                        knowledge_snippets = self.crew.query_knowledge(
-                            [self.knowledge_search_query], **knowledge_config
+                    knowledge_snippets = self.crew.query_knowledge(
+                        [self.knowledge_search_query], **knowledge_config
+                    )
+                    if knowledge_snippets:
+                        self.crew_knowledge_context = extract_knowledge_context(
+                            knowledge_snippets
                         )
-                        if knowledge_snippets:
-                            self.crew_knowledge_context = extract_knowledge_context(
-                                knowledge_snippets
-                            )
-                            if self.crew_knowledge_context:
-                                task_prompt += self.crew_knowledge_context
+                        if self.crew_knowledge_context:
+                            task_prompt += self.crew_knowledge_context
 
                     crewai_event_bus.emit(
                         self,
