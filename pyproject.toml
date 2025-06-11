@@ -1,6 +1,6 @@
 [project]
 name = "crewai"
-version = "0.126.0"
+version = "0.130.0"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -47,7 +47,7 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools~=0.46.0"]
+tools = ["crewai-tools~=0.47.1"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
