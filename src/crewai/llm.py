@@ -219,18 +219,21 @@ def suppress_litellm_output():
         ".*text splitting strategy.*"
     ]
     
-    with warnings.catch_warnings():
-        for pattern in warning_patterns:
-            warnings.filterwarnings("ignore", message=pattern)
-        
-        try:
+    try:
+        with warnings.catch_warnings():
+            for pattern in warning_patterns:
+                warnings.filterwarnings("ignore", message=pattern)
+            
             _litellm_logger.setLevel(logging.WARNING)
             yield
-        except Exception as e:
-            logging.debug(f"Error in litellm output suppression: {e}")
-            yield
-        finally:
+    except Exception as e:
+        logging.debug(f"Error in litellm output suppression: {e}")
+        raise
+    finally:
+        try:
             _litellm_logger.setLevel(original_level)
+        except Exception as e:
+            logging.debug(f"Error restoring logger level: {e}")
 
 
 class Delta(TypedDict):
