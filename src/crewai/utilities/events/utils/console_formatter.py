@@ -5,6 +5,7 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.tree import Tree
 from rich.live import Live
+from rich.syntax import Syntax
 
 
 class ConsoleFormatter:
@@ -498,9 +499,7 @@ class ConsoleFormatter:
 
         # Parent for tool usage: LiteAgent > Agent > Task
         branch_to_use = (
-            self.current_lite_agent_branch
-            or agent_branch
-            or self.current_task_branch
+            self.current_lite_agent_branch or agent_branch or self.current_task_branch
         )
 
         # Render full crew tree when available for consistent live updates
@@ -609,9 +608,7 @@ class ConsoleFormatter:
 
         # Parent for tool usage: LiteAgent > Agent > Task
         branch_to_use = (
-            self.current_lite_agent_branch
-            or agent_branch
-            or self.current_task_branch
+            self.current_lite_agent_branch or agent_branch or self.current_task_branch
         )
 
         # Render full crew tree when available for consistent live updates
@@ -626,9 +623,8 @@ class ConsoleFormatter:
 
         # Only add thinking status if we don't have a current tool branch
         # or if the current tool branch is not a thinking node
-        should_add_thinking = (
-            self.current_tool_branch is None or
-            "Thinking" not in str(self.current_tool_branch.label)
+        should_add_thinking = self.current_tool_branch is None or "Thinking" not in str(
+            self.current_tool_branch.label
         )
 
         if should_add_thinking:
@@ -691,7 +687,10 @@ class ConsoleFormatter:
                 tree_to_use,
             ]
             for parent in parents:
-                if isinstance(parent, Tree) and thinking_branch_to_remove in parent.children:
+                if (
+                    isinstance(parent, Tree)
+                    and thinking_branch_to_remove in parent.children
+                ):
                     parent.children.remove(thinking_branch_to_remove)
                     removed = True
                     break
@@ -1186,9 +1185,7 @@ class ConsoleFormatter:
 
         # Prefer LiteAgent > Agent > Task branch as the parent for reasoning
         branch_to_use = (
-            self.current_lite_agent_branch
-            or agent_branch
-            or self.current_task_branch
+            self.current_lite_agent_branch or agent_branch or self.current_task_branch
         )
 
         # We always want to render the full crew tree when possible so the
@@ -1235,7 +1232,9 @@ class ConsoleFormatter:
         )
 
         style = "green" if ready else "yellow"
-        status_text = "Reasoning Completed" if ready else "Reasoning Completed (Not Ready)"
+        status_text = (
+            "Reasoning Completed" if ready else "Reasoning Completed (Not Ready)"
+        )
 
         if reasoning_branch is not None:
             self.update_tree_label(reasoning_branch, "✅", status_text, style)
@@ -1292,3 +1291,149 @@ class ConsoleFormatter:
 
         # Clear stored branch after failure
         self.current_reasoning_branch = None
+
+    # ----------- AGENT LOGGING EVENTS -----------
+
+    def handle_agent_logs_started(
+        self,
+        agent_role: str,
+        task_description: Optional[str] = None,
+        verbose: bool = False,
+    ) -> None:
+        """Handle agent logs started event."""
+        if not verbose:
+            return
+
+        agent_role = agent_role.split("\n")[0]
+
+        # Create panel content
+        content = Text()
+        content.append("Agent: ", style="white")
+        content.append(f"{agent_role}", style="bright_green bold")
+
+        if task_description:
+            content.append("\n\nTask: ", style="white")
+            content.append(f"{task_description}", style="bright_green")
+
+        # Create and display the panel
+        agent_panel = Panel(
+            content,
+            title="🤖 Agent Started",
+            border_style="magenta",
+            padding=(1, 2),
+        )
+        self.print(agent_panel)
+        self.print()
+
+    def handle_agent_logs_execution(
+        self,
+        agent_role: str,
+        formatted_answer: Any,
+        verbose: bool = False,
+    ) -> None:
+        """Handle agent logs execution event."""
+        if not verbose:
+            return
+
+        from crewai.agents.parser import AgentAction, AgentFinish
+        import json
+        import re
+
+        agent_role = agent_role.split("\n")[0]
+
+        if isinstance(formatted_answer, AgentAction):
+            thought = re.sub(r"\n+", "\n", formatted_answer.thought)
+            formatted_json = json.dumps(
+                formatted_answer.tool_input,
+                indent=2,
+                ensure_ascii=False,
+            )
+
+            # Create content for the action panel
+            content = Text()
+            content.append("Agent: ", style="white")
+            content.append(f"{agent_role}\n\n", style="bright_green bold")
+
+            if thought and thought != "":
+                content.append("Thought: ", style="white")
+                content.append(f"{thought}\n\n", style="bright_green")
+
+            content.append("Using Tool: ", style="white")
+            content.append(f"{formatted_answer.tool}\n\n", style="bright_green bold")
+
+            content.append("Tool Input:\n", style="white")
+
+            # Create a syntax-highlighted JSON code block
+            json_syntax = Syntax(
+                formatted_json,
+                "json",
+                theme="monokai",
+                line_numbers=False,
+                background_color="default",
+            )
+
+            content.append("\n")
+
+            # Create separate panels for better organization
+            main_content = Text()
+            main_content.append("Agent: ", style="white")
+            main_content.append(f"{agent_role}\n\n", style="bright_green bold")
+
+            if thought and thought != "":
+                main_content.append("Thought: ", style="white")
+                main_content.append(f"{thought}\n\n", style="bright_green")
+
+            main_content.append("Using Tool: ", style="white")
+            main_content.append(f"{formatted_answer.tool}", style="bright_green bold")
+
+            # Create the main action panel
+            action_panel = Panel(
+                main_content,
+                title="🔧 Agent Tool Execution",
+                border_style="magenta",
+                padding=(1, 2),
+            )
+
+            # Create the JSON input panel
+            input_panel = Panel(
+                json_syntax,
+                title="📥 Tool Input",
+                border_style="blue",
+                padding=(1, 2),
+            )
+
+            # Create tool output content with better formatting
+            output_text = str(formatted_answer.result)
+            if len(output_text) > 1000:
+                output_text = output_text[:997] + "..."
+
+            output_panel = Panel(
+                Text(output_text, style="bright_green"),
+                title="📤 Tool Output",
+                border_style="green",
+                padding=(1, 2),
+            )
+
+            # Print all panels
+            self.print(action_panel)
+            self.print(input_panel)
+            self.print(output_panel)
+            self.print()
+
+        elif isinstance(formatted_answer, AgentFinish):
+            # Create content for the finish panel
+            content = Text()
+            content.append("Agent: ", style="white")
+            content.append(f"{agent_role}\n\n", style="bright_green bold")
+            content.append("Final Answer:\n", style="white")
+            content.append(f"{formatted_answer.output}", style="bright_green")
+
+            # Create and display the finish panel
+            finish_panel = Panel(
+                content,
+                title="✅ Agent Final Answer",
+                border_style="green",
+                padding=(1, 2),
+            )
+            self.print(finish_panel)
+            self.print()

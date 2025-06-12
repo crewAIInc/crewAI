@@ -27,6 +27,8 @@ from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 from .agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionStartedEvent,
+    AgentLogsStartedEvent,
+    AgentLogsExecutionEvent,
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
@@ -291,8 +293,8 @@ class EventListener(BaseEventListener):
                 self.formatter.handle_tool_usage_started(
                     self.formatter.current_agent_branch,
                     event.tool_name,
-                self.formatter.current_crew_tree,
-            )
+                    self.formatter.current_crew_tree,
+                )
 
         @crewai_event_bus.on(ToolUsageFinishedEvent)
         def on_tool_usage_finished(source, event: ToolUsageFinishedEvent):
@@ -320,7 +322,7 @@ class EventListener(BaseEventListener):
                     event.tool_name,
                     event.error,
                     self.formatter.current_crew_tree,
-            )
+                )
 
         # ----------- LLM EVENTS -----------
 
@@ -464,6 +466,24 @@ class EventListener(BaseEventListener):
             self.formatter.handle_reasoning_failed(
                 event.error,
                 self.formatter.current_crew_tree,
+            )
+
+        # ----------- AGENT LOGGING EVENTS -----------
+
+        @crewai_event_bus.on(AgentLogsStartedEvent)
+        def on_agent_logs_started(source, event: AgentLogsStartedEvent):
+            self.formatter.handle_agent_logs_started(
+                event.agent_role,
+                event.task_description,
+                event.verbose,
+            )
+
+        @crewai_event_bus.on(AgentLogsExecutionEvent)
+        def on_agent_logs_execution(source, event: AgentLogsExecutionEvent):
+            self.formatter.handle_agent_logs_execution(
+                event.agent_role,
+                event.formatted_answer,
+                event.verbose,
             )
 
 
