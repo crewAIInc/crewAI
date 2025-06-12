@@ -136,28 +136,22 @@ def test_concurrent_llm_calls():
     assert all("test response" in result for result in results)
 
 
-def test_logger_caching_performance():
-    """Test that logger instance is cached for performance."""
+def test_logger_performance():
+    """Test that logger operations work correctly without global caching."""
     from crewai.llm import suppress_litellm_output
-    import crewai.llm
     
-    original_logger = crewai.llm._litellm_logger
-    crewai.llm._litellm_logger = None
-    
-    try:
-        with patch('logging.getLogger') as mock_get_logger:
-            mock_logger = MagicMock()
-            mock_get_logger.return_value = mock_logger
+    with patch('logging.getLogger') as mock_get_logger:
+        mock_logger = MagicMock()
+        mock_get_logger.return_value = mock_logger
+        
+        with suppress_litellm_output():
+            pass
+        
+        with suppress_litellm_output():
+            pass
             
-            with suppress_litellm_output():
-                pass
-            
-            with suppress_litellm_output():
-                pass
-                
-            mock_get_logger.assert_called_once_with("litellm")
-    finally:
-        crewai.llm._litellm_logger = original_logger
+        assert mock_get_logger.call_count == 2
+        mock_get_logger.assert_called_with("litellm")
 
 
 def test_suppression_error_handling():

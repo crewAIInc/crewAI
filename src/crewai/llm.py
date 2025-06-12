@@ -201,16 +201,11 @@ def suppress_warnings():
         yield
 
 
-_litellm_logger = None
-
 @contextmanager
 def suppress_litellm_output():
     """Contextually suppress litellm-related logging output during LLM calls."""
-    global _litellm_logger
-    if _litellm_logger is None:
-        _litellm_logger = logging.getLogger("litellm")
-    
-    original_level = _litellm_logger.level
+    litellm_logger = logging.getLogger("litellm")
+    original_level = litellm_logger.level
     
     warning_patterns = [
         ".*give feedback.*",
@@ -224,14 +219,18 @@ def suppress_litellm_output():
             for pattern in warning_patterns:
                 warnings.filterwarnings("ignore", message=pattern)
             
-            _litellm_logger.setLevel(logging.WARNING)
+            try:
+                litellm_logger.setLevel(logging.WARNING)
+            except Exception as e:
+                logging.debug(f"Error setting logger level: {e}")
+            
             yield
     except Exception as e:
         logging.debug(f"Error in litellm output suppression: {e}")
         raise
     finally:
         try:
-            _litellm_logger.setLevel(original_level)
+            litellm_logger.setLevel(original_level)
         except Exception as e:
             logging.debug(f"Error restoring logger level: {e}")
 
