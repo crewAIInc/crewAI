@@ -1,14 +1,6 @@
-"""
-Module for handling task guardrail validation results.
-
-This module provides the GuardrailResult class which standardizes
-the way task guardrails return their validation results.
-"""
-
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Tuple, Union
 
 from pydantic import BaseModel, field_validator
-
 
 class GuardrailResult(BaseModel):
     """Result from a task guardrail execution.
@@ -54,3 +46,48 @@ class GuardrailResult(BaseModel):
             result=data if success else None,
             error=data if not success else None
         )
+
+
+def process_guardrail(output: Any, guardrail: Callable, retry_count: int) -> GuardrailResult:
+    """Process the guardrail for the agent output.
+
+    Args:
+        output: The output to validate with the guardrail
+
+    Returns:
+        GuardrailResult: The result of the guardrail validation
+    """
+    from crewai.task import TaskOutput
+    from crewai.lite_agent import LiteAgentOutput
+
+    assert isinstance(output, TaskOutput) or isinstance(output, LiteAgentOutput), "Output must be a TaskOutput or LiteAgentOutput"
+
+    assert guardrail is not None
+
+    from crewai.utilities.events import (
+        LLMGuardrailCompletedEvent,
+        LLMGuardrailStartedEvent,
+    )
+    from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+
+    crewai_event_bus.emit(
+        None,
+        LLMGuardrailStartedEvent(
+            guardrail=guardrail, retry_count=retry_count
+        ),
+    )
+
+    result = guardrail(output)
+    guardrail_result = GuardrailResult.from_tuple(result)
+
+    crewai_event_bus.emit(
+        None,
+        LLMGuardrailCompletedEvent(
+            success=guardrail_result.success,
+            result=guardrail_result.result,
+            error=guardrail_result.error,
+            retry_count=retry_count,
+        ),
+    )
+
+    return guardrail_result

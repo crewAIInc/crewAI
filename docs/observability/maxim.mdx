@@ -98,6 +98,7 @@ Maxim AI provides comprehensive observability & evaluation for your CrewAI agent
 
 ### Prerequisites
 
+
 - Python version \>=3.10
 - A Maxim account ([sign up here](https://getmaxim.ai/))
 - Generate Maxim API Key
@@ -116,7 +117,6 @@ Or add it to your `requirements.txt`:
 ```
 maxim-py
 ```
-
 ### Basic Setup
 
 ### 1. Set up environment variables
@@ -140,6 +140,7 @@ from maxim.logger.crewai import instrument_crewai
 ```
 
 ### 3. Initialise Maxim with your API key
+
 
 ```python {8}
 # Instrument CrewAI with just one line
@@ -178,6 +179,7 @@ finally:
     maxim.cleanup()  # Ensure cleanup happens even if errors occur
 ```
 
+
 That's it\! All your CrewAI agent interactions will now be logged and available in your Maxim dashboard.
 
 Check this Google Colab Notebook for a quick reference - [Notebook](https://colab.research.google.com/drive/1ZKIZWsmgQQ46n8TH9zLsT1negKkJA6K8?usp=sharing)
@@ -196,12 +198,11 @@ After running your CrewAI application:
 
     <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/crewai_traces.gif'> </img>
 
-
 ## Troubleshooting
 
 ### Common Issues
 
-- **No traces appearing**: Ensure your API key and repository ID are correc
+- **No traces appearing**: Ensure your API key and repository ID are correct
 - Ensure you've **`called instrument_crewai()`** **_before_** running your crew. This initializes logging hooks correctly.
 - Set `debug=True` in your `instrument_crewai()` call to surface any internal errors:
 

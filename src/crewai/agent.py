@@ -1,6 +1,6 @@
 import shutil
 import subprocess
-from typing import Any, Dict, List, Literal, Optional, Sequence, Type, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Type, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -154,6 +154,13 @@ class Agent(BaseAgent):
     from_repository: Optional[str] = Field(
         default=None,
         description="The Agent's role to be used from your repository.",
+    )
+    guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
+        default=None,
+        description="Function or string description of a guardrail to validate agent output"
+    )
+    guardrail_max_retries: int = Field(
+        default=3, description="Maximum number of retries when guardrail fails"
     )
 
     @model_validator(mode="before")
@@ -780,6 +787,8 @@ class Agent(BaseAgent):
             response_format=response_format,
             i18n=self.i18n,
             original_agent=self,
+            guardrail=self.guardrail,
+            guardrail_max_retries=self.guardrail_max_retries,
         )
 
         return lite_agent.kickoff(messages)
