@@ -1,11 +1,13 @@
 import warnings
 
 from crewai.agent import Agent
+from crewai import agent
 from crewai import cli
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
+from crewai import knowledge
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
@@ -23,6 +25,7 @@ warnings.filterwarnings(
 __version__ = "0.126.0"
 __all__ = [
     "Agent",
+    "agent",
     "cli",
     "Crew",
     "CrewOutput",
@@ -32,6 +35,7 @@ __all__ = [
     "BaseLLM",
     "Flow",
     "Knowledge",
+    "knowledge",
     "TaskOutput",
     "LLMGuardrail",
     "utilities",
