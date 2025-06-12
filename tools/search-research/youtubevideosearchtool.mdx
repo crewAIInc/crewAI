@@ -1,0 +1,187 @@
+---
+title: YouTube Video RAG Search
+description: The `YoutubeVideoSearchTool` is designed to perform a RAG (Retrieval-Augmented Generation) search within the content of a Youtube video.
+icon: youtube
+---
+
+# `YoutubeVideoSearchTool`
+
+<Note>
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+</Note>
+
+## Description
+
+This tool is part of the `crewai_tools` package and is designed to perform semantic searches within Youtube video content, utilizing Retrieval-Augmented Generation (RAG) techniques. 
+It is one of several "Search" tools in the package that leverage RAG for different sources. 
+The YoutubeVideoSearchTool allows for flexibility in searches; users can search across any Youtube video content without specifying a video URL, 
+or they can target their search to a specific Youtube video by providing its URL.
+
+## Installation
+
+To utilize the `YoutubeVideoSearchTool`, you must first install the `crewai_tools` package. 
+This package contains the `YoutubeVideoSearchTool` among other utilities designed to enhance your data analysis and processing tasks. 
+Install the package by executing the following command in your terminal:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Example
+
+The following example demonstrates how to use the `YoutubeVideoSearchTool` with a CrewAI agent:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeVideoSearchTool
+
+# Initialize the tool for general YouTube video searches
+youtube_search_tool = YoutubeVideoSearchTool()
+
+# Define an agent that uses the tool
+video_researcher = Agent(
+    role="Video Researcher",
+    goal="Extract relevant information from YouTube videos",
+    backstory="An expert researcher who specializes in analyzing video content.",
+    tools=[youtube_search_tool],
+    verbose=True,
+)
+
+# Example task to search for information in a specific video
+research_task = Task(
+    description="Search for information about machine learning frameworks in the YouTube video at {youtube_video_url}",
+    expected_output="A summary of the key machine learning frameworks mentioned in the video.",
+    agent=video_researcher,
+)
+
+# Create and run the crew
+crew = Crew(agents=[video_researcher], tasks=[research_task])
+result = crew.kickoff(inputs={"youtube_video_url": "https://youtube.com/watch?v=example"})
+```
+
+You can also initialize the tool with a specific YouTube video URL:
+
+```python Code
+# Initialize the tool with a specific YouTube video URL
+youtube_search_tool = YoutubeVideoSearchTool(
+    youtube_video_url='https://youtube.com/watch?v=example'
+)
+
+# Define an agent that uses the tool
+video_researcher = Agent(
+    role="Video Researcher",
+    goal="Extract relevant information from a specific YouTube video",
+    backstory="An expert researcher who specializes in analyzing video content.",
+    tools=[youtube_search_tool],
+    verbose=True,
+)
+```
+
+## Parameters
+
+The `YoutubeVideoSearchTool` accepts the following parameters:
+
+- **youtube_video_url**: Optional. The URL of the YouTube video to search within. If provided during initialization, the agent won't need to specify it when using the tool.
+- **config**: Optional. Configuration for the underlying RAG system, including LLM and embedder settings.
+- **summarize**: Optional. Whether to summarize the retrieved content. Default is `False`.
+
+When using the tool with an agent, the agent will need to provide:
+
+- **search_query**: Required. The search query to find relevant information in the video content.
+- **youtube_video_url**: Required only if not provided during initialization. The URL of the YouTube video to search within.
+
+## Custom Model and Embeddings
+
+By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+
+```python Code  
+youtube_search_tool = YoutubeVideoSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # or openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```
+
+## Agent Integration Example
+
+Here's a more detailed example of how to integrate the `YoutubeVideoSearchTool` with a CrewAI agent:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeVideoSearchTool
+
+# Initialize the tool
+youtube_search_tool = YoutubeVideoSearchTool()
+
+# Define an agent that uses the tool
+video_researcher = Agent(
+    role="Video Researcher",
+    goal="Extract and analyze information from YouTube videos",
+    backstory="""You are an expert video researcher who specializes in extracting 
+    and analyzing information from YouTube videos. You have a keen eye for detail 
+    and can quickly identify key points and insights from video content.""",
+    tools=[youtube_search_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+research_task = Task(
+    description="""
+    Search for information about recent advancements in artificial intelligence 
+    in the YouTube video at {youtube_video_url}. 
+    
+    Focus on:
+    1. Key AI technologies mentioned
+    2. Real-world applications discussed
+    3. Future predictions made by the speaker
+    
+    Provide a comprehensive summary of these points.
+    """,
+    expected_output="A detailed summary of AI advancements, applications, and future predictions from the video.",
+    agent=video_researcher,
+)
+
+# Run the task
+crew = Crew(agents=[video_researcher], tasks=[research_task])
+result = crew.kickoff(inputs={"youtube_video_url": "https://youtube.com/watch?v=example"})
+```
+
+## Implementation Details
+
+The `YoutubeVideoSearchTool` is implemented as a subclass of `RagTool`, which provides the base functionality for Retrieval-Augmented Generation:
+
+```python Code
+class YoutubeVideoSearchTool(RagTool):
+    name: str = "Search a Youtube Video content"
+    description: str = "A tool that can be used to semantic search a query from a Youtube Video content."
+    args_schema: Type[BaseModel] = YoutubeVideoSearchToolSchema
+
+    def __init__(self, youtube_video_url: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if youtube_video_url is not None:
+            kwargs["data_type"] = DataType.YOUTUBE_VIDEO
+            self.add(youtube_video_url)
+            self.description = f"A tool that can be used to semantic search a query the {youtube_video_url} Youtube Video content."
+            self.args_schema = FixedYoutubeVideoSearchToolSchema
+            self._generate_description()
+```
+
+## Conclusion
+
+The `YoutubeVideoSearchTool` provides a powerful way to search and extract information from YouTube video content using RAG techniques. By enabling agents to search within video content, it facilitates information extraction and analysis tasks that would otherwise be difficult to perform. This tool is particularly useful for research, content analysis, and knowledge extraction from video sources.
