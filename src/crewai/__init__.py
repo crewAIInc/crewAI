@@ -1,16 +1,20 @@
 import warnings
 
 from crewai.agent import Agent
+from crewai import agent
+from crewai import cli
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
+from crewai import knowledge
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
+from crewai import utilities
 
 warnings.filterwarnings(
     "ignore",
@@ -21,6 +25,8 @@ warnings.filterwarnings(
 __version__ = "0.130.0"
 __all__ = [
     "Agent",
+    "agent",
+    "cli",
     "Crew",
     "CrewOutput",
     "Process",
@@ -29,6 +35,8 @@ __all__ = [
     "BaseLLM",
     "Flow",
     "Knowledge",
+    "knowledge",
     "TaskOutput",
     "LLMGuardrail",
+    "utilities",
 ]
