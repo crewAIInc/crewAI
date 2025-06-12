@@ -32,7 +32,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Prompt File** _(optional)_          | `prompt_file`          | Path to the prompt JSON file to be used for the crew.                                                                                                                                                                                                     |
 | **Planning** *(optional)*             | `planning`             | Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.                                                     |
 | **Planning LLM** *(optional)*         | `planning_llm`         | The language model used by the AgentPlanner in a planning process.                                                                                                                                                                                        |
-| **Knowledge Sources** _(optional)_    | `knowledge_sources`    | Knowledge sources available to the crew, accessible to all the agents.                                                                     |
+| **Knowledge Sources** _(optional)_    | `knowledge_sources`    | Knowledge sources available to the crew, accessible to all the agents.                                                                                                                                                                                    |
 
 <Tip>
 **Crew Max RPM**: The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
