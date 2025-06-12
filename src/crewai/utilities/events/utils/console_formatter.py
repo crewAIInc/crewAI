@@ -1397,7 +1397,7 @@ class ConsoleFormatter:
             # Create the JSON input panel
             input_panel = Panel(
                 json_syntax,
-                title="📥 Tool Input",
+                title="Tool Input",
                 border_style="blue",
                 padding=(1, 2),
             )
@@ -1409,7 +1409,7 @@ class ConsoleFormatter:
 
             output_panel = Panel(
                 Text(output_text, style="bright_green"),
-                title="📤 Tool Output",
+                title="Tool Output",
                 border_style="green",
                 padding=(1, 2),
             )
