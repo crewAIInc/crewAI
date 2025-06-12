@@ -1,6 +1,4 @@
-import pytest
-
-from crewai.cli.constants import ENV_VARS, MODELS, PROVIDERS
+from crewai.cli.constants import ENV_VARS, JSON_URL, MODELS, PROVIDERS
 
 
 def test_huggingface_in_providers():
@@ -21,3 +19,9 @@ def test_huggingface_models():
     """Test that Huggingface models are properly configured."""
     assert "huggingface" in MODELS
     assert len(MODELS["huggingface"]) > 0
+
+
+def test_json_url_is_https():
+    """Test that JSON_URL uses HTTPS for secure connection."""
+    assert JSON_URL.startswith("https://")
+    assert JSON_URL == "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
