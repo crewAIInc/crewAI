@@ -41,7 +41,12 @@ class ConsoleFormatter:
         )
 
     def create_status_content(
-        self, title: str, name: str, status_style: str = "blue", **fields
+        self,
+        title: str,
+        name: str,
+        status_style: str = "blue",
+        tool_args: Dict[str, Any] | str = "",
+        **fields,
     ) -> Text:
         """Create standardized status content with consistent formatting."""
         content = Text()
@@ -54,6 +59,8 @@ class ConsoleFormatter:
             content.append(
                 f"{value}\n", style=fields.get(f"{label}_style", status_style)
             )
+        content.append("Tool Args: ", style="white")
+        content.append(f"{tool_args}\n", style=status_style)
 
         return content
 
@@ -153,6 +160,7 @@ class ConsoleFormatter:
         crew_name: str,
         source_id: str,
         status: str = "completed",
+        final_string_output: str = "",
     ) -> None:
         """Handle crew tree updates with consistent formatting."""
         if not self.verbose or tree is None:
@@ -184,6 +192,7 @@ class ConsoleFormatter:
             style,
             ID=source_id,
         )
+        content.append(f"Final Output: {final_string_output}\n", style="white")
 
         self.print_panel(content, title, style)
 
@@ -456,12 +465,19 @@ class ConsoleFormatter:
     def handle_llm_tool_usage_started(
         self,
         tool_name: str,
+        tool_args: Dict[str, Any] | str,
     ):
-        tree = self.get_llm_tree(tool_name)
-        self.add_tree_node(tree, "🔄 Tool Usage Started", "green")
-        self.print(tree)
+        # Create status content for the tool usage
+        content = self.create_status_content(
+            "Tool Usage Started", tool_name, Status="In Progress", tool_args=tool_args
+        )
+
+        # Create and print the panel
+        self.print_panel(content, "Tool Usage", "green")
         self.print()
-        return tree
+
+        # Still return the tree for compatibility with existing code
+        return self.get_llm_tree(tool_name)
 
     def handle_llm_tool_usage_finished(
         self,
@@ -492,6 +508,7 @@ class ConsoleFormatter:
         agent_branch: Optional[Tree],
         tool_name: str,
         crew_tree: Optional[Tree],
+        tool_args: Dict[str, Any] | str = "",
     ) -> Optional[Tree]:
         """Handle tool usage started event."""
         if not self.verbose:
@@ -1404,8 +1421,8 @@ class ConsoleFormatter:
 
             # Create tool output content with better formatting
             output_text = str(formatted_answer.result)
-            if len(output_text) > 1000:
-                output_text = output_text[:997] + "..."
+            if len(output_text) > 2000:
+                output_text = output_text[:1997] + "..."
 
             output_panel = Panel(
                 Text(output_text, style="bright_green"),

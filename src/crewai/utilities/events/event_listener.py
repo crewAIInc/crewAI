@@ -110,6 +110,7 @@ class EventListener(BaseEventListener):
                 event.crew_name or "Crew",
                 source.id,
                 "completed",
+                final_string_output,
             )
 
         @crewai_event_bus.on(CrewKickoffFailedEvent)
@@ -288,6 +289,7 @@ class EventListener(BaseEventListener):
             if isinstance(source, LLM):
                 self.formatter.handle_llm_tool_usage_started(
                     event.tool_name,
+                    event.tool_args,
                 )
             else:
                 self.formatter.handle_tool_usage_started(
