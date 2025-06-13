@@ -237,6 +237,7 @@ MODELS = {
         "watsonx/meta-llama/llama-3-2-1b-instruct",
         "watsonx/meta-llama/llama-3-2-90b-vision-instruct",
         "watsonx/meta-llama/llama-3-405b-instruct",
+        "watsonx/meta-llama/llama-4-maverick-17b-128e-instruct-fp8",
         "watsonx/mistral/mistral-large",
         "watsonx/ibm/granite-3-8b-instruct",
     ],
