@@ -1,0 +1,293 @@
+---
+title: Slack Integration
+description: "Team communication and collaboration with Slack integration for CrewAI."
+icon: "slack"
+---
+
+## Overview
+
+Enable your agents to manage team communication through Slack. Send messages, search conversations, manage channels, and coordinate team activities to streamline your collaboration workflows with AI-powered automation.
+
+## Prerequisites
+
+Before using the Slack integration, ensure you have:
+
+- A [CrewAI Enterprise](https://app.crewai.com) account with an active subscription
+- A Slack workspace with appropriate permissions
+- Connected your Slack workspace through the [Integrations page](https://app.crewai.com/integrations)
+
+## Available Tools
+
+### **User Management**
+
+<AccordionGroup>
+  <Accordion title="SLACK_LIST_MEMBERS">
+    **Description:** List all members in a Slack channel.
+
+    **Parameters:**
+    - No parameters required - retrieves all channel members
+  </Accordion>
+
+  <Accordion title="SLACK_GET_USER_BY_EMAIL">
+    **Description:** Find a user in your Slack workspace by their email address.
+
+    **Parameters:**
+    - `email` (string, required): The email address of a user in the workspace
+  </Accordion>
+
+  <Accordion title="SLACK_GET_USERS_BY_NAME">
+    **Description:** Search for users by their name or display name.
+
+    **Parameters:**
+    - `name` (string, required): User's real name to search for
+    - `displayName` (string, required): User's display name to search for
+    - `paginationParameters` (object, optional): Pagination settings
+      - `pageCursor` (string, optional): Page cursor for pagination
+  </Accordion>
+</AccordionGroup>
+
+### **Channel Management**
+
+<AccordionGroup>
+  <Accordion title="SLACK_LIST_CHANNELS">
+    **Description:** List all channels in your Slack workspace.
+
+    **Parameters:**
+    - No parameters required - retrieves all accessible channels
+  </Accordion>
+</AccordionGroup>
+
+### **Messaging**
+
+<AccordionGroup>
+  <Accordion title="SLACK_SEND_MESSAGE">
+    **Description:** Send a message to a Slack channel.
+
+    **Parameters:**
+    - `channel` (string, required): Channel name or ID - Use Connect Portal Workflow Settings to allow users to select a channel, or enter a channel name to create a new channel
+    - `message` (string, required): The message text to send
+    - `botName` (string, required): The name of the bot that sends this message
+    - `botIcon` (string, required): Bot icon - Can be either an image URL or an emoji (e.g., ":dog:")
+    - `blocks` (object, optional): Slack Block Kit JSON for rich message formatting with attachments and interactive elements
+    - `authenticatedUser` (boolean, optional): If true, message appears to come from your authenticated Slack user instead of the application (defaults to false)
+  </Accordion>
+
+  <Accordion title="SLACK_SEND_DIRECT_MESSAGE">
+    **Description:** Send a direct message to a specific user in Slack.
+
+    **Parameters:**
+    - `memberId` (string, required): Recipient user ID - Use Connect Portal Workflow Settings to allow users to select a workspace member
+    - `message` (string, required): The message text to send
+    - `botName` (string, required): The name of the bot that sends this message
+    - `botIcon` (string, required): Bot icon - Can be either an image URL or an emoji (e.g., ":dog:")
+    - `blocks` (object, optional): Slack Block Kit JSON for rich message formatting with attachments and interactive elements
+    - `authenticatedUser` (boolean, optional): If true, message appears to come from your authenticated Slack user instead of the application (defaults to false)
+  </Accordion>
+</AccordionGroup>
+
+### **Search & Discovery**
+
+<AccordionGroup>
+  <Accordion title="SLACK_SEARCH_MESSAGES">
+    **Description:** Search for messages across your Slack workspace.
+
+    **Parameters:**
+    - `query` (string, required): Search query using Slack search syntax to find messages that match specified criteria
+
+    **Search Query Examples:**
+    - `"project update"` - Search for messages containing "project update"
+    - `from:@john in:#general` - Search for messages from John in the #general channel
+    - `has:link after:2023-01-01` - Search for messages with links after January 1, 2023
+    - `in:@channel before:yesterday` - Search for messages in a specific channel before yesterday
+  </Accordion>
+</AccordionGroup>
+
+## Block Kit Integration
+
+Slack's Block Kit allows you to create rich, interactive messages. Here are some examples of how to use the `blocks` parameter:
+
+### Simple Text with Attachment
+```json
+[
+  {
+    "text": "I am a test message",
+    "attachments": [
+      {
+        "text": "And here's an attachment!"
+      }
+    ]
+  }
+]
+```
+
+### Rich Formatting with Sections
+```json
+[
+  {
+    "type": "section",
+    "text": {
+      "type": "mrkdwn",
+      "text": "*Project Update*\nStatus: ✅ Complete"
+    }
+  },
+  {
+    "type": "divider"
+  },
+  {
+    "type": "section",
+    "text": {
+      "type": "plain_text",
+      "text": "All tasks have been completed successfully."
+    }
+  }
+]
+```
+
+## Usage Examples
+
+### Basic Slack Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Slack tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Slack capabilities
+slack_agent = Agent(
+    role="Team Communication Manager",
+    goal="Facilitate team communication and coordinate collaboration efficiently",
+    backstory="An AI assistant specialized in team communication and workspace coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to send project updates
+update_task = Task(
+    description="Send a project status update to the #general channel with current progress",
+    agent=slack_agent,
+    expected_output="Project update message sent successfully to team channel"
+)
+
+# Run the task
+crew = Crew(
+    agents=[slack_agent],
+    tasks=[update_task]
+)
+
+crew.kickoff()
+```
+
+### Filtering Specific Slack Tools
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Slack tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["slack_send_message", "slack_send_direct_message", "slack_search_messages"]
+)
+
+communication_manager = Agent(
+    role="Communication Coordinator",
+    goal="Manage team communications and ensure important messages reach the right people",
+    backstory="An experienced communication coordinator who handles team messaging and notifications.",
+    tools=enterprise_tools
+)
+
+# Task to coordinate team communication
+coordination_task = Task(
+    description="Send task completion notifications to team members and update project channels",
+    agent=communication_manager,
+    expected_output="Team notifications sent and project channels updated successfully"
+)
+
+crew = Crew(
+    agents=[communication_manager],
+    tasks=[coordination_task]
+)
+
+crew.kickoff()
+```
+
+### Advanced Messaging with Block Kit
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+notification_agent = Agent(
+    role="Notification Manager",
+    goal="Create rich, interactive notifications and manage workspace communication",
+    backstory="An AI assistant that specializes in creating engaging team notifications and updates.",
+    tools=[enterprise_tools]
+)
+
+# Task to send rich notifications
+notification_task = Task(
+    description="""
+    1. Send a formatted project completion message to #general with progress charts
+    2. Send direct messages to team leads with task summaries
+    3. Create interactive notification with action buttons for team feedback
+    """,
+    agent=notification_agent,
+    expected_output="Rich notifications sent with interactive elements and formatted content"
+)
+
+crew = Crew(
+    agents=[notification_agent],
+    tasks=[notification_task]
+)
+
+crew.kickoff()
+```
+
+### Message Search and Analytics
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+analytics_agent = Agent(
+    role="Communication Analyst",
+    goal="Analyze team communication patterns and extract insights from conversations",
+    backstory="An analytical AI that excels at understanding team dynamics through communication data.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving search and analysis
+analysis_task = Task(
+    description="""
+    1. Search for recent project-related messages across all channels
+    2. Find users by email to identify team members
+    3. Analyze communication patterns and response times
+    4. Generate weekly team communication summary
+    """,
+    agent=analytics_agent,
+    expected_output="Comprehensive communication analysis with team insights and recommendations"
+)
+
+crew = Crew(
+    agents=[analytics_agent],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+## Contact Support
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with Slack integration setup or troubleshooting.
+</Card>
