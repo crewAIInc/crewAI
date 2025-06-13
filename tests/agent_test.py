@@ -1844,7 +1844,7 @@ def test_agent_with_knowledge_with_no_crewai_knowledge():
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
         llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
-        knowledge = mock_knowledge
+        knowledge=mock_knowledge
     )
 
     # Create a task that requires the agent to use the knowledge
@@ -1877,7 +1877,7 @@ def test_agent_with_only_crewai_knowledge():
         agent=agent
     )
 
-    crew = Crew(agents=[agent], tasks=[task],knowledge = mock_knowledge)
+    crew = Crew(agents=[agent], tasks=[task],knowledge=mock_knowledge)
     crew.kickoff()
     mock_knowledge.query.assert_called_once()
 
@@ -1893,7 +1893,7 @@ def test_agent_knowledege_with_crewai_knowledge():
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
         llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
-        knowledge = agent_knowledge
+        knowledge=agent_knowledge
     )
 
     # Create a task that requires the agent to use the knowledge
@@ -1903,7 +1903,7 @@ def test_agent_knowledege_with_crewai_knowledge():
         agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task],knowledge = crew_knowledge)
+    crew = Crew(agents=[agent], tasks=[task],knowledge=crew_knowledge)
     crew.kickoff()
     agent_knowledge.query.assert_called_once()
     crew_knowledge.query.assert_called_once()
