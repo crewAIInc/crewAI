@@ -6,6 +6,15 @@ MAX_LLM_RETRY = 3
 MAX_FILE_NAME_LENGTH = 255
 EMITTER_COLOR = "bold_blue"
 
+# Tool usage and validation constants
+DEFAULT_TOOL_RESULTS_LIMIT = 3
+MAX_REASONING_ATTEMPTS_DEFAULT = 5
+DEFAULT_CONTEXT_SCORE_THRESHOLD = 0.35
+
+# File and collection name constants  
+MIN_COLLECTION_NAME_LENGTH = 3
+MAX_COLLECTION_NAME_LENGTH = 63
+
 
 class _NotSpecified:
     def __repr__(self):
