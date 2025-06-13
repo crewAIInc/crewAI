@@ -1903,7 +1903,7 @@ def test_agent_knowledege_with_crewai_knowledge():
         agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task],knowledge=crew_knowledge)
+    crew = Crew(agents=[agent],tasks=[task],knowledge=crew_knowledge)
     crew.kickoff()
     agent_knowledge.query.assert_called_once()
     crew_knowledge.query.assert_called_once()
