@@ -9,7 +9,10 @@ from crewai.utilities.serialization import to_serializable
 class BaseEvent(BaseModel):
     """Base class for all events"""
 
-    timestamp: Optional[datetime] = None
+    timestamp: Optional[datetime] = Field(
+        default=None,
+        description="Event timestamp. Set automatically on emission if not provided."
+    )
     type: str
     source_fingerprint: Optional[str] = None  # UUID string of the source entity
     source_type: Optional[str] = None  # "agent", "task", "crew"

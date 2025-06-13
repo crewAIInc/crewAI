@@ -1,6 +1,6 @@
 import threading
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Type, TypeVar, cast
 
 from blinker import Signal
@@ -62,14 +62,17 @@ class CrewAIEventsBus:
 
     def emit(self, source: Any, event: BaseEvent) -> None:
         """
-        Emit an event to all registered handlers
+        Emit an event to all registered handlers.
+        
+        Sets the event timestamp automatically if not already provided to ensure
+        chronological ordering of events.
 
         Args:
             source: The object emitting the event
             event: The event instance to emit
         """
         if event.timestamp is None:
-            event.timestamp = datetime.now()
+            event.timestamp = datetime.now(timezone.utc)
             
         for event_type, handlers in self._handlers.items():
             if isinstance(event, event_type):
