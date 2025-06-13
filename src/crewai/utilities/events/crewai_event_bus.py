@@ -1,5 +1,6 @@
 import threading
 from contextlib import contextmanager
+from datetime import datetime
 from typing import Any, Callable, Dict, List, Type, TypeVar, cast
 
 from blinker import Signal
@@ -67,6 +68,9 @@ class CrewAIEventsBus:
             source: The object emitting the event
             event: The event instance to emit
         """
+        if event.timestamp is None:
+            event.timestamp = datetime.now()
+            
         for event_type, handlers in self._handlers.items():
             if isinstance(event, event_type):
                 for handler in handlers:
