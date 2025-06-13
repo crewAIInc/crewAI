@@ -49,7 +49,7 @@ class CrewAgentExecutorMixin:
                 pass
 
     def _create_external_memory(self, output) -> None:
-        """Create and save a external-term memory item if conditions are met."""
+        """Create and save an external-term memory item if conditions are met."""
         if (
             self.crew
             and self.agent
