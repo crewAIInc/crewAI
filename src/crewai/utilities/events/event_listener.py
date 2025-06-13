@@ -326,10 +326,14 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(source, event: LLMCallStartedEvent):
-            self.formatter.handle_llm_call_started(
+            # Capture the returned tool branch and update the current_tool_branch reference
+            thinking_branch = self.formatter.handle_llm_call_started(
                 self.formatter.current_agent_branch,
                 self.formatter.current_crew_tree,
             )
+            # Update the formatter's current_tool_branch to ensure proper cleanup
+            if thinking_branch is not None:
+                self.formatter.current_tool_branch = thinking_branch
 
         @crewai_event_bus.on(LLMCallCompletedEvent)
         def on_llm_call_completed(source, event: LLMCallCompletedEvent):

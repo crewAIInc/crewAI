@@ -625,14 +625,22 @@ class ConsoleFormatter:
                 return None
 
         # Only add thinking status if we don't have a current tool branch
-        if self.current_tool_branch is None:
+        # or if the current tool branch is not a thinking node
+        should_add_thinking = (
+            self.current_tool_branch is None or
+            "Thinking" not in str(self.current_tool_branch.label)
+        )
+
+        if should_add_thinking:
             tool_branch = branch_to_use.add("")
             self.update_tree_label(tool_branch, "🧠", "Thinking...", "blue")
             self.current_tool_branch = tool_branch
             self.print(tree_to_use)
             self.print()
             return tool_branch
-        return None
+
+        # Return the existing tool branch if it's already a thinking node
+        return self.current_tool_branch
 
     def handle_llm_call_completed(
         self,
@@ -641,7 +649,7 @@ class ConsoleFormatter:
         crew_tree: Optional[Tree],
     ) -> None:
         """Handle LLM call completed event."""
-        if not self.verbose or tool_branch is None:
+        if not self.verbose:
             return
 
         # Decide which tree to render: prefer full crew tree, else parent branch
@@ -649,23 +657,47 @@ class ConsoleFormatter:
         if tree_to_use is None:
             return
 
-        # Remove the thinking status node when complete
-        if "Thinking" in str(tool_branch.label):
+        # Try to remove the thinking status node - first try the provided tool_branch
+        thinking_branch_to_remove = None
+        removed = False
+
+        # Method 1: Use the provided tool_branch if it's a thinking node
+        if tool_branch is not None and "Thinking" in str(tool_branch.label):
+            thinking_branch_to_remove = tool_branch
+
+        # Method 2: Fallback - search for any thinking node if tool_branch is None or not thinking
+        if thinking_branch_to_remove is None:
             parents = [
                 self.current_lite_agent_branch,
                 self.current_agent_branch,
                 self.current_task_branch,
                 tree_to_use,
             ]
-            removed = False
             for parent in parents:
-                if isinstance(parent, Tree) and tool_branch in parent.children:
-                    parent.children.remove(tool_branch)
+                if isinstance(parent, Tree):
+                    for child in parent.children:
+                        if "Thinking" in str(child.label):
+                            thinking_branch_to_remove = child
+                            break
+                    if thinking_branch_to_remove:
+                        break
+
+        # Remove the thinking node if found
+        if thinking_branch_to_remove:
+            parents = [
+                self.current_lite_agent_branch,
+                self.current_agent_branch,
+                self.current_task_branch,
+                tree_to_use,
+            ]
+            for parent in parents:
+                if isinstance(parent, Tree) and thinking_branch_to_remove in parent.children:
+                    parent.children.remove(thinking_branch_to_remove)
                     removed = True
                     break
 
             # Clear pointer if we just removed the current_tool_branch
-            if self.current_tool_branch is tool_branch:
+            if self.current_tool_branch is thinking_branch_to_remove:
                 self.current_tool_branch = None
 
             if removed:
@@ -682,9 +714,36 @@ class ConsoleFormatter:
         # Decide which tree to render: prefer full crew tree, else parent branch
         tree_to_use = self.current_crew_tree or crew_tree or self.current_task_branch
 
-        # Update tool branch if it exists
-        if tool_branch:
-            tool_branch.label = Text("❌ LLM Failed", style="red bold")
+        # Find the thinking branch to update (similar to completion logic)
+        thinking_branch_to_update = None
+
+        # Method 1: Use the provided tool_branch if it's a thinking node
+        if tool_branch is not None and "Thinking" in str(tool_branch.label):
+            thinking_branch_to_update = tool_branch
+
+        # Method 2: Fallback - search for any thinking node if tool_branch is None or not thinking
+        if thinking_branch_to_update is None:
+            parents = [
+                self.current_lite_agent_branch,
+                self.current_agent_branch,
+                self.current_task_branch,
+                tree_to_use,
+            ]
+            for parent in parents:
+                if isinstance(parent, Tree):
+                    for child in parent.children:
+                        if "Thinking" in str(child.label):
+                            thinking_branch_to_update = child
+                            break
+                    if thinking_branch_to_update:
+                        break
+
+        # Update the thinking branch to show failure
+        if thinking_branch_to_update:
+            thinking_branch_to_update.label = Text("❌ LLM Failed", style="red bold")
+            # Clear the current_tool_branch reference
+            if self.current_tool_branch is thinking_branch_to_update:
+                self.current_tool_branch = None
             if tree_to_use:
                 self.print(tree_to_use)
                 self.print()
