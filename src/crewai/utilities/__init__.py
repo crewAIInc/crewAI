@@ -7,6 +7,7 @@ from .parser import YamlParser
 from .printer import Printer
 from .prompts import Prompts
 from .rpm_controller import RPMController
+from .tpm_controller import TPMController
 from .exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "Logger",
     "Printer",
     "Prompts",
+    "TPMController",    
     "RPMController",
     "YamlParser",
     "LLMContextLengthExceededException",
