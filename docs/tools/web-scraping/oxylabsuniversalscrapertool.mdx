@@ -1,0 +1,81 @@
+---
+title: Oxylabs Universal Scraper
+description: The `OxylabsUniversalScraperTool` allows to scrape any website. It supports output parsing, rendered scraping, callback urls as well as different geolocation, domains, user agent types and custom parsing instructions.
+icon: globe
+---
+
+# `OxylabsUniversalScraperTool`
+
+
+## Installation
+
+```shell
+pip install 'crewai[tools]' oxylabs
+```
+
+Get the credentials by creating an Oxylabs Account [here](https://oxylabs.io).
+
+## Example
+
+```python
+from crewai_tools import OxylabsUniversalScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsUniversalScraperTool()
+
+result = tool.run(url="https://ip.oxylabs.io")
+
+print(result)
+```
+
+## Parameters
+
+- `url` - website url to scrape.
+- `user_agent_type` - device type and browser. The full list can be found [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/features/http-context-and-job-management/user-agent-type).
+- `geo_location` - sets the proxy's geolocation to retrieve data. Find supported locations [here](https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FiwDdoZGfMbUe5cRL2417%2Fuploads%2FxoQb19qSyodB2D4no0DZ%2FList%20of%20supported%20geo_location%20values_sapi.json?alt=media&token=d2e2df7b-10ba-4399-a547-0c4a99e62293).
+- `render` - enables JavaScript rendering when set to `html`. Learn more [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/features/js-rendering-and-browser-control/javascript-rendering).
+- `callback_url` - URL to your callback endpoint. Learn more [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/integration-methods/push-pull#callback).
+- `context` - Additional advanced settings and controls for specialized requirements. Learn more [here](https://developers.oxylabs.io/scraping-solutions/web-scraper-api/targets/generic-target#additional).
+- `parse` - returns parsed data when set to `true`, as long as a dedicated parser exists for the submitted URL's page type.
+- `parsing_instructions` - define your own parsing and data transformation logic that will be executed on an HTML scraping result. Learn more [here](https://developers.oxylabs.io/scraper-apis/web-scraper-api/features/result-processing-and-storage/custom-parser/parsing-instruction-examples).
+
+
+## Advanced example
+
+Check out the Oxylabs [documentation](https://developers.oxylabs.io/scraper-apis/web-scraper-api/other-websites) to get the full list of parameters.
+
+```python
+from crewai_tools import OxylabsUniversalScraperTool
+
+# make sure OXYLABS_USERNAME and OXYLABS_PASSWORD variables are set
+tool = OxylabsUniversalScraperTool(
+    config={
+        "render": "html",
+        "user_agent_type": "mobile",
+        "context": [
+            {"key": "force_headers", "value": True},
+            {"key": "force_cookies", "value": True},
+            {
+                "key": "headers",
+                "value": {
+                    "Custom-Header-Name": "custom header content",
+                },
+            },
+            {
+                "key": "cookies",
+                "value": [
+                    {"key": "NID", "value": "1234567890"},
+                    {"key": "1P JAR", "value": "0987654321"},
+                ],
+            },
+            {"key": "http_method", "value": "get"},
+            {"key": "follow_redirects", "value": True},
+            {"key": "successful_status_codes", "value": [808, 909]},
+        ],
+    }
+)
+
+result = tool.run(url="https://ip.oxylabs.io")
+
+print(result)
+```
