@@ -4,8 +4,11 @@ Crewai Enterprise Tools
 
 import os
 import typing as t
+import logging
 from crewai.tools import BaseTool
 from crewai_tools.adapters.enterprise_adapter import EnterpriseActionKitToolAdapter
+
+logger = logging.getLogger(__name__)
 
 
 def CrewaiEnterpriseTools(
@@ -18,7 +21,7 @@ def CrewaiEnterpriseTools(
 
     Args:
         enterprise_token: The token for accessing enterprise actions.
-                         If not provided, will try to use CREWAI_ENTEPRISE_TOOLS_TOKEN env var.
+                         If not provided, will try to use CREWAI_ENTERPRISE_TOOLS_TOKEN env var.
         actions_list: Optional list of specific tool names to include.
                    If provided, only tools with these names will be returned.
 
@@ -26,11 +29,8 @@ def CrewaiEnterpriseTools(
         A list of BaseTool instances for enterprise actions
     """
     if enterprise_token is None:
-        enterprise_token = os.environ.get("CREWAI_ENTEPRISE_TOOLS_TOKEN")
-        if enterprise_token is None:
-            raise ValueError(
-                "No enterprise token provided. Please provide a token or set the CREWAI_ENTEPRISE_TOOLS_TOKEN environment variable."
-            )
+        enterprise_token = os.environ.get("CREWAI_ENTERPRISE_TOOLS_TOKEN")
+        logger.warning("No enterprise token provided")
 
     adapter_kwargs = {"enterprise_action_token": enterprise_token}
 

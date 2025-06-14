@@ -125,8 +125,6 @@ class EnterpriseActionKitToolAdapter:
         enterprise_action_kit_project_id: str = ENTERPRISE_ACTION_KIT_PROJECT_ID,
     ):
         """Initialize the adapter with an enterprise action token."""
-        if not enterprise_action_token:
-            raise ValueError("enterprise_action_token is required")
 
         self.enterprise_action_token = enterprise_action_token
         self._actions_schema = {}
