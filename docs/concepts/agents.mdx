@@ -295,6 +295,11 @@ multimodal_agent = Agent(
   - `"safe"`: Uses Docker (recommended for production)
   - `"unsafe"`: Direct execution (use only in trusted environments)
 
+<Note>
+  This runs a default Docker image. If you want to configure the docker image, the checkout the Code Interpreter Tool in the tools section.
+  Add the code interpreter tool as a tool in the agent as a tool parameter.
+  </Note>
+
 #### Advanced Features
 - `multimodal`: Enable multimodal capabilities for processing text and visual content
 - `reasoning`: Enable agent to reflect and create plans before executing tasks
