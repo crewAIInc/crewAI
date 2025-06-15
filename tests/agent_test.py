@@ -1896,6 +1896,80 @@ def test_agent_with_knowledge_sources_generate_search_query():
         assert "red" in result.raw.lower()
 
 
+@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+def test_agent_with_knowledge_with_no_crewai_knowledge():
+    mock_knowledge = MagicMock(spec=Knowledge)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
+        knowledge=mock_knowledge
+    )
+
+    # Create a task that requires the agent to use the knowledge
+    task = Task(
+        description="What is Vidit's favorite color?",
+        expected_output="Vidit's favorclearite color.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff()
+    mock_knowledge.query.assert_called_once()
+
+
+@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+def test_agent_with_only_crewai_knowledge():
+    mock_knowledge = MagicMock(spec=Knowledge)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY'))
+    )
+
+    # Create a task that requires the agent to use the knowledge
+    task = Task(
+        description="What is Vidit's favorite color?",
+        expected_output="Vidit's favorclearite color.",
+        agent=agent
+    )
+
+    crew = Crew(agents=[agent], tasks=[task],knowledge=mock_knowledge)
+    crew.kickoff()
+    mock_knowledge.query.assert_called_once()
+
+
+@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+def test_agent_knowledege_with_crewai_knowledge():
+    crew_knowledge = MagicMock(spec=Knowledge)
+    agent_knowledge = MagicMock(spec=Knowledge)
+
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
+        knowledge=agent_knowledge
+    )
+
+    # Create a task that requires the agent to use the knowledge
+    task = Task(
+        description="What is Vidit's favorite color?",
+        expected_output="Vidit's favorclearite color.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent],tasks=[task],knowledge=crew_knowledge)
+    crew.kickoff()
+    agent_knowledge.query.assert_called_once()
+    crew_knowledge.query.assert_called_once()
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_litellm_auth_error_handling():
     """Test that LiteLLM authentication errors are handled correctly and not retried."""
