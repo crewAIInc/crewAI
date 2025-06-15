@@ -1,0 +1,268 @@
+---
+title: Box Integration
+description: "File storage and document management with Box integration for CrewAI."
+icon: "box"
+---
+
+## Overview
+
+Enable your agents to manage files, folders, and documents through Box. Upload files, organize folder structures, search content, and streamline your team's document management with AI-powered automation.
+
+## Prerequisites
+
+Before using the Box integration, ensure you have:
+
+- A [CrewAI Enterprise](https://app.crewai.com) account with an active subscription
+- A Box account with appropriate permissions
+- Connected your Box account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
+
+## Setting Up Box Integration
+
+### 1. Connect Your Box Account
+
+1. Navigate to [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Box** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for file and folder management
+5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+## Available Actions
+
+<AccordionGroup>
+  <Accordion title="BOX_SAVE_FILE">
+    **Description:** Save a file from URL in Box.
+
+    **Parameters:**
+    - `fileAttributes` (object, required): Attributes - File metadata including name, parent folder, and timestamps.
+      ```json
+      {
+        "content_created_at": "2012-12-12T10:53:43-08:00",
+        "content_modified_at": "2012-12-12T10:53:43-08:00",
+        "name": "qwerty.png",
+        "parent": { "id": "1234567" }
+      }
+      ```
+    - `file` (string, required): File URL - Files must be smaller than 50MB in size. (example: "https://picsum.photos/200/300").
+  </Accordion>
+
+  <Accordion title="BOX_SAVE_FILE_FROM_OBJECT">
+    **Description:** Save a file in Box.
+
+    **Parameters:**
+    - `file` (string, required): File - Accepts a File Object containing file data. Files must be smaller than 50MB in size.
+    - `fileName` (string, required): File Name (example: "qwerty.png").
+    - `folder` (string, optional): Folder - Use Connect Portal Workflow Settings to allow users to select the File's Folder destination. Defaults to the user's root folder if left blank.
+  </Accordion>
+
+  <Accordion title="BOX_GET_FILE_BY_ID">
+    **Description:** Get a file by ID in Box.
+
+    **Parameters:**
+    - `fileId` (string, required): File ID - The unique identifier that represents a file. (example: "12345").
+  </Accordion>
+
+  <Accordion title="BOX_LIST_FILES">
+    **Description:** List files in Box.
+
+    **Parameters:**
+    - `folderId` (string, required): Folder ID - The unique identifier that represents a folder. (example: "0").
+    - `filterFormula` (object, optional): A filter in disjunctive normal form - OR of AND groups of single conditions.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "direction",
+                "operator": "$stringExactlyMatches",
+                "value": "ASC"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="BOX_CREATE_FOLDER">
+    **Description:** Create a folder in Box.
+
+    **Parameters:**
+    - `folderName` (string, required): Name - The name for the new folder. (example: "New Folder").
+    - `folderParent` (object, required): Parent Folder - The parent folder where the new folder will be created.
+      ```json
+      {
+        "id": "123456"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="BOX_MOVE_FOLDER">
+    **Description:** Move a folder in Box.
+
+    **Parameters:**
+    - `folderId` (string, required): Folder ID - The unique identifier that represents a folder. (example: "0").
+    - `folderName` (string, required): Name - The name for the folder. (example: "New Folder").
+    - `folderParent` (object, required): Parent Folder - The new parent folder destination.
+      ```json
+      {
+        "id": "123456"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="BOX_GET_FOLDER_BY_ID">
+    **Description:** Get a folder by ID in Box.
+
+    **Parameters:**
+    - `folderId` (string, required): Folder ID - The unique identifier that represents a folder. (example: "0").
+  </Accordion>
+
+  <Accordion title="BOX_SEARCH_FOLDERS">
+    **Description:** Search folders in Box.
+
+    **Parameters:**
+    - `folderId` (string, required): Folder ID - The folder to search within.
+    - `filterFormula` (object, optional): A filter in disjunctive normal form - OR of AND groups of single conditions.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "sort",
+                "operator": "$stringExactlyMatches",
+                "value": "name"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="BOX_DELETE_FOLDER">
+    **Description:** Delete a folder in Box.
+
+    **Parameters:**
+    - `folderId` (string, required): Folder ID - The unique identifier that represents a folder. (example: "0").
+    - `recursive` (boolean, optional): Recursive - Delete a folder that is not empty by recursively deleting the folder and all of its content.
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic Box Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Box tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Box capabilities
+box_agent = Agent(
+    role="Document Manager",
+    goal="Manage files and folders in Box efficiently",
+    backstory="An AI assistant specialized in document management and file organization.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a folder structure
+create_structure_task = Task(
+    description="Create a folder called 'Project Files' in the root directory and upload a document from URL",
+    agent=box_agent,
+    expected_output="Folder created and file uploaded successfully"
+)
+
+# Run the task
+crew = Crew(
+    agents=[box_agent],
+    tasks=[create_structure_task]
+)
+
+crew.kickoff()
+```
+
+### Filtering Specific Box Tools
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Box tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["box_create_folder", "box_save_file", "box_list_files"]
+)
+
+file_organizer_agent = Agent(
+    role="File Organizer",
+    goal="Organize and manage file storage efficiently",
+    backstory="An AI assistant that focuses on file organization and storage management.",
+    tools=enterprise_tools
+)
+
+# Task to organize files
+organization_task = Task(
+    description="Create a folder structure for the marketing team and organize existing files",
+    agent=file_organizer_agent,
+    expected_output="Folder structure created and files organized"
+)
+
+crew = Crew(
+    agents=[file_organizer_agent],
+    tasks=[organization_task]
+)
+
+crew.kickoff()
+```
+
+### Advanced File Management
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+file_manager = Agent(
+    role="File Manager",
+    goal="Maintain organized file structure and manage document lifecycle",
+    backstory="An experienced file manager who ensures documents are properly organized and accessible.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple Box operations
+management_task = Task(
+    description="""
+    1. List all files in the root folder
+    2. Create monthly archive folders for the current year
+    3. Move old files to appropriate archive folders
+    4. Generate a summary report of the file organization
+    """,
+    agent=file_manager,
+    expected_output="Files organized into archive structure with summary report"
+)
+
+crew = Crew(
+    agents=[file_manager],
+    tasks=[management_task]
+)
+
+crew.kickoff()
+```
