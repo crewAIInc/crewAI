@@ -5,6 +5,7 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.tree import Tree
 from rich.live import Live
+from rich.syntax import Syntax
 
 
 class ConsoleFormatter:
@@ -17,6 +18,8 @@ class ConsoleFormatter:
     current_lite_agent_branch: Optional[Tree] = None
     tool_usage_counts: Dict[str, int] = {}
     current_reasoning_branch: Optional[Tree] = None  # Track reasoning status
+    _live_paused: bool = False
+    current_llm_tool_tree: Optional[Tree] = None
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -38,7 +41,12 @@ class ConsoleFormatter:
         )
 
     def create_status_content(
-        self, title: str, name: str, status_style: str = "blue", **fields
+        self,
+        title: str,
+        name: str,
+        status_style: str = "blue",
+        tool_args: Dict[str, Any] | str = "",
+        **fields,
     ) -> Text:
         """Create standardized status content with consistent formatting."""
         content = Text()
@@ -51,6 +59,8 @@ class ConsoleFormatter:
             content.append(
                 f"{value}\n", style=fields.get(f"{label}_style", status_style)
             )
+        content.append("Tool Args: ", style="white")
+        content.append(f"{tool_args}\n", style=status_style)
 
         return content
 
@@ -118,6 +128,19 @@ class ConsoleFormatter:
         # Finally, pass through to the regular Console.print implementation
         self.console.print(*args, **kwargs)
 
+    def pause_live_updates(self) -> None:
+        """Pause Live session updates to allow for human input without interference."""
+        if not self._live_paused:
+            if self._live:
+                self._live.stop()
+                self._live = None
+            self._live_paused = True
+
+    def resume_live_updates(self) -> None:
+        """Resume Live session updates after human input is complete."""
+        if self._live_paused:
+            self._live_paused = False
+
     def print_panel(
         self, content: Text, title: str, style: str = "blue", is_flow: bool = False
     ) -> None:
@@ -137,6 +160,7 @@ class ConsoleFormatter:
         crew_name: str,
         source_id: str,
         status: str = "completed",
+        final_string_output: str = "",
     ) -> None:
         """Handle crew tree updates with consistent formatting."""
         if not self.verbose or tree is None:
@@ -168,6 +192,7 @@ class ConsoleFormatter:
             style,
             ID=source_id,
         )
+        content.append(f"Final Output: {final_string_output}\n", style="white")
 
         self.print_panel(content, title, style)
 
@@ -253,7 +278,7 @@ class ConsoleFormatter:
                 task_content.append(agent_role, style=style)
 
                 # Third line: Status
-                task_content.append("Status: ", style="white")
+                task_content.append("\nStatus: ", style="white")
                 task_content.append(status_text, style=f"{style} bold")
                 branch.label = task_content
                 self.print(crew_tree)
@@ -426,11 +451,64 @@ class ConsoleFormatter:
         self.print()
         return method_branch
 
+    def get_llm_tree(self, tool_name: str):
+        text = Text()
+        text.append(f"🔧 Using {tool_name} from LLM available_function", style="yellow")
+
+        tree = self.current_flow_tree or self.current_crew_tree
+
+        if tree:
+            tree.add(text)
+
+        return tree or Tree(text)
+
+    def handle_llm_tool_usage_started(
+        self,
+        tool_name: str,
+        tool_args: Dict[str, Any] | str,
+    ):
+        # Create status content for the tool usage
+        content = self.create_status_content(
+            "Tool Usage Started", tool_name, Status="In Progress", tool_args=tool_args
+        )
+
+        # Create and print the panel
+        self.print_panel(content, "Tool Usage", "green")
+        self.print()
+
+        # Still return the tree for compatibility with existing code
+        return self.get_llm_tree(tool_name)
+
+    def handle_llm_tool_usage_finished(
+        self,
+        tool_name: str,
+    ):
+        tree = self.get_llm_tree(tool_name)
+        self.add_tree_node(tree, "✅ Tool Usage Completed", "green")
+        self.print(tree)
+        self.print()
+
+    def handle_llm_tool_usage_error(
+        self,
+        tool_name: str,
+        error: str,
+    ):
+        tree = self.get_llm_tree(tool_name)
+        self.add_tree_node(tree, "❌ Tool Usage Failed", "red")
+        self.print(tree)
+        self.print()
+
+        error_content = self.create_status_content(
+            "Tool Usage Failed", tool_name, "red", Error=error
+        )
+        self.print_panel(error_content, "Tool Error", "red")
+
     def handle_tool_usage_started(
         self,
         agent_branch: Optional[Tree],
         tool_name: str,
         crew_tree: Optional[Tree],
+        tool_args: Dict[str, Any] | str = "",
     ) -> Optional[Tree]:
         """Handle tool usage started event."""
         if not self.verbose:
@@ -438,9 +516,7 @@ class ConsoleFormatter:
 
         # Parent for tool usage: LiteAgent > Agent > Task
         branch_to_use = (
-            self.current_lite_agent_branch
-            or agent_branch
-            or self.current_task_branch
+            self.current_lite_agent_branch or agent_branch or self.current_task_branch
         )
 
         # Render full crew tree when available for consistent live updates
@@ -549,9 +625,7 @@ class ConsoleFormatter:
 
         # Parent for tool usage: LiteAgent > Agent > Task
         branch_to_use = (
-            self.current_lite_agent_branch
-            or agent_branch
-            or self.current_task_branch
+            self.current_lite_agent_branch or agent_branch or self.current_task_branch
         )
 
         # Render full crew tree when available for consistent live updates
@@ -565,14 +639,21 @@ class ConsoleFormatter:
                 return None
 
         # Only add thinking status if we don't have a current tool branch
-        if self.current_tool_branch is None:
+        # or if the current tool branch is not a thinking node
+        should_add_thinking = self.current_tool_branch is None or "Thinking" not in str(
+            self.current_tool_branch.label
+        )
+
+        if should_add_thinking:
             tool_branch = branch_to_use.add("")
             self.update_tree_label(tool_branch, "🧠", "Thinking...", "blue")
             self.current_tool_branch = tool_branch
             self.print(tree_to_use)
             self.print()
             return tool_branch
-        return None
+
+        # Return the existing tool branch if it's already a thinking node
+        return self.current_tool_branch
 
     def handle_llm_call_completed(
         self,
@@ -581,7 +662,7 @@ class ConsoleFormatter:
         crew_tree: Optional[Tree],
     ) -> None:
         """Handle LLM call completed event."""
-        if not self.verbose or tool_branch is None:
+        if not self.verbose:
             return
 
         # Decide which tree to render: prefer full crew tree, else parent branch
@@ -589,23 +670,50 @@ class ConsoleFormatter:
         if tree_to_use is None:
             return
 
-        # Remove the thinking status node when complete
-        if "Thinking" in str(tool_branch.label):
+        # Try to remove the thinking status node - first try the provided tool_branch
+        thinking_branch_to_remove = None
+        removed = False
+
+        # Method 1: Use the provided tool_branch if it's a thinking node
+        if tool_branch is not None and "Thinking" in str(tool_branch.label):
+            thinking_branch_to_remove = tool_branch
+
+        # Method 2: Fallback - search for any thinking node if tool_branch is None or not thinking
+        if thinking_branch_to_remove is None:
             parents = [
                 self.current_lite_agent_branch,
                 self.current_agent_branch,
                 self.current_task_branch,
                 tree_to_use,
             ]
-            removed = False
             for parent in parents:
-                if isinstance(parent, Tree) and tool_branch in parent.children:
-                    parent.children.remove(tool_branch)
+                if isinstance(parent, Tree):
+                    for child in parent.children:
+                        if "Thinking" in str(child.label):
+                            thinking_branch_to_remove = child
+                            break
+                    if thinking_branch_to_remove:
+                        break
+
+        # Remove the thinking node if found
+        if thinking_branch_to_remove:
+            parents = [
+                self.current_lite_agent_branch,
+                self.current_agent_branch,
+                self.current_task_branch,
+                tree_to_use,
+            ]
+            for parent in parents:
+                if (
+                    isinstance(parent, Tree)
+                    and thinking_branch_to_remove in parent.children
+                ):
+                    parent.children.remove(thinking_branch_to_remove)
                     removed = True
                     break
 
             # Clear pointer if we just removed the current_tool_branch
-            if self.current_tool_branch is tool_branch:
+            if self.current_tool_branch is thinking_branch_to_remove:
                 self.current_tool_branch = None
 
             if removed:
@@ -622,9 +730,36 @@ class ConsoleFormatter:
         # Decide which tree to render: prefer full crew tree, else parent branch
         tree_to_use = self.current_crew_tree or crew_tree or self.current_task_branch
 
-        # Update tool branch if it exists
-        if tool_branch:
-            tool_branch.label = Text("❌ LLM Failed", style="red bold")
+        # Find the thinking branch to update (similar to completion logic)
+        thinking_branch_to_update = None
+
+        # Method 1: Use the provided tool_branch if it's a thinking node
+        if tool_branch is not None and "Thinking" in str(tool_branch.label):
+            thinking_branch_to_update = tool_branch
+
+        # Method 2: Fallback - search for any thinking node if tool_branch is None or not thinking
+        if thinking_branch_to_update is None:
+            parents = [
+                self.current_lite_agent_branch,
+                self.current_agent_branch,
+                self.current_task_branch,
+                tree_to_use,
+            ]
+            for parent in parents:
+                if isinstance(parent, Tree):
+                    for child in parent.children:
+                        if "Thinking" in str(child.label):
+                            thinking_branch_to_update = child
+                            break
+                    if thinking_branch_to_update:
+                        break
+
+        # Update the thinking branch to show failure
+        if thinking_branch_to_update:
+            thinking_branch_to_update.label = Text("❌ LLM Failed", style="red bold")
+            # Clear the current_tool_branch reference
+            if self.current_tool_branch is thinking_branch_to_update:
+                self.current_tool_branch = None
             if tree_to_use:
                 self.print(tree_to_use)
                 self.print()
@@ -702,7 +837,7 @@ class ConsoleFormatter:
         completion_content.append("Test Execution Completed\n", style="green bold")
         completion_content.append("Crew: ", style="white")
         completion_content.append(f"{crew_name}\n", style="green")
-        completion_content.append("Status: ", style="white")
+        completion_content.append("\nStatus: ", style="white")
         completion_content.append("Completed", style="green")
 
         self.print_panel(completion_content, "Test Completion", "green")
@@ -812,7 +947,7 @@ class ConsoleFormatter:
         lite_agent_label = Text()
         lite_agent_label.append(f"{prefix} ", style=f"{style} bold")
         lite_agent_label.append(lite_agent_role, style=style)
-        lite_agent_label.append("Status: ", style="white")
+        lite_agent_label.append("\nStatus: ", style="white")
         lite_agent_label.append(status_text, style=f"{style} bold")
         lite_agent_branch.label = lite_agent_label
 
@@ -1067,9 +1202,7 @@ class ConsoleFormatter:
 
         # Prefer LiteAgent > Agent > Task branch as the parent for reasoning
         branch_to_use = (
-            self.current_lite_agent_branch
-            or agent_branch
-            or self.current_task_branch
+            self.current_lite_agent_branch or agent_branch or self.current_task_branch
         )
 
         # We always want to render the full crew tree when possible so the
@@ -1116,7 +1249,9 @@ class ConsoleFormatter:
         )
 
         style = "green" if ready else "yellow"
-        status_text = "Reasoning Completed" if ready else "Reasoning Completed (Not Ready)"
+        status_text = (
+            "Reasoning Completed" if ready else "Reasoning Completed (Not Ready)"
+        )
 
         if reasoning_branch is not None:
             self.update_tree_label(reasoning_branch, "✅", status_text, style)
@@ -1173,3 +1308,149 @@ class ConsoleFormatter:
 
         # Clear stored branch after failure
         self.current_reasoning_branch = None
+
+    # ----------- AGENT LOGGING EVENTS -----------
+
+    def handle_agent_logs_started(
+        self,
+        agent_role: str,
+        task_description: Optional[str] = None,
+        verbose: bool = False,
+    ) -> None:
+        """Handle agent logs started event."""
+        if not verbose:
+            return
+
+        agent_role = agent_role.split("\n")[0]
+
+        # Create panel content
+        content = Text()
+        content.append("Agent: ", style="white")
+        content.append(f"{agent_role}", style="bright_green bold")
+
+        if task_description:
+            content.append("\n\nTask: ", style="white")
+            content.append(f"{task_description}", style="bright_green")
+
+        # Create and display the panel
+        agent_panel = Panel(
+            content,
+            title="🤖 Agent Started",
+            border_style="magenta",
+            padding=(1, 2),
+        )
+        self.print(agent_panel)
+        self.print()
+
+    def handle_agent_logs_execution(
+        self,
+        agent_role: str,
+        formatted_answer: Any,
+        verbose: bool = False,
+    ) -> None:
+        """Handle agent logs execution event."""
+        if not verbose:
+            return
+
+        from crewai.agents.parser import AgentAction, AgentFinish
+        import json
+        import re
+
+        agent_role = agent_role.split("\n")[0]
+
+        if isinstance(formatted_answer, AgentAction):
+            thought = re.sub(r"\n+", "\n", formatted_answer.thought)
+            formatted_json = json.dumps(
+                formatted_answer.tool_input,
+                indent=2,
+                ensure_ascii=False,
+            )
+
+            # Create content for the action panel
+            content = Text()
+            content.append("Agent: ", style="white")
+            content.append(f"{agent_role}\n\n", style="bright_green bold")
+
+            if thought and thought != "":
+                content.append("Thought: ", style="white")
+                content.append(f"{thought}\n\n", style="bright_green")
+
+            content.append("Using Tool: ", style="white")
+            content.append(f"{formatted_answer.tool}\n\n", style="bright_green bold")
+
+            content.append("Tool Input:\n", style="white")
+
+            # Create a syntax-highlighted JSON code block
+            json_syntax = Syntax(
+                formatted_json,
+                "json",
+                theme="monokai",
+                line_numbers=False,
+                background_color="default",
+            )
+
+            content.append("\n")
+
+            # Create separate panels for better organization
+            main_content = Text()
+            main_content.append("Agent: ", style="white")
+            main_content.append(f"{agent_role}\n\n", style="bright_green bold")
+
+            if thought and thought != "":
+                main_content.append("Thought: ", style="white")
+                main_content.append(f"{thought}\n\n", style="bright_green")
+
+            main_content.append("Using Tool: ", style="white")
+            main_content.append(f"{formatted_answer.tool}", style="bright_green bold")
+
+            # Create the main action panel
+            action_panel = Panel(
+                main_content,
+                title="🔧 Agent Tool Execution",
+                border_style="magenta",
+                padding=(1, 2),
+            )
+
+            # Create the JSON input panel
+            input_panel = Panel(
+                json_syntax,
+                title="Tool Input",
+                border_style="blue",
+                padding=(1, 2),
+            )
+
+            # Create tool output content with better formatting
+            output_text = str(formatted_answer.result)
+            if len(output_text) > 2000:
+                output_text = output_text[:1997] + "..."
+
+            output_panel = Panel(
+                Text(output_text, style="bright_green"),
+                title="Tool Output",
+                border_style="green",
+                padding=(1, 2),
+            )
+
+            # Print all panels
+            self.print(action_panel)
+            self.print(input_panel)
+            self.print(output_panel)
+            self.print()
+
+        elif isinstance(formatted_answer, AgentFinish):
+            # Create content for the finish panel
+            content = Text()
+            content.append("Agent: ", style="white")
+            content.append(f"{agent_role}\n\n", style="bright_green bold")
+            content.append("Final Answer:\n", style="white")
+            content.append(f"{formatted_answer.output}", style="bright_green")
+
+            # Create and display the finish panel
+            finish_panel = Panel(
+                content,
+                title="✅ Agent Final Answer",
+                border_style="green",
+                padding=(1, 2),
+            )
+            self.print(finish_panel)
+            self.print()

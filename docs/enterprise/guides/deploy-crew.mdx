@@ -1,41 +1,41 @@
 ---
 title: "Deploy Crew"
-description: "Deploy your local CrewAI project to the Enterprise platform"
-icon: "cloud-arrow-up"
+description: "Deploying a Crew on CrewAI Enterprise"
+icon: "rocket"
 ---
 
-## Overview
-
-This guide will walk you through the process of deploying your locally developed CrewAI project to the CrewAI Enterprise platform, 
-transforming it into a production-ready API endpoint.
-
-## Option 1: CLI Deployment
-
-<iframe 
-    width="100%"
-    height="400"
-    src="https://www.youtube.com/embed/3EqSV-CYDZA" 
-    title="Deploying a Crew to CrewAI Enterprise" 
-    frameborder="0"
-    style={{ borderRadius: '10px' }}
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen
-></iframe>
-
-### Prerequisites
-
-Before starting the deployment process, make sure you have:
-
-- A CrewAI project built locally ([follow our quickstart guide](/quickstart) if you haven't created one yet)
-- Your code pushed to a GitHub repository
-- The latest version of the CrewAI CLI installed (`uv tool install crewai`)
-
 <Note>
-For a quick reference project, you can clone our example repository at [github.com/tonykipkemboi/crewai-latest-ai-development](https://github.com/tonykipkemboi/crewai-latest-ai-development).
+After creating a crew locally or through Crew Studio, the next step is deploying it to the CrewAI Enterprise platform. This guide covers multiple deployment methods to help you choose the best approach for your workflow.
 </Note>
 
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="Crew Ready for Deployment" icon="users">
+    You should have a working crew either built locally or created through Crew Studio
+  </Card>
+  <Card title="GitHub Repository" icon="github">
+    Your crew code should be in a GitHub repository (for GitHub integration method)
+  </Card>
+</CardGroup>
+
+## Option 1: Deploy Using CrewAI CLI
+
+The CLI provides the fastest way to deploy locally developed crews to the Enterprise platform.
 
 <Steps>
+  <Step title="Install CrewAI CLI">
+    If you haven't already, install the CrewAI CLI:
+
+    ```bash
+    pip install crewai[tools]
+    ```
+
+    <Tip>
+    The CLI comes with the main CrewAI package, but the `[tools]` extra ensures you have all deployment dependencies.
+    </Tip>
+
+  </Step>
 
   <Step title="Authenticate with the Enterprise Platform">
     First, you need to authenticate your CLI with the CrewAI Enterprise platform:
@@ -185,6 +185,62 @@ You can also deploy your crews directly through the CrewAI Enterprise web interf
   </Step>
 
 </Steps>
+
+## ⚠️ Environment Variable Security Requirements
+
+<Warning>
+**Important**: CrewAI Enterprise has security restrictions on environment variable names that can cause deployment failures if not followed.
+</Warning>
+
+### Blocked Environment Variable Patterns
+
+For security reasons, the following environment variable naming patterns are **automatically filtered** and will cause deployment issues:
+
+**Blocked Patterns:**
+- Variables ending with `_TOKEN` (e.g., `MY_API_TOKEN`)
+- Variables ending with `_PASSWORD` (e.g., `DB_PASSWORD`) 
+- Variables ending with `_SECRET` (e.g., `API_SECRET`)
+- Variables ending with `_KEY` in certain contexts
+
+**Specific Blocked Variables:**
+- `GITHUB_USER`, `GITHUB_TOKEN`
+- `AWS_REGION`, `AWS_DEFAULT_REGION` 
+- Various internal CrewAI system variables
+
+### Allowed Exceptions
+
+Some variables are explicitly allowed despite matching blocked patterns:
+- `AZURE_AD_TOKEN`
+- `AZURE_OPENAI_AD_TOKEN` 
+- `ENTERPRISE_ACTION_TOKEN`
+- `CREWAI_ENTEPRISE_TOOLS_TOKEN`
+
+### How to Fix Naming Issues
+
+If your deployment fails due to environment variable restrictions:
+
+```bash
+# ❌ These will cause deployment failures
+OPENAI_TOKEN=sk-...
+DATABASE_PASSWORD=mypassword
+API_SECRET=secret123
+
+# ✅ Use these naming patterns instead  
+OPENAI_API_KEY=sk-...
+DATABASE_CREDENTIALS=mypassword
+API_CONFIG=secret123
+```
+
+### Best Practices
+
+1. **Use standard naming conventions**: `PROVIDER_API_KEY` instead of `PROVIDER_TOKEN`
+2. **Test locally first**: Ensure your crew works with the renamed variables
+3. **Update your code**: Change any references to the old variable names
+4. **Document changes**: Keep track of renamed variables for your team
+
+<Tip>
+If you encounter deployment failures with cryptic environment variable errors, check your variable names against these patterns first.
+</Tip>
 
 ### Interact with Your Deployed Crew
 

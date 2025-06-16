@@ -233,6 +233,11 @@ CrewAI provides a wide range of events that you can listen for:
 - **KnowledgeQueryFailedEvent**: Emitted when a knowledge query fails
 - **KnowledgeSearchQueryFailedEvent**: Emitted when a knowledge search query fails
 
+### LLM Guardrail Events
+
+- **LLMGuardrailStartedEvent**: Emitted when a guardrail validation starts. Contains details about the guardrail being applied and retry count.
+- **LLMGuardrailCompletedEvent**: Emitted when a guardrail validation completes. Contains details about validation success/failure, results, and error messages if any.
+
 ### Flow Events
 
 - **FlowCreatedEvent**: Emitted when a Flow is created
