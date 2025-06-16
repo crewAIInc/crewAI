@@ -29,6 +29,10 @@ my_crew = Crew(
 
 From this point on, your crew will have planning enabled, and the tasks will be planned before each iteration.
 
+<Warning>
+When planning is enabled, crewAI will use `gpt-4o-mini` as the default LLM for planning, which requires a valid OpenAI API key. Since your agents might be using different LLMs, this could cause confusion if you don't have an OpenAI API key configured or if you're experiencing unexpected behavior related to LLM API calls.
+</Warning>
+
 #### Planning LLM
 
 Now you can define the LLM that will be used to plan the tasks. 

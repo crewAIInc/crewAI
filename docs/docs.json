@@ -9,7 +9,12 @@
   },
   "favicon": "images/favicon.svg",
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude"]
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
   },
   "navigation": {
     "tabs": [
@@ -201,6 +206,7 @@
               "observability/arize-phoenix",
               "observability/langfuse",
               "observability/langtrace",
+              "observability/maxim",
               "observability/mlflow",
               "observability/openlit",
               "observability/opik",
@@ -213,6 +219,7 @@
             "group": "Learn",
             "pages": [
               "learn/overview",
+              "learn/llm-selection-guide",
               "learn/conditional-tasks",
               "learn/coding-agents",
               "learn/create-custom-tools",
@@ -255,7 +262,8 @@
               "enterprise/features/tool-repository",
               "enterprise/features/webhook-streaming",
               "enterprise/features/traces",
-              "enterprise/features/hallucination-guardrail"
+              "enterprise/features/hallucination-guardrail",
+              "enterprise/features/integrations"
             ]
           },
           {
