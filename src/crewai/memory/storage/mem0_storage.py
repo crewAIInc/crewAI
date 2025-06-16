@@ -16,6 +16,8 @@ class Mem0Storage(Storage):
         self._validate_type(type)
         self.memory_type = type
         self.crew = crew
+
+        # TODO: Memory config will be removed in the future the config will be passed as a parameter
         self.config = config or getattr(crew, "memory_config", {}).get("config", {}) or {}
 
         self._validate_user_id()
