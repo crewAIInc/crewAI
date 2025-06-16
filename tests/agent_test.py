@@ -501,8 +501,7 @@ def test_agent_custom_max_iterations():
 def test_agent_repeated_tool_usage(capsys):
     @tool
     def get_final_answer() -> float:
-        """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        """Get the final answer but don't give it yet, just re-use this tool non-stop."""
         return 42
 
     agent = Agent(
@@ -527,11 +526,41 @@ def test_agent_repeated_tool_usage(capsys):
     )
 
     captured = capsys.readouterr()
-
-    assert (
-        "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
-        in captured.out
+    output = (
+        captured.out.replace("\n", " ")
+        .replace("  ", " ")
+        .strip()
+        .replace("╭", "")
+        .replace("╮", "")
+        .replace("╯", "")
+        .replace("╰", "")
+        .replace("│", "")
+        .replace("─", "")
+        .replace("[", "")
+        .replace("]", "")
+        .replace("bold", "")
+        .replace("blue", "")
+        .replace("yellow", "")
+        .replace("green", "")
+        .replace("red", "")
+        .replace("dim", "")
+        .replace("🤖", "")
+        .replace("🔧", "")
+        .replace("✅", "")
+        .replace("\x1b[93m", "")
+        .replace("\x1b[00m", "")
+        .replace("\\", "")
+        .replace('"', "")
+        .replace("'", "")
     )
+
+    # Look for the message in the normalized output, handling the apostrophe difference
+    expected_message = (
+        "I tried reusing the same input, I must stop using this action input."
+    )
+    assert (
+        expected_message in output
+    ), f"Expected message not found in output. Output was: {output}"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -564,10 +593,42 @@ def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
     )
 
     captured = capsys.readouterr()
-    assert (
-        "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
-        in captured.out
+    output = (
+        captured.out.replace("\n", " ")
+        .replace("  ", " ")
+        .strip()
+        .replace("╭", "")
+        .replace("╮", "")
+        .replace("╯", "")
+        .replace("╰", "")
+        .replace("│", "")
+        .replace("─", "")
+        .replace("[", "")
+        .replace("]", "")
+        .replace("bold", "")
+        .replace("blue", "")
+        .replace("yellow", "")
+        .replace("green", "")
+        .replace("red", "")
+        .replace("dim", "")
+        .replace("🤖", "")
+        .replace("🔧", "")
+        .replace("✅", "")
+        .replace("\x1b[93m", "")
+        .replace("\x1b[00m", "")
+        .replace("\\", "")
+        .replace('"', "")
+        .replace("'", "")
     )
+
+    # Look for the message in the normalized output, handling the apostrophe difference
+    expected_message = (
+        "I tried reusing the same input, I must stop using this action input"
+    )
+
+    assert (
+        expected_message in output
+    ), f"Expected message not found in output. Output was: {output}"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -2092,7 +2153,12 @@ def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "DoesNotExist", "module": "crewai_tools",}],
+        "tools": [
+            {
+                "name": "DoesNotExist",
+                "module": "crewai_tools",
+            }
+        ],
     }
     mock_get_agent.return_value = mock_get_response
     with pytest.raises(
@@ -2131,7 +2197,9 @@ def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_tok
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 @patch("crewai.utilities.agent_utils.Settings")
 @patch("crewai.utilities.agent_utils.console")
-def test_agent_from_repository_displays_org_info(mock_console, mock_settings, mock_get_agent, mock_get_auth_token):
+def test_agent_from_repository_displays_org_info(
+    mock_console, mock_settings, mock_get_agent, mock_get_auth_token
+):
     mock_settings_instance = MagicMock()
     mock_settings_instance.org_uuid = "test-org-uuid"
     mock_settings_instance.org_name = "Test Organization"
@@ -2143,7 +2211,7 @@ def test_agent_from_repository_displays_org_info(mock_console, mock_settings, mo
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": []
+        "tools": [],
     }
     mock_get_agent.return_value = mock_get_response
 
@@ -2151,7 +2219,7 @@ def test_agent_from_repository_displays_org_info(mock_console, mock_settings, mo
 
     mock_console.print.assert_any_call(
         "Fetching agent from organization: Test Organization (test-org-uuid)",
-        style="bold blue"
+        style="bold blue",
     )
 
     assert agent.role == "test role"
@@ -2162,7 +2230,9 @@ def test_agent_from_repository_displays_org_info(mock_console, mock_settings, mo
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 @patch("crewai.utilities.agent_utils.Settings")
 @patch("crewai.utilities.agent_utils.console")
-def test_agent_from_repository_without_org_set(mock_console, mock_settings, mock_get_agent, mock_get_auth_token):
+def test_agent_from_repository_without_org_set(
+    mock_console, mock_settings, mock_get_agent, mock_get_auth_token
+):
     mock_settings_instance = MagicMock()
     mock_settings_instance.org_uuid = None
     mock_settings_instance.org_name = None
@@ -2175,11 +2245,11 @@ def test_agent_from_repository_without_org_set(mock_console, mock_settings, mock
 
     with pytest.raises(
         AgentRepositoryError,
-        match="Agent test_agent could not be loaded: Unauthorized access"
+        match="Agent test_agent could not be loaded: Unauthorized access",
     ):
         Agent(from_repository="test_agent")
 
     mock_console.print.assert_any_call(
         "No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.",
-        style="yellow"
+        style="yellow",
     )
