@@ -598,3 +598,63 @@ def test_generate_model_description_union_field():
     description = generate_model_description(UnionModel)
     expected_description = '{\n  "field": int | str | None\n}'
     assert description == expected_description
+
+
+def test_convert_with_instructions_none_agent():
+    """Test that convert_with_instructions handles None agent gracefully."""
+    result = "Some text to convert"
+    
+    with patch("crewai.utilities.converter.Printer") as mock_printer:
+        output = convert_with_instructions(result, SimpleModel, False, None)
+        
+        assert output == result
+        
+        mock_printer.return_value.print.assert_called_once_with(
+            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead.",
+            color="red",
+        )
+
+
+def test_handle_partial_json_with_none_agent():
+    """Test that handle_partial_json handles None agent gracefully."""
+    result = "No valid JSON here"
+    
+    with patch("crewai.utilities.converter.Printer") as mock_printer:
+        output = handle_partial_json(result, SimpleModel, False, None)
+        
+        assert output == result
+        
+        mock_printer.return_value.print.assert_called_once_with(
+            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead.",
+            color="red",
+        )
+
+
+def test_convert_to_model_with_none_agent_and_invalid_json():
+    """Test convert_to_model with None agent when JSON is invalid."""
+    result = '{"name": "John", "age": "invalid_age"}'
+    
+    with patch("crewai.utilities.converter.Printer") as mock_printer:
+        output = convert_to_model(result, SimpleModel, None, None)
+        
+        assert output == result
+        
+        mock_printer.return_value.print.assert_called_once_with(
+            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead.",
+            color="red",
+        )
+
+
+def test_reproduce_issue_3017_scenario():
+    """Test that reproduces the exact scenario from issue #3017."""
+    invalid_json_result = '{"name": "John", "age": '
+    
+    with patch("crewai.utilities.converter.Printer") as mock_printer:
+        output = convert_to_model(invalid_json_result, SimpleModel, None, None)
+        
+        assert output == invalid_json_result
+        
+        mock_printer.return_value.print.assert_called_once()
+        call_args = mock_printer.return_value.print.call_args
+        assert "Failed to convert text into a Pydantic model" in call_args[1]["content"]
+        assert call_args[1]["color"] == "red"

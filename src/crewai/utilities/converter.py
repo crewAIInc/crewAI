@@ -190,6 +190,13 @@ def convert_with_instructions(
     agent: Any,
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
+    if agent is None:
+        Printer().print(
+            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead.",
+            color="red",
+        )
+        return result
+    
     llm = agent.function_calling_llm or agent.llm
     instructions = get_conversion_instructions(model, llm)
     converter = create_converter(
