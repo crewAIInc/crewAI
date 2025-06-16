@@ -192,7 +192,7 @@ def convert_with_instructions(
 ) -> Union[dict, BaseModel, str]:
     if agent is None:
         Printer().print(
-            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead.",
+            content=f"Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead. Model: {model.__name__}",
             color="red",
         )
         return result

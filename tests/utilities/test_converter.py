@@ -610,7 +610,7 @@ def test_convert_with_instructions_none_agent():
         assert output == result
         
         mock_printer.return_value.print.assert_called_once_with(
-            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead.",
+            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead. Model: SimpleModel",
             color="red",
         )
 
@@ -625,7 +625,7 @@ def test_handle_partial_json_with_none_agent():
         assert output == result
         
         mock_printer.return_value.print.assert_called_once_with(
-            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead.",
+            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead. Model: SimpleModel",
             color="red",
         )
 
@@ -640,7 +640,7 @@ def test_convert_to_model_with_none_agent_and_invalid_json():
         assert output == result
         
         mock_printer.return_value.print.assert_called_once_with(
-            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead.",
+            content="Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead. Model: SimpleModel",
             color="red",
         )
 
@@ -657,4 +657,17 @@ def test_reproduce_issue_3017_scenario():
         mock_printer.return_value.print.assert_called_once()
         call_args = mock_printer.return_value.print.call_args
         assert "Failed to convert text into a Pydantic model" in call_args[1]["content"]
+        assert "Model: SimpleModel" in call_args[1]["content"]
         assert call_args[1]["color"] == "red"
+
+
+def test_error_message_format():
+    """Test that error messages contain expected format and content."""
+    with patch("crewai.utilities.converter.Printer") as mock_printer:
+        convert_with_instructions("test", SimpleModel, False, None)
+        
+        error_message = mock_printer.return_value.print.call_args[1]["content"]
+        assert "Failed to convert" in error_message
+        assert "No agent available" in error_message
+        assert "Model: SimpleModel" in error_message
+        assert mock_printer.return_value.print.call_args[1]["color"] == "red"
