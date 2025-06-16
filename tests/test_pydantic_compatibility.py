@@ -1,6 +1,5 @@
 """Tests for Pydantic version compatibility issues."""
 
-import pytest
 from unittest.mock import patch, MagicMock
 from pydantic import BaseModel
 
@@ -8,7 +7,7 @@ from crewai.flow.flow_trackable import FlowTrackable
 from crewai.flow import Flow
 
 
-class TestFlowTrackable(BaseModel, FlowTrackable):
+class TestFlowTrackable(FlowTrackable, BaseModel):
     """Test class that inherits from FlowTrackable for testing."""
     name: str = "test"
 
