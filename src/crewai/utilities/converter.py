@@ -1,12 +1,16 @@
 import json
 import re
-from typing import Any, Optional, Type, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Optional, Type, Union, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+from crewai.utilities.logger import Logger
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
 
 
 class ConverterError(Exception):
@@ -187,10 +191,15 @@ def convert_with_instructions(
     result: str,
     model: Type[BaseModel],
     is_json_output: bool,
-    agent: Any,
+    agent: Optional["Agent"],
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
     if agent is None:
+        Logger().log(
+            level="warning",
+            message="Attempted conversion with None agent",
+            color="yellow"
+        )
         Printer().print(
             content=f"Failed to convert text into a Pydantic model: No agent available for conversion. Using raw output instead. Model: {model.__name__}",
             color="red",
