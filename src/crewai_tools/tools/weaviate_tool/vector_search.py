@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, List
 
 try:
     import weaviate
@@ -31,6 +31,7 @@ class WeaviateToolSchema(BaseModel):
 class WeaviateVectorSearchTool(BaseTool):
     """Tool to search the Weaviate database"""
 
+    package_dependencies: List[str] = ["weaviate-client"]
     name: str = "WeaviateVectorSearchTool"
     description: str = "A tool to search the Weaviate database for relevant information on internal documents."
     args_schema: Type[BaseModel] = WeaviateToolSchema
@@ -48,6 +49,7 @@ class WeaviateVectorSearchTool(BaseTool):
         ...,
         description="The API key for the Weaviate cluster",
     )
+    package_dependencies: List[str] = ["weaviate-client"]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

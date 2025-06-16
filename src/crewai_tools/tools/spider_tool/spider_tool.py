@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Literal, Optional, Type
+from typing import Any, Dict, Literal, Optional, Type, List
 from urllib.parse import unquote, urlparse
 
 from crewai.tools import BaseTool
@@ -53,6 +53,7 @@ class SpiderTool(BaseTool):
     spider: Any = None
     log_failures: bool = True
     config: SpiderToolConfig = SpiderToolConfig()
+    package_dependencies: List[str] = ["spider-client"]
 
     def __init__(
         self,

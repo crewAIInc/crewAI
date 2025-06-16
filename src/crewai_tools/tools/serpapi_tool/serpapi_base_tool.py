@@ -1,12 +1,14 @@
 import os
 import re
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, List
 
 from crewai.tools import BaseTool
 
 
 class SerpApiBaseTool(BaseTool):
     """Base class for SerpApi functionality with shared capabilities."""
+
+    package_dependencies: List[str] = ["serpapi"]
 
     client: Optional[Any] = None
 

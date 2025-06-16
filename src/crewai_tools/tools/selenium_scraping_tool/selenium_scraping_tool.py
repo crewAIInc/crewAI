@@ -1,6 +1,6 @@
 import re
 import time
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, List
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool
@@ -58,6 +58,7 @@ class SeleniumScrapingTool(BaseTool):
     css_element: Optional[str] = None
     return_html: Optional[bool] = False
     _by: Optional[Any] = None
+    package_dependencies: List[str] = ["selenium", "webdriver-manager"]
 
     def __init__(
         self,

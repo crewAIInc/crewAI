@@ -26,6 +26,7 @@ class TavilyExtractorToolSchema(BaseModel):
 
 
 class TavilyExtractorTool(BaseTool):
+    package_dependencies: List[str] = ["tavily-python"]
     """
     Tool that uses the Tavily API to extract content from web pages.
 

@@ -69,6 +69,7 @@ class DatabricksQueryTool(BaseTool):
     default_warehouse_id: Optional[str] = None
 
     _workspace_client: Optional["WorkspaceClient"] = None
+    package_dependencies: List[str] = ["databricks-sdk"]
 
     def __init__(
         self,

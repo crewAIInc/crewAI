@@ -1,6 +1,6 @@
 """Multion tool spec."""
 
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 from crewai.tools import BaseTool
 
@@ -16,6 +16,7 @@ class MultiOnTool(BaseTool):
     session_id: Optional[str] = None
     local: bool = False
     max_steps: int = 3
+    package_dependencies: List[str] = ["multion"]
 
     def __init__(
         self,

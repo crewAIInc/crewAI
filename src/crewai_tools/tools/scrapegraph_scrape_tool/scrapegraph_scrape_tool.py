@@ -1,5 +1,5 @@
 import os
-from typing import TYPE_CHECKING, Any, Optional, Type
+from typing import TYPE_CHECKING, Any, Optional, Type, List
 from urllib.parse import urlparse
 
 from crewai.tools import BaseTool
@@ -67,6 +67,7 @@ class ScrapegraphScrapeTool(BaseTool):
     api_key: Optional[str] = None
     enable_logging: bool = False
     _client: Optional["Client"] = None
+    package_dependencies: List[str] = ["scrapegraph-py"]
 
     def __init__(
         self,

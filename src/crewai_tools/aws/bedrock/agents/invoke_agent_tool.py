@@ -1,4 +1,4 @@
-from typing import Type, Optional, Dict, Any
+from typing import Type, Optional, Dict, Any, List
 import os
 import json
 import uuid
@@ -29,6 +29,7 @@ class BedrockInvokeAgentTool(BaseTool):
     session_id: str = None
     enable_trace: bool = False
     end_session: bool = False
+    package_dependencies: List[str] = ["boto3"]
 
     def __init__(
         self,
@@ -51,7 +52,7 @@ class BedrockInvokeAgentTool(BaseTool):
             description (Optional[str]): Custom description for the tool
         """
         super().__init__(**kwargs)
-        
+
         # Get values from environment variables if not provided
         self.agent_id = agent_id or os.getenv('BEDROCK_AGENT_ID')
         self.agent_alias_id = agent_alias_id or os.getenv('BEDROCK_AGENT_ALIAS_ID')
@@ -62,7 +63,7 @@ class BedrockInvokeAgentTool(BaseTool):
         # Update the description if provided
         if description:
             self.description = description
-            
+
         # Validate parameters
         self._validate_parameters()
 
@@ -74,17 +75,17 @@ class BedrockInvokeAgentTool(BaseTool):
                 raise BedrockValidationError("agent_id cannot be empty")
             if not isinstance(self.agent_id, str):
                 raise BedrockValidationError("agent_id must be a string")
-                
+
             # Validate agent_alias_id
             if not self.agent_alias_id:
                 raise BedrockValidationError("agent_alias_id cannot be empty")
             if not isinstance(self.agent_alias_id, str):
                 raise BedrockValidationError("agent_alias_id must be a string")
-                
+
             # Validate session_id if provided
             if self.session_id and not isinstance(self.session_id, str):
                 raise BedrockValidationError("session_id must be a string")
-                
+
         except BedrockValidationError as e:
             raise BedrockValidationError(f"Parameter validation failed: {str(e)}")
 
@@ -123,7 +124,7 @@ Below is the users query or task. Complete it and answer it consicely and to the
 
             # Process the response
             completion = ""
-            
+
             # Check if response contains a completion field
             if 'completion' in response:
                 # Process streaming response format
@@ -134,7 +135,7 @@ Below is the users query or task. Complete it and answer it consicely and to the
                             completion += chunk_bytes.decode('utf-8')
                         else:
                             completion += str(chunk_bytes)
-            
+
             # If no completion found in streaming format, try direct format
             if not completion and 'chunk' in response and 'bytes' in response['chunk']:
                 chunk_bytes = response['chunk']['bytes']
@@ -142,31 +143,31 @@ Below is the users query or task. Complete it and answer it consicely and to the
                     completion = chunk_bytes.decode('utf-8')
                 else:
                     completion = str(chunk_bytes)
-            
+
             # If still no completion, return debug info
             if not completion:
                 debug_info = {
                     "error": "Could not extract completion from response",
                     "response_keys": list(response.keys())
                 }
-                
+
                 # Add more debug info
                 if 'chunk' in response:
                     debug_info["chunk_keys"] = list(response['chunk'].keys())
-                
+
                 raise BedrockAgentError(f"Failed to extract completion: {json.dumps(debug_info, indent=2)}")
-            
+
             return completion
 
         except ClientError as e:
             error_code = "Unknown"
             error_message = str(e)
-            
+
             # Try to extract error code if available
             if hasattr(e, 'response') and 'Error' in e.response:
                 error_code = e.response['Error'].get('Code', 'Unknown')
                 error_message = e.response['Error'].get('Message', str(e))
-            
+
             raise BedrockAgentError(f"Error ({error_code}): {error_message}")
         except BedrockAgentError:
             # Re-raise BedrockAgentError exceptions

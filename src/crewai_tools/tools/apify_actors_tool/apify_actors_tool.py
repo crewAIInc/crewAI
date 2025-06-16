@@ -38,6 +38,7 @@ class ApifyActorsTool(BaseTool):
                 print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
     """
     actor_tool: '_ApifyActorsTool' = Field(description="Apify Actor Tool")
+    package_dependencies: List[str] = ["langchain-apify"]
 
     def __init__(
         self,

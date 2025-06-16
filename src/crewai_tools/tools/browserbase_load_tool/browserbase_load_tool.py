@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, List
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -19,6 +19,7 @@ class BrowserbaseLoadTool(BaseTool):
     session_id: Optional[str] = None
     proxy: Optional[bool] = None
     browserbase: Optional[Any] = None
+    package_dependencies: List[str] = ["browserbase"]
 
     def __init__(
         self,

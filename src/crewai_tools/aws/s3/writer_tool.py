@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Type, List
 import os
 
 from crewai.tools import BaseTool
@@ -14,6 +14,7 @@ class S3WriterTool(BaseTool):
     name: str = "S3 Writer Tool"
     description: str = "Writes content to a file in Amazon S3 given an S3 file path"
     args_schema: Type[BaseModel] = S3WriterToolInput
+    package_dependencies: List[str] = ["boto3"]
 
     def _run(self, file_path: str, content: str) -> str:
         try:

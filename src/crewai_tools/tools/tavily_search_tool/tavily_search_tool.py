@@ -1,6 +1,6 @@
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-from typing import Optional, Type, Any, Union, Literal, Sequence
+from typing import Optional, Type, Any, Union, Literal, Sequence, List
 from dotenv import load_dotenv
 import os
 import json
@@ -101,6 +101,7 @@ class TavilySearchTool(BaseTool):
         default=1000,
         description="Maximum length for the 'content' of each search result to avoid context window issues.",
     )
+    package_dependencies: List[str] = ["tavily-python"]
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)

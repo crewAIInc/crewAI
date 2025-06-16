@@ -1,4 +1,4 @@
-from typing import Any, Type
+from typing import Any, Type, List
 import os
 
 from crewai.tools import BaseTool
@@ -15,6 +15,7 @@ class S3ReaderTool(BaseTool):
     name: str = "S3 Reader Tool"
     description: str = "Reads a file from Amazon S3 given an S3 file path"
     args_schema: Type[BaseModel] = S3ReaderToolInput
+    package_dependencies: List[str] = ["boto3"]
 
     def _run(self, file_path: str) -> str:
         try:

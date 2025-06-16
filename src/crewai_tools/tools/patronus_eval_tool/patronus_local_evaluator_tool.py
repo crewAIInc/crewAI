@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any, Type, List
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
@@ -41,6 +41,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
     evaluated_model_gold_answer: str
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    package_dependencies: List[str] = ["patronus"]
 
     def __init__(
         self,

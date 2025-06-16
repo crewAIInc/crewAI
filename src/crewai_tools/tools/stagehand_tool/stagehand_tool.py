@@ -88,6 +88,7 @@ class StagehandToolSchema(BaseModel):
 
 
 class StagehandTool(BaseTool):
+    package_dependencies: List[str] = ["stagehand"]
     """
     A tool that uses Stagehand to automate web browser interactions using natural language.
 

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Literal, Optional, Type
+from typing import Any, Dict, Literal, Optional, Type, List
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -28,6 +28,7 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
     args_schema: Type[BaseModel] = ScrapflyScrapeWebsiteToolSchema
     api_key: str = None
     scrapfly: Optional[Any] = None
+    package_dependencies: List[str] = ["scrapfly-sdk"]
 
     def __init__(self, api_key: str):
         super().__init__()

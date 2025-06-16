@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional, Type, List
 
 
 try:
@@ -74,6 +74,7 @@ class QdrantVectorSearchTool(BaseTool):
         default=None,
         description="A custom embedding function to use for vectorization. If not provided, the default model will be used.",
     )
+    package_dependencies: List[str] = ["qdrant-client"]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

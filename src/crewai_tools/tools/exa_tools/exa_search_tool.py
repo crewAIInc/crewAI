@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, List
 from pydantic import BaseModel, Field
 from crewai.tools import BaseTool
 
@@ -35,6 +35,7 @@ class EXASearchTool(BaseTool):
     content: Optional[bool] = False
     summary: Optional[bool] = False
     type: Optional[str] = "auto"
+    package_dependencies: List[str] = ["exa_py"]
 
     def __init__(
         self,

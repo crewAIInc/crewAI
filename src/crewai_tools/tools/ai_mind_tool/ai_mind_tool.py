@@ -1,10 +1,10 @@
 import os
 import secrets
-from typing import Any, Dict, List, Optional, Text, Type
+from typing import Any, Dict, List, Optional, Type
 
 from crewai.tools import BaseTool
 from openai import OpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AIMindToolConstants:
@@ -16,7 +16,7 @@ class AIMindToolConstants:
 class AIMindToolInputSchema(BaseModel):
     """Input for AIMind Tool."""
 
-    query: str = "Question in natural language to ask the AI-Mind"
+    query: str = Field(description="Question in natural language to ask the AI-Mind")
 
 
 class AIMindTool(BaseTool):
@@ -31,9 +31,10 @@ class AIMindTool(BaseTool):
     args_schema: Type[BaseModel] = AIMindToolInputSchema
     api_key: Optional[str] = None
     datasources: Optional[List[Dict[str, Any]]] = None
-    mind_name: Optional[Text] = None
+    mind_name: Optional[str] = None
+    package_dependencies: List[str] = ["minds-sdk"]
 
-    def __init__(self, api_key: Optional[Text] = None, **kwargs):
+    def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("MINDS_API_KEY")
         if not self.api_key:
@@ -72,7 +73,7 @@ class AIMindTool(BaseTool):
 
     def _run(
         self,
-        query: Text
+        query: str
     ):
         # Run the query on the AI-Mind.
         # The Minds API is OpenAI compatible and therefore, the OpenAI client can be used.

@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional, Type, Dict, Literal, Union
+from typing import Any, Optional, Type, Dict, Literal, Union, List
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -25,6 +25,7 @@ class HyperbrowserLoadTool(BaseTool):
     args_schema: Type[BaseModel] = HyperbrowserLoadToolSchema
     api_key: Optional[str] = None
     hyperbrowser: Optional[Any] = None
+    package_dependencies: List[str] = ["hyperbrowser"]
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
@@ -65,7 +66,7 @@ class HyperbrowserLoadTool(BaseTool):
         if "scrape_options" in params:
             params["scrape_options"] = ScrapeOptions(**params["scrape_options"])
         return params
-    
+
     def _extract_content(self, data: Union[Any, None]):
         """Extract content from response data."""
         content = ""
@@ -81,7 +82,7 @@ class HyperbrowserLoadTool(BaseTool):
             raise ImportError(
                 "`hyperbrowser` package not found, please run `pip install hyperbrowser`"
             )
-        
+
         params = self._prepare_params(params)
 
         if operation == 'scrape':

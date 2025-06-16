@@ -26,6 +26,7 @@ class BedrockKBRetrieverTool(BaseTool):
     retrieval_configuration: Optional[Dict[str, Any]] = None
     guardrail_configuration: Optional[Dict[str, Any]] = None
     next_token: Optional[str] = None
+    package_dependencies: List[str] = ["boto3"]
 
     def __init__(
         self,
@@ -46,13 +47,13 @@ class BedrockKBRetrieverTool(BaseTool):
             next_token (Optional[str], optional): Token for retrieving the next batch of results. Defaults to None.
         """
         super().__init__(**kwargs)
-        
+
         # Get knowledge_base_id from environment variable if not provided
         self.knowledge_base_id = knowledge_base_id or os.getenv('BEDROCK_KB_ID')
         self.number_of_results = number_of_results
         self.guardrail_configuration = guardrail_configuration
         self.next_token = next_token
-        
+
         # Initialize retrieval_configuration with provided parameters or use the one provided
         if retrieval_configuration is None:
             self.retrieval_configuration = self._build_retrieval_configuration()
@@ -67,16 +68,16 @@ class BedrockKBRetrieverTool(BaseTool):
 
     def _build_retrieval_configuration(self) -> Dict[str, Any]:
         """Build the retrieval configuration based on provided parameters.
-        
+
         Returns:
             Dict[str, Any]: The constructed retrieval configuration
         """
         vector_search_config = {}
-        
+
         # Add number of results if provided
         if self.number_of_results is not None:
             vector_search_config["numberOfResults"] = self.number_of_results
-            
+
         return {"vectorSearchConfiguration": vector_search_config}
 
     def _validate_parameters(self):
@@ -91,7 +92,7 @@ class BedrockKBRetrieverTool(BaseTool):
                 raise BedrockValidationError("knowledge_base_id must be 10 characters or less")
             if not all(c.isalnum() for c in self.knowledge_base_id):
                 raise BedrockValidationError("knowledge_base_id must contain only alphanumeric characters")
-            
+
             # Validate next_token if provided
             if self.next_token:
                 if not isinstance(self.next_token, str):
@@ -100,23 +101,23 @@ class BedrockKBRetrieverTool(BaseTool):
                     raise BedrockValidationError("next_token must be between 1 and 2048 characters")
                 if ' ' in self.next_token:
                     raise BedrockValidationError("next_token cannot contain spaces")
-                    
+
             # Validate number_of_results if provided
             if self.number_of_results is not None:
                 if not isinstance(self.number_of_results, int):
                     raise BedrockValidationError("number_of_results must be an integer")
                 if self.number_of_results < 1:
                     raise BedrockValidationError("number_of_results must be greater than 0")
-                    
+
         except BedrockValidationError as e:
             raise BedrockValidationError(f"Parameter validation failed: {str(e)}")
 
     def _process_retrieval_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Process a single retrieval result from Bedrock Knowledge Base.
-        
+
         Args:
             result (Dict[str, Any]): Raw result from Bedrock Knowledge Base
-            
+
         Returns:
             Dict[str, Any]: Processed result with standardized format
         """
@@ -124,12 +125,12 @@ class BedrockKBRetrieverTool(BaseTool):
         content_obj = result.get('content', {})
         content = content_obj.get('text', '')
         content_type = content_obj.get('type', 'text')
-        
+
         # Extract location information
         location = result.get('location', {})
         location_type = location.get('type', 'unknown')
         source_uri = None
-        
+
         # Map for location types and their URI fields
         location_mapping = {
             's3Location': {'field': 'uri', 'type': 'S3'},
@@ -141,7 +142,7 @@ class BedrockKBRetrieverTool(BaseTool):
             'kendraDocumentLocation': {'field': 'uri', 'type': 'KendraDocument'},
             'sqlLocation': {'field': 'query', 'type': 'SQL'}
         }
-        
+
         # Extract the URI based on location type
         for loc_key, config in location_mapping.items():
             if loc_key in location:
@@ -149,7 +150,7 @@ class BedrockKBRetrieverTool(BaseTool):
                 if not location_type or location_type == 'unknown':
                     location_type = config['type']
                 break
-        
+
         # Create result object
         result_object = {
             'content': content,
@@ -157,22 +158,22 @@ class BedrockKBRetrieverTool(BaseTool):
             'source_type': location_type,
             'source_uri': source_uri
         }
-        
+
         # Add optional fields if available
         if 'score' in result:
             result_object['score'] = result['score']
-        
+
         if 'metadata' in result:
             result_object['metadata'] = result['metadata']
-            
+
         # Handle byte content if present
         if 'byteContent' in content_obj:
             result_object['byte_content'] = content_obj['byteContent']
-            
+
         # Handle row content if present
         if 'row' in content_obj:
             result_object['row_content'] = content_obj['row']
-            
+
         return result_object
 
     def _run(self, query: str) -> str:
@@ -201,10 +202,10 @@ class BedrockKBRetrieverTool(BaseTool):
             # Add optional parameters if provided
             if self.retrieval_configuration:
                 retrieve_params['retrievalConfiguration'] = self.retrieval_configuration
-                
+
             if self.guardrail_configuration:
                 retrieve_params['guardrailConfiguration'] = self.guardrail_configuration
-                
+
             if self.next_token:
                 retrieve_params['nextToken'] = self.next_token
 
@@ -223,10 +224,10 @@ class BedrockKBRetrieverTool(BaseTool):
                 response_object["results"] = results
             else:
                 response_object["message"] = "No results found for the given query."
-                
+
             if "nextToken" in response:
                 response_object["nextToken"] = response["nextToken"]
-                
+
             if "guardrailAction" in response:
                 response_object["guardrailAction"] = response["guardrailAction"]
 
@@ -236,12 +237,12 @@ class BedrockKBRetrieverTool(BaseTool):
         except ClientError as e:
             error_code = "Unknown"
             error_message = str(e)
-            
+
             # Try to extract error code if available
             if hasattr(e, 'response') and 'Error' in e.response:
                 error_code = e.response['Error'].get('Code', 'Unknown')
                 error_message = e.response['Error'].get('Message', str(e))
-            
+
             raise BedrockKnowledgeBaseError(f"Error ({error_code}): {error_message}")
         except Exception as e:
             raise BedrockKnowledgeBaseError(f"Unexpected error: {str(e)}")

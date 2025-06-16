@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 
 from crewai.tools import BaseTool
 
@@ -23,6 +23,7 @@ class LinkupSearchTool(BaseTool):
         "Performs an API call to Linkup to retrieve contextual information."
     )
     _client: LinkupClient = PrivateAttr()  # type: ignore
+    package_dependencies: List[str] = ["linkup-sdk"]
 
     def __init__(self, api_key: str):
         """
