@@ -2,7 +2,9 @@ import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
 from hashlib import md5
+from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
+from collections.abc import Sequence
 
 from pydantic import (
     UUID4,
@@ -107,9 +109,9 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    allowed_agents: Optional[List[Union[str, "BaseAgent"]]] = Field(
+    allowed_agents: Optional[List[Union[str, BaseAgent]]] = Field(
         default=None,
-        description="List of agent roles or agent instances that this agent can delegate to. If None, can delegate to all agents when allow_delegation=True.",
+        description="List of agent roles or agent instances that this agent can delegate to. If None, can delegate to all agents when allow_delegation=True. Empty list prevents all delegation.",
     )
     tools: Optional[List[BaseTool]] = Field(
         default_factory=list, description="Tools at agents' disposal"
@@ -200,19 +202,19 @@ class BaseAgent(ABC, BaseModel):
 
     @field_validator("allowed_agents", mode="before")
     @classmethod
-    def validate_allowed_agents(cls, allowed_agents: Optional[List[Union[str, "BaseAgent"]]]) -> Optional[List[Union[str, "BaseAgent"]]]:
+    def validate_allowed_agents(cls, allowed_agents: Optional[Sequence[Union[str, BaseAgent]]]) -> Optional[List[Union[str, BaseAgent]]]:
         """Validate the allowed_agents list."""
         if allowed_agents is None:
             return None
         
-        if not isinstance(allowed_agents, list):
-            raise ValueError("allowed_agents must be a list of agent roles (strings) or agent instances")
+        if not isinstance(allowed_agents, Sequence) or isinstance(allowed_agents, str):
+            raise ValueError("allowed_agents must be a list or tuple of agent roles (strings) or agent instances")
         
         for agent in allowed_agents:
             if not isinstance(agent, (str, BaseAgent)):
                 raise ValueError("Each item in allowed_agents must be either a string (agent role) or a BaseAgent instance")
         
-        return allowed_agents
+        return list(allowed_agents)
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self):

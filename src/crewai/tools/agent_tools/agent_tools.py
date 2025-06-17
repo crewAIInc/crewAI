@@ -53,7 +53,7 @@ class AgentTools:
         for agent in self.agents:
             for allowed in delegating_agent.allowed_agents:
                 if isinstance(allowed, str):
-                    if agent.role.lower() == allowed.lower():
+                    if agent.role.strip().lower() == allowed.strip().lower():
                         filtered_agents.append(agent)
                         break
                 elif isinstance(allowed, BaseAgent):
