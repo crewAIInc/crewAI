@@ -11,7 +11,7 @@ class TestAuthenticationCommand(unittest.TestCase):
         self.auth_command = AuthenticationCommand()
 
     @patch("crewai.cli.authentication.main.requests.post")
-    def test_get_device_code(self, mock_post):
+    def test_old_get_device_code(self, mock_post):
         mock_response = MagicMock()
         mock_response.json.return_value = {
             "device_code": "123456",
@@ -21,7 +21,7 @@ class TestAuthenticationCommand(unittest.TestCase):
         }
         mock_post.return_value = mock_response
 
-        device_code_data = self.auth_command._get_device_code()
+        device_code_data = self.auth_command._old_get_device_code()
 
         self.assertEqual(device_code_data["device_code"], "123456")
         self.assertEqual(device_code_data["user_code"], "ABCDEF")
