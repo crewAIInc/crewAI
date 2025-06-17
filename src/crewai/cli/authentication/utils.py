@@ -15,6 +15,13 @@ from .constants import (
     WORKOS_DOMAIN,
     WORKOS_ENVIRONMENT_ID,
     WORKOS_TOKEN_URL,
+    AUTH0_CLIENT_ID,  # Legacy Import for old auth
+    AUTH0_DOMAIN,  # Legacy Import for old auth
+)
+
+from auth0.authentication.token_verifier import (
+    AsymmetricSignatureVerifier,  # Legacy Import for old auth
+    TokenVerifier,  # Legacy Import for old auth
 )
 
 
@@ -251,3 +258,19 @@ class TokenManager:
 
         updated_encrypted_data = self.fernet.encrypt(json.dumps(all_tokens).encode())
         self.save_secure_file(self.file_path, updated_encrypted_data)
+
+
+# Legacy Authentication code below
+def old_validate_token(id_token: str) -> None:
+    """
+    Verify the token and its precedence
+
+    :param id_token:
+    """
+    jwks_url = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
+    issuer = f"https://{AUTH0_DOMAIN}/"
+    signature_verifier = AsymmetricSignatureVerifier(jwks_url)
+    token_verifier = TokenVerifier(
+        signature_verifier=signature_verifier, issuer=issuer, audience=AUTH0_CLIENT_ID
+    )
+    token_verifier.verify(id_token)

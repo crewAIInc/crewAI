@@ -227,7 +227,7 @@ def update():
 @crewai.command()
 def login():
     """Sign Up/Login to CrewAI Enterprise."""
-    AuthenticationCommand().login()
+    AuthenticationCommand().dynamic_login()
 
 
 # DEPLOY CREWAI+ COMMANDS
