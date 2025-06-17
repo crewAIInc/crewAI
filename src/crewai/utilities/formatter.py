@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING, List, Union
-from crewai.utilities.constants import NOT_SPECIFIED
+from crewai.utilities.constants import _NotSpecified
 
 if TYPE_CHECKING:
     from crewai.task import Task
