@@ -81,8 +81,8 @@ class TestTaskContextTypeAnnotation:
         task_with_empty_list = Task(description="Task 3", expected_output="Output 3", context=[])
         
         assert task_with_not_specified.context is NOT_SPECIFIED
-        assert not (task_with_none.context is NOT_SPECIFIED)
-        assert not (task_with_empty_list.context is NOT_SPECIFIED)
+        assert task_with_none.context is not NOT_SPECIFIED
+        assert task_with_empty_list.context is not NOT_SPECIFIED
 
     def test_task_context_repr_shows_not_specified(self):
         """Test that NOT_SPECIFIED has a proper string representation."""

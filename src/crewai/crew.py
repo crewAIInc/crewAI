@@ -1034,7 +1034,7 @@ class Crew(FlowTrackable, BaseModel):
         context = (
             aggregate_raw_outputs_from_task_outputs(task_outputs)
             if task.context is NOT_SPECIFIED
-            else aggregate_raw_outputs_from_tasks(task.context)
+            else aggregate_raw_outputs_from_tasks(cast(List["Task"], task.context))
         )
         return context
 
