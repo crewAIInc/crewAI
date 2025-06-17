@@ -5,7 +5,7 @@ import sys
 import threading
 import warnings
 from collections import defaultdict
-from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from contextlib import contextmanager
 from typing import (
     Any,
     DefaultDict,
@@ -18,7 +18,7 @@ from typing import (
     Union,
     cast,
 )
-
+from datetime import datetime
 from dotenv import load_dotenv
 from litellm.types.utils import ChatCompletionDeltaToolCall
 from pydantic import BaseModel, Field
@@ -29,6 +29,11 @@ from crewai.utilities.events.llm_events import (
     LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
+)
+from crewai.utilities.events.tool_usage_events import (
+    ToolUsageStartedEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageErrorEvent,
 )
 
 with warnings.catch_warnings():
@@ -67,33 +72,72 @@ class FilteredStream(io.TextIOBase):
             self._lock = threading.Lock()
 
         with self._lock:
-            # Filter out extraneous messages from LiteLLM
+            lower_s = s.lower()
+
+            # Skip common noisy LiteLLM banners and any other lines that contain "litellm"
             if (
-                "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
-                in s
-                or "LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()`"
-                in s
+                "give feedback / get help" in lower_s
+                or "litellm.info:" in lower_s
+                or "litellm" in lower_s
+                or "Consider using a smaller input or implementing a text splitting strategy" in lower_s
             ):
                 return 0
+
             return self._original_stream.write(s)
 
     def flush(self):
         with self._lock:
             return self._original_stream.flush()
 
+    def __getattr__(self, name):
+        """Delegate attribute access to the wrapped original stream.
+
+        This ensures compatibility with libraries (e.g., Rich) that rely on
+        attributes such as `encoding`, `isatty`, `buffer`, etc., which may not
+        be explicitly defined on this proxy class.
+        """
+        return getattr(self._original_stream, name)
+
+    # Delegate common properties/methods explicitly so they aren't shadowed by
+    # the TextIOBase defaults (e.g., .encoding returns None by default, which
+    # confuses Rich). These explicit pass-throughs ensure the wrapped Console
+    # still sees a fully-featured stream.
+    @property
+    def encoding(self):
+        return getattr(self._original_stream, "encoding", "utf-8")
+
+    def isatty(self):
+        return self._original_stream.isatty()
+
+    def fileno(self):
+        return self._original_stream.fileno()
+
+    def writable(self):
+        return True
+
+
+# Apply the filtered stream globally so that any subsequent writes containing the filtered
+# keywords (e.g., "litellm") are hidden from terminal output. We guard against double
+# wrapping to ensure idempotency in environments where this module might be reloaded.
+if not isinstance(sys.stdout, FilteredStream):
+    sys.stdout = FilteredStream(sys.stdout)
+if not isinstance(sys.stderr, FilteredStream):
+    sys.stderr = FilteredStream(sys.stderr)
+
 
 LLM_CONTEXT_WINDOW_SIZES = {
     # openai
     "gpt-4": 8192,
     "gpt-4o": 128000,
-    "gpt-4o-mini": 128000,
+    "gpt-4o-mini": 200000,
     "gpt-4-turbo": 128000,
     "gpt-4.1": 1047576,  # Based on official docs
     "gpt-4.1-mini-2025-04-14": 1047576,
     "gpt-4.1-nano-2025-04-14": 1047576,
     "o1-preview": 128000,
     "o1-mini": 128000,
-    "o3-mini": 200000,  # Based on official o3-mini specifications
+    "o3-mini": 200000,
+    "o4-mini": 200000,
     # gemini
     "gemini-2.0-flash": 1048576,
     "gemini-2.0-flash-thinking-exp-01-21": 32768,
@@ -225,7 +269,7 @@ LLM_CONTEXT_WINDOW_SIZES = {
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
-CONTEXT_WINDOW_USAGE_RATIO = 0.75
+CONTEXT_WINDOW_USAGE_RATIO = 0.85
 
 
 @contextmanager
@@ -236,12 +280,7 @@ def suppress_warnings():
             "ignore", message="open_text is deprecated*", category=DeprecationWarning
         )
 
-        # Redirect stdout and stderr
-        with (
-            redirect_stdout(FilteredStream(sys.stdout)),
-            redirect_stderr(FilteredStream(sys.stderr)),
-        ):
-            yield
+        yield
 
 
 class Delta(TypedDict):
@@ -816,7 +855,26 @@ class LLM(BaseLLM):
                 fn = available_functions[function_name]
 
                 # --- 3.2) Execute function
+                assert hasattr(crewai_event_bus, "emit")
+                started_at = datetime.now()
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageStartedEvent(
+                        tool_name=function_name,
+                        tool_args=function_args,
+                    ),
+                )
                 result = fn(**function_args)
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageFinishedEvent(
+                        output=result,
+                        tool_name=function_name,
+                        tool_args=function_args,
+                        started_at=started_at,
+                        finished_at=datetime.now(),
+                    ),
+                )
 
                 # --- 3.3) Emit success event
                 self._handle_emit_call_events(result, LLMCallType.TOOL_CALL)
@@ -831,6 +889,14 @@ class LLM(BaseLLM):
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),
+                )
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(
+                        tool_name=function_name,
+                        tool_args=function_args,
+                        error=f"Tool execution error: {str(e)}"
+                    ),
                 )
         return None
 

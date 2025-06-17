@@ -35,12 +35,12 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.security import Fingerprint, SecurityConfig
-from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED
+from crewai.utilities.guardrail import process_guardrail, GuardrailResult
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.events import (
     TaskCompletedEvent,
@@ -133,6 +133,10 @@ class Task(BaseModel):
     )
     human_input: Optional[bool] = Field(
         description="Whether the task should have a human review the final answer of the agent",
+        default=False,
+    )
+    markdown: Optional[bool] = Field(
+        description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
         default=False,
     )
     converter_cls: Optional[Type[Converter]] = Field(
@@ -427,7 +431,11 @@ class Task(BaseModel):
             )
 
             if self._guardrail:
-                guardrail_result = self._process_guardrail(task_output)
+                guardrail_result = process_guardrail(
+                    output=task_output,
+                    guardrail=self._guardrail,
+                    retry_count=self.retry_count
+                )
                 if not guardrail_result.success:
                     if self.retry_count >= self.max_retries:
                         raise Exception(
@@ -522,10 +530,14 @@ class Task(BaseModel):
         return guardrail_result
 
     def prompt(self) -> str:
-        """Prompt the task.
+        """Generates the task prompt with optional markdown formatting.
+
+        When the markdown attribute is True, instructions for formatting the
+        response in Markdown syntax will be added to the prompt.
 
         Returns:
-            Prompt of the task.
+            str: The formatted prompt string containing the task description,
+                 expected output, and optional markdown formatting instructions.
         """
         tasks_slices = [self.description]
 
@@ -533,6 +545,17 @@ class Task(BaseModel):
             expected_output=self.expected_output
         )
         tasks_slices = [self.description, output]
+
+        if self.markdown:
+            markdown_instruction = """Your final answer MUST be formatted in Markdown syntax.
+Follow these guidelines:
+- Use # for headers
+- Use ** for bold text
+- Use * for italic text
+- Use - or * for bullet points
+- Use `code` for inline code
+- Use ```language for code blocks"""
+            tasks_slices.append(markdown_instruction)
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(

@@ -1,8 +1,10 @@
+import importlib.util
 import os
 import shutil
 import sys
 from functools import reduce
-from inspect import isfunction, ismethod
+from inspect import getmro, isclass, isfunction, ismethod
+from pathlib import Path
 from typing import Any, Dict, List, get_type_hints
 
 import click
@@ -161,7 +163,7 @@ def tree_find_and_replace(directory, find, replace):
         for filename in files:
             filepath = os.path.join(path, filename)
 
-            with open(filepath, "r") as file:
+            with open(filepath, "r", encoding="utf-8", errors="ignore") as file:
                 contents = file.read()
             with open(filepath, "w") as file:
                 file.write(contents.replace(find, replace))
@@ -339,3 +341,112 @@ def fetch_crews(module_attr) -> list[Crew]:
             if crew_instance := get_crew_instance(attr):
                 crew_instances.append(crew_instance)
     return crew_instances
+
+
+def is_valid_tool(obj):
+    from crewai.tools.base_tool import Tool
+
+    if isclass(obj):
+        try:
+            return any(base.__name__ == "BaseTool" for base in getmro(obj))
+        except (TypeError, AttributeError):
+            return False
+
+    return isinstance(obj, Tool)
+
+
+def extract_available_exports(dir_path: str = "src"):
+    """
+    Extract available tool classes from the project's __init__.py files.
+    Only includes classes that inherit from BaseTool or functions decorated with @tool.
+
+    Returns:
+        list: A list of valid tool class names or ["BaseTool"] if none found
+    """
+    try:
+        init_files = Path(dir_path).glob("**/__init__.py")
+        available_exports = []
+
+        for init_file in init_files:
+            tools = _load_tools_from_init(init_file)
+            available_exports.extend(tools)
+
+        if not available_exports:
+            _print_no_tools_warning()
+            raise SystemExit(1)
+
+        return available_exports
+
+    except Exception as e:
+        console.print(f"[red]Error: Could not extract tool classes: {str(e)}[/red]")
+        console.print(
+            "Please ensure your project contains valid tools (classes inheriting from BaseTool or functions with @tool decorator)."
+        )
+        raise SystemExit(1)
+
+
+def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
+    """
+    Load and validate tools from a given __init__.py file.
+    """
+    spec = importlib.util.spec_from_file_location("temp_module", init_file)
+
+    if not spec or not spec.loader:
+        return []
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["temp_module"] = module
+
+    try:
+        spec.loader.exec_module(module)
+
+        if not hasattr(module, "__all__"):
+            console.print(
+                f"[bold yellow]Warning: No __all__ defined in {init_file}[/bold yellow]"
+            )
+            raise SystemExit(1)
+
+        return [
+            {
+                "name": name,
+            }
+            for name in module.__all__
+            if hasattr(module, name) and is_valid_tool(getattr(module, name))
+        ]
+
+    except Exception as e:
+        console.print(f"[red]Warning: Could not load {init_file}: {str(e)}[/red]")
+        raise SystemExit(1)
+
+    finally:
+        sys.modules.pop("temp_module", None)
+
+
+def _print_no_tools_warning():
+    """
+    Display warning and usage instructions if no tools were found.
+    """
+    console.print(
+        "\n[bold yellow]Warning: No valid tools were exposed in your __init__.py file![/bold yellow]"
+    )
+    console.print(
+        "Your __init__.py file must contain all classes that inherit from [bold]BaseTool[/bold] "
+        "or functions decorated with [bold]@tool[/bold]."
+    )
+    console.print(
+        "\nExample:\n[dim]# In your __init__.py file[/dim]\n"
+        "[green]__all__ = ['YourTool', 'your_tool_function'][/green]\n\n"
+        "[dim]# In your tool.py file[/dim]\n"
+        "[green]from crewai.tools import BaseTool, tool\n\n"
+        "# Tool class example\n"
+        "class YourTool(BaseTool):\n"
+        '    name = "your_tool"\n'
+        '    description = "Your tool description"\n'
+        "    # ... rest of implementation\n\n"
+        "# Decorated function example\n"
+        "@tool\n"
+        "def your_tool_function(text: str) -> str:\n"
+        '    """Your tool description"""\n'
+        "    # ... implementation\n"
+        "    return result\n"
+    )
