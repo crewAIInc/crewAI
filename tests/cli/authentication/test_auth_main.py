@@ -32,13 +32,13 @@ class TestAuthenticationCommand(unittest.TestCase):
 
     @patch("crewai.cli.authentication.main.console.print")
     @patch("crewai.cli.authentication.main.webbrowser.open")
-    def test_display_auth_instructions(self, mock_open, mock_print):
+    def test_old_display_auth_instructions(self, mock_open, mock_print):
         device_code_data = {
             "verification_uri_complete": "https://example.com",
             "user_code": "ABCDEF",
         }
 
-        self.auth_command._display_auth_instructions(device_code_data)
+        self.auth_command._old_display_auth_instructions(device_code_data)
 
         mock_print.assert_any_call("1. Navigate to: ", "https://example.com")
         mock_print.assert_any_call("2. Enter the following code: ", "ABCDEF")
@@ -48,7 +48,7 @@ class TestAuthenticationCommand(unittest.TestCase):
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.validate_token")
     @patch("crewai.cli.authentication.main.console.print")
-    def test_poll_for_token_success(
+    def test_old_poll_for_token_success(
         self, mock_print, mock_validate_token, mock_post, mock_tool
     ):
         mock_response = MagicMock()
@@ -62,7 +62,7 @@ class TestAuthenticationCommand(unittest.TestCase):
         mock_instance = mock_tool.return_value
         mock_instance.login.return_value = None
 
-        self.auth_command._poll_for_token({"device_code": "123456"})
+        self.auth_command._old_poll_for_token({"device_code": "123456"})
 
         mock_validate_token.assert_called_once_with("TOKEN")
         mock_print.assert_called_once_with(
@@ -71,7 +71,7 @@ class TestAuthenticationCommand(unittest.TestCase):
 
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.console.print")
-    def test_poll_for_token_error(self, mock_print, mock_post):
+    def test_old_poll_for_token_error(self, mock_print, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 400
         mock_response.json.return_value = {
@@ -81,13 +81,13 @@ class TestAuthenticationCommand(unittest.TestCase):
         mock_post.return_value = mock_response
 
         with self.assertRaises(requests.HTTPError):
-            self.auth_command._poll_for_token({"device_code": "123456"})
+            self.auth_command._old_poll_for_token({"device_code": "123456"})
 
         mock_print.assert_not_called()
 
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.console.print")
-    def test_poll_for_token_timeout(self, mock_print, mock_post):
+    def test_old_poll_for_token_timeout(self, mock_print, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 400
         mock_response.json.return_value = {
@@ -96,7 +96,9 @@ class TestAuthenticationCommand(unittest.TestCase):
         }
         mock_post.return_value = mock_response
 
-        self.auth_command._poll_for_token({"device_code": "123456", "interval": 0.01})
+        self.auth_command._old_poll_for_token(
+            {"device_code": "123456", "interval": 0.01}
+        )
 
         mock_print.assert_called_once_with(
             "Timeout: Failed to get the token. Please try again.", style="bold red"

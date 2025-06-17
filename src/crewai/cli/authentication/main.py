@@ -53,14 +53,15 @@ class AuthenticationCommand:
         self.auth_url = self._get_auth_url()
 
     # TODO: While we migrate from auth providers, we should use this method to determine which auth provider to use.
-    def dynamic_login(self) -> None:
+    # Afterwards, we can remove this method and the old_login method and change new_login to login.
+    def login(self) -> None:
         """Login or Sign Up to CrewAI Enterprise"""
         if True:
             self.old_login()
         else:
-            self.login()
+            self.new_login()
 
-    def login(self) -> None:
+    def new_login(self) -> None:
         """Login or Sign Up to CrewAI Enterprise"""
 
         console.print("Signing in to CrewAI enterprise... \n", style="bold blue")
