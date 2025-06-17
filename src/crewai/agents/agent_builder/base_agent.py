@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
 from hashlib import md5
-from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 from collections.abc import Sequence
 
