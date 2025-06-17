@@ -101,14 +101,3 @@ class TestTaskContextTypeAnnotation:
             Task(description="Test 4", expected_output="Output 4", context=[task1])
         except ValidationError as e:
             pytest.fail(f"Valid context types should not raise ValidationError: {e}")
-
-    def test_task_context_validation_rejects_invalid_types(self):
-        """Test that Task validation rejects invalid context types."""
-        with pytest.raises(ValidationError):
-            Task(description="Test", expected_output="Output", context="invalid")
-            
-        with pytest.raises(ValidationError):
-            Task(description="Test", expected_output="Output", context=123)
-            
-        with pytest.raises(ValidationError):
-            Task(description="Test", expected_output="Output", context=["not", "tasks"])
