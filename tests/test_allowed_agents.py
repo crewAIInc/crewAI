@@ -155,7 +155,7 @@ def test_allowed_agents_validation():
     )
     assert agent.allowed_agents is None
     
-    with pytest.raises(ValueError, match="allowed_agents must be a list"):
+    with pytest.raises(ValueError, match="Input should be a valid list"):
         Agent(
             role="Test",
             goal="Test",
@@ -163,7 +163,7 @@ def test_allowed_agents_validation():
             allowed_agents="invalid"
         )
     
-    with pytest.raises(ValueError, match="must be either a string"):
+    with pytest.raises(ValueError, match="Each item in allowed_agents must be either a string"):
         Agent(
             role="Test",
             goal="Test",
