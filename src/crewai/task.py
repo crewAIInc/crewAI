@@ -97,7 +97,7 @@ class Task(BaseModel):
     )
     context: Union[List["Task"], None, _NotSpecified] = Field(
         description="Other tasks that will have their output used as context for this task.",
-        default=NOT_SPECIFIED,
+        default=NOT_SPECIFIED
     )
     async_execution: Optional[bool] = Field(
         description="Whether the task should be executed asynchronously or not.",
