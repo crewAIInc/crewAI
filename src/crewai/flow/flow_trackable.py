@@ -20,7 +20,8 @@ class FlowTrackable(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _set_parent_flow(self, max_depth: int = 5) -> "FlowTrackable":
+    def _set_parent_flow(self) -> "FlowTrackable":
+        max_depth = 5
         frame = inspect.currentframe()
 
         try:
