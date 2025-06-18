@@ -159,6 +159,10 @@ class Task(BaseModel):
         default=None, description="End time of the task execution"
     )
 
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
+
     @field_validator("guardrail")
     @classmethod
     def validate_guardrail_function(
