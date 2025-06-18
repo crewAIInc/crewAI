@@ -58,9 +58,13 @@ class AuthenticationCommand:
     def login(self) -> None:
         """Login or Sign Up to CrewAI Enterprise"""
 
-        email = input("Enter your email: ")
-        response = PlusAPI("").get_provider(email)
+        # do not add a new line before the input
+        console.print(
+            "Your CrewAI Enterprise account email: ", style="bold blue", end=""
+        )
+        email = input()
 
+        response = PlusAPI("").get_provider(email)
         if response.status_code == 200:
             if response.json()["provider"] == "auth0":
                 self.old_login()
