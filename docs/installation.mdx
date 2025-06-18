@@ -22,7 +22,7 @@ Watch this video tutorial for a step-by-step demonstration of the installation p
 <Note>
   **Python Version Requirements**
 
-  CrewAI requires `Python >=3.10 and <3.13`. Here's how to check your version:
+  CrewAI requires `Python >=3.10 and <3.14`. Here's how to check your version:
   ```bash
   python3 --version
   ```
@@ -69,6 +69,10 @@ If you haven't installed `uv` yet, follow **step 1** to quickly get it set up on
             ```shell
             uv tool update-shell
             ```
+          </Warning>
+
+          <Warning>
+            If you encounter the `chroma-hnswlib==0.7.6` build error (`fatal error C1083: Cannot open include file: 'float.h'`) on Windows, install (Visual Studio Build Tools)[https://visualstudio.microsoft.com/downloads/] with *Desktop development with C++*.
           </Warning>
 
       - To verify that `crewai` is installed, run:

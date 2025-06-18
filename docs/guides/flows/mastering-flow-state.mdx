@@ -4,8 +4,6 @@ description: A comprehensive guide to managing, persisting, and leveraging state
 icon: diagram-project
 ---
 
-# Mastering Flow State Management
-
 ## Understanding the Power of State in Flows
 
 State management is the backbone of any sophisticated AI workflow. In CrewAI Flows, the state system allows you to maintain context, share data between steps, and build complex application logic. Mastering state management is essential for creating reliable, maintainable, and powerful AI applications.
@@ -279,22 +277,23 @@ This pattern allows you to combine direct data passing with state updates for ma
 
 One of CrewAI's most powerful features is the ability to persist flow state across executions. This enables workflows that can be paused, resumed, and even recovered after failures.
 
-### The @persist Decorator
+### The @persist() Decorator
 
-The `@persist` decorator automates state persistence, saving your flow's state at key points in execution.
+The `@persist()` decorator automates state persistence, saving your flow's state at key points in execution.
 
 #### Class-Level Persistence
 
-When applied at the class level, `@persist` saves state after every method execution:
+When applied at the class level, `@persist()` saves state after every method execution:
 
 ```python
-from crewai.flow.flow import Flow, listen, persist, start
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
 from pydantic import BaseModel
 
 class CounterState(BaseModel):
     value: int = 0
 
-@persist  # Apply to the entire flow class
+@persist()  # Apply to the entire flow class
 class PersistentCounterFlow(Flow[CounterState]):
     @start()
     def increment(self):
@@ -321,10 +320,11 @@ print(f"Second run result: {result2}")  # Will be higher due to persisted state
 
 #### Method-Level Persistence
 
-For more granular control, you can apply `@persist` to specific methods:
+For more granular control, you can apply `@persist()` to specific methods:
 
 ```python
-from crewai.flow.flow import Flow, listen, persist, start
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
 
 class SelectivePersistFlow(Flow):
     @start()
@@ -332,7 +332,7 @@ class SelectivePersistFlow(Flow):
         self.state["count"] = 1
         return "First step"
 
-    @persist  # Only persist after this method
+    @persist()  # Only persist after this method
     @listen(first_step)
     def important_step(self, prev_result):
         self.state["count"] += 1

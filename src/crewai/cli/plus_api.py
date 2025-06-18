@@ -1,9 +1,10 @@
 from os import getenv
-from typing import Optional
+from typing import List, Optional
 from urllib.parse import urljoin
 
 import requests
 
+from crewai.cli.config import Settings
 from crewai.cli.version import get_crewai_version
 
 
@@ -13,7 +14,9 @@ class PlusAPI:
     """
 
     TOOLS_RESOURCE = "/crewai_plus/api/v1/tools"
+    ORGANIZATIONS_RESOURCE = "/crewai_plus/api/v1/me/organizations"
     CREWS_RESOURCE = "/crewai_plus/api/v1/crews"
+    AGENTS_RESOURCE = "/crewai_plus/api/v1/agents"
 
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
@@ -23,6 +26,9 @@ class PlusAPI:
             "User-Agent": f"CrewAI-CLI/{get_crewai_version()}",
             "X-Crewai-Version": get_crewai_version(),
         }
+        settings = Settings()
+        if settings.org_uuid:
+            self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
         self.base_url = getenv("CREWAI_BASE_URL", "https://app.crewai.com")
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
@@ -37,6 +43,9 @@ class PlusAPI:
     def get_tool(self, handle: str):
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
 
+    def get_agent(self, handle: str):
+        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}")
+
     def publish_tool(
         self,
         handle: str,
@@ -44,6 +53,7 @@ class PlusAPI:
         version: str,
         description: Optional[str],
         encoded_file: str,
+        available_exports: Optional[List[str]] = None,
     ):
         params = {
             "handle": handle,
@@ -51,6 +61,7 @@ class PlusAPI:
             "version": version,
             "file": encoded_file,
             "description": description,
+            "available_exports": available_exports,
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 
@@ -97,3 +108,7 @@ class PlusAPI:
 
     def create_crew(self, payload) -> requests.Response:
         return self._make_request("POST", self.CREWS_RESOURCE, json=payload)
+    
+    def get_organizations(self) -> requests.Response:
+        return self._make_request("GET", self.ORGANIZATIONS_RESOURCE)
+    

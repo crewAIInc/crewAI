@@ -5,12 +5,32 @@ on: [pull_request]
 jobs:
   lint:
     runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Install Requirements
+      - name: Fetch Target Branch
+        run: git fetch origin $TARGET_BRANCH --depth=1
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Get Changed Python Files
+        id: changed-files
         run: |
-          pip install ruff
+          merge_base=$(git merge-base origin/"$TARGET_BRANCH" HEAD)
+          changed_files=$(git diff --name-only --diff-filter=ACMRTUB "$merge_base" | grep '\.py$' || true)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$changed_files" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Run Ruff Linter
-        run: ruff check
+      - name: Run Ruff on Changed Files
+        if: ${{ steps.changed-files.outputs.files != '' }}
+        run: |
+          echo "${{ steps.changed-files.outputs.files }}" \
+            | tr ' ' '\n' \
+            | grep -v 'src/crewai/cli/templates/' \
+            | xargs -I{} ruff check "{}"

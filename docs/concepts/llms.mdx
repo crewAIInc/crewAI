@@ -4,9 +4,10 @@ description: 'A comprehensive guide to configuring and using Large Language Mode
 icon: 'microchip-ai'
 ---
 
-<Note>
-  CrewAI integrates with multiple LLM providers through LiteLLM, giving you the flexibility to choose the right model for your specific use case. This guide will help you understand how to configure and use different LLM providers in your CrewAI projects.
-</Note>
+## Overview
+
+CrewAI integrates with multiple LLM providers through LiteLLM, giving you the flexibility to choose the right model for your specific use case. This guide will help you understand how to configure and use different LLM providers in your CrewAI projects.
+
 
 ## What are LLMs?
 
@@ -27,23 +28,19 @@ Large Language Models (LLMs) are the core intelligence behind CrewAI agents. The
   </Card>
 </CardGroup>
 
-## Setting Up Your LLM
+## Setting up your LLM
 
-There are three ways to configure LLMs in CrewAI. Choose the method that best fits your workflow:
+There are different places in CrewAI code where you can specify the model to use. Once you specify the model you are using, you will need to provide the configuration (like an API key) for each of the model providers you use. See the [provider configuration examples](#provider-configuration-examples) section for your provider.
 
 <Tabs>
   <Tab title="1. Environment Variables">
-    The simplest way to get started. Set these variables in your environment:
+    The simplest way to get started. Set the model in your environment directly, through an `.env` file or in your app code. If you used `crewai create` to bootstrap your project, it will be set already.
 
-    ```bash
-    # Required: Your API key for authentication
-    OPENAI_API_KEY=<your-api-key>
+    ```bash .env
+    MODEL=model-id  # e.g. gpt-4o, gemini-2.0-flash, claude-3-sonnet-...
 
-    # Optional: Default model selection
-    OPENAI_MODEL_NAME=gpt-4o-mini  # Default if not set
-
-    # Optional: Organization ID (if applicable)
-    OPENAI_ORGANIZATION_ID=<your-org-id>
+    # Be sure to set your API keys here too. See the Provider
+    # section below.
     ```
 
     <Warning>
@@ -53,13 +50,13 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
   <Tab title="2. YAML Configuration">
     Create a YAML file to define your agent configurations. This method is great for version control and team collaboration:
 
-    ```yaml
+    ```yaml agents.yaml {6}
     researcher:
         role: Research Specialist
         goal: Conduct comprehensive research and analysis
         backstory: A dedicated research professional with years of experience
         verbose: true
-        llm: openai/gpt-4o-mini # your model here
+        llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
         # (see provider configuration examples below for more)
     ```
 
@@ -74,23 +71,23 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
   <Tab title="3. Direct Code">
     For maximum flexibility, configure LLMs directly in your Python code:
 
-    ```python
+    ```python {4,8}
     from crewai import LLM
 
     # Basic configuration
-    llm = LLM(model="gpt-4")
+    llm = LLM(model="model-id-here")  # gpt-4o, gemini-2.0-flash, anthropic/claude...
 
     # Advanced configuration with detailed parameters
     llm = LLM(
-        model="gpt-4o-mini",
+        model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
         temperature=0.7,        # Higher for more creative outputs
-        timeout=120,           # Seconds to wait for response
-        max_tokens=4000,       # Maximum length of response
-        top_p=0.9,            # Nucleus sampling parameter
-        frequency_penalty=0.1, # Reduce repetition
-        presence_penalty=0.1,  # Encourage topic diversity
+        timeout=120,            # Seconds to wait for response
+        max_tokens=4000,        # Maximum length of response
+        top_p=0.9,              # Nucleus sampling parameter
+        frequency_penalty=0.1 , # Reduce repetition
+        presence_penalty=0.1,   # Encourage topic diversity
         response_format={"type": "json"},  # For structured outputs
-        seed=42               # For reproducible results
+        seed=42                 # For reproducible results
     )
     ```
 
@@ -109,7 +106,6 @@ There are three ways to configure LLMs in CrewAI. Choose the method that best fi
 </Tabs>
 
 ## Provider Configuration Examples
-
 
 CrewAI supports a multitude of LLM providers, each offering unique features, authentication methods, and model capabilities.
 In this section, you'll find detailed examples that help you select, configure, and optimize the LLM that best fits your project's needs.
@@ -156,6 +152,39 @@ In this section, you'll find detailed examples that help you select, configure, 
     | o1                  | 200,000 tokens   | Fast reasoning, complex reasoning             |
   </Accordion>
 
+  <Accordion title="Meta-Llama">
+    Meta's Llama API provides access to Meta's family of large language models.
+    The API is available through the [Meta Llama API](https://llama.developer.meta.com?utm_source=partner-crewai&utm_medium=website).
+    Set the following environment variables in your `.env` file:
+
+    ```toml Code
+    # Meta Llama API Key Configuration
+    LLAMA_API_KEY=LLM|your_api_key_here
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    from crewai import LLM
+
+    # Initialize Meta Llama LLM
+    llm = LLM(
+        model="meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8",
+        temperature=0.8,
+        stop=["END"],
+        seed=42
+    )
+    ```
+
+    All models listed here https://llama.developer.meta.com/docs/models/ are supported.
+
+    | Model ID | Input context length | Output context length | Input Modalities | Output Modalities |
+    | --- | --- | --- | --- | --- |
+    | `meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8` | 128k | 4028 | Text, Image | Text |
+    | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | Text, Image | Text |
+    | `meta_llama/Llama-3.3-70B-Instruct` | 128k | 4028 | Text | Text |
+    | `meta_llama/Llama-3.3-8B-Instruct` | 128k | 4028 | Text | Text |
+  </Accordion>
+
   <Accordion title="Anthropic">
     ```toml Code
     # Required
@@ -174,19 +203,55 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
-  <Accordion title="Google">
-    Set the following environment variables in your `.env` file:
+  <Accordion title="Google (Gemini API)">
+    Set your API key in your `.env` file. If you need a key, or need to find an
+    existing key, check [AI Studio](https://aistudio.google.com/apikey).
 
-    ```toml Code
-    # Option 1: Gemini accessed with an API key.
+    ```toml .env
     # https://ai.google.dev/gemini-api/docs/api-key
     GEMINI_API_KEY=<your-api-key>
-
-    # Option 2: Vertex AI IAM credentials for Gemini, Anthropic, and Model Garden.
-    # https://cloud.google.com/vertex-ai/generative-ai/docs/overview
     ```
 
-    Get credentials from your Google Cloud Console and save it to a JSON file with the following code:
+    Example usage in your CrewAI project:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash",
+        temperature=0.7,
+    )
+    ```
+
+    ### Gemini models
+
+    Google offers a range of powerful models optimized for different use cases.
+
+    | Model                          | Context Window | Best For                                                          |
+    |--------------------------------|----------------|-------------------------------------------------------------------|
+    | gemini-2.5-flash-preview-04-17 | 1M tokens      | Adaptive thinking, cost efficiency                                |
+    | gemini-2.5-pro-preview-05-06   | 1M tokens      | Enhanced thinking and reasoning, multimodal understanding, advanced coding, and more |
+    | gemini-2.0-flash               | 1M tokens      | Next generation features, speed, thinking, and realtime streaming |
+    | gemini-2.0-flash-lite          | 1M tokens      | Cost efficiency and low latency                                   |
+    | gemini-1.5-flash               | 1M tokens      | Balanced multimodal model, good for most tasks                    |
+    | gemini-1.5-flash-8B            | 1M tokens      | Fastest, most cost-efficient, good for high-frequency tasks       |
+    | gemini-1.5-pro                 | 2M tokens      | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
+
+    The full list of models is available in the [Gemini model docs](https://ai.google.dev/gemini-api/docs/models).
+
+    ### Gemma
+
+    The Gemini API also allows you to use your API key to access [Gemma models](https://ai.google.dev/gemma/docs) hosted on Google infrastructure.
+
+    | Model          | Context Window |
+    |----------------|----------------|
+    | gemma-3-1b-it  | 32k tokens     |
+    | gemma-3-4b-it  | 32k tokens     |
+    | gemma-3-12b-it | 32k tokens     |
+    | gemma-3-27b-it | 128k tokens    |
+
+  </Accordion>
+  <Accordion title="Google (Vertex AI)">
+    Get credentials from your Google Cloud Console and save it to a JSON file, then load it with the following code:
     ```python Code
     import json
 
@@ -210,14 +275,18 @@ In this section, you'll find detailed examples that help you select, configure, 
         vertex_credentials=vertex_credentials_json
     )
     ```
+
     Google offers a range of powerful models optimized for different use cases:
 
-    | Model                  | Context Window | Best For                                                          |
-    |-----------------------|----------------|------------------------------------------------------------------|
-    | gemini-2.0-flash-exp  | 1M tokens      | Higher quality at faster speed, multimodal model, good for most tasks |
-    | gemini-1.5-flash      | 1M tokens      | Balanced multimodal model, good for most tasks                    |
-    | gemini-1.5-flash-8B   | 1M tokens      | Fastest, most cost-efficient, good for high-frequency tasks       |
-    | gemini-1.5-pro        | 2M tokens      | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
+    | Model                          | Context Window | Best For                                                          |
+    |--------------------------------|----------------|-------------------------------------------------------------------|
+    | gemini-2.5-flash-preview-04-17 | 1M tokens      | Adaptive thinking, cost efficiency                                |
+    | gemini-2.5-pro-preview-05-06   | 1M tokens      | Enhanced thinking and reasoning, multimodal understanding, advanced coding, and more |
+    | gemini-2.0-flash               | 1M tokens      | Next generation features, speed, thinking, and realtime streaming |
+    | gemini-2.0-flash-lite          | 1M tokens      | Cost efficiency and low latency                                   |
+    | gemini-1.5-flash               | 1M tokens      | Balanced multimodal model, good for most tasks                    |
+    | gemini-1.5-flash-8B            | 1M tokens      | Fastest, most cost-efficient, good for high-frequency tasks       |
+    | gemini-1.5-pro                 | 2M tokens      | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
   </Accordion>
 
   <Accordion title="Azure">
@@ -383,7 +452,7 @@ In this section, you'll find detailed examples that help you select, configure, 
     | microsoft/phi-3-medium-4k-instruct                                  | 4,096 tokens   | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
     | microsoft/phi-3-medium-128k-instruct                                | 128K tokens    | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
     | microsoft/phi-3.5-mini-instruct                                     | 128K tokens    | Lightweight multilingual LLM powering AI applications in latency bound, memory/compute constrained environments |
-    | microsoft/phi-3.5-moe-instruct                                      | 128K tokens    | Advanced LLM based on Mixture of Experts architecure to deliver compute efficient content generation |
+    | microsoft/phi-3.5-moe-instruct                                      | 128K tokens    | Advanced LLM based on Mixture of Experts architecture to deliver compute efficient content generation |
     | microsoft/kosmos-2                                                  | 1,024 tokens   | Groundbreaking multimodal model designed to understand and reason about visual elements in images. |
     | microsoft/phi-3-vision-128k-instruct                               | 128k tokens    | Cutting-edge open multimodal model exceling in high-quality reasoning from images. |
     | microsoft/phi-3.5-vision-instruct                                  | 128k tokens    | Cutting-edge open multimodal model exceling in high-quality reasoning from images. |
@@ -407,19 +476,19 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 
   <Accordion title="Local NVIDIA NIM Deployed using WSL2">
-    
-    NVIDIA NIM enables you to run powerful LLMs locally on your Windows machine using WSL2 (Windows Subsystem for Linux). 
-    This approach allows you to leverage your NVIDIA GPU for private, secure, and cost-effective AI inference without relying on cloud services. 
+
+    NVIDIA NIM enables you to run powerful LLMs locally on your Windows machine using WSL2 (Windows Subsystem for Linux).
+    This approach allows you to leverage your NVIDIA GPU for private, secure, and cost-effective AI inference without relying on cloud services.
     Perfect for development, testing, or production scenarios where data privacy or offline capabilities are required.
-    
+
     Here is a step-by-step guide to setting up a local NVIDIA NIM model:
-    
+
     1. Follow installation instructions from [NVIDIA Website](https://docs.nvidia.com/nim/wsl2/latest/getting-started.html)
 
     2. Install the local model. For Llama 3.1-8b follow [instructions](https://build.nvidia.com/meta/llama-3_1-8b-instruct/deploy)
 
     3. Configure your crewai local models:
-  
+
     ```python Code
     from crewai.llm import LLM
 
@@ -441,7 +510,7 @@ In this section, you'll find detailed examples that help you select, configure, 
                 config=self.agents_config['researcher'], # type: ignore[index]
                 llm=local_nvidia_nim_llm
             )
-        
+
         # ...
     ```
   </Accordion>
@@ -637,23 +706,29 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
 
     When streaming is enabled, responses are delivered in chunks as they're generated, creating a more responsive user experience.
   </Tab>
-  
+
   <Tab title="Event Handling">
     CrewAI emits events for each chunk received during streaming:
-    
+
     ```python
-    from crewai import LLM
-    from crewai.utilities.events import EventHandler, LLMStreamChunkEvent
-    
-    class MyEventHandler(EventHandler):
-        def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
-            # Process each chunk as it arrives
-            print(f"Received chunk: {event.chunk}")
-    
-    # Register the event handler
-    from crewai.utilities.events import crewai_event_bus
-    crewai_event_bus.register_handler(MyEventHandler())
+    from crewai.utilities.events import (
+      LLMStreamChunkEvent
+    )
+    from crewai.utilities.events.base_event_listener import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
+              # Process each chunk as it arrives
+              print(f"Received chunk: {event.chunk}")
+
+    my_listener = MyCustomListener()
     ```
+
+    <Tip>
+      [Click here](https://docs.crewai.com/concepts/event-listener#event-listeners) for more details 
+    </Tip>
   </Tab>
 </Tabs>
 
@@ -750,6 +825,24 @@ Learn how to get the most out of your LLM configuration:
       Remember to regularly monitor your token usage and adjust your configuration as needed to optimize costs and performance.
     </Info>
   </Accordion>
+  
+  <Accordion title="Drop Additional Parameters">
+    CrewAI internally uses Litellm for LLM calls, which allows you to drop additional parameters that are not needed for your specific use case. This can help simplify your code and reduce the complexity of your LLM configuration.
+    For example, if you don't need to send the <code>stop</code> parameter, you can simply omit it from your LLM call:
+
+    ```python
+    from crewai import LLM
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "<api-key>"
+
+    o3_llm = LLM(
+        model="o3",
+        drop_params=True,
+        additional_drop_params=["stop"]
+    )
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## Common Issues and Solutions
@@ -785,7 +878,7 @@ Learn how to get the most out of your LLM configuration:
     <Tip>
       Use larger context models for extensive tasks
     </Tip>
-    
+
     ```python
     # Large context model
     llm = LLM(model="openai/gpt-4o")  # 128K tokens

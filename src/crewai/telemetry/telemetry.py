@@ -2,17 +2,33 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import platform
 import warnings
 from contextlib import contextmanager
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
+import threading
+
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter,
+)
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    SpanExportResult,
+)
+from opentelemetry.trace import Span, Status, StatusCode
 
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
     CREWAI_TELEMETRY_SERVICE_NAME,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -22,18 +38,18 @@ def suppress_warnings():
         yield
 
 
-from opentelemetry import trace  # noqa: E402
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,  # noqa: E402
-)
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
-from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
-from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
-from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
-
 if TYPE_CHECKING:
     from crewai.crew import Crew
     from crewai.task import Task
+
+
+class SafeOTLPSpanExporter(OTLPSpanExporter):
+    def export(self, spans) -> SpanExportResult:
+        try:
+            return super().export(spans)
+        except Exception as e:
+            logger.error(e)
+            return SpanExportResult.FAILURE
 
 
 class Telemetry:
@@ -49,9 +65,24 @@ class Telemetry:
     attribute in the Crew class.
     """
 
-    def __init__(self):
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(Telemetry, cls).__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self) -> None:
+        if hasattr(self, '_initialized') and self._initialized:
+            return
+        
         self.ready: bool = False
         self.trace_set: bool = False
+        self._initialized: bool = True
 
         if self._is_telemetry_disabled():
             return
@@ -64,7 +95,7 @@ class Telemetry:
                 self.provider = TracerProvider(resource=self.resource)
 
             processor = BatchSpanProcessor(
-                OTLPSpanExporter(
+                SafeOTLPSpanExporter(
                     endpoint=f"{CREWAI_TELEMETRY_BASE_URL}/v1/traces",
                     timeout=30,
                 )
@@ -87,6 +118,10 @@ class Telemetry:
             or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
         )
 
+    def _should_execute_telemetry(self) -> bool:
+        """Check if telemetry operations should be executed."""
+        return self.ready and not self._is_telemetry_disabled()
+
     def set_tracer(self):
         if self.ready and not self.trace_set:
             try:
@@ -97,8 +132,9 @@ class Telemetry:
                 self.ready = False
                 self.trace_set = False
 
-    def _safe_telemetry_operation(self, operation):
-        if not self.ready:
+    def _safe_telemetry_operation(self, operation: Callable[[], None]) -> None:
+        """Execute telemetry operation safely, checking both readiness and environment variables."""
+        if not self._should_execute_telemetry():
             return
         try:
             operation()
@@ -217,7 +253,7 @@ class Telemetry:
                                 "agent_key": task.agent.key if task.agent else None,
                                 "context": (
                                     [task.description for task in task.context]
-                                    if task.context
+                                    if isinstance(task.context, list)
                                     else None
                                 ),
                                 "tools_names": [
@@ -397,7 +433,8 @@ class Telemetry:
 
             return span
 
-        return self._safe_telemetry_operation(operation)
+        self._safe_telemetry_operation(operation)
+        return None
 
     def task_ended(self, span: Span, task: Task, crew: Crew):
         """Records the completion of a task execution in a crew.
@@ -733,7 +770,7 @@ class Telemetry:
                             "agent_key": task.agent.key if task.agent else None,
                             "context": (
                                 [task.description for task in task.context]
-                                if task.context
+                                if isinstance(task.context, list)
                                 else None
                             ),
                             "tools_names": [
@@ -747,7 +784,8 @@ class Telemetry:
             return span
 
         if crew.share_crew:
-            return self._safe_telemetry_operation(operation)
+            self._safe_telemetry_operation(operation)
+            return operation()
         return None
 
     def end_crew(self, crew, final_string_output):

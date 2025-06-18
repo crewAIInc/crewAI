@@ -4,7 +4,7 @@ description: Understanding and leveraging tools within the CrewAI framework for 
 icon: screwdriver-wrench
 ---
 
-## Introduction
+## Overview
 
 CrewAI tools empower agents with capabilities ranging from web searching and data analysis to collaboration and delegating tasks among coworkers.
 This documentation outlines how to create, integrate, and leverage these tools within the CrewAI framework, including a new focus on collaboration tools.
@@ -17,8 +17,6 @@ enabling everything from simple searches to complex interactions and effective t
 
 <Note type="info" title="Enterprise Enhancement: Tools Repository">
 CrewAI Enterprise provides a comprehensive Tools Repository with pre-built integrations for common business systems and APIs. Deploy agents with enterprise tools in minutes instead of days.
-
-![Tools Repository Screenshot](../images/enterprise/tools-repository.png)
 
 The Enterprise Tools Repository includes:
 - Pre-built connectors for popular enterprise systems
@@ -34,6 +32,7 @@ The Enterprise Tools Repository includes:
 - **Customizability**: Provides the flexibility to develop custom tools or utilize existing ones, catering to the specific needs of agents.
 - **Error Handling**: Incorporates robust error handling mechanisms to ensure smooth operation.
 - **Caching Mechanism**: Features intelligent caching to optimize performance and reduce redundant operations.
+- **Asynchronous Support**: Handles both synchronous and asynchronous tools, enabling non-blocking operations.
 
 ## Using CrewAI Tools
 
@@ -178,6 +177,62 @@ class MyCustomTool(BaseTool):
         # Your tool's logic here
         return "Tool's result"
 ```
+
+## Asynchronous Tool Support
+
+CrewAI supports asynchronous tools, allowing you to implement tools that perform non-blocking operations like network requests, file I/O, or other async operations without blocking the main execution thread.
+
+### Creating Async Tools
+
+You can create async tools in two ways:
+
+#### 1. Using the `tool` Decorator with Async Functions
+
+```python Code
+from crewai.tools import tool
+
+@tool("fetch_data_async")
+async def fetch_data_async(query: str) -> str:
+    """Asynchronously fetch data based on the query."""
+    # Simulate async operation
+    await asyncio.sleep(1)
+    return f"Data retrieved for {query}"
+```
+
+#### 2. Implementing Async Methods in Custom Tool Classes
+
+```python Code
+from crewai.tools import BaseTool
+
+class AsyncCustomTool(BaseTool):
+    name: str = "async_custom_tool"
+    description: str = "An asynchronous custom tool"
+    
+    async def _run(self, query: str = "") -> str:
+        """Asynchronously run the tool"""
+        # Your async implementation here
+        await asyncio.sleep(1)
+        return f"Processed {query} asynchronously"
+```
+
+### Using Async Tools
+
+Async tools work seamlessly in both standard Crew workflows and Flow-based workflows:
+
+```python Code
+# In standard Crew
+agent = Agent(role="researcher", tools=[async_custom_tool])
+
+# In Flow
+class MyFlow(Flow):
+    @start()
+    async def begin(self):
+        crew = Crew(agents=[agent])
+        result = await crew.kickoff_async()
+        return result
+```
+
+The CrewAI framework automatically handles the execution of both synchronous and asynchronous tools, so you don't need to worry about how to call them differently.
 
 ### Utilizing the `tool` Decorator
 
