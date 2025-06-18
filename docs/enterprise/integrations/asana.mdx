@@ -1,0 +1,253 @@
+---
+title: Asana Integration
+description: "Team task and project coordination with Asana integration for CrewAI."
+icon: "circle"
+---
+
+## Overview
+
+Enable your agents to manage tasks, projects, and team coordination through Asana. Create tasks, update project status, manage assignments, and streamline your team's workflow with AI-powered automation.
+
+## Prerequisites
+
+Before using the Asana integration, ensure you have:
+
+- A [CrewAI Enterprise](https://app.crewai.com) account with an active subscription
+- An Asana account with appropriate permissions
+- Connected your Asana account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
+
+## Setting Up Asana Integration
+
+### 1. Connect Your Asana Account
+
+1. Navigate to [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Asana** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for task and project management
+5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+## Available Actions
+
+<AccordionGroup>
+  <Accordion title="ASANA_CREATE_COMMENT">
+    **Description:** Create a comment in Asana.
+
+    **Parameters:**
+    - `task` (string, required): Task ID - The ID of the Task the comment will be added to. The comment will be authored by the currently authenticated user.
+    - `text` (string, required): Text (example: "This is a comment.").
+  </Accordion>
+
+  <Accordion title="ASANA_CREATE_PROJECT">
+    **Description:** Create a project in Asana.
+
+    **Parameters:**
+    - `name` (string, required): Name (example: "Stuff to buy").
+    - `workspace` (string, required): Workspace - Use Connect Portal Workflow Settings to allow users to select which Workspace to create Projects in. Defaults to the user's first Workspace if left blank.
+    - `team` (string, optional): Team - Use Connect Portal Workflow Settings to allow users to select which Team to share this Project with. Defaults to the user's first Team if left blank.
+    - `notes` (string, optional): Notes (example: "These are things we need to purchase.").
+  </Accordion>
+
+  <Accordion title="ASANA_GET_PROJECTS">
+    **Description:** Get a list of projects in Asana.
+
+    **Parameters:**
+    - `archived` (string, optional): Archived - Choose "true" to show archived projects, "false" to display only active projects, or "default" to show both archived and active projects.
+      - Options: `default`, `true`, `false`
+  </Accordion>
+
+  <Accordion title="ASANA_GET_PROJECT_BY_ID">
+    **Description:** Get a project by ID in Asana.
+
+    **Parameters:**
+    - `projectFilterId` (string, required): Project ID.
+  </Accordion>
+
+  <Accordion title="ASANA_CREATE_TASK">
+    **Description:** Create a task in Asana.
+
+    **Parameters:**
+    - `name` (string, required): Name (example: "Task Name").
+    - `workspace` (string, optional): Workspace - Use Connect Portal Workflow Settings to allow users to select which Workspace to create Tasks in. Defaults to the user's first Workspace if left blank..
+    - `project` (string, optional): Project - Use Connect Portal Workflow Settings to allow users to select which Project to create this Task in.
+    - `notes` (string, optional): Notes.
+    - `dueOnDate` (string, optional): Due On - The date on which this task is due. Cannot be used together with Due At. (example: "YYYY-MM-DD").
+    - `dueAtDate` (string, optional): Due At - The date and time (ISO timestamp) at which this task is due. Cannot be used together with Due On. (example: "2019-09-15T02:06:58.147Z").
+    - `assignee` (string, optional): Assignee - The ID of the Asana user this task will be assigned to. Use Connect Portal Workflow Settings to allow users to select an Assignee.
+    - `gid` (string, optional): External ID - An ID from your application to associate this task with. You can use this ID to sync updates to this task later.
+  </Accordion>
+
+  <Accordion title="ASANA_UPDATE_TASK">
+    **Description:** Update a task in Asana.
+
+    **Parameters:**
+    - `taskId` (string, required): Task ID - The ID of the Task that will be updated.
+    - `completeStatus` (string, optional): Completed Status.
+      - Options: `true`, `false`
+    - `name` (string, optional): Name (example: "Task Name").
+    - `notes` (string, optional): Notes.
+    - `dueOnDate` (string, optional): Due On - The date on which this task is due. Cannot be used together with Due At. (example: "YYYY-MM-DD").
+    - `dueAtDate` (string, optional): Due At - The date and time (ISO timestamp) at which this task is due. Cannot be used together with Due On. (example: "2019-09-15T02:06:58.147Z").
+    - `assignee` (string, optional): Assignee - The ID of the Asana user this task will be assigned to. Use Connect Portal Workflow Settings to allow users to select an Assignee.
+    - `gid` (string, optional): External ID - An ID from your application to associate this task with. You can use this ID to sync updates to this task later.
+  </Accordion>
+
+  <Accordion title="ASANA_GET_TASKS">
+    **Description:** Get a list of tasks in Asana.
+
+    **Parameters:**
+    - `workspace` (string, optional): Workspace - The ID of the Workspace to filter tasks on. Use Connect Portal Workflow Settings to allow users to select a Workspace.
+    - `project` (string, optional): Project - The ID of the Project to filter tasks on. Use Connect Portal Workflow Settings to allow users to select a Project.
+    - `assignee` (string, optional): Assignee - The ID of the assignee to filter tasks on. Use Connect Portal Workflow Settings to allow users to select an Assignee.
+    - `completedSince` (string, optional): Completed since - Only return tasks that are either incomplete or that have been completed since this time (ISO or Unix timestamp). (example: "2014-04-25T16:15:47-04:00").
+  </Accordion>
+
+  <Accordion title="ASANA_GET_TASKS_BY_ID">
+    **Description:** Get a list of tasks by ID in Asana.
+
+    **Parameters:**
+    - `taskId` (string, required): Task ID.
+  </Accordion>
+
+  <Accordion title="ASANA_GET_TASK_BY_EXTERNAL_ID">
+    **Description:** Get a task by external ID in Asana.
+
+    **Parameters:**
+    - `gid` (string, required): External ID - The ID that this task is associated or synced with, from your application.
+  </Accordion>
+
+  <Accordion title="ASANA_ADD_TASK_TO_SECTION">
+    **Description:** Add a task to a section in Asana.
+
+    **Parameters:**
+    - `sectionId` (string, required): Section ID - The ID of the section to add this task to.
+    - `taskId` (string, required): Task ID - The ID of the task. (example: "1204619611402340").
+    - `beforeTaskId` (string, optional): Before Task ID - The ID of a task in this section that this task will be inserted before. Cannot be used with After Task ID. (example: "1204619611402340").
+    - `afterTaskId` (string, optional): After Task ID - The ID of a task in this section that this task will be inserted after. Cannot be used with Before Task ID. (example: "1204619611402340").
+  </Accordion>
+
+  <Accordion title="ASANA_GET_TEAMS">
+    **Description:** Get a list of teams in Asana.
+
+    **Parameters:**
+    - `workspace` (string, required): Workspace - Returns the teams in this workspace visible to the authorized user.
+  </Accordion>
+
+  <Accordion title="ASANA_GET_WORKSPACES">
+    **Description:** Get a list of workspaces in Asana.
+
+    **Parameters:** None required.
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic Asana Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Asana tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Asana capabilities
+asana_agent = Agent(
+    role="Project Manager",
+    goal="Manage tasks and projects in Asana efficiently",
+    backstory="An AI assistant specialized in project management and task coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new project
+create_project_task = Task(
+    description="Create a new project called 'Q1 Marketing Campaign' in the Marketing workspace",
+    agent=asana_agent,
+    expected_output="Confirmation that the project was created successfully with project ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[asana_agent],
+    tasks=[create_project_task]
+)
+
+crew.kickoff()
+```
+
+### Filtering Specific Asana Tools
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Asana tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["asana_create_task", "asana_update_task", "asana_get_tasks"]
+)
+
+task_manager_agent = Agent(
+    role="Task Manager",
+    goal="Create and manage tasks efficiently",
+    backstory="An AI assistant that focuses on task creation and management.",
+    tools=enterprise_tools
+)
+
+# Task to create and assign a task
+task_management = Task(
+    description="Create a task called 'Review quarterly reports' and assign it to the appropriate team member",
+    agent=task_manager_agent,
+    expected_output="Task created and assigned successfully"
+)
+
+crew = Crew(
+    agents=[task_manager_agent],
+    tasks=[task_management]
+)
+
+crew.kickoff()
+```
+
+### Advanced Project Management
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+project_coordinator = Agent(
+    role="Project Coordinator",
+    goal="Coordinate project activities and track progress",
+    backstory="An experienced project coordinator who ensures projects run smoothly.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple Asana operations
+coordination_task = Task(
+    description="""
+    1. Get all active projects in the workspace
+    2. For each project, get the list of incomplete tasks
+    3. Create a summary report task in the 'Management Reports' project
+    4. Add comments to overdue tasks to request status updates
+    """,
+    agent=project_coordinator,
+    expected_output="Summary report created and status update requests sent for overdue tasks"
+)
+
+crew = Crew(
+    agents=[project_coordinator],
+    tasks=[coordination_task]
+)
+
+crew.kickoff()
+```
