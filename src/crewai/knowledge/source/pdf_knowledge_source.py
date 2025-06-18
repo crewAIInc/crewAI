@@ -16,8 +16,9 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
 
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess PDF file content."""
-        pdfplumber = self._import_pdfplumber()
-
+        if not PDFPLUMBER_AVAILABLE:
+            return {}
+        
         content = {}
 
         for path in self.safe_file_paths:
@@ -45,6 +46,8 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
         Add PDF file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
+        self._import_pdfplumber()
+        
         for _, text in self.content.items():
             new_chunks = self._chunk_text(text)
             self.chunks.extend(new_chunks)

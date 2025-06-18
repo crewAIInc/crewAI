@@ -72,6 +72,15 @@ class SafeOTLPSpanExporter:
         except Exception as e:
             logger.error(e)
             return SpanExportResult.FAILURE if SpanExportResult else None
+    
+    def shutdown(self):
+        """Shutdown the exporter."""
+        if OPENTELEMETRY_AVAILABLE and self._exporter and hasattr(self._exporter, 'shutdown'):
+            try:
+                return self._exporter.shutdown()
+            except Exception as e:
+                logger.error(f"Error during exporter shutdown: {e}")
+        return None
 
 
 class Telemetry:
@@ -107,6 +116,7 @@ class Telemetry:
         self._initialized: bool = True
 
         if self._is_telemetry_disabled() or not OPENTELEMETRY_AVAILABLE:
+            self.ready = False
             return
 
         try:
