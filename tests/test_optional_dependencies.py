@@ -44,10 +44,8 @@ class TestOptionalDependencies:
                 test_file.touch()
                 
                 try:
-                    pdf_source = PDFKnowledgeSource(file_paths=["test.pdf"])
-                    
                     with pytest.raises(ImportError) as exc_info:
-                        pdf_source._import_pdfplumber()
+                        PDFKnowledgeSource(file_paths=["test.pdf"])
                     
                     assert "pdfplumber is required" in str(exc_info.value)
                     assert "crewai[knowledge]" in str(exc_info.value)

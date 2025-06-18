@@ -14,6 +14,15 @@ from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledge
 class PDFKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries PDF file content using embeddings."""
 
+    def __init__(self, *args, **kwargs):
+        """Initialize PDFKnowledgeSource and check for pdfplumber availability."""
+        if not PDFPLUMBER_AVAILABLE:
+            raise ImportError(
+                "pdfplumber is required for PDF knowledge sources. "
+                "Please install it with: pip install 'crewai[knowledge]'"
+            )
+        super().__init__(*args, **kwargs)
+
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess PDF file content."""
         if not PDFPLUMBER_AVAILABLE:
