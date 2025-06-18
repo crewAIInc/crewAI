@@ -7,6 +7,7 @@ import socket
 from urllib.parse import parse_qs, urlparse
 import requests
 from rich.console import Console
+from crewai.cli.plus_api import PlusAPI
 
 from crewai.cli.tools.main import ToolCommand
 
@@ -56,10 +57,21 @@ class AuthenticationCommand:
     # Afterwards, we can remove this method and the old_login method and change new_login to login.
     def login(self) -> None:
         """Login or Sign Up to CrewAI Enterprise"""
-        if True:
-            self.old_login()
+
+        email = input("Enter your email: ")
+        response = PlusAPI("").get_provider(email)
+
+        if response.status_code == 200:
+            if response.json()["provider"] == "auth0":
+                self.old_login()
+            else:
+                self.new_login()
         else:
-            self.new_login()
+            console.print(
+                "Error: Failed to authenticate with crewai enterprise. Ensure that you are using the latest crewai version and please try again. If the problem persists, contact support@crewai.com.",
+                style="red",
+            )
+            raise SystemExit
 
     def new_login(self) -> None:
         """Login or Sign Up to CrewAI Enterprise"""
