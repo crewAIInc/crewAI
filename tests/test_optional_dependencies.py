@@ -95,6 +95,9 @@ class TestOptionalDependencies:
 
     def test_opentelemetry_graceful_degradation(self):
         """Test that telemetry degrades gracefully without opentelemetry."""
+        from crewai.telemetry.telemetry import Telemetry
+        Telemetry._reset_instance()
+        
         with patch.dict('sys.modules', {'opentelemetry': None}):
             with patch('crewai.telemetry.telemetry.OPENTELEMETRY_AVAILABLE', False):
                 from crewai.telemetry.telemetry import Telemetry

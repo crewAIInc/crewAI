@@ -107,6 +107,12 @@ class Telemetry:
                     cls._instance._initialized = False
         return cls._instance
 
+    @classmethod
+    def _reset_instance(cls):
+        """Reset the singleton instance for testing purposes."""
+        with cls._lock:
+            cls._instance = None
+
     def __init__(self) -> None:
         if hasattr(self, '_initialized') and self._initialized:
             return
