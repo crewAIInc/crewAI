@@ -5,16 +5,27 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from auth0.authentication.token_verifier import (
-    AsymmetricSignatureVerifier,
-    TokenVerifier,
-)
+try:
+    from auth0.authentication.token_verifier import (
+        AsymmetricSignatureVerifier,
+        TokenVerifier,
+    )
+    AUTH0_AVAILABLE = True
+except ImportError:
+    AUTH0_AVAILABLE = False
+    AsymmetricSignatureVerifier = None
+    TokenVerifier = None
 from cryptography.fernet import Fernet
 
 from .constants import AUTH0_CLIENT_ID, AUTH0_DOMAIN
 
 
 def validate_token(id_token: str) -> None:
+    if not AUTH0_AVAILABLE:
+        raise ImportError(
+            "Auth0 is required for authentication functionality. "
+            "Please install it with: pip install 'crewai[auth]'"
+        )
     """
     Verify the token and its precedence
 

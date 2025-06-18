@@ -6,11 +6,19 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional, Union
 
-import chromadb
-import chromadb.errors
-from chromadb.api import ClientAPI
-from chromadb.api.types import OneOrMany
-from chromadb.config import Settings
+try:
+    import chromadb
+    import chromadb.errors
+    from chromadb.api import ClientAPI
+    from chromadb.api.types import OneOrMany
+    from chromadb.config import Settings
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    chromadb = None
+    ClientAPI = None
+    OneOrMany = None
+    Settings = None
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -43,7 +51,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     search efficiency.
     """
 
-    collection: Optional[chromadb.Collection] = None
+    collection: Optional[Any] = None
     collection_name: Optional[str] = "knowledge"
     app: Optional[ClientAPI] = None
 
@@ -52,6 +60,12 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         embedder: Optional[Dict[str, Any]] = None,
         collection_name: Optional[str] = None,
     ):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for knowledge storage functionality. "
+                "Please install it with: pip install 'crewai[knowledge]'"
+            )
+            
         self.collection_name = collection_name
         self._set_embedder_config(embedder)
 
@@ -181,6 +195,12 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise
 
     def _create_default_embedding_function(self):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with: pip install 'crewai[knowledge]'"
+            )
+            
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )

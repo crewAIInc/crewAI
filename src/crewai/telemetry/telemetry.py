@@ -11,17 +11,31 @@ from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Callable, Optional
 import threading
 
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,
-)
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (
-    BatchSpanProcessor,
-    SpanExportResult,
-)
-from opentelemetry.trace import Span, Status, StatusCode
+try:
+    from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+        OTLPSpanExporter,
+    )
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import (
+        BatchSpanProcessor,
+        SpanExportResult,
+    )
+    from opentelemetry.trace import Span, Status, StatusCode
+    OPENTELEMETRY_AVAILABLE = True
+except ImportError:
+    OPENTELEMETRY_AVAILABLE = False
+    trace = None
+    OTLPSpanExporter = None
+    SERVICE_NAME = None
+    Resource = None
+    TracerProvider = None
+    BatchSpanProcessor = None
+    SpanExportResult = None
+    Span = None
+    Status = None
+    StatusCode = None
 
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
@@ -43,13 +57,21 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 
-class SafeOTLPSpanExporter(OTLPSpanExporter):
-    def export(self, spans) -> SpanExportResult:
+class SafeOTLPSpanExporter:
+    def __init__(self, *args, **kwargs):
+        if OPENTELEMETRY_AVAILABLE:
+            self._exporter = OTLPSpanExporter(*args, **kwargs)
+        else:
+            self._exporter = None
+    
+    def export(self, spans):
+        if not OPENTELEMETRY_AVAILABLE or not self._exporter:
+            return None
         try:
-            return super().export(spans)
+            return self._exporter.export(spans)
         except Exception as e:
             logger.error(e)
-            return SpanExportResult.FAILURE
+            return SpanExportResult.FAILURE if SpanExportResult else None
 
 
 class Telemetry:
@@ -84,7 +106,7 @@ class Telemetry:
         self.trace_set: bool = False
         self._initialized: bool = True
 
-        if self._is_telemetry_disabled():
+        if self._is_telemetry_disabled() or not OPENTELEMETRY_AVAILABLE:
             return
 
         try:
@@ -116,11 +138,12 @@ class Telemetry:
         return (
             os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
             or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
+            or not OPENTELEMETRY_AVAILABLE
         )
 
     def _should_execute_telemetry(self) -> bool:
         """Check if telemetry operations should be executed."""
-        return self.ready and not self._is_telemetry_disabled()
+        return self.ready and not self._is_telemetry_disabled() and OPENTELEMETRY_AVAILABLE
 
     def set_tracer(self):
         if self.ready and not self.trace_set:

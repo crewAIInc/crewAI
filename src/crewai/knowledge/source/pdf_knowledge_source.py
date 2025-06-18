@@ -1,6 +1,13 @@
 from pathlib import Path
 from typing import Dict, List
 
+try:
+    import pdfplumber
+    PDFPLUMBER_AVAILABLE = True
+except ImportError:
+    PDFPLUMBER_AVAILABLE = False
+    pdfplumber = None
+
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
@@ -26,14 +33,12 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
 
     def _import_pdfplumber(self):
         """Dynamically import pdfplumber."""
-        try:
-            import pdfplumber
-
-            return pdfplumber
-        except ImportError:
+        if not PDFPLUMBER_AVAILABLE:
             raise ImportError(
-                "pdfplumber is not installed. Please install it with: pip install pdfplumber"
+                "pdfplumber is required for PDF knowledge sources. "
+                "Please install it with: pip install 'crewai[knowledge]'"
             )
+        return pdfplumber
 
     def add(self) -> None:
         """

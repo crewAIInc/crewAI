@@ -1,12 +1,22 @@
 from typing import Any, Dict, List, Optional, Union
 
-import aisuite as ai
+try:
+    import aisuite as ai
+    AISUITE_AVAILABLE = True
+except ImportError:
+    AISUITE_AVAILABLE = False
+    ai = None
 
 from crewai.llms.base_llm import BaseLLM
 
 
 class AISuiteLLM(BaseLLM):
     def __init__(self, model: str, temperature: Optional[float] = None, **kwargs):
+        if not AISUITE_AVAILABLE:
+            raise ImportError(
+                "AISuite is required for AISuiteLLM. "
+                "Please install it with: pip install 'crewai[llm-integrations]'"
+            )
         super().__init__(model, temperature, **kwargs)
         self.client = ai.Client()
 

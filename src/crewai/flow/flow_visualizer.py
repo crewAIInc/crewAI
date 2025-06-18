@@ -3,7 +3,12 @@
 import os
 from pathlib import Path
 
-from pyvis.network import Network
+try:
+    from pyvis.network import Network
+    PYVIS_AVAILABLE = True
+except ImportError:
+    PYVIS_AVAILABLE = False
+    Network = None
 
 from crewai.flow.config import COLORS, NODE_STYLES
 from crewai.flow.html_template_handler import HTMLTemplateHandler
@@ -63,6 +68,12 @@ class FlowPlot:
         RuntimeError
             If network visualization generation fails.
         """
+        if not PYVIS_AVAILABLE:
+            raise ImportError(
+                "Pyvis is required for flow visualization. "
+                "Please install it with: pip install 'crewai[visualization]'"
+            )
+            
         if not filename or not isinstance(filename, str):
             raise ValueError("Filename must be a non-empty string")
             
@@ -222,5 +233,11 @@ def plot_flow(flow, filename="flow_plot"):
     IOError
         If file operations fail.
     """
+    if not PYVIS_AVAILABLE:
+        raise ImportError(
+            "Pyvis is required for flow visualization. "
+            "Please install it with: pip install 'crewai[visualization]'"
+        )
+        
     visualizer = FlowPlot(flow)
     visualizer.plot(filename)
