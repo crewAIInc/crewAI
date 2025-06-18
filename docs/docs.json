@@ -267,6 +267,27 @@
             ]
           },
           {
+            "group": "Integration Docs",
+            "pages": [
+              "enterprise/integrations/asana",
+              "enterprise/integrations/box",
+              "enterprise/integrations/clickup",
+              "enterprise/integrations/github",
+              "enterprise/integrations/gmail",
+              "enterprise/integrations/google_calendar",
+              "enterprise/integrations/google_sheets",
+              "enterprise/integrations/hubspot",
+              "enterprise/integrations/jira",
+              "enterprise/integrations/linear",
+              "enterprise/integrations/notion",
+              "enterprise/integrations/salesforce",
+              "enterprise/integrations/shopify",
+              "enterprise/integrations/slack",
+              "enterprise/integrations/stripe",
+              "enterprise/integrations/zendesk"
+            ]
+          },
+          {
             "group": "How-To Guides",
             "pages": [
               "enterprise/guides/build-crew",
