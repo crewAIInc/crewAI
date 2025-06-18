@@ -1,8 +1,15 @@
 import os
 from typing import Any, Dict, Optional, cast
 
-from chromadb import Documents, EmbeddingFunction, Embeddings
-from chromadb.api.types import validate_embedding_function
+try:
+    from chromadb import Documents, EmbeddingFunction, Embeddings
+    from chromadb.api.types import validate_embedding_function
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    Documents = None
+    EmbeddingFunction = None
+    Embeddings = None
 
 
 class EmbeddingConfigurator:
@@ -25,6 +32,11 @@ class EmbeddingConfigurator:
         self,
         embedder_config: Optional[Dict[str, Any]] = None,
     ) -> EmbeddingFunction:
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for embedding configuration. "
+                "Please install it with: pip install 'crewai[memory]' or 'crewai[knowledge]'"
+            )
         """Configures and returns an embedding function based on the provided config."""
         if embedder_config is None:
             return self._create_default_embedding_function()
@@ -47,6 +59,12 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _create_default_embedding_function():
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with: pip install 'crewai[memory]' or 'crewai[knowledge]'"
+            )
+            
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )
@@ -57,6 +75,12 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_openai(config, model_name):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for OpenAI embedding configuration. "
+                "Please install it with: pip install 'crewai[memory]' or 'crewai[knowledge]'"
+            )
+            
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )
@@ -75,6 +99,12 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_azure(config, model_name):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for Azure embedding configuration. "
+                "Please install it with: pip install 'crewai[memory]' or 'crewai[knowledge]'"
+            )
+            
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )
@@ -93,6 +123,12 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_ollama(config, model_name):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for Ollama embedding configuration. "
+                "Please install it with: pip install 'crewai[memory]' or 'crewai[knowledge]'"
+            )
+            
         from chromadb.utils.embedding_functions.ollama_embedding_function import (
             OllamaEmbeddingFunction,
         )
@@ -104,6 +140,12 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_vertexai(config, model_name):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for VertexAI embedding configuration. "
+                "Please install it with: pip install 'crewai[memory]' or 'crewai[knowledge]'"
+            )
+            
         from chromadb.utils.embedding_functions.google_embedding_function import (
             GoogleVertexEmbeddingFunction,
         )
@@ -117,6 +159,12 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_google(config, model_name):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for Google embedding configuration. "
+                "Please install it with: pip install 'crewai[memory]' or 'crewai[knowledge]'"
+            )
+            
         from chromadb.utils.embedding_functions.google_embedding_function import (
             GoogleGenerativeAiEmbeddingFunction,
         )
@@ -129,6 +177,12 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _configure_cohere(config, model_name):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for Cohere embedding configuration. "
+                "Please install it with: pip install 'crewai[memory]' or 'crewai[knowledge]'"
+            )
+            
         from chromadb.utils.embedding_functions.cohere_embedding_function import (
             CohereEmbeddingFunction,
         )
@@ -234,3 +288,11 @@ class EmbeddingConfigurator:
             raise ValueError(
                 "Custom embedder must be an instance of `EmbeddingFunction` or a callable that creates one"
             )
+
+    def validate_embedder_config(self, config: EmbeddingFunction) -> EmbeddingFunction:
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for embedding validation. "
+                "Please install it with: pip install 'crewai[memory]' or 'crewai[knowledge]'"
+            )
+        return cast(EmbeddingFunction, validate_embedding_function(config))

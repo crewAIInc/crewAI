@@ -6,7 +6,12 @@ import shutil
 import uuid
 from typing import Any, Dict, List, Optional
 
-from chromadb.api import ClientAPI
+try:
+    from chromadb.api import ClientAPI
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    ClientAPI = None
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
@@ -37,11 +42,17 @@ class RAGStorage(BaseRAGStorage):
     search efficiency.
     """
 
-    app: ClientAPI | None = None
+    app: Optional[Any] = None
 
     def __init__(
         self, type, allow_reset=True, embedder_config=None, crew=None, path=None
     ):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for RAG storage functionality. "
+                "Please install it with: pip install 'crewai[memory]'"
+            )
+        
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
         agents = [self._sanitize_role(agent.role) for agent in agents]
@@ -60,6 +71,12 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for RAG storage functionality. "
+                "Please install it with: pip install 'crewai[memory]'"
+            )
+            
         import chromadb
         from chromadb.config import Settings
 
@@ -165,6 +182,12 @@ class RAGStorage(BaseRAGStorage):
                 )
 
     def _create_default_embedding_function(self):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError(
+                "ChromaDB is required for embedding functionality. "
+                "Please install it with: pip install 'crewai[memory]'"
+            )
+            
         from chromadb.utils.embedding_functions.openai_embedding_function import (
             OpenAIEmbeddingFunction,
         )

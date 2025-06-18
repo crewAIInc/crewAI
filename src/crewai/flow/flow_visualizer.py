@@ -1,14 +1,18 @@
 # flow_visualizer.py
 
 import os
-from pathlib import Path
 
-from pyvis.network import Network
+try:
+    from pyvis.network import Network
+    PYVIS_AVAILABLE = True
+except ImportError:
+    PYVIS_AVAILABLE = False
+    Network = None
 
 from crewai.flow.config import COLORS, NODE_STYLES
 from crewai.flow.html_template_handler import HTMLTemplateHandler
 from crewai.flow.legend_generator import generate_legend_items_html, get_legend_items
-from crewai.flow.path_utils import safe_path_join, validate_path_exists
+from crewai.flow.path_utils import safe_path_join
 from crewai.flow.utils import calculate_node_levels
 from crewai.flow.visualization_utils import (
     add_edges,
@@ -63,6 +67,12 @@ class FlowPlot:
         RuntimeError
             If network visualization generation fails.
         """
+        if not PYVIS_AVAILABLE:
+            raise ImportError(
+                "Pyvis is required for flow visualization. "
+                "Please install it with: pip install 'crewai[visualization]'"
+            )
+            
         if not filename or not isinstance(filename, str):
             raise ValueError("Filename must be a non-empty string")
             
@@ -222,5 +232,11 @@ def plot_flow(flow, filename="flow_plot"):
     IOError
         If file operations fail.
     """
+    if not PYVIS_AVAILABLE:
+        raise ImportError(
+            "Pyvis is required for flow visualization. "
+            "Please install it with: pip install 'crewai[visualization]'"
+        )
+        
     visualizer = FlowPlot(flow)
     visualizer.plot(filename)

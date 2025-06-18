@@ -1,16 +1,33 @@
 from pathlib import Path
 from typing import Dict, List
 
+try:
+    import pdfplumber
+    PDFPLUMBER_AVAILABLE = True
+except ImportError:
+    PDFPLUMBER_AVAILABLE = False
+    pdfplumber = None
+
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
 class PDFKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries PDF file content using embeddings."""
 
+    def __init__(self, *args, **kwargs):
+        """Initialize PDFKnowledgeSource and check for pdfplumber availability."""
+        if not PDFPLUMBER_AVAILABLE:
+            raise ImportError(
+                "pdfplumber is required for PDF knowledge sources. "
+                "Please install it with: pip install 'crewai[knowledge]'"
+            )
+        super().__init__(*args, **kwargs)
+
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess PDF file content."""
-        pdfplumber = self._import_pdfplumber()
-
+        if not PDFPLUMBER_AVAILABLE:
+            return {}
+        
         content = {}
 
         for path in self.safe_file_paths:
@@ -26,20 +43,20 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
 
     def _import_pdfplumber(self):
         """Dynamically import pdfplumber."""
-        try:
-            import pdfplumber
-
-            return pdfplumber
-        except ImportError:
+        if not PDFPLUMBER_AVAILABLE:
             raise ImportError(
-                "pdfplumber is not installed. Please install it with: pip install pdfplumber"
+                "pdfplumber is required for PDF knowledge sources. "
+                "Please install it with: pip install 'crewai[knowledge]'"
             )
+        return pdfplumber
 
     def add(self) -> None:
         """
         Add PDF file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
+        self._import_pdfplumber()
+        
         for _, text in self.content.items():
             new_chunks = self._chunk_text(text)
             self.chunks.extend(new_chunks)
