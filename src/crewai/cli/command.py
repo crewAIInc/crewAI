@@ -23,10 +23,10 @@ class PlusAPIMixin:
         except Exception:
             self._deploy_signup_error_span = telemetry.deploy_signup_error_span()
             console.print(
-                "Please sign up/login to CrewAI+ before using the CLI.",
+                "Please sign up/login to CrewAI Enterprise before using the CLI.",
                 style="bold red",
             )
-            console.print("Run 'crewai signup' to sign up/login.", style="bold green")
+            console.print("Run 'crewai login' to sign up/login.", style="bold green")
             raise SystemExit
 
     def _validate_response(self, response: requests.Response) -> None:

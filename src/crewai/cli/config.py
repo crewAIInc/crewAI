@@ -37,6 +37,10 @@ class Settings(BaseModel):
         merged_data = {**file_data, **data}
         super().__init__(config_path=config_path, **merged_data)
 
+    def clear(self) -> None:
+        """Clear all settings"""
+        self.config_path.unlink(missing_ok=True)
+
     def dump(self) -> None:
         """Save current settings to settings.json"""
         if self.config_path.is_file():

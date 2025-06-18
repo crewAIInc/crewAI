@@ -1,6 +1,6 @@
 from os import getenv
 from typing import List, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote
 
 import requests
 
@@ -10,11 +10,13 @@ from crewai.cli.version import get_crewai_version
 
 class PlusAPI:
     """
-    This class exposes methods for working with the CrewAI+ API.
+    This class exposes methods for working with the CrewAI Enterprise API.
     """
 
+    USER_RESOURCE = "/crewai_plus/api/v1/me"
+    ORGANIZATIONS_RESOURCE = f"{USER_RESOURCE}/organizations"
+    PROVIDER_RESOURCE = f"{USER_RESOURCE}/provider"
     TOOLS_RESOURCE = "/crewai_plus/api/v1/tools"
-    ORGANIZATIONS_RESOURCE = "/crewai_plus/api/v1/me/organizations"
     CREWS_RESOURCE = "/crewai_plus/api/v1/crews"
     AGENTS_RESOURCE = "/crewai_plus/api/v1/agents"
 
@@ -108,7 +110,12 @@ class PlusAPI:
 
     def create_crew(self, payload) -> requests.Response:
         return self._make_request("POST", self.CREWS_RESOURCE, json=payload)
-    
+
     def get_organizations(self) -> requests.Response:
         return self._make_request("GET", self.ORGANIZATIONS_RESOURCE)
-    
+
+    def get_provider(self, email: str) -> requests.Response:
+        email_encoded = quote(email)
+        return self._make_request(
+            "GET", f"{self.PROVIDER_RESOURCE}?email={email_encoded}"
+        )
