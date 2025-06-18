@@ -158,7 +158,6 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
-
     model_config = {
         "arbitrary_types_allowed": True
     }
