@@ -2,7 +2,6 @@
 
 import pytest
 from unittest.mock import patch, Mock
-import sys
 
 
 class TestOptionalDependencies:
@@ -35,15 +34,28 @@ class TestOptionalDependencies:
     def test_pdfplumber_import_error(self):
         """Test that PDF knowledge source raises helpful error without pdfplumber."""
         with patch.dict('sys.modules', {'pdfplumber': None}):
-            from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
-            
-            pdf_source = PDFKnowledgeSource(file_paths=["test.pdf"])
-            
-            with pytest.raises(ImportError) as exc_info:
-                pdf_source._import_pdfplumber()
-            
-            assert "pdfplumber is required" in str(exc_info.value)
-            assert "crewai[knowledge]" in str(exc_info.value)
+            with patch('crewai.knowledge.source.pdf_knowledge_source.PDFPLUMBER_AVAILABLE', False):
+                from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
+                
+                from pathlib import Path
+                knowledge_dir = Path("knowledge")
+                knowledge_dir.mkdir(exist_ok=True)
+                test_file = knowledge_dir / "test.pdf"
+                test_file.touch()
+                
+                try:
+                    pdf_source = PDFKnowledgeSource(file_paths=["test.pdf"])
+                    
+                    with pytest.raises(ImportError) as exc_info:
+                        pdf_source._import_pdfplumber()
+                    
+                    assert "pdfplumber is required" in str(exc_info.value)
+                    assert "crewai[knowledge]" in str(exc_info.value)
+                finally:
+                    if test_file.exists():
+                        test_file.unlink()
+                    if knowledge_dir.exists() and not any(knowledge_dir.iterdir()):
+                        knowledge_dir.rmdir()
 
     def test_pyvis_import_error(self):
         """Test that flow visualization raises helpful error without pyvis."""
