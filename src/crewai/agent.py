@@ -1,6 +1,18 @@
+import os
 import shutil
 import subprocess
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -157,7 +169,7 @@ class Agent(BaseAgent):
     )
     guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
         default=None,
-        description="Function or string description of a guardrail to validate agent output"
+        description="Function or string description of a guardrail to validate agent output",
     )
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
@@ -665,10 +677,26 @@ class Agent(BaseAgent):
                     print(f"Warning: Failed to inject date: {str(e)}")
 
     def _validate_docker_installation(self) -> None:
-        """Check if Docker is installed and running."""
+        """Check if Docker is installed and running, with container environment support."""
+        if os.getenv("CREWAI_SKIP_DOCKER_VALIDATION", "false").lower() == "true":
+            return
+
+        if self.code_execution_mode == "unsafe":
+            return
+
+        if self._is_running_in_container():
+            if hasattr(self, "_logger"):
+                self._logger.log(
+                    "warning",
+                    f"Running inside container - skipping Docker validation for agent: {self.role}. "
+                    f"Set CREWAI_SKIP_DOCKER_VALIDATION=true to suppress this warning.",
+                )
+            return
+
         if not shutil.which("docker"):
             raise RuntimeError(
-                f"Docker is not installed. Please install Docker to use code execution with agent: {self.role}"
+                f"Docker is not installed. Please install Docker to use code execution with agent: {self.role}. "
+                f"Alternatively, set code_execution_mode='unsafe' or CREWAI_SKIP_DOCKER_VALIDATION=true."
             )
 
         try:
@@ -680,8 +708,31 @@ class Agent(BaseAgent):
             )
         except subprocess.CalledProcessError:
             raise RuntimeError(
-                f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
+                f"Docker is not running. Please start Docker to use code execution with agent: {self.role}. "
+                f"Alternatively, set code_execution_mode='unsafe' or CREWAI_SKIP_DOCKER_VALIDATION=true."
             )
+
+    def _is_running_in_container(self) -> bool:
+        """Detect if the current process is running inside a container."""
+        if os.path.exists("/.dockerenv"):
+            return True
+
+        try:
+            with open("/proc/1/cgroup", "r") as f:
+                content = f.read()
+                if (
+                    "docker" in content
+                    or "container" in content
+                    or "kubepods" in content
+                ):
+                    return True
+        except (FileNotFoundError, PermissionError):
+            pass
+
+        if os.getpid() == 1:
+            return True
+
+        return False
 
     def __repr__(self):
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
