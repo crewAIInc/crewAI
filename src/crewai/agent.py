@@ -565,7 +565,7 @@ class Agent(BaseAgent):
 
     def get_delegation_tools(self, agents: List[BaseAgent]):
         agent_tools = AgentTools(agents=agents)
-        tools = agent_tools.tools()
+        tools = agent_tools.tools(delegating_agent=self)
         return tools
 
     def get_multimodal_tools(self) -> Sequence[BaseTool]:
