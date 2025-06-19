@@ -39,7 +39,7 @@ from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
-from crewai.utilities.constants import NOT_SPECIFIED
+from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.guardrail import process_guardrail, GuardrailResult
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.events import (
@@ -95,9 +95,9 @@ class Task(BaseModel):
     agent: Optional[BaseAgent] = Field(
         description="Agent responsible for execution the task.", default=None
     )
-    context: Optional[List["Task"]] = Field(
+    context: Union[List["Task"], None, _NotSpecified] = Field(
         description="Other tasks that will have their output used as context for this task.",
-        default=NOT_SPECIFIED,
+        default=NOT_SPECIFIED
     )
     async_execution: Optional[bool] = Field(
         description="Whether the task should be executed asynchronously or not.",
@@ -158,6 +158,9 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
+    model_config = {
+        "arbitrary_types_allowed": True
+    }
 
     @field_validator("guardrail")
     @classmethod
