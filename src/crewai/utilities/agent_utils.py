@@ -187,7 +187,10 @@ def get_llm_response(
                 continue
     
     printer.print(content="All LLMs failed, raising last exception", color="red")
-    raise last_exception
+    if last_exception is not None:
+        raise last_exception
+    else:
+        raise RuntimeError("All LLMs failed but no exception was captured")
 
 
 def process_llm_response(
