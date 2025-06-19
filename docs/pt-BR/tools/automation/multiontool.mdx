@@ -1,0 +1,126 @@
+---
+title: MultiOn Tool
+description: O `MultiOnTool` permite que agentes CrewAI naveguem e interajam com a web por meio de instruções em linguagem natural.
+icon: globe
+---
+
+## Visão Geral
+
+O `MultiOnTool` foi projetado para envolver as capacidades de navegação web do [MultiOn](https://docs.multion.ai/welcome), permitindo que agentes CrewAI controlem navegadores web usando instruções em linguagem natural. Esta ferramenta facilita a navegação fluida, tornando-se um recurso essencial para projetos que requerem interação dinâmica com dados web e automação de tarefas baseadas na web.
+
+## Instalação
+
+Para utilizar esta ferramenta, é necessário instalar o pacote MultiOn:
+
+```shell
+uv add multion
+```
+
+Você também precisará instalar a extensão de navegador do MultiOn e habilitar o uso da API.
+
+## Passos para Começar
+
+Para usar o `MultiOnTool` de forma eficaz, siga estes passos:
+
+1. **Instale o CrewAI**: Certifique-se de que o pacote `crewai[tools]` esteja instalado em seu ambiente Python.
+2. **Instale e utilize o MultiOn**: Siga a [documentação do MultiOn](https://docs.multion.ai/learn/browser-extension) para instalar a extensão de navegador do MultiOn.
+3. **Habilite o Uso da API**: Clique na extensão do MultiOn na pasta de extensões do seu navegador (não no ícone flutuante do MultiOn na página web) para abrir as configurações da extensão. Clique na opção para habilitar a API (API Enabled).
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma tarefa de navegação web:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import MultiOnTool
+
+# Initialize the tool
+multion_tool = MultiOnTool(api_key="YOUR_MULTION_API_KEY", local=False)
+
+# Define an agent that uses the tool
+browser_agent = Agent(
+    role="Browser Agent",
+    goal="Control web browsers using natural language",
+    backstory="An expert browsing agent.",
+    tools=[multion_tool],
+    verbose=True,
+)
+
+# Example task to search and summarize news
+browse_task = Task(
+    description="Summarize the top 3 trending AI News headlines",
+    expected_output="A summary of the top 3 trending AI News headlines",
+    agent=browser_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[browser_agent], tasks=[browse_task])
+result = crew.kickoff()
+```
+
+## Parâmetros
+
+O `MultiOnTool` aceita os seguintes parâmetros durante a inicialização:
+
+- **api_key**: Opcional. Especifica a chave da API do MultiOn. Se não for fornecida, a ferramenta procurará pela variável de ambiente `MULTION_API_KEY`.
+- **local**: Opcional. Defina como `True` para executar o agente localmente em seu navegador. Certifique-se de que a extensão do MultiOn está instalada e a opção API Enabled está marcada. O padrão é `False`.
+- **max_steps**: Opcional. Define o número máximo de etapas que o agente MultiOn pode executar para um comando. O padrão é `3`.
+
+## Uso
+
+Ao utilizar o `MultiOnTool`, o agente fornecerá instruções em linguagem natural que a ferramenta traduzirá em ações de navegação web. A ferramenta retorna os resultados da sessão de navegação juntamente com um status.
+
+```python Code
+# Example of using the tool with an agent
+browser_agent = Agent(
+    role="Web Browser Agent",
+    goal="Search for and summarize information from the web",
+    backstory="An expert at finding and extracting information from websites.",
+    tools=[multion_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+search_task = Task(
+    description="Search for the latest AI news on TechCrunch and summarize the top 3 headlines",
+    expected_output="A summary of the top 3 AI news headlines from TechCrunch",
+    agent=browser_agent,
+)
+
+# Run the task
+crew = Crew(agents=[browser_agent], tasks=[search_task])
+result = crew.kickoff()
+```
+
+Se o status retornado for `CONTINUE`, o agente deve ser instruído a reenviar a mesma instrução para continuar a execução.
+
+## Detalhes de Implementação
+
+O `MultiOnTool` é implementado como uma subclasse de `BaseTool` do CrewAI. Ele envolve o cliente MultiOn para fornecer capacidades de navegação web:
+
+```python Code
+class MultiOnTool(BaseTool):
+    """Tool to wrap MultiOn Browse Capabilities."""
+
+    name: str = "Multion Browse Tool"
+    description: str = """Multion gives the ability for LLMs to control web browsers using natural language instructions.
+            If the status is 'CONTINUE', reissue the same instruction to continue execution
+        """
+    
+    # Implementation details...
+    
+    def _run(self, cmd: str, *args: Any, **kwargs: Any) -> str:
+        """
+        Run the Multion client with the given command.
+        
+        Args:
+            cmd (str): The detailed and specific natural language instruction for web browsing
+            *args (Any): Additional arguments to pass to the Multion client
+            **kwargs (Any): Additional keyword arguments to pass to the Multion client
+        """
+        # Implementation details...
+```
+
+## Conclusão
+
+O `MultiOnTool` oferece uma maneira poderosa de integrar capacidades de navegação web em agentes CrewAI. Ao permitir que agentes interajam com sites por meio de instruções em linguagem natural, amplia significativamente as possibilidades para tarefas baseadas na web, desde coleta de dados e pesquisa até interações automatizadas com serviços online.

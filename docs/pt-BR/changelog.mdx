@@ -1,0 +1,473 @@
+---
+title: Registro de Alterações
+description: Veja as atualizações e mudanças mais recentes do CrewAI
+icon: timeline
+---
+
+<Update label="2024-05-22" description="v0.121.0" tags={["Latest"]}>
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01210.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.121.0">Ver no GitHub</a>
+  </div>
+
+  **Melhorias & Correções no Núcleo**
+  - Corrigido erro de codificação ao criar ferramentas
+  - Corrigido teste do llama com falha
+  - Configuração de logs atualizada para mais consistência
+  - Inicialização e tratamento de eventos de telemetria aprimorados
+
+  **Novas Funcionalidades & Aprimoramentos**
+  - Adicionado **atributo markdown** à classe Task
+  - Adicionado **atributo reasoning** à classe Agent
+  - Adicionada flag **inject_date** ao Agent para injeção automática de data
+  - Implementado **HallucinationGuardrail** (sem-operação, com cobertura de testes)
+
+  **Documentação & Guias**
+  - Documentação adicionada para **StagehandTool** e melhoria na estrutura MDX
+  - Inclusa documentação para integração **MCP** e atualização nos docs corporativos
+  - Eventos de conhecimento documentados e documentação de reasoning atualizada
+  - Adicionada explicação do parâmetro stop
+  - Corrigidas referências de import nos exemplos de documentação (before_kickoff, after_kickoff)
+  - Atualizações gerais e reestruturação nos docs para maior clareza
+</Update>
+
+<Update label="2024-05-15" description="v0.120.1">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01201.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.120.1">Ver no GitHub</a>
+  </div>
+
+  **Melhorias & Correções no Núcleo**
+  - Corrigida **interpolação com hífens**
+</Update>
+
+<Update label="2024-05-14" description="v0.120.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01200.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.120.0">Ver no GitHub</a>
+  </div>
+
+  **Melhorias & Correções no Núcleo**
+  - Conjunto completo de regras do Ruff habilitado por padrão para linting mais rigoroso
+  - Corrigida condição de corrida no FilteredStream usando context managers
+  - Corrigido problema de reset de conhecimento do agente
+  - Lógica de busca de agente refatorada para módulo utilitário
+
+  **Novas Funcionalidades & Aprimoramentos**
+  - Suporte adicionado para **carregar um Agent diretamente de um repositório**
+  - Permitida configuração de contexto vazio em Task
+  - Feedback do repositório de Agent aprimorado e correção no comportamento de auto-import de Tool
+  - Inicialização direta de conhecimento introduzida (bypassando knowledge_sources)
+
+  **Documentação & Guias**
+  - security.md atualizado para refletir práticas atuais de segurança
+  - Seção de configuração do Google revisada para mais clareza
+  - Adicionado link para AI Studio ao inserir chave Gemini
+  - Guia de observabilidade do Arize Phoenix atualizado
+  - Documentação de fluxo renovada
+</Update>
+
+<Update label="2024-05-08" description="v0.119.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01190.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.119.0">Ver no GitHub</a>
+  </div>
+
+  **Melhorias & Correções no Núcleo**
+  - Confiabilidade de testes aprimorada melhorando o tratamento do pytest para testes instáveis
+  - Corrigido crash no reset de memória por incompatibilidade de dimensões de embeddings
+  - Identificação do fluxo pai habilitada para Crew e LiteAgent
+  - Crashes de telemetria prevenidos quando indisponíveis
+  - Atualização da versão do **LiteLLM** para melhor compatibilidade
+  - Corrigidos testes do conversor de llama removendo skip_external_api
+
+  **Novas Funcionalidades & Aprimoramentos**
+  - Introduzida **reescrita de prompt de recuperação de conhecimento** no Agent para melhor rastreamento e debug
+  - Guias de configuração do LLM e início rápido tornados independentes do modelo
+
+  **Documentação & Guias**
+  - Adicionada documentação de configuração avançada para o RAG tool
+  - Guia de resolução de problemas no Windows atualizado
+  - Exemplos na documentação refinados para maior clareza
+  - Correção de erros ortográficos em docs e arquivos de configuração
+</Update>
+
+<Update label="2024-04-28" description="v0.118.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01180.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.118.0">Ver no GitHub</a>
+  </div>
+
+  **Melhorias & Correções no Núcleo**
+  - Corrigidos problemas com prompt ou templates de sistema ausentes
+  - Removida configuração global de logs para evitar sobreposição não intencional
+  - Renomeado **TaskGuardrail para LLMGuardrail** para maior clareza
+  - Versão do litellm rebaixada para 1.167.1 visando compatibilidade
+  - Adicionados arquivos init.py ausentes para garantir inicialização correta dos módulos
+
+  **Novas Funcionalidades & Aprimoramentos**
+  - Suporte adicionado para **criação de Guardrails sem código** facilitando o controle de comportamento da IA
+
+  **Documentação & Guias**
+  - CrewStructuredTool removido da documentação pública para refletir uso interno
+  - Documentação corporativa e embed do YouTube atualizados para melhor onboarding
+</Update>
+
+<Update label="2024-04-20" description="v0.117.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01170.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.117.0">Ver no GitHub</a>
+  </div>
+
+  **Novas Funcionalidades & Aprimoramentos**
+  - Adicionado suporte ao parâmetro `result_as_answer` no decorator `@tool`.
+  - Suporte a novos modelos de linguagem: GPT-4.1, Gemini-2.0 e Gemini-2.5 Pro.
+  - Capacidades de gerenciamento de conhecimento aprimoradas.
+  - Adicionado provedor Huggingface na CLI.
+  - Compatibilidade e suporte CI melhorados para Python 3.10+.
+
+  **Melhorias & Correções no Núcleo**
+  - Corrigidos problemas com parâmetros de template incorretos e entradas ausentes.
+  - Fluxo assíncrono aprimorado com verificações de condição coroutine.
+  - Gerenciamento de memória aprimorado com configuração isolada e cópia correta dos objetos.
+  - Inicialização de lite agents corrigida com referências corretas.
+  - Corrigidos problemas de type hint em Python e remoção de imports redundantes.
+  - Atualização do posicionamento de eventos para rastreamento do uso de ferramentas.
+  - Exceções explícitas lançadas quando fluxos falham.
+  - Remoção de código e comentários redundantes em diversos módulos.
+  - Atualização da ação de token do GitHub App para v2.
+
+  **Documentação & Guias**
+  - Estrutura documental aprimorada, incluindo instruções para implantação corporativa.
+  - Criação automática de pastas de saída para geração de documentação.
+  - Link quebrado reparado na documentação do WeaviateVectorSearchTool.
+  - Correções na documentação do guardrail e nos caminhos de import dos search tools para JSON.
+  - Atualização na documentação do CodeInterpreterTool.
+  - Aprimoramento de SEO, navegação contextual e tratamento de erros nas páginas de documentação.
+</Update>
+
+<Update label="2024-04-25" description="v0.117.1">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01171.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.117.1">Ver no GitHub</a>
+  </div>
+
+  **Melhorias & Correções no Núcleo**
+  - Versão do **crewai-tools** atualizada para a mais recente
+  - Versão do **liteLLM** atualizada para a mais recente
+  - Correção no **Mem0 OSS**
+</Update>
+
+<Update label="2024-04-07" description="v0.114.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01140.png" />
+  </Frame>
+
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.114.0">Ver no GitHub</a>
+  </div>
+
+  **Novas Funcionalidades & Aprimoramentos**
+  - Agents como unidade atômica. (`Agent(...).kickoff()`)
+  - Suporte para [implementações Custom LLM](https://docs.crewai.com/guides/advanced/custom-llm).
+  - Memória externa integrada e [Opik observability](https://docs.crewai.com/how-to/opik-observability).
+  - Extração de YAML aprimorada.
+  - Validação multimodal de agentes.
+  - Impressões digitais seguras adicionadas para agents e crews.
+
+  **Melhorias & Correções no Núcleo**
+  - Serialização, cópia de agent e compatibilidade Python aprimoradas.
+  - Suporte a curingas adicionado a `emit()`
+  - Suporte a chamadas adicionais do roteador e ajustes de janela de contexto.
+  - Correções em typing, validação e imports.
+  - Melhoria na performance de métodos.
+  - Manipulação de tasks do agent, emissão de eventos e gerenciamento de memória aprimorados.
+  - Correções na CLI, tarefas condicionais, comportamento de clonagem e saídas de ferramentas.
+
+  **Documentação & Guias**
+  - Estrutura, tema e organização da documentação aprimorados.
+  - Guias para Local NVIDIA NIM com WSL2, W&B Weave e Arize Phoenix adicionados.
+  - Exemplos de configuração de ferramentas, prompts e docs de observabilidade atualizados.
+  - Guia para usar agentes singulares nos Flows.
+</Update>
+
+<Update label="2024-03-17" description="v0.108.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01080.png" />
+  </Frame>
+
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.108.0">Ver no GitHub</a>
+  </div>
+
+  **Novas Funcionalidades & Aprimoramentos**
+  - Conversão de tabs para espaços no template `crew.py`
+  - Streaming de respostas LLM e sistema de eventos aprimorados
+  - Inclusão de `model_name`
+  - Event Listener aprimorado com visualização rica e logs melhorados
+  - Impressões digitais adicionadas
+
+  **Correções de Bugs**
+  - Correções de problemas com Mistral
+  - Correção de bug na documentação
+  - Correção de erro de type check na propriedade fingerprint
+
+  **Atualizações em Documentação**
+  - Documentação de ferramentas aprimorada
+  - Guia de instalação atualizado para o pacote `uv` tool
+  - Instruções adicionadas para upgrade do crewAI com o `uv` tool
+  - Documentação para `ApifyActorsTool` incluída
+</Update>
+
+<Update label="2024-03-10" description="v0.105.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01050.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.105.0">Ver no GitHub</a>
+  </div>
+
+  **Melhorias & Correções no Núcleo**
+  - Correção de variáveis de template ausentes e configuração de memória de usuário
+  - Suporte a fluxo assíncrono melhorado e resolução para formatação de respostas do agente
+  - Função de reset de memória aprimorada e correção nos comandos de memória da CLI
+  - Correções em tipos, propriedades de chamadas de ferramenta e desacoplamento de telemetria
+
+  **Novas Funcionalidades & Aprimoramentos**
+  - Exportação de estado do Flow e utilitários de estado melhorados
+  - Configuração de conhecimento do agente aprimorada com embedder opcional para crew
+  - Emissor de eventos adicionado para melhor observabilidade e rastreamento de chamadas LLM
+  - Suporte para Python 3.10 e ChatOllama via langchain_ollama
+  - Suporte ao tamanho da janela de contexto para o modelo o3-mini
+  - Adicionada capacidade de múltiplas chamadas de roteador
+
+  **Documentação & Guias**
+  - Layout e estrutura hierárquica da documentação aprimorados
+  - Guia para QdrantVectorSearchTool incluído e uso de event listener esclarecido
+  - Correções de erros nos prompts e atualização da lista de modelos do Amazon Bedrock
+</Update>
+
+<Update label="2024-02-12" description="v0.102.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01020.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.102.0">Ver no GitHub</a>
+  </div>
+
+  **Melhorias & Correções no Núcleo**
+  - Suporte LLM expandido: melhorar saída estruturada do LLM, manuseio de parâmetros e formatação para modelos Anthropic
+  - Estabilidade de Crew & Agent: corrigido clonagem de agents/crews com knowledge sources, múltiplas saídas de task em tarefas condicionais e callbacks de tarefa de Crew ignorados
+  - Correções de Memória & Armazenamento: melhora no gerenciamento de memória de curto prazo com Bedrock, inicialização correta do embedder e função reset memories adicionada na classe crew
+  - Confiabilidade em Treinamento & Execução: corrigidos treinamento quebrado e questões de interpolação com tipos de entrada dict e list
+
+  **Novas Funcionalidades & Aprimoramentos**
+  - Gerenciamento Avançado de Conhecimento: convencionamento de nomes melhorado e configuração de embedding aprimorada com suporte a embedder customizado
+  - Logging & Observabilidade Expandidos: suporte ao formato JSON para logging e documentação de rastreamento no MLflow integrada
+  - Melhorias no Tratamento de Dados: atualização do excel_knowledge_source.py para processar arquivos com múltipl abas
+  - Desempenho Geral & Limpeza do Código: alinhamento de código corporativo e resolução de problemas de linting
+  - Novo tool adicionado: `QdrantVectorSearchTool`
+
+  **Documentação & Guias**
+  - Docs de AI & Memória atualizados: melhorias em documentação do Bedrock, Google AI e memória de longo prazo
+  - Clareza em tarefas & fluxos: adicionada linha "Entrada Humana" em Task Attributes, guia para Langfuse e documentação para FileWriterTool
+  - Diversas correções de ortografia & formatação
+</Update>
+
+<Update label="2024-01-28" description="v0.100.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v01000.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.100.0">Ver no GitHub</a>
+  </div>
+
+  **Funcionalidades**
+  - Adição dos docs Composio
+  - Adicionado SageMaker como provedor LLM
+  
+  **Correções**
+  - Correção geral nas conexões LLM
+  - Uso de acessores seguros no treinamento
+  - Checagem de versão adicionada ao crew_chat.py
+  
+  **Documentação**
+  - Novos docs para crewai chat
+  - Melhorias no formato e clareza nos docs da CLI e da Composio Tool
+</Update>
+
+<Update label="2024-01-20" description="v0.98.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v0980.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.98.0">Ver no GitHub</a>
+  </div>
+
+  **Funcionalidades**
+  - Conversation crew v1
+  - Adição de ID único para estados de flow
+  - Adição do decorator @persist com a interface FlowPersistence
+  
+  **Integrações**
+  - Integração SambaNova adicionada
+  - Novo provedor NVIDIA NIM na CLI
+  - Apresentando VoyageAI
+  
+  **Correções**
+  - Correção de comportamento de chave API e tratamento de entidades na integração com Mem0
+  - Correção na lógica de invoke principal e nos testes relacionados
+  - Inputs de ferramentas agora são objetos reais em vez de strings
+  - Partes importantes adicionadas no processo de criação de ferramentas
+  - Versão do litellm foi rebaixada para prevenir problema no Windows
+  - Correção antes da execução caso inputs estejam nulos
+  - Corrigidos erros, modelo pydantic aninhado e falhas de docling
+</Update>
+
+<Update label="2024-01-04" description="v0.95.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v0950.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.95.0">Ver no GitHub</a>
+  </div>
+
+  **Novas Funcionalidades**
+  - Adição de habilidades multimodais ao Crew
+  - Guardrails programáticos
+  - HITL com múltiplas rodadas
+  - Suporte ao Gemini 2.0
+  - Melhorias em CrewAI Flows
+  - Permissões de workflow adicionadas
+  - Suporte a langfuse com litellm
+  - Integração Portkey com CrewAI
+  - Método interpolate_only e melhorias em tratamento de erros
+  - Suporte ao Docling
+  - Suporte ao Weviate
+  
+  **Correções**
+  - output_file não respeitava caminho do sistema
+  - Erro de I/O em disco ao resetar memória de curto prazo
+  - CrewJSONEncoder agora aceita enums
+  - Versão máxima do Python
+  - Interpolação de output_file em Task
+  - Manipulação adequada de nomes de funções coworker quanto a caixa e espaços
+  - tiktoken adicionado como dependência explícita e documentação do requisito Rust
+  - Inclusão do conhecimento do agent no processo de planejamento
+  - Inicialização do armazenamento definida como None em KnowledgeStorage
+  - Verificações opcionais de armazenamento corrigidas
+  - Emissor de eventos incluído nos flows
+  - Melhorias em docstring, tratamento de erros e type hints
+  - Suppressão de userWarnings de problemas pydantic no litellm
+</Update>
+
+<Update label="2024-12-05" description="v0.86.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v0860.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.86.0">Ver no GitHub</a>
+  </div>
+  **Alterações**
+  - Removidas todas referências a pipeline e roteador de pipeline
+  - Adicionado Nvidia NIM como provedor em Custom LLM
+  - Adicionado demo de knowledge + melhorias nos docs de knowledge
+  - Adicionado suporte a múltiplas rodadas de HITL
+  - Novos docs sobre crew em yaml com decorators
+  - Template de crew simplificado
+</Update>
+
+<Update label="2024-12-04" description="v0.85.0">
+  ## Destaques da Versão
+  <Frame>
+    <img src="/images/releases/v0850.png" />
+  </Frame>
+  
+  <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+    <a href="https://github.com/crewAIInc/crewAI/releases/tag/0.85.0">Ver no GitHub</a>
+  </div>
+  **Funcionalidades**
+  - Adicionado conhecimento em nível de agent
+  - Feat/remover langchain
+  - Aprimoradas saídas tipadas das tasks
+  - Login no Tool Repository ao fazer login no crewai
+  
+  **Correções**
+  - Correção em issues de result as answer não encerrando loop do LLM corretamente
+  - Correção de ausência de nome de chave ao rodar com o provedor ollama
+  - Correção em erro ortográfico identificado
+  
+  **Documentação**
+  - Atualização no readme para rodar mypy
+  - Adição do conhecimento em mint.json
+  - Atualização das ações do Github
+  - Atualização na documentação de Agents para incluir duas abordagens na criação de agent
+  - Melhorias na Configuração e Uso do LLM
+</Update>
+
+<Update label="2024-11-25" description="v0.83.0">
+  **Novas Funcionalidades**
+  - Novos callbacks before_kickoff e after_kickoff em crew
+  - Suporte para pre-seed de agents com Knowledge
+  - Adicionado suporte para recuperação de preferências de usuário e memórias usando Mem0
+  
+  **Correções**
+  - Correção em execução assíncrona
+  - Upgrade do chroma e ajuste no gerador de funções do embedder
+  - Atualização do CLI Watson com modelos suportados + docs
+  - Redução do nível para Bandit
+  - Correção de todos os testes
+  
+  **Documentação**
+  - Documentação atualizada
+</Update>
+
+<Update label="2024-11-13" description="v0.80.0">
+  **Correções**
+  - Correção em bug de substituição do callback Tokens
+  - Correção em issue de callback Step
+  - Informação de prompt tokens em cache adicionada nas métricas de uso
+  - Correção no teste crew_train_success
+</Update>
