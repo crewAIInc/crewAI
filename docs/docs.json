@@ -134,10 +134,7 @@
                   "tools/web-scraping/stagehandtool",
                   "tools/web-scraping/firecrawlcrawlwebsitetool",
                   "tools/web-scraping/firecrawlscrapewebsitetool",
-                  "tools/web-scraping/oxylabsamazonproductscrapertool",
-                  "tools/web-scraping/oxylabsamazonsearchscrapertool",
-                  "tools/web-scraping/oxylabsgooglesearchscrapertool",
-                  "tools/web-scraping/oxylabsuniversalscrapertool"
+                  "tools/web-scraping/oxylabsscraperstool"
                 ]
               },
               {
