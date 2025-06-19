@@ -564,16 +564,38 @@ class Agent(BaseAgent):
         )
 
     def get_delegation_tools(self, agents: List[BaseAgent]):
+        """
+        Retrieve delegation tools configured with the provided agents.
+
+        Args:
+            agents (List[BaseAgent]): A list of agents to be used for delegation.
+
+        Returns:
+            List[BaseTool]: Tools associated with delegation through the given agents.
+        """
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
 
     def get_multimodal_tools(self) -> Sequence[BaseTool]:
+        """
+        Retrieve tools used for handling multimodal inputs like images.
+
+        Returns:
+            Sequence[BaseTool]: A list of multimodal tools available for the agent.
+        """
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
 
         return [AddImageTool()]
 
     def get_code_execution_tools(self):
+        """
+        Retrieve tools for code execution, based on the agent's execution mode.
+
+        Returns:
+            List[BaseTool] | None: List of code execution tools if available,
+            otherwise None if crewai_tools is not installed.
+        """
         try:
             from crewai_tools import CodeInterpreterTool  # type: ignore
 
@@ -586,6 +608,18 @@ class Agent(BaseAgent):
             )
 
     def get_output_converter(self, llm, text, model, instructions):
+        """
+        Create a Converter object for processing model outputs.
+
+        Args:
+            llm: The language model to be used.
+            text (str): The input text.
+            model (str): The name of the model.
+            instructions (str): Instructions for conversion.
+
+        Returns:
+            Converter: Configured Converter object.
+        """
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def _training_handler(self, task_prompt: str) -> str:
