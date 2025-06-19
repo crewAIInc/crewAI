@@ -145,27 +145,49 @@ def get_llm_response(
     messages: List[Dict[str, str]],
     callbacks: List[Any],
     printer: Printer,
+    fallback_llms: Optional[List[Union[LLM, BaseLLM]]] = None,
 ) -> str:
-    """Call the LLM and return the response, handling any invalid responses."""
-    try:
-        answer = llm.call(
-            messages,
-            callbacks=callbacks,
-        )
-    except Exception as e:
-        printer.print(
-            content=f"Error during LLM call: {e}",
-            color="red",
-        )
-        raise e
-    if not answer:
-        printer.print(
-            content="Received None or empty response from LLM call.",
-            color="red",
-        )
-        raise ValueError("Invalid response from LLM call - None or empty.")
-
-    return answer
+    """Call the LLM and return the response, handling any invalid responses and trying fallbacks if available."""
+    llms_to_try = [llm]
+    if fallback_llms:
+        llms_to_try.extend(fallback_llms)
+    
+    last_exception = None
+    
+    for i, current_llm in enumerate(llms_to_try):
+        try:
+            answer = current_llm.call(
+                messages,
+                callbacks=callbacks,
+            )
+            if not answer:
+                error_msg = "Received None or empty response from LLM call."
+                printer.print(content=error_msg, color="red")
+                if i < len(llms_to_try) - 1:
+                    printer.print(content=f"Trying fallback LLM {i+1}...", color="yellow")
+                    continue
+                else:
+                    raise ValueError("Invalid response from LLM call - None or empty.")
+            return answer
+        except Exception as e:
+            last_exception = e
+            if i == 0:
+                printer.print(content=f"Primary LLM failed: {e}", color="red")
+            else:
+                printer.print(content=f"Fallback LLM {i} failed: {e}", color="red")
+            
+            if e.__class__.__module__.startswith("litellm"):
+                error_str = str(e).lower()
+                if any(term in error_str for term in ["authentication", "api key", "unauthorized", "forbidden"]):
+                    printer.print(content="Authentication error detected, skipping remaining fallbacks", color="red")
+                    raise e
+            
+            if i < len(llms_to_try) - 1:
+                printer.print(content=f"Trying fallback LLM {i+1}...", color="yellow")
+                continue
+    
+    printer.print(content="All LLMs failed, raising last exception", color="red")
+    raise last_exception
 
 
 def process_llm_response(
