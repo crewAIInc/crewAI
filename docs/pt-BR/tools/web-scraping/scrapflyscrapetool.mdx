@@ -1,0 +1,220 @@
+---
+title: Scrapfly Scrape Website Tool
+description: The `ScrapflyScrapeWebsiteTool` leverages Scrapfly's web scraping API to extract content from websites in various formats.
+icon: spider
+---
+
+# `ScrapflyScrapeWebsiteTool`
+
+## Description
+
+The `ScrapflyScrapeWebsiteTool` is designed to leverage [Scrapfly](https://scrapfly.io/)'s web scraping API to extract content from websites. This tool provides advanced web scraping capabilities with headless browser support, proxies, and anti-bot bypass features. It allows for extracting web page data in various formats, including raw HTML, markdown, and plain text, making it ideal for a wide range of web scraping tasks.
+
+## Installation
+
+To use this tool, you need to install the Scrapfly SDK:
+
+```shell
+uv add scrapfly-sdk
+```
+
+You'll also need to obtain a Scrapfly API key by registering at [scrapfly.io/register](https://www.scrapfly.io/register/).
+
+## Steps to Get Started
+
+To effectively use the `ScrapflyScrapeWebsiteTool`, follow these steps:
+
+1. **Install Dependencies**: Install the Scrapfly SDK using the command above.
+2. **Obtain API Key**: Register at Scrapfly to get your API key.
+3. **Initialize the Tool**: Create an instance of the tool with your API key.
+4. **Configure Scraping Parameters**: Customize the scraping parameters based on your needs.
+
+## Example
+
+The following example demonstrates how to use the `ScrapflyScrapeWebsiteTool` to extract content from a website:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapflyScrapeWebsiteTool
+
+# Initialize the tool
+scrape_tool = ScrapflyScrapeWebsiteTool(api_key="your_scrapfly_api_key")
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Example task to extract content from a website
+scrape_task = Task(
+    description="Extract the main content from the product page at https://web-scraping.dev/products and summarize the available products.",
+    expected_output="A summary of the products available on the website.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+You can also customize the scraping parameters:
+
+```python Code
+# Example with custom scraping parameters
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites with custom parameters",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# The agent will use the tool with parameters like:
+# url="https://web-scraping.dev/products"
+# scrape_format="markdown"
+# ignore_scrape_failures=True
+# scrape_config={
+#     "asp": True,  # Bypass scraping blocking solutions, like Cloudflare
+#     "render_js": True,  # Enable JavaScript rendering with a cloud headless browser
+#     "proxy_pool": "public_residential_pool",  # Select a proxy pool
+#     "country": "us",  # Select a proxy location
+#     "auto_scroll": True,  # Auto scroll the page
+# }
+
+scrape_task = Task(
+    description="Extract the main content from the product page at https://web-scraping.dev/products using advanced scraping options including JavaScript rendering and proxy settings.",
+    expected_output="A detailed summary of the products with all available information.",
+    agent=web_scraper_agent,
+)
+```
+
+## Parameters
+
+The `ScrapflyScrapeWebsiteTool` accepts the following parameters:
+
+### Initialization Parameters
+
+- **api_key**: Required. Your Scrapfly API key.
+
+### Run Parameters
+
+- **url**: Required. The URL of the website to scrape.
+- **scrape_format**: Optional. The format in which to extract the web page content. Options are "raw" (HTML), "markdown", or "text". Default is "markdown".
+- **scrape_config**: Optional. A dictionary containing additional Scrapfly scraping configuration options.
+- **ignore_scrape_failures**: Optional. Whether to ignore failures during scraping. If set to `True`, the tool will return `None` instead of raising an exception when scraping fails.
+
+## Scrapfly Configuration Options
+
+The `scrape_config` parameter allows you to customize the scraping behavior with the following options:
+
+- **asp**: Enable anti-scraping protection bypass.
+- **render_js**: Enable JavaScript rendering with a cloud headless browser.
+- **proxy_pool**: Select a proxy pool (e.g., "public_residential_pool", "datacenter").
+- **country**: Select a proxy location (e.g., "us", "uk").
+- **auto_scroll**: Automatically scroll the page to load lazy-loaded content.
+- **js**: Execute custom JavaScript code by the headless browser.
+
+For a complete list of configuration options, refer to the [Scrapfly API documentation](https://scrapfly.io/docs/scrape-api/getting-started).
+
+## Usage
+
+When using the `ScrapflyScrapeWebsiteTool` with an agent, the agent will need to provide the URL of the website to scrape and can optionally specify the format and additional configuration options:
+
+```python Code
+# Example of using the tool with an agent
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+scrape_task = Task(
+    description="Extract the main content from example.com in markdown format.",
+    expected_output="The main content of example.com in markdown format.",
+    agent=web_scraper_agent,
+)
+
+# Run the task
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+For more advanced usage with custom configuration:
+
+```python Code
+# Create a task with more specific instructions
+advanced_scrape_task = Task(
+    description="""
+    Extract content from example.com with the following requirements:
+    - Convert the content to plain text format
+    - Enable JavaScript rendering
+    - Use a US-based proxy
+    - Handle any scraping failures gracefully
+    """,
+    expected_output="The extracted content from example.com",
+    agent=web_scraper_agent,
+)
+```
+
+## Error Handling
+
+By default, the `ScrapflyScrapeWebsiteTool` will raise an exception if scraping fails. Agents can be instructed to handle failures gracefully by specifying the `ignore_scrape_failures` parameter:
+
+```python Code
+# Create a task that instructs the agent to handle errors
+error_handling_task = Task(
+    description="""
+    Extract content from a potentially problematic website and make sure to handle any 
+    scraping failures gracefully by setting ignore_scrape_failures to True.
+    """,
+    expected_output="Either the extracted content or a graceful error message",
+    agent=web_scraper_agent,
+)
+```
+
+## Implementation Details
+
+The `ScrapflyScrapeWebsiteTool` uses the Scrapfly SDK to interact with the Scrapfly API:
+
+```python Code
+class ScrapflyScrapeWebsiteTool(BaseTool):
+    name: str = "Scrapfly web scraping API tool"
+    description: str = (
+        "Scrape a webpage url using Scrapfly and return its content as markdown or text"
+    )
+    
+    # Implementation details...
+    
+    def _run(
+        self,
+        url: str,
+        scrape_format: str = "markdown",
+        scrape_config: Optional[Dict[str, Any]] = None,
+        ignore_scrape_failures: Optional[bool] = None,
+    ):
+        from scrapfly import ScrapeApiResponse, ScrapeConfig
+
+        scrape_config = scrape_config if scrape_config is not None else {}
+        try:
+            response: ScrapeApiResponse = self.scrapfly.scrape(
+                ScrapeConfig(url, format=scrape_format, **scrape_config)
+            )
+            return response.scrape_result["content"]
+        except Exception as e:
+            if ignore_scrape_failures:
+                logger.error(f"Error fetching data from {url}, exception: {e}")
+                return None
+            else:
+                raise e
+```
+
+## Conclusion
+
+The `ScrapflyScrapeWebsiteTool` provides a powerful way to extract content from websites using Scrapfly's advanced web scraping capabilities. With features like headless browser support, proxies, and anti-bot bypass, it can handle complex websites and extract content in various formats. This tool is particularly useful for data extraction, content monitoring, and research tasks where reliable web scraping is required. 

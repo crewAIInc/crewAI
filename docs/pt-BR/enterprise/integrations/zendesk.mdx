@@ -1,0 +1,343 @@
+---
+title: Zendesk Integration
+description: "Customer support and helpdesk management with Zendesk integration for CrewAI."
+icon: "headset"
+---
+
+## Overview
+
+Enable your agents to manage customer support operations through Zendesk. Create and update tickets, manage users, track support metrics, and streamline your customer service workflows with AI-powered automation.
+
+## Prerequisites
+
+Before using the Zendesk integration, ensure you have:
+
+- A [CrewAI Enterprise](https://app.crewai.com) account with an active subscription
+- A Zendesk account with appropriate API permissions
+- Connected your Zendesk account through the [Integrations page](https://app.crewai.com/integrations)
+
+## Available Tools
+
+### **Ticket Management**
+
+<AccordionGroup>
+  <Accordion title="ZENDESK_CREATE_TICKET">
+    **Description:** Create a new support ticket in Zendesk.
+
+    **Parameters:**
+    - `ticketSubject` (string, required): Ticket subject line (e.g., "Help, my printer is on fire!")
+    - `ticketDescription` (string, required): First comment that appears on the ticket (e.g., "The smoke is very colorful.")
+    - `requesterName` (string, required): Name of the user requesting support (e.g., "Jane Customer")
+    - `requesterEmail` (string, required): Email of the user requesting support (e.g., "jane@example.com")
+    - `assigneeId` (string, optional): Zendesk Agent ID assigned to this ticket - Use Connect Portal Workflow Settings to allow users to select an assignee
+    - `ticketType` (string, optional): Ticket type - Options: problem, incident, question, task
+    - `ticketPriority` (string, optional): Priority level - Options: urgent, high, normal, low
+    - `ticketStatus` (string, optional): Ticket status - Options: new, open, pending, hold, solved, closed
+    - `ticketDueAt` (string, optional): Due date for task-type tickets (ISO 8601 timestamp)
+    - `ticketTags` (string, optional): Array of tags to apply (e.g., `["enterprise", "other_tag"]`)
+    - `ticketExternalId` (string, optional): External ID to link tickets to local records
+    - `ticketCustomFields` (object, optional): Custom field values in JSON format
+  </Accordion>
+
+  <Accordion title="ZENDESK_UPDATE_TICKET">
+    **Description:** Update an existing support ticket in Zendesk.
+
+    **Parameters:**
+    - `ticketId` (string, required): ID of the ticket to update (e.g., "35436")
+    - `ticketSubject` (string, optional): Updated ticket subject
+    - `requesterName` (string, required): Name of the user who requested this ticket
+    - `requesterEmail` (string, required): Email of the user who requested this ticket
+    - `assigneeId` (string, optional): Updated assignee ID - Use Connect Portal Workflow Settings
+    - `ticketType` (string, optional): Updated ticket type - Options: problem, incident, question, task
+    - `ticketPriority` (string, optional): Updated priority - Options: urgent, high, normal, low
+    - `ticketStatus` (string, optional): Updated status - Options: new, open, pending, hold, solved, closed
+    - `ticketDueAt` (string, optional): Updated due date (ISO 8601 timestamp)
+    - `ticketTags` (string, optional): Updated tags array
+    - `ticketExternalId` (string, optional): Updated external ID
+    - `ticketCustomFields` (object, optional): Updated custom field values
+  </Accordion>
+
+  <Accordion title="ZENDESK_GET_TICKET_BY_ID">
+    **Description:** Retrieve a specific ticket by its ID.
+
+    **Parameters:**
+    - `ticketId` (string, required): The ticket ID to retrieve (e.g., "35436")
+  </Accordion>
+
+  <Accordion title="ZENDESK_ADD_COMMENT_TO_TICKET">
+    **Description:** Add a comment or internal note to an existing ticket.
+
+    **Parameters:**
+    - `ticketId` (string, required): ID of the ticket to add comment to (e.g., "35436")
+    - `commentBody` (string, required): Comment message (accepts plain text or HTML, e.g., "Thanks for your help!")
+    - `isInternalNote` (boolean, optional): Set to true for internal notes instead of public replies (defaults to false)
+    - `isPublic` (boolean, optional): True for public comments, false for internal notes
+  </Accordion>
+
+  <Accordion title="ZENDESK_SEARCH_TICKETS">
+    **Description:** Search for tickets using various filters and criteria.
+
+    **Parameters:**
+    - `ticketSubject` (string, optional): Filter by text in ticket subject
+    - `ticketDescription` (string, optional): Filter by text in ticket description and comments
+    - `ticketStatus` (string, optional): Filter by status - Options: new, open, pending, hold, solved, closed
+    - `ticketType` (string, optional): Filter by type - Options: problem, incident, question, task, no_type
+    - `ticketPriority` (string, optional): Filter by priority - Options: urgent, high, normal, low, no_priority
+    - `requesterId` (string, optional): Filter by requester user ID
+    - `assigneeId` (string, optional): Filter by assigned agent ID
+    - `recipientEmail` (string, optional): Filter by original recipient email address
+    - `ticketTags` (string, optional): Filter by ticket tags
+    - `ticketExternalId` (string, optional): Filter by external ID
+    - `createdDate` (object, optional): Filter by creation date with operator (EQUALS, LESS_THAN_EQUALS, GREATER_THAN_EQUALS) and value
+    - `updatedDate` (object, optional): Filter by update date with operator and value
+    - `dueDate` (object, optional): Filter by due date with operator and value
+    - `sort_by` (string, optional): Sort field - Options: created_at, updated_at, priority, status, ticket_type
+    - `sort_order` (string, optional): Sort direction - Options: asc, desc
+  </Accordion>
+</AccordionGroup>
+
+### **User Management**
+
+<AccordionGroup>
+  <Accordion title="ZENDESK_CREATE_USER">
+    **Description:** Create a new user in Zendesk.
+
+    **Parameters:**
+    - `name` (string, required): User's full name
+    - `email` (string, optional): User's email address (e.g., "jane@example.com")
+    - `phone` (string, optional): User's phone number
+    - `role` (string, optional): User role - Options: admin, agent, end-user
+    - `externalId` (string, optional): Unique identifier from another system
+    - `details` (string, optional): Additional user details
+    - `notes` (string, optional): Internal notes about the user
+  </Accordion>
+
+  <Accordion title="ZENDESK_UPDATE_USER">
+    **Description:** Update an existing user's information.
+
+    **Parameters:**
+    - `userId` (string, required): ID of the user to update
+    - `name` (string, optional): Updated user name
+    - `email` (string, optional): Updated email (adds as secondary email on update)
+    - `phone` (string, optional): Updated phone number
+    - `role` (string, optional): Updated role - Options: admin, agent, end-user
+    - `externalId` (string, optional): Updated external ID
+    - `details` (string, optional): Updated user details
+    - `notes` (string, optional): Updated internal notes
+  </Accordion>
+
+  <Accordion title="ZENDESK_GET_USER_BY_ID">
+    **Description:** Retrieve a specific user by their ID.
+
+    **Parameters:**
+    - `userId` (string, required): The user ID to retrieve
+  </Accordion>
+
+  <Accordion title="ZENDESK_SEARCH_USERS">
+    **Description:** Search for users using various criteria.
+
+    **Parameters:**
+    - `name` (string, optional): Filter by user name
+    - `email` (string, optional): Filter by user email (e.g., "jane@example.com")
+    - `role` (string, optional): Filter by role - Options: admin, agent, end-user
+    - `externalId` (string, optional): Filter by external ID
+    - `sort_by` (string, optional): Sort field - Options: created_at, updated_at
+    - `sort_order` (string, optional): Sort direction - Options: asc, desc
+  </Accordion>
+</AccordionGroup>
+
+### **Administrative Tools**
+
+<AccordionGroup>
+  <Accordion title="ZENDESK_GET_TICKET_FIELDS">
+    **Description:** Retrieve all standard and custom fields available for tickets.
+
+    **Parameters:**
+    - `paginationParameters` (object, optional): Pagination settings
+      - `pageCursor` (string, optional): Page cursor for pagination
+  </Accordion>
+
+  <Accordion title="ZENDESK_GET_TICKET_AUDITS">
+    **Description:** Get audit records (read-only history) for tickets.
+
+    **Parameters:**
+    - `ticketId` (string, optional): Get audits for specific ticket (if empty, retrieves audits for all non-archived tickets, e.g., "1234")
+    - `paginationParameters` (object, optional): Pagination settings
+      - `pageCursor` (string, optional): Page cursor for pagination
+  </Accordion>
+</AccordionGroup>
+
+## Custom Fields
+
+Custom fields allow you to store additional information specific to your organization:
+
+```json
+[
+  { "id": 27642, "value": "745" },
+  { "id": 27648, "value": "yes" }
+]
+```
+
+## Ticket Priority Levels
+
+Understanding priority levels:
+
+- **urgent** - Critical issues requiring immediate attention
+- **high** - Important issues that should be addressed quickly
+- **normal** - Standard priority for most tickets
+- **low** - Minor issues that can be addressed when convenient
+
+## Ticket Status Workflow
+
+Standard ticket status progression:
+
+- **new** - Recently created, not yet assigned
+- **open** - Actively being worked on
+- **pending** - Waiting for customer response or external action
+- **hold** - Temporarily paused
+- **solved** - Issue resolved, awaiting customer confirmation
+- **closed** - Ticket completed and closed
+
+## Usage Examples
+
+### Basic Zendesk Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Zendesk tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Zendesk capabilities
+zendesk_agent = Agent(
+    role="Support Manager",
+    goal="Manage customer support tickets and provide excellent customer service",
+    backstory="An AI assistant specialized in customer support operations and ticket management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new support ticket
+create_ticket_task = Task(
+    description="Create a high-priority support ticket for John Smith who is unable to access his account after password reset",
+    agent=zendesk_agent,
+    expected_output="Support ticket created successfully with ticket ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[zendesk_agent],
+    tasks=[create_ticket_task]
+)
+
+crew.kickoff()
+```
+
+### Filtering Specific Zendesk Tools
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Zendesk tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["zendesk_create_ticket", "zendesk_update_ticket", "zendesk_add_comment_to_ticket"]
+)
+
+support_agent = Agent(
+    role="Customer Support Agent",
+    goal="Handle customer inquiries and resolve support issues efficiently",
+    backstory="An experienced support agent who specializes in ticket resolution and customer communication.",
+    tools=enterprise_tools
+)
+
+# Task to manage support workflow
+support_task = Task(
+    description="Create a ticket for login issues, add troubleshooting comments, and update status to resolved",
+    agent=support_agent,
+    expected_output="Support ticket managed through complete resolution workflow"
+)
+
+crew = Crew(
+    agents=[support_agent],
+    tasks=[support_task]
+)
+
+crew.kickoff()
+```
+
+### Advanced Ticket Management
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+ticket_manager = Agent(
+    role="Ticket Manager",
+    goal="Manage support ticket workflows and ensure timely resolution",
+    backstory="An AI assistant that specializes in support ticket triage and workflow optimization.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage ticket lifecycle
+ticket_workflow = Task(
+    description="""
+    1. Create a new support ticket for account access issues
+    2. Add internal notes with troubleshooting steps
+    3. Update ticket priority based on customer tier
+    4. Add resolution comments and close the ticket
+    """,
+    agent=ticket_manager,
+    expected_output="Complete ticket lifecycle managed from creation to resolution"
+)
+
+crew = Crew(
+    agents=[ticket_manager],
+    tasks=[ticket_workflow]
+)
+
+crew.kickoff()
+```
+
+### Support Analytics and Reporting
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+support_analyst = Agent(
+    role="Support Analyst",
+    goal="Analyze support metrics and generate insights for team performance",
+    backstory="An analytical AI that excels at extracting insights from support data and ticket patterns.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving analytics and reporting
+analytics_task = Task(
+    description="""
+    1. Search for all open tickets from the last 30 days
+    2. Analyze ticket resolution times and customer satisfaction
+    3. Identify common issues and support patterns
+    4. Generate weekly support performance report
+    """,
+    agent=support_analyst,
+    expected_output="Comprehensive support analytics report with performance insights and recommendations"
+)
+
+crew = Crew(
+    agents=[support_analyst],
+    tasks=[analytics_task]
+)
+
+crew.kickoff()
+```
