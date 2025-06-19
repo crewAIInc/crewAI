@@ -1,0 +1,356 @@
+---
+title: Gmail Integration
+description: "Email and contact management with Gmail integration for CrewAI."
+icon: "envelope"
+---
+
+## Overview
+
+Enable your agents to manage emails, contacts, and drafts through Gmail. Send emails, search messages, manage contacts, create drafts, and streamline your email communications with AI-powered automation.
+
+## Prerequisites
+
+Before using the Gmail integration, ensure you have:
+
+- A [CrewAI Enterprise](https://app.crewai.com) account with an active subscription
+- A Gmail account with appropriate permissions
+- Connected your Gmail account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
+
+## Setting Up Gmail Integration
+
+### 1. Connect Your Gmail Account
+
+1. Navigate to [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Gmail** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for email and contact management
+5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+## Available Actions
+
+<AccordionGroup>
+  <Accordion title="GMAIL_SEND_EMAIL">
+    **Description:** Send an email in Gmail.
+
+    **Parameters:**
+    - `toRecipients` (array, required): To - Specify the recipients as either a single string or a JSON array.
+      ```json
+      [
+        "recipient1@domain.com",
+        "recipient2@domain.com"
+      ]
+      ```
+    - `from` (string, required): From - Specify the email of the sender.
+    - `subject` (string, required): Subject - Specify the subject of the message.
+    - `messageContent` (string, required): Message Content - Specify the content of the email message as plain text or HTML.
+    - `attachments` (string, optional): Attachments - Accepts either a single file object or a JSON array of file objects.
+    - `additionalHeaders` (object, optional): Additional Headers - Specify any additional header fields here.
+      ```json
+      {
+        "reply-to": "Sender Name <sender@domain.com>"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GMAIL_GET_EMAIL_BY_ID">
+    **Description:** Get an email by ID in Gmail.
+
+    **Parameters:**
+    - `userId` (string, required): User ID - Specify the user's email address. (example: "user@domain.com").
+    - `messageId` (string, required): Message ID - Specify the ID of the message to retrieve.
+  </Accordion>
+
+  <Accordion title="GMAIL_SEARCH_FOR_EMAIL">
+    **Description:** Search for emails in Gmail using advanced filters.
+
+    **Parameters:**
+    - `emailFilterFormula` (object, optional): A filter in disjunctive normal form - OR of AND groups of single conditions.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "from",
+                "operator": "$stringContains",
+                "value": "example@domain.com"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      Available fields: `from`, `to`, `date`, `label`, `subject`, `cc`, `bcc`, `category`, `deliveredto:`, `size`, `filename`, `older_than`, `newer_than`, `list`, `is:important`, `is:unread`, `is:snoozed`, `is:starred`, `is:read`, `has:drive`, `has:document`, `has:spreadsheet`, `has:presentation`, `has:attachment`, `has:youtube`, `has:userlabels`
+    - `paginationParameters` (object, optional): Pagination Parameters.
+      ```json
+      {
+        "pageCursor": "page_cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GMAIL_DELETE_EMAIL">
+    **Description:** Delete an email in Gmail.
+
+    **Parameters:**
+    - `userId` (string, required): User ID - Specify the user's email address. (example: "user@domain.com").
+    - `messageId` (string, required): Message ID - Specify the ID of the message to trash.
+  </Accordion>
+
+  <Accordion title="GMAIL_CREATE_A_CONTACT">
+    **Description:** Create a contact in Gmail.
+
+    **Parameters:**
+    - `givenName` (string, required): Given Name - Specify the Given Name of the Contact to create. (example: "John").
+    - `familyName` (string, required): Family Name - Specify the Family Name of the Contact to create. (example: "Doe").
+    - `email` (string, required): Email - Specify the Email Address of the Contact to create.
+    - `additionalFields` (object, optional): Additional Fields - Additional contact information.
+      ```json
+      {
+        "addresses": [
+          {
+            "streetAddress": "1000 North St.",
+            "city": "Los Angeles"
+          }
+        ]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="GMAIL_GET_CONTACT_BY_RESOURCE_NAME">
+    **Description:** Get a contact by resource name in Gmail.
+
+    **Parameters:**
+    - `resourceName` (string, required): Resource Name - Specify the resource name of the contact to fetch.
+  </Accordion>
+
+  <Accordion title="GMAIL_SEARCH_FOR_CONTACT">
+    **Description:** Search for a contact in Gmail.
+
+    **Parameters:**
+    - `searchTerm` (string, required): Term - Specify a search term to search for near or exact matches on the names, nickNames, emailAddresses, phoneNumbers, or organizations Contact properties.
+  </Accordion>
+
+  <Accordion title="GMAIL_DELETE_CONTACT">
+    **Description:** Delete a contact in Gmail.
+
+    **Parameters:**
+    - `resourceName` (string, required): Resource Name - Specify the resource name of the contact to delete.
+  </Accordion>
+
+  <Accordion title="GMAIL_CREATE_DRAFT">
+    **Description:** Create a draft in Gmail.
+
+    **Parameters:**
+    - `toRecipients` (array, optional): To - Specify the recipients as either a single string or a JSON array.
+      ```json
+      [
+        "recipient1@domain.com",
+        "recipient2@domain.com"
+      ]
+      ```
+    - `from` (string, optional): From - Specify the email of the sender.
+    - `subject` (string, optional): Subject - Specify the subject of the message.
+    - `messageContent` (string, optional): Message Content - Specify the content of the email message as plain text or HTML.
+    - `attachments` (string, optional): Attachments - Accepts either a single file object or a JSON array of file objects.
+    - `additionalHeaders` (object, optional): Additional Headers - Specify any additional header fields here.
+      ```json
+      {
+        "reply-to": "Sender Name <sender@domain.com>"
+      }
+      ```
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic Gmail Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Gmail tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Gmail capabilities
+gmail_agent = Agent(
+    role="Email Manager",
+    goal="Manage email communications and contacts efficiently",
+    backstory="An AI assistant specialized in email management and communication.",
+    tools=[enterprise_tools]
+)
+
+# Task to send a follow-up email
+send_email_task = Task(
+    description="Send a follow-up email to john@example.com about the project update meeting",
+    agent=gmail_agent,
+    expected_output="Email sent successfully with confirmation"
+)
+
+# Run the task
+crew = Crew(
+    agents=[gmail_agent],
+    tasks=[send_email_task]
+)
+
+crew.kickoff()
+```
+
+### Filtering Specific Gmail Tools
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Gmail tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["gmail_send_email", "gmail_search_for_email", "gmail_create_draft"]
+)
+
+email_coordinator = Agent(
+    role="Email Coordinator",
+    goal="Coordinate email communications and manage drafts",
+    backstory="An AI assistant that focuses on email coordination and draft management.",
+    tools=enterprise_tools
+)
+
+# Task to prepare and send emails
+email_coordination = Task(
+    description="Search for emails from the marketing team, create a summary draft, and send it to stakeholders",
+    agent=email_coordinator,
+    expected_output="Summary email sent to stakeholders"
+)
+
+crew = Crew(
+    agents=[email_coordinator],
+    tasks=[email_coordination]
+)
+
+crew.kickoff()
+```
+
+### Contact Management
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+contact_manager = Agent(
+    role="Contact Manager",
+    goal="Manage and organize email contacts efficiently",
+    backstory="An experienced contact manager who maintains organized contact databases.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage contacts
+contact_task = Task(
+    description="""
+    1. Search for contacts from the 'example.com' domain
+    2. Create new contacts for recent email senders not in the contact list
+    3. Update contact information with recent interaction data
+    """,
+    agent=contact_manager,
+    expected_output="Contact database updated with new contacts and recent interactions"
+)
+
+crew = Crew(
+    agents=[contact_manager],
+    tasks=[contact_task]
+)
+
+crew.kickoff()
+```
+
+### Email Search and Analysis
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+email_analyst = Agent(
+    role="Email Analyst",
+    goal="Analyze email patterns and provide insights",
+    backstory="An AI assistant that analyzes email data to provide actionable insights.",
+    tools=[enterprise_tools]
+)
+
+# Task to analyze email patterns
+analysis_task = Task(
+    description="""
+    Search for all unread emails from the last 7 days,
+    categorize them by sender domain,
+    and create a summary report of communication patterns
+    """,
+    agent=email_analyst,
+    expected_output="Email analysis report with communication patterns and recommendations"
+)
+
+crew = Crew(
+    agents=[email_analyst],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+### Automated Email Workflows
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+workflow_manager = Agent(
+    role="Email Workflow Manager",
+    goal="Automate email workflows and responses",
+    backstory="An AI assistant that manages automated email workflows and responses.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple Gmail operations
+workflow_task = Task(
+    description="""
+    1. Search for emails with 'urgent' in the subject from the last 24 hours
+    2. Create draft responses for each urgent email
+    3. Send automated acknowledgment emails to senders
+    4. Create a summary report of urgent items requiring attention
+    """,
+    agent=workflow_manager,
+    expected_output="Urgent emails processed with automated responses and summary report"
+)
+
+crew = Crew(
+    agents=[workflow_manager],
+    tasks=[workflow_task]
+)
+
+crew.kickoff()
+```
+
+### Getting Help
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with Gmail integration setup or troubleshooting.
+</Card>
