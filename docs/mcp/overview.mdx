@@ -85,6 +85,22 @@ with MCPServerAdapter(server_params) as mcp_tools:
 ```
 This general pattern shows how to integrate tools. For specific examples tailored to each transport, refer to the detailed guides below.
 
+## Filtering Tools
+
+```python
+with MCPServerAdapter(server_params) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    my_agent = Agent(
+        role="MCP Tool User",
+        goal="Utilize tools from an MCP server.",
+        backstory="I can connect to MCP servers and use their tools.",
+        tools=mcp_tools["tool_name"], # Pass the loaded tools to your agent
+        reasoning=True,
+        verbose=True
+    )
+    # ... rest of your crew setup ...
+```
 ## Explore MCP Integrations
 
 <CardGroup cols={2}>

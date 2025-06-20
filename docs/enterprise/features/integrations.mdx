@@ -124,7 +124,7 @@ from crewai_tools import CrewaiEnterpriseTools
 enterprise_tools = CrewaiEnterpriseTools(
     actions_list=["gmail_find_email"] # only gmail_find_email tool will be available
 )
-gmail_tool = enterprise_tools[0]
+gmail_tool = enterprise_tools["gmail_find_email"]
 
 gmail_agent = Agent(
     role="Gmail Manager",
