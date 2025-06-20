@@ -1,4 +1,4 @@
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 from typing import Optional, Type, Any, Union, Literal, Sequence, List
 from dotenv import load_dotenv
@@ -102,6 +102,9 @@ class TavilySearchTool(BaseTool):
         description="Maximum length for the 'content' of each search result to avoid context window issues.",
     )
     package_dependencies: List[str] = ["tavily-python"]
+    env_vars: List[EnvVar] = [
+        EnvVar(name="TAVILY_API_KEY", description="API key for Tavily search service", required=True),
+    ]
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)

@@ -15,7 +15,7 @@ except ImportError:
     Vectorizers = Any
     Auth = Any
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 
@@ -41,6 +41,9 @@ class WeaviateVectorSearchTool(BaseTool):
     collection_name: Optional[str] = None
     limit: Optional[int] = Field(default=3)
     headers: Optional[dict] = None
+    env_vars: List[EnvVar] = [
+        EnvVar(name="OPENAI_API_KEY", description="OpenAI API key for embedding generation and retrieval", required=True),
+    ]
     weaviate_cluster_url: str = Field(
         ...,
         description="The URL of the Weaviate cluster",

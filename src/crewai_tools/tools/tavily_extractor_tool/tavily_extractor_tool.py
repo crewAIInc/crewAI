@@ -1,4 +1,4 @@
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 from typing import Optional, Type, Any, Union, List, Literal
 from dotenv import load_dotenv
@@ -27,6 +27,9 @@ class TavilyExtractorToolSchema(BaseModel):
 
 class TavilyExtractorTool(BaseTool):
     package_dependencies: List[str] = ["tavily-python"]
+    env_vars: List[EnvVar] = [
+        EnvVar(name="TAVILY_API_KEY", description="API key for Tavily extraction service", required=True),
+    ]
     """
     Tool that uses the Tavily API to extract content from web pages.
 

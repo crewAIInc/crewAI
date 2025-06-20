@@ -1,7 +1,7 @@
 import os
 from typing import Any, Optional, Type, List
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 
@@ -20,6 +20,10 @@ class BrowserbaseLoadTool(BaseTool):
     proxy: Optional[bool] = None
     browserbase: Optional[Any] = None
     package_dependencies: List[str] = ["browserbase"]
+    env_vars: List[EnvVar] = [
+        EnvVar(name="BROWSERBASE_API_KEY", description="API key for Browserbase services", required=False),
+        EnvVar(name="BROWSERBASE_PROJECT_ID", description="Project ID for Browserbase services", required=False),
+    ]
 
     def __init__(
         self,

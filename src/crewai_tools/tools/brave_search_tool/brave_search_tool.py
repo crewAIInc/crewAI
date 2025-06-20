@@ -1,10 +1,10 @@
 import datetime
 import os
 import time
-from typing import Any, ClassVar, Optional, Type
+from typing import Any, ClassVar, List, Optional, Type
 
 import requests
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 
@@ -48,6 +48,9 @@ class BraveSearchTool(BaseTool):
     save_file: bool = False
     _last_request_time: ClassVar[float] = 0
     _min_request_interval: ClassVar[float] = 1.0  # seconds
+    env_vars: List[EnvVar] = [
+        EnvVar(name="BRAVE_API_KEY", description="API key for Brave Search", required=True),
+    ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

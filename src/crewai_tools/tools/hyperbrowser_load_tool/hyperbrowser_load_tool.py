@@ -1,7 +1,7 @@
 import os
 from typing import Any, Optional, Type, Dict, Literal, Union, List
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 
@@ -26,6 +26,9 @@ class HyperbrowserLoadTool(BaseTool):
     api_key: Optional[str] = None
     hyperbrowser: Optional[Any] = None
     package_dependencies: List[str] = ["hyperbrowser"]
+    env_vars: List[EnvVar] = [
+        EnvVar(name="HYPERBROWSER_API_KEY", description="API key for Hyperbrowser services", required=False),
+    ]
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
