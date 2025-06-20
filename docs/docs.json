@@ -134,7 +134,7 @@
                   "tools/web-scraping/stagehandtool",
                   "tools/web-scraping/firecrawlcrawlwebsitetool",
                   "tools/web-scraping/firecrawlscrapewebsitetool",
-                  "tools/web-scraping/firecrawlsearchtool"
+                  "tools/web-scraping/oxylabsscraperstool"
                 ]
               },
               {
