@@ -53,5 +53,5 @@ def CrewaiEnterpriseTools(
         return ToolCollection(all_tools)
 
     # Filter tools based on the provided list
-    filtered_tools = [tool for tool in all_tools if tool.name in actions_list]
+    filtered_tools = [tool for tool in all_tools if tool.name.lower() in [action.lower() for action in actions_list]]
     return ToolCollection(filtered_tools)

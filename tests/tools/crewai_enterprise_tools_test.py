@@ -46,7 +46,7 @@ class TestCrewaiEnterpriseTools(unittest.TestCase):
 
     @patch.dict(os.environ, {"CREWAI_ENTERPRISE_TOOLS_TOKEN": "env-token"})
     def test_filters_tools_by_actions_list(self):
-        tools = CrewaiEnterpriseTools(actions_list=["tool1", "tool3"])
+        tools = CrewaiEnterpriseTools(actions_list=["ToOl1", "tool3"])
         self.assertEqual(len(tools), 2)
         self.assertEqual(tools[0].name, "tool1")
         self.assertEqual(tools[1].name, "tool3")
