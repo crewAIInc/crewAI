@@ -1,0 +1,139 @@
+---
+title: Scrape Element From Website Tool
+description: The `ScrapeElementFromWebsiteTool` enables CrewAI agents to extract specific elements from websites using CSS selectors.
+icon: code
+---
+
+# `ScrapeElementFromWebsiteTool`
+
+## Description
+
+The `ScrapeElementFromWebsiteTool` is designed to extract specific elements from websites using CSS selectors. This tool allows CrewAI agents to scrape targeted content from web pages, making it useful for data extraction tasks where only specific parts of a webpage are needed.
+
+## Installation
+
+To use this tool, you need to install the required dependencies:
+
+```shell
+uv add requests beautifulsoup4
+```
+
+## Steps to Get Started
+
+To effectively use the `ScrapeElementFromWebsiteTool`, follow these steps:
+
+1. **Install Dependencies**: Install the required packages using the command above.
+2. **Identify CSS Selectors**: Determine the CSS selectors for the elements you want to extract from the website.
+3. **Initialize the Tool**: Create an instance of the tool with the necessary parameters.
+
+## Example
+
+The following example demonstrates how to use the `ScrapeElementFromWebsiteTool` to extract specific elements from a website:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapeElementFromWebsiteTool
+
+# Initialize the tool
+scrape_tool = ScrapeElementFromWebsiteTool()
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific information from websites",
+    backstory="An expert in web scraping who can extract targeted content from web pages.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Example task to extract headlines from a news website
+scrape_task = Task(
+    description="Extract the main headlines from the CNN homepage. Use the CSS selector '.headline' to target the headline elements.",
+    expected_output="A list of the main headlines from CNN.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+You can also initialize the tool with predefined parameters:
+
+```python Code
+# Initialize the tool with predefined parameters
+scrape_tool = ScrapeElementFromWebsiteTool(
+    website_url="https://www.example.com",
+    css_element=".main-content"
+)
+```
+
+## Parameters
+
+The `ScrapeElementFromWebsiteTool` accepts the following parameters during initialization:
+
+- **website_url**: Optional. The URL of the website to scrape. If provided during initialization, the agent won't need to specify it when using the tool.
+- **css_element**: Optional. The CSS selector for the elements to extract. If provided during initialization, the agent won't need to specify it when using the tool.
+- **cookies**: Optional. A dictionary containing cookies to be sent with the request. This can be useful for websites that require authentication.
+
+## Usage
+
+When using the `ScrapeElementFromWebsiteTool` with an agent, the agent will need to provide the following parameters (unless they were specified during initialization):
+
+- **website_url**: The URL of the website to scrape.
+- **css_element**: The CSS selector for the elements to extract.
+
+The tool will return the text content of all elements matching the CSS selector, joined by newlines.
+
+```python Code
+# Example of using the tool with an agent
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract specific elements from websites",
+    backstory="An expert in web scraping who can extract targeted content using CSS selectors.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to extract specific elements
+extract_task = Task(
+    description="""
+    Extract all product titles from the featured products section on example.com.
+    Use the CSS selector '.product-title' to target the title elements.
+    """,
+    expected_output="A list of product titles from the website",
+    agent=web_scraper_agent,
+)
+
+# Run the task through a crew
+crew = Crew(agents=[web_scraper_agent], tasks=[extract_task])
+result = crew.kickoff()
+```
+
+## Implementation Details
+
+The `ScrapeElementFromWebsiteTool` uses the `requests` library to fetch the web page and `BeautifulSoup` to parse the HTML and extract the specified elements:
+
+```python Code
+class ScrapeElementFromWebsiteTool(BaseTool):
+    name: str = "Read a website content"
+    description: str = "A tool that can be used to read a website content."
+    
+    # Implementation details...
+    
+    def _run(self, **kwargs: Any) -> Any:
+        website_url = kwargs.get("website_url", self.website_url)
+        css_element = kwargs.get("css_element", self.css_element)
+        page = requests.get(
+            website_url,
+            headers=self.headers,
+            cookies=self.cookies if self.cookies else {},
+        )
+        parsed = BeautifulSoup(page.content, "html.parser")
+        elements = parsed.select(css_element)
+        return "\n".join([element.get_text() for element in elements])
+```
+
+## Conclusion
+
+The `ScrapeElementFromWebsiteTool` provides a powerful way to extract specific elements from websites using CSS selectors. By enabling agents to target only the content they need, it makes web scraping tasks more efficient and focused. This tool is particularly useful for data extraction, content monitoring, and research tasks where specific information needs to be extracted from web pages. 

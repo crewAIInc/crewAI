@@ -1,0 +1,205 @@
+---
+title: Patronus AI Evaluation
+description: Monitor and evaluate CrewAI agent performance using Patronus AI's comprehensive evaluation platform for LLM outputs and agent behaviors.
+icon: shield-check
+---
+
+# Patronus AI Evaluation
+
+## Overview
+
+[Patronus AI](https://patronus.ai) provides comprehensive evaluation and monitoring capabilities for CrewAI agents, enabling you to assess model outputs, agent behaviors, and overall system performance. This integration allows you to implement continuous evaluation workflows that help maintain quality and reliability in production environments.
+
+## Key Features
+
+- **Automated Evaluation**: Real-time assessment of agent outputs and behaviors
+- **Custom Criteria**: Define specific evaluation criteria tailored to your use cases  
+- **Performance Monitoring**: Track agent performance metrics over time
+- **Quality Assurance**: Ensure consistent output quality across different scenarios
+- **Safety & Compliance**: Monitor for potential issues and policy violations
+
+## Evaluation Tools
+
+Patronus provides three main evaluation tools for different use cases:
+
+1. **PatronusEvalTool**: Allows agents to select the most appropriate evaluator and criteria for the evaluation task.
+2. **PatronusPredefinedCriteriaEvalTool**: Uses predefined evaluator and criteria specified by the user.
+3. **PatronusLocalEvaluatorTool**: Uses custom function evaluators defined by the user.
+
+## Installation
+
+To use these tools, you need to install the Patronus package:
+
+```shell
+uv add patronus
+```
+
+You'll also need to set up your Patronus API key as an environment variable:
+
+```shell
+export PATRONUS_API_KEY="your_patronus_api_key"
+```
+
+## Steps to Get Started
+
+To effectively use the Patronus evaluation tools, follow these steps:
+
+1. **Install Patronus**: Install the Patronus package using the command above.
+2. **Set Up API Key**: Set your Patronus API key as an environment variable.
+3. **Choose the Right Tool**: Select the appropriate Patronus evaluation tool based on your needs.
+4. **Configure the Tool**: Configure the tool with the necessary parameters.
+
+## Examples
+
+### Using PatronusEvalTool
+
+The following example demonstrates how to use the `PatronusEvalTool`, which allows agents to select the most appropriate evaluator and criteria:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PatronusEvalTool
+
+# Initialize the tool
+patronus_eval_tool = PatronusEvalTool()
+
+# Define an agent that uses the tool
+coding_agent = Agent(
+    role="Coding Agent",
+    goal="Generate high quality code and verify that the output is code",
+    backstory="An experienced coder who can generate high quality python code.",
+    tools=[patronus_eval_tool],
+    verbose=True,
+)
+
+# Example task to generate and evaluate code
+generate_code_task = Task(
+    description="Create a simple program to generate the first N numbers in the Fibonacci sequence. Select the most appropriate evaluator and criteria for evaluating your output.",
+    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    agent=coding_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[coding_agent], tasks=[generate_code_task])
+result = crew.kickoff()
+```
+
+### Using PatronusPredefinedCriteriaEvalTool
+
+The following example demonstrates how to use the `PatronusPredefinedCriteriaEvalTool`, which uses predefined evaluator and criteria:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PatronusPredefinedCriteriaEvalTool
+
+# Initialize the tool with predefined criteria
+patronus_eval_tool = PatronusPredefinedCriteriaEvalTool(
+    evaluators=[{"evaluator": "judge", "criteria": "contains-code"}]
+)
+
+# Define an agent that uses the tool
+coding_agent = Agent(
+    role="Coding Agent",
+    goal="Generate high quality code",
+    backstory="An experienced coder who can generate high quality python code.",
+    tools=[patronus_eval_tool],
+    verbose=True,
+)
+
+# Example task to generate code
+generate_code_task = Task(
+    description="Create a simple program to generate the first N numbers in the Fibonacci sequence.",
+    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    agent=coding_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[coding_agent], tasks=[generate_code_task])
+result = crew.kickoff()
+```
+
+### Using PatronusLocalEvaluatorTool
+
+The following example demonstrates how to use the `PatronusLocalEvaluatorTool`, which uses custom function evaluators:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import PatronusLocalEvaluatorTool
+from patronus import Client, EvaluationResult
+import random
+
+# Initialize the Patronus client
+client = Client()
+
+# Register a custom evaluator
+@client.register_local_evaluator("random_evaluator")
+def random_evaluator(**kwargs):
+    score = random.random()
+    return EvaluationResult(
+        score_raw=score,
+        pass_=score >= 0.5,
+        explanation="example explanation",
+    )
+
+# Initialize the tool with the custom evaluator
+patronus_eval_tool = PatronusLocalEvaluatorTool(
+    patronus_client=client,
+    evaluator="random_evaluator",
+    evaluated_model_gold_answer="example label",
+)
+
+# Define an agent that uses the tool
+coding_agent = Agent(
+    role="Coding Agent",
+    goal="Generate high quality code",
+    backstory="An experienced coder who can generate high quality python code.",
+    tools=[patronus_eval_tool],
+    verbose=True,
+)
+
+# Example task to generate code
+generate_code_task = Task(
+    description="Create a simple program to generate the first N numbers in the Fibonacci sequence.",
+    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    agent=coding_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[coding_agent], tasks=[generate_code_task])
+result = crew.kickoff()
+```
+
+## Parameters
+
+### PatronusEvalTool
+
+The `PatronusEvalTool` does not require any parameters during initialization. It automatically fetches available evaluators and criteria from the Patronus API.
+
+### PatronusPredefinedCriteriaEvalTool
+
+The `PatronusPredefinedCriteriaEvalTool` accepts the following parameters during initialization:
+
+- **evaluators**: Required. A list of dictionaries containing the evaluator and criteria to use. For example: `[{"evaluator": "judge", "criteria": "contains-code"}]`.
+
+### PatronusLocalEvaluatorTool
+
+The `PatronusLocalEvaluatorTool` accepts the following parameters during initialization:
+
+- **patronus_client**: Required. The Patronus client instance.
+- **evaluator**: Optional. The name of the registered local evaluator to use. Default is an empty string.
+- **evaluated_model_gold_answer**: Optional. The gold answer to use for evaluation. Default is an empty string.
+
+## Usage
+
+When using the Patronus evaluation tools, you provide the model input, output, and context, and the tool returns the evaluation results from the Patronus API.
+
+For the `PatronusEvalTool` and `PatronusPredefinedCriteriaEvalTool`, the following parameters are required when calling the tool:
+
+- **evaluated_model_input**: The agent's task description in simple text.
+- **evaluated_model_output**: The agent's output of the task.
+- **evaluated_model_retrieved_context**: The agent's context.
+
+For the `PatronusLocalEvaluatorTool`, the same parameters are required, but the evaluator and gold answer are specified during initialization.
+
+## Conclusion
+
+The Patronus evaluation tools provide a powerful way to evaluate and score model inputs and outputs using the Patronus AI platform. By enabling agents to evaluate their own outputs or the outputs of other agents, these tools can help improve the quality and reliability of CrewAI workflows. 
