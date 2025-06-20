@@ -596,6 +596,8 @@ pre-commit install
 uv run pytest .
 ```
 
+Before running the tests, make sure you have set **OPENAI_API_KEY** as an environment variable in your `.env` file.
+
 ### Running static type checks
 
 ```bash
