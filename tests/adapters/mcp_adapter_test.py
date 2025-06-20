@@ -4,7 +4,7 @@ import pytest
 from mcp import StdioServerParameters
 
 from crewai_tools import MCPServerAdapter
-
+from crewai_tools.adapters.tool_collection import ToolCollection
 
 @pytest.fixture
 def echo_server_script():
@@ -18,7 +18,7 @@ def echo_server_script():
         def echo_tool(text: str) -> str:
             """Echo the input text"""
             return f"Echo: {text}"
-        
+
         mcp.run()
         '''
     )
@@ -68,6 +68,7 @@ def test_context_manager_syntax(echo_server_script):
         command="uv", args=["run", "python", "-c", echo_server_script]
     )
     with MCPServerAdapter(serverparams) as tools:
+        assert isinstance(tools, ToolCollection)
         assert len(tools) == 1
         assert tools[0].name == "echo_tool"
         assert tools[0].run(text="hello") == "Echo: hello"
@@ -91,7 +92,7 @@ def test_try_finally_syntax(echo_server_script):
         assert tools[0].run(text="hello") == "Echo: hello"
     finally:
         mcp_server_adapter.stop()
-        
+
 def test_try_finally_syntax_sse(echo_sse_server):
     sse_serverparams = echo_sse_server
     mcp_server_adapter = MCPServerAdapter(sse_serverparams)

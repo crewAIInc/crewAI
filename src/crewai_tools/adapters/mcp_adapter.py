@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
-
+from crewai_tools.adapters.tool_collection import ToolCollection
 """
 MCPServer for CrewAI.
 
@@ -114,7 +114,7 @@ class MCPServerAdapter:
         self._adapter.__exit__(None, None, None)
 
     @property
-    def tools(self) -> list[BaseTool]:
+    def tools(self) -> ToolCollection[BaseTool]:
         """The CrewAI tools available from the MCP server.
 
         Raises:
@@ -127,7 +127,7 @@ class MCPServerAdapter:
             raise ValueError(
                 "MCP server not started, run `mcp_server.start()` first before accessing `tools`"
             )
-        return self._tools
+        return ToolCollection(self._tools)
 
     def __enter__(self):
         """
