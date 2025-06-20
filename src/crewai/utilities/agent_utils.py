@@ -476,7 +476,14 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
                     try:
                         module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
-                        attributes[key].append(tool_class(**tool["init_params"]))
+
+                        tool_value = tool_class(**tool["init_params"])
+
+                        if isinstance(tool_value, list):
+                            attributes[key].extend(tool_value)
+                        else:
+                            attributes[key].append(tool_value)
+
                     except Exception as e:
                         raise AgentRepositoryError(
                             f"Tool {tool['name']} could not be loaded: {e}"
