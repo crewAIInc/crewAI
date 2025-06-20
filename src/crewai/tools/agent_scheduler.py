@@ -1,6 +1,7 @@
 import random
 from typing import Dict, List
-
+from crewai.tools import BaseTool
+from pydantic import Field
 
 class AgentScheduler:
     """
@@ -28,16 +29,25 @@ class AgentScheduler:
         return 3  # Moderate
 
 
-# Optional test harness
-if __name__ == "__main__":
-    agents = ["agent_alpha", "agent_beta", "agent_gamma"]
-    scheduler = AgentScheduler(agent_ids=agents)
+class AgentSchedulerTool(BaseTool):
+    name: str = "agent_scheduler"
+    description: str = (
+        "Tracks agent performance and suggests dynamic retraining intervals. "
+        "Takes agent_id (e.g., 'agent_alpha') and performance (comma-separated values like 'True,False,True')"
+    )
+    agent_ids: List[str]
+    scheduler: AgentScheduler = Field(default=None)
 
-    for _ in range(10):
-        for agent in agents:
-            result = random.choice([True, False])
-            scheduler.track_performance(agent, result)
+    def __init__(self, agent_ids: List[str]):
+        super().__init__(agent_ids=agent_ids)
+        object.__setattr__(self, 'scheduler', AgentScheduler(agent_ids))
 
-    for agent in agents:
-        interval = scheduler.adjust_training_schedule(agent)
-        print(f"{agent} → retrain every {interval} days")
+    def _run(self, agent_id: str, performance: str) -> str:
+        try:
+            performance_list = [x.strip() == "True" for x in performance.split(",")]
+            for result in performance_list:
+                self.scheduler.track_performance(agent_id, result)
+            interval = self.scheduler.adjust_training_schedule(agent_id)
+            return f"Recommended retraining interval for {agent_id}: {interval} days"
+        except Exception as e:
+            return f"Error processing input: {e}"

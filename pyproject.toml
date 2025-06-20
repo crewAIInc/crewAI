@@ -1,127 +1,71 @@
-[project]
+[tool.poetry]
 name = "crewai"
 version = "0.126.0"
-description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
+description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents."
+authors = ["Joao Moura <joao@crewai.com>"]
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
-authors = [
-    { name = "Joao Moura", email = "joao@crewai.com" }
-]
-dependencies = [
-    # Core Dependencies
-    "pydantic>=2.4.2",
-    "openai>=1.13.3",
-    "litellm==1.72.0",
-    "instructor>=1.3.3",
-    # Text Processing
-    "pdfplumber>=0.11.4",
-    "regex>=2024.9.11",
-    # Telemetry and Monitoring
-    "opentelemetry-api>=1.30.0",
-    "opentelemetry-sdk>=1.30.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.30.0",
-    # Data Handling
-    "chromadb>=0.5.23",
-    "tokenizers>=0.20.3",
-    "onnxruntime==1.22.0",
-    "openpyxl>=3.1.5",
-    "pyvis>=0.3.2",
-    # Authentication and Security
-    "auth0-python>=4.7.1",
-    "python-dotenv>=1.0.0",
-    # Configuration and Utils
-    "click>=8.1.7",
-    "appdirs>=1.4.4",
-    "jsonref>=1.1.0",
-    "json-repair>=0.25.2",
-    "uv>=0.4.25",
-    "tomli-w>=1.1.0",
-    "tomli>=2.0.2",
-    "blinker>=1.9.0",
-    "json5>=0.10.0",
-]
 
-[project.urls]
-Homepage = "https://crewai.com"
-Documentation = "https://docs.crewai.com"
-Repository = "https://github.com/crewAIInc/crewAI"
+[tool.poetry.dependencies]
+python = ">=3.10,<3.14"
+pydantic = ">=2.4.2"
+openai = ">=1.13.3"
+litellm = "==1.72.0"
+instructor = ">=1.3.3"
+pdfplumber = ">=0.11.4"
+regex = ">=2024.9.11"
+opentelemetry-api = ">=1.30.0"
+opentelemetry-sdk = ">=1.30.0"
+opentelemetry-exporter-otlp-proto-http = ">=1.30.0"
+chromadb = ">=0.5.23"
+tokenizers = ">=0.20.3"
+onnxruntime = "==1.22.0"
+openpyxl = ">=3.1.5"
+pyvis = ">=0.3.2"
+auth0-python = ">=4.7.1"
+python-dotenv = ">=1.0.0"
+click = ">=8.1.7"
+appdirs = ">=1.4.4"
+jsonref = ">=1.1.0"
+json-repair = ">=0.25.2"
+uv = ">=0.4.25"
+tomli-w = ">=1.1.0"
+tomli = ">=2.0.2"
+blinker = ">=1.9.0"
+json5 = ">=0.10.0"
 
-[project.optional-dependencies]
-tools = ["crewai-tools~=0.46.0"]
-embeddings = [
-    "tiktoken~=0.8.0"
-]
-agentops = ["agentops>=0.3.0"]
-pdfplumber = [
-    "pdfplumber>=0.11.4",
-]
-pandas = [
-    "pandas>=2.2.3",
-]
-openpyxl = [
-    "openpyxl>=3.1.5",
-]
-mem0 = ["mem0ai>=0.1.94"]
-docling = [
-    "docling>=2.12.0",
-]
-aisuite = [
-    "aisuite>=0.1.10",
-]
+[tool.poetry.extras]
+tools = ["crewai-tools"]
+embeddings = ["tiktoken"]
+agentops = ["agentops"]
+pdfplumber = ["pdfplumber"]
+pandas = ["pandas"]
+openpyxl = ["openpyxl"]
+mem0 = ["mem0ai"]
+docling = ["docling"]
+aisuite = ["aisuite"]
 
-[tool.uv]
-dev-dependencies = [
-    "ruff>=0.8.2",
-    "mypy>=1.10.0",
-    "pre-commit>=3.6.0",
-    "mkdocs>=1.4.3",
-    "mkdocstrings>=0.22.0",
-    "mkdocstrings-python>=1.1.2",
-    "mkdocs-material>=9.5.7",
-    "mkdocs-material-extensions>=1.3.1",
-    "pillow>=10.2.0",
-    "cairosvg>=2.7.1",
-    "pytest>=8.0.0",
-    "python-dotenv>=1.0.0",
-    "pytest-asyncio>=0.23.7",
-    "pytest-subprocess>=1.5.2",
-    "pytest-recording>=0.13.2",
-    "pytest-randomly>=3.16.0",
-    "pytest-timeout>=2.3.1",
-]
 
-[project.scripts]
+[tool.poetry.dev-dependencies]
+ruff = ">=0.8.2"
+mypy = ">=1.10.0"
+pre-commit = ">=3.6.0"
+mkdocs = ">=1.4.3"
+mkdocstrings = ">=0.22.0"
+mkdocstrings-python = ">=1.1.2"
+mkdocs-material = ">=9.5.7"
+mkdocs-material-extensions = ">=1.3.1"
+pillow = ">=10.2.0"
+cairosvg = ">=2.7.1"
+pytest = ">=8.0.0"
+pytest-asyncio = ">=0.23.7"
+pytest-subprocess = ">=1.5.2"
+pytest-recording = ">=0.13.2"
+pytest-randomly = ">=3.16.0"
+pytest-timeout = ">=2.3.1"
+
+[tool.poetry.scripts]
 crewai = "crewai.cli.cli:crewai"
 
-[tool.mypy]
-ignore_missing_imports = true
-disable_error_code = 'import-untyped'
-exclude = ["cli/templates"]
-
-[tool.bandit]
-exclude_dirs = ["src/crewai/cli/templates"]
-
-# PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
-[[tool.uv.index]]
-name = "pytorch-nightly"
-url = "https://download.pytorch.org/whl/nightly/cpu"
-explicit = true
-
-[[tool.uv.index]]
-name = "pytorch"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[tool.uv.sources]
-torch = [
-  { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
-  { index = "pytorch", marker = "python_version < '3.13'" },
-]
-torchvision = [
-  { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
-  { index = "pytorch", marker = "python_version < '3.13'" },
-]
-
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

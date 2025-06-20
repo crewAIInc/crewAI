@@ -4,4 +4,5 @@ __all__ = [
     "BaseTool",
     "tool",
     "EnvVar",
+    "CollaborationOptimizerTool"
 ]

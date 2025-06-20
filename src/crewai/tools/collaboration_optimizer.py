@@ -1,56 +1,52 @@
-# collaboration_optimizer.py
-# Located at: src/crewai/tools/collaboration_optimizer.py
+# src/crewai/tools/collaboration_optimizer.py
 
-import numpy as np
-import gym
-from gym.spaces import Discrete, Box
+from crewai.tools import BaseTool
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
-
+import numpy as np
+import gymnasium as gym
+from gymnasium.spaces import Discrete, Box
 
 class AgentCollaborationEnv(gym.Env):
-    """
-    A Gym environment that simulates collaboration between agents.
-    Each agent gets a performance score. The better they collaborate, the higher the cumulative reward.
-    """
-
     def __init__(self, num_agents: int = 3):
         super(AgentCollaborationEnv, self).__init__()
         self.num_agents = num_agents
-        self.observation_space = Box(
-            low=0, high=1, shape=(self.num_agents,), dtype=np.float32
-        )
-        self.action_space = Discrete(
-            self.num_agents * 2
-        )  # Simulate routing or delegation decisions
+        self.observation_space = Box(low=0, high=1, shape=(self.num_agents,), dtype=np.float32)
+        self.action_space = Discrete(self.num_agents * 2)
         self.state = np.zeros(self.num_agents, dtype=np.float32)
 
-    def reset(self):
-        self.state = np.random.rand(self.num_agents)
-        return self.state
+    def reset(self, seed=None, options=None):
+        self.state = np.random.rand(self.num_agents).astype(np.float32)
+        return self.state, {}
 
     def step(self, action):
-        # Simulate some logic based on action
-        self.state = np.random.rand(self.num_agents)
-        reward = float(
-            np.mean(self.state)
-        )  # Reward: better collaboration = higher mean
-        done = np.random.rand() > 0.95  # Random termination condition
-        return self.state, reward, done, {}
+        self.state = np.random.rand(self.num_agents).astype(np.float32)
+        reward = float(np.mean(self.state))
+        terminated = np.random.rand() > 0.95
+        truncated = False
+        return self.state, reward, terminated, truncated, {}
 
 
-# Optional test harness
-if __name__ == "__main__":
-    env = AgentCollaborationEnv(num_agents=4)
-    check_env(env, warn=True)
+class CollaborationOptimizerTool(BaseTool):
+    name: str = "collaboration_optimizer"
+    description: str = "Optimizes collaboration strategies among agents using reinforcement learning."
 
-    model = PPO("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=2000)
-    model.save("agent_collab_optimizer")
+    def _run(self, num_agents: int = 3, timesteps: int = 2000):
+        env = AgentCollaborationEnv(num_agents)
+        check_env(env, warn=True)
 
-    # Run a quick evaluation
-    obs = env.reset()
-    for _ in range(5):
-        action, _ = model.predict(obs)
-        obs, reward, done, _ = env.step(action)
-        print(f"Step reward: {reward:.4f}")
+        model = PPO("MlpPolicy", env, verbose=0)
+        model.learn(total_timesteps=timesteps)
+
+        # Evaluation phase (returns average reward over 5 steps)
+        obs, _ = env.reset()
+        total_reward = 0
+        for _ in range(5):
+            action, _ = model.predict(obs)
+            obs, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
+            if terminated or truncated:
+              break
+        avg_reward = total_reward / 5.0
+
+        return f"Average collaboration reward for {num_agents} agents: {avg_reward:.4f}"
