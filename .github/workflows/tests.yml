@@ -32,3 +32,7 @@ jobs:
 
       - name: Run tests
         run: uv run pytest --block-network --timeout=60 -vv
+        env:
+          # Use real API key for Python 3.12 due to pytest-recording issue #150
+          # where --block-network doesn't work properly in Python 3.12
+          OPENAI_API_KEY: ${{ matrix.python-version == '3.12' && secrets.OPENAI_API_KEY || 'fake-api-key' }}
