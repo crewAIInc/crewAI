@@ -1,6 +1,8 @@
 ---
 title: "Customize Agent Prompts"
 description: "Learn how to customize system and user prompts in CrewAI agents for precise control over agent behavior and output formatting."
+categoryId: "how-to-guides"
+priority: 1
 ---
 
 # Customize Agent Prompts
@@ -35,7 +37,7 @@ CrewAI assembles prompts differently based on agent type:
 
 You can override the default prompt structure using custom templates:
 
-```python
+```python showLineNumbers
 from crewai import Agent, Task, Crew
 
 # Define custom templates
@@ -76,7 +78,7 @@ Custom templates support these placeholders:
 
 Enable system/user prompt separation for better LLM compatibility:
 
-```python
+```python showLineNumbers
 agent = Agent(
     role="Research Assistant",
     goal="Conduct thorough research on given topics",
@@ -95,7 +97,7 @@ When `use_system_prompt=True`:
 
 Control output formatting using Pydantic models:
 
-```python
+```python showLineNumbers
 from pydantic import BaseModel
 from typing import List
 
@@ -116,7 +118,7 @@ task = Task(
 
 Add specific formatting requirements:
 
-```python
+```python showLineNumbers
 task = Task(
     description="Analyze the quarterly sales data",
     expected_output="Analysis in JSON format with specific fields",
@@ -137,7 +139,7 @@ task = Task(
 
 CrewAI automatically configures stop words based on agent setup:
 
-```python
+```python showLineNumbers
 # Default stop word is "\nObservation:" for tool-enabled agents
 agent = Agent(
     role="Analyst",
@@ -147,11 +149,13 @@ agent = Agent(
 )
 ```
 
+> **Note:** If `system_template`, `prompt_template`, or `response_template` are not provided, the default templates from `translations/en.json` are used.
+
 ### Custom Stop Words via Response Template
 
 Modify stop words by customizing the response template:
 
-```python
+```python showLineNumbers
 response_template = """Provide your analysis:
 {{ .Response }}
 ---END---"""
@@ -164,11 +168,13 @@ agent = Agent(
 )
 ```
 
+> ⚠️ **Warning:** If your stop sequence (e.g., `---END---`) can appear naturally within the model's response, this may cause premature output truncation. Always select distinctive, unlikely-to-occur sequences for stopping generation.
+
 ## LiteAgent Prompt Customization
 
 LiteAgents use a simplified prompt system with direct customization:
 
-```python
+```python showLineNumbers
 from crewai import LiteAgent
 
 # LiteAgent with tools
@@ -187,7 +193,7 @@ lite_agent = LiteAgent(
 
 ### Example 1: Multi-Language Support
 
-```python
+```python showLineNumbers
 # Custom templates for different languages
 spanish_system_template = """{{ .System }}
 
@@ -204,7 +210,7 @@ agent = Agent(
 
 ### Example 2: Domain-Specific Formatting
 
-```python
+```python showLineNumbers
 # Medical report formatting
 medical_response_template = """MEDICAL ANALYSIS REPORT
 {{ .Response }}
@@ -222,7 +228,7 @@ medical_agent = Agent(
 
 ### Example 3: Complex Workflow Integration
 
-```python
+```python showLineNumbers
 from crewai import Flow
 
 class CustomPromptFlow(Flow):
@@ -271,22 +277,24 @@ NEXT STEPS: [Recommend next actions]""",
 
 ## Best Practices
 
-### Precision and Accuracy
+#### Precision and Accuracy
 - Use specific role definitions and detailed backstories for consistent behavior
 - Include validation requirements in custom templates
 - Test prompt variations to ensure predictable outputs
 
-### Security Considerations  
+#### Security Considerations  
 - Validate all user inputs before including them in prompts
 - Use structured output formats to prevent prompt injection
 - Implement guardrails for sensitive operations
 
-### Performance Optimization
+> 🛡️ **Security Tip:** Avoid injecting raw or untrusted inputs directly into prompt templates without validation or sanitization. Use controlled data or escape sequences appropriately to prevent prompt injection attacks or unintended model behavior.
+
+#### Performance Optimization
 - Keep system prompts concise while maintaining necessary context
 - Use appropriate stop words to prevent unnecessary token generation
 - Test prompt efficiency with your target LLM models
 
-### Complexity Handling
+#### Complexity Handling
 - Break complex requirements into multiple template components
 - Use conditional prompt assembly for different scenarios
 - Implement fallback templates for error handling
@@ -295,17 +303,17 @@ NEXT STEPS: [Recommend next actions]""",
 
 ### Common Issues
 
-**Prompt Not Applied**: Ensure you're using the correct template parameter names and that `use_system_prompt` is set appropriately.
+**Prompt Not Applied**: Ensure you're using the correct template parameter names and that `use_system_prompt` is set appropriately. See the [Basic Prompt Customization](#basic-prompt-customization) section for examples.
 
-**Format Not Working**: Verify that your `output_format` or `output_pydantic` model matches the expected structure.
+**Format Not Working**: Verify that your `output_format` or `output_pydantic` model matches the expected structure. Refer to [Output Format Customization](#output-format-customization) for details.
 
-**Stop Words Not Effective**: Check that your `response_template` includes the desired stop sequence after the `{{ .Response }}` placeholder.
+**Stop Words Not Effective**: Check that your `response_template` includes the desired stop sequence after the `{{ .Response }}` placeholder. See [Stop Words Configuration](#stop-words-configuration) for guidance.
 
 ### Debugging Prompts
 
 Enable verbose mode to see the actual prompts being sent to the LLM:
 
-```python
+```python showLineNumbers
 agent = Agent(
     role="Debug Agent",
     goal="Help debug prompt issues", 
@@ -313,5 +321,14 @@ agent = Agent(
     verbose=True  # Shows detailed prompt information
 )
 ```
+
+### Additional Troubleshooting Steps
+
+#### Additional Troubleshooting Steps
+- **Verify prompt payloads**: Use verbose mode to inspect the actual prompts sent to the LLM  
+- **Test stop word effects**: Carefully verify that stop sequences don't cause premature truncation
+- **Check template syntax**: Ensure placeholders like `{{ .System }}` are correctly formatted
+
+For more troubleshooting guidance, see the [Troubleshooting](#troubleshooting) section above.
 
 This comprehensive prompt customization system gives you precise control over agent behavior while maintaining the reliability and consistency that CrewAI is known for in production environments.
