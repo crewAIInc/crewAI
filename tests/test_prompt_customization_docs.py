@@ -1,9 +1,9 @@
-import pytest
 from unittest.mock import Mock, patch
 from pydantic import BaseModel
 from typing import List
 
-from crewai import Agent, Task, Crew, LiteAgent
+from crewai import Agent, Task
+from crewai.lite_agent import LiteAgent
 from crewai.utilities.prompts import Prompts
 from crewai.utilities import I18N
 
