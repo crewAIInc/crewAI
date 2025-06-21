@@ -7,7 +7,8 @@ import numpy as np
 import gymnasium as gym
 from gymnasium.spaces import Discrete, Box
 
-class AgentCollaborationEnv(gym.Env):
+class AgentCollaborationEnv(gym.
+                            Env):
     def __init__(self, num_agents: int = 3):
         super(AgentCollaborationEnv, self).__init__()
         self.num_agents = num_agents

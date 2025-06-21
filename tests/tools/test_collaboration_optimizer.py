@@ -1,40 +1,50 @@
 import os
+import unittest
 from crewai import Agent, Task, Crew, LLM
 from crewAI.src.crewai.tools.collaboration_optimizer import CollaborationOptimizerTool
-from langchain_openai import AzureChatOpenAI
 
 # Set Azure OpenAI credentials
-os.environ["AXZURE_API_TYPE"] = "azure"
+os.environ["AZURE_API_TYPE"] = "azure"
 os.environ["AZURE_API_KEY"] = os.getenv("AZURE_OPENAI_API_KEY")
 os.environ["AZURE_API_BASE"] = os.getenv("AZURE_OPENAI_ENDPOINT")
 os.environ["AZURE_API_VERSION"] = "2025-01-01-preview"
 os.environ["AZURE_DEPLOYMENT_NAME"] = "gpt-4o"
 
 
-# llm = AzureChatOpenAI(azure_deployment='gpt-4o', azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT'), api_key=os.getenv('AZURE_OPENAI_API_KEY'))
-llm = LLM(model="azure/gpt-4o", api_version="2023-05-15")
+class TestCollaborationOptimizerTool(unittest.TestCase):
+    def setup(self):
+        self.llm = LLM(model="azure/gpt-4o", api_version="2023-05-15")
+        self.agent = Agent(
+            name="Optimizer Agent",
+            role="Collaboration Strategist",
+            backstory="An AI agent specialized in optimizing teamwork among multiple agents through reinforcement learning strategies.",
+            goal="Maximize team collaboration efficiency",
+            tools=[CollaborationOptimizerTool()],
+            llm=self.llm,
+            verbose=True
+        )
 
+        self.task = Task(
+            description="Run a simulation to optimize collaboration among 4 agents.",
+            expected_output="Optimal reward score and strategy feedback",
+            agent=self.agent
+        )
 
-class LLMWrapper:
-    def __init__(self, llm): self.llm = llm
-    def __call__(self, prompt): return self.llm.invoke(prompt).content
+        self.crew = Crew(agents=[self.agent], tasks=[self.task], verbose=True)
 
+      def test_collaboration_optimizer_tool_attached_to_agent(self):
+        # Ensure the tool is properly attached
+        tool_names = [tool.name for tool in self.agent.tools]
+        self.assertIn("Collaboration Optimizer", tool_names)
 
-agent = Agent(
-    name="Optimizer Agent",
-    role="Collaboration Strategist",
-    backstory="An AI agent specialized in optimizing teamwork among multiple agents through reinforcement learning strategies.",
-    goal="Maximize team collaboration efficiency",
-    tools=[CollaborationOptimizerTool()],
-    llm=llm,
-    verbose=True
-)
+      def test_crew_kickoff_returns_result(self):
+          # Run the crew and assert the result format
+          result = self.crew.kickoff()
+          self.assertIsInstance(result, str)  # Or dict, depending on what the tool returns
+          self.assertIn("Optimal", result)  # You can refine this based on expected output
 
-task = Task(
-    description="Run a simulation to optimize collaboration among 4 agents.",
-    expected_output="Optimal reward score and strategy feedback",
-    agent=agent
-)
+      def test_tool_description_contains_expected_keywords(self):
+          tool = self.agent.tools[0]
+          self.assertIn("optimiz", tool.description.lower())  # fuzzy match for "optimize", etc.
+          self.assertTrue(tool.description)  # Ensure description is not empty
 
-crew = Crew(agents=[agent], tasks=[task], verbose=True)
-crew.kickoff()
