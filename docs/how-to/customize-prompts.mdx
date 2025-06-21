@@ -151,7 +151,7 @@ agent = Agent(
 )
 ```
 
-> **Note:** If `system_template`, `prompt_template`, or `response_template` are not provided, the default templates from `translations/en.json` are used.
+> **Note:** If `system_template`, `prompt_template`, or `response_template` are not provided, the default templates from `translations/en.json` are used. The default system template includes role-playing instructions, tool descriptions (if applicable), and task formatting guidelines.
 
 ### Custom Stop Words via Response Template
 
@@ -311,6 +311,8 @@ NEXT STEPS: [Recommend next actions]""",
 
 **Stop Words Not Effective**: Check that your `response_template` includes the desired stop sequence after the `{{ .Response }}` placeholder. See [Stop Words Configuration](#stop-words-configuration) for guidance.
 
+**Template Injection Concerns**: Review the [Security Considerations](#security-considerations) section for guidance on preventing prompt injection attacks.
+
 ### Debugging Prompts
 
 Enable verbose mode to see the actual prompts being sent to the LLM:
@@ -326,11 +328,13 @@ agent = Agent(
 
 ### Additional Troubleshooting Steps
 
-#### Additional Troubleshooting Steps
 - **Verify prompt payloads**: Use verbose mode to inspect the actual prompts sent to the LLM  
 - **Test stop word effects**: Carefully verify that stop sequences don't cause premature truncation
 - **Check template syntax**: Ensure placeholders like `{{ .System }}` are correctly formatted
 - **Validate security**: Review custom templates for potential injection vulnerabilities as described in [Security Considerations](#security-considerations)
+- **Revert to defaults**: If custom templates aren't working, temporarily remove them to isolate the issue
+- **Test incrementally**: Add one custom template at a time to identify which component is causing problems
+- **Validate template parameters**: Ensure all required parameters (role, goal, backstory) are provided when using custom templates
 
 For more troubleshooting guidance, see the sections above on [Best Practices](#best-practices) and [Security Considerations](#security-considerations).
 
