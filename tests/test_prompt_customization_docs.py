@@ -460,3 +460,47 @@ DISCLAIMER: This analysis is for informational purposes only."""
         assert lite_agent_with_tools.role == "Reviewer"
         assert len(lite_agent_with_tools.tools) == 1
         assert lite_agent_with_tools.tools[0].name == "mock_tool"
+
+    def test_malformed_template_handling(self):
+        """Test handling of malformed or incomplete templates gracefully.
+        
+        Validates:
+        - Agent creation succeeds with malformed templates
+        - Missing placeholders don't cause failures
+        - System handles edge cases gracefully
+        """
+        incomplete_template = "This is a template without placeholders"
+        
+        agent = Agent(
+            role="Test Agent",
+            goal="Test incomplete templates",
+            backstory="Agent for testing edge cases.",
+            system_template=incomplete_template,
+            llm="gpt-4o-mini"
+        )
+
+        assert agent.system_template == incomplete_template
+        assert agent.role == "Test Agent"
+        
+        agent_empty = Agent(
+            role="Empty Template Agent",
+            goal="Test empty templates",
+            backstory="Agent with empty template.",
+            response_template="",
+            llm="gpt-4o-mini"
+        )
+        
+        assert agent_empty.response_template == ""
+
+    def test_agent_creation_with_missing_required_parameters(self):
+        """Test agent creation behavior when required parameters are missing.
+        
+        Validates:
+        - Agent creation requires role, goal, and backstory
+        - Appropriate errors are raised for missing parameters
+        """
+        with pytest.raises((TypeError, ValueError)):
+            Agent(llm="gpt-4o-mini")  # Missing required parameters
+            
+        with pytest.raises((TypeError, ValueError)):
+            Agent(role="Test", llm="gpt-4o-mini")  # Missing goal and backstory
