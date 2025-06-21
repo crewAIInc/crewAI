@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from crewai.utilities.events.base_events import BaseEvent
 
@@ -26,6 +26,15 @@ class LLMCallStartedEvent(BaseEvent):
     tools: Optional[List[dict]] = None
     callbacks: Optional[List[Any]] = None
     available_functions: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def sanitize_tools(cls, values):
+        """Sanitize tools list to only include dict objects, filtering out non-dict objects like TokenCalcHandler"""
+        if isinstance(values, dict) and 'tools' in values and values['tools'] is not None:
+            if isinstance(values['tools'], list):
+                values['tools'] = [tool for tool in values['tools'] if isinstance(tool, dict)]
+        return values
 
 
 class LLMCallCompletedEvent(BaseEvent):
