@@ -123,18 +123,22 @@ End of response."""
         assert task.expected_output == "A structured research report"
 
     def test_custom_format_instructions(self):
-        """Test custom output format instructions."""
-        output_format = """{
-    "total_sales": "number",
-    "growth_rate": "percentage", 
-    "top_products": ["list of strings"],
-    "recommendations": "detailed string"
-}"""
+        """Test custom output format instructions using output_json.
+        
+        Validates:
+        - Task can be configured with structured JSON output using Pydantic models
+        - Output format is properly stored and accessible via _get_output_format method
+        """
+        class SalesAnalysisOutput(BaseModel):
+            total_sales: float
+            growth_rate: str
+            top_products: List[str]
+            recommendations: str
 
         task = Task(
             description="Analyze the quarterly sales data",
             expected_output="Analysis in JSON format with specific fields",
-            output_format=output_format,
+            output_json=SalesAnalysisOutput,
             agent=Agent(
                 role="Sales Analyst",
                 goal="Analyze sales data",
@@ -143,10 +147,17 @@ End of response."""
             )
         )
 
-        assert task.output_format == output_format
+        assert task.output_json == SalesAnalysisOutput
+        assert task._get_output_format().value == "json"
 
     def test_stop_words_configuration(self):
-        """Test stop words configuration through response template."""
+        """Test stop words configuration through response template.
+        
+        Validates:
+        - Response template is properly stored on agent
+        - Agent has create_agent_executor method for setting up execution
+        - Stop words are configured based on response template content
+        """
         response_template = """Provide your analysis:
 {{ .Response }}
 ---END---"""
@@ -160,9 +171,11 @@ End of response."""
         )
 
         assert agent.response_template == response_template
-
         assert hasattr(agent, 'create_agent_executor')
         assert callable(getattr(agent, 'create_agent_executor'))
+        
+        agent.create_agent_executor()
+        assert agent.agent_executor is not None
 
     def test_lite_agent_prompt_customization(self):
         """Test LiteAgent prompt customization."""

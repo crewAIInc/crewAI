@@ -116,20 +116,22 @@ task = Task(
 
 ### Custom Format Instructions
 
-Add specific formatting requirements:
+Add specific formatting requirements using Pydantic models:
 
 ```python showLineNumbers
+from pydantic import BaseModel
+from typing import List
+
+class SalesAnalysisOutput(BaseModel):
+    total_sales: float
+    growth_rate: str
+    top_products: List[str]
+    recommendations: str
+
 task = Task(
     description="Analyze the quarterly sales data",
     expected_output="Analysis in JSON format with specific fields",
-    output_format="""
-    {
-        "total_sales": "number",
-        "growth_rate": "percentage", 
-        "top_products": ["list of strings"],
-        "recommendations": "detailed string"
-    }
-    """
+    output_json=SalesAnalysisOutput
 )
 ```
 
@@ -287,7 +289,7 @@ NEXT STEPS: [Recommend next actions]""",
 - Use structured output formats to prevent prompt injection
 - Implement guardrails for sensitive operations
 
-> 🛡️ **Security Tip:** Avoid injecting raw or untrusted inputs directly into prompt templates without validation or sanitization. Use controlled data or escape sequences appropriately to prevent prompt injection attacks or unintended model behavior.
+> 🛡️ **Security Warning:** Never inject raw or untrusted user inputs directly into prompt templates without proper validation and sanitization. This can lead to prompt injection attacks where malicious users manipulate agent behavior. Always validate inputs, use parameterized templates, and consider implementing input filtering for production systems. Additionally, be cautious with custom stop sequences - if they can appear naturally in model responses, they may cause premature truncation of legitimate outputs.
 
 #### Performance Optimization
 - Keep system prompts concise while maintaining necessary context
@@ -305,7 +307,7 @@ NEXT STEPS: [Recommend next actions]""",
 
 **Prompt Not Applied**: Ensure you're using the correct template parameter names and that `use_system_prompt` is set appropriately. See the [Basic Prompt Customization](#basic-prompt-customization) section for examples.
 
-**Format Not Working**: Verify that your `output_format` or `output_pydantic` model matches the expected structure. Refer to [Output Format Customization](#output-format-customization) for details.
+**Format Not Working**: Verify that your `output_json` or `output_pydantic` model matches the expected structure. Refer to [Output Format Customization](#output-format-customization) for details.
 
 **Stop Words Not Effective**: Check that your `response_template` includes the desired stop sequence after the `{{ .Response }}` placeholder. See [Stop Words Configuration](#stop-words-configuration) for guidance.
 
@@ -328,7 +330,8 @@ agent = Agent(
 - **Verify prompt payloads**: Use verbose mode to inspect the actual prompts sent to the LLM  
 - **Test stop word effects**: Carefully verify that stop sequences don't cause premature truncation
 - **Check template syntax**: Ensure placeholders like `{{ .System }}` are correctly formatted
+- **Validate security**: Review custom templates for potential injection vulnerabilities as described in [Security Considerations](#security-considerations)
 
-For more troubleshooting guidance, see the [Troubleshooting](#troubleshooting) section above.
+For more troubleshooting guidance, see the sections above on [Best Practices](#best-practices) and [Security Considerations](#security-considerations).
 
 This comprehensive prompt customization system gives you precise control over agent behavior while maintaining the reliability and consistency that CrewAI is known for in production environments.
