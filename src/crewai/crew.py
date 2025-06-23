@@ -280,7 +280,11 @@ class Crew(FlowTrackable, BaseModel):
         self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
-        self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+
+        # Initialize RPM controller only if not already set by a Flow
+        if not hasattr(self, '_rpm_controller') or self._rpm_controller is None:
+            self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
             self.function_calling_llm = create_llm(self.function_calling_llm)
 
@@ -314,7 +318,7 @@ class Crew(FlowTrackable, BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Initialize private memory attributes."""
         self._external_memory = (
-            # External memory doesn’t support a default value since it was designed to be managed entirely externally
+            # External memory doesn't support a default value since it was designed to be managed entirely externally
             self.external_memory.set_crew(self) if self.external_memory else None
         )
 
@@ -1498,6 +1502,31 @@ class Crew(FlowTrackable, BaseModel):
         }
 
     def reset_knowledge(self, knowledges: List[Knowledge]) -> None:
-        """Reset crew and agent knowledge storage."""
-        for ks in knowledges:
-            ks.reset()
+        """Reset specific crew knowledge."""
+        for knowledge in knowledges:
+            if knowledge.storage:
+                knowledge.storage.reset()
+
+    def set_flow_rpm_controller(self, rpm_controller: RPMController) -> None:
+        """Set an external RPM controller (typically from a Flow) on this crew.
+
+        This method allows a Flow to override the crew's individual RPM settings
+        with a global rate limit that applies across all crews in the flow.
+
+        Args:
+            rpm_controller: The RPMController instance to use for this crew
+        """
+        # Set the external RPM controller
+        self._rpm_controller = rpm_controller
+
+        # Update all agents to use the new RPM controller
+        for agent in self.agents:
+            agent.set_rpm_controller(rpm_controller)
+
+        # Log the change for debugging purposes
+        if hasattr(self, '_logger'):
+            self._logger.log(
+                "info",
+                f"Crew RPM controller set to global flow limit: {rpm_controller.max_rpm} RPM",
+                color="blue"
+            )

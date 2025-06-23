@@ -21,7 +21,8 @@ from pydantic import BaseModel, Field, ValidationError
 
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.utils import get_possible_return_constants
+from crewai.flow.utils import get_possible_return_constants, auto_configure_flow_crews
+from crewai.utilities import Logger, RPMController
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.flow_events import (
     FlowCreatedEvent,
@@ -447,12 +448,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def __init__(
         self,
         persistence: Optional[FlowPersistence] = None,
+        max_rpm: Optional[int] = None,
+        verbose: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
 
         Args:
             persistence: Optional persistence backend for storing flow states
+            max_rpm: Maximum number of requests per minute for all crews in this flow
+            verbose: Whether to enable verbose logging
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -461,6 +466,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._pending_and_listeners: Dict[str, Set[str]] = {}
         self._method_outputs: List[Any] = []  # List to store all method outputs
         self._persistence: Optional[FlowPersistence] = persistence
+
+        # Initialize RPM controller for global flow-level rate limiting
+        self._logger = Logger(verbose=verbose)
+        self.max_rpm = max_rpm
+        self._rpm_controller: Optional[RPMController] = None
+        if max_rpm is not None:
+            self._rpm_controller = RPMController(max_rpm=max_rpm, logger=self._logger)
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -846,6 +858,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 else method(*args, **kwargs)
             )
 
+            # Auto-configure any crew instances with flow's RPM controller
+            if self._rpm_controller is not None:
+                result = auto_configure_flow_crews(self, result)
+
             self._method_outputs.append(result)
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1
@@ -1072,11 +1088,41 @@ class Flow(Generic[T], metaclass=FlowMeta):
             logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow") -> None:
+        """
+        Plots the flow using the plotly graphing framework.
+
+        Args:
+            filename: The name of the file to be saved as.
+        """
         crewai_event_bus.emit(
-            self,
-            FlowPlotEvent(
-                type="flow_plot",
-                flow_name=self.__class__.__name__,
-            ),
+            self, FlowPlotEvent(type="flow_plot", flow_name=self.__class__.__name__)
         )
         plot_flow(self, filename)
+
+    def get_flow_rpm_controller(self) -> Optional[RPMController]:
+        """Get the flow's global RPM controller.
+
+        Returns:
+            The RPMController instance if max_rpm is set, None otherwise
+        """
+        return self._rpm_controller
+
+    def set_crew_rpm_controller(self, crew) -> None:
+        """Set the flow's RPM controller on a crew if flow has global RPM limit.
+
+        Args:
+            crew: The crew instance to configure with flow's RPM controller
+        """
+        if self._rpm_controller is not None:
+            # Import here to avoid circular imports
+            from crewai.crew import Crew
+            if isinstance(crew, Crew):
+                crew._rpm_controller = self._rpm_controller
+                # Update all agents in the crew to use the flow's RPM controller
+                for agent in crew.agents:
+                    agent.set_rpm_controller(self._rpm_controller)
+
+    def __del__(self):
+        """Cleanup resources when the flow is destroyed."""
+        if hasattr(self, '_rpm_controller') and self._rpm_controller is not None:
+            self._rpm_controller.stop_rpm_counter()
