@@ -1,0 +1,43 @@
+/* Fix for Frame component width issue in installation docs */
+/* Ensures file structure displays with proper width */
+.frame-container {
+  min-width: 300px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Target Frame components specifically */
+[data-component="frame"] {
+  min-width: 300px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Ensure code blocks within frames have proper width */
+.frame-container pre,
+[data-component="frame"] pre {
+  min-width: 280px;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Additional Frame component styling for better display */
+.frame {
+  min-width: 300px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Target any frame-like containers */
+div[class*="frame"] {
+  min-width: 300px;
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Ensure pre elements inside any frame have proper styling */
+div[class*="frame"] pre {
+  min-width: 280px;
+  white-space: pre;
+  overflow-x: auto;
+}
