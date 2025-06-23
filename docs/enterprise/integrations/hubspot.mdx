@@ -1,0 +1,579 @@
+---
+title: "HubSpot Integration"
+description: "Manage companies and contacts in HubSpot with CrewAI."
+icon: "briefcase"
+---
+
+## Overview
+
+Enable your agents to manage companies and contacts within HubSpot. Create new records and streamline your CRM processes with AI-powered automation.
+
+## Prerequisites
+
+Before using the HubSpot integration, ensure you have:
+
+- A [CrewAI Enterprise](https://app.crewai.com) account with an active subscription.
+- A HubSpot account with appropriate permissions.
+- Connected your HubSpot account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors).
+
+## Setting Up HubSpot Integration
+
+### 1. Connect Your HubSpot Account
+
+1. Navigate to [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors).
+2. Find **HubSpot** in the Authentication Integrations section.
+3. Click **Connect** and complete the OAuth flow.
+4. Grant the necessary permissions for company and contact management.
+5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account).
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+## Available Actions
+
+<AccordionGroup>
+  <Accordion title="HUBSPOT_CREATE_RECORD_COMPANIES">
+    **Description:** Create a new company record in HubSpot.
+
+    **Parameters:**
+    - `name` (string, required): Name of the company.
+    - `domain` (string, optional): Company Domain Name.
+    - `industry` (string, optional): Industry. Must be one of the predefined values from HubSpot.
+    - `phone` (string, optional): Phone Number.
+    - `hubspot_owner_id` (string, optional): Company owner ID.
+    - `type` (string, optional): Type of the company. Available values: `PROSPECT`, `PARTNER`, `RESELLER`, `VENDOR`, `OTHER`.
+    - `city` (string, optional): City.
+    - `state` (string, optional): State/Region.
+    - `zip` (string, optional): Postal Code.
+    - `numberofemployees` (number, optional): Number of Employees.
+    - `annualrevenue` (number, optional): Annual Revenue.
+    - `timezone` (string, optional): Time Zone.
+    - `description` (string, optional): Description.
+    - `linkedin_company_page` (string, optional): LinkedIn Company Page URL.
+    - `company_email` (string, optional): Company Email.
+    - `first_name` (string, optional): First Name of a contact at the company.
+    - `last_name` (string, optional): Last Name of a contact at the company.
+    - `about_us` (string, optional): About Us.
+    - `hs_csm_sentiment` (string, optional): CSM Sentiment. Available values: `at_risk`, `neutral`, `healthy`.
+    - `closedate` (string, optional): Close Date.
+    - `hs_keywords` (string, optional): Company Keywords. Must be one of the predefined values.
+    - `country` (string, optional): Country/Region.
+    - `hs_country_code` (string, optional): Country/Region Code.
+    - `hs_employee_range` (string, optional): Employee range.
+    - `facebook_company_page` (string, optional): Facebook Company Page URL.
+    - `facebookfans` (number, optional): Number of Facebook Fans.
+    - `hs_gps_coordinates` (string, optional): GPS Coordinates.
+    - `hs_gps_error` (string, optional): GPS Error.
+    - `googleplus_page` (string, optional): Google Plus Page URL.
+    - `owneremail` (string, optional): HubSpot Owner Email.
+    - `ownername` (string, optional): HubSpot Owner Name.
+    - `hs_ideal_customer_profile` (string, optional): Ideal Customer Profile Tier. Available values: `tier_1`, `tier_2`, `tier_3`.
+    - `hs_industry_group` (string, optional): Industry group.
+    - `is_public` (boolean, optional): Is Public.
+    - `hs_last_metered_enrichment_timestamp` (string, optional): Last Metered Enrichment Timestamp.
+    - `hs_lead_status` (string, optional): Lead Status. Available values: `NEW`, `OPEN`, `IN_PROGRESS`, `OPEN_DEAL`, `UNQUALIFIED`, `ATTEMPTED_TO_CONTACT`, `CONNECTED`, `BAD_TIMING`.
+    - `lifecyclestage` (string, optional): Lifecycle Stage. Available values: `subscriber`, `lead`, `marketingqualifiedlead`, `salesqualifiedlead`, `opportunity`, `customer`, `evangelist`, `other`.
+    - `linkedinbio` (string, optional): LinkedIn Bio.
+    - `hs_linkedin_handle` (string, optional): LinkedIn handle.
+    - `hs_live_enrichment_deadline` (string, optional): Live enrichment deadline.
+    - `hs_logo_url` (string, optional): Logo URL.
+    - `hs_analytics_source` (string, optional): Original Traffic Source.
+    - `hs_pinned_engagement_id` (number, optional): Pinned Engagement ID.
+    - `hs_quick_context` (string, optional): Quick context.
+    - `hs_revenue_range` (string, optional): Revenue range.
+    - `hs_state_code` (string, optional): State/Region Code.
+    - `address` (string, optional): Street Address.
+    - `address2` (string, optional): Street Address 2.
+    - `hs_is_target_account` (boolean, optional): Target Account.
+    - `hs_target_account` (string, optional): Target Account Tier. Available values: `tier_1`, `tier_2`, `tier_3`.
+    - `hs_target_account_recommendation_snooze_time` (string, optional): Target Account Recommendation Snooze Time.
+    - `hs_target_account_recommendation_state` (string, optional): Target Account Recommendation State. Available values: `DISMISSED`, `NONE`, `SNOOZED`.
+    - `total_money_raised` (string, optional): Total Money Raised.
+    - `twitterbio` (string, optional): Twitter Bio.
+    - `twitterfollowers` (number, optional): Twitter Followers.
+    - `twitterhandle` (string, optional): Twitter Handle.
+    - `web_technologies` (string, optional): Web Technologies used. Must be one of the predefined values.
+    - `website` (string, optional): Website URL.
+    - `founded_year` (string, optional): Year Founded.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_CONTACTS">
+    **Description:** Create a new contact record in HubSpot.
+
+    **Parameters:**
+    - `email` (string, required): Email address of the contact.
+    - `firstname` (string, optional): First Name.
+    - `lastname` (string, optional): Last Name.
+    - `phone` (string, optional): Phone Number.
+    - `hubspot_owner_id` (string, optional): Contact owner.
+    - `lifecyclestage` (string, optional): Lifecycle Stage. Available values: `subscriber`, `lead`, `marketingqualifiedlead`, `salesqualifiedlead`, `opportunity`, `customer`, `evangelist`, `other`.
+    - `hs_lead_status` (string, optional): Lead Status. Available values: `NEW`, `OPEN`, `IN_PROGRESS`, `OPEN_DEAL`, `UNQUALIFIED`, `ATTEMPTED_TO_CONTACT`, `CONNECTED`, `BAD_TIMING`.
+    - `annualrevenue` (string, optional): Annual Revenue.
+    - `hs_buying_role` (string, optional): Buying Role.
+    - `cc_emails` (string, optional): CC Emails.
+    - `ch_customer_id` (string, optional): Chargify Customer ID.
+    - `ch_customer_reference` (string, optional): Chargify Customer Reference.
+    - `chargify_sites` (string, optional): Chargify Site(s).
+    - `city` (string, optional): City.
+    - `hs_facebook_ad_clicked` (boolean, optional): Clicked Facebook ad.
+    - `hs_linkedin_ad_clicked` (string, optional): Clicked LinkedIn Ad.
+    - `hs_clicked_linkedin_ad` (string, optional): Clicked on a LinkedIn Ad.
+    - `closedate` (string, optional): Close Date.
+    - `company` (string, optional): Company Name.
+    - `company_size` (string, optional): Company size.
+    - `country` (string, optional): Country/Region.
+    - `hs_country_region_code` (string, optional): Country/Region Code.
+    - `date_of_birth` (string, optional): Date of birth.
+    - `degree` (string, optional): Degree.
+    - `hs_email_customer_quarantined_reason` (string, optional): Email address quarantine reason.
+    - `hs_role` (string, optional): Employment Role. Must be one of the predefined values.
+    - `hs_seniority` (string, optional): Employment Seniority. Must be one of the predefined values.
+    - `hs_sub_role` (string, optional): Employment Sub Role. Must be one of the predefined values.
+    - `hs_employment_change_detected_date` (string, optional): Employment change detected date.
+    - `hs_enriched_email_bounce_detected` (boolean, optional): Enriched Email Bounce Detected.
+    - `hs_facebookid` (string, optional): Facebook ID.
+    - `hs_facebook_click_id` (string, optional): Facebook click id.
+    - `fax` (string, optional): Fax Number.
+    - `field_of_study` (string, optional): Field of study.
+    - `followercount` (number, optional): Follower Count.
+    - `gender` (string, optional): Gender.
+    - `hs_google_click_id` (string, optional): Google ad click id.
+    - `graduation_date` (string, optional): Graduation date.
+    - `owneremail` (string, optional): HubSpot Owner Email (legacy).
+    - `ownername` (string, optional): HubSpot Owner Name (legacy).
+    - `industry` (string, optional): Industry.
+    - `hs_inferred_language_codes` (string, optional): Inferred Language Codes. Must be one of the predefined values.
+    - `jobtitle` (string, optional): Job Title.
+    - `hs_job_change_detected_date` (string, optional): Job change detected date.
+    - `job_function` (string, optional): Job function.
+    - `hs_journey_stage` (string, optional): Journey Stage. Must be one of the predefined values.
+    - `kloutscoregeneral` (number, optional): Klout Score.
+    - `hs_last_metered_enrichment_timestamp` (string, optional): Last Metered Enrichment Timestamp.
+    - `hs_latest_source` (string, optional): Latest Traffic Source.
+    - `hs_latest_source_timestamp` (string, optional): Latest Traffic Source Date.
+    - `hs_legal_basis` (string, optional): Legal basis for processing contact's data.
+    - `linkedinbio` (string, optional): LinkedIn Bio.
+    - `linkedinconnections` (number, optional): LinkedIn Connections.
+    - `hs_linkedin_url` (string, optional): LinkedIn URL.
+    - `hs_linkedinid` (string, optional): Linkedin ID.
+    - `hs_live_enrichment_deadline` (string, optional): Live enrichment deadline.
+    - `marital_status` (string, optional): Marital Status.
+    - `hs_content_membership_email` (string, optional): Member email.
+    - `hs_content_membership_notes` (string, optional): Membership Notes.
+    - `message` (string, optional): Message.
+    - `military_status` (string, optional): Military status.
+    - `mobilephone` (string, optional): Mobile Phone Number.
+    - `numemployees` (string, optional): Number of Employees.
+    - `hs_analytics_source` (string, optional): Original Traffic Source.
+    - `photo` (string, optional): Photo.
+    - `hs_pinned_engagement_id` (number, optional): Pinned engagement ID.
+    - `zip` (string, optional): Postal Code.
+    - `hs_language` (string, optional): Preferred language. Must be one of the predefined values.
+    - `associatedcompanyid` (number, optional): Primary Associated Company ID.
+    - `hs_email_optout_survey_reason` (string, optional): Reason for opting out of email.
+    - `relationship_status` (string, optional): Relationship Status.
+    - `hs_returning_to_office_detected_date` (string, optional): Returning to office detected date.
+    - `salutation` (string, optional): Salutation.
+    - `school` (string, optional): School.
+    - `seniority` (string, optional): Seniority.
+    - `hs_feedback_show_nps_web_survey` (boolean, optional): Should be shown an NPS web survey.
+    - `start_date` (string, optional): Start date.
+    - `state` (string, optional): State/Region.
+    - `hs_state_code` (string, optional): State/Region Code.
+    - `hs_content_membership_status` (string, optional): Status.
+    - `address` (string, optional): Street Address.
+    - `tax_exempt` (string, optional): Tax Exempt.
+    - `hs_timezone` (string, optional): Time Zone. Must be one of the predefined values.
+    - `twitterbio` (string, optional): Twitter Bio.
+    - `hs_twitterid` (string, optional): Twitter ID.
+    - `twitterprofilephoto` (string, optional): Twitter Profile Photo.
+    - `twitterhandle` (string, optional): Twitter Username.
+    - `vat_number` (string, optional): VAT Number.
+    - `ch_verified` (string, optional): Verified for ACH/eCheck Payments.
+    - `website` (string, optional): Website URL.
+    - `hs_whatsapp_phone_number` (string, optional): WhatsApp Phone Number.
+    - `work_email` (string, optional): Work email.
+    - `hs_googleplusid` (string, optional): googleplus ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_DEALS">
+    **Description:** Create a new deal record in HubSpot.
+
+    **Parameters:**
+    - `dealname` (string, required): Name of the deal.
+    - `amount` (number, optional): The value of the deal.
+    - `dealstage` (string, optional): The pipeline stage of the deal.
+    - `pipeline` (string, optional): The pipeline the deal belongs to.
+    - `closedate` (string, optional): The date the deal is expected to close.
+    - `hubspot_owner_id` (string, optional): The owner of the deal.
+    - `dealtype` (string, optional): The type of deal. Available values: `newbusiness`, `existingbusiness`.
+    - `description` (string, optional): A description of the deal.
+    - `hs_priority` (string, optional): The priority of the deal. Available values: `low`, `medium`, `high`.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_ENGAGEMENTS">
+    **Description:** Create a new engagement (e.g., note, email, call, meeting, task) in HubSpot.
+
+    **Parameters:**
+    - `engagementType` (string, required): The type of engagement. Available values: `NOTE`, `EMAIL`, `CALL`, `MEETING`, `TASK`.
+    - `hubspot_owner_id` (string, optional): The user the activity is assigned to.
+    - `hs_timestamp` (string, optional): The date and time of the activity.
+    - `hs_note_body` (string, optional): The body of the note. (Used for `NOTE`)
+    - `hs_task_subject` (string, optional): The title of the task. (Used for `TASK`)
+    - `hs_task_body` (string, optional): The notes for the task. (Used for `TASK`)
+    - `hs_task_status` (string, optional): The status of the task. (Used for `TASK`)
+    - `hs_meeting_title` (string, optional): The title of the meeting. (Used for `MEETING`)
+    - `hs_meeting_body` (string, optional): The description for the meeting. (Used for `MEETING`)
+    - `hs_meeting_start_time` (string, optional): The start time of the meeting. (Used for `MEETING`)
+    - `hs_meeting_end_time` (string, optional): The end time of the meeting. (Used for `MEETING`)
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_COMPANIES">
+    **Description:** Update an existing company record in HubSpot.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the company to update.
+    - `name` (string, optional): Name of the company.
+    - `domain` (string, optional): Company Domain Name.
+    - `industry` (string, optional): Industry.
+    - `phone` (string, optional): Phone Number.
+    - `city` (string, optional): City.
+    - `state` (string, optional): State/Region.
+    - `zip` (string, optional): Postal Code.
+    - `numberofemployees` (number, optional): Number of Employees.
+    - `annualrevenue` (number, optional): Annual Revenue.
+    - `description` (string, optional): Description.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_ANY">
+    **Description:** Create a record for a specified object type in HubSpot.
+
+    **Parameters:**
+    - `recordType` (string, required): The object type ID of the custom object.
+    - Additional parameters depend on the custom object's schema.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_CONTACTS">
+    **Description:** Update an existing contact record in HubSpot.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the contact to update.
+    - `firstname` (string, optional): First Name.
+    - `lastname` (string, optional): Last Name.
+    - `email` (string, optional): Email address.
+    - `phone` (string, optional): Phone Number.
+    - `company` (string, optional): Company Name.
+    - `jobtitle` (string, optional): Job Title.
+    - `lifecyclestage` (string, optional): Lifecycle Stage.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_DEALS">
+    **Description:** Update an existing deal record in HubSpot.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the deal to update.
+    - `dealname` (string, optional): Name of the deal.
+    - `amount` (number, optional): The value of the deal.
+    - `dealstage` (string, optional): The pipeline stage of the deal.
+    - `pipeline` (string, optional): The pipeline the deal belongs to.
+    - `closedate` (string, optional): The date the deal is expected to close.
+    - `dealtype` (string, optional): The type of deal.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_ENGAGEMENTS">
+    **Description:** Update an existing engagement in HubSpot.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the engagement to update.
+    - `hs_note_body` (string, optional): The body of the note.
+    - `hs_task_subject` (string, optional): The title of the task.
+    - `hs_task_body` (string, optional): The notes for the task.
+    - `hs_task_status` (string, optional): The status of the task.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_ANY">
+    **Description:** Update a record for a specified object type in HubSpot.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the record to update.
+    - `recordType` (string, required): The object type ID of the custom object.
+    - Additional parameters depend on the custom object's schema.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_COMPANIES">
+    **Description:** Get a list of company records from HubSpot.
+
+    **Parameters:**
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_CONTACTS">
+    **Description:** Get a list of contact records from HubSpot.
+
+    **Parameters:**
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_DEALS">
+    **Description:** Get a list of deal records from HubSpot.
+
+    **Parameters:**
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_ENGAGEMENTS">
+    **Description:** Get a list of engagement records from HubSpot.
+
+    **Parameters:**
+    - `objectName` (string, required): The type of engagement to fetch (e.g., "notes").
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_ANY">
+    **Description:** Get a list of records for any specified object type in HubSpot.
+
+    **Parameters:**
+    - `recordType` (string, required): The object type ID of the custom object.
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_COMPANIES">
+    **Description:** Get a single company record by its ID.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the company to retrieve.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_CONTACTS">
+    **Description:** Get a single contact record by its ID.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the contact to retrieve.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_DEALS">
+    **Description:** Get a single deal record by its ID.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the deal to retrieve.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ENGAGEMENTS">
+    **Description:** Get a single engagement record by its ID.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the engagement to retrieve.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ANY">
+    **Description:** Get a single record of any specified object type by its ID.
+
+    **Parameters:**
+    - `recordType` (string, required): The object type ID of the custom object.
+    - `recordId` (string, required): The ID of the record to retrieve.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_COMPANIES">
+    **Description:** Search for company records in HubSpot using a filter formula.
+
+    **Parameters:**
+    - `filterFormula` (object, optional): A filter in disjunctive normal form (OR of ANDs).
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_CONTACTS">
+    **Description:** Search for contact records in HubSpot using a filter formula.
+
+    **Parameters:**
+    - `filterFormula` (object, optional): A filter in disjunctive normal form (OR of ANDs).
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_DEALS">
+    **Description:** Search for deal records in HubSpot using a filter formula.
+
+    **Parameters:**
+    - `filterFormula` (object, optional): A filter in disjunctive normal form (OR of ANDs).
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_ENGAGEMENTS">
+    **Description:** Search for engagement records in HubSpot using a filter formula.
+
+    **Parameters:**
+    - `engagementFilterFormula` (object, optional): A filter for engagements.
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_ANY">
+    **Description:** Search for records of any specified object type in HubSpot.
+
+    **Parameters:**
+    - `recordType` (string, required): The object type ID to search.
+    - `filterFormula` (string, optional): The filter formula to apply.
+    - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_COMPANIES">
+    **Description:** Delete a company record by its ID.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the company to delete.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_CONTACTS">
+    **Description:** Delete a contact record by its ID.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the contact to delete.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_DEALS">
+    **Description:** Delete a deal record by its ID.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the deal to delete.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_ENGAGEMENTS">
+    **Description:** Delete an engagement record by its ID.
+
+    **Parameters:**
+    - `recordId` (string, required): The ID of the engagement to delete.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_ANY">
+    **Description:** Delete a record of any specified object type by its ID.
+
+    **Parameters:**
+    - `recordType` (string, required): The object type ID of the custom object.
+    - `recordId` (string, required): The ID of the record to delete.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_CONTACTS_BY_LIST_ID">
+    **Description:** Get contacts from a specific list by its ID.
+
+    **Parameters:**
+    - `listId` (string, required): The ID of the list to get contacts from.
+    - `paginationParameters` (object, optional): Use `pageCursor` for subsequent pages.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DESCRIBE_ACTION_SCHEMA">
+    **Description:** Get the expected schema for a given object type and operation.
+
+    **Parameters:**
+    - `recordType` (string, required): The object type ID (e.g., 'companies').
+    - `operation` (string, required): The operation type (e.g., 'CREATE_RECORD').
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic HubSpot Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (HubSpot tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with HubSpot capabilities
+hubspot_agent = Agent(
+    role="CRM Manager",
+    goal="Manage company and contact records in HubSpot",
+    backstory="An AI assistant specialized in CRM management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new company
+create_company_task = Task(
+    description="Create a new company in HubSpot with name 'Innovate Corp' and domain 'innovatecorp.com'.",
+    agent=hubspot_agent,
+    expected_output="Company created successfully with confirmation"
+)
+
+# Run the task
+crew = Crew(
+    agents=[hubspot_agent],
+    tasks=[create_company_task]
+)
+
+crew.kickoff()
+```
+
+### Filtering Specific HubSpot Tools
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only the tool to create contacts
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["hubspot_create_record_contacts"]
+)
+
+contact_creator = Agent(
+    role="Contact Creator",
+    goal="Create new contacts in HubSpot",
+    backstory="An AI assistant that focuses on creating new contact entries in the CRM.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a contact
+create_contact = Task(
+    description="Create a new contact for 'John Doe' with email 'john.doe@example.com'.",
+    agent=contact_creator,
+    expected_output="Contact created successfully in HubSpot."
+)
+
+crew = Crew(
+    agents=[contact_creator],
+    tasks=[create_contact]
+)
+
+crew.kickoff()
+```
+
+### Contact Management
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+crm_manager = Agent(
+    role="CRM Manager",
+    goal="Manage and organize HubSpot contacts efficiently.",
+    backstory="An experienced CRM manager who maintains an organized contact database.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage contacts
+contact_task = Task(
+    description="Create a new contact for 'Jane Smith' at 'Global Tech Inc.' with email 'jane.smith@globaltech.com'.",
+    agent=crm_manager,
+    expected_output="Contact database updated with the new contact."
+)
+
+crew = Crew(
+    agents=[crm_manager],
+    tasks=[contact_task]
+)
+
+crew.kickoff()
+```
+
+### Getting Help
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with HubSpot integration setup or troubleshooting.
+</Card>
