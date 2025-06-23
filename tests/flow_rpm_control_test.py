@@ -3,6 +3,7 @@
 Tests for Flow-level RPM control functionality.
 """
 
+import gc
 import pytest
 from unittest.mock import Mock, patch
 
@@ -32,6 +33,30 @@ class TestFlowRPMControl:
         flow_without_rpm = TestFlow()
         assert flow_without_rpm.max_rpm is None
         assert flow_without_rpm._rpm_controller is None
+
+    def test_flow_initialization_invalid_rpm(self):
+        """Test Flow initialization with invalid RPM values."""
+
+        class TestFlow(Flow):
+            @start()
+            def test_method(self):
+                return "test"
+
+        # Test negative RPM
+        with pytest.raises(ValueError, match="max_rpm must be a positive integer"):
+            TestFlow(max_rpm=-1)
+
+        # Test zero RPM
+        with pytest.raises(ValueError, match="max_rpm must be a positive integer"):
+            TestFlow(max_rpm=0)
+
+        # Test non-integer RPM
+        with pytest.raises(ValueError, match="max_rpm must be a positive integer"):
+            TestFlow(max_rpm=10.5)
+
+        # Test string RPM
+        with pytest.raises(ValueError, match="max_rpm must be a positive integer"):
+            TestFlow(max_rpm="10")
 
     def test_flow_initialization_with_verbose(self):
         """Test that Flow initializes correctly with verbose parameter."""

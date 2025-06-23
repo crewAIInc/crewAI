@@ -2,6 +2,7 @@ import asyncio
 import copy
 import inspect
 import logging
+from threading import Lock
 from typing import (
     Any,
     Callable,
@@ -459,7 +460,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
             max_rpm: Maximum number of requests per minute for all crews in this flow
             verbose: Whether to enable verbose logging
             **kwargs: Additional state values to initialize or override
+
+        Raises:
+            ValueError: If max_rpm is not a positive integer
         """
+        # Validate RPM configuration
+        self._validate_rpm_config(max_rpm)
+
         # Initialize basic instance attributes
         self._methods: Dict[str, Callable] = {}
         self._method_execution_counts: Dict[str, int] = {}
@@ -467,12 +474,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._method_outputs: List[Any] = []  # List to store all method outputs
         self._persistence: Optional[FlowPersistence] = persistence
 
-        # Initialize RPM controller for global flow-level rate limiting
+        # Initialize RPM controller for global flow-level rate limiting with thread safety
         self._logger = Logger(verbose=verbose)
         self.max_rpm = max_rpm
+        self._rpm_controller_lock = Lock()
         self._rpm_controller: Optional[RPMController] = None
         if max_rpm is not None:
-            self._rpm_controller = RPMController(max_rpm=max_rpm, logger=self._logger)
+            with self._rpm_controller_lock:
+                self._rpm_controller = RPMController(max_rpm=max_rpm, logger=self._logger)
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -1112,17 +1121,58 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Args:
             crew: The crew instance to configure with flow's RPM controller
+
+        Raises:
+            ValueError: If crew is None or not a valid Crew instance
+            TypeError: If crew is not a Crew instance
         """
+        # Import here to avoid circular imports
+        from crewai.crew import Crew
+
+        if crew is None:
+            raise ValueError("crew cannot be None")
+        if not isinstance(crew, Crew):
+            raise TypeError("crew must be a Crew instance")
+
         if self._rpm_controller is not None:
-            # Import here to avoid circular imports
-            from crewai.crew import Crew
-            if isinstance(crew, Crew):
-                crew._rpm_controller = self._rpm_controller
-                # Update all agents in the crew to use the flow's RPM controller
-                for agent in crew.agents:
-                    agent.set_rpm_controller(self._rpm_controller)
+            crew.set_flow_rpm_controller(self._rpm_controller)
+
+    def cleanup_resources(self) -> None:
+        """Clean up flow resources, particularly the RPM controller.
+
+        This method should be called when the flow is no longer needed
+        to ensure proper resource cleanup.
+        """
+        rpm_controller = getattr(self, '_rpm_controller', None)
+        if rpm_controller is not None:
+            try:
+                rpm_controller.stop_rpm_counter()
+                self._rpm_controller = None
+            except Exception as e:
+                if hasattr(self, '_logger'):
+                    self._logger.log(
+                        level="warning",
+                        message=f"Failed to clean up RPM controller: {e}",
+                        color="yellow"
+                    )
 
     def __del__(self):
         """Cleanup resources when the flow is destroyed."""
-        if hasattr(self, '_rpm_controller') and self._rpm_controller is not None:
-            self._rpm_controller.stop_rpm_counter()
+        try:
+            self.cleanup_resources()
+        except Exception:
+            # Silently ignore exceptions during shutdown to avoid
+            # interpreter shutdown errors
+            pass
+
+    def _validate_rpm_config(self, max_rpm: Optional[int]) -> None:
+        """Validate the RPM configuration for the flow.
+
+        Args:
+            max_rpm: Maximum number of requests per minute for all crews in this flow
+
+        Raises:
+            ValueError: If max_rpm is not a positive integer
+        """
+        if max_rpm is not None and (not isinstance(max_rpm, int) or max_rpm <= 0):
+            raise ValueError("max_rpm must be a positive integer")

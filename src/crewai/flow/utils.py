@@ -381,7 +381,7 @@ def process_router_paths(flow, current, current_level, levels, queue):
                         queue.append(listener_name)
 
 
-def configure_crew_with_flow_rpm(crew_instance, flow_instance) -> None:
+def configure_crew_with_flow_rpm(crew_instance: Any, flow_instance: Any) -> None:
     """Configure a crew instance to use the flow's global RPM controller.
 
     This function should be called whenever a crew is created within a flow
@@ -402,11 +402,12 @@ def configure_crew_with_flow_rpm(crew_instance, flow_instance) -> None:
         crew_instance.set_flow_rpm_controller(flow_instance._rpm_controller)
 
 
-def auto_configure_flow_crews(flow_instance, result: Any) -> Any:
+def auto_configure_flow_crews(flow_instance: Any, result: Any) -> Any:
     """Automatically configure any crew instances returned from a flow method.
 
     This function is called after each flow method execution to detect and
     configure any crew instances with the flow's global RPM controller.
+    Uses recursive traversal to handle nested data structures.
 
     Args:
         flow_instance: The flow instance
@@ -418,19 +419,26 @@ def auto_configure_flow_crews(flow_instance, result: Any) -> Any:
     # Import here to avoid circular imports
     from crewai.crew import Crew
 
-    if flow_instance._rpm_controller is None:
-        return result
+    def configure_recursive(obj: Any) -> None:
+        """Recursively configure crew instances in nested structures."""
+        if isinstance(obj, Crew):
+            configure_crew_with_flow_rpm(obj, flow_instance)
+        elif isinstance(obj, (list, tuple)):
+            for item in obj:
+                configure_recursive(item)
+        elif isinstance(obj, dict):
+            for value in obj.values():
+                configure_recursive(value)
+        # Handle other container types if needed
+        elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes)):
+            try:
+                for item in obj:
+                    configure_recursive(item)
+            except (TypeError, AttributeError):
+                # Skip objects that aren't properly iterable
+                pass
 
-    # Handle different types of results that might contain crews
-    if isinstance(result, Crew):
-        configure_crew_with_flow_rpm(result, flow_instance)
-    elif isinstance(result, (list, tuple)):
-        for item in result:
-            if isinstance(item, Crew):
-                configure_crew_with_flow_rpm(item, flow_instance)
-    elif isinstance(result, dict):
-        for value in result.values():
-            if isinstance(value, Crew):
-                configure_crew_with_flow_rpm(value, flow_instance)
+    if getattr(flow_instance, '_rpm_controller', None) is not None:
+        configure_recursive(result)
 
     return result

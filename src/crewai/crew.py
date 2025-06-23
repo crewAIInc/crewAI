@@ -282,7 +282,7 @@ class Crew(FlowTrackable, BaseModel):
             self._file_handler = FileHandler(self.output_log_file)
 
         # Initialize RPM controller only if not already set by a Flow
-        if not hasattr(self, '_rpm_controller') or self._rpm_controller is None:
+        if getattr(self, '_rpm_controller', None) is None:
             self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
 
         if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
@@ -1515,7 +1515,13 @@ class Crew(FlowTrackable, BaseModel):
 
         Args:
             rpm_controller: The RPMController instance to use for this crew
+
+        Raises:
+            TypeError: If rpm_controller is not an RPMController instance
         """
+        if not isinstance(rpm_controller, RPMController):
+            raise TypeError("rpm_controller must be an RPMController instance")
+
         # Set the external RPM controller
         self._rpm_controller = rpm_controller
 
@@ -1526,7 +1532,7 @@ class Crew(FlowTrackable, BaseModel):
         # Log the change for debugging purposes
         if hasattr(self, '_logger'):
             self._logger.log(
-                "info",
-                f"Crew RPM controller set to global flow limit: {rpm_controller.max_rpm} RPM",
+                level="info",
+                message=f"Crew RPM controller set to global flow limit: {rpm_controller.max_rpm} RPM",
                 color="blue"
             )

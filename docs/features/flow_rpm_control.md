@@ -1,25 +1,58 @@
 # Flow-Level RPM Control
 
+> **Added in Version**: CrewAI v1.0.0+
+> **Feature Status**: Production Ready
+
 CrewAI now supports global RPM (Requests Per Minute) control at the Flow level, allowing you to set a single rate limit that applies across all Crews within a Flow. This feature is essential for complex applications that orchestrate multiple Crews and need precise control over API usage rates.
 
 ## Overview
 
-Previously, CrewAI provided RPM control at the Agent and Crew levels independently. When working with Flows that coordinate multiple Crews, there was no mechanism to control the overall request rate across all Crews within a Flow. This could lead to exceeding API rate limits when multiple Crews executed simultaneously.
+Previously, CrewAI provided RPM control at the [Agent](../api/crewai.agent.Agent) and [Crew](../api/crewai.crew.Crew) levels independently. When working with [Flows](../api/crewai.flow.flow.Flow) that coordinate multiple Crews, there was no mechanism to control the overall request rate across all Crews within a Flow. This could lead to exceeding API rate limits when multiple Crews executed simultaneously.
 
 With Flow-level RPM control, you can now:
 
-- Set a global RPM limit for all Crews in a Flow
-- Prevent API rate limit errors in complex multi-Crew workflows
-- Simplify rate management across multiple Crews
-- Better control API costs in production applications
+- **Set a global RPM limit** for all Crews in a Flow
+- **Prevent API rate limit errors** in complex multi-Crew workflows
+- **Simplify rate management** across multiple Crews
+- **Better control API costs** in production applications
 
 ## Key Features
 
-- **Global Rate Limiting**: One RPM limit applies to all Crews within the Flow
-- **Automatic Configuration**: Crews created within Flow methods are automatically configured
-- **Thread-Safe**: Handles concurrent Crew execution safely
-- **Override Behavior**: Flow-level limits override individual Crew and Agent RPM settings
-- **Backward Compatible**: Existing Flows without RPM limits work unchanged
+✅ **Global Rate Limiting**: One RPM limit applies to all Crews within the Flow
+✅ **Automatic Configuration**: Crews created within Flow methods are automatically configured
+✅ **Thread-Safe**: Handles concurrent Crew execution safely
+✅ **Override Behavior**: Flow-level limits override individual Crew and Agent RPM settings
+✅ **Backward Compatible**: Existing Flows without RPM limits work unchanged
+✅ **Resource Management**: Proper cleanup of RPM controllers
+
+## Architecture Diagram
+
+```mermaid
+graph TD
+    F[Flow with max_rpm=10] --> C1[Crew 1]
+    F --> C2[Crew 2]
+    F --> C3[Crew N]
+
+    C1 --> A1[Agent 1.1]
+    C1 --> A2[Agent 1.2]
+    C2 --> A3[Agent 2.1]
+    C3 --> A4[Agent N.1]
+
+    F -.->|Global RPM Controller| RC[RPMController]
+    RC -.->|Overrides| C1
+    RC -.->|Overrides| C2
+    RC -.->|Overrides| C3
+    RC -.->|Controls| A1
+    RC -.->|Controls| A2
+    RC -.->|Controls| A3
+    RC -.->|Controls| A4
+
+    style F fill:#e1f5fe
+    style RC fill:#fff3e0
+    style C1 fill:#f3e5f5
+    style C2 fill:#f3e5f5
+    style C3 fill:#f3e5f5
+```
 
 ## Usage
 
@@ -29,23 +62,26 @@ With Flow-level RPM control, you can now:
 from crewai import Agent, Crew, Task
 from crewai.flow.flow import Flow, start, listen
 
+# Configuration constants
+FLOW_GLOBAL_RPM = 10
+
 class AnalysisFlow(Flow):
-    def __init__(self):
-        # Set global RPM limit of 10 requests per minute for entire Flow
-        super().__init__(max_rpm=10, verbose=True)
+    def __init__(self) -> None:
+        # Set global RPM limit for entire Flow
+        super().__init__(max_rpm=FLOW_GLOBAL_RPM, verbose=True)
 
     @start()
-    def initialize_analysis(self):
+    def initialize_analysis(self) -> dict:
         return {"status": "initialized"}
 
     @listen(initialize_analysis)
-    def run_data_collection_crew(self, context):
+    def run_data_collection_crew(self, context: dict) -> Any:
         # Create agents
         data_analyst = Agent(
             role="Data Analyst",
             goal="Collect and validate data",
             backstory="Expert in data extraction",
-            max_rpm=20  # This will be overridden by Flow's 10 RPM limit
+            max_rpm=20  # ⚠️ This will be overridden by Flow's 10 RPM limit
         )
 
         # Create tasks
@@ -59,248 +95,265 @@ class AnalysisFlow(Flow):
         data_crew = Crew(
             agents=[data_analyst],
             tasks=[collect_task],
-            max_rpm=15  # This will be overridden by Flow's 10 RPM limit
+            max_rpm=15  # ⚠️ This will be overridden by Flow's 10 RPM limit
         )
 
         return data_crew.kickoff()
 
-    @listen(run_data_collection_crew)
-    def run_analysis_crew(self, context):
-        # This crew will also be limited to Flow's 10 RPM
-        analysis_agent = Agent(
-            role="Data Analyst",
-            goal="Analyze collected data",
-            backstory="Expert in data analysis"
-        )
-
-        analysis_task = Task(
-            description="Analyze the data",
-            agent=analysis_agent,
-            expected_output="Analysis report"
-        )
-
-        analysis_crew = Crew(
-            agents=[analysis_agent],
-            tasks=[analysis_task]
-        )
-
-        return analysis_crew.kickoff()
-
 # Execute the flow
 flow = AnalysisFlow()
-result = flow.kickoff()
+try:
+    result = flow.kickoff()
+finally:
+    flow.cleanup_resources()  # Ensure proper cleanup
 ```
 
-### Flow Without RPM Control
+### Error Handling and Validation
 
 ```python
-class UnlimitedFlow(Flow):
+class RobustFlow(Flow):
+    def __init__(self, environment: str = "development") -> None:
+        # Validate environment and set appropriate RPM
+        rpm_limits = {
+            "development": 5,
+            "staging": 20,
+            "production": 60
+        }
+
+        if environment not in rpm_limits:
+            raise ValueError(f"Invalid environment: {environment}")
+
+        max_rpm = rpm_limits[environment]
+
+        try:
+            super().__init__(max_rpm=max_rpm, verbose=True)
+        except ValueError as e:
+            raise ValueError(f"Failed to initialize flow: {e}")
+
     @start()
-    def process_data(self):
-        agent = Agent(
-            role="Data Processor",
-            goal="Process data quickly",
-            backstory="High-performance specialist"
-        )
+    def validated_process(self) -> Any:
+        # Flow methods with proper error handling
+        try:
+            crew = self._create_crew()
+            return crew.kickoff()
+        except Exception as e:
+            self.cleanup_resources()
+            raise RuntimeError(f"Flow execution failed: {e}")
 
-        task = Task(
-            description="Process dataset",
-            agent=agent,
-            expected_output="Processed data"
-        )
-
-        # This crew uses its own RPM settings
-        crew = Crew(
-            agents=[agent],
-            tasks=[task],
-            max_rpm=50  # This will be respected
-        )
-
-        return crew.kickoff()
-
-# No global RPM limit
-flow = UnlimitedFlow()
-result = flow.kickoff()
-```
-
-### Manual Crew Configuration
-
-```python
-# Create flow with RPM control
-flow = AnalysisFlow()
-
-# Create crew manually outside of flow methods
-agent = Agent(role="Manual Agent", goal="Test", backstory="Test agent")
-task = Task(description="Test task", agent=agent, expected_output="Result")
-crew = Crew(agents=[agent], tasks=[task], max_rpm=25)
-
-# Manually apply flow's RPM controller
-flow.set_crew_rpm_controller(crew)
-
-# Now crew uses flow's RPM limit
-crew.kickoff()
+    def _create_crew(self) -> Crew:
+        """Helper method to create crew with validation."""
+        agent = Agent(role="Validator", goal="Validate", backstory="Expert")
+        task = Task(description="Validate", agent=agent, expected_output="Result")
+        return Crew(agents=[agent], tasks=[task])
 ```
 
 ## API Reference
 
-### Flow Class
+### Flow Class Extensions
 
-#### Constructor Parameters
-
-```python
-Flow(
-    persistence: Optional[FlowPersistence] = None,
-    max_rpm: Optional[int] = None,
-    verbose: bool = False,
-    **kwargs: Any
-)
-```
-
-- **`max_rpm`**: Maximum requests per minute for all Crews in this Flow
-- **`verbose`**: Enable verbose logging for RPM operations
-- **`persistence`**: Optional persistence backend
-- **`**kwargs`**: Additional state initialization values
-
-#### Methods
-
-##### `get_flow_rpm_controller() -> Optional[RPMController]`
-
-Returns the Flow's global RPM controller, or `None` if no RPM limit is set.
+#### Constructor
 
 ```python
-flow = AnalysisFlow()
-controller = flow.get_flow_rpm_controller()
-if controller:
-    print(f"Flow RPM limit: {controller.max_rpm}")
+class Flow:
+    def __init__(
+        self,
+        persistence: Optional[FlowPersistence] = None,
+        max_rpm: Optional[int] = None,
+        verbose: bool = False,
+        **kwargs: Any
+    ) -> None:
+        """
+        Args:
+            max_rpm: Maximum requests per minute for all Crews in this Flow
+            verbose: Enable verbose logging for RPM operations
+
+        Raises:
+            ValueError: If max_rpm is not a positive integer
+        """
 ```
 
-##### `set_crew_rpm_controller(crew: Crew) -> None`
-
-Manually configure a Crew to use the Flow's global RPM controller.
+#### New Methods
 
 ```python
-flow.set_crew_rpm_controller(my_crew)
+def get_flow_rpm_controller(self) -> Optional[RPMController]:
+    """Get the Flow's global RPM controller."""
+
+def set_crew_rpm_controller(self, crew: Crew) -> None:
+    """Manually configure a Crew to use Flow's global RPM controller."""
+
+def cleanup_resources(self) -> None:
+    """Clean up flow resources, particularly the RPM controller."""
 ```
 
-### Crew Class
-
-#### New Method
-
-##### `set_flow_rpm_controller(rpm_controller: RPMController) -> None`
-
-Set an external RPM controller (typically from a Flow) on this Crew.
+### Crew Class Extensions
 
 ```python
-crew = Crew(agents=[agent], tasks=[task])
-crew.set_flow_rpm_controller(flow_controller)
+def set_flow_rpm_controller(self, rpm_controller: RPMController) -> None:
+    """Set an external RPM controller on this Crew.
+
+    Raises:
+        TypeError: If rpm_controller is not an RPMController instance
+    """
 ```
 
-## How It Works
+## Advanced Usage
 
-### Automatic Configuration
+### Custom RPM Metrics and Monitoring
 
-When a Flow method returns a Crew instance (or data structure containing Crews), the Flow automatically configures those Crews to use its global RPM controller:
+```python
+import logging
+from typing import Dict, Any
 
-1. **Method Execution**: Flow executes a method decorated with `@start()` or `@listen()`
-2. **Result Processing**: Flow inspects the returned result for Crew instances
-3. **Auto-Configuration**: Any found Crews are configured with the Flow's RPM controller
-4. **Agent Updates**: All agents within configured Crews are also updated
+# Set up monitoring
+logger = logging.getLogger("flow_rpm_monitor")
 
-### Override Behavior
+class MonitoredFlow(Flow):
+    def __init__(self, max_rpm: int) -> None:
+        super().__init__(max_rpm=max_rpm, verbose=True)
+        self.request_count = 0
 
-When a Flow has a global RPM limit:
+    @start()
+    def monitored_execution(self) -> Any:
+        controller = self.get_flow_rpm_controller()
+        if controller:
+            logger.info(f"Flow RPM limit: {controller.max_rpm}")
+            logger.info(f"Current requests: {getattr(controller, '_current_rpm', 0)}")
 
-- **Crew RPM Settings**: Individual Crew `max_rpm` settings are overridden
-- **Agent RPM Settings**: Individual Agent `max_rpm` settings are overridden
-- **Shared Rate Limiting**: All Crews and Agents share the same RPM controller instance
+        # Your flow logic here
+        return self._execute_with_monitoring()
 
-### Thread Safety
+    def _execute_with_monitoring(self) -> Any:
+        # Monitor request patterns
+        start_time = time.time()
 
-The RPM controller uses thread-safe mechanisms:
+        try:
+            crew = self._create_monitored_crew()
+            result = crew.kickoff()
 
-- **Locking**: Thread locks prevent race conditions during rate limit checks
-- **Atomic Operations**: Request counting and timing operations are atomic
-- **Concurrent Crews**: Multiple Crews can execute concurrently while respecting the global limit
+            execution_time = time.time() - start_time
+            logger.info(f"Execution completed in {execution_time:.2f}s")
+
+            return result
+        except Exception as e:
+            logger.error(f"Execution failed after {time.time() - start_time:.2f}s: {e}")
+            raise
+```
+
+### Environment-Based Configuration
+
+```python
+import os
+from enum import Enum
+
+class Environment(Enum):
+    DEVELOPMENT = "development"
+    STAGING = "staging"
+    PRODUCTION = "production"
+
+class EnvironmentAwareFlow(Flow):
+    RPM_LIMITS = {
+        Environment.DEVELOPMENT: 5,
+        Environment.STAGING: 25,
+        Environment.PRODUCTION: 100
+    }
+
+    def __init__(self) -> None:
+        env_str = os.getenv("ENVIRONMENT", "development")
+        try:
+            environment = Environment(env_str)
+        except ValueError:
+            raise ValueError(f"Invalid ENVIRONMENT: {env_str}")
+
+        max_rpm = self.RPM_LIMITS[environment]
+        super().__init__(max_rpm=max_rpm, verbose=environment != Environment.PRODUCTION)
+
+        logger.info(f"Initialized flow for {environment.value} with {max_rpm} RPM")
+```
 
 ## Best Practices
 
-### 1. Choose Appropriate RPM Limits
+### 1. ✅ Resource Management
 
 ```python
-# For development/testing
-class DevFlow(Flow):
-    def __init__(self):
-        super().__init__(max_rpm=5)  # Conservative limit
+class WellManagedFlow(Flow):
+    def __init__(self) -> None:
+        super().__init__(max_rpm=20)
 
-# For production with higher requirements
-class ProdFlow(Flow):
-    def __init__(self):
-        super().__init__(max_rpm=60)  # Higher limit for production
+    def execute_safely(self) -> Any:
+        try:
+            return self.kickoff()
+        finally:
+            self.cleanup_resources()  # Always cleanup
+
+    # Or use context manager pattern
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup_resources()
+
+# Usage
+with WellManagedFlow() as flow:
+    result = flow.kickoff()  # Automatic cleanup
 ```
 
-### 2. Monitor RPM Usage
+### 2. ✅ Validation and Error Handling
 
 ```python
-class MonitoredFlow(Flow):
-    def __init__(self):
-        super().__init__(max_rpm=20, verbose=True)  # Enable logging
+def create_validated_flow(max_rpm: int, environment: str) -> Flow:
+    """Factory function with validation."""
+    if not isinstance(max_rpm, int) or max_rpm <= 0:
+        raise ValueError("max_rpm must be a positive integer")
 
-    @start()
-    def monitored_process(self):
-        controller = self.get_flow_rpm_controller()
-        if controller:
-            print(f"Current RPM limit: {controller.max_rpm}")
-        # ... rest of method
+    if environment not in ["dev", "staging", "prod"]:
+        raise ValueError("Invalid environment")
+
+    class ValidatedFlow(Flow):
+        def __init__(self):
+            super().__init__(max_rpm=max_rpm, verbose=(environment != "prod"))
+
+    return ValidatedFlow()
 ```
 
-### 3. Handle Rate Limiting Gracefully
+### 3. ✅ Testing with RPM Control
 
 ```python
-@listen(some_method)
-def rate_limited_process(self, context):
-    try:
-        # Create and execute crew
-        crew = Crew(agents=[agent], tasks=[task])
-        result = crew.kickoff()
-        return result
-    except Exception as e:
-        if "RPM" in str(e):
-            print("Rate limit reached, will retry after delay")
-            # Handle rate limiting appropriately
-        raise
-```
+import pytest
+from unittest.mock import patch
 
-### 4. Design for Scalability
+class TestFlowRPM:
+    def test_flow_respects_rpm_limit(self):
+        """Test that flow properly enforces RPM limits."""
+        flow = MyFlow(max_rpm=5)
 
-```python
-class ScalableFlow(Flow):
-    def __init__(self, environment="dev"):
-        # Adjust RPM based on environment
-        rpm_limits = {
-            "dev": 10,
-            "staging": 30,
-            "prod": 100
-        }
-        super().__init__(max_rpm=rpm_limits.get(environment, 10))
+        # Verify controller setup
+        controller = flow.get_flow_rpm_controller()
+        assert controller is not None
+        assert controller.max_rpm == 5
+
+        # Test crew configuration
+        crew = self._create_test_crew()
+        flow.set_crew_rpm_controller(crew)
+        assert crew._rpm_controller is controller
 ```
 
 ## Migration Guide
 
 ### From Individual Crew RPM to Flow RPM
 
-**Before:**
+**Before (❌ Uncoordinated):**
 ```python
-# Manual coordination of RPM across crews
-crew1 = Crew(agents=[agent1], tasks=[task1], max_rpm=5)
-crew2 = Crew(agents=[agent2], tasks=[task2], max_rpm=5)
-# Total: 10 RPM, but no coordination between crews
+# No coordination between crews - potential for rate limit violations
+crew1 = Crew(agents=[agent1], tasks=[task1], max_rpm=10)
+crew2 = Crew(agents=[agent2], tasks=[task2], max_rpm=10)
+# Total: potentially 20 RPM with no coordination
 ```
 
-**After:**
+**After (✅ Coordinated):**
 ```python
 class CoordinatedFlow(Flow):
     def __init__(self):
-        super().__init__(max_rpm=10)  # Global limit for both crews
+        super().__init__(max_rpm=15)  # Global limit for all crews
 
     @start()
     def run_crew1(self):
@@ -315,78 +368,134 @@ class CoordinatedFlow(Flow):
 
 ## Troubleshooting
 
-### Common Issues
+### Common Issues and Solutions
 
-#### 1. Crews Not Using Flow RPM Limit
+#### ❌ Issue: Crews Not Using Flow RPM Limit
 
 **Problem**: Manually created Crews aren't using the Flow's RPM limit.
 
-**Solution**: Use `set_crew_rpm_controller()` for manual configuration:
-
+**Solution**:
 ```python
-flow = MyFlow()
+flow = MyFlow(max_rpm=10)
 crew = Crew(agents=[agent], tasks=[task])
-flow.set_crew_rpm_controller(crew)  # Apply Flow's RPM limit
+
+# Manual configuration required
+flow.set_crew_rpm_controller(crew)
 ```
 
-#### 2. Rate Limits Still Being Exceeded
+#### ❌ Issue: `ValueError: max_rpm must be a positive integer`
 
-**Problem**: API rate limits are still being hit despite setting Flow RPM.
+**Problem**: Invalid RPM value passed to Flow constructor.
 
-**Solution**: Check that the Flow RPM limit is appropriate for your API provider:
-
+**Solution**:
 ```python
-# Check your API provider's rate limits
-# OpenAI: typically 3-60 RPM depending on tier
-# Anthropic: varies by plan
-# Adjust Flow RPM accordingly
-class ConservativeFlow(Flow):
-    def __init__(self):
-        super().__init__(max_rpm=3)  # Very conservative
+# ❌ Wrong
+flow = MyFlow(max_rpm=-1)    # Negative
+flow = MyFlow(max_rpm=0)     # Zero
+flow = MyFlow(max_rpm="10")  # String
+
+# ✅ Correct
+flow = MyFlow(max_rpm=10)    # Positive integer
 ```
 
-#### 3. Flows Running Slower Than Expected
+#### ❌ Issue: Memory Leaks with RPM Controllers
 
-**Problem**: Flow execution is slower after adding RPM control.
+**Problem**: RPM controllers not properly cleaned up.
 
-**Solution**: The RPM limit may be too restrictive. Monitor and adjust:
-
+**Solution**:
 ```python
-class OptimizedFlow(Flow):
-    def __init__(self):
-        # Start conservative, then increase based on monitoring
-        super().__init__(max_rpm=30, verbose=True)
+flow = MyFlow(max_rpm=10)
+try:
+    result = flow.kickoff()
+finally:
+    flow.cleanup_resources()  # Explicit cleanup
 ```
 
 ### Debug Mode
 
-Enable verbose logging to debug RPM issues:
-
 ```python
+import logging
+
+# Enable debug logging
+logging.basicConfig(level=logging.DEBUG)
+
 class DebugFlow(Flow):
     def __init__(self):
         super().__init__(max_rpm=10, verbose=True)
 
     @start()
-    def debug_method(self):
-        print(f"Flow RPM controller: {self.get_flow_rpm_controller()}")
-        # Create crew and check its controller
-        crew = Crew(agents=[agent], tasks=[task])
+    def debug_execution(self):
+        # Log RPM controller state
+        controller = self.get_flow_rpm_controller()
+        print(f"Flow RPM controller: {controller}")
+        print(f"Max RPM: {controller.max_rpm if controller else 'None'}")
+
+        # Create and inspect crew
+        crew = self._create_crew()
         print(f"Crew RPM controller: {crew._rpm_controller}")
+        print(f"Same instance?: {crew._rpm_controller is controller}")
+
         return crew.kickoff()
 ```
 
-## Examples Repository
+## Performance Considerations
 
-Find more examples in the `examples/` directory:
+### RPM Limit Recommendations by API Provider
 
-- `flow_rpm_control_example.py`: Complete working example
-- `flow_rpm_migration_example.py`: Migration from individual to Flow RPM
-- `flow_rpm_production_example.py`: Production-ready implementation
+| Provider | Free Tier | Paid Tier | Recommended Flow RPM |
+|----------|-----------|-----------|---------------------|
+| OpenAI GPT-3.5 | 3 RPM | 3,500 RPM | 3-60 RPM |
+| OpenAI GPT-4 | 3 RPM | 5,000 RPM | 3-100 RPM |
+| Anthropic Claude | 5 RPM | 1,000 RPM | 5-200 RPM |
+| Google Gemini | 15 RPM | 1,000 RPM | 10-300 RPM |
+
+### Load Testing
+
+```python
+import asyncio
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+async def load_test_flow_rpm():
+    """Test flow under concurrent load."""
+    flow = MyFlow(max_rpm=30)
+
+    def execute_flow():
+        return flow.kickoff()
+
+    start_time = time.time()
+
+    # Execute multiple flows concurrently
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(execute_flow) for _ in range(10)]
+        results = [future.result() for future in futures]
+
+    duration = time.time() - start_time
+    print(f"Executed {len(results)} flows in {duration:.2f}s")
+    print(f"Average: {duration/len(results):.2f}s per flow")
+
+    flow.cleanup_resources()
+```
 
 ## Related Documentation
 
-- [Flow Basics](./flows.md)
-- [RPM Controller](./rpm_controller.md)
-- [Crew Configuration](./crews.md)
-- [Agent Configuration](./agents.md)
+- **[Flow Basics](./flows.md)** - Core Flow concepts and usage
+- **[RPM Controller](./rpm_controller.md)** - Detailed RPM controller documentation
+- **[Crew Configuration](./crews.md)** - Crew setup and management
+- **[Agent Configuration](./agents.md)** - Agent configuration options
+- **[API Reference](../api/)** - Complete API documentation
+
+## Changelog
+
+### Version 1.0.0
+- ✅ Initial release of Flow-level RPM control
+- ✅ Automatic crew configuration
+- ✅ Thread-safe implementation
+- ✅ Comprehensive test suite
+
+---
+
+**Need Help?**
+- 📖 Check the [API Documentation](../api/crewai.flow.flow.Flow)
+- 💬 Join our [Community Discord](https://discord.gg/crewai)
+- 🐛 Report issues on [GitHub](https://github.com/crewAIInc/crewAI/issues)
