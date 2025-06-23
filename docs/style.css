@@ -1,43 +1,47 @@
 /* Fix for Frame component width issue in installation docs */
 /* Ensures file structure displays with proper width */
-.frame-container {
-  min-width: 300px;
-  width: 100%;
-  overflow-x: auto;
+
+/* CSS Custom Properties for maintainability */
+:root {
+  --frame-min-width: 300px;
+  --frame-width: 100%;
+  --frame-pre-min-width: 280px;
 }
 
-/* Target Frame components specifically */
-[data-component="frame"] {
-  min-width: 300px;
-  width: 100%;
-  overflow-x: auto;
-}
-
-/* Ensure code blocks within frames have proper width */
-.frame-container pre,
-[data-component="frame"] pre {
-  min-width: 280px;
-  white-space: pre;
-  overflow-x: auto;
-}
-
-/* Additional Frame component styling for better display */
-.frame {
-  min-width: 300px;
-  width: 100%;
-  overflow-x: auto;
-}
-
-/* Target any frame-like containers */
+/* Consolidated Frame component selectors */
+.frame-container,
+[data-component="frame"],
+.frame,
 div[class*="frame"] {
-  min-width: 300px;
-  width: 100%;
+  min-width: var(--frame-min-width);
+  width: var(--frame-width);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Pre elements within Frame components */
+.frame-container pre,
+[data-component="frame"] pre,
+.frame pre,
+div[class*="frame"] pre {
+  min-width: var(--frame-pre-min-width);
+  white-space: pre;
   overflow-x: auto;
 }
 
-/* Ensure pre elements inside any frame have proper styling */
-div[class*="frame"] pre {
-  min-width: 280px;
-  white-space: pre;
-  overflow-x: auto;
+/* Responsive design for smaller screens */
+@media screen and (max-width: 768px) {
+  .frame-container,
+  [data-component="frame"],
+  .frame,
+  div[class*="frame"] {
+    min-width: 100%;
+  }
+  
+  .frame-container pre,
+  [data-component="frame"] pre,
+  .frame pre,
+  div[class*="frame"] pre {
+    min-width: 100%;
+  }
 }
