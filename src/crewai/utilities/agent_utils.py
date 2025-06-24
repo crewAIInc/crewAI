@@ -145,12 +145,14 @@ def get_llm_response(
     messages: List[Dict[str, str]],
     callbacks: List[Any],
     printer: Printer,
-) -> str:
+    return_full_completion: bool = False,
+) -> Union[str, Dict[str, Any]]:
     """Call the LLM and return the response, handling any invalid responses."""
     try:
         answer = llm.call(
             messages,
             callbacks=callbacks,
+            return_full_completion=return_full_completion,
         )
     except Exception as e:
         printer.print(
@@ -158,29 +160,42 @@ def get_llm_response(
             color="red",
         )
         raise e
-    if not answer:
-        printer.print(
-            content="Received None or empty response from LLM call.",
-            color="red",
-        )
-        raise ValueError("Invalid response from LLM call - None or empty.")
-
-    return answer
+    
+    if return_full_completion:
+        if not answer or (isinstance(answer, dict) and not answer.get("content")):
+            printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
+            raise ValueError("Invalid response from LLM call - None or empty.")
+        return answer
+    else:
+        if not answer:
+            printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
+            raise ValueError("Invalid response from LLM call - None or empty.")
+        return answer
 
 
 def process_llm_response(
-    answer: str, use_stop_words: bool
+    answer: Union[str, Dict[str, Any]], use_stop_words: bool
 ) -> Union[AgentAction, AgentFinish]:
     """Process the LLM response and format it into an AgentAction or AgentFinish."""
+    text_answer = answer
+    if isinstance(answer, dict):
+        text_answer = answer.get("content", "")
+    
     if not use_stop_words:
         try:
             # Preliminary parsing to check for errors.
-            format_answer(answer)
+            format_answer(text_answer)
         except OutputParserException as e:
             if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
-                answer = answer.split("Observation:")[0].strip()
+                text_answer = text_answer.split("Observation:")[0].strip()
 
-    return format_answer(answer)
+    return format_answer(text_answer)
 
 
 def handle_agent_action_core(

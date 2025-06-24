@@ -92,12 +92,49 @@ class LiteAgentOutput(BaseModel):
     usage_metrics: Optional[Dict[str, Any]] = Field(
         description="Token usage metrics for this execution", default=None
     )
+    completion_metadata: Optional[Dict[str, Any]] = Field(
+        description="Full completion metadata including generations and logprobs", default=None
+    )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert pydantic_output to a dictionary."""
         if self.pydantic:
             return self.pydantic.model_dump()
         return {}
+
+    def get_generations(self) -> Optional[List[str]]:
+        """Get all generations from completion metadata."""
+        if not self.completion_metadata or "choices" not in self.completion_metadata:
+            return None
+        
+        generations = []
+        for choice in self.completion_metadata["choices"]:
+            if hasattr(choice, "message") and hasattr(choice.message, "content"):
+                generations.append(choice.message.content or "")
+            elif isinstance(choice, dict) and "message" in choice:
+                generations.append(choice["message"].get("content", ""))
+        
+        return generations if generations else None
+
+    def get_logprobs(self) -> Optional[List[Dict[str, Any]]]:
+        """Get log probabilities from completion metadata."""
+        if not self.completion_metadata or "choices" not in self.completion_metadata:
+            return None
+        
+        logprobs_list = []
+        for choice in self.completion_metadata["choices"]:
+            if hasattr(choice, "logprobs") and choice.logprobs:
+                logprobs_list.append(choice.logprobs)
+            elif isinstance(choice, dict) and "logprobs" in choice:
+                logprobs_list.append(choice["logprobs"])
+        
+        return logprobs_list if logprobs_list else None
+
+    def get_usage_metrics_from_completion(self) -> Optional[Dict[str, Any]]:
+        """Get token usage metrics from completion metadata."""
+        if not self.completion_metadata:
+            return None
+        return self.completion_metadata.get("usage")
 
     def __str__(self) -> str:
         """String representation of the output."""

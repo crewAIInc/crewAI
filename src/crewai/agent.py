@@ -88,6 +88,22 @@ class Agent(BaseAgent):
     llm: Union[str, InstanceOf[BaseLLM], Any] = Field(
         description="Language model that will run the agent.", default=None
     )
+    llm_n: Optional[int] = Field(
+        default=None,
+        description="Number of generations to request from the LLM.",
+    )
+    llm_logprobs: Optional[int] = Field(
+        default=None,
+        description="Number of log probabilities to return from the LLM.",
+    )
+    llm_top_logprobs: Optional[int] = Field(
+        default=None,
+        description="Number of top log probabilities to return from the LLM.",
+    )
+    return_completion_metadata: bool = Field(
+        default=False,
+        description="Whether to return full completion metadata including generations and logprobs.",
+    )
     function_calling_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
@@ -178,6 +194,15 @@ class Agent(BaseAgent):
             self.function_calling_llm, BaseLLM
         ):
             self.function_calling_llm = create_llm(self.function_calling_llm)
+
+        if hasattr(self.llm, 'n') and self.llm_n is not None:
+            self.llm.n = self.llm_n
+        if hasattr(self.llm, 'logprobs') and self.llm_logprobs is not None:
+            self.llm.logprobs = self.llm_logprobs
+        if hasattr(self.llm, 'top_logprobs') and self.llm_top_logprobs is not None:
+            self.llm.top_logprobs = self.llm_top_logprobs
+        if hasattr(self.llm, 'return_full_completion'):
+            self.llm.return_full_completion = self.return_completion_metadata
 
         if not self.agent_executor:
             self._setup_agent_executor()

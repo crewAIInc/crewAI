@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -25,6 +25,9 @@ class TaskOutput(BaseModel):
     agent: str = Field(description="Agent that executed the task")
     output_format: OutputFormat = Field(
         description="Output format of the task", default=OutputFormat.RAW
+    )
+    completion_metadata: Optional[Dict[str, Any]] = Field(
+        description="Full completion metadata including generations and logprobs", default=None
     )
 
     @model_validator(mode="after")
@@ -55,6 +58,40 @@ class TaskOutput(BaseModel):
         elif self.pydantic:
             output_dict.update(self.pydantic.model_dump())
         return output_dict
+
+    def get_generations(self) -> Optional[List[str]]:
+        """Get all generations from completion metadata."""
+        if not self.completion_metadata or "choices" not in self.completion_metadata:
+            return None
+        
+        generations = []
+        for choice in self.completion_metadata["choices"]:
+            if hasattr(choice, "message") and hasattr(choice.message, "content"):
+                generations.append(choice.message.content or "")
+            elif isinstance(choice, dict) and "message" in choice:
+                generations.append(choice["message"].get("content", ""))
+        
+        return generations if generations else None
+
+    def get_logprobs(self) -> Optional[List[Dict[str, Any]]]:
+        """Get log probabilities from completion metadata."""
+        if not self.completion_metadata or "choices" not in self.completion_metadata:
+            return None
+        
+        logprobs_list = []
+        for choice in self.completion_metadata["choices"]:
+            if hasattr(choice, "logprobs") and choice.logprobs:
+                logprobs_list.append(choice.logprobs)
+            elif isinstance(choice, dict) and "logprobs" in choice:
+                logprobs_list.append(choice["logprobs"])
+        
+        return logprobs_list if logprobs_list else None
+
+    def get_usage_metrics(self) -> Optional[Dict[str, Any]]:
+        """Get token usage metrics from completion metadata."""
+        if not self.completion_metadata:
+            return None
+        return self.completion_metadata.get("usage")
 
     def __str__(self) -> str:
         if self.pydantic:
