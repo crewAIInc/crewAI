@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import Mock, patch
 from crewai import Agent, Task, Crew, LLM
 from crewai.lite_agent import LiteAgent

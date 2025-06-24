@@ -1,4 +1,3 @@
-import pytest
 from crewai.utilities.xml_parser import (
     extract_xml_content,
     extract_all_xml_content,

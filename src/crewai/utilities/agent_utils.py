@@ -109,7 +109,11 @@ def handle_max_iterations_exceeded(
         )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    formatted_answer = format_answer(answer)
+    text_answer = answer
+    if isinstance(answer, dict) and "content" in answer:
+        text_answer = answer["content"]
+    
+    formatted_answer = format_answer(str(text_answer))
     # Return the formatted answer, regardless of its type
     return formatted_answer
 
@@ -149,11 +153,18 @@ def get_llm_response(
 ) -> Union[str, Dict[str, Any]]:
     """Call the LLM and return the response, handling any invalid responses."""
     try:
-        answer = llm.call(
-            messages,
-            callbacks=callbacks,
-            return_full_completion=return_full_completion,
-        )
+        from crewai.llm import LLM
+        if isinstance(llm, LLM) and return_full_completion:
+            answer = llm.call(
+                messages,
+                callbacks=callbacks,
+                return_full_completion=return_full_completion,
+            )
+        else:
+            answer = llm.call(
+                messages,
+                callbacks=callbacks,
+            )
     except Exception as e:
         printer.print(
             content=f"Error during LLM call: {e}",
@@ -190,12 +201,12 @@ def process_llm_response(
     if not use_stop_words:
         try:
             # Preliminary parsing to check for errors.
-            format_answer(text_answer)
+            format_answer(str(text_answer))
         except OutputParserException as e:
             if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
-                text_answer = text_answer.split("Observation:")[0].strip()
+                text_answer = str(text_answer).split("Observation:")[0].strip()
 
-    return format_answer(text_answer)
+    return format_answer(str(text_answer))
 
 
 def handle_agent_action_core(
