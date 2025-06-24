@@ -21,20 +21,25 @@ def create_folder_structure(name, parent_folder=None):
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     
     if not name.strip():
-        class_name = "DefaultCrew"
-    else:
-        class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
-        
-        class_name = re.sub(r'[^a-zA-Z0-9_]', '', class_name)
-        
-        if class_name and class_name[0].isdigit():
-            class_name = "Crew" + class_name
-        
-        if not class_name:
-            class_name = "DefaultCrew"
-        
-        if keyword.iskeyword(class_name) or class_name in ('True', 'False', 'None'):
-            class_name = class_name + "Crew"
+        raise ValueError("Project name cannot be empty or contain only whitespace")
+    
+    class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
+    
+    class_name = re.sub(r'[^a-zA-Z0-9_]', '', class_name)
+    
+    if not class_name:
+        raise ValueError(f"Project name '{name}' contains no valid characters for a Python class name")
+    
+    if class_name[0].isdigit():
+        raise ValueError(f"Project name '{name}' would generate class name '{class_name}' which cannot start with a digit")
+    
+    # Check if the original name (before title casing) is a keyword
+    original_name_clean = re.sub(r'[^a-zA-Z0-9_]', '', name.replace("_", "").replace("-", "").lower())
+    if keyword.iskeyword(original_name_clean) or keyword.iskeyword(class_name) or class_name in ('True', 'False', 'None'):
+        raise ValueError(f"Project name '{name}' would generate class name '{class_name}' which is a reserved Python keyword")
+    
+    if not class_name.isidentifier():
+        raise ValueError(f"Project name '{name}' would generate invalid Python class name '{class_name}'")
 
     if parent_folder:
         folder_path = Path(parent_folder) / folder_name

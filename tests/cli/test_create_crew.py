@@ -149,70 +149,48 @@ def test_create_folder_structure_handles_spaces_and_dashes_with_slash():
         assert folder_path.exists()
 
 
-def test_create_folder_structure_handles_invalid_class_name_edge_cases():
+def test_create_folder_structure_raises_error_for_invalid_class_names():
     with tempfile.TemporaryDirectory() as temp_dir:
         os.chdir(temp_dir)
         
-        folder_path, folder_name, class_name = create_folder_structure("123project/")
-        assert folder_name == "123project"
-        assert class_name == "Crew123Project"
-        assert class_name.isidentifier()
-        assert folder_path.exists()
+        invalid_cases = [
+            ("123project/", "cannot start with a digit"),
+            ("True/", "reserved Python keyword"),
+            ("False/", "reserved Python keyword"), 
+            ("None/", "reserved Python keyword"),
+            ("class/", "reserved Python keyword"),
+            ("def/", "reserved Python keyword"),
+            ("   /", "empty or contain only whitespace"),
+            ("", "empty or contain only whitespace"),
+            ("@#$/", "contains no valid characters"),
+        ]
         
-        folder_path, folder_name, class_name = create_folder_structure("True/")
-        assert folder_name == "true"
-        assert class_name == "TrueCrew"
-        assert class_name.isidentifier()
-        assert folder_path.exists()
-        
-        folder_path, folder_name, class_name = create_folder_structure("   /")
-        assert folder_name == "___"  # Spaces become underscores in folder_name
-        assert class_name == "DefaultCrew"  # But class_name should be DefaultCrew for whitespace-only input
-        assert class_name.isidentifier()
-        assert folder_path.exists()
-        
-        folder_path, folder_name, class_name = create_folder_structure("hello@world/")
-        assert folder_name == "hello@world"
-        assert class_name == "HelloWorld"
-        assert class_name.isidentifier()
-        assert folder_path.exists()
+        for invalid_name, expected_error in invalid_cases:
+            with pytest.raises(ValueError, match=expected_error):
+                create_folder_structure(invalid_name)
 
 
-def test_create_folder_structure_class_names_are_valid_python_identifiers():
+def test_create_folder_structure_validates_class_names():
     import keyword
     
-    test_cases = [
-        "hello/",
-        "my-project/",
-        "123project/",
-        "class/",
-        "def/",
-        "import/",
-        "True/",
-        "False/",
-        "None/",
-        "hello.world/",
-        "hello@world/",
-        "hello#world/",
-        "hello$world/",
-        "///",
-        "",
-        "   /",
-    ]
-    
     with tempfile.TemporaryDirectory() as temp_dir:
         os.chdir(temp_dir)
         
-        for i, test_case in enumerate(test_cases):
-            unique_name = f"{test_case.rstrip('/')}_test_{i}/"
-            if not test_case.strip('/'):
-                unique_name = f"empty_test_{i}/"
-                
-            folder_path, folder_name, class_name = create_folder_structure(unique_name)
-            
-            assert class_name.isidentifier(), f"Class name '{class_name}' from input '{unique_name}' is not a valid identifier"
-            assert not keyword.iskeyword(class_name), f"Class name '{class_name}' from input '{unique_name}' is a Python keyword"
-            assert class_name not in ('True', 'False', 'None'), f"Class name '{class_name}' from input '{unique_name}' is a Python built-in"
+        valid_cases = [
+            ("hello/", "hello", "Hello"),
+            ("my-project/", "my_project", "MyProject"),
+            ("hello_world/", "hello_world", "HelloWorld"),
+            ("valid123/", "valid123", "Valid123"),
+            ("hello.world/", "hello.world", "HelloWorld"),
+            ("hello@world/", "hello@world", "HelloWorld"),
+        ]
+        
+        for valid_name, expected_folder, expected_class in valid_cases:
+            folder_path, folder_name, class_name = create_folder_structure(valid_name)
+            assert folder_name == expected_folder
+            assert class_name == expected_class
+            assert class_name.isidentifier()
+            assert not keyword.iskeyword(class_name)
             
             if folder_path.exists():
                 shutil.rmtree(folder_path)
