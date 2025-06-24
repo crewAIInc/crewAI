@@ -94,17 +94,18 @@ def _get_project_attribute(
 
         attribute = _get_nested_value(pyproject_content, keys)
     except FileNotFoundError:
-        print(f"Error: {pyproject_path} not found.")
+        console.print(f"Error: {pyproject_path} not found.", style="bold red")
     except KeyError:
-        print(f"Error: {pyproject_path} is not a valid pyproject.toml file.")
+        console.print(f"Error: {pyproject_path} is not a valid pyproject.toml file.", style="bold red")
     except tomllib.TOMLDecodeError if sys.version_info >= (3, 11) else Exception as e:  # type: ignore
-        print(
+        console.print(
             f"Error: {pyproject_path} is not a valid TOML file."
             if sys.version_info >= (3, 11)
-            else f"Error reading the pyproject.toml file: {e}"
+            else f"Error reading the pyproject.toml file: {e}",
+            style="bold red",
         )
     except Exception as e:
-        print(f"Error reading the pyproject.toml file: {e}")
+        console.print(f"Error reading the pyproject.toml file: {e}", style="bold red")
 
     if require and not attribute:
         console.print(
@@ -137,9 +138,9 @@ def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
         return env_dict
 
     except FileNotFoundError:
-        print(f"Error: {env_file_path} not found.")
+        console.print(f"Error: {env_file_path} not found.", style="bold red")
     except Exception as e:
-        print(f"Error reading the .env file: {e}")
+        console.print(f"Error reading the .env file: {e}", style="bold red")
 
     return {}
 
@@ -295,7 +296,7 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
                                 try:
                                     crew_instances.extend(fetch_crews(module_attr))
                                 except Exception as e:
-                                    print(f"Error processing attribute {attr_name}: {e}")
+                                    console.print(f"Error processing attribute {attr_name}: {e}", style="bold red")
                                     continue
 
                             # If we found crew instances, break out of the loop
@@ -303,7 +304,7 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
                                 break
 
                         except Exception as exec_error:
-                            print(f"Error executing module: {exec_error}")
+                            console.print(f"Error executing module: {exec_error}", style="bold red")
 
                     except (ImportError, AttributeError) as e:
                         if require:
@@ -425,7 +426,8 @@ def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
 
         if not hasattr(module, "__all__"):
             console.print(
-                f"[bold yellow]Warning: No __all__ defined in {init_file}[/bold yellow]"
+                f"Warning: No __all__ defined in {init_file}",
+                style="bold yellow",
             )
             raise SystemExit(1)
 
