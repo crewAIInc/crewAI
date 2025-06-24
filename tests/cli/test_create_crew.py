@@ -39,7 +39,7 @@ def test_create_folder_structure_strips_single_trailing_slash():
 
 def test_create_folder_structure_strips_multiple_trailing_slashes():
     with tempfile.TemporaryDirectory() as temp_dir:
-        old_cwd = os.getcwd()
+        original_cwd = os.getcwd()
         try:
             os.chdir(temp_dir)
             folder_path, folder_name, class_name = create_folder_structure("hello///")
@@ -49,13 +49,12 @@ def test_create_folder_structure_strips_multiple_trailing_slashes():
             assert folder_path.name == "hello"
             assert folder_path.exists()
         finally:
-            if os.path.exists(old_cwd):
-                os.chdir(old_cwd)
+            os.chdir(original_cwd)
 
 
 def test_create_folder_structure_handles_complex_name_with_trailing_slash():
     with tempfile.TemporaryDirectory() as temp_dir:
-        old_cwd = os.getcwd()
+        original_cwd = os.getcwd()
         try:
             os.chdir(temp_dir)
             folder_path, folder_name, class_name = create_folder_structure("my-awesome_project/")
@@ -65,13 +64,12 @@ def test_create_folder_structure_handles_complex_name_with_trailing_slash():
             assert folder_path.name == "my_awesome_project"
             assert folder_path.exists()
         finally:
-            if os.path.exists(old_cwd):
-                os.chdir(old_cwd)
+            os.chdir(original_cwd)
 
 
 def test_create_folder_structure_normal_name_unchanged():
     with tempfile.TemporaryDirectory() as temp_dir:
-        old_cwd = os.getcwd()
+        original_cwd = os.getcwd()
         try:
             os.chdir(temp_dir)
             folder_path, folder_name, class_name = create_folder_structure("hello")
@@ -81,8 +79,7 @@ def test_create_folder_structure_normal_name_unchanged():
             assert folder_path.name == "hello"
             assert folder_path.exists()
         finally:
-            if os.path.exists(old_cwd):
-                os.chdir(old_cwd)
+            os.chdir(original_cwd)
 
 
 
@@ -90,7 +87,7 @@ def test_create_folder_structure_normal_name_unchanged():
 
 def test_create_folder_structure_with_parent_folder():
     with tempfile.TemporaryDirectory() as temp_dir:
-        old_cwd = os.getcwd()
+        original_cwd = os.getcwd()
         try:
             os.chdir(temp_dir)
             parent_path = Path(temp_dir) / "parent"
@@ -104,8 +101,7 @@ def test_create_folder_structure_with_parent_folder():
             assert folder_path.parent == parent_path
             assert folder_path.exists()
         finally:
-            if os.path.exists(old_cwd):
-                os.chdir(old_cwd)
+            os.chdir(original_cwd)
 
 
 @mock.patch("crewai.cli.create_crew.copy_template")
@@ -164,7 +160,7 @@ def test_create_crew_normal_name_still_works(mock_load_env, mock_write_env, mock
 
 def test_create_folder_structure_handles_spaces_and_dashes_with_slash():
     with tempfile.TemporaryDirectory() as temp_dir:
-        old_cwd = os.getcwd()
+        original_cwd = os.getcwd()
         try:
             os.chdir(temp_dir)
             folder_path, folder_name, class_name = create_folder_structure("My Cool-Project/")
@@ -174,13 +170,12 @@ def test_create_folder_structure_handles_spaces_and_dashes_with_slash():
             assert folder_path.name == "my_cool_project"
             assert folder_path.exists()
         finally:
-            if os.path.exists(old_cwd):
-                os.chdir(old_cwd)
+            os.chdir(original_cwd)
 
 
 def test_create_folder_structure_raises_error_for_invalid_class_names():
     with tempfile.TemporaryDirectory() as temp_dir:
-        old_cwd = os.getcwd()
+        original_cwd = os.getcwd()
         try:
             os.chdir(temp_dir)
             
@@ -200,15 +195,14 @@ def test_create_folder_structure_raises_error_for_invalid_class_names():
                 with pytest.raises(ValueError, match=expected_error):
                     create_folder_structure(invalid_name)
         finally:
-            if os.path.exists(old_cwd):
-                os.chdir(old_cwd)
+            os.chdir(original_cwd)
 
 
 def test_create_folder_structure_validates_class_names():
     import keyword
     
     with tempfile.TemporaryDirectory() as temp_dir:
-        old_cwd = os.getcwd()
+        original_cwd = os.getcwd()
         try:
             os.chdir(temp_dir)
             
@@ -231,8 +225,7 @@ def test_create_folder_structure_validates_class_names():
                 if folder_path.exists():
                     shutil.rmtree(folder_path)
         finally:
-            if os.path.exists(old_cwd):
-                os.chdir(old_cwd)
+            os.chdir(original_cwd)
 
 
 @mock.patch("crewai.cli.create_crew.copy_template")
