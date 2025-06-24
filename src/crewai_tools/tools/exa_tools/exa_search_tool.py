@@ -1,6 +1,7 @@
 from typing import Any, Optional, Type, List
 from pydantic import BaseModel, Field
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
+import os
 
 try:
     from exa_py import Exa
@@ -36,10 +37,15 @@ class EXASearchTool(BaseTool):
     summary: Optional[bool] = False
     type: Optional[str] = "auto"
     package_dependencies: List[str] = ["exa_py"]
+    api_key: Optional[str] = Field(
+        default_factory=lambda: os.getenv("EXA_API_KEY"), description="API key for Exa services", required=False
+    )
+    env_vars: List[EnvVar] = [
+        EnvVar(name="EXA_API_KEY", description="API key for Exa services", required=False),
+    ]
 
     def __init__(
         self,
-        api_key: str,
         content: Optional[bool] = False,
         summary: Optional[bool] = False,
         type: Optional[str] = "auto",
@@ -62,7 +68,7 @@ class EXASearchTool(BaseTool):
                 raise ImportError(
                     "You are missing the 'exa_py' package. Would you like to install it?"
                 )
-        self.client = Exa(api_key=api_key)
+        self.client = Exa(api_key=self.api_key)
         self.content = content
         self.summary = summary
         self.type = type
