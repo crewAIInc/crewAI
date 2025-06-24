@@ -275,7 +275,7 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
 
         for search_path in search_paths:
             for root, _, files in os.walk(search_path):
-                if crew_path in files:
+                if crew_path in files and "cli/templates" not in root:
                     crew_os_path = os.path.join(root, crew_path)
                     try:
                         spec = importlib.util.spec_from_file_location(
