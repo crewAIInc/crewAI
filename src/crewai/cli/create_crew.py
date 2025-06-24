@@ -14,6 +14,7 @@ from crewai.cli.utils import copy_template, load_env_vars, write_env_file
 
 
 def create_folder_structure(name, parent_folder=None):
+    name = name.rstrip('/')
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
 
