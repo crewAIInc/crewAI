@@ -1,28 +1,107 @@
 ---
-title: Maxim Integration
-description: Start Agent monitoring, evaluation, and observability
-icon: bars-staggered
+title: "Maxim Integration"
+description: "Start Agent monitoring, evaluation, and observability"
+icon: "infinity"
 ---
 
-# Maxim Integration
+# Maxim Overview
 
 Maxim AI provides comprehensive agent monitoring, evaluation, and observability for your CrewAI applications. With Maxim's one-line integration, you can easily trace and analyse agent interactions, performance metrics, and more.
 
+## Features
 
-## Features: One Line Integration
+### Prompt Management
 
-- **End-to-End Agent Tracing**: Monitor the complete lifecycle of your agents
-- **Performance Analytics**: Track latency, tokens consumed, and costs
-- **Hyperparameter Monitoring**: View the configuration details of your agent runs
-- **Tool Call Tracking**: Observe when and how agents use their tools
-- **Advanced Visualisation**: Understand agent trajectories through intuitive dashboards
+Maxim's Prompt Management capabilities enable you to create, organize, and optimize prompts for your CrewAI agents. Rather than hardcoding instructions, leverage Maxim’s SDK to dynamically retrieve and apply version-controlled prompts.
+
+<Tabs>
+  <Tab title="Prompt Playground">
+    Create, refine, experiment and deploy your prompts via the playground. Organize of your prompts using folders and versions, experimenting with the real world cases by linking tools and context, and deploying based on custom logic.
+
+    Easily experiment across models by [**configuring models**](https://www.getmaxim.ai/docs/introduction/quickstart/setting-up-workspace#add-model-api-keys) and selecting the relevant model from the dropdown at the top of the prompt playground.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_playground.png'> </img>
+  </Tab>
+  <Tab title="Prompt Versions">
+    As teams build their AI applications, a big part of experimentation is iterating on the prompt structure. In order to collaborate effectively and organize your changes clearly, Maxim allows prompt versioning and comparison runs across versions.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_versions.png'> </img>
+  </Tab>
+  <Tab title="Prompt Comparisons">
+    Iterating on Prompts as you evolve your AI application would need experiments across models, prompt structures, etc. In order to compare versions and make informed decisions about changes, the comparison playground allows a side by side view of results.
+
+    ## **Why use Prompt comparison?**
+
+    Prompt comparison combines multiple single Prompts into one view, enabling a streamlined approach for various workflows:
+
+    1. **Model comparison**: Evaluate the performance of different models on the same Prompt.
+    2. **Prompt optimization**: Compare different versions of a Prompt to identify the most effective formulation.
+    3. **Cross-Model consistency**: Ensure consistent outputs across various models for the same Prompt.
+    4. **Performance benchmarking**: Analyze metrics like latency, cost, and token count across different models and Prompts.
+  </Tab>
+</Tabs>
+
+### Observability & Evals
+
+Maxim AI provides comprehensive observability & evaluation for your CrewAI agents, helping you understand exactly what's happening during each execution.
+
+<Tabs>
+  <Tab title="Agent Tracing">
+    Track your agent’s complete lifecycle, including tool calls, agent trajectories, and decision flows effortlessly.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_agent_tracking.png'> </img>
+  </Tab>
+  <Tab title="Analytics + Evals">
+    Run detailed evaluations on full traces or individual nodes with support for:
+
+    - Multi-step interactions and granular trace analysis
+    - Session Level Evaluations
+    - Simulations for real-world testing
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_trace_eval.png'> </img>
+
+    <CardGroup cols={3}>
+      <Card title="Auto Evals on Logs" icon="e" href="https://www.getmaxim.ai/docs/observe/how-to/evaluate-logs/auto-evaluation">
+        <p>
+        Evaluate captured logs automatically from the UI based on filters and sampling
+
+        </p>
+      </Card>
+      <Card title="Human Evals on Logs" icon="hand" href="https://www.getmaxim.ai/docs/observe/how-to/evaluate-logs/human-evaluation">
+        <p>
+        Use human evaluation or rating to assess the quality of your logs and evaluate them.
+
+        </p>
+      </Card>
+      <Card title="Node Level Evals" icon="road" href="https://www.getmaxim.ai/docs/observe/how-to/evaluate-logs/node-level-evaluation">
+        <p>
+        Evaluate any component of your trace or log to gain insights into your agent’s behavior.
+
+        </p>
+      </Card>
+    </CardGroup>
+    ---
+  </Tab>
+  <Tab title="Alerting">
+    Set thresholds on **error**, **cost, token usage, user feedback, latency** and get real-time alerts via Slack or PagerDuty.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_alerts_1.png'> </img>
+  </Tab>
+  <Tab title="Dashboards">
+    Visualize Traces over time, usage metrics, latency & error rates with ease.
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/maxim_dashboard_1.png'> </img>
+  </Tab>
+</Tabs>
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python version >=3.10
+
+- Python version \>=3.10
 - A Maxim account ([sign up here](https://getmaxim.ai/))
+- Generate Maxim API Key
 - A CrewAI project
 
 ### Installation
@@ -30,16 +109,14 @@ Maxim AI provides comprehensive agent monitoring, evaluation, and observability 
 Install the Maxim SDK via pip:
 
 ```python
-pip install maxim-py>=3.6.2
+pip install maxim-py
 ```
 
 Or add it to your `requirements.txt`:
 
 ```
-maxim-py>=3.6.2
+maxim-py
 ```
-
-
 ### Basic Setup
 
 ### 1. Set up environment variables
@@ -64,18 +141,15 @@ from maxim.logger.crewai import instrument_crewai
 
 ### 3. Initialise Maxim with your API key
 
-```python
-# Initialize Maxim logger
-logger = Maxim().logger()
 
+```python {8}
 # Instrument CrewAI with just one line
-instrument_crewai(logger)
+instrument_crewai(Maxim().logger())
 ```
 
 ### 4. Create and run your CrewAI application as usual
 
 ```python
-
 # Create your agent
 researcher = Agent(
     role='Senior Research Analyst',
@@ -105,7 +179,8 @@ finally:
     maxim.cleanup()  # Ensure cleanup happens even if errors occur
 ```
 
-That's it! All your CrewAI agent interactions will now be logged and available in your Maxim dashboard.
+
+That's it\! All your CrewAI agent interactions will now be logged and available in your Maxim dashboard.
 
 Check this Google Colab Notebook for a quick reference - [Notebook](https://colab.research.google.com/drive/1ZKIZWsmgQQ46n8TH9zLsT1negKkJA6K8?usp=sharing)
 
@@ -113,40 +188,44 @@ Check this Google Colab Notebook for a quick reference - [Notebook](https://cola
 
 After running your CrewAI application:
 
-![Example trace in Maxim showing agent interactions](https://raw.githubusercontent.com/maximhq/maxim-docs/master/images/Screenshot2025-05-14at12.10.58PM.png)
-
-1. Log in to your [Maxim Dashboard](https://getmaxim.ai/dashboard)
+1. Log in to your [Maxim Dashboard](https://app.getmaxim.ai/login)
 2. Navigate to your repository
 3. View detailed agent traces, including:
-    - Agent conversations
-    - Tool usage patterns
-    - Performance metrics
-    - Cost analytics
+   - Agent conversations
+   - Tool usage patterns
+   - Performance metrics
+   - Cost analytics
+
+    <img src='https://raw.githubusercontent.com/akmadan/crewAI/docs_maxim_observability/docs/images/crewai_traces.gif'> </img>
 
 ## Troubleshooting
 
 ### Common Issues
 
-- **No traces appearing**: Ensure your API key and repository ID are correc
-- Ensure you've **called `instrument_crewai()`** ***before*** running your crew. This initializes logging hooks correctly.
+- **No traces appearing**: Ensure your API key and repository ID are correct
+- Ensure you've **`called instrument_crewai()`** **_before_** running your crew. This initializes logging hooks correctly.
 - Set `debug=True` in your `instrument_crewai()` call to surface any internal errors:
-    
-    ```python
-    instrument_crewai(logger, debug=True)
-    ```
-    
+
+  ```python
+  instrument_crewai(logger, debug=True)
+  ```
 - Configure your agents with `verbose=True` to capture detailed logs:
-    
-    ```python
-    
-    agent = CrewAgent(..., verbose=True)
-    ```
-    
+
+  ```python
+  agent = CrewAgent(..., verbose=True)
+  ```
 - Double-check that `instrument_crewai()` is called **before** creating or executing agents. This might be obvious, but it's a common oversight.
 
-### Support
+## Resources
 
-If you encounter any issues:
-
-- Check the [Maxim Documentation](https://getmaxim.ai/docs)
-- Maxim Github [Link](https://github.com/maximhq)
+<CardGroup cols="3">
+  <Card title="CrewAI Docs" icon="book" href="https://docs.crewai.com/">
+    Official CrewAI documentation
+  </Card>
+  <Card title="Maxim Docs" icon="book" href="https://getmaxim.ai/docs">
+    Official Maxim documentation
+  </Card>
+  <Card title="Maxim Github" icon="github" href="https://github.com/maximhq">
+    Maxim Github
+  </Card>
+</CardGroup>
