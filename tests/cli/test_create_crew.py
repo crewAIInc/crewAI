@@ -149,6 +149,75 @@ def test_create_folder_structure_handles_spaces_and_dashes_with_slash():
         assert folder_path.exists()
 
 
+def test_create_folder_structure_handles_invalid_class_name_edge_cases():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        os.chdir(temp_dir)
+        
+        folder_path, folder_name, class_name = create_folder_structure("123project/")
+        assert folder_name == "123project"
+        assert class_name == "Crew123Project"
+        assert class_name.isidentifier()
+        assert folder_path.exists()
+        
+        folder_path, folder_name, class_name = create_folder_structure("True/")
+        assert folder_name == "true"
+        assert class_name == "TrueCrew"
+        assert class_name.isidentifier()
+        assert folder_path.exists()
+        
+        folder_path, folder_name, class_name = create_folder_structure("   /")
+        assert folder_name == "___"  # Spaces become underscores in folder_name
+        assert class_name == "DefaultCrew"  # But class_name should be DefaultCrew for whitespace-only input
+        assert class_name.isidentifier()
+        assert folder_path.exists()
+        
+        folder_path, folder_name, class_name = create_folder_structure("hello@world/")
+        assert folder_name == "hello@world"
+        assert class_name == "HelloWorld"
+        assert class_name.isidentifier()
+        assert folder_path.exists()
+
+
+def test_create_folder_structure_class_names_are_valid_python_identifiers():
+    import keyword
+    
+    test_cases = [
+        "hello/",
+        "my-project/",
+        "123project/",
+        "class/",
+        "def/",
+        "import/",
+        "True/",
+        "False/",
+        "None/",
+        "hello.world/",
+        "hello@world/",
+        "hello#world/",
+        "hello$world/",
+        "///",
+        "",
+        "   /",
+    ]
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        os.chdir(temp_dir)
+        
+        for i, test_case in enumerate(test_cases):
+            unique_name = f"{test_case.rstrip('/')}_test_{i}/"
+            if not test_case.strip('/'):
+                unique_name = f"empty_test_{i}/"
+                
+            folder_path, folder_name, class_name = create_folder_structure(unique_name)
+            
+            assert class_name.isidentifier(), f"Class name '{class_name}' from input '{unique_name}' is not a valid identifier"
+            assert not keyword.iskeyword(class_name), f"Class name '{class_name}' from input '{unique_name}' is a Python keyword"
+            assert class_name not in ('True', 'False', 'None'), f"Class name '{class_name}' from input '{unique_name}' is a Python built-in"
+            
+            if folder_path.exists():
+                shutil.rmtree(folder_path)
+
+
 @mock.patch("crewai.cli.create_crew.copy_template")
 @mock.patch("crewai.cli.create_crew.write_env_file")
 @mock.patch("crewai.cli.create_crew.load_env_vars")

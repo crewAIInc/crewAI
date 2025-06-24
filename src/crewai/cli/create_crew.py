@@ -14,9 +14,27 @@ from crewai.cli.utils import copy_template, load_env_vars, write_env_file
 
 
 def create_folder_structure(name, parent_folder=None):
+    import keyword
+    import re
+    
     name = name.rstrip('/')
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
-    class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
+    
+    if not name.strip():
+        class_name = "DefaultCrew"
+    else:
+        class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
+        
+        class_name = re.sub(r'[^a-zA-Z0-9_]', '', class_name)
+        
+        if class_name and class_name[0].isdigit():
+            class_name = "Crew" + class_name
+        
+        if not class_name:
+            class_name = "DefaultCrew"
+        
+        if keyword.iskeyword(class_name) or class_name in ('True', 'False', 'None'):
+            class_name = class_name + "Crew"
 
     if parent_folder:
         folder_path = Path(parent_folder) / folder_name
