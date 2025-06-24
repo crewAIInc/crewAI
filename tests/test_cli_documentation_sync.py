@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 
 from crewai.cli.constants import PROVIDERS
