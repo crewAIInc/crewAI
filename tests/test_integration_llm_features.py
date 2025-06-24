@@ -79,7 +79,7 @@ class TestIntegrationLLMFeatures:
             
             result = lite_agent.kickoff("Analyze this problem")
             
-            thinking_content = extract_xml_content(result.raw, "thinking")
+            thinking_content = extract_xml_content(result, "thinking")
             assert thinking_content is not None
             assert "step by step" in thinking_content
             assert "requirements" in thinking_content

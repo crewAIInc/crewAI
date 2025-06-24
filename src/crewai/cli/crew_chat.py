@@ -246,7 +246,7 @@ def handle_user_input(
         available_functions=available_functions,
     )
 
-    messages.append({"role": "assistant", "content": final_response})
+    messages.append({"role": "assistant", "content": str(final_response)})
     click.secho(f"\nAssistant: {final_response}\n", fg="green")
 
 

@@ -260,14 +260,22 @@ class AgentReasoning:
                 available_functions={"create_reasoning_plan": _create_reasoning_plan},
             )
 
-            self.logger.debug(f"Function calling response: {response[:100]}...")
-
-            try:
-                result = json.loads(response)
-                if "plan" in result and "ready" in result:
-                    return result["plan"], result["ready"]
-            except (json.JSONDecodeError, KeyError):
-                pass
+            if isinstance(response, dict):
+                response_str = str(response)
+                self.logger.debug(f"Function calling response: {response_str[:100]}...")
+                
+                if "plan" in response and "ready" in response:
+                    return response["plan"], response["ready"]
+            else:
+                response_str = str(response)
+                self.logger.debug(f"Function calling response: {response_str[:100]}...")
+                
+                try:
+                    result = json.loads(response_str)
+                    if "plan" in result and "ready" in result:
+                        return result["plan"], result["ready"]
+                except (json.JSONDecodeError, KeyError):
+                    pass
 
             response_str = str(response)
             return response_str, "READY: I am ready to execute the task." in response_str
