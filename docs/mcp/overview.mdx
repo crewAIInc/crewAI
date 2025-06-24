@@ -6,11 +6,11 @@ icon: plug
 
 ## Overview
 
-The [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) provides a standardized way for AI agents to provide context to LLMs by communicating with external services, known as MCP Servers. 
-The `crewai-tools` library extends CrewAI's capabilities by allowing you to seamlessly integrate tools from these MCP servers into your agents. 
-This gives your crews access to a vast ecosystem of functionalities. 
+The [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) provides a standardized way for AI agents to provide context to LLMs by communicating with external services, known as MCP Servers.
+The `crewai-tools` library extends CrewAI's capabilities by allowing you to seamlessly integrate tools from these MCP servers into your agents.
+This gives your crews access to a vast ecosystem of functionalities.
 
-We currently support the following transport mechanisms: 
+We currently support the following transport mechanisms:
 
 - **Stdio**: for local servers (communication via standard input/output between processes on the same machine)
 - **Server-Sent Events (SSE)**: for remote servers (unidirectional, real-time data streaming from server to client over HTTP)
@@ -52,27 +52,27 @@ from mcp import StdioServerParameters # For Stdio Server
 # Example server_params (choose one based on your server type):
 # 1. Stdio Server:
 server_params=StdioServerParameters(
-    command="python3", 
+    command="python3",
     args=["servers/your_server.py"],
     env={"UV_PYTHON": "3.12", **os.environ},
 )
 
 # 2. SSE Server:
 server_params = {
-    "url": "http://localhost:8000/sse", 
+    "url": "http://localhost:8000/sse",
     "transport": "sse"
 }
 
 # 3. Streamable HTTP Server:
 server_params = {
-    "url": "http://localhost:8001/mcp", 
+    "url": "http://localhost:8001/mcp",
     "transport": "streamable-http"
 }
 
 # Example usage (uncomment and adapt once server_params is set):
 with MCPServerAdapter(server_params) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
-    
+
     my_agent = Agent(
         role="MCP Tool User",
         goal="Utilize tools from an MCP server.",
@@ -101,44 +101,79 @@ with MCPServerAdapter(server_params) as mcp_tools:
     )
     # ... rest of your crew setup ...
 ```
+
+## Using with CrewBase
+
+To use MCPServer tools within a CrewBase class, use the `mcp_tools` method. Server configurations should be provided via the mcp_server_params attribute. You can pass either a single configuration or a list of multiple server configurations.
+
+```python
+@CrewBase
+class CrewWithMCP:
+  # ... define your agents and tasks config file ...
+
+  mcp_server_params = [
+    # Streamable HTTP Server
+    {
+        "url": "http://localhost:8001/mcp",
+        "transport": "streamable-http"
+    },
+    # SSE Server
+    {
+        "url": "http://localhost:8000/sse",
+        "transport": "sse"
+    },
+    # StdIO Server
+    StdioServerParameters(
+        command="python3",
+        args=["servers/your_stdio_server.py"],
+        env={"UV_PYTHON": "3.12", **os.environ},
+    )
+  ]
+
+  @agent
+  def your_agent(self):
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools()) # you can filter which tool are available also
+
+    # ... rest of your crew setup ...
+```
 ## Explore MCP Integrations
 
 <CardGroup cols={2}>
-  <Card 
-    title="Stdio Transport" 
-    icon="server" 
+  <Card
+    title="Stdio Transport"
+    icon="server"
     href="/mcp/stdio"
     color="#3B82F6"
   >
     Connect to local MCP servers via standard input/output. Ideal for scripts and local executables.
   </Card>
-  <Card 
-    title="SSE Transport" 
-    icon="wifi" 
+  <Card
+    title="SSE Transport"
+    icon="wifi"
     href="/mcp/sse"
     color="#10B981"
   >
     Integrate with remote MCP servers using Server-Sent Events for real-time data streaming.
   </Card>
-  <Card 
-    title="Streamable HTTP Transport" 
-    icon="globe" 
+  <Card
+    title="Streamable HTTP Transport"
+    icon="globe"
     href="/mcp/streamable-http"
     color="#F59E0B"
   >
     Utilize flexible Streamable HTTP for robust communication with remote MCP servers.
   </Card>
-  <Card 
-    title="Connecting to Multiple Servers" 
-    icon="layer-group" 
+  <Card
+    title="Connecting to Multiple Servers"
+    icon="layer-group"
     href="/mcp/multiple-servers"
     color="#8B5CF6"
   >
     Aggregate tools from several MCP servers simultaneously using a single adapter.
   </Card>
-  <Card 
-    title="Security Considerations" 
-    icon="lock" 
+  <Card
+    title="Security Considerations"
+    icon="lock"
     href="/mcp/security"
     color="#EF4444"
   >
@@ -148,7 +183,7 @@ with MCPServerAdapter(server_params) as mcp_tools:
 
 Checkout this repository for full demos and examples of MCP integration with CrewAI! 👇
 
-<Card 
+<Card
 title="GitHub Repository"
 icon="github"
 href="https://github.com/tonykipkemboi/crewai-mcp-demo"
@@ -163,7 +198,7 @@ Always ensure that you trust an MCP Server before using it.
 </Warning>
 
 #### Security Warning: DNS Rebinding Attacks
-SSE transports can be vulnerable to DNS rebinding attacks if not properly secured. 
+SSE transports can be vulnerable to DNS rebinding attacks if not properly secured.
 To prevent this:
 
 1. **Always validate Origin headers** on incoming SSE connections to ensure they come from expected sources
@@ -175,6 +210,6 @@ Without these protections, attackers could use DNS rebinding to interact with lo
 For more details, see the [Anthropic's MCP Transport Security docs](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations).
 
 ### Limitations
-*   **Supported Primitives**: Currently, `MCPServerAdapter` primarily supports adapting MCP `tools`. 
+*   **Supported Primitives**: Currently, `MCPServerAdapter` primarily supports adapting MCP `tools`.
 Other MCP primitives like `prompts` or `resources` are not directly integrated as CrewAI components through this adapter at this time.
 *   **Output Handling**: The adapter typically processes the primary text output from an MCP tool (e.g., `.content[0].text`). Complex or multi-modal outputs might require custom handling if not fitting this pattern.

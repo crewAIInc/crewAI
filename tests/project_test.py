@@ -1,5 +1,5 @@
 from typing import List
-
+from unittest.mock import Mock, patch
 import pytest
 
 from crewai.agent import Agent
@@ -16,7 +16,7 @@ from crewai.project import (
     task,
 )
 from crewai.task import Task
-
+from crewai.tools import tool
 
 class SimpleCrew:
     @agent
@@ -84,6 +84,14 @@ class InternalCrew:
     @crew
     def crew(self):
         return Crew(agents=self.agents, tasks=self.tasks, verbose=True)
+
+@CrewBase
+class InternalCrewWithMCP(InternalCrew):
+    mcp_server_params = {"host": "localhost", "port": 8000}
+
+    @agent
+    def reporting_analyst(self):
+        return Agent(config=self.agents_config["reporting_analyst"], tools=self.get_mcp_tools())  # type: ignore[index]
 
 
 def test_agent_memoization():
@@ -237,3 +245,17 @@ def test_multiple_before_after_kickoff():
 def test_crew_name():
     crew = InternalCrew()
     assert crew._crew_name == "InternalCrew"
+
+@tool
+def simple_tool():
+    """Return 'Hi!'"""
+    return "Hi!"
+
+def test_internal_crew_with_mcp():
+    mock = Mock()
+    mock.tools = [simple_tool]
+    with patch("crewai_tools.MCPServerAdapter", return_value=mock) as adapter_mock:
+        crew = InternalCrewWithMCP()
+        assert crew.reporting_analyst().tools == [simple_tool]
+
+    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000})
