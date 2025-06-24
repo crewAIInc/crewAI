@@ -79,7 +79,7 @@ class TestIntegrationLLMFeatures:
             
             result = lite_agent.kickoff("Analyze this problem")
             
-            thinking_content = extract_xml_content(result, "thinking")
+            thinking_content = extract_xml_content(result.raw, "thinking")
             assert thinking_content is not None
             assert "step by step" in thinking_content
             assert "requirements" in thinking_content
@@ -148,10 +148,10 @@ class TestIntegrationLLMFeatures:
 
         crew = Crew(agents=[agent], tasks=[task])
         
-        with patch.object(crew, 'kickoff') as mock_kickoff:
-            mock_output = Mock()
-            mock_output.tasks_output = [Mock(completion_metadata={"choices": mock_response.choices})]
-            mock_kickoff.return_value = mock_output
+        with patch.object(crew, '_run_sequential_process') as mock_run:
+            from crewai.crews.crew_output import CrewOutput
+            mock_output = CrewOutput(raw="Test response")
+            mock_run.return_value = mock_output
             
             result = crew.kickoff()
             assert result is not None
