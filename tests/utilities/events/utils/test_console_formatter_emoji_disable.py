@@ -1,7 +1,5 @@
 import os
-import pytest
 from unittest.mock import patch
-from rich.text import Text
 from rich.tree import Tree
 
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
