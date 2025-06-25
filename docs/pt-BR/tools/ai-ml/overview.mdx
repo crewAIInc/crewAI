@@ -1,0 +1,65 @@
+---
+title: "Visão Geral"
+description: "Aproveite serviços de IA, gere imagens, processe visão e construa sistemas inteligentes"
+icon: "face-smile"
+---
+
+Essas ferramentas se integram com serviços de IA e machine learning para aprimorar seus agentes com capacidades avançadas como geração de imagens, processamento de visão e execução inteligente de código.
+
+## **Ferramentas Disponíveis**
+
+<CardGroup cols={2}>
+  <Card title="DALL-E Tool" icon="image" href="/pt-BR/tools/ai-ml/dalletool">
+    Gere imagens com IA utilizando o modelo DALL-E da OpenAI.
+  </Card>
+
+  <Card title="Vision Tool" icon="eye" href="/pt-BR/tools/ai-ml/visiontool">
+    Processe e analise imagens com capacidades de visão computacional.
+  </Card>
+
+  <Card title="AI Mind Tool" icon="brain" href="/pt-BR/tools/ai-ml/aimindtool">
+    Capacidades avançadas de raciocínio e tomada de decisão com IA.
+  </Card>
+
+  <Card title="LlamaIndex Tool" icon="llama" href="/pt-BR/tools/ai-ml/llamaindextool">
+    Construa bases de conhecimento e sistemas de recuperação com LlamaIndex.
+  </Card>
+
+  <Card title="LangChain Tool" icon="link" href="/pt-BR/tools/ai-ml/langchaintool">
+    Integre com LangChain para fluxos de trabalho de IA complexos.
+  </Card>
+
+  <Card title="RAG Tool" icon="database" href="/pt-BR/tools/ai-ml/ragtool">
+    Implemente sistemas de Geração Aumentada por Recuperação (RAG).
+  </Card>
+
+  <Card title="Code Interpreter Tool" icon="code" href="/pt-BR/tools/ai-ml/codeinterpretertool">
+    Execute código Python e realize análises de dados.
+  </Card>
+
+
+</CardGroup>
+
+## **Casos de Uso Comuns**
+
+- **Geração de Conteúdo**: Crie imagens, textos e conteúdo multimídia
+- **Análise de Dados**: Execute código e analise conjuntos de dados complexos
+- **Sistemas de Conhecimento**: Construa sistemas RAG e bancos de dados inteligentes
+- **Visão Computacional**: Processe e compreenda conteúdo visual
+- **Segurança em IA**: Implemente moderação de conteúdo e checagens de segurança
+
+```python
+from crewai_tools import DallETool, VisionTool, CodeInterpreterTool
+
+# Create AI tools
+image_generator = DallETool()
+vision_processor = VisionTool()
+code_executor = CodeInterpreterTool()
+
+# Add to your agent
+agent = Agent(
+    role="AI Specialist",
+    tools=[image_generator, vision_processor, code_executor],
+    goal="Create and analyze content using AI capabilities"
+)
+```

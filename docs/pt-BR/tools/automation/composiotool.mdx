@@ -1,0 +1,118 @@
+---
+title: Ferramenta Composio
+description: O Composio oferece mais de 250 ferramentas prontas para produção para agentes de IA com gerenciamento de autenticação flexível.
+icon: gear-code
+---
+
+# `ComposioToolSet`
+
+## Descrição
+Composio é uma plataforma de integração que permite conectar seus agentes de IA a mais de 250 ferramentas. Os principais recursos incluem:
+
+- **Autenticação de Nível Empresarial**: Suporte integrado para OAuth, Chaves de API, JWT com atualização automática de token
+- **Observabilidade Completa**: Logs detalhados de uso das ferramentas, registros de execução, e muito mais
+
+## Instalação
+
+Para incorporar as ferramentas Composio em seu projeto, siga as instruções abaixo:
+
+```shell
+pip install composio-crewai
+pip install crewai
+```
+
+Após a conclusão da instalação, execute `composio login` ou exporte sua chave de API do composio como `COMPOSIO_API_KEY`. Obtenha sua chave de API Composio [aqui](https://app.composio.dev)
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma ação do github:
+
+1. Inicialize o conjunto de ferramentas Composio
+
+```python Code
+from composio_crewai import ComposioToolSet, App, Action
+from crewai import Agent, Task, Crew
+
+toolset = ComposioToolSet()
+```
+
+2. Conecte sua conta do GitHub
+<CodeGroup>
+```shell CLI
+composio add github
+```
+```python Code
+request = toolset.initiate_connection(app=App.GITHUB)
+print(f"Open this URL to authenticate: {request.redirectUrl}")
+```
+</CodeGroup>
+
+3. Obtenha ferramentas
+
+- Recuperando todas as ferramentas de um app (não recomendado em produção):
+```python Code
+tools = toolset.get_tools(apps=[App.GITHUB])
+```
+
+- Filtrando ferramentas com base em tags:
+```python Code
+tag = "users"
+
+filtered_action_enums = toolset.find_actions_by_tags(
+    App.GITHUB,
+    tags=[tag], 
+)
+
+tools = toolset.get_tools(actions=filtered_action_enums)
+```
+
+- Filtrando ferramentas com base no caso de uso:
+```python Code
+use_case = "Star a repository on GitHub"
+
+filtered_action_enums = toolset.find_actions_by_use_case(
+    App.GITHUB, use_case=use_case, advanced=False
+)
+
+tools = toolset.get_tools(actions=filtered_action_enums)
+```
+<Tip>Defina `advanced` como True para obter ações para casos de uso complexos</Tip>
+
+- Usando ferramentas específicas:
+
+Neste exemplo, usaremos a ação `GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER` do app GitHub.
+```python Code
+tools = toolset.get_tools(
+    actions=[Action.GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER]
+)
+```
+Saiba mais sobre como filtrar ações [aqui](https://docs.composio.dev/patterns/tools/use-tools/use-specific-actions)
+
+4. Defina o agente
+
+```python Code
+crewai_agent = Agent(
+    role="GitHub Agent",
+    goal="You take action on GitHub using GitHub APIs",
+    backstory="You are AI agent that is responsible for taking actions on GitHub on behalf of users using GitHub APIs",
+    verbose=True,
+    tools=tools,
+    llm= # pass an llm
+)
+```
+
+5. Execute a tarefa
+
+```python Code
+task = Task(
+    description="Star a repo composiohq/composio on GitHub",
+    agent=crewai_agent,
+    expected_output="Status of the operation",
+)
+
+crew = Crew(agents=[crewai_agent], tasks=[task])
+
+crew.kickoff()
+```
+
+* Uma lista mais detalhada de ferramentas pode ser encontrada [aqui](https://app.composio.dev)

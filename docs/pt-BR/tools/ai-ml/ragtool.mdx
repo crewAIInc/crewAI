@@ -1,0 +1,172 @@
+---
+title: Ferramenta RAG
+description: O `RagTool` é uma ferramenta dinâmica de base de conhecimento para responder perguntas usando Geração Aumentada por Recuperação.
+icon: vector-square
+---
+
+# `RagTool`
+
+## Descrição
+
+O `RagTool` foi desenvolvido para responder perguntas aproveitando o poder da Geração Aumentada por Recuperação (RAG) através do EmbedChain.
+Ele fornece uma base de conhecimento dinâmica que pode ser consultada para recuperar informações relevantes de várias fontes de dados.
+Esta ferramenta é particularmente útil para aplicações que exigem acesso a uma ampla variedade de informações e precisam fornecer respostas contextualmente relevantes.
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e usá-la com diferentes fontes de dados:
+
+```python Code
+from crewai_tools import RagTool
+
+# Create a RAG tool with default settings
+rag_tool = RagTool()
+
+# Add content from a file
+rag_tool.add(data_type="file", path="path/to/your/document.pdf")
+
+# Add content from a web page
+rag_tool.add(data_type="web_page", url="https://example.com")
+
+# Define an agent with the RagTool
+@agent
+def knowledge_expert(self) -> Agent:
+    '''
+    This agent uses the RagTool to answer questions about the knowledge base.
+    '''
+    return Agent(
+        config=self.agents_config["knowledge_expert"],
+        allow_delegation=False,
+        tools=[rag_tool]
+    )
+```
+
+## Fontes de Dados Suportadas
+
+O `RagTool` pode ser utilizado com uma grande variedade de fontes de dados, incluindo:
+
+- 📰 Arquivos PDF
+- 📊 Arquivos CSV
+- 📃 Arquivos JSON
+- 📝 Texto
+- 📁 Diretórios/Pastas
+- 🌐 Páginas web em HTML
+- 📽️ Canais do YouTube
+- 📺 Vídeos do YouTube
+- 📚 Sites de documentação
+- 📝 Arquivos MDX
+- 📄 Arquivos DOCX
+- 🧾 Arquivos XML
+- 📬 Gmail
+- 📝 Repositórios GitHub
+- 🐘 Bancos de dados PostgreSQL
+- 🐬 Bancos de dados MySQL
+- 🤖 Conversas no Slack
+- 💬 Mensagens do Discord
+- 🗨️ Fóruns Discourse
+- 📝 Newsletters do Substack
+- 🐝 Conteúdo do Beehiiv
+- 💾 Arquivos Dropbox
+- 🖼️ Imagens
+- ⚙️ Fontes de dados personalizadas
+
+## Parâmetros
+
+O `RagTool` aceita os seguintes parâmetros:
+
+- **summarize**: Opcional. Indica se o conteúdo recuperado deve ser resumido. O padrão é `False`.
+- **adapter**: Opcional. Um adaptador personalizado para a base de conhecimento. Se não for fornecido, será utilizado o EmbedchainAdapter.
+- **config**: Opcional. Configuração para o aplicativo EmbedChain subjacente.
+
+## Adicionando Conteúdo
+
+Você pode adicionar conteúdo à base de conhecimento utilizando o método `add`:
+
+```python Code
+# Add a PDF file
+rag_tool.add(data_type="file", path="path/to/your/document.pdf")
+
+# Add a web page
+rag_tool.add(data_type="web_page", url="https://example.com")
+
+# Add a YouTube video
+rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VIDEO_ID")
+
+# Add a directory of files
+rag_tool.add(data_type="directory", path="path/to/your/directory")
+```
+
+## Exemplo de Integração com Agente
+
+Veja como integrar o `RagTool` com um agente do CrewAI:
+
+```python Code
+from crewai import Agent
+from crewai.project import agent
+from crewai_tools import RagTool
+
+# Initialize the tool and add content
+rag_tool = RagTool()
+rag_tool.add(data_type="web_page", url="https://docs.crewai.com")
+rag_tool.add(data_type="file", path="company_data.pdf")
+
+# Define an agent with the RagTool
+@agent
+def knowledge_expert(self) -> Agent:
+    return Agent(
+        config=self.agents_config["knowledge_expert"],
+        allow_delegation=False,
+        tools=[rag_tool]
+    )
+```
+
+## Configuração Avançada
+
+É possível personalizar o comportamento do `RagTool` fornecendo um dicionário de configuração:
+
+```python Code
+from crewai_tools import RagTool
+
+# Create a RAG tool with custom configuration
+config = {
+    "app": {
+        "name": "custom_app",
+    },
+    "llm": {
+        "provider": "openai",
+        "config": {
+            "model": "gpt-4",
+        }
+    },
+    "embedding_model": {
+        "provider": "openai",
+        "config": {
+            "model": "text-embedding-ada-002"
+        }
+    },
+    "vectordb": {
+        "provider": "elasticsearch",
+        "config": {
+            "collection_name": "my-collection",
+            "cloud_id": "deployment-name:xxxx",
+            "api_key": "your-key",
+            "verify_certs": False
+        }
+    },
+    "chunker": {
+        "chunk_size": 400,
+        "chunk_overlap": 100,
+        "length_function": "len",
+        "min_chunk_size": 0
+    }
+}
+
+rag_tool = RagTool(config=config, summarize=True)
+```
+
+A ferramenta RAG interna utiliza o adaptador Embedchain, possibilitando que você forneça quaisquer opções de configuração suportadas pelo Embedchain.
+Você pode consultar a [documentação do Embedchain](https://docs.embedchain.ai/components/introduction) para mais detalhes.
+Certifique-se de revisar as opções de configuração disponíveis no arquivo .yaml.
+
+## Conclusão
+O `RagTool` oferece uma maneira poderosa de criar e consultar bases de conhecimento a partir de diversas fontes de dados. Ao explorar a Geração Aumentada por Recuperação, ele permite que agentes acessem e recuperem informações relevantes de forma eficiente, ampliando a capacidade de fornecer respostas precisas e contextualmente apropriadas.

@@ -1,0 +1,99 @@
+---
+title: Apify Actors
+description: "`ApifyActorsTool` permite que você execute Apify Actors para adicionar recursos de raspagem de dados na web, coleta, extração de dados e automação web aos seus fluxos de trabalho CrewAI."
+# hack to use custom Apify icon
+icon: "); -webkit-mask-image: url('https://upload.wikimedia.org/wikipedia/commons/a/ae/Apify.svg');/*"
+---
+
+# `ApifyActorsTool`
+
+Integre [Apify Actors](https://apify.com/actors) nos seus fluxos de trabalho CrewAI.
+
+## Descrição
+
+O `ApifyActorsTool` conecta [Apify Actors](https://apify.com/actors), programas em nuvem para raspagem e automação web, aos seus fluxos de trabalho CrewAI.
+Utilize qualquer um dos mais de 4.000 Actors disponíveis na [Apify Store](https://apify.com/store) para casos de uso como extração de dados de redes sociais, motores de busca, mapas online, sites de e-commerce, portais de viagem ou sites em geral.
+
+Para mais detalhes, consulte a [integração Apify CrewAI](https://docs.apify.com/platform/integrations/crewai) na documentação do Apify.
+
+## Passos para começar
+
+<Steps>
+    <Step title="Instale as dependências">
+        Instale `crewai[tools]` e `langchain-apify` usando pip: `pip install 'crewai[tools]' langchain-apify`.
+    </Step>
+    <Step title="Obtenha um token de API do Apify">
+        Cadastre-se no [Apify Console](https://console.apify.com/) e obtenha seu [token de API do Apify](https://console.apify.com/settings/integrations).
+    </Step>
+    <Step title="Configure o ambiente">
+        Defina seu token de API do Apify na variável de ambiente `APIFY_API_TOKEN` para habilitar a funcionalidade da ferramenta.
+    </Step>
+</Steps>
+
+## Exemplo de uso
+
+Use o `ApifyActorsTool` manualmente para executar o [RAG Web Browser Actor](https://apify.com/apify/rag-web-browser) e realizar uma busca na web:
+
+```python
+from crewai_tools import ApifyActorsTool
+
+# Inicialize a ferramenta com um Apify Actor
+tool = ApifyActorsTool(actor_name="apify/rag-web-browser")
+
+# Execute a ferramenta com parâmetros de entrada
+results = tool.run(run_input={"query": "What is CrewAI?", "maxResults": 5})
+
+# Processe os resultados
+for result in results:
+    print(f"URL: {result['metadata']['url']}")
+    print(f"Content: {result.get('markdown', 'N/A')[:100]}...")
+```
+
+### Saída esperada
+
+Veja abaixo a saída do código acima:
+
+```text
+URL: https://www.example.com/crewai-intro
+Content: CrewAI is a framework for building AI-powered workflows...
+URL: https://docs.crewai.com/
+Content: Official documentation for CrewAI...
+```
+
+O `ApifyActorsTool` busca automaticamente a definição do Actor e o esquema de entrada no Apify utilizando o `actor_name` fornecido e então constrói a descrição da ferramenta e o esquema dos argumentos. Isso significa que você só precisa informar um `actor_name` válido, e a ferramenta faz o resto quando usada com agentes—não é necessário especificar o `run_input`. Veja como funciona:
+
+```python
+from crewai import Agent
+from crewai_tools import ApifyActorsTool
+
+rag_browser = ApifyActorsTool(actor_name="apify/rag-web-browser")
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Find and summarize information about specific topics",
+    backstory="You are an experienced researcher with attention to detail",
+    tools=[rag_browser],
+)
+```
+
+Você pode executar outros Actors da [Apify Store](https://apify.com/store) apenas alterando o `actor_name` e, ao usar manualmente, ajustando o `run_input` de acordo com o esquema de entrada do Actor.
+
+Para um exemplo de uso com agentes, consulte o [template CrewAI Actor](https://apify.com/templates/python-crewai).
+
+## Configuração
+
+O `ApifyActorsTool` exige os seguintes inputs para funcionar:
+
+- **`actor_name`**
+  O ID do Apify Actor a ser executado, por exemplo, `"apify/rag-web-browser"`. Explore todos os Actors na [Apify Store](https://apify.com/store).
+- **`run_input`**
+  Um dicionário de parâmetros de entrada para o Actor ao executar a ferramenta manualmente.
+  - Por exemplo, para o Actor `apify/rag-web-browser`: `{"query": "search term", "maxResults": 5}`
+  - Veja o [schema de entrada do Actor](https://apify.com/apify/rag-web-browser/input-schema) para a lista de parâmetros de entrada.
+
+## Recursos
+
+- **[Apify](https://apify.com/)**: Explore a plataforma Apify.
+- **[Como criar um agente de IA no Apify](https://blog.apify.com/how-to-build-an-ai-agent/)** - Um guia completo, passo a passo, para criar, publicar e monetizar agentes de IA na plataforma Apify.
+- **[RAG Web Browser Actor](https://apify.com/apify/rag-web-browser)**: Um Actor popular para busca na web para LLMs.
+- **[Guia de Integração CrewAI](https://docs.apify.com/platform/integrations/crewai)**: Siga o guia oficial para integrar Apify e CrewAI.

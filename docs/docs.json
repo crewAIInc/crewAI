@@ -7,7 +7,7 @@
     "light": "#F3A78B",
     "dark": "#C94C3C"
   },
-  "favicon": "images/favicon.svg",
+  "favicon": "/images/favicon.svg",
   "contextual": {
     "options": [
       "copy",
@@ -17,369 +17,736 @@
     ]
   },
   "navigation": {
-    "tabs": [
+    "languages": [
       {
-        "tab": "Documentation",
-        "groups": [
+        "language": "en",
+        "global": {
+          "anchors": [
+            {
+              "anchor": "Website",
+              "href": "https://crewai.com",
+              "icon": "globe"
+            },
+            {
+              "anchor": "Forum",
+              "href": "https://community.crewai.com",
+              "icon": "discourse"
+            },
+            {
+              "anchor": "Crew GPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
+            },
+            {
+              "anchor": "Get Help",
+              "href": "mailto:support@crewai.com",
+              "icon": "headset"
+            }
+          ]
+        },
+        "tabs": [
           {
-            "group": "Get Started",
-            "pages": [
-              "introduction",
-              "installation",
-              "quickstart"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
+            "tab": "Documentation",
+            "groups": [
               {
-                "group": "Strategy",
+                "group": "Get Started",
                 "pages": [
-                  "guides/concepts/evaluating-use-cases"
+                  "en/introduction",
+                  "en/installation",
+                  "en/quickstart"
                 ]
               },
               {
-                "group": "Agents",
+                "group": "Guides",
                 "pages": [
-                  "guides/agents/crafting-effective-agents"
+                  {
+                    "group": "Strategy",
+                    "pages": [
+                      "en/guides/concepts/evaluating-use-cases"
+                    ]
+                  },
+                  {
+                    "group": "Agents",
+                    "pages": [
+                      "en/guides/agents/crafting-effective-agents"
+                    ]
+                  },
+                  {
+                    "group": "Crews",
+                    "pages": [
+                      "en/guides/crews/first-crew"
+                    ]
+                  },
+                  {
+                    "group": "Flows",
+                    "pages": [
+                      "en/guides/flows/first-flow",
+                      "en/guides/flows/mastering-flow-state"
+                    ]
+                  },
+                  {
+                    "group": "Advanced",
+                    "pages": [
+                      "en/guides/advanced/customizing-prompts",
+                      "en/guides/advanced/fingerprinting"
+                    ]
+                  }
                 ]
               },
               {
-                "group": "Crews",
+                "group": "Core Concepts",
                 "pages": [
-                  "guides/crews/first-crew"
+                  "en/concepts/agents",
+                  "en/concepts/tasks",
+                  "en/concepts/crews",
+                  "en/concepts/flows",
+                  "en/concepts/knowledge",
+                  "en/concepts/llms",
+                  "en/concepts/processes",
+                  "en/concepts/collaboration",
+                  "en/concepts/training",
+                  "en/concepts/memory",
+                  "en/concepts/reasoning",
+                  "en/concepts/planning",
+                  "en/concepts/testing",
+                  "en/concepts/cli",
+                  "en/concepts/tools",
+                  "en/concepts/event-listener"
                 ]
               },
               {
-                "group": "Flows",
+                "group": "MCP Integration",
                 "pages": [
-                  "guides/flows/first-flow",
-                  "guides/flows/mastering-flow-state"
+                  "en/mcp/overview",
+                  "en/mcp/stdio",
+                  "en/mcp/sse",
+                  "en/mcp/streamable-http",
+                  "en/mcp/multiple-servers",
+                  "en/mcp/security"
                 ]
               },
               {
-                "group": "Advanced",
+                "group": "Tools",
                 "pages": [
-                  "guides/advanced/customizing-prompts",
-                  "guides/advanced/fingerprinting"
+                  "en/tools/overview",
+                  {
+                    "group": "File & Document",
+                    "pages": [
+                      "en/tools/file-document/overview",
+                      "en/tools/file-document/filereadtool",
+                      "en/tools/file-document/filewritetool",
+                      "en/tools/file-document/pdfsearchtool",
+                      "en/tools/file-document/docxsearchtool",
+                      "en/tools/file-document/mdxsearchtool",
+                      "en/tools/file-document/xmlsearchtool",
+                      "en/tools/file-document/txtsearchtool",
+                      "en/tools/file-document/jsonsearchtool",
+                      "en/tools/file-document/csvsearchtool",
+                      "en/tools/file-document/directorysearchtool",
+                      "en/tools/file-document/directoryreadtool"
+                    ]
+                  },
+                  {
+                    "group": "Web Scraping & Browsing",
+                    "pages": [
+                      "en/tools/web-scraping/overview",
+                      "en/tools/web-scraping/scrapewebsitetool",
+                      "en/tools/web-scraping/scrapeelementfromwebsitetool",
+                      "en/tools/web-scraping/scrapflyscrapetool",
+                      "en/tools/web-scraping/seleniumscrapingtool",
+                      "en/tools/web-scraping/scrapegraphscrapetool",
+                      "en/tools/web-scraping/spidertool",
+                      "en/tools/web-scraping/browserbaseloadtool",
+                      "en/tools/web-scraping/hyperbrowserloadtool",
+                      "en/tools/web-scraping/stagehandtool",
+                      "en/tools/web-scraping/firecrawlcrawlwebsitetool",
+                      "en/tools/web-scraping/firecrawlscrapewebsitetool",
+                      "en/tools/web-scraping/oxylabsscraperstool"
+                    ]
+                  },
+                  {
+                    "group": "Search & Research",
+                    "pages": [
+                      "en/tools/search-research/overview",
+                      "en/tools/search-research/serperdevtool",
+                      "en/tools/search-research/bravesearchtool",
+                      "en/tools/search-research/exasearchtool",
+                      "en/tools/search-research/linkupsearchtool",
+                      "en/tools/search-research/githubsearchtool",
+                      "en/tools/search-research/websitesearchtool",
+                      "en/tools/search-research/codedocssearchtool",
+                      "en/tools/search-research/youtubechannelsearchtool",
+                      "en/tools/search-research/youtubevideosearchtool"
+                    ]
+                  },
+                  {
+                    "group": "Database & Data",
+                    "pages": [
+                      "en/tools/database-data/overview",
+                      "en/tools/database-data/mysqltool",
+                      "en/tools/database-data/pgsearchtool",
+                      "en/tools/database-data/snowflakesearchtool",
+                      "en/tools/database-data/nl2sqltool",
+                      "en/tools/database-data/qdrantvectorsearchtool",
+                      "en/tools/database-data/weaviatevectorsearchtool"
+                    ]
+                  },
+                  {
+                    "group": "AI & Machine Learning",
+                    "pages": [
+                      "en/tools/ai-ml/overview",
+                      "en/tools/ai-ml/dalletool",
+                      "en/tools/ai-ml/visiontool",
+                      "en/tools/ai-ml/aimindtool",
+                      "en/tools/ai-ml/llamaindextool",
+                      "en/tools/ai-ml/langchaintool",
+                      "en/tools/ai-ml/ragtool",
+                      "en/tools/ai-ml/codeinterpretertool"
+                    ]
+                  },
+                  {
+                    "group": "Cloud & Storage",
+                    "pages": [
+                      "en/tools/cloud-storage/overview",
+                      "en/tools/cloud-storage/s3readertool",
+                      "en/tools/cloud-storage/s3writertool",
+                      "en/tools/cloud-storage/bedrockinvokeagenttool",
+                      "en/tools/cloud-storage/bedrockkbretriever"
+                    ]
+                  },
+                  {
+                    "group": "Automation & Integration",
+                    "pages": [
+                      "en/tools/automation/overview",
+                      "en/tools/automation/apifyactorstool",
+                      "en/tools/automation/composiotool",
+                      "en/tools/automation/multiontool"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Observability",
+                "pages": [
+                  "en/observability/overview",
+                  "en/observability/agentops",
+                  "en/observability/arize-phoenix",
+                  "en/observability/langfuse",
+                  "en/observability/langtrace",
+                  "en/observability/maxim",
+                  "en/observability/mlflow",
+                  "en/observability/openlit",
+                  "en/observability/opik",
+                  "en/observability/patronus-evaluation",
+                  "en/observability/portkey",
+                  "en/observability/weave"
+                ]
+              },
+              {
+                "group": "Learn",
+                "pages": [
+                  "en/learn/overview",
+                  "en/learn/llm-selection-guide",
+                  "en/learn/conditional-tasks",
+                  "en/learn/coding-agents",
+                  "en/learn/create-custom-tools",
+                  "en/learn/custom-llm",
+                  "en/learn/custom-manager-agent",
+                  "en/learn/customizing-agents",
+                  "en/learn/dalle-image-generation",
+                  "en/learn/force-tool-output-as-result",
+                  "en/learn/hierarchical-process",
+                  "en/learn/human-input-on-execution",
+                  "en/learn/kickoff-async",
+                  "en/learn/kickoff-for-each",
+                  "en/learn/llm-connections",
+                  "en/learn/multimodal-agents",
+                  "en/learn/replay-tasks-from-latest-crew-kickoff",
+                  "en/learn/sequential-process",
+                  "en/learn/using-annotations"
+                ]
+              },
+              {
+                "group": "Telemetry",
+                "pages": [
+                  "en/telemetry"
                 ]
               }
             ]
           },
           {
-            "group": "Core Concepts",
-            "pages": [
-              "concepts/agents",
-              "concepts/tasks",
-              "concepts/crews",
-              "concepts/flows",
-              "concepts/knowledge",
-              "concepts/llms",
-              "concepts/processes",
-              "concepts/collaboration",
-              "concepts/training",
-              "concepts/memory",
-              "concepts/reasoning",
-              "concepts/planning",
-              "concepts/testing",
-              "concepts/cli",
-              "concepts/tools",
-              "concepts/event-listener"
-            ]
-          },
-          {
-            "group": "MCP Integration",
-            "pages": [
-              "mcp/overview",
-              "mcp/stdio",
-              "mcp/sse",
-              "mcp/streamable-http",
-              "mcp/multiple-servers",
-              "mcp/security"
-            ]
-          },
-          {
-            "group": "Tools",
-            "pages": [
-              "tools/overview",
+            "tab": "Enterprise",
+            "groups": [
               {
-                "group": "File & Document",
+                "group": "Getting Started",
                 "pages": [
-                  "tools/file-document/overview",
-                  "tools/file-document/filereadtool",
-                  "tools/file-document/filewritetool",
-                  "tools/file-document/pdfsearchtool",
-                  "tools/file-document/docxsearchtool",
-                  "tools/file-document/mdxsearchtool",
-                  "tools/file-document/xmlsearchtool",
-                  "tools/file-document/txtsearchtool",
-                  "tools/file-document/jsonsearchtool",
-                  "tools/file-document/csvsearchtool",
-                  "tools/file-document/directorysearchtool",
-                  "tools/file-document/directoryreadtool"
+                  "en/enterprise/introduction"
                 ]
               },
               {
-                "group": "Web Scraping & Browsing",
+                "group": "Features",
                 "pages": [
-                  "tools/web-scraping/overview",
-                  "tools/web-scraping/scrapewebsitetool",
-                  "tools/web-scraping/scrapeelementfromwebsitetool",
-                  "tools/web-scraping/scrapflyscrapetool",
-                  "tools/web-scraping/seleniumscrapingtool",
-                  "tools/web-scraping/scrapegraphscrapetool",
-                  "tools/web-scraping/spidertool",
-                  "tools/web-scraping/browserbaseloadtool",
-                  "tools/web-scraping/hyperbrowserloadtool",
-                  "tools/web-scraping/stagehandtool",
-                  "tools/web-scraping/firecrawlcrawlwebsitetool",
-                  "tools/web-scraping/firecrawlscrapewebsitetool",
-                  "tools/web-scraping/oxylabsscraperstool"
+                  "en/enterprise/features/tool-repository",
+                  "en/enterprise/features/webhook-streaming",
+                  "en/enterprise/features/traces",
+                  "en/enterprise/features/hallucination-guardrail",
+                  "en/enterprise/features/integrations"
                 ]
               },
               {
-                "group": "Search & Research",
+                "group": "Integration Docs",
                 "pages": [
-                  "tools/search-research/overview",
-                  "tools/search-research/serperdevtool",
-                  "tools/search-research/bravesearchtool",
-                  "tools/search-research/exasearchtool",
-                  "tools/search-research/linkupsearchtool",
-                  "tools/search-research/githubsearchtool",
-                  "tools/search-research/websitesearchtool",
-                  "tools/search-research/codedocssearchtool",
-                  "tools/search-research/youtubechannelsearchtool",
-                  "tools/search-research/youtubevideosearchtool"
+                  "en/enterprise/integrations/asana",
+                  "en/enterprise/integrations/box",
+                  "en/enterprise/integrations/clickup",
+                  "en/enterprise/integrations/github",
+                  "en/enterprise/integrations/gmail",
+                  "en/enterprise/integrations/google_calendar",
+                  "en/enterprise/integrations/google_sheets",
+                  "en/enterprise/integrations/hubspot",
+                  "en/enterprise/integrations/jira",
+                  "en/enterprise/integrations/linear",
+                  "en/enterprise/integrations/notion",
+                  "en/enterprise/integrations/salesforce",
+                  "en/enterprise/integrations/shopify",
+                  "en/enterprise/integrations/slack",
+                  "en/enterprise/integrations/stripe",
+                  "en/enterprise/integrations/zendesk"
                 ]
               },
               {
-                "group": "Database & Data",
+                "group": "How-To Guides",
                 "pages": [
-                  "tools/database-data/overview",
-                  "tools/database-data/mysqltool",
-                  "tools/database-data/pgsearchtool",
-                  "tools/database-data/snowflakesearchtool",
-                  "tools/database-data/nl2sqltool",
-                  "tools/database-data/qdrantvectorsearchtool",
-                  "tools/database-data/weaviatevectorsearchtool"
+                  "en/enterprise/guides/build-crew",
+                  "en/enterprise/guides/deploy-crew",
+                  "en/enterprise/guides/kickoff-crew",
+                  "en/enterprise/guides/update-crew",
+                  "en/enterprise/guides/enable-crew-studio",
+                  "en/enterprise/guides/azure-openai-setup",
+                  "en/enterprise/guides/hubspot-trigger",
+                  "en/enterprise/guides/react-component-export",
+                  "en/enterprise/guides/salesforce-trigger",
+                  "en/enterprise/guides/slack-trigger",
+                  "en/enterprise/guides/team-management",
+                  "en/enterprise/guides/webhook-automation",
+                  "en/enterprise/guides/human-in-the-loop",
+                  "en/enterprise/guides/zapier-trigger"
                 ]
               },
               {
-                "group": "AI & Machine Learning",
+                "group": "Resources",
                 "pages": [
-                  "tools/ai-ml/overview",
-                  "tools/ai-ml/dalletool",
-                  "tools/ai-ml/visiontool",
-                  "tools/ai-ml/aimindtool",
-                  "tools/ai-ml/llamaindextool",
-                  "tools/ai-ml/langchaintool",
-                  "tools/ai-ml/ragtool",
-                  "tools/ai-ml/codeinterpretertool"
-                ]
-              },
-              {
-                "group": "Cloud & Storage",
-                "pages": [
-                  "tools/cloud-storage/overview",
-                  "tools/cloud-storage/s3readertool",
-                  "tools/cloud-storage/s3writertool",
-                  "tools/cloud-storage/bedrockinvokeagenttool",
-                  "tools/cloud-storage/bedrockkbretriever"
-                ]
-              },
-              {
-                "group": "Automation & Integration",
-                "pages": [
-                  "tools/automation/overview",
-                  "tools/automation/apifyactorstool",
-                  "tools/automation/composiotool",
-                  "tools/automation/multiontool"
+                  "en/enterprise/resources/frequently-asked-questions"
                 ]
               }
             ]
           },
           {
-            "group": "Observability",
-            "pages": [
-              "observability/overview",
-              "observability/agentops",
-              "observability/arize-phoenix",
-              "observability/langfuse",
-              "observability/langtrace",
-              "observability/maxim",
-              "observability/mlflow",
-              "observability/openlit",
-              "observability/opik",
-              "observability/patronus-evaluation",
-              "observability/portkey",
-              "observability/weave"
+            "tab": "API Reference",
+            "groups": [
+              {
+                "group": "Getting Started",
+                "pages": [
+                  "en/api-reference/introduction"
+                ]
+              },
+              {
+                "group": "Endpoints",
+                "openapi": "enterprise-api.yaml"
+              }
             ]
           },
           {
-            "group": "Learn",
-            "pages": [
-              "learn/overview",
-              "learn/llm-selection-guide",
-              "learn/conditional-tasks",
-              "learn/coding-agents",
-              "learn/create-custom-tools",
-              "learn/custom-llm",
-              "learn/custom-manager-agent",
-              "learn/customizing-agents",
-              "learn/dalle-image-generation",
-              "learn/force-tool-output-as-result",
-              "learn/hierarchical-process",
-              "learn/human-input-on-execution",
-              "learn/kickoff-async",
-              "learn/kickoff-for-each",
-              "learn/llm-connections",
-              "learn/multimodal-agents",
-              "learn/replay-tasks-from-latest-crew-kickoff",
-              "learn/sequential-process",
-              "learn/using-annotations"
+            "tab": "Examples",
+            "groups": [
+              {
+                "group": "Examples",
+                "pages": [
+                  "en/examples/example"
+                ]
+              }
             ]
           },
           {
-            "group": "Telemetry",
-            "pages": [
-              "telemetry"
+            "tab": "Releases",
+            "groups": [
+              {
+                "group": "Releases",
+                "pages": [
+                  "en/changelog"
+                ]
+              }
             ]
           }
         ]
       },
       {
-        "tab": "Enterprise",
-        "groups": [
+        "language": "pt-BR",
+        "global": {
+          "anchors": [
+            {
+              "anchor": "Website",
+              "href": "https://crewai.com",
+              "icon": "globe"
+            },
+            {
+              "anchor": "Fórum",
+              "href": "https://community.crewai.com",
+              "icon": "discourse"
+            },
+            {
+              "anchor": "Crew GPT",
+              "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
+              "icon": "robot"
+            },
+            {
+              "anchor": "Obter Ajuda",
+              "href": "mailto:support@crewai.com",
+              "icon": "headset"
+            }
+          ]
+        },
+        "tabs": [
           {
-            "group": "Getting Started",
-            "pages": [
-              "enterprise/introduction"
+            "tab": "Documentação",
+            "groups": [
+              {
+                "group": "Começando",
+                "pages": [
+                  "pt-BR/introduction",
+                  "pt-BR/installation",
+                  "pt-BR/quickstart"
+                ]
+              },
+              {
+                "group": "Guias",
+                "pages": [
+                  {
+                    "group": "Estratégia",
+                    "pages": [
+                      "pt-BR/guides/concepts/evaluating-use-cases"
+                    ]
+                  },
+                  {
+                    "group": "Agentes",
+                    "pages": [
+                      "pt-BR/guides/agents/crafting-effective-agents"
+                    ]
+                  },
+                  {
+                    "group": "Crews",
+                    "pages": [
+                      "pt-BR/guides/crews/first-crew"
+                    ]
+                  },
+                  {
+                    "group": "Flows",
+                    "pages": [
+                      "pt-BR/guides/flows/first-flow",
+                      "pt-BR/guides/flows/mastering-flow-state"
+                    ]
+                  },
+                  {
+                    "group": "Avançado",
+                    "pages": [
+                      "pt-BR/guides/advanced/customizing-prompts",
+                      "pt-BR/guides/advanced/fingerprinting"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Conceitos-Chave",
+                "pages": [
+                  "pt-BR/concepts/agents",
+                  "pt-BR/concepts/tasks",
+                  "pt-BR/concepts/crews",
+                  "pt-BR/concepts/flows",
+                  "pt-BR/concepts/knowledge",
+                  "pt-BR/concepts/llms",
+                  "pt-BR/concepts/processes",
+                  "pt-BR/concepts/collaboration",
+                  "pt-BR/concepts/training",
+                  "pt-BR/concepts/memory",
+                  "pt-BR/concepts/reasoning",
+                  "pt-BR/concepts/planning",
+                  "pt-BR/concepts/testing",
+                  "pt-BR/concepts/cli",
+                  "pt-BR/concepts/tools",
+                  "pt-BR/concepts/event-listener"
+                ]
+              },
+              {
+                "group": "Integração MCP",
+                "pages": [
+                  "pt-BR/mcp/overview",
+                  "pt-BR/mcp/stdio",
+                  "pt-BR/mcp/sse",
+                  "pt-BR/mcp/streamable-http",
+                  "pt-BR/mcp/multiple-servers",
+                  "pt-BR/mcp/security"
+                ]
+              },
+              {
+                "group": "Ferramentas",
+                "pages": [
+                  "pt-BR/tools/overview",
+                  {
+                    "group": "Arquivo & Documento",
+                    "pages": [
+                      "pt-BR/tools/file-document/overview",
+                      "pt-BR/tools/file-document/filereadtool",
+                      "pt-BR/tools/file-document/filewritetool",
+                      "pt-BR/tools/file-document/pdfsearchtool",
+                      "pt-BR/tools/file-document/docxsearchtool",
+                      "pt-BR/tools/file-document/mdxsearchtool",
+                      "pt-BR/tools/file-document/xmlsearchtool",
+                      "pt-BR/tools/file-document/txtsearchtool",
+                      "pt-BR/tools/file-document/jsonsearchtool",
+                      "pt-BR/tools/file-document/csvsearchtool",
+                      "pt-BR/tools/file-document/directorysearchtool",
+                      "pt-BR/tools/file-document/directoryreadtool"
+                    ]
+                  },
+                  {
+                    "group": "Web Scraping & Navegação",
+                    "pages": [
+                      "pt-BR/tools/web-scraping/overview",
+                      "pt-BR/tools/web-scraping/scrapewebsitetool",
+                      "pt-BR/tools/web-scraping/scrapeelementfromwebsitetool",
+                      "pt-BR/tools/web-scraping/scrapflyscrapetool",
+                      "pt-BR/tools/web-scraping/seleniumscrapingtool",
+                      "pt-BR/tools/web-scraping/scrapegraphscrapetool",
+                      "pt-BR/tools/web-scraping/spidertool",
+                      "pt-BR/tools/web-scraping/browserbaseloadtool",
+                      "pt-BR/tools/web-scraping/hyperbrowserloadtool",
+                      "pt-BR/tools/web-scraping/stagehandtool",
+                      "pt-BR/tools/web-scraping/firecrawlcrawlwebsitetool",
+                      "pt-BR/tools/web-scraping/firecrawlscrapewebsitetool",
+                      "pt-BR/tools/web-scraping/oxylabsscraperstool"
+                    ]
+                  },
+                  {
+                    "group": "Pesquisa",
+                    "pages": [
+                      "pt-BR/tools/search-research/overview",
+                      "pt-BR/tools/search-research/serperdevtool",
+                      "pt-BR/tools/search-research/bravesearchtool",
+                      "pt-BR/tools/search-research/exasearchtool",
+                      "pt-BR/tools/search-research/linkupsearchtool",
+                      "pt-BR/tools/search-research/githubsearchtool",
+                      "pt-BR/tools/search-research/websitesearchtool",
+                      "pt-BR/tools/search-research/codedocssearchtool",
+                      "pt-BR/tools/search-research/youtubechannelsearchtool",
+                      "pt-BR/tools/search-research/youtubevideosearchtool"
+                    ]
+                  },
+                  {
+                    "group": "Dados",
+                    "pages": [
+                      "pt-BR/tools/database-data/overview",
+                      "pt-BR/tools/database-data/mysqltool",
+                      "pt-BR/tools/database-data/pgsearchtool",
+                      "pt-BR/tools/database-data/snowflakesearchtool",
+                      "pt-BR/tools/database-data/nl2sqltool",
+                      "pt-BR/tools/database-data/qdrantvectorsearchtool",
+                      "pt-BR/tools/database-data/weaviatevectorsearchtool"
+                    ]
+                  },
+                  {
+                    "group": "IA & Machine Learning",
+                    "pages": [
+                      "pt-BR/tools/ai-ml/overview",
+                      "pt-BR/tools/ai-ml/dalletool",
+                      "pt-BR/tools/ai-ml/visiontool",
+                      "pt-BR/tools/ai-ml/aimindtool",
+                      "pt-BR/tools/ai-ml/llamaindextool",
+                      "pt-BR/tools/ai-ml/langchaintool",
+                      "pt-BR/tools/ai-ml/ragtool",
+                      "pt-BR/tools/ai-ml/codeinterpretertool"
+                    ]
+                  },
+                  {
+                    "group": "Cloud & Armazenamento",
+                    "pages": [
+                      "pt-BR/tools/cloud-storage/overview",
+                      "pt-BR/tools/cloud-storage/s3readertool",
+                      "pt-BR/tools/cloud-storage/s3writertool",
+                      "pt-BR/tools/cloud-storage/bedrockinvokeagenttool",
+                      "pt-BR/tools/cloud-storage/bedrockkbretriever"
+                    ]
+                  },
+                  {
+                    "group": "Automação & Integração",
+                    "pages": [
+                      "pt-BR/tools/automation/overview",
+                      "pt-BR/tools/automation/apifyactorstool",
+                      "pt-BR/tools/automation/composiotool",
+                      "pt-BR/tools/automation/multiontool"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Observabilidade",
+                "pages": [
+                  "pt-BR/observability/overview",
+                  "pt-BR/observability/agentops",
+                  "pt-BR/observability/arize-phoenix",
+                  "pt-BR/observability/langfuse",
+                  "pt-BR/observability/langtrace",
+                  "pt-BR/observability/maxim",
+                  "pt-BR/observability/mlflow",
+                  "pt-BR/observability/openlit",
+                  "pt-BR/observability/opik",
+                  "pt-BR/observability/patronus-evaluation",
+                  "pt-BR/observability/portkey",
+                  "pt-BR/observability/weave"
+                ]
+              },
+              {
+                "group": "Aprenda",
+                "pages": [
+                  "pt-BR/learn/overview",
+                  "pt-BR/learn/llm-selection-guide",
+                  "pt-BR/learn/conditional-tasks",
+                  "pt-BR/learn/coding-agents",
+                  "pt-BR/learn/create-custom-tools",
+                  "pt-BR/learn/custom-llm",
+                  "pt-BR/learn/custom-manager-agent",
+                  "pt-BR/learn/customizing-agents",
+                  "pt-BR/learn/dalle-image-generation",
+                  "pt-BR/learn/force-tool-output-as-result",
+                  "pt-BR/learn/hierarchical-process",
+                  "pt-BR/learn/human-input-on-execution",
+                  "pt-BR/learn/kickoff-async",
+                  "pt-BR/learn/kickoff-for-each",
+                  "pt-BR/learn/llm-connections",
+                  "pt-BR/learn/multimodal-agents",
+                  "pt-BR/learn/replay-tasks-from-latest-crew-kickoff",
+                  "pt-BR/learn/sequential-process",
+                  "pt-BR/learn/using-annotations"
+                ]
+              },
+              {
+                "group": "Telemetria",
+                "pages": [
+                  "pt-BR/telemetry"
+                ]
+              }
             ]
           },
           {
-            "group": "Features",
-            "pages": [
-              "enterprise/features/tool-repository",
-              "enterprise/features/webhook-streaming",
-              "enterprise/features/traces",
-              "enterprise/features/hallucination-guardrail",
-              "enterprise/features/integrations"
+            "tab": "Enterprise",
+            "groups": [
+              {
+                "group": "Começando",
+                "pages": [
+                  "pt-BR/enterprise/introduction"
+                ]
+              },
+              {
+                "group": "Funcionalidades",
+                "pages": [
+                  "pt-BR/enterprise/features/tool-repository",
+                  "pt-BR/enterprise/features/webhook-streaming",
+                  "pt-BR/enterprise/features/traces",
+                  "pt-BR/enterprise/features/hallucination-guardrail",
+                  "pt-BR/enterprise/features/integrations"
+                ]
+              },
+              {
+                "group": "Documentação de Integração",
+                "pages": [
+                  "pt-BR/enterprise/integrations/asana",
+                  "pt-BR/enterprise/integrations/box",
+                  "pt-BR/enterprise/integrations/clickup",
+                  "pt-BR/enterprise/integrations/github",
+                  "pt-BR/enterprise/integrations/gmail",
+                  "pt-BR/enterprise/integrations/google_calendar",
+                  "pt-BR/enterprise/integrations/google_sheets",
+                  "pt-BR/enterprise/integrations/hubspot",
+                  "pt-BR/enterprise/integrations/jira",
+                  "pt-BR/enterprise/integrations/linear",
+                  "pt-BR/enterprise/integrations/notion",
+                  "pt-BR/enterprise/integrations/salesforce",
+                  "pt-BR/enterprise/integrations/shopify",
+                  "pt-BR/enterprise/integrations/slack",
+                  "pt-BR/enterprise/integrations/stripe",
+                  "pt-BR/enterprise/integrations/zendesk"
+                ]
+              },
+              {
+                "group": "Guias",
+                "pages": [
+                  "pt-BR/enterprise/guides/build-crew",
+                  "pt-BR/enterprise/guides/deploy-crew",
+                  "pt-BR/enterprise/guides/kickoff-crew",
+                  "pt-BR/enterprise/guides/update-crew",
+                  "pt-BR/enterprise/guides/enable-crew-studio",
+                  "pt-BR/enterprise/guides/azure-openai-setup",
+                  "pt-BR/enterprise/guides/hubspot-trigger",
+                  "pt-BR/enterprise/guides/react-component-export",
+                  "pt-BR/enterprise/guides/salesforce-trigger",
+                  "pt-BR/enterprise/guides/slack-trigger",
+                  "pt-BR/enterprise/guides/team-management",
+                  "pt-BR/enterprise/guides/webhook-automation",
+                  "pt-BR/enterprise/guides/human-in-the-loop",
+                  "pt-BR/enterprise/guides/zapier-trigger"
+                ]
+              },
+              {
+                "group": "Recursos",
+                "pages": [
+                  "pt-BR/enterprise/resources/frequently-asked-questions"
+                ]
+              }
             ]
           },
           {
-            "group": "Integration Docs",
-            "pages": [
-              "enterprise/integrations/asana",
-              "enterprise/integrations/box",
-              "enterprise/integrations/clickup",
-              "enterprise/integrations/github",
-              "enterprise/integrations/gmail",
-              "enterprise/integrations/google_calendar",
-              "enterprise/integrations/google_sheets",
-              "enterprise/integrations/hubspot",
-              "enterprise/integrations/jira",
-              "enterprise/integrations/linear",
-              "enterprise/integrations/notion",
-              "enterprise/integrations/salesforce",
-              "enterprise/integrations/shopify",
-              "enterprise/integrations/slack",
-              "enterprise/integrations/stripe",
-              "enterprise/integrations/zendesk"
+            "tab": "Referência da API",
+            "groups": [
+              {
+                "group": "Começando",
+                "pages": [
+                  "pt-BR/api-reference/introduction"
+                ]
+              },
+              {
+                "group": "Endpoints",
+                "openapi": "enterprise-api.yaml"
+              }
             ]
           },
           {
-            "group": "How-To Guides",
-            "pages": [
-              "enterprise/guides/build-crew",
-              "enterprise/guides/deploy-crew",
-              "enterprise/guides/kickoff-crew",
-              "enterprise/guides/update-crew",
-              "enterprise/guides/enable-crew-studio",
-              "enterprise/guides/azure-openai-setup",
-              "enterprise/guides/hubspot-trigger",
-              "enterprise/guides/react-component-export",
-              "enterprise/guides/salesforce-trigger",
-              "enterprise/guides/slack-trigger",
-              "enterprise/guides/team-management",
-              "enterprise/guides/webhook-automation",
-              "enterprise/guides/human-in-the-loop",
-              "enterprise/guides/zapier-trigger"
+            "tab": "Exemplos",
+            "groups": [
+              {
+                "group": "Exemplos",
+                "pages": [
+                  "pt-BR/examples/example"
+                ]
+              }
             ]
           },
           {
-            "group": "Resources",
-            "pages": [
-              "enterprise/resources/frequently-asked-questions"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "API Reference",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "pages": [
-              "api-reference/introduction"
-            ]
-          },
-          {
-            "group": "Endpoints",
-            "openapi": "enterprise-api.yaml"
-          }
-        ]
-      },
-      {
-        "tab": "Examples",
-        "groups": [
-          {
-            "group": "Examples",
-            "pages": [
-              "examples/example"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Releases",
-        "groups": [
-          {
-            "group": "Releases",
-            "pages": [
-              "changelog"
+            "tab": "Lançamentos",
+            "groups": [
+              {
+                "group": "Lançamentos",
+                "pages": [
+                  "pt-BR/changelog"
+                ]
+              }
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Website",
-          "href": "https://crewai.com",
-          "icon": "globe"
-        },
-        {
-          "anchor": "Forum",
-          "href": "https://community.crewai.com",
-          "icon": "discourse"
-        },
-        {
-          "anchor": "Crew GPT",
-          "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
-          "icon": "robot"
-        },
-        {
-          "anchor": "Get Help",
-          "href": "mailto:support@crewai.com",
-          "icon": "headset"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
-    "light": "images/crew_only_logo.png",
-    "dark": "images/crew_only_logo.png"
+    "light": "/images/crew_only_logo.png",
+    "dark": "/images/crew_only_logo.png"
   },
   "appearance": {
     "default": "dark",
@@ -396,9 +763,6 @@
       "type": "github",
       "href": "https://github.com/crewAIInc/crewAI"
     }
-  },
-  "search": {
-    "prompt": "Search CrewAI docs"
   },
   "api": {
     "baseUrl": "https://your-actual-crew-name.crewai.com",

@@ -1,0 +1,71 @@
+---
+title: Busca RAG em PDF
+description: O `PDFSearchTool` é projetado para pesquisar arquivos PDF e retornar os resultados mais relevantes.
+icon: file-pdf
+---
+
+# `PDFSearchTool`
+
+<Note>
+    Ainda estamos trabalhando para melhorar as ferramentas, então pode haver comportamentos inesperados ou mudanças futuras.
+</Note>
+
+## Descrição
+
+O PDFSearchTool é uma ferramenta RAG projetada para buscas semânticas dentro do conteúdo de PDFs. Ela permite inserir uma consulta de busca e um documento PDF, aproveitando técnicas avançadas de busca para encontrar conteúdos relevantes de forma eficiente.
+Essa capacidade a torna especialmente útil para extrair informações específicas de arquivos PDF grandes rapidamente.
+
+## Instalação
+
+Para começar a usar o PDFSearchTool, primeiro, garanta que o pacote crewai_tools está instalado com o seguinte comando:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+Veja como utilizar o PDFSearchTool para buscar dentro de um documento PDF:
+
+```python Code
+from crewai_tools import PDFSearchTool
+
+# Inicialize a ferramenta permitindo buscas em qualquer conteúdo PDF caso o caminho seja informado durante a execução
+tool = PDFSearchTool()
+
+# OU
+
+# Inicialize a ferramenta com um caminho PDF específico para buscas exclusivas naquele documento
+tool = PDFSearchTool(pdf='path/to/your/document.pdf')
+```
+
+## Argumentos
+
+- `pdf`: **Opcional** O caminho do PDF para busca. Pode ser fornecido na inicialização ou nos argumentos do método `run`. Caso seja fornecido na inicialização, a ferramenta confinará suas buscas ao documento especificado.
+
+## Modelo e embeddings personalizados
+
+Por padrão, a ferramenta utiliza OpenAI tanto para embeddings quanto para sumarização. Para personalizar o modelo, você pode usar um dicionário de configuração como no exemplo abaixo:
+
+```python Code
+tool = PDFSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

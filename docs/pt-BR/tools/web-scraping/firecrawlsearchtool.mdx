@@ -1,0 +1,41 @@
+---
+title: Firecrawl Search
+description: O `FirecrawlSearchTool` foi projetado para pesquisar sites e convertê-los em markdown limpo ou dados estruturados.
+icon: fire-flame
+---
+
+# `FirecrawlSearchTool`
+
+## Descrição
+
+[Firecrawl](https://firecrawl.dev) é uma plataforma para rastrear e converter qualquer site em markdown limpo ou dados estruturados.
+
+## Instalação
+
+- Obtenha uma chave de API em [firecrawl.dev](https://firecrawl.dev) e defina-a nas variáveis de ambiente (`FIRECRAWL_API_KEY`).
+- Instale o [Firecrawl SDK](https://github.com/mendableai/firecrawl) junto com o pacote `crewai[tools]`:
+
+```shell
+pip install firecrawl-py 'crewai[tools]'
+```
+
+## Exemplo
+
+Utilize o FirecrawlSearchTool da seguinte forma para permitir que seu agente carregue sites:
+
+```python Code
+from crewai_tools import FirecrawlSearchTool
+
+tool = FirecrawlSearchTool(query='what is firecrawl?')
+```
+
+## Argumentos
+
+- `api_key`: Opcional. Especifica a chave de API do Firecrawl. O padrão é a variável de ambiente `FIRECRAWL_API_KEY`.
+- `query`: A string da consulta de busca a ser utilizada na pesquisa.
+- `page_options`: Opcional. Opções para formatação dos resultados.
+  - `onlyMainContent`: Opcional. Retorna somente o conteúdo principal da página, excluindo cabeçalhos, navegações, rodapés, etc.
+  - `includeHtml`: Opcional. Inclui o conteúdo HTML bruto da página. Vai gerar uma chave html na resposta.
+  - `fetchPageContent`: Opcional. Busca o conteúdo completo da página.
+- `search_options`: Opcional. Opções para controle do comportamento de rastreamento.
+  - `limit`: Opcional. Número máximo de páginas a rastrear.

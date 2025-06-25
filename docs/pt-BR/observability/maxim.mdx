@@ -1,0 +1,150 @@
+---
+title: Integração Maxim
+description: Inicie o monitoramento, avaliação e observabilidade de agentes
+icon: bars-staggered
+---
+
+# Integração Maxim
+
+Maxim AI oferece monitoramento completo de agentes, avaliação e observabilidade para suas aplicações CrewAI. Com a integração de uma linha do Maxim, você pode facilmente rastrear e analisar interações dos agentes, métricas de desempenho e muito mais.
+
+## Funcionalidades: Integração com Uma Linha
+
+- **Rastreamento de Agentes de Ponta a Ponta**: Monitore todo o ciclo de vida dos seus agentes
+- **Análise de Desempenho**: Acompanhe latência, tokens consumidos e custos
+- **Monitoramento de Hiperparâmetros**: Visualize detalhes de configuração das execuções dos agentes
+- **Rastreamento de Chamadas de Ferramentas**: Observe quando e como os agentes usam suas ferramentas
+- **Visualização Avançada**: Entenda as trajetórias dos agentes através de dashboards intuitivos
+
+## Começando
+
+### Pré-requisitos
+
+- Python versão >=3.10
+- Uma conta Maxim ([cadastre-se aqui](https://getmaxim.ai/))
+- Um projeto CrewAI
+
+### Instalação
+
+Instale o SDK do Maxim via pip:
+
+```python
+pip install maxim-py>=3.6.2
+```
+
+Ou adicione ao seu `requirements.txt`:
+
+```
+maxim-py>=3.6.2
+```
+
+### Configuração Básica
+
+### 1. Configure as variáveis de ambiente
+
+```python
+### Configuração de Variáveis de Ambiente
+
+# Crie um arquivo `.env` na raiz do seu projeto:
+
+# Configuração da API Maxim
+MAXIM_API_KEY=your_api_key_here
+MAXIM_LOG_REPO_ID=your_repo_id_here
+```
+
+### 2. Importe os pacotes necessários
+
+```python
+from crewai import Agent, Task, Crew, Process
+from maxim import Maxim
+from maxim.logger.crewai import instrument_crewai
+```
+
+### 3. Inicialize o Maxim com sua chave de API
+
+```python
+# Inicialize o logger do Maxim
+logger = Maxim().logger()
+
+# Instrumente o CrewAI com apenas uma linha
+instrument_crewai(logger)
+```
+
+### 4. Crie e execute sua aplicação CrewAI normalmente
+
+```python
+
+# Crie seu agente
+researcher = Agent(
+    role='Senior Research Analyst',
+    goal='Uncover cutting-edge developments in AI',
+    backstory="You are an expert researcher at a tech think tank...",
+    verbose=True,
+    llm=llm
+)
+
+# Defina a tarefa
+research_task = Task(
+    description="Research the latest AI advancements...",
+    expected_output="",
+    agent=researcher
+)
+
+# Configure e execute a crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=True
+)
+
+try:
+    result = crew.kickoff()
+finally:
+    maxim.cleanup()  # Garanta o cleanup mesmo em caso de erros
+```
+
+É isso! Todas as interações dos seus agentes CrewAI agora serão registradas e estarão disponíveis em seu painel Maxim.
+
+Confira este Google Colab Notebook para referência rápida – [Notebook](https://colab.research.google.com/drive/1ZKIZWsmgQQ46n8TH9zLsT1negKkJA6K8?usp=sharing)
+
+## Visualizando Seus Rastreamentos
+
+Após executar sua aplicação CrewAI:
+
+![Exemplo de rastreamento no Maxim mostrando interações de agentes](https://raw.githubusercontent.com/maximhq/maxim-docs/master/images/Screenshot2025-05-14at12.10.58PM.png)
+
+1. Faça login no seu [Painel Maxim](https://getmaxim.ai/dashboard)
+2. Navegue até seu repositório
+3. Visualize rastreamentos detalhados de agentes, incluindo:
+   - Conversas dos agentes
+   - Padrões de uso de ferramentas
+   - Métricas de desempenho
+   - Análises de custos
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+- **Nenhum rastreamento aparecendo**: Certifique-se de que sua chave de API e o ID do repositório estão corretos
+- Certifique-se de que você **chamou `instrument_crewai()`** ***antes*** de executar sua crew. Isso inicializa corretamente os hooks de logging.
+- Defina `debug=True` na chamada do `instrument_crewai()` para expor erros internos:
+
+    ```python
+    instrument_crewai(logger, debug=True)
+    ```
+
+- Configure seus agentes com `verbose=True` para capturar logs detalhados:
+
+    ```python
+    
+    agent = CrewAgent(..., verbose=True)
+    ```
+
+- Verifique cuidadosamente se `instrument_crewai()` foi chamado **antes** de criar ou executar agentes. Isso pode parecer óbvio, mas é um erro comum.
+
+### Suporte
+
+Se você encontrar algum problema:
+
+- Consulte a [Documentação do Maxim](https://getmaxim.ai/docs)
+- Maxim Github [Link](https://github.com/maximhq)

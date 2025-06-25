@@ -1,0 +1,209 @@
+---
+title: Interpretador de Código
+description: O `CodeInterpreterTool` é uma poderosa ferramenta projetada para executar código Python 3 em um ambiente seguro e isolado.
+icon: code-simple
+---
+
+# `CodeInterpreterTool`
+
+## Descrição
+
+O `CodeInterpreterTool` permite que agentes CrewAI executem códigos Python 3 gerados autonomamente. Essa funcionalidade é particularmente valiosa, pois permite que os agentes criem códigos, os executem, obtenham os resultados e usem essas informações para orientar decisões e ações subsequentes.
+
+Há diversas formas de usar esta ferramenta:
+
+### Container Docker (Recomendado)
+
+Esta é a opção principal. O código é executado em um container Docker seguro e isolado, garantindo a segurança independentemente de seu conteúdo.
+Certifique-se de que o Docker esteja instalado e em funcionamento em seu sistema. Se ainda não tiver, você pode instalá-lo a partir [deste link](https://docs.docker.com/get-docker/).
+
+### Ambiente Sandbox
+
+Se o Docker não estiver disponível — seja por não estar instalado ou inacessível por qualquer motivo — o código será executado em um ambiente Python restrito, chamado de sandbox.
+Esse ambiente é bastante limitado, com restrições severas a vários módulos e funções embutidas.
+
+### Execução Não Segura
+
+**NÃO RECOMENDADO PARA PRODUÇÃO**
+Este modo permite a execução de qualquer código Python, inclusive chamadas perigosas para os módulos `sys, os..` e semelhantes. [Veja aqui](/pt-BR/tools/ai-ml/codeinterpretertool#enabling-unsafe-mode) como habilitar este modo.
+
+## Registro de Logs
+
+O `CodeInterpreterTool` registra a estratégia de execução selecionada no STDOUT.
+
+
+## Instalação
+
+Para utilizar esta ferramenta, você precisa instalar o pacote de ferramentas CrewAI:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+O exemplo a seguir demonstra como usar o `CodeInterpreterTool` com um agente CrewAI:
+
+```python Code
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import CodeInterpreterTool
+
+# Initialize the tool
+code_interpreter = CodeInterpreterTool()
+
+# Define an agent that uses the tool
+programmer_agent = Agent(
+    role="Python Programmer",
+    goal="Write and execute Python code to solve problems",
+    backstory="An expert Python programmer who can write efficient code to solve complex problems.",
+    tools=[code_interpreter],
+    verbose=True,
+)
+
+# Example task to generate and execute code
+coding_task = Task(
+    description="Write a Python function to calculate the Fibonacci sequence up to the 10th number and print the result.",
+    expected_output="The Fibonacci sequence up to the 10th number.",
+    agent=programmer_agent,
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[programmer_agent],
+    tasks=[coding_task],
+    verbose=True,
+    process=Process.sequential,
+)
+result = crew.kickoff()
+```
+
+Você também pode habilitar a execução de código diretamente ao criar um agente:
+
+```python Code
+from crewai import Agent
+
+# Create an agent with code execution enabled
+programmer_agent = Agent(
+    role="Python Programmer",
+    goal="Write and execute Python code to solve problems",
+    backstory="An expert Python programmer who can write efficient code to solve complex problems.",
+    allow_code_execution=True,  # This automatically adds the CodeInterpreterTool
+    verbose=True,
+)
+```
+
+### Habilitando o `unsafe_mode`
+
+```python Code
+from crewai_tools import CodeInterpreterTool
+
+code = """
+import os
+os.system("ls -la")
+"""
+
+CodeInterpreterTool(unsafe_mode=True).run(code=code)
+```
+
+## Parâmetros
+
+O `CodeInterpreterTool` aceita os seguintes parâmetros durante a inicialização:
+
+- **user_dockerfile_path**: Opcional. Caminho para um Dockerfile personalizado a ser utilizado pelo container do interpretador de código.
+- **user_docker_base_url**: Opcional. URL do daemon Docker que será usado para rodar o container.
+- **unsafe_mode**: Opcional. Indica se o código será executado diretamente na máquina hospedeira ao invés de um container Docker ou sandbox. O padrão é `False`. Use com cautela!
+- **default_image_tag**: Opcional. Tag padrão da imagem Docker. O padrão é `code-interpreter:latest`
+
+Ao utilizar a ferramenta com um agente, o agente precisará fornecer:
+
+- **code**: Obrigatório. O código Python 3 a ser executado.
+- **libraries_used**: Opcional. Uma lista de bibliotecas usadas no código que precisam ser instaladas. O padrão é `[]`
+
+## Exemplo de Integração com Agente
+
+Aqui está um exemplo mais detalhado de como integrar o `CodeInterpreterTool` com um agente CrewAI:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import CodeInterpreterTool
+
+# Initialize the tool
+code_interpreter = CodeInterpreterTool()
+
+# Define an agent that uses the tool
+data_analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze data using Python code",
+    backstory="""You are an expert data analyst who specializes in using Python
+    to analyze and visualize data. You can write efficient code to process
+    large datasets and extract meaningful insights.""",
+    tools=[code_interpreter],
+    verbose=True,
+)
+
+# Create a task for the agent
+analysis_task = Task(
+    description="""
+    Write Python code to:
+    1. Generate a random dataset of 100 points with x and y coordinates
+    2. Calculate the correlation coefficient between x and y
+    3. Create a scatter plot of the data
+    4. Print the correlation coefficient and save the plot as 'scatter.png'
+
+    Make sure to handle any necessary imports and print the results.
+    """,
+    expected_output="The correlation coefficient and confirmation that the scatter plot has been saved.",
+    agent=data_analyst,
+)
+
+# Run the task
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task],
+    verbose=True,
+    process=Process.sequential,
+)
+result = crew.kickoff()
+```
+
+## Detalhes de Implementação
+
+O `CodeInterpreterTool` utiliza Docker para criar um ambiente seguro para execução de código:
+
+```python Code
+class CodeInterpreterTool(BaseTool):
+    name: str = "Code Interpreter"
+    description: str = "Interprets Python3 code strings with a final print statement."
+    args_schema: Type[BaseModel] = CodeInterpreterSchema
+    default_image_tag: str = "code-interpreter:latest"
+
+    def _run(self, **kwargs) -> str:
+        code = kwargs.get("code", self.code)
+        libraries_used = kwargs.get("libraries_used", [])
+
+        if self.unsafe_mode:
+            return self.run_code_unsafe(code, libraries_used)
+        else:
+            return self.run_code_safety(code, libraries_used)
+```
+
+A ferramenta executa os seguintes passos:
+1. Verifica se a imagem Docker existe ou a constrói, caso necessário
+2. Cria um container Docker com o diretório de trabalho atual montado
+3. Instala quaisquer bibliotecas necessárias especificadas pelo agente
+4. Executa o código Python dentro do container
+5. Retorna a saída da execução do código
+6. Limpa o ambiente, parando e removendo o container
+
+## Considerações de Segurança
+
+Por padrão, o `CodeInterpreterTool` executa o código em um container Docker isolado, fornecendo uma camada de segurança. No entanto, ainda há algumas considerações importantes:
+
+1. O container Docker tem acesso ao diretório de trabalho atual, então arquivos sensíveis podem ser potencialmente acessados.
+2. Caso o container Docker não esteja disponível e o código precise ser executado de forma segura, ele será executado em um ambiente sandbox. Por motivos de segurança, a instalação de bibliotecas arbitrárias não é permitida
+3. O parâmetro `unsafe_mode` permite que códigos sejam executados diretamente na máquina hospedeira, o que deve ser usado apenas em ambientes confiáveis.
+4. Tenha cautela ao permitir que agentes instalem bibliotecas arbitrárias, pois estas podem incluir códigos maliciosos.
+
+## Conclusão
+
+O `CodeInterpreterTool` oferece uma maneira poderosa para que agentes CrewAI executem código Python em um ambiente relativamente seguro. Permitindo que agentes escrevam e executem códigos, ele amplia significativamente sua capacidade de resolução de problemas, especialmente para tarefas que envolvem análise de dados, cálculos ou outros trabalhos computacionais. Esta ferramenta é especialmente útil para agentes que precisam realizar operações complexas que são mais eficientemente expressas em código do que em linguagem natural.
