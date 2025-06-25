@@ -87,6 +87,13 @@ This general pattern shows how to integrate tools. For specific examples tailore
 
 ## Filtering Tools
 
+There are two ways to filter tools:
+
+1. Accessing a specific tool using dictionary-style indexing.
+2. Pass a list of tool names to the `MCPServerAdapter` constructor.
+
+### Accessing a specific tool using dictionary-style indexing.
+
 ```python
 with MCPServerAdapter(server_params) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
@@ -95,7 +102,24 @@ with MCPServerAdapter(server_params) as mcp_tools:
         role="MCP Tool User",
         goal="Utilize tools from an MCP server.",
         backstory="I can connect to MCP servers and use their tools.",
-        tools=mcp_tools["tool_name"], # Pass the loaded tools to your agent
+        tools=[mcp_tools["tool_name"]], # Pass the loaded tools to your agent
+        reasoning=True,
+        verbose=True
+    )
+    # ... rest of your crew setup ...
+```
+
+### Pass a list of tool names to the `MCPServerAdapter` constructor.
+
+```python
+with MCPServerAdapter(server_params, "tool_name") as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    my_agent = Agent(
+        role="MCP Tool User",
+        goal="Utilize tools from an MCP server.",
+        backstory="I can connect to MCP servers and use their tools.",
+        tools=mcp_tools, # Pass the loaded tools to your agent
         reasoning=True,
         verbose=True
     )
@@ -132,10 +156,22 @@ class CrewWithMCP:
 
   @agent
   def your_agent(self):
-      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools()) # you can filter which tool are available also
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools()) # get all available tools
 
     # ... rest of your crew setup ...
 ```
+
+You can filter which tools are available to your agent by passing a list of tool names to the `get_mcp_tools` method.
+
+```python
+@agent
+def another_agent(self):
+    return Agent(
+      config=self.agents_config["your_agent"],
+      tools=self.get_mcp_tools("tool_1", "tool_2") # get specific tools
+    )
+```
+
 ## Explore MCP Integrations
 
 <CardGroup cols={2}>
