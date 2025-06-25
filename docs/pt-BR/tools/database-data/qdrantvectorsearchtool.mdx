@@ -1,0 +1,272 @@
+---
+title: 'Qdrant Vector Search Tool'
+description: 'Capacidades de busca semântica para agentes CrewAI usando o banco de dados vetorial Qdrant'
+icon: vector-square
+---
+
+## Visão Geral
+
+A ferramenta Qdrant Vector Search permite adicionar capacidades de busca semântica aos seus agentes CrewAI utilizando o [Qdrant](https://qdrant.tech/), um mecanismo de busca por similaridade vetorial. Com essa ferramenta, seus agentes podem pesquisar em documentos armazenados em uma coleção Qdrant usando similaridade semântica.
+
+## Instalação
+
+Instale os pacotes necessários:
+
+```bash
+uv add qdrant-client
+```
+
+## Uso Básico
+
+Veja um exemplo mínimo de como utilizar a ferramenta:
+
+```python
+from crewai import Agent
+from crewai_tools import QdrantVectorSearchTool
+
+# Inicialize a ferramenta
+qdrant_tool = QdrantVectorSearchTool(
+    qdrant_url="your_qdrant_url",
+    qdrant_api_key="your_qdrant_api_key",
+    collection_name="your_collection"
+)
+
+# Crie um agente que utiliza a ferramenta
+agent = Agent(
+    role="Research Assistant",
+    goal="Find relevant information in documents",
+    tools=[qdrant_tool]
+)
+
+# A ferramenta usará automaticamente embeddings da OpenAI
+# e retornará os 3 resultados mais relevantes com pontuação > 0.35
+```
+
+## Exemplo Completo e Funcional
+
+Veja um exemplo completo mostrando como:
+1. Extrair texto de um PDF
+2. Gerar embeddings usando OpenAI
+3. Armazenar no Qdrant
+4. Criar um fluxo de trabalho RAG agente CrewAI para busca semântica
+
+```python
+import os
+import uuid
+import pdfplumber
+from openai import OpenAI
+from dotenv import load_dotenv
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai_tools import QdrantVectorSearchTool
+from qdrant_client import QdrantClient
+from qdrant_client.models import PointStruct, Distance, VectorParams
+
+# Carregar variáveis de ambiente
+load_dotenv()
+
+# Inicializar cliente OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Extrair texto do PDF
+def extract_text_from_pdf(pdf_path):
+    text = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text.append(page_text.strip())
+    return text
+
+# Gerar embeddings da OpenAI
+def get_openai_embedding(text):
+    response = client.embeddings.create(
+        input=text,
+        model="text-embedding-3-small"
+    )
+    return response.data[0].embedding
+
+# Armazenar texto e embeddings no Qdrant
+def load_pdf_to_qdrant(pdf_path, qdrant, collection_name):
+    # Extrair texto do PDF
+    text_chunks = extract_text_from_pdf(pdf_path)
+    
+    # Criar coleção no Qdrant
+    if qdrant.collection_exists(collection_name):
+        qdrant.delete_collection(collection_name)
+    qdrant.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
+    )
+
+    # Armazenar embeddings
+    points = []
+    for chunk in text_chunks:
+        embedding = get_openai_embedding(chunk)
+        points.append(PointStruct(
+            id=str(uuid.uuid4()),
+            vector=embedding,
+            payload={"text": chunk}
+        ))
+    qdrant.upsert(collection_name=collection_name, points=points)
+
+# Inicializar cliente Qdrant e carregar dados
+qdrant = QdrantClient(
+    url=os.getenv("QDRANT_URL"),
+    api_key=os.getenv("QDRANT_API_KEY")
+)
+collection_name = "example_collection"
+pdf_path = "path/to/your/document.pdf"
+load_pdf_to_qdrant(pdf_path, qdrant, collection_name)
+
+# Inicializar ferramenta de busca Qdrant
+qdrant_tool = QdrantVectorSearchTool(
+    qdrant_url=os.getenv("QDRANT_URL"),
+    qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+    collection_name=collection_name,
+    limit=3,
+    score_threshold=0.35
+)
+
+# Criar agentes CrewAI
+search_agent = Agent(
+    role="Senior Semantic Search Agent",
+    goal="Find and analyze documents based on semantic search",
+    backstory="""You are an expert research assistant who can find relevant 
+    information using semantic search in a Qdrant database.""",
+    tools=[qdrant_tool],
+    verbose=True
+)
+
+answer_agent = Agent(
+    role="Senior Answer Assistant",
+    goal="Generate answers to questions based on the context provided",
+    backstory="""You are an expert answer assistant who can generate 
+    answers to questions based on the context provided.""",
+    tools=[qdrant_tool],
+    verbose=True
+)
+
+# Definir tarefas
+search_task = Task(
+    description="""Search for relevant documents about the {query}.
+    Your final answer should include:
+    - The relevant information found
+    - The similarity scores of the results
+    - The metadata of the relevant documents""",
+    agent=search_agent
+)
+
+answer_task = Task(
+    description="""Given the context and metadata of relevant documents,
+    generate a final answer based on the context.""",
+    agent=answer_agent
+)
+
+# Executar fluxo CrewAI
+crew = Crew(
+    agents=[search_agent, answer_agent],
+    tasks=[search_task, answer_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+result = crew.kickoff(
+    inputs={"query": "What is the role of X in the document?"}
+)
+print(result)
+```
+
+## Parâmetros da Ferramenta
+
+### Parâmetros Obrigatórios
+- `qdrant_url` (str): URL do seu servidor Qdrant
+- `qdrant_api_key` (str): Chave de API para autenticação com o Qdrant
+- `collection_name` (str): Nome da coleção Qdrant a ser pesquisada
+
+### Parâmetros Opcionais
+- `limit` (int): Número máximo de resultados a serem retornados (padrão: 3)
+- `score_threshold` (float): Limite mínimo de similaridade (padrão: 0.35)
+- `custom_embedding_fn` (Callable[[str], list[float]]): Função personalizada para vetorização de textos
+
+## Parâmetros de Busca
+
+A ferramenta aceita estes parâmetros em seu schema:
+- `query` (str): Consulta de busca para encontrar documentos similares
+- `filter_by` (str, opcional): Campo de metadado para filtrar
+- `filter_value` (str, opcional): Valor para filtrar
+
+## Formato de Retorno
+
+A ferramenta retorna resultados no formato JSON:
+
+```json
+[
+  {
+    "metadata": {
+      // Todos os metadados armazenados junto com o documento
+    },
+    "context": "O conteúdo textual real do documento",
+    "distance": 0.95  // Pontuação de similaridade
+  }
+]
+```
+
+## Embedding Padrão
+
+Por padrão, a ferramenta utiliza o modelo `text-embedding-3-small` da OpenAI para vetorização. Isso requer:
+- Chave de API da OpenAI definida na variável de ambiente: `OPENAI_API_KEY`
+
+## Embeddings Personalizados
+
+Em vez de utilizar o modelo padrão de embeddings, você pode utilizar sua própria função de embeddings nos casos em que:
+
+1. Deseja usar um modelo de embeddings diferente (ex: Cohere, HuggingFace, modelos Ollama)
+2. Precisa reduzir custos utilizando modelos de código aberto
+3. Tem requisitos específicos quanto à dimensão dos vetores ou à qualidade dos embeddings
+4. Deseja utilizar embeddings específicos para determinado domínio (ex: textos médicos ou jurídicos)
+
+Veja um exemplo utilizando um modelo HuggingFace:
+
+```python
+from transformers import AutoTokenizer, AutoModel
+import torch
+
+# Carregar modelo e tokenizer
+tokenizer = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+model = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
+
+def custom_embeddings(text: str) -> list[float]:
+    # Tokenizar e obter saídas do modelo
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+    outputs = model(**inputs)
+    
+    # Usar mean pooling para obter o embedding do texto
+    embeddings = outputs.last_hidden_state.mean(dim=1)
+    
+    # Converter para lista de floats e retornar
+    return embeddings[0].tolist()
+
+# Usar embeddings personalizados com a ferramenta
+tool = QdrantVectorSearchTool(
+    qdrant_url="your_url",
+    qdrant_api_key="your_key",
+    collection_name="your_collection",
+    custom_embedding_fn=custom_embeddings  # Passe sua função personalizada
+)
+```
+
+## Tratamento de Erros
+
+A ferramenta trata os seguintes erros específicos:
+- Lança ImportError se `qdrant-client` não estiver instalado (com opção de instalar automaticamente)
+- Lança ValueError se `QDRANT_URL` não estiver definido
+- Solicita instalação de `qdrant-client` se estiver ausente utilizando `uv add qdrant-client`
+
+## Variáveis de Ambiente
+
+Variáveis de ambiente obrigatórias:
+```bash
+export QDRANT_URL="your_qdrant_url"  # Se não for informado no construtor
+export QDRANT_API_KEY="your_api_key"  # Se não for informado no construtor
+export OPENAI_API_KEY="your_openai_key"  # Se estiver usando embeddings padrão
+```

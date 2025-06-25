@@ -1,0 +1,151 @@
+---
+title: FAQs
+description: "Perguntas frequentes sobre CrewAI Enterprise"
+icon: "circle-question"
+---
+
+<AccordionGroup>
+    <Accordion title="Como a execução de tarefas é tratada no processo hierárquico?">
+        No processo hierárquico, um agente gerente é criado automaticamente e coordena o fluxo de trabalho, delegando tarefas e validando resultados para uma execução eficiente e simplificada. O agente gerente utiliza ferramentas para facilitar a delegação e execução de tarefas por agentes sob sua orientação. O LLM do gerente é fundamental para o processo hierárquico e deve ser configurado corretamente para funcionar adequadamente.
+    </Accordion>
+
+    <Accordion title="Onde posso encontrar a documentação mais recente da CrewAI?">
+        A documentação mais atualizada da CrewAI está disponível em nosso site oficial de documentação: https://docs.crewai.com/
+        <Card href="https://docs.crewai.com/" icon="books">CrewAI Docs</Card>
+    </Accordion>
+
+    <Accordion title="Quais as principais diferenças entre os Processos Hierárquico e Sequencial na CrewAI?">
+        #### Processo Hierárquico:
+        - As tarefas são delegadas e executadas com base em uma cadeia de comando estruturada
+        - Um modelo de linguagem do gerente (`manager_llm`) deve ser especificado para o agente gerente
+        - O agente gerente supervisiona a execução de tarefas, planejamento, delegação e validação
+        - As tarefas não são pré-atribuídas; o gerente aloca tarefas para os agentes com base em suas capacidades
+
+        #### Processo Sequencial:
+        - As tarefas são executadas uma após a outra, garantindo uma progressão ordenada
+        - O resultado de uma tarefa serve como contexto para a próxima
+        - A execução das tarefas segue a ordem predefinida na lista de tarefas
+
+        #### Qual Processo é Melhor para Projetos Complexos?
+        O processo hierárquico é mais adequado para projetos complexos porque permite:
+        - **Alocação e delegação dinâmica de tarefas**: O agente gerente pode atribuir tarefas de acordo com as capacidades dos agentes
+        - **Validação e supervisão estruturadas**: O agente gerente revisa os resultados das tarefas e garante a conclusão
+        - **Gestão de tarefas complexas**: Controle preciso da disponibilidade de ferramentas por agente
+    </Accordion>
+
+    <Accordion title="Quais são os benefícios do uso de memória no framework CrewAI?">
+        - **Aprendizado adaptativo**: As crews tornam-se mais eficientes ao longo do tempo, adaptando-se a novas informações e aprimorando sua abordagem às tarefas
+        - **Personalização aprimorada**: A memória permite que os agentes recordem preferências do usuário e interações anteriores, possibilitando experiências personalizadas
+        - **Resolução aprimorada de problemas**: O acesso a um repositório rico em memória auxilia os agentes a tomarem decisões mais informadas, baseando-se em aprendizados anteriores e insights contextuais
+    </Accordion>
+
+    <Accordion title="Qual é o propósito de definir um limite máximo de RPM para um agente?">
+        Definir um limite máximo de RPM para um agente evita que ele faça solicitações excessivas a serviços externos, o que pode ajudar a evitar limites de taxa e melhorar o desempenho.
+    </Accordion>
+
+    <Accordion title="Qual o papel da entrada humana na execução de tarefas dentro de uma crew da CrewAI?">
+        A entrada humana permite que os agentes solicitem informações adicionais ou esclarecimentos quando necessário. Este recurso é fundamental em processos de tomada de decisão complexos ou quando os agentes precisam de mais detalhes para concluir uma tarefa com eficácia.
+
+        Para integrar a entrada humana na execução do agente, defina a flag `human_input` na definição da tarefa. Quando habilitada, o agente solicitará a entrada do usuário antes de entregar sua resposta final. Essa entrada pode fornecer contexto extra, esclarecer ambiguidades ou validar a saída do agente.
+
+        Para orientações detalhadas de implementação, veja nosso [guia Human-in-the-Loop](/pt-BR/how-to/human-in-the-loop).
+    </Accordion>
+
+    <Accordion title="Quais opções avançadas de customização estão disponíveis para aprimorar e personalizar o comportamento e as capacidades dos agentes na CrewAI?">
+        A CrewAI oferece diversas opções avançadas de customização:
+
+        - **Customização de Modelo de Linguagem**: Os agentes podem ser personalizados com modelos de linguagem específicos (`llm`) e modelos de linguagem para chamadas de função (`function_calling_llm`)
+        - **Configurações de Desempenho e Debug**: Ajuste o desempenho do agente e monitore suas operações
+        - **Modo Verbose**: Habilita registros detalhados das ações do agente, útil para depuração e otimização
+        - **Limite de RPM**: Define o número máximo de solicitações por minuto (`max_rpm`)
+        - **Máximo de Iterações**: O atributo `max_iter` permite definir o número máximo de iterações que um agente pode executar para uma única tarefa
+        - **Delegação e Autonomia**: Controle a capacidade do agente de delegar ou fazer perguntas com o atributo `allow_delegation` (padrão: True)
+        - **Integração de Entrada Humana**: Os agentes podem solicitar informações adicionais ou esclarecimentos quando necessário
+    </Accordion>
+
+    <Accordion title="Em quais cenários a entrada humana é particularmente útil na execução de agentes?">
+        A entrada humana é especialmente útil quando:
+        - **Os agentes precisam de informações adicionais ou esclarecimentos**: Quando se deparam com ambiguidade ou dados incompletos
+        - **Os agentes precisam tomar decisões complexas ou sensíveis**: A entrada humana pode auxiliar em decisões éticas ou de nuances
+        - **Supervisão e validação da saída do agente**: A entrada humana pode ajudar a validar resultados e prevenir erros
+        - **Personalização do comportamento do agente**: Entradas humanas podem fornecer feedback para aprimorar respostas dos agentes ao longo do tempo
+        - **Identificação e resolução de erros ou limitações**: A entrada humana auxilia a suprir lacunas de capacidade dos agentes
+    </Accordion>
+
+    <Accordion title="Quais são os diferentes tipos de memória disponíveis na crewAI?">
+        Os diferentes tipos de memória disponíveis na CrewAI são:
+        - **Memória de curto prazo**: Armazenamento temporário para contexto imediato
+        - **Memória de longo prazo**: Armazenamento persistente para padrões aprendidos e informações
+        - **Memória de entidade**: Armazenamento focado em entidades específicas e seus atributos
+        - **Memória contextual**: Memória que mantém o contexto ao longo das interações
+
+        Saiba mais sobre os diferentes tipos de memória:
+        <Card href="https://docs.crewai.com/concepts/memory" icon="brain">CrewAI Memory</Card>
+    </Accordion>
+
+    <Accordion title="Como faço para usar Output Pydantic em uma Tarefa?">
+        Para usar Output Pydantic em uma tarefa, você precisa definir a saída esperada da tarefa como um modelo Pydantic. Veja um exemplo rápido:
+
+        <Steps>
+            <Step title="Defina um modelo Pydantic">
+                ```python
+                from pydantic import BaseModel
+
+                class User(BaseModel):
+                    name: str
+                    age: int
+                ```
+            </Step>
+
+            <Step title="Crie uma tarefa com Output Pydantic">
+                ```python
+                from crewai import Task, Crew, Agent
+                from my_models import User
+
+                task = Task(
+                    description="Create a user with the provided name and age",
+                    expected_output=User,  # This is the Pydantic model
+                    agent=agent,
+                    tools=[tool1, tool2]
+                )
+                ```
+            </Step>
+
+            <Step title="Defina o atributo output_pydantic no seu agente">
+                ```python
+                from crewai import Agent
+                from my_models import User
+
+                agent = Agent(
+                    role='User Creator',
+                    goal='Create users',
+                    backstory='I am skilled in creating user accounts',
+                    tools=[tool1, tool2],
+                    output_pydantic=User
+                )
+                ```
+            </Step>
+        </Steps>
+
+        Aqui está um tutorial de como obter saídas estruturadas de forma consistente dos seus agentes:
+        <Frame>
+            <iframe
+            height="400"
+            width="100%"
+            src="https://www.youtube.com/embed/dNpKQk5uxHw"
+            title="YouTube video player" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+        </Frame>
+    </Accordion>
+
+    <Accordion title="Como posso criar ferramentas personalizadas para meus agentes CrewAI?">
+        Você pode criar ferramentas personalizadas herdando da classe `BaseTool` fornecida pela CrewAI ou usando o decorador de ferramenta. Herdar envolve definir uma nova classe que herda de `BaseTool`, especificando o nome, a descrição e o método `_run` para a lógica operacional. O decorador de ferramenta permite criar um objeto `Tool` diretamente com os atributos necessários e uma lógica funcional.
+
+        <Card href="https://docs.crewai.com/how-to/create-custom-tools" icon="code">CrewAI Tools Guide</Card>
+    </Accordion>
+
+    <Accordion title="Como controlar o número máximo de solicitações por minuto que toda a crew pode realizar?">
+        O atributo `max_rpm` define o número máximo de solicitações por minuto que a crew pode realizar para evitar limites de taxa, e irá sobrescrever as definições de `max_rpm` dos agentes individuais se você defini-lo.
+    </Accordion>
+</AccordionGroup>

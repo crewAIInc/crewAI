@@ -1,0 +1,343 @@
+---
+title: Integração com Zendesk
+description: "Gestão de suporte ao cliente e helpdesk com integração Zendesk para CrewAI."
+icon: "headset"
+---
+
+## Visão Geral
+
+Permita que seus agentes gerenciem operações de suporte ao cliente através do Zendesk. Crie e atualize tickets, gerencie usuários, monitore métricas de suporte e otimize seus fluxos de atendimento ao cliente com automação impulsionada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração com o Zendesk, certifique-se de que você possui:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com) com uma assinatura ativa
+- Uma conta Zendesk com permissões apropriadas de API
+- Sua conta Zendesk conectada através da [página de Integrações](https://app.crewai.com/integrations)
+
+## Ferramentas Disponíveis
+
+### **Gerenciamento de Tickets**
+
+<AccordionGroup>
+  <Accordion title="ZENDESK_CREATE_TICKET">
+    **Descrição:** Crie um novo ticket de suporte no Zendesk.
+
+    **Parâmetros:**
+    - `ticketSubject` (string, obrigatório): Assunto do ticket (ex.: "Socorro, minha impressora está pegando fogo!")
+    - `ticketDescription` (string, obrigatório): Primeiro comentário que aparece no ticket (ex.: "A fumaça é muito colorida.")
+    - `requesterName` (string, obrigatório): Nome do usuário solicitando suporte (ex.: "Jane Cliente")
+    - `requesterEmail` (string, obrigatório): E-mail do solicitante do suporte (ex.: "jane@example.com")
+    - `assigneeId` (string, opcional): ID do agente Zendesk atribuído ao ticket - Use as Configurações de Fluxo de Trabalho do Portal Connect para permitir a seleção do responsável
+    - `ticketType` (string, opcional): Tipo de ticket - Opções: problem, incident, question, task
+    - `ticketPriority` (string, opcional): Nível de prioridade - Opções: urgent, high, normal, low
+    - `ticketStatus` (string, opcional): Status do ticket - Opções: new, open, pending, hold, solved, closed
+    - `ticketDueAt` (string, opcional): Data de vencimento para tickets do tipo tarefa (timestamp ISO 8601)
+    - `ticketTags` (string, opcional): Array de tags a aplicar (ex.: `["enterprise", "outra_tag"]`)
+    - `ticketExternalId` (string, opcional): ID externo para vincular tickets a registros locais
+    - `ticketCustomFields` (object, opcional): Valores de campos personalizados em formato JSON
+  </Accordion>
+
+  <Accordion title="ZENDESK_UPDATE_TICKET">
+    **Descrição:** Atualize um ticket de suporte existente no Zendesk.
+
+    **Parâmetros:**
+    - `ticketId` (string, obrigatório): ID do ticket a ser atualizado (ex.: "35436")
+    - `ticketSubject` (string, opcional): Assunto atualizado do ticket
+    - `requesterName` (string, obrigatório): Nome do solicitante deste ticket
+    - `requesterEmail` (string, obrigatório): E-mail do solicitante deste ticket
+    - `assigneeId` (string, opcional): ID atualizado do responsável - Use as Configurações de Fluxo de Trabalho do Portal Connect
+    - `ticketType` (string, opcional): Tipo atualizado - Opções: problem, incident, question, task
+    - `ticketPriority` (string, opcional): Prioridade atualizada - Opções: urgent, high, normal, low
+    - `ticketStatus` (string, opcional): Status atualizado - Opções: new, open, pending, hold, solved, closed
+    - `ticketDueAt` (string, opcional): Nova data de vencimento (timestamp ISO 8601)
+    - `ticketTags` (string, opcional): Array de tags atualizadas
+    - `ticketExternalId` (string, opcional): Novo ID externo
+    - `ticketCustomFields` (object, opcional): Valores atualizados dos campos personalizados
+  </Accordion>
+
+  <Accordion title="ZENDESK_GET_TICKET_BY_ID">
+    **Descrição:** Recupere um ticket específico pelo ID.
+
+    **Parâmetros:**
+    - `ticketId` (string, obrigatório): ID do ticket a ser recuperado (ex.: "35436")
+  </Accordion>
+
+  <Accordion title="ZENDESK_ADD_COMMENT_TO_TICKET">
+    **Descrição:** Adicione um comentário ou nota interna a um ticket existente.
+
+    **Parâmetros:**
+    - `ticketId` (string, obrigatório): ID do ticket para adicionar o comentário (ex.: "35436")
+    - `commentBody` (string, obrigatório): Mensagem do comentário (aceita texto simples ou HTML, ex.: "Obrigado pela sua ajuda!")
+    - `isInternalNote` (boolean, opcional): Defina como verdadeiro para notas internas ao invés de respostas públicas (padrão é falso)
+    - `isPublic` (boolean, opcional): Verdadeiro para comentários públicos, falso para notas internas
+  </Accordion>
+
+  <Accordion title="ZENDESK_SEARCH_TICKETS">
+    **Descrição:** Busque tickets usando diversos filtros e critérios.
+
+    **Parâmetros:**
+    - `ticketSubject` (string, opcional): Filtrar pelo texto no assunto do ticket
+    - `ticketDescription` (string, opcional): Filtrar por texto na descrição e comentários do ticket
+    - `ticketStatus` (string, opcional): Filtrar por status - Opções: new, open, pending, hold, solved, closed
+    - `ticketType` (string, opcional): Filtrar por tipo - Opções: problem, incident, question, task, no_type
+    - `ticketPriority` (string, opcional): Filtrar por prioridade - Opções: urgent, high, normal, low, no_priority
+    - `requesterId` (string, opcional): Filtrar por ID do solicitante
+    - `assigneeId` (string, opcional): Filtrar pelo ID do agente responsável
+    - `recipientEmail` (string, opcional): Filtrar pelo e-mail do destinatário original
+    - `ticketTags` (string, opcional): Filtrar por tags do ticket
+    - `ticketExternalId` (string, opcional): Filtrar por ID externo
+    - `createdDate` (object, opcional): Filtrar por data de criação com operador (EQUALS, LESS_THAN_EQUALS, GREATER_THAN_EQUALS) e valor
+    - `updatedDate` (object, opcional): Filtrar por data de atualização com operador e valor
+    - `dueDate` (object, opcional): Filtrar por data de vencimento com operador e valor
+    - `sort_by` (string, opcional): Campo de ordenação - Opções: created_at, updated_at, priority, status, ticket_type
+    - `sort_order` (string, opcional): Direção da ordenação - Opções: asc, desc
+  </Accordion>
+</AccordionGroup>
+
+### **Gerenciamento de Usuários**
+
+<AccordionGroup>
+  <Accordion title="ZENDESK_CREATE_USER">
+    **Descrição:** Crie um novo usuário no Zendesk.
+
+    **Parâmetros:**
+    - `name` (string, obrigatório): Nome completo do usuário
+    - `email` (string, opcional): E-mail do usuário (ex.: "jane@example.com")
+    - `phone` (string, opcional): Telefone do usuário
+    - `role` (string, opcional): Papel do usuário - Opções: admin, agent, end-user
+    - `externalId` (string, opcional): Identificador único de outro sistema
+    - `details` (string, opcional): Detalhes adicionais do usuário
+    - `notes` (string, opcional): Notas internas sobre o usuário
+  </Accordion>
+
+  <Accordion title="ZENDESK_UPDATE_USER">
+    **Descrição:** Atualize informações de um usuário existente.
+
+    **Parâmetros:**
+    - `userId` (string, obrigatório): ID do usuário a ser atualizado
+    - `name` (string, opcional): Nome atualizado do usuário
+    - `email` (string, opcional): Novo e-mail (adicionado como e-mail secundário na atualização)
+    - `phone` (string, opcional): Novo telefone
+    - `role` (string, opcional): Novo papel - Opções: admin, agent, end-user
+    - `externalId` (string, opcional): Novo ID externo
+    - `details` (string, opcional): Novos detalhes do usuário
+    - `notes` (string, opcional): Novas notas internas
+  </Accordion>
+
+  <Accordion title="ZENDESK_GET_USER_BY_ID">
+    **Descrição:** Recupere um usuário específico pelo ID.
+
+    **Parâmetros:**
+    - `userId` (string, obrigatório): ID do usuário a ser recuperado
+  </Accordion>
+
+  <Accordion title="ZENDESK_SEARCH_USERS">
+    **Descrição:** Busque usuários utilizando vários critérios.
+
+    **Parâmetros:**
+    - `name` (string, opcional): Filtrar por nome do usuário
+    - `email` (string, opcional): Filtrar por e-mail do usuário (ex.: "jane@example.com")
+    - `role` (string, opcional): Filtrar por papel - Opções: admin, agent, end-user
+    - `externalId` (string, opcional): Filtrar por ID externo
+    - `sort_by` (string, opcional): Campo de ordenação - Opções: created_at, updated_at
+    - `sort_order` (string, opcional): Direção de ordenação - Opções: asc, desc
+  </Accordion>
+</AccordionGroup>
+
+### **Ferramentas Administrativas**
+
+<AccordionGroup>
+  <Accordion title="ZENDESK_GET_TICKET_FIELDS">
+    **Descrição:** Recupere todos os campos padrão e personalizados disponíveis para tickets.
+
+    **Parâmetros:**
+    - `paginationParameters` (object, opcional): Configurações de paginação
+      - `pageCursor` (string, opcional): Cursor de página para paginação
+  </Accordion>
+
+  <Accordion title="ZENDESK_GET_TICKET_AUDITS">
+    **Descrição:** Obtenha registros de auditoria (histórico somente leitura) dos tickets.
+
+    **Parâmetros:**
+    - `ticketId` (string, opcional): Obtenha auditorias para um ticket específico (se vazio, recupera auditorias de todos os tickets não arquivados, ex.: "1234")
+    - `paginationParameters` (object, opcional): Configurações de paginação
+      - `pageCursor` (string, opcional): Cursor de página para paginação
+  </Accordion>
+</AccordionGroup>
+
+## Campos Personalizados
+
+Campos personalizados permitem armazenar informações adicionais específicas para sua organização:
+
+```json
+[
+  { "id": 27642, "value": "745" },
+  { "id": 27648, "value": "yes" }
+]
+```
+
+## Níveis de Prioridade dos Tickets
+
+Compreendendo os níveis de prioridade:
+
+- **urgent** - Questões críticas que exigem atenção imediata
+- **high** - Questões importantes que devem ser tratadas rapidamente
+- **normal** - Prioridade padrão para a maioria dos tickets
+- **low** - Questões menores que podem ser tratadas quando conveniente
+
+## Fluxo de Status dos Tickets
+
+Progresso padrão de status dos tickets:
+
+- **new** - Recém-criado, ainda não atribuído
+- **open** - Em andamento
+- **pending** - Aguardando resposta do cliente ou ação externa
+- **hold** - Pausa temporária
+- **solved** - Problema resolvido, aguardando confirmação do cliente
+- **closed** - Ticket finalizado e fechado
+
+## Exemplos de Uso
+
+### Configuração Básica de Agente Zendesk
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha as ferramentas enterprise (as ferramentas Zendesk serão incluídas)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Crie um agente com capacidades Zendesk
+zendesk_agent = Agent(
+    role="Gerente de Suporte",
+    goal="Gerenciar tickets de suporte ao cliente e oferecer excelente atendimento",
+    backstory="Um assistente de IA especializado em operações de suporte ao cliente e gerenciamento de tickets.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa para criar um novo ticket de suporte
+create_ticket_task = Task(
+    description="Crie um ticket de suporte de alta prioridade para John Smith que não consegue acessar sua conta após redefinir a senha",
+    agent=zendesk_agent,
+    expected_output="Ticket de suporte criado com sucesso com o ID do ticket"
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[zendesk_agent],
+    tasks=[create_ticket_task]
+)
+
+crew.kickoff()
+```
+
+### Filtrando Ferramentas Zendesk Específicas
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha apenas ferramentas Zendesk específicas
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["zendesk_create_ticket", "zendesk_update_ticket", "zendesk_add_comment_to_ticket"]
+)
+
+support_agent = Agent(
+    role="Agente de Suporte ao Cliente",
+    goal="Atender consultas de clientes e resolver issues de suporte de forma eficiente",
+    backstory="Um agente de suporte experiente que se especializa em resolução de tickets e comunicação com clientes.",
+    tools=enterprise_tools
+)
+
+# Tarefa para gerenciar o fluxo de suporte
+support_task = Task(
+    description="Crie um ticket para problemas de login, adicione comentários de troubleshooting e atualize o status para resolvido",
+    agent=support_agent,
+    expected_output="Ticket de suporte gerenciado através de todo o fluxo de resolução"
+)
+
+crew = Crew(
+    agents=[support_agent],
+    tasks=[support_task]
+)
+
+crew.kickoff()
+```
+
+### Gerenciamento Avançado de Tickets
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+ticket_manager = Agent(
+    role="Gerente de Tickets",
+    goal="Gerenciar fluxos de tickets de suporte e garantir resolução tempestiva",
+    backstory="Um assistente de IA que se especializa em triagem de tickets de suporte e otimização de fluxos de trabalho.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa para gerenciar o ciclo de vida do ticket
+ticket_workflow = Task(
+    description="""
+    1. Crie um novo ticket de suporte para problemas de acesso à conta
+    2. Adicione notas internas com as etapas de troubleshooting
+    3. Atualize a prioridade do ticket de acordo com o nível do cliente
+    4. Adicione comentários de resolução e feche o ticket
+    """,
+    agent=ticket_manager,
+    expected_output="Ciclo de vida completo do ticket gerenciado da criação à resolução"
+)
+
+crew = Crew(
+    agents=[ticket_manager],
+    tasks=[ticket_workflow]
+)
+
+crew.kickoff()
+```
+
+### Análise e Relatórios de Suporte
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+support_analyst = Agent(
+    role="Analista de Suporte",
+    goal="Analisar métricas de suporte e gerar insights para desempenho da equipe",
+    backstory="Um IA analítico que se destaca na extração de insights a partir de dados de suporte e padrões de tickets.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa complexa envolvendo análise e geração de relatórios
+analytics_task = Task(
+    description="""
+    1. Busque todos os tickets abertos nos últimos 30 dias
+    2. Analise tempos de resolução dos tickets e satisfação do cliente
+    3. Identifique problemas comuns e padrões de suporte
+    4. Gere relatório semanal de desempenho do suporte
+    """,
+    agent=support_analyst,
+    expected_output="Relatório analítico abrangente de suporte com insights de desempenho e recomendações"
+)
+
+crew = Crew(
+    agents=[support_analyst],
+    tasks=[analytics_task]
+)
+
+crew.kickoff()
+```
