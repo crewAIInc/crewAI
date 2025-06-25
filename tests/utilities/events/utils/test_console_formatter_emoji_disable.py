@@ -96,11 +96,11 @@ class TestConsoleFormatterEmojiDisable:
                 assert formatter._get_icon(emoji) == expected_text
 
     def test_unknown_emoji_fallback(self):
-        """Test that unknown emojis fall back to ASCII-only representation."""
+        """Test that unknown emojis fall back to proper representation."""
         with patch.dict(os.environ, {"CREWAI_DISABLE_EMOJIS": "true"}):
             formatter = ConsoleFormatter(verbose=True)
             result = formatter._get_icon("🦄")
-            assert result == ""
+            assert result == "[ICON:UNKNOWN]"
 
     @patch.dict(os.environ, {"CREWAI_DISABLE_EMOJIS": "true"})
     def test_crew_tree_creation_without_emojis(self):

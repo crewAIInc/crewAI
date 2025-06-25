@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from rich.console import Console
 from rich.panel import Panel
@@ -7,6 +7,39 @@ from rich.text import Text
 from rich.tree import Tree
 from rich.live import Live
 from rich.syntax import Syntax
+
+DEFAULT_EMOJI_MAP = {
+    "✅": "[DONE]",
+    "❌": "[FAILED]", 
+    "🚀": "[CREW]",
+    "🔄": "[RUNNING]",
+    "📋": "[TASK]",
+    "🔧": "[TOOL]",
+    "🧠": "[THINKING]",
+    "🌊": "[FLOW]",
+    "✨": "[CREATED]",
+    "🧪": "[TEST]",
+    "📚": "[KNOWLEDGE]",
+    "🔍": "[SEARCH]",
+    "🔎": "[QUERY]",
+    "🤖": "[AGENT]",
+    "📊": "[METRICS]",
+    "⚡": "[QUICK]",
+    "🎯": "[TARGET]",
+    "🔗": "[LINK]",
+    "💡": "[IDEA]",
+    "⚠️": "[WARNING]",
+    "🎉": "[SUCCESS]",
+    "🔥": "[HOT]",
+    "💾": "[SAVE]",
+    "🔒": "[SECURE]",
+    "🌟": "[STAR]",
+}
+
+
+def _parse_bool_env(val: str) -> bool:
+    """Parse environment variable value to boolean."""
+    return val.lower() in ("true", "1", "yes") if val else False
 
 
 class ConsoleFormatter:
@@ -25,7 +58,13 @@ class ConsoleFormatter:
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
         self.verbose = verbose
-        self.disable_emojis = os.getenv("CREWAI_DISABLE_EMOJIS", "").lower() in ("true", "1", "yes")
+        self.disable_emojis = _parse_bool_env(os.getenv("CREWAI_DISABLE_EMOJIS", ""))
+        
+        self.emoji_map = DEFAULT_EMOJI_MAP.copy()
+        self.icon_cache: Dict[str, str] = {}
+        if self.disable_emojis:
+            self.icon_cache = {emoji: text for emoji, text in self.emoji_map.items()}
+        
         # Live instance to dynamically update a Tree renderable (e.g. the Crew tree)
         # When multiple Tree objects are printed sequentially we reuse this Live
         # instance so the previous render is replaced instead of writing a new one.
@@ -33,37 +72,15 @@ class ConsoleFormatter:
         # final Tree persists on the terminal.
         self._live: Optional[Live] = None
 
-    EMOJI_MAP = {
-        "✅": "[DONE]",
-        "❌": "[FAILED]", 
-        "🚀": "[CREW]",
-        "🔄": "[RUNNING]",
-        "📋": "[TASK]",
-        "🔧": "[TOOL]",
-        "🧠": "[THINKING]",
-        "🌊": "[FLOW]",
-        "✨": "[CREATED]",
-        "🧪": "[TEST]",
-        "📚": "[KNOWLEDGE]",
-        "🔍": "[SEARCH]",
-        "🔎": "[QUERY]",
-        "🤖": "[AGENT]",
-        "📊": "[METRICS]",
-        "⚡": "[QUICK]",
-        "🎯": "[TARGET]",
-        "🔗": "[LINK]",
-        "💡": "[IDEA]",
-        "⚠️": "[WARNING]",
-        "🎉": "[SUCCESS]",
-        "🔥": "[HOT]",
-        "💾": "[SAVE]",
-        "🔒": "[SECURE]",
-        "🌟": "[STAR]",
-    }
-
     def _get_icon(self, emoji: str) -> str:
+        """Get emoji or text alternative based on disable_emojis setting."""
         if self.disable_emojis:
-            return self.EMOJI_MAP.get(emoji, emoji.encode('ascii', 'ignore').decode('ascii'))
+            if emoji in self.icon_cache:
+                return self.icon_cache[emoji]
+            ascii_fallback = emoji.encode('ascii', 'ignore').decode('ascii')
+            fallback = f"[ICON:{ascii_fallback or 'UNKNOWN'}]"
+            self.icon_cache[emoji] = fallback
+            return fallback
         return emoji
 
     def create_panel(self, content: Text, title: str, style: str = "blue") -> Panel:
