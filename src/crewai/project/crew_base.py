@@ -86,18 +86,17 @@ def CrewBase(cls: T) -> T:
             import types
             return types.MethodType(_close_mcp_server, self)
 
-        def get_mcp_tools(self) -> List[BaseTool]:
+        def get_mcp_tools(self, *tool_names: list[str]) -> List[BaseTool]:
             if not self.mcp_server_params:
                 return []
 
             from crewai_tools import MCPServerAdapter
 
             adapter = getattr(self, '_mcp_server_adapter', None)
-            if adapter and isinstance(adapter, MCPServerAdapter):
-                return adapter.tools
+            if not adapter:
+                self._mcp_server_adapter = MCPServerAdapter(self.mcp_server_params)
 
-            self._mcp_server_adapter = MCPServerAdapter(self.mcp_server_params)
-            return self._mcp_server_adapter.tools
+            return self._mcp_server_adapter.tools.filter_by_names(tool_names or None)
 
 
         def load_configurations(self):
