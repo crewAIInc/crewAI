@@ -8,7 +8,7 @@ from crewai_tools.adapters.tool_collection import ToolCollection
 class TestToolCollection(unittest.TestCase):
     def setUp(self):
 
-        self.search_tool = self._create_mock_tool("search", "Search Tool")
+        self.search_tool = self._create_mock_tool("SearcH", "Search Tool") # Tool name is case sensitive
         self.calculator_tool = self._create_mock_tool("calculator", "Calculator Tool")
         self.translator_tool = self._create_mock_tool("translator", "Translator Tool")
 
@@ -26,7 +26,7 @@ class TestToolCollection(unittest.TestCase):
 
     def test_initialization(self):
         self.assertEqual(len(self.tools), 3)
-        self.assertEqual(self.tools[0].name, "search")
+        self.assertEqual(self.tools[0].name, "SearcH")
         self.assertEqual(self.tools[1].name, "calculator")
         self.assertEqual(self.tools[2].name, "translator")
 
@@ -170,3 +170,62 @@ class TestToolCollection(unittest.TestCase):
 
         with self.assertRaises(IndexError):
             _ = self.tools[123]
+
+    def test_filter_by_names(self):
+
+        filtered = self.tools.filter_by_names(None)
+
+        self.assertIsInstance(filtered, ToolCollection)
+        self.assertEqual(len(filtered), 3)
+
+        filtered = self.tools.filter_by_names(["search", "translator"])
+
+        self.assertIsInstance(filtered, ToolCollection)
+        self.assertEqual(len(filtered), 2)
+        self.assertEqual(filtered[0], self.search_tool)
+        self.assertEqual(filtered[1], self.translator_tool)
+        self.assertEqual(filtered["search"], self.search_tool)
+        self.assertEqual(filtered["translator"], self.translator_tool)
+
+        filtered = self.tools.filter_by_names(["search", "nonexistent"])
+
+        self.assertIsInstance(filtered, ToolCollection)
+        self.assertEqual(len(filtered), 1)
+        self.assertEqual(filtered[0], self.search_tool)
+
+        filtered = self.tools.filter_by_names(["nonexistent1", "nonexistent2"])
+
+        self.assertIsInstance(filtered, ToolCollection)
+        self.assertEqual(len(filtered), 0)
+
+        filtered = self.tools.filter_by_names([])
+
+        self.assertIsInstance(filtered, ToolCollection)
+        self.assertEqual(len(filtered), 0)
+
+    def test_filter_where(self):
+        filtered = self.tools.filter_where(lambda tool: tool.name.startswith("S"))
+
+        self.assertIsInstance(filtered, ToolCollection)
+        self.assertEqual(len(filtered), 1)
+        self.assertEqual(filtered[0], self.search_tool)
+        self.assertEqual(filtered["search"], self.search_tool)
+
+        filtered = self.tools.filter_where(lambda tool: True)
+
+        self.assertIsInstance(filtered, ToolCollection)
+        self.assertEqual(len(filtered), 3)
+        self.assertEqual(filtered[0], self.search_tool)
+        self.assertEqual(filtered[1], self.calculator_tool)
+        self.assertEqual(filtered[2], self.translator_tool)
+
+        filtered = self.tools.filter_where(lambda tool: False)
+
+        self.assertIsInstance(filtered, ToolCollection)
+        self.assertEqual(len(filtered), 0)
+        filtered = self.tools.filter_where(lambda tool: len(tool.name) > 8)
+
+        self.assertIsInstance(filtered, ToolCollection)
+        self.assertEqual(len(filtered), 2)
+        self.assertEqual(filtered[0], self.calculator_tool)
+        self.assertEqual(filtered[1], self.translator_tool)

@@ -49,9 +49,5 @@ def CrewaiEnterpriseTools(
     adapter = EnterpriseActionKitToolAdapter(**adapter_kwargs)
     all_tools = adapter.tools()
 
-    if actions_list is None:
-        return ToolCollection(all_tools)
-
     # Filter tools based on the provided list
-    filtered_tools = [tool for tool in all_tools if tool.name.lower() in [action.lower() for action in actions_list]]
-    return ToolCollection(filtered_tools)
+    return ToolCollection(all_tools).filter_by_names(actions_list)
