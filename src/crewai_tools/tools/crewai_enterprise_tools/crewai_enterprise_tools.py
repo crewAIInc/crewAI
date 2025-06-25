@@ -5,6 +5,7 @@ Crewai Enterprise Tools
 import os
 import typing as t
 import logging
+import json
 from crewai.tools import BaseTool
 from crewai_tools.adapters.enterprise_adapter import EnterpriseActionKitToolAdapter
 from crewai_tools.adapters.tool_collection import ToolCollection
@@ -50,6 +51,31 @@ def CrewaiEnterpriseTools(
 
     adapter = EnterpriseActionKitToolAdapter(**adapter_kwargs)
     all_tools = adapter.tools()
+    parsed_actions_list = _parse_actions_list(actions_list)
 
     # Filter tools based on the provided list
-    return ToolCollection(all_tools).filter_by_names(actions_list)
+    return ToolCollection(all_tools).filter_by_names(parsed_actions_list)
+
+
+# ENTERPRISE INJECTION ONLY
+def _parse_actions_list(actions_list: t.Optional[t.List[str]]) -> t.List[str] | None:
+    """Parse a string representation of a list of tool names to a list of tool names.
+
+    Args:
+        actions_list: A string representation of a list of tool names.
+
+    Returns:
+        A list of tool names.
+    """
+    if actions_list is not None:
+        return actions_list
+
+    actions_list_from_env = os.environ.get("CREWAI_ENTERPRISE_TOOLS_ACTIONS_LIST")
+    if actions_list_from_env is None:
+        return None
+
+    try:
+        return json.loads(actions_list_from_env)
+    except json.JSONDecodeError:
+        logger.warning(f"Failed to parse actions_list as JSON: {actions_list_from_env}")
+        return None
