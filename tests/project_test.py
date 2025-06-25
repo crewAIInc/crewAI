@@ -93,6 +93,9 @@ class InternalCrewWithMCP(InternalCrew):
     def reporting_analyst(self):
         return Agent(config=self.agents_config["reporting_analyst"], tools=self.get_mcp_tools())  # type: ignore[index]
 
+    @agent
+    def researcher(self):
+        return Agent(config=self.agents_config["researcher"], tools=self.get_mcp_tools("simple_tool"))  # type: ignore[index]
 
 def test_agent_memoization():
     crew = SimpleCrew()
@@ -251,11 +254,20 @@ def simple_tool():
     """Return 'Hi!'"""
     return "Hi!"
 
+@tool
+def another_simple_tool():
+    """Return 'Hi!'"""
+    return "Hi!"
+
+
 def test_internal_crew_with_mcp():
-    mock = Mock()
-    mock.tools = [simple_tool]
+    from crewai_tools import MCPServerAdapter
+    from crewai_tools.adapters.mcp_adapter import ToolCollection
+    mock = Mock(spec=MCPServerAdapter)
+    mock.tools = ToolCollection([simple_tool, another_simple_tool])
     with patch("crewai_tools.MCPServerAdapter", return_value=mock) as adapter_mock:
         crew = InternalCrewWithMCP()
-        assert crew.reporting_analyst().tools == [simple_tool]
+        assert crew.reporting_analyst().tools == [simple_tool, another_simple_tool]
+        assert crew.researcher().tools == [simple_tool]
 
     adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000})
