@@ -31,9 +31,11 @@ def CrewaiEnterpriseTools(
     Returns:
         A ToolCollection of BaseTool instances for enterprise actions
     """
-    if enterprise_token is None:
+
+    if enterprise_token is None or enterprise_token == "":
         enterprise_token = os.environ.get("CREWAI_ENTERPRISE_TOOLS_TOKEN")
-        logger.warning("No enterprise token provided")
+        if not enterprise_token:
+            logger.warning("No enterprise token provided")
 
     adapter_kwargs = {"enterprise_action_token": enterprise_token}
 

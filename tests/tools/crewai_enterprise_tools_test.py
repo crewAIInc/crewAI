@@ -15,7 +15,7 @@ class TestCrewaiEnterpriseTools(unittest.TestCase):
             self._create_mock_tool("tool3", "Tool 3 Description"),
         ]
         self.adapter_patcher = patch(
-            'crewai_tools.tools.crewai_enterprise_tools.crewai_enterprise_tools.EnterpriseActionKitToolAdapter'
+            "crewai_tools.tools.crewai_enterprise_tools.crewai_enterprise_tools.EnterpriseActionKitToolAdapter"
         )
         self.MockAdapter = self.adapter_patcher.start()
 
@@ -55,16 +55,21 @@ class TestCrewaiEnterpriseTools(unittest.TestCase):
         CrewaiEnterpriseTools(
             enterprise_token="test-token",
             enterprise_action_kit_project_id="project-id",
-            enterprise_action_kit_project_url="project-url"
+            enterprise_action_kit_project_url="project-url",
         )
 
         self.MockAdapter.assert_called_once_with(
             enterprise_action_token="test-token",
             enterprise_action_kit_project_id="project-id",
-            enterprise_action_kit_project_url="project-url"
+            enterprise_action_kit_project_url="project-url",
         )
 
     @patch.dict(os.environ, {"CREWAI_ENTERPRISE_TOOLS_TOKEN": "env-token"})
     def test_uses_environment_token(self):
         CrewaiEnterpriseTools()
+        self.MockAdapter.assert_called_once_with(enterprise_action_token="env-token")
+
+    @patch.dict(os.environ, {"CREWAI_ENTERPRISE_TOOLS_TOKEN": "env-token"})
+    def test_uses_environment_token_when_no_token_provided(self):
+        CrewaiEnterpriseTools(enterprise_token="")
         self.MockAdapter.assert_called_once_with(enterprise_action_token="env-token")
