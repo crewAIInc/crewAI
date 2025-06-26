@@ -1,0 +1,194 @@
+---
+title: Busca RAG em Canal do YouTube
+description: O `YoutubeChannelSearchTool` foi desenvolvido para realizar buscas RAG (Retrieval-Augmented Generation) no conteúdo de um canal do Youtube.
+icon: youtube
+---
+
+# `YoutubeChannelSearchTool`
+
+<Note>
+    Ainda estamos trabalhando para melhorar as ferramentas, então pode haver comportamentos inesperados ou alterações no futuro.
+</Note>
+
+## Descrição
+
+Esta ferramenta foi desenvolvida para realizar buscas semânticas dentro do conteúdo de um canal específico do Youtube.
+Aproveitando a metodologia RAG (Retrieval-Augmented Generation), ela fornece resultados de busca relevantes,
+tornando-se indispensável para extrair informações ou encontrar conteúdos específicos sem a necessidade de percorrer manualmente os vídeos.
+Ela otimiza o processo de busca em canais do Youtube, sendo ideal para pesquisadores, criadores de conteúdo e espectadores que buscam informações ou temas específicos.
+
+## Instalação
+
+Para utilizar o YoutubeChannelSearchTool, é necessário instalar o pacote `crewai_tools`. Execute o seguinte comando no seu terminal para instalar:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+O exemplo a seguir demonstra como utilizar o `YoutubeChannelSearchTool` com um agente CrewAI:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeChannelSearchTool
+
+# Inicializa a ferramenta para buscas gerais em canais do YouTube
+youtube_channel_tool = YoutubeChannelSearchTool()
+
+# Define um agente que utiliza a ferramenta
+channel_researcher = Agent(
+    role="Channel Researcher",
+    goal="Extrair informações relevantes de canais do YouTube",
+    backstory="Um pesquisador especialista em analisar conteúdos de canais do YouTube.",
+    tools=[youtube_channel_tool],
+    verbose=True,
+)
+
+# Exemplo de tarefa para buscar informações em um canal específico
+research_task = Task(
+    description="Buscar informações sobre tutoriais de machine learning no canal do YouTube {youtube_channel_handle}",
+    expected_output="Um resumo dos principais tutoriais de machine learning disponíveis no canal.",
+    agent=channel_researcher,
+)
+
+# Cria e executa o crew
+crew = Crew(agents=[channel_researcher], tasks=[research_task])
+result = crew.kickoff(inputs={"youtube_channel_handle": "@exampleChannel"})
+```
+
+Você também pode inicializar a ferramenta com um handle específico de canal do YouTube:
+
+```python Code
+# Inicializa a ferramenta com o handle específico de um canal do YouTube
+youtube_channel_tool = YoutubeChannelSearchTool(
+    youtube_channel_handle='@exampleChannel'
+)
+
+# Define um agente que utiliza a ferramenta
+channel_researcher = Agent(
+    role="Channel Researcher",
+    goal="Extrair informações relevantes de um canal específico do YouTube",
+    backstory="Um pesquisador especialista em analisar conteúdos de canais do YouTube.",
+    tools=[youtube_channel_tool],
+    verbose=True,
+)
+```
+
+## Parâmetros
+
+O `YoutubeChannelSearchTool` aceita os seguintes parâmetros:
+
+- **youtube_channel_handle**: Opcional. O handle do canal do YouTube para realizar a busca. Se fornecido durante a inicialização, o agente não precisará informá-lo ao utilizar a ferramenta. Se o handle não começar com '@', será adicionado automaticamente.
+- **config**: Opcional. Configurações para o sistema RAG subjacente, incluindo parâmetros de LLM e embedder.
+- **summarize**: Opcional. Indica se o conteúdo recuperado deve ser resumido. O padrão é `False`.
+
+Ao utilizar a ferramenta com um agente, o agente deverá fornecer:
+
+- **search_query**: Obrigatório. A consulta de busca para encontrar informações relevantes no conteúdo do canal.
+- **youtube_channel_handle**: Obrigatório apenas se não for fornecido durante a inicialização. O handle do canal do YouTube onde realizar a busca.
+
+## Modelo Personalizado e Embeddings
+
+Por padrão, a ferramenta utiliza o OpenAI tanto para embeddings quanto para sumarização. Para personalizar o modelo, é possível usar um dicionário de configuração como no exemplo:
+
+```python Code  
+youtube_channel_tool = YoutubeChannelSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```
+
+## Exemplo de Integração com Agente
+
+Veja um exemplo mais detalhado de como integrar o `YoutubeChannelSearchTool` com um agente CrewAI:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeChannelSearchTool
+
+# Inicializa a ferramenta
+youtube_channel_tool = YoutubeChannelSearchTool()
+
+# Define um agente que utiliza a ferramenta
+channel_researcher = Agent(
+    role="Channel Researcher",
+    goal="Extrair e analisar informações de canais do YouTube",
+    backstory="""Você é um pesquisador especialista em canais, com experiência
+    em extrair e analisar informações de canais do YouTube. Você possui olho clínico para detalhes
+    e pode rapidamente identificar pontos-chave e insights a partir do conteúdo em vídeo de todo o canal.""",
+    tools=[youtube_channel_tool],
+    verbose=True,
+)
+
+# Crie uma tarefa para o agente
+research_task = Task(
+    description="""
+    Buscar informações sobre projetos e tutoriais de ciência de dados
+    no canal do YouTube {youtube_channel_handle}.
+    
+    Foque em:
+    1. Principais técnicas de ciência de dados abordadas
+    2. Séries de tutoriais populares
+    3. Vídeos mais vistos ou recomendados
+    
+    Forneça um resumo abrangente sobre esses pontos.
+    """,
+    expected_output="Um resumo detalhado sobre o conteúdo de ciência de dados disponível no canal.",
+    agent=channel_researcher,
+)
+
+# Execute a tarefa
+crew = Crew(agents=[channel_researcher], tasks=[research_task])
+result = crew.kickoff(inputs={"youtube_channel_handle": "@exampleDataScienceChannel"})
+```
+
+## Detalhes da Implementação
+
+O `YoutubeChannelSearchTool` é implementado como uma subclasse de `RagTool`, que fornece a funcionalidade base para Retrieval-Augmented Generation:
+
+```python Code
+class YoutubeChannelSearchTool(RagTool):
+    name: str = "Search a Youtube Channels content"
+    description: str = "A tool that can be used to semantic search a query from a Youtube Channels content."
+    args_schema: Type[BaseModel] = YoutubeChannelSearchToolSchema
+
+    def __init__(self, youtube_channel_handle: Optional[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        if youtube_channel_handle is not None:
+            kwargs["data_type"] = DataType.YOUTUBE_CHANNEL
+            self.add(youtube_channel_handle)
+            self.description = f"A tool that can be used to semantic search a query the {youtube_channel_handle} Youtube Channels content."
+            self.args_schema = FixedYoutubeChannelSearchToolSchema
+            self._generate_description()
+
+    def add(
+        self,
+        youtube_channel_handle: str,
+        **kwargs: Any,
+    ) -> None:
+        if not youtube_channel_handle.startswith("@"):
+            youtube_channel_handle = f"@{youtube_channel_handle}"
+        super().add(youtube_channel_handle, **kwargs)
+```
+
+## Conclusão
+
+O `YoutubeChannelSearchTool` oferece uma forma poderosa de buscar e extrair informações do conteúdo de canais do YouTube utilizando técnicas RAG. Ao possibilitar que agentes busquem entre todos os vídeos de um canal, facilita tarefas de extração e análise de informações que seriam difíceis de executar manualmente. Esta ferramenta é especialmente útil para pesquisa, análise de conteúdo e extração de conhecimento de canais do YouTube.

@@ -1,0 +1,55 @@
+---
+title: "Visão Geral"
+description: "Automatize fluxos de trabalho e integre com plataformas e serviços externos"
+icon: "face-smile"
+---
+
+Essas ferramentas permitem que seus agentes automatizem fluxos de trabalho, integrem com plataformas externas e conectem-se a diversos serviços de terceiros para funcionalidades aprimoradas.
+
+## **Ferramentas Disponíveis**
+
+<CardGroup cols={2}>
+  <Card title="Apify Actor Tool" icon="spider" href="/pt-BR/tools/automation/apifyactorstool">
+    Execute atores do Apify para tarefas de automação e raspagem de dados web.
+  </Card>
+
+  <Card title="Composio Tool" icon="puzzle-piece" href="/pt-BR/tools/automation/composiotool">
+    Integre com centenas de aplicativos e serviços através do Composio.
+  </Card>
+
+  <Card title="Multion Tool" icon="window-restore" href="/pt-BR/tools/automation/multiontool">
+    Automatize interações no navegador e fluxos de trabalho baseados na web.
+  </Card>
+</CardGroup>
+
+## **Casos de Uso Comuns**
+
+- **Automação de Fluxos de Trabalho**: Automatize tarefas e processos repetitivos
+- **Integração com APIs**: Conecte-se a APIs e serviços externos
+- **Sincronização de Dados**: Sincronize dados entre diferentes plataformas
+- **Orquestração de Processos**: Coordene fluxos de trabalho complexos e com múltiplas etapas
+- **Serviços de Terceiros**: Aproveite ferramentas e plataformas externas
+
+```python
+from crewai_tools import ApifyActorTool, ComposioTool, MultiOnTool
+
+# Create automation tools
+apify_automation = ApifyActorTool()
+platform_integration = ComposioTool()
+browser_automation = MultiOnTool()
+
+# Add to your agent
+agent = Agent(
+    role="Automation Specialist",
+    tools=[apify_automation, platform_integration, browser_automation],
+    goal="Automate workflows and integrate systems"
+)
+```
+
+## **Benefícios da Integração**
+
+- **Eficiência**: Reduza o trabalho manual por meio da automação
+- **Escalabilidade**: Gerencie cargas de trabalho crescentes automaticamente
+- **Confiabilidade**: Execução consistente de fluxos de trabalho
+- **Conectividade**: Integre diferentes sistemas e plataformas
+- **Produtividade**: Foque em tarefas de alto valor enquanto a automação cuida das rotinas
