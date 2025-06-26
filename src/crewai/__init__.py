@@ -31,4 +31,5 @@ __all__ = [
     "Knowledge",
     "TaskOutput",
     "LLMGuardrail",
+    "__version__",
 ]
