@@ -1,7 +1,6 @@
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Union
 
-import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
@@ -104,9 +103,9 @@ def test_model_with_python310_union_syntax():
     schema = parser.get_schema()
 
     expected_schema = """{
-    union_field: Optional[str],
-    multi_union_field: Optional[Union[int, str]],
-    non_optional_union: Union[int, str]
+    union_field: str | None,
+    multi_union_field: int | str | None,
+    non_optional_union: int | str
 }"""
     assert schema.strip() == expected_schema.strip()
 
@@ -123,8 +122,8 @@ def test_mixed_union_syntax():
 
     expected_schema = """{
     traditional_optional: Optional[str],
-    new_union_syntax: Optional[str],
+    new_union_syntax: str | None,
     traditional_union: Union[int, str],
-    new_multi_union: Union[int, str, float]
+    new_multi_union: int | str | float
 }"""
     assert schema.strip() == expected_schema.strip()
