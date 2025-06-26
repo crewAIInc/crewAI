@@ -285,13 +285,13 @@ Watch this video tutorial for a step-by-step demonstration of deploying your cre
 
 ### 11. API Keys
 
-When running ```crewai create crew``` command, the CLI will first show you the top 5 most common LLM providers and ask you to select one.
+When running ```crewai create crew``` command, the CLI will show you a list of available LLM providers to choose from, followed by model selection for your chosen provider.
 
-Once you've selected an LLM provider, you will be prompted for API keys.
+Once you've selected an LLM provider and model, you will be prompted for API keys.
 
-#### Initial API key providers
+#### Available LLM Providers
 
-The CLI will initially prompt for API keys for the following services:
+Here's a list of the most popular LLM providers suggested by the CLI:
 
 * OpenAI
 * Groq
@@ -299,17 +299,14 @@ The CLI will initially prompt for API keys for the following services:
 * Google Gemini
 * SambaNova
 
-When you select a provider, the CLI will prompt you to enter your API key.
+When you select a provider, the CLI will then show you available models for that provider and prompt you to enter your API key.
 
 #### Other Options
 
-If you select option 6, you will be able to select from a list of LiteLLM supported providers.
+If you select "other", you will be able to select from a list of LiteLLM supported providers.
 
 When you select a provider, the CLI will prompt you to enter the Key name and the API key.
 
 See the following link for each provider's key name:
 
 * [LiteLLM Providers](https://docs.litellm.ai/docs/providers)
-
-
-
