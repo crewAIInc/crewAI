@@ -1,0 +1,119 @@
+---
+title: "Introdução"
+description: "Referência completa para a API REST do CrewAI Enterprise"
+icon: "code"
+---
+
+# CrewAI Enterprise API
+
+Bem-vindo à referência da API do CrewAI Enterprise. Esta API permite que você interaja programaticamente com seus crews implantados, possibilitando a integração com seus aplicativos, fluxos de trabalho e serviços.
+
+## Início Rápido
+
+<Steps>
+  <Step title="Obtenha suas credenciais de API">
+    Navegue até a página de detalhes do seu crew no painel do CrewAI Enterprise e copie seu Bearer Token na aba Status.
+  </Step>
+  
+  <Step title="Descubra os Inputs Necessários">
+    Use o endpoint `GET /inputs` para ver quais parâmetros seu crew espera.
+  </Step>
+  
+  <Step title="Inicie uma Execução de Crew">
+    Chame `POST /kickoff` com seus inputs para iniciar a execução do crew e receber um `kickoff_id`.
+  </Step>
+  
+  <Step title="Monitore o Progresso">
+    Use `GET /status/{kickoff_id}` para checar o status da execução e recuperar os resultados.
+  </Step>
+</Steps>
+
+## Autenticação
+
+Todas as requisições à API exigem autenticação usando um Bearer token. Inclua seu token no header `Authorization`:
+
+```bash
+curl -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  https://your-crew-url.crewai.com/inputs
+```
+
+### Tipos de Token
+
+| Tipo de Token       | Escopo                   | Caso de Uso                                              |
+|:--------------------|:------------------------|:---------------------------------------------------------|
+| **Bearer Token**    | Acesso em nível de organização | Operações completas de crew, ideal para integração server-to-server |
+| **User Bearer Token** | Acesso com escopo de usuário         | Permissões limitadas, adequado para operações específicas de usuário   |
+
+<Tip>
+Você pode encontrar ambos os tipos de token na aba Status da página de detalhes do seu crew no painel do CrewAI Enterprise.
+</Tip>
+
+## URL Base
+
+Cada crew implantado possui um endpoint de API único:
+
+```
+https://your-crew-name.crewai.com
+```
+
+Substitua `your-crew-name` pela URL real do seu crew no painel.
+
+## Fluxo Típico
+
+1. **Descoberta**: Chame `GET /inputs` para entender o que seu crew precisa
+2. **Execução**: Envie os inputs via `POST /kickoff` para iniciar o processamento  
+3. **Monitoramento**: Faça polling em `GET /status/{kickoff_id}` até a conclusão
+4. **Resultados**: Extraia o output final da resposta concluída
+
+## Tratamento de Erros
+
+A API utiliza códigos de status HTTP padrão:
+
+| Código | Significado                           |
+|--------|:--------------------------------------|
+| `200`  | Sucesso                               |
+| `400`  | Requisição Inválida - Formato de input inválido |
+| `401`  | Não Autorizado - Bearer token inválido |
+| `404`  | Não Encontrado - Recurso não existe     |
+| `422`  | Erro de Validação - Inputs obrigatórios ausentes |
+| `500`  | Erro no Servidor - Contate o suporte    |
+
+## Testes Interativos
+
+<Info>
+**Por que não há botão "Enviar"?** Como cada usuário do CrewAI Enterprise possui sua própria URL de crew, utilizamos o **modo referência** em vez de um playground interativo para evitar confusão. Isso mostra exatamente como as requisições devem ser feitas, sem botões de envio não funcionais.
+</Info>
+
+Cada página de endpoint mostra para você:
+- ✅ **Formato exato da requisição** com todos os parâmetros
+- ✅ **Exemplos de resposta** para casos de sucesso e erro  
+- ✅ **Exemplos de código** em várias linguagens (cURL, Python, JavaScript, etc.)
+- ✅ **Exemplos de autenticação** com o formato adequado de Bearer token
+
+### **Para testar sua API de verdade:**
+
+<CardGroup cols={2}>
+  <Card title="Copie Exemplos cURL" icon="terminal">
+    Copie os exemplos cURL e substitua a URL + token por seus valores reais
+  </Card>
+  <Card title="Use Postman/Insomnia" icon="play">
+    Importe os exemplos na sua ferramenta de testes de API preferida
+  </Card>
+</CardGroup>
+
+**Exemplo de fluxo:**
+1. **Copie este exemplo cURL** de qualquer página de endpoint
+2. **Substitua `your-actual-crew-name.crewai.com`** pela URL real do seu crew  
+3. **Substitua o Bearer token** pelo seu token real do painel
+4. **Execute a requisição** no seu terminal ou cliente de API
+
+## Precisa de Ajuda?
+
+<CardGroup cols={2}>
+  <Card title="Suporte Enterprise" icon="headset" href="mailto:support@crewai.com">
+    Obtenha ajuda com integração da API e resolução de problemas
+  </Card>
+  <Card title="Painel Enterprise" icon="chart-line" href="https://app.crewai.com">
+    Gerencie seus crews e visualize logs de execução
+  </Card>
+</CardGroup>

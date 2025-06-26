@@ -1,0 +1,140 @@
+---
+title: Usando Agentes Multimodais
+description: Aprenda como habilitar e usar capacidades multimodais em seus agentes para processar imagens e outros conteúdos não textuais dentro do framework CrewAI.
+icon: video
+---
+
+## Usando Agentes Multimodais
+
+O CrewAI suporta agentes multimodais que podem processar tanto conteúdo textual quanto não textual, como imagens. Este guia mostrará como habilitar e utilizar capacidades multimodais em seus agentes.
+
+### Habilitando Capacidades Multimodais
+
+Para criar um agente multimodal, basta definir o parâmetro `multimodal` como `True` ao inicializar seu agente:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Image Analyst",
+    goal="Analyze and extract insights from images",
+    backstory="An expert in visual content interpretation with years of experience in image analysis",
+    multimodal=True  # This enables multimodal capabilities
+)
+```
+
+Ao definir `multimodal=True`, o agente é automaticamente configurado com as ferramentas necessárias para lidar com conteúdo não textual, incluindo a `AddImageTool`.
+
+### Trabalhando com Imagens
+
+O agente multimodal vem pré-configurado com a `AddImageTool`, permitindo que ele processe imagens. Não é necessário adicionar esta ferramenta manualmente – ela é automaticamente incluída ao habilitar capacidades multimodais.
+
+Aqui está um exemplo completo mostrando como usar um agente multimodal para analisar uma imagem:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create a multimodal agent
+image_analyst = Agent(
+    role="Product Analyst",
+    goal="Analyze product images and provide detailed descriptions",
+    backstory="Expert in visual product analysis with deep knowledge of design and features",
+    multimodal=True
+)
+
+# Create a task for image analysis
+task = Task(
+    description="Analyze the product image at https://example.com/product.jpg and provide a detailed description",
+    expected_output="A detailed description of the product image",
+    agent=image_analyst
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[image_analyst],
+    tasks=[task]
+)
+
+result = crew.kickoff()
+```
+
+### Uso Avançado com Contexto
+
+Você pode fornecer contexto adicional ou perguntas específicas sobre a imagem ao criar tarefas para agentes multimodais. A descrição da tarefa pode incluir aspectos específicos nos quais você deseja que o agente foque:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create a multimodal agent for detailed analysis
+expert_analyst = Agent(
+    role="Visual Quality Inspector",
+    goal="Perform detailed quality analysis of product images",
+    backstory="Senior quality control expert with expertise in visual inspection",
+    multimodal=True  # AddImageTool is automatically included
+)
+
+# Create a task with specific analysis requirements
+inspection_task = Task(
+    description="""
+    Analyze the product image at https://example.com/product.jpg with focus on:
+    1. Quality of materials
+    2. Manufacturing defects
+    3. Compliance with standards
+    Provide a detailed report highlighting any issues found.
+    """,
+    expected_output="A detailed report highlighting any issues found",
+    agent=expert_analyst
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[expert_analyst],
+    tasks=[inspection_task]
+)
+
+result = crew.kickoff()
+```
+
+### Detalhes da Ferramenta
+
+Ao trabalhar com agentes multimodais, a `AddImageTool` é automaticamente configurada com o seguinte esquema:
+
+```python
+class AddImageToolSchema:
+    image_url: str  # Required: The URL or path of the image to process
+    action: Optional[str] = None  # Optional: Additional context or specific questions about the image
+```
+
+O agente multimodal irá automaticamente realizar o processamento de imagens por meio de suas ferramentas internas, permitindo que ele:
+- Acesse imagens via URLs ou caminhos de arquivos locais
+- Processe o conteúdo da imagem com contexto opcional ou perguntas específicas
+- Forneça análises e insights com base nas informações visuais e requisitos da tarefa
+
+### Boas Práticas
+
+Ao trabalhar com agentes multimodais, tenha em mente as seguintes boas práticas:
+
+1. **Acesso à Imagem**
+   - Certifique-se de que suas imagens estejam acessíveis via URLs alcançáveis pelo agente
+   - Para imagens locais, considere hospedá-las temporariamente ou utilize caminhos absolutos
+   - Verifique se as URLs das imagens são válidas e acessíveis antes de rodar as tarefas
+
+2. **Descrição da Tarefa**
+   - Seja específico sobre quais aspectos da imagem você deseja que o agente analise
+   - Inclua perguntas ou requisitos claros na descrição da tarefa
+   - Considere usar o parâmetro opcional `action` para uma análise focada
+
+3. **Gerenciamento de Recursos**
+   - O processamento de imagens pode exigir mais recursos computacionais do que tarefas apenas textuais
+   - Alguns modelos de linguagem podem exigir codificação em base64 para dados de imagem
+   - Considere o processamento em lote para múltiplas imagens visando otimizar o desempenho
+
+4. **Configuração do Ambiente**
+   - Verifique se seu ambiente possui as dependências necessárias para processamento de imagens
+   - Certifique-se de que seu modelo de linguagem suporta capacidades multimodais
+   - Teste primeiro com imagens pequenas para validar sua configuração
+
+5. **Tratamento de Erros**
+   - Implemente tratamento apropriado para falhas no carregamento de imagens
+   - Tenha estratégias de contingência para casos onde o processamento de imagens falhar
+   - Monitore e registre operações de processamento de imagens para depuração

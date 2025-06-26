@@ -2099,7 +2099,7 @@ def mock_get_auth_token():
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
-    from crewai_tools import SerperDevTool, XMLSearchTool
+    from crewai_tools import SerperDevTool, XMLSearchTool, CSVSearchTool, EnterpriseActionTool
 
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
@@ -2108,19 +2108,42 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
         "goal": "test goal",
         "backstory": "test backstory",
         "tools": [
-            {"module": "crewai_tools", "name": "SerperDevTool"},
-            {"module": "crewai_tools", "name": "XMLSearchTool"},
+            {"module": "crewai_tools", "name": "SerperDevTool", "init_params": {"n_results": 30}},
+            {"module": "crewai_tools", "name": "XMLSearchTool", "init_params": {"summarize": True}},
+            {"module": "crewai_tools", "name": "CSVSearchTool", "init_params": {}},
+
+            # using a tools that returns a list of BaseTools
+            {"module": "crewai_tools", "name": "CrewaiEnterpriseTools", "init_params": {"actions_list": [], "enterprise_token": "test_key"}},
         ],
     }
     mock_get_agent.return_value = mock_get_response
-    agent = Agent(from_repository="test_agent")
+
+    tool_action = EnterpriseActionTool(
+        name="test_name",
+        description="test_description",
+        enterprise_action_token="test_token",
+        action_name="test_action_name",
+        action_schema={"test": "test"},
+    )
+
+    with patch("crewai_tools.CrewaiEnterpriseTools", return_value=[tool_action]):
+        agent = Agent(from_repository="test_agent")
 
     assert agent.role == "test role"
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
-    assert len(agent.tools) == 2
+    assert len(agent.tools) == 4
+
     assert isinstance(agent.tools[0], SerperDevTool)
+    assert agent.tools[0].n_results == 30
     assert isinstance(agent.tools[1], XMLSearchTool)
+    assert agent.tools[1].summarize
+
+    assert isinstance(agent.tools[2], CSVSearchTool)
+    assert not agent.tools[2].summarize
+
+    assert isinstance(agent.tools[3], EnterpriseActionTool)
+    assert agent.tools[3].name == "test_name"
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_agent")
@@ -2133,7 +2156,7 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
-        "tools": [{"name": "SerperDevTool", "module": "crewai_tools"}],
+        "tools": [{"name": "SerperDevTool", "module": "crewai_tools", "init_params": {}}],
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent", role="Custom Role")

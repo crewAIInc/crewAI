@@ -1,0 +1,220 @@
+---
+title: Ferramenta de Raspagem de Sites Scrapfly
+description: A `ScrapflyScrapeWebsiteTool` aproveita a API de web scraping da Scrapfly para extrair conteúdo de sites em diversos formatos.
+icon: spider
+---
+
+# `ScrapflyScrapeWebsiteTool`
+
+## Descrição
+
+A `ScrapflyScrapeWebsiteTool` foi desenvolvida para aproveitar a API de web scraping da [Scrapfly](https://scrapfly.io/) para extrair conteúdo de sites. Esta ferramenta oferece recursos avançados de raspagem com suporte a navegador headless, proxies e recursos de bypass de anti-bot. Permite extrair dados de páginas web em vários formatos, incluindo HTML bruto, markdown e texto simples, sendo ideal para uma ampla variedade de tarefas de raspagem de sites.
+
+## Instalação
+
+Para utilizar esta ferramenta, é necessário instalar o Scrapfly SDK:
+
+```shell
+uv add scrapfly-sdk
+```
+
+Você também precisará obter uma chave de API da Scrapfly registrando-se em [scrapfly.io/register](https://www.scrapfly.io/register/).
+
+## Passos para Começar
+
+Para usar a `ScrapflyScrapeWebsiteTool` de forma eficaz, siga estas etapas:
+
+1. **Instale as Dependências**: Instale o Scrapfly SDK usando o comando acima.
+2. **Obtenha a Chave de API**: Cadastre-se na Scrapfly para obter sua chave de API.
+3. **Inicialize a Ferramenta**: Crie uma instância da ferramenta com sua chave de API.
+4. **Configure os Parâmetros de Raspagem**: Personalize os parâmetros de raspagem conforme suas necessidades.
+
+## Exemplo
+
+O exemplo a seguir demonstra como usar a `ScrapflyScrapeWebsiteTool` para extrair conteúdo de um site:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapflyScrapeWebsiteTool
+
+# Initialize the tool
+scrape_tool = ScrapflyScrapeWebsiteTool(api_key="your_scrapfly_api_key")
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Example task to extract content from a website
+scrape_task = Task(
+    description="Extract the main content from the product page at https://web-scraping.dev/products and summarize the available products.",
+    expected_output="A summary of the products available on the website.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+Você também pode personalizar os parâmetros de raspagem:
+
+```python Code
+# Example with custom scraping parameters
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites with custom parameters",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# The agent will use the tool with parameters like:
+# url="https://web-scraping.dev/products"
+# scrape_format="markdown"
+# ignore_scrape_failures=True
+# scrape_config={
+#     "asp": True,  # Bypass scraping blocking solutions, like Cloudflare
+#     "render_js": True,  # Enable JavaScript rendering with a cloud headless browser
+#     "proxy_pool": "public_residential_pool",  # Select a proxy pool
+#     "country": "us",  # Select a proxy location
+#     "auto_scroll": True,  # Auto scroll the page
+# }
+
+scrape_task = Task(
+    description="Extract the main content from the product page at https://web-scraping.dev/products using advanced scraping options including JavaScript rendering and proxy settings.",
+    expected_output="A detailed summary of the products with all available information.",
+    agent=web_scraper_agent,
+)
+```
+
+## Parâmetros
+
+A `ScrapflyScrapeWebsiteTool` aceita os seguintes parâmetros:
+
+### Parâmetros de Inicialização
+
+- **api_key**: Obrigatório. Sua chave de API da Scrapfly.
+
+### Parâmetros de Execução
+
+- **url**: Obrigatório. A URL do site a ser raspado.
+- **scrape_format**: Opcional. O formato em que o conteúdo da página será extraído. As opções são "raw" (HTML), "markdown" ou "text". O padrão é "markdown".
+- **scrape_config**: Opcional. Um dicionário contendo opções adicionais de configuração de raspagem da Scrapfly.
+- **ignore_scrape_failures**: Opcional. Determina se as falhas de raspagem devem ser ignoradas. Se definido como `True`, a ferramenta irá retornar `None` ao invés de lançar uma exceção caso ocorra uma falha na raspagem.
+
+## Opções de Configuração Scrapfly
+
+O parâmetro `scrape_config` permite personalizar o comportamento da raspagem com as seguintes opções:
+
+- **asp**: Ativa o bypass de proteção anti-scraping.
+- **render_js**: Ativa a renderização de JavaScript com um navegador headless na nuvem.
+- **proxy_pool**: Seleciona um pool de proxies (por exemplo, "public_residential_pool", "datacenter").
+- **country**: Seleciona a localização do proxy (por exemplo, "us", "uk").
+- **auto_scroll**: Rola automaticamente a página para carregar conteúdo lazy-loaded.
+- **js**: Executa código JavaScript personalizado via o navegador headless.
+
+Para uma lista completa de opções de configuração, consulte a [documentação da API Scrapfly](https://scrapfly.io/docs/scrape-api/getting-started).
+
+## Uso
+
+Ao usar a `ScrapflyScrapeWebsiteTool` com um agente, o agente deverá fornecer a URL do site a ser raspado e pode opcionalmente especificar o formato e opções adicionais de configuração:
+
+```python Code
+# Example of using the tool with an agent
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+scrape_task = Task(
+    description="Extract the main content from example.com in markdown format.",
+    expected_output="The main content of example.com in markdown format.",
+    agent=web_scraper_agent,
+)
+
+# Run the task
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+Para um uso mais avançado com configurações personalizadas:
+
+```python Code
+# Create a task with more specific instructions
+advanced_scrape_task = Task(
+    description="""
+    Extract content from example.com with the following requirements:
+    - Convert the content to plain text format
+    - Enable JavaScript rendering
+    - Use a US-based proxy
+    - Handle any scraping failures gracefully
+    """,
+    expected_output="The extracted content from example.com",
+    agent=web_scraper_agent,
+)
+```
+
+## Tratamento de Erros
+
+Por padrão, a `ScrapflyScrapeWebsiteTool` irá lançar uma exceção se a raspagem falhar. Os agentes podem ser instruídos a tratar falhas de forma mais flexível especificando o parâmetro `ignore_scrape_failures`:
+
+```python Code
+# Create a task that instructs the agent to handle errors
+error_handling_task = Task(
+    description="""
+    Extract content from a potentially problematic website and make sure to handle any 
+    scraping failures gracefully by setting ignore_scrape_failures to True.
+    """,
+    expected_output="Either the extracted content or a graceful error message",
+    agent=web_scraper_agent,
+)
+```
+
+## Detalhes de Implementação
+
+A `ScrapflyScrapeWebsiteTool` utiliza o Scrapfly SDK para interagir com a API Scrapfly:
+
+```python Code
+class ScrapflyScrapeWebsiteTool(BaseTool):
+    name: str = "Scrapfly web scraping API tool"
+    description: str = (
+        "Scrape a webpage url using Scrapfly and return its content as markdown or text"
+    )
+    
+    # Implementation details...
+    
+    def _run(
+        self,
+        url: str,
+        scrape_format: str = "markdown",
+        scrape_config: Optional[Dict[str, Any]] = None,
+        ignore_scrape_failures: Optional[bool] = None,
+    ):
+        from scrapfly import ScrapeApiResponse, ScrapeConfig
+
+        scrape_config = scrape_config if scrape_config is not None else {}
+        try:
+            response: ScrapeApiResponse = self.scrapfly.scrape(
+                ScrapeConfig(url, format=scrape_format, **scrape_config)
+            )
+            return response.scrape_result["content"]
+        except Exception as e:
+            if ignore_scrape_failures:
+                logger.error(f"Error fetching data from {url}, exception: {e}")
+                return None
+            else:
+                raise e
+```
+
+## Conclusão
+
+A `ScrapflyScrapeWebsiteTool` oferece uma forma poderosa de extrair conteúdo de sites usando as avançadas capacidades de web scraping da Scrapfly. Com recursos como suporte a navegador headless, proxies e bypass de anti-bot, ela consegue lidar com sites complexos e extrair conteúdo em diversos formatos. Esta ferramenta é especialmente útil em tarefas de extração de dados, monitoramento de conteúdo e pesquisa, onde a raspagem confiável de sites é necessária.

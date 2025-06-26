@@ -1,0 +1,50 @@
+---
+title: Carregador Web Browserbase
+description: O Browserbase é uma plataforma para desenvolvedores para executar, gerenciar e monitorar navegadores headless de forma confiável.
+icon: browser 
+---
+
+# `BrowserbaseLoadTool`
+
+## Descrição
+
+[Browserbase](https://browserbase.com) é uma plataforma para desenvolvedores que permite executar, gerenciar e monitorar navegadores headless de forma confiável.
+
+Potencialize suas buscas de dados para IA com:
+
+ - [Infraestrutura Serverless](https://docs.browserbase.com/under-the-hood) fornecendo navegadores confiáveis para extrair dados de interfaces complexas
+ - [Modo Stealth](https://docs.browserbase.com/features/stealth-mode) com táticas de fingerprinting e resolução automática de captcha incluídas
+ - [Depurador de Sessão](https://docs.browserbase.com/features/sessions) para inspecionar sua Sessão do Navegador com linha do tempo de rede e logs
+ - [Depuração Ao Vivo](https://docs.browserbase.com/guides/session-debug-connection/browser-remote-control) para depurar rapidamente sua automação
+
+## Instalação
+
+- Obtenha uma chave de API e o Project ID em [browserbase.com](https://browserbase.com) e defina-os nas variáveis de ambiente (`BROWSERBASE_API_KEY`, `BROWSERBASE_PROJECT_ID`).
+- Instale o [SDK do Browserbase](http://github.com/browserbase/python-sdk) juntamente com o pacote `crewai[tools]`:
+
+```shell
+pip install browserbase 'crewai[tools]'
+```
+
+## Exemplo
+
+Utilize o BrowserbaseLoadTool conforme abaixo para permitir que seu agente carregue sites:
+
+```python Code
+from crewai_tools import BrowserbaseLoadTool
+
+# Inicialize a ferramenta com a chave da API do Browserbase e o Project ID
+tool = BrowserbaseLoadTool()
+```
+
+## Argumentos
+
+Os parâmetros a seguir podem ser usados para customizar o comportamento do `BrowserbaseLoadTool`:
+
+| Argumento        | Tipo      | Descrição                                                                                                                         |
+|:-----------------|:----------|:----------------------------------------------------------------------------------------------------------------------------------|
+| **api_key**      | `string`  | _Opcional_. Chave de API do Browserbase. Padrão é a variável de ambiente `BROWSERBASE_API_KEY`.                                   |
+| **project_id**   | `string`  | _Opcional_. Project ID do Browserbase. Padrão é a variável de ambiente `BROWSERBASE_PROJECT_ID`.                                  |
+| **text_content** | `bool`    | _Opcional_. Recuperar somente o conteúdo em texto. O padrão é `False`.                                                            |
+| **session_id**   | `string`  | _Opcional_. Forneça um Session ID existente.                                                                                      |
+| **proxy**        | `bool`    | _Opcional_. Habilitar/Desabilitar proxies. O padrão é `False`.                                                                    |

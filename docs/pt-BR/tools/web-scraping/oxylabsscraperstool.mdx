@@ -1,0 +1,235 @@
+---
+title: Oxylabs Scrapers
+description: >
+  Os Scrapers da Oxylabs permitem acessar facilmente informações de fontes específicas. Veja abaixo a lista de fontes disponíveis:
+    - `Amazon Product`
+    - `Amazon Search`
+    - `Google Seach`
+    - `Universal`
+icon: globe
+---
+
+## Instalação
+
+Obtenha as credenciais criando uma conta na Oxylabs [aqui](https://oxylabs.io).
+```shell
+pip install 'crewai[tools]' oxylabs
+```
+Confira a [Documentação da Oxylabs](https://developers.oxylabs.io/scraping-solutions/web-scraper-api/targets) para mais informações sobre os parâmetros da API.
+
+# `OxylabsAmazonProductScraperTool`
+
+### Exemplo
+
+```python
+from crewai_tools import OxylabsAmazonProductScraperTool
+
+# certifique-se de que as variáveis OXYLABS_USERNAME e OXYLABS_PASSWORD estejam definidas
+tool = OxylabsAmazonProductScraperTool()
+
+result = tool.run(query="AAAAABBBBCC")
+
+print(result)
+```
+
+### Parâmetros
+
+- `query` - código ASIN de 10 caracteres.
+- `domain` - domínio de localização da Amazon.
+- `geo_location` - local de entrega (_Deliver to_).
+- `user_agent_type` - tipo de dispositivo e navegador.
+- `render` - ativa o renderizador JavaScript ao definir como `html`.
+- `callback_url` - URL do seu endpoint de callback.
+- `context` - Configurações avançadas adicionais e controles para requisitos especializados.
+- `parse` - retorna os dados já processados quando definido como true.
+- `parsing_instructions` - defina sua própria lógica de parsing e transformação de dados que será executada no resultado de scraping HTML.
+
+### Exemplo avançado
+
+```python
+from crewai_tools import OxylabsAmazonProductScraperTool
+
+# certifique-se de que as variáveis OXYLABS_USERNAME e OXYLABS_PASSWORD estejam definidas
+tool = OxylabsAmazonProductScraperTool(
+    config={
+        "domain": "com",
+        "parse": True,
+        "context": [
+            {
+                "key": "autoselect_variant",
+                "value": True
+            }
+        ]
+    }
+)
+
+result = tool.run(query="AAAAABBBBCC")
+
+print(result)
+```
+
+# `OxylabsAmazonSearchScraperTool`
+
+### Exemplo
+
+```python
+from crewai_tools import OxylabsAmazonSearchScraperTool
+
+# certifique-se de que as variáveis OXYLABS_USERNAME e OXYLABS_PASSWORD estejam definidas
+tool = OxylabsAmazonSearchScraperTool()
+
+result = tool.run(query="headsets")
+
+print(result)
+```
+
+### Parâmetros
+
+- `query` - termo de busca da Amazon.
+- `domain` - Domínio de localização para Bestbuy.
+- `start_page` - número da página inicial.
+- `pages` - quantidade de páginas a ser recuperada.
+- `geo_location` - local de entrega (_Deliver to_).
+- `user_agent_type` - tipo de dispositivo e navegador.
+- `render` - ativa o renderizador JavaScript ao definir como `html`.
+- `callback_url` - URL do seu endpoint de callback.
+- `context` - Configurações avançadas adicionais e controles para requisitos especializados.
+- `parse` - retorna os dados já processados quando definido como true.
+- `parsing_instructions` - defina sua própria lógica de parsing e transformação de dados que será executada no resultado de scraping HTML.
+
+### Exemplo avançado
+
+```python
+from crewai_tools import OxylabsAmazonSearchScraperTool
+
+# certifique-se de que as variáveis OXYLABS_USERNAME e OXYLABS_PASSWORD estejam definidas
+tool = OxylabsAmazonSearchScraperTool(
+    config={
+        "domain": 'nl',
+        "start_page": 2,
+        "pages": 2,
+        "parse": True,
+        "context": [
+            {'key': 'category_id', 'value': 16391693031}
+        ],
+    }
+)
+
+result = tool.run(query='nirvana tshirt')
+
+print(result)
+```
+
+# `OxylabsGoogleSearchScraperTool`
+
+### Exemplo
+
+```python
+from crewai_tools import OxylabsGoogleSearchScraperTool
+
+# certifique-se de que as variáveis OXYLABS_USERNAME e OXYLABS_PASSWORD estejam definidas
+tool = OxylabsGoogleSearchScraperTool()
+
+result = tool.run(query="iPhone 16")
+
+print(result)
+```
+
+### Parâmetros
+
+- `query` - palavra-chave de busca.
+- `domain` - domínio de localização do Google.
+- `start_page` - número da página inicial.
+- `pages` - número de páginas a ser recuperado.
+- `limit` - quantidade de resultados a ser recuperada em cada página.
+- `locale` - valor do header `Accept-Language`, que altera o idioma da interface da página de pesquisa do Google.
+- `geo_location` - a localização geográfica para a qual o resultado deve ser adaptado. Usar este parâmetro corretamente é extremamente importante para obter os dados corretos.
+- `user_agent_type` - tipo de dispositivo e navegador.
+- `render` - ativa o renderizador JavaScript ao definir como `html`.
+- `callback_url` - URL do seu endpoint de callback.
+- `context` - Configurações avançadas adicionais e controles para requisitos especializados.
+- `parse` - retorna os dados já processados quando definido como true.
+- `parsing_instructions` - defina sua própria lógica de parsing e transformação de dados que será executada no resultado de scraping HTML.
+
+### Exemplo avançado
+
+```python
+from crewai_tools import OxylabsGoogleSearchScraperTool
+
+# certifique-se de que as variáveis OXYLABS_USERNAME e OXYLABS_PASSWORD estejam definidas
+tool = OxylabsGoogleSearchScraperTool(
+    config={
+        "parse": True,
+        "geo_location": "Paris, France",
+        "user_agent_type": "tablet",
+    }
+)
+
+result = tool.run(query="iPhone 16")
+
+print(result)
+```
+
+# `OxylabsUniversalScraperTool`
+
+### Exemplo
+
+```python
+from crewai_tools import OxylabsUniversalScraperTool
+
+# certifique-se de que as variáveis OXYLABS_USERNAME e OXYLABS_PASSWORD estejam definidas
+tool = OxylabsUniversalScraperTool()
+
+result = tool.run(url="https://ip.oxylabs.io")
+
+print(result)
+```
+
+### Parâmetros
+
+- `url` - URL do site a ser raspada.
+- `user_agent_type` - tipo de dispositivo e navegador.
+- `geo_location` - define a geolocalização do proxy para coletar os dados.
+- `render` - ativa o renderizador JavaScript ao definir como `html`.
+- `callback_url` - URL do seu endpoint de callback.
+- `context` - Configurações avançadas adicionais e controles para requisitos especializados.
+- `parse` - retorna os dados já processados quando definido como `true`, desde que exista um parser dedicado para o tipo de página da URL fornecida.
+- `parsing_instructions` - defina sua própria lógica de parsing e transformação de dados que será executada no resultado de scraping HTML.
+
+### Exemplo avançado
+
+```python
+from crewai_tools import OxylabsUniversalScraperTool
+
+# certifique-se de que as variáveis OXYLABS_USERNAME e OXYLABS_PASSWORD estejam definidas
+tool = OxylabsUniversalScraperTool(
+    config={
+        "render": "html",
+        "user_agent_type": "mobile",
+        "context": [
+            {"key": "force_headers", "value": True},
+            {"key": "force_cookies", "value": True},
+            {
+                "key": "headers",
+                "value": {
+                    "Custom-Header-Name": "custom header content",
+                },
+            },
+            {
+                "key": "cookies",
+                "value": [
+                    {"key": "NID", "value": "1234567890"},
+                    {"key": "1P JAR", "value": "0987654321"},
+                ],
+            },
+            {"key": "http_method", "value": "get"},
+            {"key": "follow_redirects", "value": True},
+            {"key": "successful_status_codes", "value": [808, 909]},
+        ],
+    }
+)
+
+result = tool.run(url="https://ip.oxylabs.io")
+
+print(result)
+```

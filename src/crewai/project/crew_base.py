@@ -1,7 +1,8 @@
 import inspect
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar, cast
+from typing import Any, Callable, Dict, TypeVar, cast, List
+from crewai.tools import BaseTool
 
 import yaml
 from dotenv import load_dotenv
@@ -26,6 +27,8 @@ def CrewBase(cls: T) -> T:
             cls, "agents_config", "config/agents.yaml"
         )
         original_tasks_config_path = getattr(cls, "tasks_config", "config/tasks.yaml")
+
+        mcp_server_params: Any = getattr(cls, "mcp_server_params", None)
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -63,6 +66,38 @@ def CrewBase(cls: T) -> T:
             self._kickoff = self._filter_functions(
                 self._original_functions, "is_kickoff"
             )
+
+            # Add close mcp server method to after kickoff
+            bound_method = self._create_close_mcp_server_method()
+            self._after_kickoff['_close_mcp_server'] = bound_method
+
+        def _create_close_mcp_server_method(self):
+            def _close_mcp_server(self, instance, outputs):
+                adapter = getattr(self, '_mcp_server_adapter', None)
+                if adapter is not None:
+                    try:
+                        adapter.stop()
+                    except Exception as e:
+                        logging.warning(f"Error stopping MCP server: {e}")
+                return outputs
+
+            _close_mcp_server.is_after_kickoff = True
+
+            import types
+            return types.MethodType(_close_mcp_server, self)
+
+        def get_mcp_tools(self, *tool_names: list[str]) -> List[BaseTool]:
+            if not self.mcp_server_params:
+                return []
+
+            from crewai_tools import MCPServerAdapter
+
+            adapter = getattr(self, '_mcp_server_adapter', None)
+            if not adapter:
+                self._mcp_server_adapter = MCPServerAdapter(self.mcp_server_params)
+
+            return self._mcp_server_adapter.tools.filter_by_names(tool_names or None)
+
 
         def load_configurations(self):
             """Load agent and task configurations from YAML files."""
