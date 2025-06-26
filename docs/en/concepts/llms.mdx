@@ -684,6 +684,28 @@ In this section, you'll find detailed examples that help you select, configure, 
       - openrouter/deepseek/deepseek-chat
     </Info>
   </Accordion>
+
+  <Accordion title="Nebius AI Studio">
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    NEBIUS_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    llm = LLM(
+        model="nebius/Qwen/Qwen3-30B-A3B"
+    )
+    ```
+
+    <Info>
+      Nebius AI Studio features:
+      - Large collection of open source models
+      - Higher rate limits
+      - Competitive pricing
+      - Good balance of speed and quality
+    </Info>
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
