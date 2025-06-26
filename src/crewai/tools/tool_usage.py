@@ -324,14 +324,7 @@ class ToolUsage:
     def _format_result(self, result: Any) -> str:
         if self.task:
             self.task.used_tools += 1
-        if self._should_remember_format():
-            result = self._remember_format(result=result)
         return str(result)
-
-    def _should_remember_format(self) -> bool:
-        if self.task:
-            return self.task.used_tools % self._remember_format_after_usages == 0
-        return False
 
     def _remember_format(self, result: str) -> str:
         result = str(result)

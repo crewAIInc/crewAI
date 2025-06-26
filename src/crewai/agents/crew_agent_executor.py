@@ -154,9 +154,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                messages = self.messages 
+                if self.task.used_tools > 3:
+                    messages = [
+                        *self.messages,
+                        self._remember_format_message()
+                    ]
+
                 answer = get_llm_response(
                     llm=self.llm,
-                    messages=self.messages,
+                    messages=messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
                 )
@@ -460,3 +467,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ),
             color="red",
         )
+
+    def _remember_format_message(self) -> Dict[str, str]:
+        content = self._i18n.slice("tools").format(
+            tools=self.tools_description, tool_names=self.tools_names
+        )
+        return {"role": "assistant", "content": content}
