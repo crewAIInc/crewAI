@@ -252,7 +252,7 @@ def write_env_file(folder_path, env_vars):
     env_file_path = folder_path / ".env"
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
-            file.write(f"{key}={value}\n")
+            file.write(f"{key.upper()}={value}\n")
 
 
 def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
