@@ -1,0 +1,283 @@
+---
+title: Ferramentas
+description: Compreendendo e aproveitando ferramentas dentro do framework CrewAI para colaboração e execução de tarefas por agentes.
+icon: screwdriver-wrench
+---
+
+## Visão geral
+
+As ferramentas do CrewAI capacitam agentes com habilidades que vão desde busca na web e análise de dados até colaboração e delegação de tarefas entre colegas de trabalho.
+Esta documentação descreve como criar, integrar e aproveitar essas ferramentas dentro do framework CrewAI, incluindo um novo foco em ferramentas de colaboração.
+
+## O que é uma Ferramenta?
+
+Uma ferramenta no CrewAI é uma habilidade ou função que os agentes podem utilizar para executar diversas ações.
+Isso inclui ferramentas do [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) e [LangChain Tools](https://python.langchain.com/docs/integrations/tools),
+permitindo desde buscas simples até interações complexas e trabalho em equipe eficiente entre agentes.
+
+<Note type="info" title="Aprimoramento para Empresas: Repositório de Ferramentas">
+O CrewAI Enterprise oferece um Repositório de Ferramentas abrangente, com integrações pré-construídas para sistemas empresariais e APIs comuns. Implemente agentes com ferramentas corporativas em minutos em vez de dias.
+
+O Repositório de Ferramentas Empresariais inclui:
+- Conectores pré-construídos para sistemas empresariais populares
+- Interface para criação de ferramentas personalizadas
+- Controle de versão e funcionalidades de compartilhamento
+- Recursos de segurança e conformidade
+</Note>
+
+## Características Principais das Ferramentas
+
+- **Utilidade**: Desenvolvidas para tarefas como busca web, análise de dados, geração de conteúdo e colaboração entre agentes.
+- **Integração**: Potencializa as habilidades dos agentes ao integrar ferramentas de forma transparente ao seu fluxo de trabalho.
+- **Personalização**: Oferece flexibilidade para desenvolver ferramentas personalizadas ou utilizar existentes, atendendo necessidades específicas dos agentes.
+- **Tratamento de Erros**: Incorpora mecanismos robustos de tratamento de erros para garantir operação sem interrupções.
+- **Mecanismo de Cache**: Possui cache inteligente para otimizar desempenho e reduzir operações redundantes.
+- **Suporte Assíncrono**: Suporta ferramentas síncronas e assíncronas, permitindo operações não bloqueantes.
+
+## Utilizando Ferramentas CrewAI
+
+Para aprimorar as capacidades de seus agentes com as ferramentas do CrewAI, comece instalando nosso pacote extra de ferramentas:
+
+```bash
+pip install 'crewai[tools]'
+```
+
+Aqui está um exemplo demonstrando seu uso:
+
+```python Code
+import os
+from crewai import Agent, Task, Crew
+# Importando ferramentas do crewAI
+from crewai_tools import (
+    DirectoryReadTool,
+    FileReadTool,
+    SerperDevTool,
+    WebsiteSearchTool
+)
+
+# Configure as chaves de API
+os.environ["SERPER_API_KEY"] = "Your Key" # chave da API serper.dev
+os.environ["OPENAI_API_KEY"] = "Your Key"
+
+# Instanciar as ferramentas
+docs_tool = DirectoryReadTool(directory='./blog-posts')
+file_tool = FileReadTool()
+search_tool = SerperDevTool()
+web_rag_tool = WebsiteSearchTool()
+
+# Criar agentes
+researcher = Agent(
+    role='Market Research Analyst',
+    goal='Provide up-to-date market analysis of the AI industry',
+    backstory='An expert analyst with a keen eye for market trends.',
+    tools=[search_tool, web_rag_tool],
+    verbose=True
+)
+
+writer = Agent(
+    role='Content Writer',
+    goal='Craft engaging blog posts about the AI industry',
+    backstory='A skilled writer with a passion for technology.',
+    tools=[docs_tool, file_tool],
+    verbose=True
+)
+
+# Definir tarefas
+research = Task(
+    description='Research the latest trends in the AI industry and provide a summary.',
+    expected_output='A summary of the top 3 trending developments in the AI industry with a unique perspective on their significance.',
+    agent=researcher
+)
+
+write = Task(
+    description='Write an engaging blog post about the AI industry, based on the research analyst's summary. Draw inspiration from the latest blog posts in the directory.',
+    expected_output='A 4-paragraph blog post formatted in markdown with engaging, informative, and accessible content, avoiding complex jargon.',
+    agent=writer,
+    output_file='blog-posts/new_post.md'  # O post final do blog será salvo aqui
+)
+
+# Montar um crew com o planejamento habilitado
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research, write],
+    verbose=True,
+    planning=True,  # Habilitar o recurso de planejamento
+)
+
+# Executar tarefas
+crew.kickoff()
+```
+
+## Ferramentas CrewAI Disponíveis
+
+- **Tratamento de Erros**: Todas as ferramentas são construídas com capacidades de tratamento de erros, permitindo que os agentes administrem exceções de forma adequada e prossigam com suas tarefas.
+- **Mecanismo de Cache**: Todas as ferramentas suportam cache, possibilitando que agentes reutilizem de forma eficiente resultados obtidos anteriormente, reduzindo a carga em recursos externos e acelerando o tempo de execução. Também é possível definir controles mais precisos sobre o mecanismo de cache usando o atributo `cache_function` na ferramenta.
+
+Aqui está uma lista das ferramentas disponíveis e suas descrições:
+
+| Ferramenta                        | Descrição                                                                                     |
+| :-------------------------------  | :------------------------------------------------------------------------------------------- |
+| **ApifyActorsTool**               | Ferramenta que integra Apify Actors aos seus fluxos de trabalho para web scraping e automação.|
+| **BrowserbaseLoadTool**           | Ferramenta para interação e extração de dados de navegadores web.                            |
+| **CodeDocsSearchTool**            | Uma ferramenta RAG otimizada para busca em documentações de código e documentos técnicos.     |
+| **CodeInterpreterTool**           | Ferramenta para interpretar código Python.                                                   |
+| **ComposioTool**                  | Permite o uso de ferramentas Composio.                                                       |
+| **CSVSearchTool**                 | Ferramenta RAG projetada para busca em arquivos CSV, ideal para dados estruturados.           |
+| **DALL-E Tool**                   | Ferramenta para gerar imagens utilizando a API do DALL-E.                                     |
+| **DirectorySearchTool**           | Ferramenta RAG para busca em diretórios, útil para navegação em sistemas de arquivos.         |
+| **DOCXSearchTool**                | Ferramenta RAG voltada para busca em documentos DOCX, ideal para processar arquivos Word.     |
+| **DirectoryReadTool**             | Facilita a leitura e processamento de estruturas de diretórios e seus conteúdos.              |
+| **EXASearchTool**                 | Ferramenta projetada para buscas exaustivas em diversas fontes de dados.                      |
+| **FileReadTool**                  | Permite a leitura e extração de dados de arquivos, suportando diversos formatos.              |
+| **FirecrawlSearchTool**           | Ferramenta para buscar páginas web usando Firecrawl e retornar os resultados.                 |
+| **FirecrawlCrawlWebsiteTool**     | Ferramenta para rastrear páginas web utilizando o Firecrawl.                                  |
+| **FirecrawlScrapeWebsiteTool**    | Ferramenta para extrair o conteúdo de URLs usando Firecrawl.                                  |
+| **GithubSearchTool**              | Ferramenta RAG para buscar em repositórios GitHub, útil para pesquisa de código e documentação.|
+| **SerperDevTool**                 | Ferramenta especializada para finalidades de desenvolvimento, com funcionalidades em evolução. |
+| **TXTSearchTool**                 | Ferramenta RAG voltada para busca em arquivos de texto (.txt), adaptada para dados não estruturados. |
+| **JSONSearchTool**                | Ferramenta RAG para busca em arquivos JSON, voltada ao manuseio de dados estruturados.        |
+| **LlamaIndexTool**                | Permite o uso das ferramentas LlamaIndex.                                                     |
+| **MDXSearchTool**                 | Ferramenta RAG para busca em arquivos Markdown (MDX), útil para documentação.                 |
+| **PDFSearchTool**                 | Ferramenta RAG para busca em documentos PDF, ideal para processar documentos digitalizados.   |
+| **PGSearchTool**                  | Ferramenta RAG otimizada para busca em bancos de dados PostgreSQL, adequada para consultas.   |
+| **Vision Tool**                   | Ferramenta para gerar imagens utilizando a API do DALL-E.                                     |
+| **RagTool**                       | Ferramenta RAG de uso geral, capaz de lidar com diferentes fontes e tipos de dados.           |
+| **ScrapeElementFromWebsiteTool**  | Permite extrair elementos específicos de sites, útil para extração de dados direcionada.      |
+| **ScrapeWebsiteTool**             | Facilita o scraping de sites inteiros, ideal para coleta abrangente de dados.                 |
+| **WebsiteSearchTool**             | Ferramenta RAG para busca em conteúdos de sites, otimizada para extração de dados web.        |
+| **XMLSearchTool**                 | Ferramenta RAG para busca em arquivos XML, adequada para formatos de dados estruturados.      |
+| **YoutubeChannelSearchTool**      | Ferramenta RAG para busca em canais do YouTube, útil para análise de conteúdo em vídeo.       |
+| **YoutubeVideoSearchTool**        | Ferramenta RAG para busca em vídeos do YouTube, ideal para extração de dados de vídeo.        |
+
+## Criando suas próprias Ferramentas
+
+<Tip>
+  Desenvolvedores podem criar `ferramentas personalizadas` adaptadas para as necessidades de seus agentes ou utilizar opções pré-construídas.
+</Tip>
+
+Existem duas formas principais de criar uma ferramenta CrewAI:
+
+### Herança de `BaseTool`
+
+```python Code
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
+
+class MyCustomTool(BaseTool):
+    name: str = "Name of my tool"
+    description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = MyToolInput
+
+    def _run(self, argument: str) -> str:
+        # Seu código da ferramenta aqui
+        return "Tool's result"
+```
+
+## Suporte a Ferramentas Assíncronas
+
+O CrewAI suporta ferramentas assíncronas, permitindo que você implemente ferramentas que realizam operações não bloqueantes, como requisições de rede, I/O de arquivos ou outras operações async sem bloquear o fluxo principal de execução.
+
+### Criando Ferramentas Assíncronas
+
+Você pode criar ferramentas assíncronas de duas formas:
+
+#### 1. Utilizando o Decorador `tool` com Funções Assíncronas
+
+```python Code
+from crewai.tools import tool
+
+@tool("fetch_data_async")
+async def fetch_data_async(query: str) -> str:
+    """Asynchronously fetch data based on the query."""
+    # Simulate async operation
+    await asyncio.sleep(1)
+    return f"Data retrieved for {query}"
+```
+
+#### 2. Implementando Métodos Assíncronos em Classes de Ferramentas Personalizadas
+
+```python Code
+from crewai.tools import BaseTool
+
+class AsyncCustomTool(BaseTool):
+    name: str = "async_custom_tool"
+    description: str = "An asynchronous custom tool"
+    
+    async def _run(self, query: str = "") -> str:
+        """Asynchronously run the tool"""
+        # Sua implementação assíncrona aqui
+        await asyncio.sleep(1)
+        return f"Processed {query} asynchronously"
+```
+
+### Utilizando Ferramentas Assíncronas
+
+Ferramentas assíncronas funcionam perfeitamente tanto em fluxos tradicionais do Crew quanto em fluxos baseados em Flow:
+
+```python Code
+# No Crew tradicional
+agent = Agent(role="researcher", tools=[async_custom_tool])
+
+# Em Flow
+class MyFlow(Flow):
+    @start()
+    async def begin(self):
+        crew = Crew(agents=[agent])
+        result = await crew.kickoff_async()
+        return result
+```
+
+O framework CrewAI lida automaticamente com a execução de ferramentas síncronas e assíncronas, então você não precisa se preocupar com diferenças na chamada.
+
+### Utilizando o Decorador `tool`
+
+```python Code
+from crewai.tools import tool
+@tool("Name of my tool")
+def my_tool(question: str) -> str:
+    """Clear description for what this tool is useful for, your agent will need this information to use it."""
+    # Lógica da função aqui
+    return "Result from your custom tool"
+```
+
+### Mecanismo de Cache Personalizado
+
+<Tip>
+  As ferramentas podem implementar opcionalmente uma `cache_function` para ajuste fino do comportamento de cache.
+  Esta função determina quando armazenar resultados em cache com base em condições específicas, oferecendo controle granular sobre a lógica de cache.
+</Tip>
+
+```python Code
+from crewai.tools import tool
+
+@tool
+def multiplication_tool(first_number: int, second_number: int) -> str:
+    """Useful for when you need to multiply two numbers together."""
+    return first_number * second_number
+
+def cache_func(args, result):
+    # Neste exemplo, só cacheamos o resultado se for múltiplo de 2
+    cache = result % 2 == 0
+    return cache
+
+multiplication_tool.cache_function = cache_func
+
+writer1 = Agent(
+        role="Writer",
+        goal="You write lessons of math for kids.",
+        backstory="You're an expert in writing and you love to teach kids but you know nothing of math.",
+        tools=[multiplication_tool],
+        allow_delegation=False,
+    )
+    #...
+```
+
+## Conclusão
+
+Ferramentas são fundamentais para expandir as capacidades dos agentes CrewAI, permitindo que assumam uma ampla gama de tarefas e colaborem de forma eficiente.
+Ao construir soluções com CrewAI, aproveite tanto ferramentas existentes quanto personalizadas para potencializar seus agentes e ampliar o ecossistema de IA. Considere utilizar tratamento de erros,
+mecanismos de cache e a flexibilidade de argumentos das ferramentas para otimizar o desempenho e as capacidades dos seus agentes.

@@ -1,0 +1,69 @@
+---
+title: Busca RAG no MySQL
+description: O `MySQLSearchTool` foi projetado para buscar em bancos de dados MySQL e retornar os resultados mais relevantes.
+icon: database
+---
+
+## Visão Geral
+
+Esta ferramenta foi desenvolvida para facilitar buscas semânticas em tabelas de bancos de dados MySQL. Utilizando a tecnologia RAG (Retrieve and Generate),
+o MySQLSearchTool oferece aos usuários um meio eficiente de consultar o conteúdo de tabelas do banco de dados, especificamente adaptado para bancos MySQL.
+Ela simplifica o processo de encontrar dados relevantes por meio de consultas de busca semântica, tornando-se um recurso valioso para quem precisa
+realizar consultas avançadas em grandes conjuntos de dados dentro de um banco de dados MySQL.
+
+## Instalação
+
+Para instalar o pacote `crewai_tools` e utilizar o MySQLSearchTool, execute o seguinte comando no seu terminal:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+Abaixo está um exemplo demonstrando como usar o MySQLSearchTool para realizar uma busca semântica em uma tabela de um banco de dados MySQL:
+
+```python Code
+from crewai_tools import MySQLSearchTool
+
+# Inicialize a ferramenta com o URI do banco de dados e o nome da tabela de destino
+tool = MySQLSearchTool(
+    db_uri='mysql://user:password@localhost:3306/mydatabase',
+    table_name='employees'
+)
+```
+
+## Argumentos
+
+O MySQLSearchTool requer os seguintes argumentos para sua operação:
+
+- `db_uri`: Uma string representando o URI do banco de dados MySQL a ser consultado. Este argumento é obrigatório e deve incluir os detalhes de autenticação necessários e o local do banco de dados.
+- `table_name`: Uma string especificando o nome da tabela dentro do banco de dados na qual será realizada a busca semântica. Este argumento é obrigatório.
+
+## Modelo e embeddings personalizados
+
+Por padrão, a ferramenta utiliza o OpenAI tanto para embeddings quanto para sumarização. Para customizar o modelo, você pode usar um dicionário de configuração conforme o exemplo:
+
+```python Code
+tool = MySQLSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google",
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

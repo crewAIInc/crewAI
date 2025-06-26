@@ -1,0 +1,293 @@
+---
+title: "Deploy Crew"
+description: "Implantando um Crew na CrewAI Enterprise"
+icon: "rocket"
+---
+
+<Note>
+Depois de criar um crew localmente ou pelo Crew Studio, o próximo passo é implantá-lo na plataforma CrewAI Enterprise. Este guia cobre múltiplos métodos de implantação para ajudá-lo a escolher a melhor abordagem para o seu fluxo de trabalho.
+</Note>
+
+## Pré-requisitos
+
+<CardGroup cols={2}>
+  <Card title="Crew Pronto para Implantação" icon="users">
+    Você deve ter um crew funcional, criado localmente ou pelo Crew Studio
+  </Card>
+  <Card title="Repositório GitHub" icon="github">
+    O código do seu crew deve estar em um repositório do GitHub (para o método de integração com GitHub)
+  </Card>
+</CardGroup>
+
+## Opção 1: Implantar Usando o CrewAI CLI
+
+A CLI fornece a maneira mais rápida de implantar crews desenvolvidos localmente na plataforma Enterprise.
+
+<Steps>
+  <Step title="Instale o CrewAI CLI">
+    Se ainda não tiver, instale o CrewAI CLI:
+
+    ```bash
+    pip install crewai[tools]
+    ```
+
+    <Tip>
+    A CLI vem com o pacote principal CrewAI, mas o extra `[tools]` garante todas as dependências de implantação.
+    </Tip>
+
+  </Step>
+
+  <Step title="Autentique-se na Plataforma Enterprise">
+    Primeiro, você precisa autenticar sua CLI com a plataforma CrewAI Enterprise:
+
+    ```bash
+    # Se já possui uma conta CrewAI Enterprise
+    crewai login
+
+    # Se vai criar uma nova conta
+    crewai signup
+    ```
+
+    Ao executar qualquer um dos comandos, a CLI irá:
+    1. Exibir uma URL e um código de dispositivo único
+    2. Abrir seu navegador para a página de autenticação
+    3. Solicitar a confirmação do dispositivo
+    4. Completar o processo de autenticação
+
+    Após a autenticação bem-sucedida, você verá uma mensagem de confirmação no terminal!
+
+  </Step>
+
+  <Step title="Criar uma Implantação">
+
+    No diretório do seu projeto, execute:
+
+    ```bash
+    crewai deploy create
+    ```
+
+    Este comando irá:
+    1. Detectar informações do seu repositório GitHub
+    2. Identificar variáveis de ambiente no seu arquivo `.env` local
+    3. Transferir essas variáveis com segurança para a plataforma Enterprise
+    4. Criar uma nova implantação com um identificador único
+
+    Com a criação bem-sucedida, você verá uma mensagem como:
+    ```shell
+    Deployment created successfully!
+    Name: your_project_name
+    Deployment ID: 01234567-89ab-cdef-0123-456789abcdef
+    Current Status: Deploy Enqueued
+    ```
+
+  </Step>
+
+  <Step title="Acompanhe o Progresso da Implantação">
+
+    Acompanhe o status da implantação com:
+
+    ```bash
+    crewai deploy status
+    ```
+
+    Para ver logs detalhados do processo de build:
+
+    ```bash
+    crewai deploy logs
+    ```
+
+    <Tip>
+    A primeira implantação normalmente leva de 10 a 15 minutos, pois as imagens dos containers são construídas. As próximas implantações são bem mais rápidas.
+    </Tip>
+
+  </Step>
+</Steps>
+
+## Comandos Adicionais da CLI
+
+O CrewAI CLI oferece vários comandos para gerenciar suas implantações:
+
+  ```bash
+  # Liste todas as suas implantações
+  crewai deploy list
+
+  # Consulte o status de uma implantação
+  crewai deploy status
+
+  # Veja os logs da implantação
+  crewai deploy logs
+
+  # Envie atualizações após alterações no código
+  crewai deploy push
+
+  # Remova uma implantação
+  crewai deploy remove <deployment_id>
+  ```
+
+## Opção 2: Implantar Diretamente pela Interface Web
+
+Você também pode implantar seus crews diretamente pela interface web da CrewAI Enterprise conectando sua conta do GitHub. Esta abordagem não requer utilizar a CLI na sua máquina local.
+
+<Steps>
+
+  <Step title="Enviar no GitHub">
+
+  Você precisa subir seu crew para um repositório do GitHub. Caso ainda não tenha criado um crew, você pode [seguir este tutorial](/pt-BR/quickstart).
+
+  </Step>
+
+  <Step title="Conectando o GitHub ao CrewAI Enterprise">
+
+    1. Faça login em [CrewAI Enterprise](https://app.crewai.com)
+    2. Clique no botão "Connect GitHub"
+
+    <Frame>
+      ![Botão Connect GitHub](/images/enterprise/connect-github.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="Selecionar o Repositório">
+
+    Após conectar sua conta GitHub, você poderá selecionar qual repositório deseja implantar:
+
+    <Frame>
+      ![Selecionar Repositório](/images/enterprise/select-repo.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="Definir as Variáveis de Ambiente">
+
+    Antes de implantar, você precisará configurar as variáveis de ambiente para conectar ao seu provedor de LLM ou outros serviços:
+
+    1. Você pode adicionar variáveis individualmente ou em lote
+    2. Digite suas variáveis no formato `KEY=VALUE` (uma por linha)
+
+    <Frame>
+      ![Definir Variáveis de Ambiente](/images/enterprise/set-env-variables.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="Implante Seu Crew">
+
+    1. Clique no botão "Deploy" para iniciar o processo de implantação
+    2. Você pode monitorar o progresso pela barra de progresso
+    3. A primeira implantação geralmente demora de 10 a 15 minutos; as próximas serão mais rápidas
+
+    <Frame>
+      ![Progresso da Implantação](/images/enterprise/deploy-progress.png)
+    </Frame>
+
+    Após a conclusão, você verá:
+    - A URL exclusiva do seu crew
+    - Um Bearer token para proteger sua API crew
+    - Um botão "Delete" caso precise remover a implantação
+
+  </Step>
+
+</Steps>
+
+## ⚠️ Requisitos de Segurança para Variáveis de Ambiente
+
+<Warning>
+**Importante**: A CrewAI Enterprise possui restrições de segurança sobre os nomes de variáveis de ambiente que podem causar falha na implantação caso não sejam seguidas.
+</Warning>
+
+### Padrões de Variáveis de Ambiente Bloqueados
+
+Por motivos de segurança, os seguintes padrões de nome de variável de ambiente são **automaticamente filtrados** e causarão problemas de implantação:
+
+**Padrões Bloqueados:**
+- Variáveis terminando em `_TOKEN` (ex: `MY_API_TOKEN`)
+- Variáveis terminando em `_PASSWORD` (ex: `DB_PASSWORD`)
+- Variáveis terminando em `_SECRET` (ex: `API_SECRET`)
+- Variáveis terminando em `_KEY` em certos contextos
+
+**Variáveis Bloqueadas Específicas:**
+- `GITHUB_USER`, `GITHUB_TOKEN`
+- `AWS_REGION`, `AWS_DEFAULT_REGION`
+- Diversas variáveis internas do sistema CrewAI
+
+### Exceções Permitidas
+
+Algumas variáveis são explicitamente permitidas mesmo coincidindo com os padrões bloqueados:
+- `AZURE_AD_TOKEN`
+- `AZURE_OPENAI_AD_TOKEN`
+- `ENTERPRISE_ACTION_TOKEN`
+- `CREWAI_ENTEPRISE_TOOLS_TOKEN`
+
+### Como Corrigir Problemas de Nomeação
+
+Se sua implantação falhar devido a restrições de variáveis de ambiente:
+
+```bash
+# ❌ Estas irão causar falhas na implantação
+OPENAI_TOKEN=sk-...
+DATABASE_PASSWORD=mysenha
+API_SECRET=segredo123
+
+# ✅ Utilize estes padrões de nomeação
+OPENAI_API_KEY=sk-...
+DATABASE_CREDENTIALS=mysenha
+API_CONFIG=segredo123
+```
+
+### Melhores Práticas
+
+1. **Use convenções padrão de nomenclatura**: `PROVIDER_API_KEY` em vez de `PROVIDER_TOKEN`
+2. **Teste localmente primeiro**: Certifique-se de que seu crew funciona com as variáveis renomeadas
+3. **Atualize seu código**: Altere todas as referências aos nomes antigos das variáveis
+4. **Documente as mudanças**: Mantenha registro das variáveis renomeadas para seu time
+
+<Tip>
+Se você se deparar com falhas de implantação com erros enigmáticos de variáveis de ambiente, confira primeiro os nomes das variáveis em relação a esses padrões.
+</Tip>
+
+### Interaja com Seu Crew Implantado
+
+Após a implantação, você pode acessar seu crew por meio de:
+
+1. **REST API**: A plataforma gera um endpoint HTTPS exclusivo com estas rotas principais:
+   - `/inputs`: Lista os parâmetros de entrada requeridos
+   - `/kickoff`: Inicia uma execução com os inputs fornecidos
+   - `/status/{kickoff_id}`: Consulta o status da execução
+
+2. **Interface Web**: Acesse [app.crewai.com](https://app.crewai.com) para visualizar:
+   - **Aba Status**: Informações da implantação, detalhes do endpoint da API e token de autenticação
+   - **Aba Run**: Visualização da estrutura do seu crew
+   - **Aba Executions**: Histórico de todas as execuções
+   - **Aba Metrics**: Análises de desempenho
+   - **Aba Traces**: Insights detalhados das execuções
+
+### Dispare uma Execução
+
+No dashboard Enterprise, você pode:
+
+1. Clicar no nome do seu crew para abrir seus detalhes
+2. Selecionar "Trigger Crew" na interface de gerenciamento
+3. Inserir os inputs necessários no modal exibido
+4. Monitorar o progresso à medida que a execução avança pelo pipeline
+
+### Monitoramento e Análises
+
+A plataforma Enterprise oferece recursos abrangentes de observabilidade:
+
+- **Gestão das Execuções**: Acompanhe execuções ativas e concluídas
+- **Traces**: Quebra detalhada de cada execução
+- **Métricas**: Uso de tokens, tempos de execução e custos
+- **Visualização em Linha do Tempo**: Representação visual das sequências de tarefas
+
+### Funcionalidades Avançadas
+
+A plataforma Enterprise também oferece:
+
+- **Gerenciamento de Variáveis de Ambiente**: Armazene e gerencie com segurança as chaves de API
+- **Conexões com LLM**: Configure integrações com diversos provedores de LLM
+- **Repositório Custom Tools**: Crie, compartilhe e instale ferramentas
+- **Crew Studio**: Monte crews via interface de chat sem escrever código
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para ajuda com questões de implantação ou dúvidas sobre a plataforma Enterprise.
+</Card>

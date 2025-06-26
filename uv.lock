@@ -716,7 +716,7 @@ wheels = [
 
 [[package]]
 name = "crewai"
-version = "0.130.0"
+version = "0.134.0"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },
@@ -800,7 +800,7 @@ requires-dist = [
     { name = "blinker", specifier = ">=1.9.0" },
     { name = "chromadb", specifier = ">=0.5.23" },
     { name = "click", specifier = ">=8.1.7" },
-    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.47.1" },
+    { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.48.0" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "instructor", specifier = ">=1.3.3" },
     { name = "json-repair", specifier = ">=0.25.2" },
@@ -847,7 +847,7 @@ dev = [
 
 [[package]]
 name = "crewai-tools"
-version = "0.47.1"
+version = "0.48.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "chromadb" },
@@ -863,9 +863,9 @@ dependencies = [
     { name = "requests" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0e/cd/fc5a96be8c108febcc2c767714e3ec9b70cca9be8e6b29bba7c1874fb6d2/crewai_tools-0.47.1.tar.gz", hash = "sha256:4de5ebf320aeae317ffabe2e4704b98b5d791f663196871fb5ad2e7bbea14a82", size = 921418 }
+sdist = { url = "https://files.pythonhosted.org/packages/34/57/5bcc70c83a5653eb05db0fbe0d8af4861365de08bab97e0197d0e55e5f76/crewai_tools-0.48.0.tar.gz", hash = "sha256:5ef1bd821bb6d9d55e82ed17fb0b60ce8504c22739497c284cf264ebba876f45", size = 939346 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/2c/05d9fa584d9d814c0c8c4c3793df572222417695fe3d716f14bc274376d6/crewai_tools-0.47.1-py3-none-any.whl", hash = "sha256:4dc9bb0a08e3afa33c6b9efb163e47181801a7906be7241977426e6d3dec0a05", size = 606305 },
+    { url = "https://files.pythonhosted.org/packages/c1/a1/94a736ac6f43e23e32adf7524bc6d48631676303536c20c76ecb0051c26d/crewai_tools-0.48.0-py3-none-any.whl", hash = "sha256:c48097b19a86466803577ef9e0a1cb0b2540da332f22cce82f97d6a381dac73e", size = 620546 },
 ]
 
 [[package]]

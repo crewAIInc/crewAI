@@ -1,0 +1,379 @@
+---
+title: 'Listeners de Evento'
+description: 'Acesse eventos do CrewAI para criar integrações e monitoramento personalizados'
+icon: spinner
+---
+
+## Visão Geral
+
+O CrewAI oferece um sistema de eventos poderoso que permite escutar e reagir a diversos eventos que ocorrem durante a execução do seu Crew. Esse recurso possibilita a criação de integrações personalizadas, soluções de monitoramento, sistemas de log ou qualquer outra funcionalidade que precise ser acionada com base nos eventos internos do CrewAI.
+
+## Como Funciona
+
+O CrewAI utiliza uma arquitetura de event bus para emitir eventos ao longo do ciclo de vida da execução. O sistema de eventos é construído a partir dos seguintes componentes:
+
+1. **CrewAIEventsBus**: Um event bus singleton que gerencia o registro e emissão de eventos
+2. **BaseEvent**: Classe base para todos os eventos do sistema
+3. **BaseEventListener**: Classe base abstrata para criar listeners de evento personalizados
+
+Quando ações específicas ocorrem no CrewAI (como a inicialização de um Crew, um Agent concluindo uma tarefa ou o uso de uma ferramenta), o sistema emite os eventos correspondentes. Você pode registrar handlers para esses eventos para executar código personalizado quando eles acontecerem.
+
+<Note type="info" title="Aprimoramento Enterprise: Prompt Tracing">
+O CrewAI Enterprise fornece o recurso Prompt Tracing, que aproveita o sistema de eventos para rastrear, armazenar e visualizar todos os prompts, respostas e metadados associados. Isso proporciona poderosas capacidades de depuração e transparência nas operações dos seus agentes.
+
+![Prompt Tracing Dashboard](/images/enterprise/traces-overview.png)
+
+Com o Prompt Tracing você pode:
+- Visualizar o histórico completo de todos os prompts enviados ao seu LLM
+- Monitorar o uso de tokens e custos
+- Depurar falhas de raciocínio dos agentes
+- Compartilhar sequências de prompts com sua equipe
+- Comparar diferentes estratégias de prompts
+- Exportar rastreamentos para compliance e auditoria
+</Note>
+
+## Criando um Listener de Evento Personalizado
+
+Para criar um listener de evento personalizado, você precisa:
+
+1. Criar uma classe que herde de `BaseEventListener`
+2. Implementar o método `setup_listeners`
+3. Registrar handles para os eventos de seu interesse
+4. Instanciar seu listener no arquivo apropriado
+
+Veja um exemplo simples de uma classe de listener de evento personalizado:
+
+```python
+from crewai.utilities.events import (
+    CrewKickoffStartedEvent,
+    CrewKickoffCompletedEvent,
+    AgentExecutionCompletedEvent,
+)
+from crewai.utilities.events.base_event_listener import BaseEventListener
+
+class MyCustomListener(BaseEventListener):
+    def __init__(self):
+        super().__init__()
+
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def on_crew_started(source, event):
+            print(f"Crew '{event.crew_name}' has started execution!")
+
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def on_crew_completed(source, event):
+            print(f"Crew '{event.crew_name}' has completed execution!")
+            print(f"Output: {event.output}")
+
+        @crewai_event_bus.on(AgentExecutionCompletedEvent)
+        def on_agent_execution_completed(source, event):
+            print(f"Agent '{event.agent.role}' completed task")
+            print(f"Output: {event.output}")
+```
+
+## Registrando Corretamente Seu Listener
+
+Apenas definir sua classe de listener não é suficiente. É necessário criar uma instância dela e garantir que ela seja importada na sua aplicação. Isso garante que:
+
+1. Os event handlers estejam registrados no event bus
+2. A instância do listener permaneça em memória (não seja coletada pelo garbage collector)
+3. O listener esteja ativo quando os eventos forem emitidos
+
+### Opção 1: Importar e Instanciar no Seu Crew ou Implementação de Flow
+
+O mais importante é criar uma instância do seu listener no arquivo onde seu Crew ou Flow está definido e executado:
+
+#### Para Aplicações Baseadas em Crew
+
+Crie e importe seu listener no início do arquivo de implementação do seu Crew:
+
+```python
+# No seu arquivo crew.py
+from crewai import Agent, Crew, Task
+from my_listeners import MyCustomListener
+
+# Crie uma instância do seu listener
+my_listener = MyCustomListener()
+
+class MyCustomCrew:
+    # Sua implementação do crew...
+
+    def crew(self):
+        return Crew(
+            agents=[...],
+            tasks=[...],
+            # ...
+        )
+```
+
+#### Para Aplicações Baseadas em Flow
+
+Crie e importe seu listener no início do arquivo de implementação do seu Flow:
+
+```python
+# Em seu arquivo main.py ou flow.py
+from crewai.flow import Flow, listen, start
+from my_listeners import MyCustomListener
+
+# Crie uma instância do seu listener
+my_listener = MyCustomListener()
+
+class MyCustomFlow(Flow):
+    # Sua implementação do flow...
+
+    @start()
+    def first_step(self):
+        # ...
+```
+
+Isso assegura que seu listener será carregado e estará ativo quando seu Crew ou Flow for executado.
+
+### Opção 2: Criar um Pacote para Seus Listeners
+
+Para uma abordagem mais estruturada, especialmente se houver múltiplos listeners:
+
+1. Crie um pacote para seus listeners:
+
+```
+my_project/
+  ├── listeners/
+  │   ├── __init__.py
+  │   ├── my_custom_listener.py
+  │   └── another_listener.py
+```
+
+2. Em `my_custom_listener.py`, defina sua classe de listener e crie uma instância:
+
+```python
+# my_custom_listener.py
+from crewai.utilities.events.base_event_listener import BaseEventListener
+# ... importe events ...
+
+class MyCustomListener(BaseEventListener):
+    # ... implementação ...
+
+# Crie uma instância do seu listener
+my_custom_listener = MyCustomListener()
+```
+
+3. Em `__init__.py`, importe as instâncias dos listeners para garantir seu carregamento:
+
+```python
+# __init__.py
+from .my_custom_listener import my_custom_listener
+from .another_listener import another_listener
+
+# Opcionalmente exporte-os se precisar acessá-los em outros lugares
+__all__ = ['my_custom_listener', 'another_listener']
+```
+
+4. Importe seu pacote de listeners no arquivo do seu Crew ou Flow:
+
+```python
+# No seu arquivo crew.py ou flow.py
+import my_project.listeners  # Isso carrega todos os seus listeners
+
+class MyCustomCrew:
+    # Sua implementação do crew...
+```
+
+É exatamente assim que o `agentops_listener` integrado do CrewAI é registrado. No código-fonte do CrewAI, você encontrará:
+
+```python
+# src/crewai/utilities/events/third_party/__init__.py
+from .agentops_listener import agentops_listener
+```
+
+Isso garante que o `agentops_listener` seja carregado quando o pacote `crewai.utilities.events` for importado.
+
+## Tipos de Eventos Disponíveis
+
+O CrewAI fornece uma ampla variedade de eventos para escuta:
+
+### Eventos de Crew
+
+- **CrewKickoffStartedEvent**: Emitido quando um Crew inicia a execução
+- **CrewKickoffCompletedEvent**: Emitido quando um Crew conclui a execução
+- **CrewKickoffFailedEvent**: Emitido quando um Crew falha ao concluir a execução
+- **CrewTestStartedEvent**: Emitido ao iniciar o teste de um Crew
+- **CrewTestCompletedEvent**: Emitido ao concluir o teste de um Crew
+- **CrewTestFailedEvent**: Emitido ao falhar no teste de um Crew
+- **CrewTrainStartedEvent**: Emitido ao iniciar o treinamento de um Crew
+- **CrewTrainCompletedEvent**: Emitido ao concluir o treinamento de um Crew
+- **CrewTrainFailedEvent**: Emitido ao falhar no treinamento de um Crew
+
+### Eventos de Agent
+
+- **AgentExecutionStartedEvent**: Emitido quando um Agent inicia a execução de uma tarefa
+- **AgentExecutionCompletedEvent**: Emitido quando um Agent conclui a execução de uma tarefa
+- **AgentExecutionErrorEvent**: Emitido quando um Agent encontra um erro durante a execução
+
+### Eventos de Task
+
+- **TaskStartedEvent**: Emitido ao iniciar a execução de uma Task
+- **TaskCompletedEvent**: Emitido ao concluir a execução de uma Task
+- **TaskFailedEvent**: Emitido ao falhar na execução de uma Task
+- **TaskEvaluationEvent**: Emitido quando uma Task é avaliada
+
+### Eventos de Uso de Ferramentas
+
+- **ToolUsageStartedEvent**: Emitido ao iniciar a execução de uma ferramenta
+- **ToolUsageFinishedEvent**: Emitido ao concluir a execução de uma ferramenta
+- **ToolUsageErrorEvent**: Emitido quando ocorre erro na execução de uma ferramenta
+- **ToolValidateInputErrorEvent**: Emitido ao ocorrer erro de validação de entrada na ferramenta
+- **ToolExecutionErrorEvent**: Emitido quando ocorre erro na execução de uma ferramenta
+- **ToolSelectionErrorEvent**: Emitido ao ocorrer erro na seleção de uma ferramenta
+
+### Eventos de Knowledge
+
+- **KnowledgeRetrievalStartedEvent**: Emitido ao iniciar recuperação de conhecimento
+- **KnowledgeRetrievalCompletedEvent**: Emitido ao concluir recuperação de conhecimento
+- **KnowledgeQueryStartedEvent**: Emitido ao iniciar consulta de conhecimento
+- **KnowledgeQueryCompletedEvent**: Emitido ao concluir consulta de conhecimento
+- **KnowledgeQueryFailedEvent**: Emitido ao falhar consulta de conhecimento
+- **KnowledgeSearchQueryFailedEvent**: Emitido ao falhar consulta de busca de conhecimento
+
+### Eventos de Guardrail do LLM
+
+- **LLMGuardrailStartedEvent**: Emitido ao iniciar validação dos guardrails. Contém detalhes do guardrail aplicado e tentativas.
+- **LLMGuardrailCompletedEvent**: Emitido ao concluir validação dos guardrails. Contém detalhes sobre sucesso/falha na validação, resultados e mensagens de erro, se houver.
+
+### Eventos de Flow
+
+- **FlowCreatedEvent**: Emitido ao criar um Flow
+- **FlowStartedEvent**: Emitido ao iniciar a execução de um Flow
+- **FlowFinishedEvent**: Emitido ao concluir a execução de um Flow
+- **FlowPlotEvent**: Emitido ao plotar um Flow
+- **MethodExecutionStartedEvent**: Emitido ao iniciar a execução de um método do Flow
+- **MethodExecutionFinishedEvent**: Emitido ao concluir a execução de um método do Flow
+- **MethodExecutionFailedEvent**: Emitido ao falhar na execução de um método do Flow
+
+### Eventos de LLM
+
+- **LLMCallStartedEvent**: Emitido ao iniciar uma chamada LLM
+- **LLMCallCompletedEvent**: Emitido ao concluir uma chamada LLM
+- **LLMCallFailedEvent**: Emitido ao falhar uma chamada LLM
+- **LLMStreamChunkEvent**: Emitido para cada chunk recebido durante respostas em streaming do LLM
+
+## Estrutura dos Handlers de Evento
+
+Cada handler de evento recebe dois parâmetros:
+
+1. **source**: O objeto que emitiu o evento
+2. **event**: A instância do evento, contendo dados específicos do evento
+
+A estrutura do objeto de evento depende do tipo do evento, mas todos herdam de `BaseEvent` e incluem:
+
+- **timestamp**: O horário em que o evento foi emitido
+- **type**: Identificador do tipo do evento
+
+Campos adicionais variam pelo tipo de evento. Por exemplo, `CrewKickoffCompletedEvent` inclui os campos `crew_name` e `output`.
+
+## Exemplo Real: Integração com AgentOps
+
+O CrewAI inclui um exemplo de integração com [AgentOps](https://github.com/AgentOps-AI/agentops), uma plataforma de monitoramento e observabilidade para agentes de IA. Veja como é implementado:
+
+```python
+from typing import Optional
+
+from crewai.utilities.events import (
+    CrewKickoffCompletedEvent,
+    ToolUsageErrorEvent,
+    ToolUsageStartedEvent,
+)
+from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.utilities.events.crew_events import CrewKickoffStartedEvent
+from crewai.utilities.events.task_events import TaskEvaluationEvent
+
+try:
+    import agentops
+    AGENTOPS_INSTALLED = True
+except ImportError:
+    AGENTOPS_INSTALLED = False
+
+class AgentOpsListener(BaseEventListener):
+    tool_event: Optional["agentops.ToolEvent"] = None
+    session: Optional["agentops.Session"] = None
+
+    def __init__(self):
+        super().__init__()
+
+    def setup_listeners(self, crewai_event_bus):
+        if not AGENTOPS_INSTALLED:
+            return
+
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def on_crew_kickoff_started(source, event: CrewKickoffStartedEvent):
+            self.session = agentops.init()
+            for agent in source.agents:
+                if self.session:
+                    self.session.create_agent(
+                        name=agent.role,
+                        agent_id=str(agent.id),
+                    )
+
+        @crewai_event_bus.on(CrewKickoffCompletedEvent)
+        def on_crew_kickoff_completed(source, event: CrewKickoffCompletedEvent):
+            if self.session:
+                self.session.end_session(
+                    end_state="Success",
+                    end_state_reason="Finished Execution",
+                )
+
+        @crewai_event_bus.on(ToolUsageStartedEvent)
+        def on_tool_usage_started(source, event: ToolUsageStartedEvent):
+            self.tool_event = agentops.ToolEvent(name=event.tool_name)
+            if self.session:
+                self.session.record(self.tool_event)
+
+        @crewai_event_bus.on(ToolUsageErrorEvent)
+        def on_tool_usage_error(source, event: ToolUsageErrorEvent):
+            agentops.ErrorEvent(exception=event.error, trigger_event=self.tool_event)
+```
+
+Esse listener inicializa uma sessão do AgentOps quando um Crew inicia, cadastra agentes no AgentOps, rastreia o uso de ferramentas e finaliza a sessão quando o Crew é concluído.
+
+O listener AgentOps é registrado no sistema de eventos do CrewAI via importação em `src/crewai/utilities/events/third_party/__init__.py`:
+
+```python
+from .agentops_listener import agentops_listener
+```
+
+Isso garante que o `agentops_listener` seja carregado quando o pacote `crewai.utilities.events` for importado.
+
+## Uso Avançado: Handlers Escopados
+
+Para lidar temporariamente com eventos (útil para testes ou operações específicas), você pode usar o context manager `scoped_handlers`:
+
+```python
+from crewai.utilities.events import crewai_event_bus, CrewKickoffStartedEvent
+
+with crewai_event_bus.scoped_handlers():
+    @crewai_event_bus.on(CrewKickoffStartedEvent)
+    def temp_handler(source, event):
+        print("Este handler só existe neste contexto")
+
+    # Faça algo que emita eventos
+
+# Fora do contexto, o handler temporário é removido
+```
+
+## Casos de Uso
+
+Listeners de evento podem ser usados para várias finalidades:
+
+1. **Log e Monitoramento**: Monitore a execução do seu Crew e registre eventos importantes
+2. **Analytics**: Colete dados sobre o desempenho e comportamento do seu Crew
+3. **Depuração**: Configure listeners temporários para debugar problemas específicos
+4. **Integração**: Conecte o CrewAI a sistemas externos como plataformas de monitoramento, bancos de dados ou serviços de notificação
+5. **Comportamento Personalizado**: Dispare ações personalizadas com base em eventos específicos
+
+## Boas Práticas
+
+1. **Mantenha Handlers Leves**: Handlers de eventos devem ser leves e evitar operações bloqueantes
+2. **Tratamento de Erros**: Implemente tratamento de erros adequado nos event handlers para evitar que exceções afetem a execução principal
+3. **Limpeza**: Se seu listener alocar recursos, garanta o devido fechamento/liberação
+4. **Escuta Seletiva**: Escute apenas eventos que realmente precisa tratar
+5. **Testes**: Teste seus listeners de evento isoladamente para garantir que se comportam conforme esperado
+
+Aproveitando o sistema de eventos do CrewAI, é possível estender a funcionalidade e integrá-lo facilmente à sua infraestrutura existente.
