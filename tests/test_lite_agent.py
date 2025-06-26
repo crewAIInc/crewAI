@@ -192,7 +192,7 @@ def test_lite_agent_structured_output():
     )
 
     result = agent.kickoff(
-        "What is the population of Tokyo? Return your strucutred output in JSON format with the following fields: summary, confidence",
+        "What is the population of Tokyo? Return your structured output in JSON format with the following fields: summary, confidence",
         response_format=SimpleOutput,
     )
 
@@ -230,7 +230,7 @@ def test_lite_agent_returns_usage_metrics():
     )
 
     result = agent.kickoff(
-        "What is the population of Tokyo? Return your strucutred output in JSON format with the following fields: summary, confidence"
+        "What is the population of Tokyo? Return your structured output in JSON format with the following fields: summary, confidence"
     )
 
     assert result.usage_metrics is not None
@@ -252,7 +252,7 @@ async def test_lite_agent_returns_usage_metrics_async():
     )
 
     result = await agent.kickoff_async(
-        "What is the population of Tokyo? Return your strucutred output in JSON format with the following fields: summary, confidence"
+        "What is the population of Tokyo? Return your structured output in JSON format with the following fields: summary, confidence"
     )
     assert isinstance(result, LiteAgentOutput)
     assert "21 million" in result.raw or "37 million" in result.raw
