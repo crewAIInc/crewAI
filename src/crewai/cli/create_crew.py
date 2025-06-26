@@ -25,6 +25,10 @@ def create_folder_structure(name, parent_folder=None):
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     folder_name = re.sub(r'[^a-zA-Z0-9_]', '', folder_name)
     
+    # Check if the name starts with invalid characters or is primarily invalid
+    if re.match(r'^[^a-zA-Z0-9_-]+', name):
+        raise ValueError(f"Project name '{name}' contains no valid characters for a Python module name")
+    
     if not folder_name:
         raise ValueError(f"Project name '{name}' contains no valid characters for a Python module name")
     
