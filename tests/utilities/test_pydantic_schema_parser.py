@@ -92,3 +92,39 @@ def test_model_with_dict():
     dict_field: Dict[str, int]
 }"""
     assert schema.strip() == expected_schema.strip()
+
+
+def test_model_with_python310_union_syntax():
+    class UnionTypeModel(BaseModel):
+        union_field: str | None
+        multi_union_field: int | str | None
+        non_optional_union: int | str
+
+    parser = PydanticSchemaParser(model=UnionTypeModel)
+    schema = parser.get_schema()
+
+    expected_schema = """{
+    union_field: Optional[str],
+    multi_union_field: Optional[Union[int, str]],
+    non_optional_union: Union[int, str]
+}"""
+    assert schema.strip() == expected_schema.strip()
+
+
+def test_mixed_union_syntax():
+    class MixedUnionModel(BaseModel):
+        traditional_optional: Optional[str]
+        new_union_syntax: str | None
+        traditional_union: Union[int, str]
+        new_multi_union: int | str | float
+
+    parser = PydanticSchemaParser(model=MixedUnionModel)
+    schema = parser.get_schema()
+
+    expected_schema = """{
+    traditional_optional: Optional[str],
+    new_union_syntax: Optional[str],
+    traditional_union: Union[int, str],
+    new_multi_union: Union[int, str, float]
+}"""
+    assert schema.strip() == expected_schema.strip()
