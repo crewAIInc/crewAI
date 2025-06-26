@@ -149,7 +149,7 @@ def test_create_folder_structure_handles_spaces_and_dashes_with_slash():
         assert folder_path.parent == Path(temp_dir)
 
 
-def test_create_folder_structure_raises_error_for_invalid_class_names():
+def test_create_folder_structure_raises_error_for_invalid_names():
     with tempfile.TemporaryDirectory() as temp_dir:
         invalid_cases = [
             ("123project/", "cannot start with a digit"),
@@ -168,7 +168,7 @@ def test_create_folder_structure_raises_error_for_invalid_class_names():
                 create_folder_structure(invalid_name, parent_folder=temp_dir)
 
 
-def test_create_folder_structure_validates_class_names():
+def test_create_folder_structure_validates_names():
     import keyword
     
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -177,16 +177,21 @@ def test_create_folder_structure_validates_class_names():
             ("my-project/", "my_project", "MyProject"),
             ("hello_world/", "hello_world", "HelloWorld"),
             ("valid123/", "valid123", "Valid123"),
-            ("hello.world/", "hello.world", "HelloWorld"),
-            ("hello@world/", "hello@world", "HelloWorld"),
+            ("hello.world/", "helloworld", "HelloWorld"),
+            ("hello@world/", "helloworld", "HelloWorld"),
         ]
         
         for valid_name, expected_folder, expected_class in valid_cases:
             folder_path, folder_name, class_name = create_folder_structure(valid_name, parent_folder=temp_dir)
             assert folder_name == expected_folder
             assert class_name == expected_class
-            assert class_name.isidentifier()
-            assert not keyword.iskeyword(class_name)
+            
+            assert folder_name.isidentifier(), f"folder_name '{folder_name}' should be valid Python identifier"
+            assert not keyword.iskeyword(folder_name), f"folder_name '{folder_name}' should not be Python keyword"
+            assert not folder_name[0].isdigit(), f"folder_name '{folder_name}' should not start with digit"
+            
+            assert class_name.isidentifier(), f"class_name '{class_name}' should be valid Python identifier"
+            assert not keyword.iskeyword(class_name), f"class_name '{class_name}' should not be Python keyword"
             assert folder_path.parent == Path(temp_dir)
             
             if folder_path.exists():
@@ -202,6 +207,39 @@ def test_create_crew_with_parent_folder_and_trailing_slash(mock_load_env, mock_w
     with tempfile.TemporaryDirectory() as work_dir:
         parent_path = Path(work_dir) / "parent"
         parent_path.mkdir()
+
+
+def test_create_folder_structure_folder_name_validation():
+    """Test that folder names are validated as valid Python module names"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        folder_invalid_cases = [
+            ("123invalid/", "cannot start with a digit.*invalid Python module name"),
+            ("import/", "reserved Python keyword"),
+            ("class/", "reserved Python keyword"),
+            ("for/", "reserved Python keyword"),
+            ("@#$invalid/", "contains no valid characters.*Python module name"),
+        ]
+        
+        for invalid_name, expected_error in folder_invalid_cases:
+            with pytest.raises(ValueError, match=expected_error):
+                create_folder_structure(invalid_name, parent_folder=temp_dir)
+        
+        valid_cases = [
+            ("hello-world/", "hello_world"),
+            ("my.project/", "myproject"),
+            ("test@123/", "test123"),
+            ("valid_name/", "valid_name"),
+        ]
+        
+        for valid_name, expected_folder in valid_cases:
+            folder_path, folder_name, class_name = create_folder_structure(valid_name, parent_folder=temp_dir)
+            assert folder_name == expected_folder
+            assert folder_name.isidentifier()
+            assert not keyword.iskeyword(folder_name)
+            
+            if folder_path.exists():
+                shutil.rmtree(folder_path)
+
         
         create_crew("child-crew/", skip_provider=True, parent_folder=parent_path)
         

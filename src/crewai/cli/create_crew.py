@@ -18,10 +18,24 @@ def create_folder_structure(name, parent_folder=None):
     import re
     
     name = name.rstrip('/')
-    folder_name = name.replace(" ", "_").replace("-", "_").lower()
     
     if not name.strip():
         raise ValueError("Project name cannot be empty or contain only whitespace")
+    
+    folder_name = name.replace(" ", "_").replace("-", "_").lower()
+    folder_name = re.sub(r'[^a-zA-Z0-9_]', '', folder_name)
+    
+    if not folder_name:
+        raise ValueError(f"Project name '{name}' contains no valid characters for a Python module name")
+    
+    if folder_name[0].isdigit():
+        raise ValueError(f"Project name '{name}' would generate folder name '{folder_name}' which cannot start with a digit (invalid Python module name)")
+    
+    if keyword.iskeyword(folder_name):
+        raise ValueError(f"Project name '{name}' would generate folder name '{folder_name}' which is a reserved Python keyword")
+    
+    if not folder_name.isidentifier():
+        raise ValueError(f"Project name '{name}' would generate invalid Python module name '{folder_name}'")
     
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
     
