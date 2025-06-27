@@ -71,6 +71,9 @@ class Agent(BaseAgent):
     """
 
     _times_executed: int = PrivateAttr(default=0)
+    _knowledge_loaded: bool = PrivateAttr(default=False)
+    _last_embedder: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    _last_knowledge_sources: Optional[List[Any]] = PrivateAttr(default=None)
     max_execution_time: Optional[int] = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -240,7 +243,7 @@ class Agent(BaseAgent):
 
         return any(getattr(self.crew, attr) for attr in memory_attributes)
 
-    def reset_knowledge_cache(self):
+    def reset_knowledge_cache(self) -> None:
         """Reset the knowledge cache to force reloading on next set_knowledge call."""
         self._knowledge_loaded = False
         self._last_embedder = None

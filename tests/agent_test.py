@@ -2278,8 +2278,8 @@ def test_agent_from_repository_without_org_set(
     )
 
 
-def test_agent_knowledge_caching_on_multiple_kickoffs():
-    """Test that agent knowledge is only loaded once when kickoff is called multiple times."""
+def test_agent_knowledge_caching_on_multiple_set_knowledge_calls():
+    """Test that agent knowledge is only loaded once when set_knowledge is called multiple times."""
     content = "Brandon's favorite color is blue and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
     
@@ -2287,26 +2287,19 @@ def test_agent_knowledge_caching_on_multiple_kickoffs():
         role="Researcher",
         goal="Research about Brandon",
         backstory="You are a researcher.",
-        knowledge_sources=[string_source]
+        knowledge_sources=[string_source],
+        llm="gpt-4o-mini"
     )
-    
-    task = Task(
-        description="What is Brandon's favorite color?",
-        expected_output="Brandon's favorite color",
-        agent=agent
-    )
-    
-    crew = Crew(agents=[agent], tasks=[task])
     
     with patch.object(Knowledge, 'add_sources') as mock_add_sources:
-        crew.kickoff()
-        assert mock_add_sources.call_count == 1
+        agent.set_knowledge()
+        assert mock_add_sources.call_count == 1, "Knowledge sources should be loaded once on first call"
         
-        crew.kickoff()
-        assert mock_add_sources.call_count == 1
+        agent.set_knowledge()
+        assert mock_add_sources.call_count == 1, "Knowledge sources should not be reloaded on second call"
         
-        crew.kickoff()
-        assert mock_add_sources.call_count == 1
+        agent.set_knowledge()
+        assert mock_add_sources.call_count == 1, "Knowledge sources should not be reloaded on third call"
 
 
 def test_agent_knowledge_reloads_when_sources_change():
@@ -2320,25 +2313,18 @@ def test_agent_knowledge_reloads_when_sources_change():
         role="Researcher",
         goal="Research about Brandon",
         backstory="You are a researcher.",
-        knowledge_sources=[string_source1]
+        knowledge_sources=[string_source1],
+        llm="gpt-4o-mini"
     )
-    
-    task = Task(
-        description="What do you know about Brandon?",
-        expected_output="Information about Brandon",
-        agent=agent
-    )
-    
-    crew = Crew(agents=[agent], tasks=[task])
     
     with patch.object(Knowledge, 'add_sources') as mock_add_sources:
-        crew.kickoff()
-        assert mock_add_sources.call_count == 1
+        agent.set_knowledge()
+        assert mock_add_sources.call_count == 1, "Knowledge sources should be loaded once on first call"
         
         agent.knowledge_sources = [string_source2]
         
-        crew.kickoff()
-        assert mock_add_sources.call_count == 2
+        agent.set_knowledge()
+        assert mock_add_sources.call_count == 2, "Knowledge sources should be reloaded when sources change"
 
 
 def test_agent_knowledge_reloads_when_embedder_changes():
@@ -2350,24 +2336,19 @@ def test_agent_knowledge_reloads_when_embedder_changes():
         role="Researcher",
         goal="Research about Brandon",
         backstory="You are a researcher.",
-        knowledge_sources=[string_source]
+        knowledge_sources=[string_source],
+        llm="gpt-4o-mini"
     )
     
-    task = Task(
-        description="What is Brandon's favorite color?",
-        expected_output="Brandon's favorite color",
-        agent=agent
-    )
-    
-    crew1 = Crew(agents=[agent], tasks=[task], embedder={"model": "text-embedding-ada-002"})
-    crew2 = Crew(agents=[agent], tasks=[task], embedder={"model": "text-embedding-3-small"})
+    embedder1 = {"provider": "openai", "model": "text-embedding-ada-002"}
+    embedder2 = {"provider": "openai", "model": "text-embedding-3-small"}
     
     with patch.object(Knowledge, 'add_sources') as mock_add_sources:
-        crew1.kickoff()
-        assert mock_add_sources.call_count == 1
+        agent.set_knowledge(crew_embedder=embedder1)
+        assert mock_add_sources.call_count == 1, "Knowledge sources should be loaded once on first call"
         
-        crew2.kickoff()
-        assert mock_add_sources.call_count == 2
+        agent.set_knowledge(crew_embedder=embedder2)
+        assert mock_add_sources.call_count == 2, "Knowledge sources should be reloaded when embedder changes"
 
 
 def test_agent_reset_knowledge_cache():
