@@ -1,6 +1,17 @@
 import shutil
 import subprocess
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -157,7 +168,7 @@ class Agent(BaseAgent):
     )
     guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
         default=None,
-        description="Function or string description of a guardrail to validate agent output"
+        description="Function or string description of a guardrail to validate agent output",
     )
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
@@ -563,7 +574,7 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: List[BaseAgent]):
+    def get_delegation_tools(self, agents: List[BaseAgent]) -> List[BaseTool]:
         """
         Retrieve delegation tools configured with the provided agents.
 
@@ -588,7 +599,7 @@ class Agent(BaseAgent):
 
         return [AddImageTool()]
 
-    def get_code_execution_tools(self):
+    def get_code_execution_tools(self) -> Optional[List[BaseTool]]:
         """
         Retrieve tools for code execution, based on the agent's execution mode.
 
@@ -607,7 +618,9 @@ class Agent(BaseAgent):
                 "info", "Coding tools not available. Install crewai_tools. "
             )
 
-    def get_output_converter(self, llm, text, model, instructions):
+    def get_output_converter(
+        self, llm: BaseLLM, text: str, model: str, instructions: str
+    ) -> Converter:
         """
         Create a Converter object for processing model outputs.
 
