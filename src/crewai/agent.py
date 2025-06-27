@@ -194,6 +194,14 @@ class Agent(BaseAgent):
 
     def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
         try:
+            current_embedder = crew_embedder or self.embedder
+            if (hasattr(self, '_knowledge_loaded') and 
+                self._knowledge_loaded and 
+                self.knowledge is not None and
+                getattr(self, '_last_embedder', None) == current_embedder and
+                getattr(self, '_last_knowledge_sources', None) == self.knowledge_sources):
+                return
+
             if self.embedder is None and crew_embedder:
                 self.embedder = crew_embedder
 
@@ -208,6 +216,10 @@ class Agent(BaseAgent):
                         storage=self.knowledge_storage or None,
                     )
                     self.knowledge.add_sources()
+                    
+                    self._knowledge_loaded = True
+                    self._last_embedder = current_embedder
+                    self._last_knowledge_sources = self.knowledge_sources.copy() if self.knowledge_sources else None
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
@@ -227,6 +239,13 @@ class Agent(BaseAgent):
         ]
 
         return any(getattr(self.crew, attr) for attr in memory_attributes)
+
+    def reset_knowledge_cache(self):
+        """Reset the knowledge cache to force reloading on next set_knowledge call."""
+        self._knowledge_loaded = False
+        self._last_embedder = None
+        self._last_knowledge_sources = None
+        self.knowledge = None
 
     def execute_task(
         self,

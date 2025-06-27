@@ -2276,3 +2276,119 @@ def test_agent_from_repository_without_org_set(
         "No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.",
         style="yellow",
     )
+
+
+def test_agent_knowledge_caching_on_multiple_kickoffs():
+    """Test that agent knowledge is only loaded once when kickoff is called multiple times."""
+    content = "Brandon's favorite color is blue and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+    
+    agent = Agent(
+        role="Researcher",
+        goal="Research about Brandon",
+        backstory="You are a researcher.",
+        knowledge_sources=[string_source]
+    )
+    
+    task = Task(
+        description="What is Brandon's favorite color?",
+        expected_output="Brandon's favorite color",
+        agent=agent
+    )
+    
+    crew = Crew(agents=[agent], tasks=[task])
+    
+    with patch.object(Knowledge, 'add_sources') as mock_add_sources:
+        crew.kickoff()
+        assert mock_add_sources.call_count == 1
+        
+        crew.kickoff()
+        assert mock_add_sources.call_count == 1
+        
+        crew.kickoff()
+        assert mock_add_sources.call_count == 1
+
+
+def test_agent_knowledge_reloads_when_sources_change():
+    """Test that agent knowledge is reloaded when knowledge sources change."""
+    content1 = "Brandon's favorite color is blue."
+    content2 = "Brandon's favorite food is tacos."
+    string_source1 = StringKnowledgeSource(content=content1)
+    string_source2 = StringKnowledgeSource(content=content2)
+    
+    agent = Agent(
+        role="Researcher",
+        goal="Research about Brandon",
+        backstory="You are a researcher.",
+        knowledge_sources=[string_source1]
+    )
+    
+    task = Task(
+        description="What do you know about Brandon?",
+        expected_output="Information about Brandon",
+        agent=agent
+    )
+    
+    crew = Crew(agents=[agent], tasks=[task])
+    
+    with patch.object(Knowledge, 'add_sources') as mock_add_sources:
+        crew.kickoff()
+        assert mock_add_sources.call_count == 1
+        
+        agent.knowledge_sources = [string_source2]
+        
+        crew.kickoff()
+        assert mock_add_sources.call_count == 2
+
+
+def test_agent_knowledge_reloads_when_embedder_changes():
+    """Test that agent knowledge is reloaded when embedder changes."""
+    content = "Brandon's favorite color is blue."
+    string_source = StringKnowledgeSource(content=content)
+    
+    agent = Agent(
+        role="Researcher",
+        goal="Research about Brandon",
+        backstory="You are a researcher.",
+        knowledge_sources=[string_source]
+    )
+    
+    task = Task(
+        description="What is Brandon's favorite color?",
+        expected_output="Brandon's favorite color",
+        agent=agent
+    )
+    
+    crew1 = Crew(agents=[agent], tasks=[task], embedder={"model": "text-embedding-ada-002"})
+    crew2 = Crew(agents=[agent], tasks=[task], embedder={"model": "text-embedding-3-small"})
+    
+    with patch.object(Knowledge, 'add_sources') as mock_add_sources:
+        crew1.kickoff()
+        assert mock_add_sources.call_count == 1
+        
+        crew2.kickoff()
+        assert mock_add_sources.call_count == 2
+
+
+def test_agent_reset_knowledge_cache():
+    """Test that reset_knowledge_cache forces knowledge reloading."""
+    content = "Brandon's favorite color is blue."
+    string_source = StringKnowledgeSource(content=content)
+    
+    agent = Agent(
+        role="Researcher",
+        goal="Research about Brandon",
+        backstory="You are a researcher.",
+        knowledge_sources=[string_source]
+    )
+    
+    agent._knowledge_loaded = True
+    agent._last_embedder = {"model": "test"}
+    agent._last_knowledge_sources = [string_source]
+    
+    agent.reset_knowledge_cache()
+    
+    assert not getattr(agent, '_knowledge_loaded', True)
+    assert agent._last_embedder is None
+    assert agent._last_knowledge_sources is None
+    assert agent.knowledge is None
