@@ -1984,7 +1984,7 @@ def test_crew_agent_executor_litellm_auth_error():
         )
 
     # Verify error handling messages
-    error_message = f"Error during LLM call: {str(mock_llm_call.side_effect)}"
+    error_message = f"Primary LLM failed: {str(mock_llm_call.side_effect)}"
     mock_printer.assert_any_call(
         content=error_message,
         color="red",

@@ -526,6 +526,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         messages=self._messages,
                         callbacks=self._callbacks,
                         printer=self._printer,
+                        fallback_llms=getattr(self, 'fallback_llms', None),
                     )
 
                     # Emit LLM call completed event
