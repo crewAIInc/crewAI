@@ -2291,15 +2291,21 @@ def test_agent_knowledge_caching_on_multiple_set_knowledge_calls():
         llm="gpt-4o-mini"
     )
     
-    with patch.object(Knowledge, 'add_sources') as mock_add_sources:
-        agent.set_knowledge()
-        assert mock_add_sources.call_count == 1, "Knowledge sources should be loaded once on first call"
+    with patch('crewai.agent.Knowledge') as mock_knowledge_class:
+        mock_knowledge_instance = MagicMock()
+        mock_knowledge_class.return_value = mock_knowledge_instance
         
         agent.set_knowledge()
-        assert mock_add_sources.call_count == 1, "Knowledge sources should not be reloaded on second call"
+        assert mock_knowledge_class.call_count == 1, "Knowledge should be created once on first call"
+        assert mock_knowledge_instance.add_sources.call_count == 1, "add_sources should be called once"
         
         agent.set_knowledge()
-        assert mock_add_sources.call_count == 1, "Knowledge sources should not be reloaded on third call"
+        assert mock_knowledge_class.call_count == 1, "Knowledge should not be recreated on second call"
+        assert mock_knowledge_instance.add_sources.call_count == 1, "add_sources should not be called again"
+        
+        agent.set_knowledge()
+        assert mock_knowledge_class.call_count == 1, "Knowledge should not be recreated on third call"
+        assert mock_knowledge_instance.add_sources.call_count == 1, "add_sources should not be called again"
 
 
 def test_agent_knowledge_reloads_when_sources_change():
@@ -2317,14 +2323,17 @@ def test_agent_knowledge_reloads_when_sources_change():
         llm="gpt-4o-mini"
     )
     
-    with patch.object(Knowledge, 'add_sources') as mock_add_sources:
+    with patch('crewai.agent.Knowledge') as mock_knowledge_class:
+        mock_knowledge_instance = MagicMock()
+        mock_knowledge_class.return_value = mock_knowledge_instance
+        
         agent.set_knowledge()
-        assert mock_add_sources.call_count == 1, "Knowledge sources should be loaded once on first call"
+        assert mock_knowledge_class.call_count == 1, "Knowledge should be created once on first call"
         
         agent.knowledge_sources = [string_source2]
         
         agent.set_knowledge()
-        assert mock_add_sources.call_count == 2, "Knowledge sources should be reloaded when sources change"
+        assert mock_knowledge_class.call_count == 2, "Knowledge should be recreated when sources change"
 
 
 def test_agent_knowledge_reloads_when_embedder_changes():
@@ -2343,12 +2352,15 @@ def test_agent_knowledge_reloads_when_embedder_changes():
     embedder1 = {"provider": "openai", "model": "text-embedding-ada-002"}
     embedder2 = {"provider": "openai", "model": "text-embedding-3-small"}
     
-    with patch.object(Knowledge, 'add_sources') as mock_add_sources:
+    with patch('crewai.agent.Knowledge') as mock_knowledge_class:
+        mock_knowledge_instance = MagicMock()
+        mock_knowledge_class.return_value = mock_knowledge_instance
+        
         agent.set_knowledge(crew_embedder=embedder1)
-        assert mock_add_sources.call_count == 1, "Knowledge sources should be loaded once on first call"
+        assert mock_knowledge_class.call_count == 1, "Knowledge should be created once on first call"
         
         agent.set_knowledge(crew_embedder=embedder2)
-        assert mock_add_sources.call_count == 2, "Knowledge sources should be reloaded when embedder changes"
+        assert mock_knowledge_class.call_count == 2, "Knowledge should be recreated when embedder changes"
 
 
 def test_agent_reset_knowledge_cache():

@@ -198,11 +198,10 @@ class Agent(BaseAgent):
     def set_knowledge(self, crew_embedder: Optional[Dict[str, Any]] = None):
         try:
             current_embedder = crew_embedder or self.embedder
-            if (hasattr(self, '_knowledge_loaded') and 
-                self._knowledge_loaded and 
+            if (self._knowledge_loaded and 
                 self.knowledge is not None and
-                getattr(self, '_last_embedder', None) == current_embedder and
-                getattr(self, '_last_knowledge_sources', None) == self.knowledge_sources):
+                self._last_embedder == current_embedder and
+                self._last_knowledge_sources == self.knowledge_sources):
                 return
 
             if self.embedder is None and crew_embedder:
