@@ -1,0 +1,103 @@
+---
+title: "Exportação de Componentes React"
+description: "Aprenda como exportar e integrar componentes React do CrewAI Enterprise em suas aplicações"
+icon: "react"
+---
+
+Este guia explica como exportar crews do CrewAI Enterprise como componentes React e integrá-los às suas próprias aplicações.
+
+## Exportando um Componente React
+
+<Steps>
+    <Step title="Exporte o Componente">
+        Clique no menu de opções (três pontos à direita do seu crew implantado), selecione a opção de exportação e salve o arquivo localmente. Usaremos o arquivo `CrewLead.jsx` como exemplo.
+
+        <Frame>
+            <img src="/images/enterprise/export-react-component.png" alt="Exportar Componente React" />
+        </Frame>
+    </Step>
+</Steps>
+
+## Configurando seu Ambiente React
+
+Para executar este componente React localmente, você precisará configurar um ambiente de desenvolvimento React e integrar este componente em um projeto React.
+
+<Steps>
+    <Step title="Instale o Node.js">
+        - Baixe e instale o Node.js no site oficial: https://nodejs.org/
+        - Escolha a versão LTS (Long Term Support) para maior estabilidade.
+    </Step>
+
+    <Step title="Crie um novo projeto React">
+        - Abra o Prompt de Comando ou PowerShell
+        - Navegue até o diretório onde deseja criar seu projeto
+        - Execute o seguinte comando para criar um novo projeto React:
+
+            ```bash
+            npx create-react-app my-crew-app
+            ```
+        - Entre no diretório do projeto:
+        
+            ```bash
+            cd my-crew-app
+            ```
+    </Step>
+
+    <Step title="Instale as dependências necessárias">
+        ```bash
+        npm install react-dom
+        ```
+    </Step>
+
+    <Step title="Crie o componente CrewLead">
+        - Mova o arquivo baixado `CrewLead.jsx` para a pasta `src` do seu projeto.
+    </Step>
+
+    <Step title="Modifique seu App.js para usar o componente CrewLead">
+        - Abra o arquivo `src/App.js`
+        - Substitua o conteúdo por algo semelhante a isso:
+
+        ```jsx
+        import React from 'react';
+        import CrewLead from './CrewLead';
+
+        function App() {
+            return (
+                <div className="App">
+                    <CrewLead baseUrl="YOUR_API_BASE_URL" bearerToken="YOUR_BEARER_TOKEN" />
+                </div>
+            );
+        }
+
+        export default App;
+        ```
+        - Substitua `YOUR_API_BASE_URL` e `YOUR_BEARER_TOKEN` pelos valores reais da sua API.
+    </Step>
+
+    <Step title="Inicie o servidor de desenvolvimento">
+        - No diretório do seu projeto, execute:
+        
+            ```bash
+            npm start
+            ```
+        - Isso iniciará o servidor de desenvolvimento, e seu navegador padrão será aberto automaticamente em http://localhost:3000, onde você verá sua aplicação React rodando.
+    </Step>
+</Steps>
+
+## Personalização
+
+Você pode então personalizar o `CrewLead.jsx` para adicionar cor, título etc.
+
+<Frame>
+    <img src="/images/enterprise/customise-react-component.png" alt="Personalizar Componente React" />
+</Frame>
+<Frame>
+    <img src="/images/enterprise/customise-react-component-2.png" alt="Personalizar Componente React" />
+</Frame>
+
+## Próximos Passos
+
+- Personalize o estilo do componente para combinar com o design da sua aplicação
+- Adicione props adicionais para configuração
+- Integre com o gerenciamento de estado da sua aplicação
+- Adicione tratamento de erros e estados de carregamento

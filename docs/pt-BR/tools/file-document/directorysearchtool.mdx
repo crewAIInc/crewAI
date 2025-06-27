@@ -1,0 +1,67 @@
+---
+title: Busca RAG em Diretório
+description: O `DirectorySearchTool` é uma poderosa ferramenta RAG (Retrieval-Augmented Generation) desenvolvida para buscas semânticas no conteúdo de um diretório.
+icon: address-book
+---
+
+# `DirectorySearchTool`
+
+<Note>
+    **Experimental**: O DirectorySearchTool está em desenvolvimento contínuo. As funcionalidades e recursos podem evoluir, e comportamentos inesperados podem ocorrer enquanto aprimoramos a ferramenta.
+</Note>
+
+## Descrição
+
+O DirectorySearchTool permite a busca semântica dentro do conteúdo de diretórios especificados, aproveitando a metodologia de Recuperação com Geração Aumentada (RAG) para uma navegação eficiente entre arquivos. Projetada para flexibilidade, a ferramenta possibilita que usuários especifiquem dinamicamente os diretórios de busca em tempo de execução ou definam um diretório fixo durante a configuração inicial.
+
+## Instalação
+
+Para utilizar o DirectorySearchTool, comece instalando o pacote crewai_tools. Execute o seguinte comando no seu terminal:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Inicialização e Uso
+
+Importe o DirectorySearchTool do pacote `crewai_tools` para começar. Você pode inicializar a ferramenta sem especificar um diretório, permitindo definir o diretório de busca em tempo de execução. Alternativamente, a ferramenta pode ser inicializada já com um diretório predefinido.
+
+```python Code
+from crewai_tools import DirectorySearchTool
+
+# Para especificação dinâmica de diretório em tempo de execução
+tool = DirectorySearchTool()
+
+# Para buscas em diretório fixo
+tool = DirectorySearchTool(directory='/path/to/directory')
+```
+
+## Argumentos
+
+- `directory`: Um argumento do tipo string que especifica o diretório de busca. Este parâmetro é opcional durante a inicialização, mas obrigatório para buscas caso não tenha sido definido inicialmente.
+
+## Modelo Personalizado e Embeddings
+
+O DirectorySearchTool utiliza OpenAI para embeddings e sumarização por padrão. As opções de personalização dessas configurações incluem a alteração do provedor de modelo e configurações, ampliando a flexibilidade para usuários avançados.
+
+```python Code
+tool = DirectorySearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # As opções incluem ollama, google, anthropic, llama2 e mais
+            config=dict(
+                model="llama2",
+                # Configurações adicionais aqui
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

@@ -1,0 +1,50 @@
+---
+title: Forçar a Saída da Ferramenta como Resultado
+description: Aprenda como forçar a saída de uma ferramenta como resultado em uma tarefa de Agent no CrewAI.
+icon: wrench-simple
+---
+
+## Introdução
+
+No CrewAI, você pode forçar a saída de uma ferramenta como o resultado de uma tarefa de um agent.  
+Esse recurso é útil quando você deseja garantir que a saída da ferramenta seja capturada e retornada como resultado da tarefa, evitando quaisquer modificações pelo agent durante a execução da tarefa.
+
+## Forçando a Saída da Ferramenta como Resultado
+
+Para forçar a saída da ferramenta como resultado da tarefa de um agent, você precisa definir o parâmetro `result_as_answer` como `True` ao adicionar uma ferramenta ao agent.  
+Esse parâmetro garante que a saída da ferramenta seja capturada e retornada como resultado da tarefa, sem qualquer modificação pelo agent.
+
+Veja um exemplo de como forçar a saída da ferramenta como resultado da tarefa de um agent:
+
+```python Code
+from crewai.agent import Agent
+from my_tool import MyCustomTool
+
+# Create a coding agent with the custom tool
+coding_agent = Agent(
+        role="Data Scientist",
+        goal="Produce amazing reports on AI",
+        backstory="You work with data and AI",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
+
+# Assuming the tool's execution and result population occurs within the system
+task_result = coding_agent.execute_task(task)
+```
+
+## Fluxo de Trabalho em Ação
+
+<Steps>
+   <Step title="Execução da Tarefa">
+      O agent executa a tarefa utilizando a ferramenta fornecida.
+   </Step>
+   <Step title="Saída da Ferramenta">
+      A ferramenta gera a saída, que é capturada como resultado da tarefa.
+   </Step>
+   <Step title="Interação do Agent">
+      O agent pode refletir e aprender com a ferramenta, mas a saída não é modificada.
+   </Step>
+   <Step title="Retorno do Resultado">
+      A saída da ferramenta é retornada como resultado da tarefa sem quaisquer modificações.
+   </Step>
+</Steps>

@@ -1,0 +1,392 @@
+---
+title: Monte sua Primeira Crew
+description: Tutorial passo a passo para criar uma equipe colaborativa de IA que trabalha junta para resolver problemas complexos.
+icon: users-gear
+---
+
+## Liberando o Poder da IA Colaborativa
+
+Imagine ter uma equipe de agentes de IA especializados trabalhando juntos de forma harmoniosa para resolver problemas complexos, cada um contribuindo com suas habilidades únicas para alcançar um objetivo comum. Esse é o poder da CrewAI – um framework que permite criar sistemas colaborativos de IA que podem realizar tarefas muito além do que uma única IA conseguiria sozinha.
+
+Neste guia, vamos criar uma crew de pesquisa que irá nos ajudar a pesquisar e analisar um tema, e então criar um relatório abrangente. Este exemplo prático demonstra como agentes de IA podem colaborar para realizar tarefas complexas, mas é apenas o começo do que é possível com a CrewAI.
+
+### O que Você Vai Construir e Aprender
+
+Ao final deste guia, você terá:
+
+1. **Criado uma equipe de pesquisa em IA especializada** com papéis e responsabilidades distintas
+2. **Orquestrado a colaboração** entre múltiplos agentes de IA
+3. **Automatizado um fluxo de trabalho complexo** que envolve coleta de informações, análise e geração de relatórios
+4. **Desenvolvido habilidades fundamentais** que podem ser aplicadas em projetos mais ambiciosos
+
+Embora estejamos criando uma crew de pesquisa simples neste guia, os mesmos padrões e técnicas podem ser aplicados para criar equipes muito mais sofisticadas para tarefas como:
+
+- Criação de conteúdo em múltiplas etapas com redatores, editores e checadores de fatos especializados
+- Sistemas de atendimento ao cliente complexos com agentes de suporte em diferentes níveis
+- Analistas de negócios autônomos que coletam dados, criam visualizações e geram insights
+- Equipes de desenvolvimento de produto que idealizam, projetam e planejam a implementação
+
+Vamos começar a construir sua primeira crew!
+
+### Pré-requisitos
+
+Antes de começar, certifique-se de que você:
+
+1. Instalou a CrewAI seguindo o [guia de instalação](/pt-BR/installation)
+2. Configurou sua chave de API de LLM no ambiente, conforme o [guia de configuração do LLM](/pt-BR/concepts/llms#setting-up-your-llm)
+3. Tem conhecimento básico de Python
+
+## Passo 1: Crie um Novo Projeto CrewAI
+
+Primeiro, vamos criar um novo projeto CrewAI usando a CLI. Este comando irá configurar toda a estrutura do projeto com os arquivos necessários, permitindo que você foque em definir seus agentes e suas tarefas, em vez de se preocupar com código boilerplate.
+
+```bash
+crewai create crew research_crew
+cd research_crew
+```
+
+Isso irá gerar um projeto com a estrutura básica necessária para sua crew. A CLI cria automaticamente:
+
+- Um diretório de projeto com os arquivos necessários
+- Arquivos de configuração para agentes e tarefas
+- Uma implementação básica da crew
+- Um script principal para rodar a crew
+
+<Frame caption="CrewAI Framework Overview">
+  <img src="/images/crews.png" alt="CrewAI Framework Overview" />
+</Frame>
+
+
+## Passo 2: Explore a Estrutura do Projeto
+
+Vamos dedicar um momento para entender a estrutura do projeto criada pela CLI. A CrewAI segue boas práticas para projetos Python, tornando fácil manter e estender seu código à medida que suas crews se tornam mais complexas.
+
+```
+research_crew/
+├── .gitignore
+├── pyproject.toml
+├── README.md
+├── .env
+└── src/
+    └── research_crew/
+        ├── __init__.py
+        ├── main.py
+        ├── crew.py
+        ├── tools/
+        │   ├── custom_tool.py
+        │   └── __init__.py
+        └── config/
+            ├── agents.yaml
+            └── tasks.yaml
+```
+
+Esta estrutura segue as melhores práticas para projetos Python e facilita a organização do seu código. A separação dos arquivos de configuração (em YAML) do código de implementação (em Python) permite modificar o comportamento da sua crew sem alterar o código subjacente.
+
+## Passo 3: Configure seus Agentes
+
+Agora vem a parte divertida – definir seus agentes de IA! Na CrewAI, agentes são entidades especializadas com papéis, objetivos e históricos específicos que moldam seu comportamento. Pense neles como personagens em uma peça, cada um com sua personalidade e propósito próprios.
+
+Para nossa crew de pesquisa, vamos criar dois agentes:
+1. Um **pesquisador** que é especialista em encontrar e organizar informações
+2. Um **analista** que pode interpretar os resultados da pesquisa e criar relatórios perspicazes
+
+Vamos modificar o arquivo `agents.yaml` para definir esses agentes especializados. Certifique-se de
+definir `llm` para o provedor que você está utilizando.
+
+```yaml
+# src/research_crew/config/agents.yaml
+researcher:
+  role: >
+    Especialista Sênior em Pesquisa para {topic}
+  goal: >
+    Encontrar informações abrangentes e precisas sobre {topic}
+    com foco em desenvolvimentos recentes e insights chave
+  backstory: >
+    Você é um especialista em pesquisa experiente com talento para
+    encontrar informações relevantes de diversas fontes. Você se destaca em
+    organizar informações de forma clara e estruturada, tornando temas complexos acessíveis para outros.
+  llm: provider/model-id  # ex: openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+
+analyst:
+  role: >
+    Analista de Dados e Redator de Relatórios para {topic}
+  goal: >
+    Analisar os resultados da pesquisa e criar um relatório abrangente e bem estruturado
+    que apresente os insights de forma clara e envolvente
+  backstory: >
+    Você é um analista habilidoso com experiência em interpretação de dados
+    e redação técnica. Tem talento para identificar padrões
+    e extrair insights relevantes dos dados de pesquisa, comunicando esses insights de forma eficaz por meio de relatórios bem elaborados.
+  llm: provider/model-id  # ex: openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+```
+
+Perceba como cada agente tem um papel, objetivo e histórico distintos. Esses elementos não são apenas descritivos – eles efetivamente moldam como o agente aborda suas tarefas. Ao criar cuidadosamente esses detalhes, você pode ter agentes com habilidades e perspectivas que se complementam.
+
+## Passo 4: Defina suas Tarefas
+
+Com nossos agentes definidos, agora precisamos atribuir tarefas específicas para eles realizarem. Tarefas na CrewAI representam o trabalho concreto que os agentes irão executar, com instruções detalhadas e saídas esperadas.
+
+Para nossa crew de pesquisa, vamos definir duas tarefas principais:
+1. Uma **tarefa de pesquisa** para coletar informações abrangentes
+2. Uma **tarefa de análise** para criar um relatório com insights
+
+Vamos modificar o arquivo `tasks.yaml`:
+
+```yaml
+# src/research_crew/config/tasks.yaml
+research_task:
+  description: >
+    Realize uma pesquisa aprofundada sobre {topic}. Foque em:
+    1. Conceitos e definições chave
+    2. Desenvolvimento histórico e tendências recentes
+    3. Principais desafios e oportunidades
+    4. Aplicações relevantes ou estudos de caso
+    5. Perspectivas futuras e novos desenvolvimentos
+
+    Certifique-se de organizar seus achados em um formato estruturado, com seções claras.
+  expected_output: >
+    Um documento de pesquisa abrangente com seções bem organizadas cobrindo
+    todos os aspectos solicitados de {topic}. Inclua fatos, números
+    e exemplos específicos sempre que possível.
+  agent: researcher
+
+analysis_task:
+  description: >
+    Analise os resultados da pesquisa e crie um relatório abrangente sobre {topic}.
+    Seu relatório deve:
+    1. Iniciar com um resumo executivo
+    2. Incluir todas as informações relevantes da pesquisa
+    3. Oferecer uma análise perspicaz de tendências e padrões
+    4. Apresentar recomendações ou considerações futuras
+    5. Estar formatado de forma profissional, clara e com títulos bem definidos
+  expected_output: >
+    Um relatório profissional, polido e estruturado sobre {topic} com apresentação dos resultados da pesquisa,
+    acrescentando análise e insights. O relatório deve ser bem estruturado,
+    incluindo resumo executivo, sessões principais e conclusão.
+  agent: analyst
+  context:
+    - research_task
+  output_file: output/report.md
+```
+
+Note o campo `context` na tarefa de análise – esse é um recurso poderoso que permite ao analista acessar a saída da tarefa de pesquisa. Isso cria um fluxo de trabalho em que a informação circula naturalmente entre os agentes, como aconteceria em uma equipe humana.
+
+## Passo 5: Configure sua Crew
+
+Agora é hora de juntar tudo configurando nossa crew. A crew é o container que orquestra como os agentes trabalham juntos para completar as tarefas.
+
+Vamos modificar o arquivo `crew.py`:
+
+```python
+# src/research_crew/crew.py
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai_tools import SerperDevTool
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
+
+@CrewBase
+class ResearchCrew():
+    """Research crew for comprehensive topic analysis and reporting"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
+    @agent
+    def researcher(self) -> Agent:
+        return Agent(
+            config=self.agents_config['researcher'], # type: ignore[index]
+            verbose=True,
+            tools=[SerperDevTool()]
+        )
+
+    @agent
+    def analyst(self) -> Agent:
+        return Agent(
+            config=self.agents_config['analyst'], # type: ignore[index]
+            verbose=True
+        )
+
+    @task
+    def research_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['research_task'] # type: ignore[index]
+        )
+
+    @task
+    def analysis_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['analysis_task'], # type: ignore[index]
+            output_file='output/report.md'
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        """Creates the research crew"""
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+Neste código, estamos:
+1. Criando o agente pesquisador e equipando-o com o SerperDevTool para buscas web
+2. Criando o agente analista
+3. Definindo as tarefas de pesquisa e análise
+4. Configurando a crew para executar as tarefas sequencialmente (o analista espera o pesquisador terminar)
+
+É aqui que a mágica acontece – com poucas linhas de código, definimos um sistema colaborativo de IA onde agentes especializados trabalham juntos em um processo coordenado.
+
+## Passo 6: Prepare seu Script Principal
+
+Agora, vamos preparar o script principal que irá rodar nossa crew. É aqui que informamos o tema específico que queremos pesquisar.
+
+```python
+#!/usr/bin/env python
+# src/research_crew/main.py
+import os
+from research_crew.crew import ResearchCrew
+
+# Crie o diretório de saída se não existir
+os.makedirs('output', exist_ok=True)
+
+def run():
+    """
+    Rodar a crew de pesquisa.
+    """
+    inputs = {
+        'topic': 'Inteligência Artificial na Saúde'
+    }
+
+    # Criar e rodar a crew
+    result = ResearchCrew().crew().kickoff(inputs=inputs)
+
+    # Imprimir o resultado
+    print("\n\n=== RELATÓRIO FINAL ===\n\n")
+    print(result.raw)
+
+    print("\n\nRelatório salvo em output/report.md")
+
+if __name__ == "__main__":
+    run()
+```
+
+Este script prepara o ambiente, define o tema de pesquisa e inicia o trabalho da crew. O poder da CrewAI fica evidente em como esse código é simples – toda a complexidade do gerenciamento de múltiplos agentes de IA é tratada pelo framework.
+
+## Passo 7: Defina suas Variáveis de Ambiente
+
+Crie um arquivo `.env` na raiz do seu projeto com suas chaves de API:
+
+```sh
+SERPER_API_KEY=sua_serper_api_key
+# Adicione a chave de API do seu provedor também.
+```
+
+Confira o [guia de configuração do LLM](/pt-BR/concepts/llms#setting-up-your-llm) para detalhes sobre como configurar o provedor de sua escolha. Você pode obter a chave da Serper em [Serper.dev](https://serper.dev/).
+
+## Passo 8: Instale as Dependências
+
+Instale as dependências necessárias usando a CLI da CrewAI:
+
+```bash
+crewai install
+```
+
+Este comando irá:
+1. Ler as dependências da configuração do seu projeto
+2. Criar um ambiente virtual se necessário
+3. Instalar todos os pacotes necessários
+
+## Passo 9: Execute sua Crew
+
+Agora chega o momento empolgante – é hora de rodar sua crew e assistir à colaboração de IA em ação!
+
+```bash
+crewai run
+```
+
+Ao rodar esse comando, você verá sua crew ganhando vida. O pesquisador irá coletar informações sobre o tema especificado, e o analista irá criar um relatório abrangente baseado nessa pesquisa. Você poderá acompanhar em tempo real o raciocínio, as ações e os resultados dos agentes à medida que colaboram para concluir as tarefas.
+
+## Passo 10: Revise o Resultado
+
+Após a conclusão do trabalho da crew, você encontrará o relatório final em `output/report.md`. O relatório incluirá:
+
+1. Um resumo executivo
+2. Informações detalhadas sobre o tema
+3. Análises e insights
+4. Recomendações ou considerações futuras
+
+Tire um momento para valorizar o que você realizou – você criou um sistema no qual múltiplos agentes de IA colaboraram em uma tarefa complexa, cada um contribuindo com suas habilidades especializadas para gerar um resultado maior do que qualquer agente conseguiria sozinho.
+
+## Explorando Outros Comandos da CLI
+
+A CrewAI oferece vários outros comandos úteis de CLI para trabalhar com crews:
+
+```bash
+# Ver todos os comandos disponíveis
+crewai --help
+
+# Rodar a crew
+crewai run
+
+# Testar a crew
+crewai test
+
+# Resetar as memórias da crew
+crewai reset-memories
+
+# Repetir a partir de uma tarefa específica
+crewai replay -t <task_id>
+```
+
+## O que Mais é Possível: Além da sua Primeira Crew
+
+O que você construiu neste guia é só o começo. As habilidades e padrões aprendidos aqui podem ser aplicados para criar sistemas de IA cada vez mais sofisticados. Veja algumas maneiras de expandir sua crew de pesquisa básica:
+
+### Expandindo sua Crew
+
+Você pode adicionar mais agentes especializados à sua crew:
+- Um **checador de fatos** para verificar as informações encontradas
+- Um **visualizador de dados** para criar gráficos e tabelas
+- Um **especialista de domínio** com conhecimento aprofundado em uma área específica
+- Um **crítico** para identificar pontos fracos na análise
+
+### Adicionando Ferramentas e Capacidades
+
+Você pode potencializar seus agentes com ferramentas adicionais:
+- Ferramentas de navegação web para pesquisa em tempo real
+- Ferramentas para CSV ou bancos de dados para análise de dados
+- Ferramentas de execução de código para processamento de dados
+- Conexões de API com serviços externos
+
+### Criando Fluxos de Trabalho Mais Complexos
+
+Você pode implementar processos mais sofisticados:
+- Processos hierárquicos em que agentes gestores delegam para agentes
+- Processos iterativos com loops de feedback para refinamento
+- Processos paralelos onde múltiplos agentes trabalham simultaneamente
+- Processos dinâmicos que se adaptam a resultados intermediários
+
+### Aplicando em Diferentes Domínios
+
+Os mesmos padrões podem ser aplicados para criar crews para:
+- **Criação de conteúdo:** Redatores, editores, checadores de fatos e designers trabalhando juntos
+- **Atendimento ao cliente:** Agentes de triagem, especialistas e controle de qualidade atuando colaborativamente
+- **Desenvolvimento de produto:** Pesquisadores, designers e planejadores trabalhando em conjunto
+- **Análise de dados:** Coletores de dados, analistas e especialistas em visualização
+
+## Próximos Passos
+
+Agora que você montou sua primeira crew, você pode:
+
+1. Experimentar diferentes configurações e personalidades de agentes
+2. Testar estruturas de tarefas e fluxos de trabalho mais complexos
+3. Implementar ferramentas customizadas para dar novas capacidades aos agentes
+4. Aplicar sua crew em outros temas ou domínios de problemas
+5. Explorar [CrewAI Flows](/pt-BR/guides/flows/first-flow) para fluxos de trabalho avançados usando programação procedural
+
+<Check>
+Parabéns! Você construiu com sucesso sua primeira crew com o CrewAI, capaz de pesquisar e analisar qualquer tema que desejar. Essa experiência fundamental lhe deu as habilidades para criar sistemas de IA cada vez mais sofisticados, aptos a encarar problemas complexos e de múltiplas etapas por meio da inteligência colaborativa.
+</Check>

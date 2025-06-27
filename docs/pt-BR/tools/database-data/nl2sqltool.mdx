@@ -1,0 +1,76 @@
+---
+title: NL2SQL Tool
+description: O `NL2SQLTool` foi projetado para converter linguagem natural em consultas SQL.
+icon: language
+---
+
+## Visão Geral
+
+Esta ferramenta é utilizada para converter linguagem natural em consultas SQL. Quando passada para o agente, ela irá gerar as consultas e, em seguida, utilizá-las para interagir com o banco de dados.
+
+Isso possibilita múltiplos fluxos de trabalho, como por exemplo ter um Agente acessando o banco de dados para buscar informações com base em um objetivo e, então, usar essas informações para gerar uma resposta, relatório ou qualquer outro tipo de saída. Além disso, permite que o Agente atualize o banco de dados de acordo com seu objetivo.
+
+**Atenção**: Certifique-se de que o Agente tenha acesso a um Read-Replica ou que seja permitido que o Agente execute consultas de inserção/atualização no banco de dados.
+
+## Requisitos
+
+- SqlAlchemy
+- Qualquer biblioteca compatível com o banco de dados (ex.: psycopg2, mysql-connector-python)
+
+## Instalação
+
+Instale o pacote crewai_tools
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Uso
+
+Para utilizar o NL2SQLTool, você precisa passar a URI do banco de dados para a ferramenta. O formato da URI deve ser `dialect+driver://username:password@host:port/database`.
+
+```python Code
+from crewai_tools import NL2SQLTool
+
+# psycopg2 foi instalado para rodar este exemplo com PostgreSQL
+nl2sql = NL2SQLTool(db_uri="postgresql://example@localhost:5432/test_db")
+
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config["researcher"],
+        allow_delegation=False,
+        tools=[nl2sql]
+    )
+```
+
+## Exemplo
+
+O objetivo principal da tarefa era:
+
+"Recupere a receita mensal média, máxima e mínima para cada cidade, mas inclua apenas cidades que tenham mais de um usuário. Além disso, conte o número de usuários em cada cidade e classifique os resultados pela receita mensal média em ordem decrescente"
+
+Assim, o Agente tentou obter informações do banco de dados; a primeira vez está errada, então o Agente tenta novamente, consegue a informação correta e repassa para o próximo agente.
+
+![alt text](https://github.com/crewAIInc/crewAI-tools/blob/main/crewai_tools/tools/nl2sql/images/image-2.png?raw=true)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-3.png)
+
+O segundo objetivo da tarefa foi:
+
+"Revise os dados e crie um relatório detalhado e, em seguida, crie a tabela no banco de dados com os campos baseados nos dados fornecidos. Inclua informações sobre a receita mensal média, máxima e mínima para cada cidade, mas apenas inclua cidades que possuam mais de um usuário. Também conte o número de usuários em cada cidade e classifique os resultados pela receita mensal média em ordem decrescente."
+
+Agora as coisas começam a ficar interessantes: o Agente gera a consulta SQL não só para criar a tabela, mas também inserir os dados na tabela. E, ao final, o Agente ainda retorna o relatório final que condiz exatamente com o que estava no banco de dados.
+
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-4.png)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-5.png)
+
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-9.png)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-7.png)
+
+Este é um exemplo simples de como o NL2SQLTool pode ser utilizado para interagir com o banco de dados e gerar relatórios baseados nos dados do banco.
+
+A ferramenta oferece possibilidades infinitas para a lógica do Agente e como ele pode interagir com o banco de dados.
+
+```md
+ DB -> Agent -> ... -> Agent -> DB
+```

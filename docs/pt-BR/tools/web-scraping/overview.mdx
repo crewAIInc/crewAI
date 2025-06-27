@@ -1,0 +1,107 @@
+---
+title: "Visão Geral"
+description: "Extraia dados de websites e automatize interações com o navegador utilizando poderosas ferramentas de scraping"
+icon: "face-smile"
+---
+
+Essas ferramentas permitem que seus agentes interajam com a web, extraiam dados de websites e automatizem tarefas baseadas em navegador. De raspagem simples a automação complexa de navegador, essas ferramentas cobrem todas as suas necessidades de interação com a web.
+
+## **Ferramentas Disponíveis**
+
+<CardGroup cols={2}>
+  <Card title="Ferramenta de Scrape de Website" icon="globe" href="/pt-BR/tools/web-scraping/scrapewebsitetool">
+    Ferramenta de raspagem de uso geral para extrair conteúdo de qualquer site.
+  </Card>
+
+  <Card title="Ferramenta de Scrape de Elemento" icon="crosshairs" href="/pt-BR/tools/web-scraping/scrapeelementfromwebsitetool">
+    Extraia elementos específicos de páginas web com capacidades de raspagem precisa.
+  </Card>
+
+  <Card title="Ferramenta Firecrawl Crawl" icon="spider" href="/pt-BR/tools/web-scraping/firecrawlcrawlwebsitetool">
+    Rastreie sites inteiros de forma sistemática com o poderoso mecanismo do Firecrawl.
+  </Card>
+
+  <Card title="Ferramenta Firecrawl Scrape" icon="fire" href="/pt-BR/tools/web-scraping/firecrawlscrapewebsitetool">
+    Raspagem web de alta performance com as capacidades avançadas do Firecrawl.
+  </Card>
+
+  <Card title="Ferramenta Firecrawl Search" icon="magnifying-glass" href="/pt-BR/tools/web-scraping/firecrawlsearchtool">
+    Pesquise e extraia conteúdos específicos utilizando os recursos de busca do Firecrawl.
+  </Card>
+
+  <Card title="Ferramenta Selenium Scraping" icon="robot" href="/pt-BR/tools/web-scraping/seleniumscrapingtool">
+    Automação de navegador e scraping com as capacidades do Selenium WebDriver.
+  </Card>
+
+  <Card title="Ferramenta ScrapFly" icon="plane" href="/pt-BR/tools/web-scraping/scrapflyscrapetool">
+    Raspagem profissional de web com o serviço premium do ScrapFly.
+  </Card>
+
+  <Card title="Ferramenta ScrapGraph" icon="network-wired" href="/pt-BR/tools/web-scraping/scrapegraphscrapetool">
+    Raspagem baseada em grafos para relacionamentos de dados complexos.
+  </Card>
+
+  <Card title="Ferramenta Spider" icon="spider" href="/pt-BR/tools/web-scraping/spidertool">
+    Rastreio abrangente de sites e capacidades de extração de dados.
+  </Card>
+
+  <Card title="Ferramenta BrowserBase" icon="browser" href="/pt-BR/tools/web-scraping/browserbaseloadtool">
+    Automação de navegador baseada em nuvem com a infraestrutura do BrowserBase.
+  </Card>
+
+  <Card title="Ferramenta HyperBrowser" icon="window-maximize" href="/pt-BR/tools/web-scraping/hyperbrowserloadtool">
+    Interações rápidas com o navegador através do engine otimizado do HyperBrowser.
+  </Card>
+
+  <Card title="Ferramenta Stagehand" icon="hand" href="/pt-BR/tools/web-scraping/stagehandtool">
+    Automação inteligente de navegador com comandos em linguagem natural.
+  </Card>
+
+  <Card title="Ferramenta Oxylabs Scraper" icon="globe" href="/pt-BR/tools/web-scraping/oxylabsscraperstool">
+    Acesse dados web em escala com o Oxylabs.
+  </Card>
+</CardGroup>
+
+## **Casos de Uso Comuns**
+
+- **Extração de Dados**: Raspagem de informações de produtos, preços e avaliações
+- **Monitoramento de Conteúdo**: Acompanhe mudanças em sites e fontes de notícias
+- **Geração de Leads**: Extraia informações de contato e dados de empresas
+- **Pesquisa de Mercado**: Coleta de inteligência competitiva e dados de mercado
+- **Testes & QA**: Automatize fluxos de teste e validação em navegadores
+- **Mídias Sociais**: Extraia posts, comentários e análises de redes sociais
+
+## **Exemplo de Início Rápido**
+
+```python
+from crewai_tools import ScrapeWebsiteTool, FirecrawlScrapeWebsiteTool, SeleniumScrapingTool
+
+# Create scraping tools
+simple_scraper = ScrapeWebsiteTool()
+advanced_scraper = FirecrawlScrapeWebsiteTool()
+browser_automation = SeleniumScrapingTool()
+
+# Add to your agent
+agent = Agent(
+    role="Web Research Specialist",
+    tools=[simple_scraper, advanced_scraper, browser_automation],
+    goal="Extract and analyze web data efficiently"
+)
+```
+
+## **Boas Práticas de Scraping**
+
+- **Respeite o robots.txt**: Sempre verifique e siga as políticas de scraping do website
+- **Controle de Taxa (Rate Limiting)**: Implemente atrasos entre as requisições para evitar sobrecarregar servidores
+- **User Agents**: Use strings de user agent apropriadas para identificar o seu bot
+- **Conformidade Legal**: Certifique-se de que suas atividades de scraping estejam em conformidade com os termos de serviço
+- **Tratamento de Erros**: Implemente um tratamento de erros robusto para problemas de rede e requisições bloqueadas
+- **Qualidade dos Dados**: Valide e limpe os dados extraídos antes de processar
+
+## **Guia de Seleção de Ferramentas**
+
+- **Tarefas Simples**: Use `ScrapeWebsiteTool` para extração básica de conteúdo
+- **Sites Dinâmicos com JavaScript**: Use `SeleniumScrapingTool` para conteúdo dinâmico
+- **Escala & Performance**: Use `FirecrawlScrapeWebsiteTool` para scraping em grande volume
+- **Infraestrutura em Nuvem**: Use `BrowserBaseLoadTool` para automação de navegador escalável
+- **Fluxos Complexos**: Use `StagehandTool` para interações inteligentes com o navegador

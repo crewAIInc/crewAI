@@ -1,0 +1,152 @@
+---
+title: Planejamento
+description: Aprenda como adicionar planejamento à sua CrewAI Crew e melhorar sua performance.
+icon: ruler-combined
+---
+
+## Visão geral
+
+O recurso de planejamento no CrewAI permite que você adicione capacidade de planejamento à sua crew. Quando ativado, antes de cada iteração da Crew, todas as informações da Crew são enviadas para um AgentPlanner que irá planejar as tarefas passo a passo, e este plano será adicionado à descrição de cada tarefa.
+
+### Usando o recurso de Planejamento
+
+Começar a usar o recurso de planejamento é muito simples, o único passo necessário é adicionar `planning=True` à sua Crew:
+
+<CodeGroup>
+```python Code
+from crewai import Crew, Agent, Task, Process
+
+# Monte sua crew com capacidades de planejamento
+my_crew = Crew(
+    agents=self.agents,
+    tasks=self.tasks,
+    process=Process.sequential,
+    planning=True,
+)
+```
+</CodeGroup>
+
+A partir deste ponto, sua crew terá o planejamento ativado, e as tarefas serão planejadas antes de cada iteração.
+
+<Warning>
+Quando o planejamento está ativado, o crewAI irá usar `gpt-4o-mini` como o LLM padrão para planejamento, o que requer uma chave de API válida da OpenAI. Como seus agentes podem estar usando LLMs diferentes, isso pode causar confusão se você não tiver uma chave de API da OpenAI configurada ou se estiver experimentando um comportamento inesperado relacionado a chamadas de API de LLM.
+</Warning>
+
+#### LLM de Planejamento
+
+Agora você pode definir qual LLM será usado para planejar as tarefas.
+
+Ao executar o exemplo básico, você verá algo semelhante ao resultado abaixo, que representa a saída do `AgentPlanner` responsável por criar a lógica passo a passo a ser adicionada às tarefas dos Agents.
+
+<CodeGroup>
+```python Code
+from crewai import Crew, Agent, Task, Process
+
+# Monte sua crew com capacidades de planejamento e LLM personalizado
+my_crew = Crew(
+    agents=self.agents,
+    tasks=self.tasks,
+    process=Process.sequential,
+    planning=True,
+    planning_llm="gpt-4o"
+)
+
+# Execute a crew
+my_crew.kickoff()
+```
+
+```markdown Result
+[2024-07-15 16:49:11][INFO]: Planejando a execução da crew
+**Plano Passo a Passo para Execução das Tarefas**
+
+**Tarefa Número 1: Realizar uma pesquisa aprofundada sobre LLMs de IA**
+
+**Agente:** Pesquisador Sênior de Dados de LLMs de IA
+
+**Objetivo do Agente:** Descobrir avanços de ponta em LLMs de IA
+
+**Resultado Esperado da Tarefa:** Uma lista com 10 tópicos dos dados mais relevantes sobre LLMs de IA
+
+**Ferramentas da Tarefa:** Nenhuma especificada
+
+**Ferramentas do Agente:** Nenhuma especificada
+
+**Plano Passo a Passo:**
+
+1. **Definir o Escopo da Pesquisa:**
+
+   - Determine as áreas específicas de LLMs de IA a focar, como avanços em arquitetura, casos de uso, considerações éticas e métricas de performance.
+
+2. **Identificar Fontes Confiáveis:**
+
+   - Liste fontes confiáveis para pesquisa em IA, incluindo periódicos acadêmicos, relatórios da indústria, conferências (ex: NeurIPS, ACL), laboratórios de pesquisa em IA (ex: OpenAI, Google AI) e bancos de dados online (ex: IEEE Xplore, arXiv).
+
+3. **Coletar Dados:**
+
+   - Procure pelos artigos, publicações e relatórios mais recentes publicados em 2024 e início de 2025.
+   - Use palavras-chave como "Large Language Models 2025", "Avanços em LLM de IA", "Ética em IA 2025", etc.
+
+4. **Analisar Resultados:**
+
+   - Leia e resuma os principais pontos de cada fonte.
+   - Destaque novas técnicas, modelos e aplicações introduzidos no último ano.
+
+5. **Organizar as Informações:**
+
+   - Categorize as informações em tópicos relevantes (ex: novas arquiteturas, implicações éticas, aplicações no mundo real).
+   - Garanta que cada tópico seja conciso, mas informativo.
+
+6. **Criar a Lista:**
+
+   - Compile os 10 dados mais relevantes em itens de uma lista.
+   - Revise a lista para garantir clareza e relevância.
+
+**Saída Esperada:**
+
+Uma lista com 10 tópicos dos dados mais relevantes sobre LLMs de IA.
+
+---
+
+**Tarefa Número 2: Revise o contexto obtido e expanda cada tópico em uma seção completa para um relatório**
+
+**Agente:** Analista de Relatórios de LLMs de IA
+
+**Objetivo do Agente:** Criar relatórios detalhados baseados na análise de dados e pesquisa sobre LLMs de IA
+
+**Resultado Esperado da Tarefa:** Um relatório completo com os principais tópicos, cada um com uma seção completa de informações. Formatado em markdown sem '```'
+
+**Ferramentas da Tarefa:** Nenhuma especificada
+
+**Ferramentas do Agente:** Nenhuma especificada
+
+**Plano Passo a Passo:**
+
+1. **Revisar os Tópicos:**
+   - Leia atentamente a lista dos 10 tópicos fornecida pelo Pesquisador Sênior de Dados de LLMs de IA.
+
+2. **Esboçar o Relatório:**
+   - Crie um esboço com cada tópico como título principal da seção.
+   - Planeje subseções sob cada título para abordar diferentes aspectos do tema.
+
+3. **Pesquisar Detalhes Adicionais:**
+   - Para cada tópico, conduza pesquisa adicional, se necessário, para reunir informações mais detalhadas.
+   - Busque estudos de caso, exemplos e dados estatísticos para embasar cada seção.
+
+4. **Redigir Seções Detalhadas:**
+   - Expanda cada tópico em uma seção abrangente.
+   - Certifique-se de que cada seção inclua introdução, explicação detalhada, exemplos e conclusão.
+   - Utilize formatação markdown para títulos, subtítulos, listas e ênfase.
+
+5. **Revisar e Editar:**
+   - Revise o relatório para garantir clareza, coerência e correção.
+   - Garanta uma sequência lógica de uma seção para a outra.
+   - Formate o relatório conforme os padrões markdown.
+
+6. **Finalizar o Relatório:**
+   - Certifique-se de que o relatório está completo, com todas as seções expandidas e detalhadas.
+   - Faça uma última verificação de formatação e ajustes necessários.
+
+**Saída Esperada:**
+Um relatório completo com os principais tópicos, cada um com uma seção cheia de informações. Formatado em markdown sem '```'.
+```
+</CodeGroup>

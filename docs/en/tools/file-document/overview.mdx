@@ -1,0 +1,88 @@
+---
+title: "Overview"
+description: "Read, write, and search through various file formats with CrewAI's document processing tools"
+icon: "face-smile"
+---
+
+These tools enable your agents to work with various file formats and document types. From reading PDFs to processing JSON data, these tools handle all your document processing needs.
+
+## **Available Tools**
+
+<CardGroup cols={2}>
+  <Card title="File Read Tool" icon="folders" href="/en/tools/file-document/filereadtool">
+    Read content from any file type including text, markdown, and more.
+  </Card>
+
+  <Card title="File Write Tool" icon="file-pen" href="/en/tools/file-document/filewritetool">
+    Write content to files, create new documents, and save processed data.
+  </Card>
+
+  <Card title="PDF Search Tool" icon="file-pdf" href="/en/tools/file-document/pdfsearchtool">
+    Search and extract text content from PDF documents efficiently.
+  </Card>
+
+  <Card title="DOCX Search Tool" icon="file-word" href="/en/tools/file-document/docxsearchtool">
+    Search through Microsoft Word documents and extract relevant content.
+  </Card>
+
+  <Card title="JSON Search Tool" icon="brackets-curly" href="/en/tools/file-document/jsonsearchtool">
+    Parse and search through JSON files with advanced query capabilities.
+  </Card>
+
+  <Card title="CSV Search Tool" icon="table" href="/en/tools/file-document/csvsearchtool">
+    Process and search through CSV files, extract specific rows and columns.
+  </Card>
+
+  <Card title="XML Search Tool" icon="code" href="/en/tools/file-document/xmlsearchtool">
+    Parse XML files and search for specific elements and attributes.
+  </Card>
+
+  <Card title="MDX Search Tool" icon="markdown" href="/en/tools/file-document/mdxsearchtool">
+    Search through MDX files and extract content from documentation.
+  </Card>
+
+  <Card title="TXT Search Tool" icon="file-lines" href="/en/tools/file-document/txtsearchtool">
+    Search through plain text files with pattern matching capabilities.
+  </Card>
+
+  <Card title="Directory Search Tool" icon="folder-open" href="/en/tools/file-document/directorysearchtool">
+    Search for files and folders within directory structures.
+  </Card>
+
+  <Card title="Directory Read Tool" icon="folder" href="/en/tools/file-document/directoryreadtool">
+    Read and list directory contents, file structures, and metadata.
+  </Card>
+</CardGroup>
+
+## **Common Use Cases**
+
+- **Document Processing**: Extract and analyze content from various file formats
+- **Data Import**: Read structured data from CSV, JSON, and XML files
+- **Content Search**: Find specific information within large document collections
+- **File Management**: Organize and manipulate files and directories
+- **Data Export**: Save processed results to various file formats
+
+## **Quick Start Example**
+
+```python
+from crewai_tools import FileReadTool, PDFSearchTool, JSONSearchTool
+
+# Create tools
+file_reader = FileReadTool()
+pdf_searcher = PDFSearchTool()
+json_processor = JSONSearchTool()
+
+# Add to your agent
+agent = Agent(
+    role="Document Analyst",
+    tools=[file_reader, pdf_searcher, json_processor],
+    goal="Process and analyze various document types"
+)
+```
+
+## **Tips for Document Processing**
+
+- **File Permissions**: Ensure your agent has proper read/write permissions
+- **Large Files**: Consider chunking for very large documents
+- **Format Support**: Check tool documentation for supported file formats
+- **Error Handling**: Implement proper error handling for corrupted or inaccessible files

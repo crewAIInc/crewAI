@@ -1,0 +1,82 @@
+---
+title: PG RAG Search
+description: O `PGSearchTool` foi desenvolvido para pesquisar bancos de dados PostgreSQL e retornar os resultados mais relevantes.
+icon: elephant
+---
+
+## Visão geral
+
+<Note>
+    O PGSearchTool está atualmente em desenvolvimento. Este documento descreve a funcionalidade e a interface pretendidas.
+    Conforme o desenvolvimento avança, esteja ciente de que alguns recursos podem não estar disponíveis ou podem mudar.
+</Note>
+
+## Descrição
+
+O PGSearchTool é concebido como uma ferramenta poderosa para facilitar buscas semânticas em tabelas de bancos de dados PostgreSQL. Aproveitando tecnologia avançada de Recuperação e Geração (RAG), 
+ele visa fornecer um meio eficiente para consultar o conteúdo de tabelas de banco de dados, especificamente voltado para bancos de dados PostgreSQL.
+O objetivo da ferramenta é simplificar o processo de encontrar dados relevantes por meio de consultas semânticas, oferecendo um recurso valioso para usuários que precisam realizar buscas avançadas em
+grandes volumes de dados dentro de um ambiente PostgreSQL.
+
+## Instalação
+
+O pacote `crewai_tools`, que incluirá o PGSearchTool assim que for lançado, pode ser instalado usando o comando abaixo:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+<Note>
+    O PGSearchTool ainda não está disponível na versão atual do pacote `crewai_tools`. Este comando de instalação será atualizado assim que a ferramenta for lançada.
+</Note>
+
+## Exemplo de Uso
+
+Abaixo está um exemplo proposto mostrando como utilizar o PGSearchTool para realizar uma busca semântica em uma tabela dentro de um banco de dados PostgreSQL:
+
+```python Code
+from crewai_tools import PGSearchTool
+
+# Inicialize a ferramenta com a URI do banco de dados e o nome da tabela alvo
+tool = PGSearchTool(
+    db_uri='postgresql://user:password@localhost:5432/mydatabase', 
+    table_name='employees'
+)
+```
+
+## Argumentos
+
+O PGSearchTool foi projetado para exigir os seguintes argumentos para seu funcionamento:
+
+| Argumento      | Tipo      | Descrição                                                                                                                        |
+|:---------------|:---------|:---------------------------------------------------------------------------------------------------------------------------------|
+| **db_uri**     | `string` | **Obrigatório**. Uma string que representa a URI do banco de dados PostgreSQL a ser consultado. Este argumento será obrigatório e deve incluir os detalhes necessários de autenticação e a localização do banco de dados. |
+| **table_name** | `string` | **Obrigatório**. Uma string que especifica o nome da tabela dentro do banco de dados na qual a busca semântica será realizada. Este argumento também será obrigatório. |
+
+## Modelo Personalizado e Embeddings
+
+A ferramenta pretende usar OpenAI tanto para embeddings quanto para sumarização por padrão. Os usuários terão a opção de personalizar o modelo usando um dicionário de configuração, conforme mostrado abaixo:
+
+```python Code
+tool = PGSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

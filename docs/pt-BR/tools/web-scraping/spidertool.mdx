@@ -1,0 +1,91 @@
+---
+title: Spider Scraper
+description: O `SpiderTool` foi projetado para extrair e ler o conteúdo de um site especificado usando o Spider.
+icon: spider-web
+---
+
+# `SpiderTool`
+
+## Descrição
+
+[Spider](https://spider.cloud/?ref=crewai) é o [scraper](https://github.com/spider-rs/spider/blob/main/benches/BENCHMARKS.md#benchmark-results) e crawler de código aberto mais rápido que retorna dados prontos para LLM.  
+Ele converte qualquer site em HTML puro, markdown, metadados ou texto e permite que você faça crawling com ações personalizadas utilizando IA.
+
+## Instalação
+
+Para usar o `SpiderTool` você precisa baixar o [Spider SDK](https://pypi.org/project/spider-client/)  
+e também o SDK `crewai[tools]`:
+
+```shell
+pip install spider-client 'crewai[tools]'
+```
+
+## Exemplo
+
+Este exemplo mostra como você pode usar o `SpiderTool` para permitir que seu agente faça scraping e crawling de websites.  
+Os dados retornados pela API do Spider já estão prontos para LLM, então não é necessário fazer nenhuma limpeza adicional.
+
+```python Code
+from crewai_tools import SpiderTool
+
+def main():
+    spider_tool = SpiderTool()
+
+    searcher = Agent(
+        role="Web Research Expert",
+        goal="Find related information from specific URL's",
+        backstory="An expert web researcher that uses the web extremely well",
+        tools=[spider_tool],
+        verbose=True,
+    )
+
+    return_metadata = Task(
+        description="Scrape https://spider.cloud with a limit of 1 and enable metadata",
+        expected_output="Metadata and 10 word summary of spider.cloud",
+        agent=searcher
+    )
+
+    crew = Crew(
+        agents=[searcher],
+        tasks=[
+            return_metadata,
+        ],
+        verbose=2
+    )
+
+    crew.kickoff()
+
+if __name__ == "__main__":
+    main()
+```
+
+## Argumentos
+| Argumento            | Tipo      | Descrição                                                                                                                                             |
+|:---------------------|:----------|:------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **api_key**          | `string`  | Especifica a chave da API do Spider. Se não for definida, procura por `SPIDER_API_KEY` nas variáveis de ambiente.                                     |
+| **params**           | `object`  | Parâmetros opcionais para a requisição. O padrão é `{"return_format": "markdown"}` para otimizar o conteúdo para LLMs.                                |
+| **request**          | `string`  | Tipo de requisição a ser realizada (`http`, `chrome`, `smart`). `smart` tem como padrão HTTP, alterando para renderização JavaScript se necessário.   |
+| **limit**            | `int`     | Máximo de páginas a serem rastreadas por site. Defina como `0` ou omita para ilimitado.                                                               |
+| **depth**            | `int`     | Profundidade máxima do crawl. Defina como `0` para sem limite.                                                                                        |
+| **cache**            | `bool`    | Habilita cache HTTP para acelerar execuções repetidas. O padrão é `true`.                                                                             |
+| **budget**           | `object`  | Define limites baseados em caminho para páginas rastreadas, ex.: `{"*":1}` apenas para a página raiz.                                                 |
+| **locale**           | `string`  | Localidade da requisição, ex.: `en-US`.                                                                                                               |
+| **cookies**          | `string`  | Cookies HTTP para a requisição.                                                                                                                       |
+| **stealth**          | `bool`    | Habilita modo furtivo para requisições Chrome para evitar detecção. O padrão é `true`.                                                                |
+| **headers**          | `object`  | Headers HTTP como um mapa de chave-valor para todas as requisições.                                                                                   |
+| **metadata**         | `bool`    | Armazena metadados sobre as páginas e conteúdos, auxiliando interoperabilidade com IA. O padrão é `false`.                                            |
+| **viewport**         | `object`  | Define as dimensões de viewport do Chrome. O padrão é `800x600`.                                                                                      |
+| **encoding**         | `string`  | Especifica o tipo de codificação, ex.: `UTF-8`, `SHIFT_JIS`.                                                                                          |
+| **subdomains**       | `bool`    | Inclui subdomínios no crawl. O padrão é `false`.                                                                                                      |
+| **user_agent**       | `string`  | User agent HTTP personalizado. Padrão é um agente aleatório.                                                                                          |
+| **store_data**       | `bool`    | Habilita o armazenamento dos dados para a requisição. Sobrescreve `storageless` quando definido. O padrão é `false`.                                  |
+| **gpt_config**       | `object`  | Permite à IA gerar ações de crawl, com encadeamento de etapas opcional via array para `"prompt"`.                                                     |
+| **fingerprint**      | `bool`    | Habilita fingerprint avançado para o Chrome.                                                                                                          |
+| **storageless**      | `bool`    | Impede todo o armazenamento de dados, incluindo embeddings de IA. O padrão é `false`.                                                                |
+| **readability**      | `bool`    | Pré-processa conteúdo para leitura via [Mozilla’s readability](https://github.com/mozilla/readability). Melhora o conteúdo para LLMs.                 |
+| **return_format**    | `string`  | Formato para retorno dos dados: `markdown`, `raw`, `text`, `html2text`. Use `raw` para formato padrão da página.                                     |
+| **proxy_enabled**    | `bool`    | Habilita proxies de alta performance para evitar bloqueios em nível de rede.                                                                          |
+| **query_selector**   | `string`  | CSS query selector para extração de conteúdo a partir do markup.                                                                                      |
+| **full_resources**   | `bool`    | Baixa todos os recursos vinculados ao site.                                                                                                           |
+| **request_timeout**  | `int`     | Timeout em segundos para as requisições (5-60). O padrão é `30`.                                                                                     |
+| **run_in_background**| `bool`    | Executa a requisição em segundo plano. Útil para armazenamento de dados e acionamento de crawls no dashboard. Não tem efeito se `storageless` estiver definido.

@@ -1,0 +1,107 @@
+---
+title: Repositório de Ferramentas
+description: "Usando o Repositório de Ferramentas para gerenciar suas ferramentas"
+icon: "toolbox"
+---
+
+## Visão geral
+
+O Repositório de Ferramentas é um gerenciador de pacotes para ferramentas da CrewAI. Ele permite que usuários publiquem, instalem e gerenciem ferramentas que se integram com crews e flows da CrewAI.
+
+As ferramentas podem ser:
+
+- **Privadas**: acessíveis apenas dentro da sua organização (padrão)
+- **Públicas**: acessíveis a todos os usuários CrewAI se publicadas com a flag `--public`
+
+O repositório não é um sistema de controle de versões. Use o Git para rastrear mudanças no código e permitir colaboração.
+
+## Pré-requisitos
+
+Antes de usar o Repositório de Ferramentas, certifique-se de que você possui:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com)
+- [CrewAI CLI](https://docs.crewai.com/concepts/cli#cli) instalada
+- uv>=0.5.0 instalado. Veja [como atualizar](https://docs.astral.sh/uv/getting-started/installation/#upgrading-uv)
+- [Git](https://git-scm.com) instalado e configurado
+- Permissões de acesso para publicar ou instalar ferramentas em sua organização CrewAI Enterprise
+
+## Instalando ferramentas
+
+Para instalar uma ferramenta:
+
+```bash
+crewai tool install <tool-name>
+```
+
+Isso instala a ferramenta e a adiciona ao `pyproject.toml`.
+
+## Criando e publicando ferramentas
+
+Para criar um novo projeto de ferramenta:
+
+```bash
+crewai tool create <tool-name>
+```
+
+Isso gera um projeto de ferramenta estruturado localmente.
+
+Após fazer alterações, inicialize um repositório Git e faça o commit do código:
+
+```bash
+git init
+git add .
+git commit -m "Initial version"
+```
+
+Para publicar a ferramenta:
+
+```bash
+crewai tool publish
+```
+
+Por padrão, as ferramentas são publicadas como privadas. Para tornar uma ferramenta pública:
+
+```bash
+crewai tool publish --public
+```
+
+Para mais detalhes sobre como construir ferramentas, acesse [Criando suas próprias ferramentas](https://docs.crewai.com/concepts/tools#creating-your-own-tools).
+
+## Atualizando ferramentas
+
+Para atualizar uma ferramenta publicada:
+
+1. Modifique a ferramenta localmente
+2. Atualize a versão no `pyproject.toml` (por exemplo, de `0.1.0` para `0.1.1`)
+3. Faça o commit das alterações e publique
+
+```bash
+git commit -m "Update version to 0.1.1"
+crewai tool publish
+```
+
+## Excluindo ferramentas
+
+Para excluir uma ferramenta:
+
+1. Acesse o [CrewAI Enterprise](https://app.crewai.com)
+2. Navegue até **Ferramentas**
+3. Selecione a ferramenta
+4. Clique em **Excluir**
+
+<Warning>
+A exclusão é permanente. Ferramentas excluídas não podem ser restauradas ou reinstaladas.
+</Warning>
+
+## Verificações de segurança
+
+Cada versão publicada passa por verificações automáticas de segurança e só fica disponível para instalação após aprovação.
+
+Você pode verificar o status das verificações de segurança de uma ferramenta em:
+
+`CrewAI Enterprise > Tools > Your Tool > Versions`
+
+
+<Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com integração de API ou resolução de problemas.
+</Card>

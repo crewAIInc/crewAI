@@ -5,8 +5,6 @@ from typing import Any, Dict
 import requests
 from rich.console import Console
 
-from crewai.cli.tools.main import ToolCommand
-
 from .constants import AUTH0_AUDIENCE, AUTH0_CLIENT_ID, AUTH0_DOMAIN
 from .utils import TokenManager, validate_token
 
@@ -67,6 +65,7 @@ class AuthenticationCommand:
                 self.token_manager.save_tokens(token_data["access_token"], expires_in)
 
                 try:
+                    from crewai.cli.tools.main import ToolCommand
                     ToolCommand().login()
                 except Exception:
                     console.print(

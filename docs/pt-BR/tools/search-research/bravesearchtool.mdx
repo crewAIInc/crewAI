@@ -1,0 +1,96 @@
+---
+title: Brave Search
+description: O `BraveSearchTool` foi projetado para pesquisar na internet usando a Brave Search API.
+icon: searchengin
+---
+
+# `BraveSearchTool`
+
+## Descrição
+
+Esta ferramenta foi desenvolvida para realizar buscas na web utilizando a Brave Search API. Ela permite que você pesquise na internet com uma consulta especificada e recupere resultados relevantes. A ferramenta suporta a personalização do número de resultados e buscas específicas por país.
+
+## Instalação
+
+Para incorporar esta ferramenta ao seu projeto, siga as instruções de instalação abaixo:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Passos para Começar
+
+Para utilizar o `BraveSearchTool` de forma eficaz, siga estes passos:
+
+1. **Instalação do Pacote**: Confirme que o pacote `crewai[tools]` está instalado no seu ambiente Python.
+2. **Obtenção da Chave de API**: Obtenha uma chave de API do Brave Search registrando-se em [Brave Search API](https://api.search.brave.com/app/keys).
+3. **Configuração do Ambiente**: Armazene a chave de API obtida em uma variável de ambiente chamada `BRAVE_API_KEY` para facilitar seu uso pela ferramenta.
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma busca com uma determinada consulta:
+
+```python Code
+from crewai_tools import BraveSearchTool
+
+# Inicialize a ferramenta para capacidades de busca na internet
+tool = BraveSearchTool()
+
+# Execute uma busca
+results = tool.run(search_query="CrewAI agent framework")
+print(results)
+```
+
+## Parâmetros
+
+O `BraveSearchTool` aceita os seguintes parâmetros:
+
+- **search_query**: Obrigatório. A consulta de pesquisa que você deseja usar para pesquisar na internet.
+- **country**: Opcional. Especifique o país dos resultados da pesquisa. O padrão é string vazia.
+- **n_results**: Opcional. Número de resultados de pesquisa a serem retornados. O padrão é `10`.
+- **save_file**: Opcional. Se os resultados da pesquisa devem ser salvos em um arquivo. O padrão é `False`.
+
+## Exemplo com Parâmetros
+
+Veja um exemplo demonstrando como usar a ferramenta com parâmetros adicionais:
+
+```python Code
+from crewai_tools import BraveSearchTool
+
+# Inicialize a ferramenta com parâmetros personalizados
+tool = BraveSearchTool(
+    country="US",
+    n_results=5,
+    save_file=True
+)
+
+# Execute uma busca
+results = tool.run(search_query="Latest AI developments")
+print(results)
+```
+
+## Exemplo de Integração com Agente
+
+Veja como integrar o `BraveSearchTool` com um agente CrewAI:
+
+```python Code
+from crewai import Agent
+from crewai.project import agent
+from crewai_tools import BraveSearchTool
+
+# Inicialize a ferramenta
+brave_search_tool = BraveSearchTool()
+
+# Defina um agente com o BraveSearchTool
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config["researcher"],
+        allow_delegation=False,
+        tools=[brave_search_tool]
+    )
+```
+
+## Conclusão
+
+Ao integrar o `BraveSearchTool` em projetos Python, os usuários ganham a capacidade de realizar buscas em tempo real e relevantes na internet diretamente de suas aplicações. A ferramenta oferece uma interface simples para a poderosa Brave Search API, facilitando a recuperação e o processamento programático dos resultados de pesquisa. Seguindo as orientações de configuração e uso fornecidas, a incorporação desta ferramenta em projetos é simplificada e direta.

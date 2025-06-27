@@ -1,0 +1,75 @@
+---
+title: Busca JSON RAG
+description: O `JSONSearchTool` foi projetado para buscar arquivos JSON e retornar os resultados mais relevantes.
+icon: file-code
+---
+
+# `JSONSearchTool`
+
+<Note>
+  O JSONSearchTool está atualmente em fase experimental. Isso significa que a ferramenta
+  está em desenvolvimento ativo, e os usuários podem encontrar comportamentos inesperados ou
+  alterações. Incentivamos fortemente o envio de feedback sobre quaisquer problemas ou sugestões de
+  melhorias.
+</Note>
+
+## Descrição
+
+O JSONSearchTool foi projetado para facilitar buscas eficientes e precisas dentro do conteúdo de arquivos JSON. Ele utiliza um mecanismo de busca RAG (Retrieve and Generate), permitindo que os usuários especifiquem um caminho JSON para buscas direcionadas dentro de um arquivo JSON específico. Essa capacidade melhora significativamente a precisão e relevância dos resultados de busca.
+
+## Instalação
+
+Para instalar o JSONSearchTool, utilize o seguinte comando pip:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplos de Uso
+
+Aqui estão exemplos atualizados de como utilizar o JSONSearchTool de forma eficaz para buscar dentro de arquivos JSON. Esses exemplos consideram a implementação e padrões de uso atuais identificados na base de código.
+
+```python Code
+from crewai_tools import JSONSearchTool
+
+# Busca geral em conteúdo JSON
+# Esta abordagem é adequada quando o caminho JSON já é conhecido ou pode ser identificado dinamicamente.
+tool = JSONSearchTool()
+
+# Restringindo a busca a um arquivo JSON específico
+# Use este método de inicialização quando desejar limitar o escopo de busca a um arquivo específico.
+tool = JSONSearchTool(json_path='./path/to/your/file.json')
+```
+
+## Argumentos
+
+- `json_path` (str, opcional): Especifica o caminho para o arquivo JSON a ser buscado. Este argumento não é obrigatório se a ferramenta for inicializada para uma busca geral. Quando fornecido, limita a busca ao arquivo JSON especificado.
+
+## Opções de Configuração
+
+O JSONSearchTool oferece ampla personalização através de um dicionário de configuração. Isso permite que os usuários selecionem diferentes modelos para embeddings e sumarização conforme suas necessidades.
+
+```python Code
+tool = JSONSearchTool(
+    config={
+        "llm": {
+            "provider": "ollama",  # Outras opções incluem google, openai, anthropic, llama2, etc.
+            "config": {
+                "model": "llama2",
+                # Configurações opcionais adicionais podem ser especificadas aqui.
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            },
+        },
+        "embedding_model": {
+            "provider": "google", # ou openai, ollama, ...
+            "config": {
+                "model": "models/embedding-001",
+                "task_type": "retrieval_document",
+                # Mais opções de personalização podem ser adicionadas aqui.
+            },
+        },
+    }
+)
+```

@@ -1,0 +1,165 @@
+---
+title: 'Bedrock Knowledge Base Retriever'
+description: 'Recupere informações das Bases de Conhecimento do Amazon Bedrock usando consultas em linguagem natural'
+icon: aws
+---
+
+# `BedrockKBRetrieverTool`
+
+A `BedrockKBRetrieverTool` permite que agentes CrewAI recuperem informações das Bases de Conhecimento do Amazon Bedrock usando consultas em linguagem natural.
+
+## Instalação
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## Requisitos
+
+- Credenciais AWS configuradas (via variáveis de ambiente ou AWS CLI)
+- Pacotes `boto3` e `python-dotenv`
+- Acesso à Base de Conhecimento do Amazon Bedrock
+
+## Uso
+
+Veja como utilizar a ferramenta com um agente CrewAI:
+
+```python {2, 4-17}
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.knowledge_base.retriever_tool import BedrockKBRetrieverTool
+
+# Initialize the tool
+kb_tool = BedrockKBRetrieverTool(
+    knowledge_base_id="your-kb-id",
+    number_of_results=5
+)
+
+# Create a CrewAI agent that uses the tool
+researcher = Agent(
+    role='Knowledge Base Researcher',
+    goal='Find information about company policies',
+    backstory='I am a researcher specialized in retrieving and analyzing company documentation.',
+    tools=[kb_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description="Find our company's remote work policy and summarize the key points.",
+    agent=researcher
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)   
+```
+
+## Argumentos da Ferramenta
+
+| Argumento | Tipo | Obrigatório | Padrão | Descrição |
+|:----------|:-----|:------------|:-------|:----------|
+| **knowledge_base_id** | `str` | Sim | Nenhum | O identificador único da base de conhecimento (0-10 caracteres alfanuméricos) |
+| **number_of_results** | `int` | Não | 5 | Número máximo de resultados a serem retornados |
+| **retrieval_configuration** | `dict` | Não | Nenhum | Configurações personalizadas para a consulta da base de conhecimento |
+| **guardrail_configuration** | `dict` | Não | Nenhum | Configurações de filtragem de conteúdo |
+| **next_token** | `str` | Não | Nenhum | Token para paginação |
+
+## Variáveis de Ambiente
+
+```bash
+BEDROCK_KB_ID=your-knowledge-base-id  # Alternativa ao uso de knowledge_base_id
+AWS_REGION=your-aws-region            # Padrão: us-east-1
+AWS_ACCESS_KEY_ID=your-access-key     # Obrigatório para autenticação AWS
+AWS_SECRET_ACCESS_KEY=your-secret-key # Obrigatório para autenticação AWS
+```
+
+## Formato da Resposta
+
+A ferramenta retorna resultados em formato JSON:
+
+```json
+{
+  "results": [
+    {
+      "content": "Retrieved text content",
+      "content_type": "text",
+      "source_type": "S3",
+      "source_uri": "s3://bucket/document.pdf",
+      "score": 0.95,
+      "metadata": {
+        "additional": "metadata"
+      }
+    }
+  ],
+  "nextToken": "pagination-token",
+  "guardrailAction": "NONE"
+}
+```
+
+## Uso Avançado
+
+### Configuração de Recuperação Personalizada
+
+```python
+kb_tool = BedrockKBRetrieverTool(
+    knowledge_base_id="your-kb-id",
+    retrieval_configuration={
+        "vectorSearchConfiguration": {
+            "numberOfResults": 10,
+            "overrideSearchType": "HYBRID"
+        }
+    }
+)
+
+policy_expert = Agent(
+    role='Policy Expert',
+    goal='Analyze company policies in detail',
+    backstory='I am an expert in corporate policy analysis with deep knowledge of regulatory requirements.',
+    tools=[kb_tool]
+)
+```
+
+## Fontes de Dados Suportadas
+
+- Amazon S3
+- Confluence
+- Salesforce
+- SharePoint
+- Páginas web
+- Locais de documentos personalizados
+- Amazon Kendra
+- Bancos de dados SQL
+
+## Casos de Uso
+
+### Integração de Conhecimento Corporativo
+- Permita que agentes CrewAI acessem o conhecimento proprietário da sua organização sem expor dados sensíveis
+- Permita que agentes tomem decisões baseadas nas políticas, procedimentos e documentações específicas da sua empresa
+- Crie agentes capazes de responder perguntas com base na sua documentação interna mantendo a segurança dos dados
+
+### Conhecimento Especializado de Domínio
+- Conecte agentes CrewAI a bases de conhecimento específicas do domínio (jurídico, médico, técnico) sem re-treinamento de modelos
+- Aproveite repositórios de conhecimento existentes que já são mantidos no seu ambiente AWS
+- Combine o raciocínio do CrewAI com informações de domínio provenientes das suas bases de conhecimento
+
+### Tomada de Decisão Orientada por Dados
+- Baseie as respostas dos agentes CrewAI nos dados reais da sua empresa, e não apenas em conhecimento geral
+- Assegure que os agentes forneçam recomendações baseadas no contexto e documentação do seu negócio
+- Reduza alucinações ao recuperar informações factuais das suas bases de conhecimento
+
+### Acesso Escalável à Informação
+- Acesse terabytes de conhecimento organizacional sem precisar incorporar tudo aos seus modelos
+- Consulte dinamicamente apenas as informações relevantes conforme a necessidade de cada tarefa
+- Aproveite a infraestrutura escalável da AWS para lidar com grandes bases de conhecimento de forma eficiente
+
+### Conformidade e Governança
+- Garanta que agentes CrewAI forneçam respostas alinhadas com a documentação aprovada da sua empresa
+- Crie trilhas de auditoria das fontes de informação usadas pelos agentes
+- Mantenha controle sobre quais fontes de informação os seus agentes podem acessar

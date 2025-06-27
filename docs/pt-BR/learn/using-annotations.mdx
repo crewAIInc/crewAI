@@ -1,0 +1,141 @@
+---
+title: "Usando Anotações no crew.py"
+description: "Aprenda como usar anotações para estruturar corretamente agentes, tarefas e componentes no CrewAI"
+icon: "at"
+---
+
+Este guia explica como utilizar anotações para referenciar corretamente **agentes**, **tarefas** e outros componentes no arquivo `crew.py`.
+
+## Introdução
+
+As anotações no framework CrewAI são utilizadas para decorar classes e métodos, fornecendo metadados e funcionalidades para diversos componentes do seu crew. Essas anotações auxiliam na organização e estruturação do seu código, tornando-o mais legível e fácil de manter.
+
+## Anotações Disponíveis
+
+O framework CrewAI fornece as seguintes anotações:
+
+- `@CrewBase`: Usada para decorar a classe principal do crew.
+- `@agent`: Decora métodos que definem e retornam objetos Agent.
+- `@task`: Decora métodos que definem e retornam objetos Task.
+- `@crew`: Decora o método que cria e retorna o objeto Crew.
+- `@llm`: Decora métodos que inicializam e retornam objetos Language Model.
+- `@tool`: Decora métodos que inicializam e retornam objetos Tool.
+- `@callback`: Utilizada para definir métodos de callback.
+- `@output_json`: Utilizada para métodos que retornam dados em JSON.
+- `@output_pydantic`: Utilizada para métodos que retornam modelos Pydantic.
+- `@cache_handler`: Utilizada para definição de métodos de manipulação de cache.
+
+## Exemplos de Uso
+
+Vamos passar por exemplos de como utilizar essas anotações:
+
+### 1. Classe Base do Crew
+
+```python
+@CrewBase
+class LinkedinProfileCrew():
+    """LinkedinProfile crew"""
+    agents_config = 'config/agents.yaml'
+    tasks_config = 'config/tasks.yaml'
+```
+
+A anotação `@CrewBase` é usada para decorar a classe principal do crew. Esta classe geralmente contém as configurações e métodos para criação de agentes, tarefas e do próprio crew.
+
+### 2. Definição de Tool
+
+```python
+@tool
+def myLinkedInProfileTool(self):
+    return LinkedInProfileTool()
+```
+
+A anotação `@tool` é usada para decorar métodos que retornam objetos tool. Essas ferramentas podem ser usadas por agentes para executar tarefas específicas.
+
+### 3. Definição de LLM
+
+```python
+@llm
+def groq_llm(self):
+    api_key = os.getenv('api_key')
+    return ChatGroq(api_key=api_key, temperature=0, model_name="mixtral-8x7b-32768")
+```
+
+A anotação `@llm` é usada para decorar métodos que inicializam e retornam objetos Language Model. Esses LLMs são utilizados pelos agentes para tarefas de processamento de linguagem natural.
+
+### 4. Definição de Agente
+
+```python
+@agent
+def researcher(self) -> Agent:
+    return Agent(
+        config=self.agents_config['researcher']
+    )
+```
+
+A anotação `@agent` é usada para decorar métodos que definem e retornam objetos Agent.
+
+### 5. Definição de Tarefa
+
+```python
+@task
+def research_task(self) -> Task:
+    return Task(
+        config=self.tasks_config['research_linkedin_task'],
+        agent=self.researcher()
+    )
+```
+
+A anotação `@task` é usada para decorar métodos que definem e retornam objetos Task. Esses métodos especificam a configuração da tarefa e o agente responsável por ela.
+
+### 6. Criação do Crew
+
+```python
+@crew
+def crew(self) -> Crew:
+    """Creates the LinkedinProfile crew"""
+    return Crew(
+        agents=self.agents,
+        tasks=self.tasks,
+        process=Process.sequential,
+        verbose=True
+    )
+``` 
+
+A anotação `@crew` é usada para decorar o método que cria e retorna o objeto `Crew`. Este método reúne todos os componentes (agentes e tarefas) em um crew funcional.
+
+## Configuração YAML
+
+As configurações dos agentes geralmente são armazenadas em um arquivo YAML. Veja um exemplo de como o arquivo `agents.yaml` pode ser estruturado para o agente researcher:
+
+```yaml
+researcher:
+    role: >
+        LinkedIn Profile Senior Data Researcher
+    goal: >
+        Uncover detailed LinkedIn profiles based on provided name {name} and domain {domain}
+        Generate a Dall-E image based on domain {domain}
+    backstory: >
+        You're a seasoned researcher with a knack for uncovering the most relevant LinkedIn profiles.
+        Known for your ability to navigate LinkedIn efficiently, you excel at gathering and presenting
+        professional information clearly and concisely.
+    allow_delegation: False
+    verbose: True
+    llm: groq_llm
+    tools:
+        - myLinkedInProfileTool
+        - mySerperDevTool
+        - myDallETool
+```
+
+Esta configuração YAML corresponde ao agente researcher definido na classe `LinkedinProfileCrew`. A configuração especifica o papel do agente, objetivo, contexto e outras propriedades, como o LLM e as tools que ele utiliza.
+
+Repare como os campos `llm` e `tools` no arquivo YAML correspondem aos métodos decorados com `@llm` e `@tool` na classe Python.
+
+## Boas Práticas
+
+- **Nomenclatura Consistente**: Utilize nomenclatura clara e consistente para seus métodos. Por exemplo, métodos de agentes podem ser nomeados de acordo com suas funções (ex: researcher, reporting_analyst).
+- **Variáveis de Ambiente**: Utilize variáveis de ambiente para informações sensíveis como chaves de API.
+- **Flexibilidade**: Estruture seu crew de forma flexível, permitindo fácil adição ou remoção de agentes e tarefas.
+- **Correspondência YAML-Código**: Assegure que os nomes e estruturas nos arquivos YAML correspondam corretamente aos métodos decorados em seu código Python.
+
+Seguindo essas orientações e utilizando corretamente as anotações, você conseguirá criar crews bem estruturados e de fácil manutenção utilizando o framework CrewAI.

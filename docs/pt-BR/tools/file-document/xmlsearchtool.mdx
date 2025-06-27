@@ -1,0 +1,77 @@
+---
+title: Busca RAG em XML
+description: O `XMLSearchTool` foi projetado para realizar uma busca RAG (Geração Aumentada por Recuperação) dentro do conteúdo de um arquivo XML.
+icon: file-xml
+---
+
+# `XMLSearchTool`
+
+<Note>
+    Ainda estamos trabalhando na melhoria das ferramentas, então pode haver comportamentos inesperados ou mudanças no futuro.
+</Note>
+
+## Descrição
+
+O XMLSearchTool é uma ferramenta RAG de ponta, desenvolvida para realizar buscas semânticas em arquivos XML.
+Ideal para usuários que precisam analisar e extrair informações do conteúdo XML de forma eficiente, esta ferramenta permite inserir uma consulta de busca e um caminho opcional para o arquivo XML.
+Ao especificar um caminho de arquivo XML, o usuário pode direcionar sua busca de forma mais precisa ao conteúdo daquele arquivo, obtendo assim resultados mais relevantes.
+
+## Instalação
+
+Para começar a usar o XMLSearchTool, é necessário instalar primeiro o pacote crewai_tools. Isso pode ser feito facilmente com o seguinte comando:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+Aqui estão dois exemplos demonstrando como usar o XMLSearchTool.
+O primeiro exemplo mostra a busca dentro de um arquivo XML específico, enquanto o segundo exemplo ilustra como iniciar uma busca sem definir previamente um caminho XML, oferecendo flexibilidade no escopo da busca.
+
+```python Code
+from crewai_tools import XMLSearchTool
+
+# Permite que agentes busquem no conteúdo de qualquer arquivo XML
+# conforme aprendem seus caminhos durante a execução
+tool = XMLSearchTool()
+
+# OU
+
+# Inicializa a ferramenta com um caminho específico para arquivo XML
+# para busca exclusiva dentro desse documento
+tool = XMLSearchTool(xml='path/to/your/xmlfile.xml')
+```
+
+## Argumentos
+
+- `xml`: Este é o caminho para o arquivo XML que você deseja buscar.
+Este parâmetro é opcional durante a inicialização da ferramenta, mas deve ser fornecido ou na inicialização ou como parte dos argumentos do método `run` para executar a busca.
+
+## Modelo customizado e embeddings
+
+Por padrão, a ferramenta utiliza a OpenAI tanto para embeddings quanto para sumarização. Para personalizar o modelo, você pode usar um dicionário de configuração conforme o exemplo a seguir:
+
+```python Code  
+tool = XMLSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

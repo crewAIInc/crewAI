@@ -1,0 +1,632 @@
+---
+title: Integração com Salesforce
+description: "Automação de vendas e CRM com integração Salesforce para CrewAI."
+icon: "salesforce"
+---
+
+## Visão Geral
+
+Permita que seus agentes gerenciem relacionamentos com clientes, processos de vendas e dados através do Salesforce. Crie e atualize registros, gerencie leads e oportunidades, execute consultas SOQL e otimize seus fluxos de trabalho de CRM com automação potencializada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração Salesforce, certifique-se de que você possui:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com) com assinatura ativa
+- Uma conta Salesforce com permissões apropriadas
+- Sua conta Salesforce conectada via a [página de Integrações](https://app.crewai.com/integrations)
+
+## Ferramentas Disponíveis
+
+### **Gerenciamento de Registros**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_CREATE_RECORD_CONTACT">
+    **Descrição:** Crie um novo registro de Contato no Salesforce.
+
+    **Parâmetros:**
+    - `FirstName` (string, opcional): Primeiro nome
+    - `LastName` (string, obrigatório): Sobrenome - Este campo é obrigatório
+    - `accountId` (string, opcional): ID da Conta - Conta à qual o contato pertence
+    - `Email` (string, opcional): Endereço de e-mail
+    - `Title` (string, opcional): Cargo do contato, como CEO ou Vice-presidente
+    - `Description` (string, opcional): Descrição do contato
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Contato
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_LEAD">
+    **Descrição:** Crie um novo registro de Lead no Salesforce.
+
+    **Parâmetros:**
+    - `FirstName` (string, opcional): Primeiro nome
+    - `LastName` (string, obrigatório): Sobrenome - Este campo é obrigatório
+    - `Company` (string, obrigatório): Empresa - Este campo é obrigatório
+    - `Email` (string, opcional): Endereço de e-mail
+    - `Phone` (string, opcional): Número de telefone
+    - `Website` (string, opcional): URL do site
+    - `Title` (string, opcional): Cargo do contato, como CEO ou Vice-presidente
+    - `Status` (string, opcional): Status do Lead - Use as Configurações de Workflow do Connect Portal para selecionar o status do Lead
+    - `Description` (string, opcional): Descrição do lead
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Lead
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_OPPORTUNITY">
+    **Descrição:** Crie um novo registro de Oportunidade no Salesforce.
+
+    **Parâmetros:**
+    - `Name` (string, obrigatório): Nome da Oportunidade - Este campo é obrigatório
+    - `StageName` (string, opcional): Estágio da Oportunidade - Use as Configurações de Workflow do Connect Portal para selecionar o estágio
+    - `CloseDate` (string, opcional): Data de fechamento no formato YYYY-MM-DD - Padrão para 30 dias a partir da data atual
+    - `AccountId` (string, opcional): Conta à qual a Oportunidade pertence
+    - `Amount` (string, opcional): Valor total estimado da venda
+    - `Description` (string, opcional): Descrição da oportunidade
+    - `OwnerId` (string, opcional): Usuário Salesforce designado para esta Oportunidade
+    - `NextStep` (string, opcional): Descrição da próxima tarefa no fechamento da Oportunidade
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Oportunidade
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_TASK">
+    **Descrição:** Crie um novo registro de Tarefa no Salesforce.
+
+    **Parâmetros:**
+    - `whatId` (string, opcional): Relacionado ao ID - ID da Conta ou Oportunidade relacionada à Tarefa
+    - `whoId` (string, opcional): ID do Nome - ID do Contato ou Lead relacionado à Tarefa
+    - `subject` (string, obrigatório): Assunto da tarefa
+    - `activityDate` (string, opcional): Data da Atividade no formato YYYY-MM-DD
+    - `description` (string, opcional): Descrição da tarefa
+    - `taskSubtype` (string, obrigatório): Subtipo da Tarefa - Opções: task, email, listEmail, call
+    - `Status` (string, opcional): Status - Opções: Not Started, In Progress, Completed
+    - `ownerId` (string, opcional): ID do responsável - Usuário Salesforce designado para a Tarefa
+    - `callDurationInSeconds` (string, opcional): Duração da chamada em segundos
+    - `isReminderSet` (boolean, opcional): Se o lembrete está definido
+    - `reminderDateTime` (string, opcional): Data/Hora do lembrete no formato ISO
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Tarefa
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_ACCOUNT">
+    **Descrição:** Crie um novo registro de Conta no Salesforce.
+
+    **Parâmetros:**
+    - `Name` (string, obrigatório): Nome da Conta - Este campo é obrigatório
+    - `OwnerId` (string, opcional): Usuário Salesforce responsável por esta Conta
+    - `Website` (string, opcional): URL do site
+    - `Phone` (string, opcional): Número de telefone
+    - `Description` (string, opcional): Descrição da conta
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Conta
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_RECORD_ANY">
+    **Descrição:** Crie um registro de qualquer tipo de objeto no Salesforce.
+
+    **Nota:** Esta é uma ferramenta flexível para criar registros de tipos de objetos personalizados ou desconhecidos.
+  </Accordion>
+</AccordionGroup>
+
+### **Atualização de Registros**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_UPDATE_RECORD_CONTACT">
+    **Descrição:** Atualize um registro de Contato existente no Salesforce.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro a ser atualizado
+    - `FirstName` (string, opcional): Primeiro nome
+    - `LastName` (string, opcional): Sobrenome
+    - `accountId` (string, opcional): ID da Conta à qual o contato pertence
+    - `Email` (string, opcional): Endereço de e-mail
+    - `Title` (string, opcional): Cargo do contato
+    - `Description` (string, opcional): Descrição do contato
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Contato
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_LEAD">
+    **Descrição:** Atualize um registro de Lead existente no Salesforce.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro a ser atualizado
+    - `FirstName` (string, opcional): Primeiro nome
+    - `LastName` (string, opcional): Sobrenome
+    - `Company` (string, opcional): Nome da empresa
+    - `Email` (string, opcional): Endereço de e-mail
+    - `Phone` (string, opcional): Número de telefone
+    - `Website` (string, opcional): URL do site
+    - `Title` (string, opcional): Cargo do contato
+    - `Status` (string, opcional): Status do Lead
+    - `Description` (string, opcional): Descrição do lead
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Lead
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_OPPORTUNITY">
+    **Descrição:** Atualize um registro de Oportunidade existente no Salesforce.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro a ser atualizado
+    - `Name` (string, opcional): Nome da Oportunidade
+    - `StageName` (string, opcional): Estágio da oportunidade
+    - `CloseDate` (string, opcional): Data de fechamento no formato YYYY-MM-DD
+    - `AccountId` (string, opcional): Conta à qual a Oportunidade pertence
+    - `Amount` (string, opcional): Valor total estimado da venda
+    - `Description` (string, opcional): Descrição da oportunidade
+    - `OwnerId` (string, opcional): Usuário Salesforce responsável por esta Oportunidade
+    - `NextStep` (string, opcional): Descrição da próxima tarefa no fechamento da Oportunidade
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Oportunidade
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_TASK">
+    **Descrição:** Atualize um registro de Tarefa existente no Salesforce.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro a ser atualizado
+    - `whatId` (string, opcional): Relacionado ao ID - ID da Conta ou Oportunidade relacionada
+    - `whoId` (string, opcional): ID do Nome - ID do Contato ou Lead relacionado à Tarefa
+    - `subject` (string, opcional): Assunto da tarefa
+    - `activityDate` (string, opcional): Data da Atividade no formato YYYY-MM-DD
+    - `description` (string, opcional): Descrição da tarefa
+    - `Status` (string, opcional): Status - Opções: Not Started, In Progress, Completed
+    - `ownerId` (string, opcional): ID do responsável - Usuário Salesforce designado para a Tarefa
+    - `callDurationInSeconds` (string, opcional): Duração da chamada em segundos
+    - `isReminderSet` (boolean, opcional): Se o lembrete está definido
+    - `reminderDateTime` (string, opcional): Data/Hora do lembrete em formato ISO
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Tarefa
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_ACCOUNT">
+    **Descrição:** Atualize um registro de Conta existente no Salesforce.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro a ser atualizado
+    - `Name` (string, opcional): Nome da Conta
+    - `OwnerId` (string, opcional): Usuário Salesforce responsável por esta Conta
+    - `Website` (string, opcional): URL do site
+    - `Phone` (string, opcional): Número de telefone
+    - `Description` (string, opcional): Descrição da conta
+    - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Conta
+  </Accordion>
+
+  <Accordion title="SALESFORCE_UPDATE_RECORD_ANY">
+    **Descrição:** Atualize um registro de qualquer tipo de objeto no Salesforce.
+
+    **Nota:** Esta é uma ferramenta flexível para atualizar registros de tipos de objetos personalizados ou desconhecidos.
+  </Accordion>
+</AccordionGroup>
+
+### **Recuperação de Registros**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_CONTACT">
+    **Descrição:** Obtenha um registro de Contato pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro do Contato
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_LEAD">
+    **Descrição:** Obtenha um registro de Lead pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro do Lead
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_OPPORTUNITY">
+    **Descrição:** Obtenha um registro de Oportunidade pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro da Oportunidade
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_TASK">
+    **Descrição:** Obtenha um registro de Tarefa pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro da Tarefa
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_ACCOUNT">
+    **Descrição:** Obtenha um registro de Conta pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro da Conta
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_ANY">
+    **Descrição:** Obtenha um registro de qualquer tipo de objeto pelo seu ID.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): Tipo do registro (ex.: "CustomObject__c")
+    - `recordId` (string, obrigatório): ID do registro
+  </Accordion>
+</AccordionGroup>
+
+### **Busca de Registros**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_CONTACT">
+    **Descrição:** Pesquise registros de Contato com filtragem avançada.
+
+    **Parâmetros:**
+    - `filterFormula` (object, opcional): Filtro avançado em forma normal disjuntiva com operadores específicos de campo
+    - `sortBy` (string, opcional): Campo para ordenação (ex.: "CreatedDate")
+    - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
+    - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_LEAD">
+    **Descrição:** Pesquise registros de Lead com filtragem avançada.
+
+    **Parâmetros:**
+    - `filterFormula` (object, opcional): Filtro avançado em forma normal disjuntiva com operadores específicos de campo
+    - `sortBy` (string, opcional): Campo para ordenação (ex.: "CreatedDate")
+    - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
+    - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_OPPORTUNITY">
+    **Descrição:** Pesquise registros de Oportunidade com filtragem avançada.
+
+    **Parâmetros:**
+    - `filterFormula` (object, opcional): Filtro avançado em forma normal disjuntiva com operadores específicos de campo
+    - `sortBy` (string, opcional): Campo para ordenação (ex.: "CreatedDate")
+    - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
+    - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_TASK">
+    **Descrição:** Pesquise registros de Tarefa com filtragem avançada.
+
+    **Parâmetros:**
+    - `filterFormula` (object, opcional): Filtro avançado em forma normal disjuntiva com operadores específicos de campo
+    - `sortBy` (string, opcional): Campo para ordenação (ex.: "CreatedDate")
+    - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
+    - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_ACCOUNT">
+    **Descrição:** Pesquise registros de Conta com filtragem avançada.
+
+    **Parâmetros:**
+    - `filterFormula` (object, opcional): Filtro avançado em forma normal disjuntiva com operadores específicos de campo
+    - `sortBy` (string, opcional): Campo para ordenação (ex.: "CreatedDate")
+    - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
+    - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_SEARCH_RECORDS_ANY">
+    **Descrição:** Pesquise registros de qualquer tipo de objeto.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): Tipo de registro para buscar
+    - `filterFormula` (string, opcional): Critérios de busca por filtro
+    - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+</AccordionGroup>
+
+### **Recuperação por List View**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_CONTACT">
+    **Descrição:** Obtenha registros de Contato de um List View específico.
+
+    **Parâmetros:**
+    - `listViewId` (string, obrigatório): ID do List View
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_LEAD">
+    **Descrição:** Obtenha registros de Lead de um List View específico.
+
+    **Parâmetros:**
+    - `listViewId` (string, obrigatório): ID do List View
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_OPPORTUNITY">
+    **Descrição:** Obtenha registros de Oportunidade de um List View específico.
+
+    **Parâmetros:**
+    - `listViewId` (string, obrigatório): ID do List View
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_TASK">
+    **Descrição:** Obtenha registros de Tarefa de um List View específico.
+
+    **Parâmetros:**
+    - `listViewId` (string, obrigatório): ID do List View
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_ACCOUNT">
+    **Descrição:** Obtenha registros de Conta de um List View específico.
+
+    **Parâmetros:**
+    - `listViewId` (string, obrigatório): ID do List View
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+
+  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_ANY">
+    **Descrição:** Obtenha registros de qualquer tipo de objeto a partir de um List View específico.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): Tipo do registro
+    - `listViewId` (string, obrigatório): ID do List View
+    - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+  </Accordion>
+</AccordionGroup>
+
+### **Campos Personalizados**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_CONTACT">
+    **Descrição:** Crie campos personalizados para objetos de Contato.
+
+    **Parâmetros:**
+    - `label` (string, obrigatório): Rótulo do campo para exibições e referência interna
+    - `type` (string, obrigatório): Tipo do campo - Opções: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, LongTextArea, Html, Time, Url
+    - `defaultCheckboxValue` (boolean, opcional): Valor padrão para campos checkbox
+    - `length` (string, obrigatório): Comprimento para campos numéricos/texto
+    - `decimalPlace` (string, obrigatório): Casas decimais para campos numéricos
+    - `pickListValues` (string, obrigatório): Valores para campos picklist (separados por novas linhas)
+    - `visibleLines` (string, obrigatório): Linhas visíveis para campos multiseleção/área de texto
+    - `description` (string, opcional): Descrição do campo
+    - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
+    - `defaultFieldValue` (string, opcional): Valor padrão do campo
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_LEAD">
+    **Descrição:** Crie campos personalizados para objetos de Lead.
+
+    **Parâmetros:**
+    - `label` (string, obrigatório): Rótulo do campo para exibições e referência interna
+    - `type` (string, obrigatório): Tipo do campo - Opções: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, LongTextArea, Html, Time, Url
+    - `defaultCheckboxValue` (boolean, opcional): Valor padrão para campos checkbox
+    - `length` (string, obrigatório): Comprimento para campos numéricos/texto
+    - `decimalPlace` (string, obrigatório): Casas decimais para campos numéricos
+    - `pickListValues` (string, obrigatório): Valores para campos picklist (separados por novas linhas)
+    - `visibleLines` (string, obrigatório): Linhas visíveis para campos multiseleção/área de texto
+    - `description` (string, opcional): Descrição do campo
+    - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
+    - `defaultFieldValue` (string, opcional): Valor padrão do campo
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_OPPORTUNITY">
+    **Descrição:** Crie campos personalizados para objetos de Oportunidade.
+
+    **Parâmetros:**
+    - `label` (string, obrigatório): Rótulo do campo para exibições e referência interna
+    - `type` (string, obrigatório): Tipo do campo - Opções: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, LongTextArea, Html, Time, Url
+    - `defaultCheckboxValue` (boolean, opcional): Valor padrão para campos checkbox
+    - `length` (string, obrigatório): Comprimento para campos numéricos/texto
+    - `decimalPlace` (string, obrigatório): Casas decimais para campos numéricos
+    - `pickListValues` (string, obrigatório): Valores para campos picklist (separados por novas linhas)
+    - `visibleLines` (string, obrigatório): Linhas visíveis para campos multiseleção/área de texto
+    - `description` (string, opcional): Descrição do campo
+    - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
+    - `defaultFieldValue` (string, opcional): Valor padrão do campo
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_TASK">
+    **Descrição:** Crie campos personalizados para objetos de Tarefa.
+
+    **Parâmetros:**
+    - `label` (string, obrigatório): Rótulo do campo para exibições e referência interna
+    - `type` (string, obrigatório): Tipo do campo - Opções: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, Time, Url
+    - `defaultCheckboxValue` (boolean, opcional): Valor padrão para campos checkbox
+    - `length` (string, obrigatório): Comprimento para campos numéricos/texto
+    - `decimalPlace` (string, obrigatório): Casas decimais para campos numéricos
+    - `pickListValues` (string, obrigatório): Valores para campos picklist (separados por novas linhas)
+    - `visibleLines` (string, obrigatório): Linhas visíveis para campos multiseleção
+    - `description` (string, opcional): Descrição do campo
+    - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
+    - `defaultFieldValue` (string, opcional): Valor padrão do campo
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_ACCOUNT">
+    **Descrição:** Crie campos personalizados para objetos de Conta.
+
+    **Parâmetros:**
+    - `label` (string, obrigatório): Rótulo do campo para exibições e referência interna
+    - `type` (string, obrigatório): Tipo do campo - Opções: Checkbox, Currency, Date, Email, Number, Percent, Phone, Picklist, MultiselectPicklist, Text, TextArea, LongTextArea, Html, Time, Url
+    - `defaultCheckboxValue` (boolean, opcional): Valor padrão para campos checkbox
+    - `length` (string, obrigatório): Comprimento para campos numéricos/texto
+    - `decimalPlace` (string, obrigatório): Casas decimais para campos numéricos
+    - `pickListValues` (string, obrigatório): Valores para campos picklist (separados por novas linhas)
+    - `visibleLines` (string, obrigatório): Linhas visíveis para campos multiseleção/área de texto
+    - `description` (string, opcional): Descrição do campo
+    - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
+    - `defaultFieldValue` (string, opcional): Valor padrão do campo
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_ANY">
+    **Descrição:** Crie campos personalizados para qualquer tipo de objeto.
+
+    **Nota:** Esta é uma ferramenta flexível para criar campos personalizados para tipos de objetos personalizados ou desconhecidos.
+  </Accordion>
+</AccordionGroup>
+
+### **Operações Avançadas**
+
+<AccordionGroup>
+  <Accordion title="SALESFORCE_WRITE_SOQL_QUERY">
+    **Descrição:** Execute consultas SOQL personalizadas em seus dados do Salesforce.
+
+    **Parâmetros:**
+    - `query` (string, obrigatório): Consulta SOQL (ex.: "SELECT Id, Name FROM Account WHERE Name = 'Exemplo'")
+  </Accordion>
+
+  <Accordion title="SALESFORCE_CREATE_CUSTOM_OBJECT">
+    **Descrição:** Crie um novo objeto personalizado no Salesforce.
+
+    **Parâmetros:**
+    - `label` (string, obrigatório): Rótulo do objeto para abas, layouts de página e relatórios
+    - `pluralLabel` (string, obrigatório): Rótulo plural (ex.: "Contas")
+    - `description` (string, opcional): Uma descrição do Objeto Personalizado
+    - `recordName` (string, obrigatório): Nome do registro exibido em layouts e buscas (ex.: "Nome da Conta")
+  </Accordion>
+
+  <Accordion title="SALESFORCE_DESCRIBE_ACTION_SCHEMA">
+    **Descrição:** Obtenha o schema esperado para operações em tipos de objetos específicos.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): Tipo de registro a ser detalhado
+    - `operation` (string, obrigatório): Tipo de Operação (ex.: "CREATE_RECORD" ou "UPDATE_RECORD")
+
+    **Nota:** Use esta função primeiro ao trabalhar com objetos personalizados para entender seu schema antes de realizar operações.
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica de um Agente Salesforce
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha ferramentas enterprise (ferramentas Salesforce serão incluídas)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Crie um agente com capacidades Salesforce
+salesforce_agent = Agent(
+    role="CRM Manager",
+    goal="Manage customer relationships and sales processes efficiently",
+    backstory="An AI assistant specialized in CRM operations and sales automation.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new lead
+create_lead_task = Task(
+    description="Create a new lead for John Doe from Example Corp with email john.doe@example.com",
+    agent=salesforce_agent,
+    expected_output="Lead created successfully with lead ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[salesforce_agent],
+    tasks=[create_lead_task]
+)
+
+crew.kickoff()
+```
+
+### Filtrando Ferramentas Salesforce Específicas
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha apenas ferramentas Salesforce específicas
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["salesforce_create_record_lead", "salesforce_update_record_opportunity", "salesforce_search_records_contact"]
+)
+
+sales_manager = Agent(
+    role="Sales Manager",
+    goal="Manage leads and opportunities in the sales pipeline",
+    backstory="An experienced sales manager who handles lead qualification and opportunity management.",
+    tools=enterprise_tools
+)
+
+# Task to manage sales pipeline
+pipeline_task = Task(
+    description="Create a qualified lead and convert it to an opportunity with $50,000 value",
+    agent=sales_manager,
+    expected_output="Lead created and opportunity established successfully"
+)
+
+crew = Crew(
+    agents=[sales_manager],
+    tasks=[pipeline_task]
+)
+
+crew.kickoff()
+```
+
+### Gerenciamento de Contatos e Contas
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+account_manager = Agent(
+    role="Account Manager",
+    goal="Manage customer accounts and maintain strong relationships",
+    backstory="An AI assistant that specializes in account management and customer relationship building.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage customer accounts
+account_task = Task(
+    description="""
+    1. Create a new account for TechCorp Inc.
+    2. Add John Doe as the primary contact for this account
+    3. Create a follow-up task for next week to check on their project status
+    """,
+    agent=account_manager,
+    expected_output="Account, contact, and follow-up task created successfully"
+)
+
+crew = Crew(
+    agents=[account_manager],
+    tasks=[account_task]
+)
+
+crew.kickoff()
+```
+
+### Consultas SOQL Avançadas e Relatórios
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+data_analyst = Agent(
+    role="Sales Data Analyst",
+    goal="Generate insights from Salesforce data using SOQL queries",
+    backstory="An analytical AI that excels at extracting meaningful insights from CRM data.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving SOQL queries and data analysis
+analysis_task = Task(
+    description="""
+    1. Execute a SOQL query to find all opportunities closing this quarter
+    2. Search for contacts at companies with opportunities over $100K
+    3. Create a summary report of the sales pipeline status
+    4. Update high-value opportunities with next steps
+    """,
+    agent=data_analyst,
+    expected_output="Comprehensive sales pipeline analysis with actionable insights"
+)
+
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+Esta documentação abrangente cobre todas as ferramentas Salesforce organizadas por funcionalidade, facilitando que os usuários encontrem as operações específicas de que necessitam para automação de seu CRM.
+
+### Precisa de ajuda?
+
+<Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência na configuração da integração com Salesforce ou para resolução de problemas.
+</Card>

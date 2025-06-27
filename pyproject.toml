@@ -1,6 +1,6 @@
 [project]
 name = "crewai"
-version = "0.130.0"
+dynamic = ["version"]
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -47,7 +47,7 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools~=0.47.1"]
+tools = ["crewai-tools~=0.48.0"]
 embeddings = [
     "tiktoken~=0.8.0"
 ]
@@ -116,6 +116,9 @@ torchvision = [
   { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
   { index = "pytorch", marker = "python_version < '3.13'" },
 ]
+
+[tool.hatch.version]
+path = "src/crewai/__init__.py"
 
 [build-system]
 requires = ["hatchling"]

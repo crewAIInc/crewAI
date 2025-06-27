@@ -1,0 +1,394 @@
+---
+title: Integração com Jira
+description: "Rastreamento de problemas e gestão de projetos com a integração Jira para CrewAI."
+icon: "bug"
+---
+
+## Visão Geral
+
+Permita que seus agentes gerenciem problemas, projetos e fluxos de trabalho pelo Jira. Crie e atualize issues, acompanhe o progresso de projetos, gerencie atribuições e otimize sua gestão de projetos com automação potencializada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração com o Jira, certifique-se de ter:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com) com assinatura ativa
+- Uma conta Jira com permissões adequadas para o projeto
+- Sua conta Jira conectada pela [Página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração com o Jira
+
+### 1. Conectar Sua Conta Jira
+
+1. Acesse [Integrações CrewAI Enterprise](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Jira** na seção de Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo do OAuth
+4. Conceda as permissões necessárias para gestão de issues e projetos
+5. Copie seu Token Enterprise em [Configurações da Conta](https://app.crewai.com/crewai_plus/settings/account)
+
+### 2. Instalar o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="JIRA_CREATE_ISSUE">
+    **Descrição:** Cria uma issue no Jira.
+
+    **Parâmetros:**
+    - `summary` (string, obrigatório): Resumo - Um breve resumo da issue. (exemplo: "A impressora parou de funcionar").
+    - `project` (string, opcional): Projeto - Projeto ao qual a issue pertence. Padrão para o primeiro projeto do usuário se não informado. Use as Configurações de Workflow do Portal de Conexão para permitir a seleção de Projeto.
+    - `issueType` (string, opcional): Tipo de issue - Padrão para Task se não informado.
+    - `jiraIssueStatus` (string, opcional): Status - Padrão para o primeiro status do projeto se não informado.
+    - `assignee` (string, opcional): Responsável - Padrão para o usuário autenticado se não informado.
+    - `descriptionType` (string, opcional): Tipo de Descrição - Selecione o Tipo de Descrição.
+      - Opções: `description`, `descriptionJSON`
+    - `description` (string, opcional): Descrição - Uma descrição detalhada da issue. Este campo aparece apenas se 'descriptionType' = 'description'.
+    - `additionalFields` (string, opcional): Campos Adicionais - Especifique outros campos em formato JSON. Use as Configurações de Workflow do Portal de Conexão para permitir ao usuário selecionar quais campos atualizar.
+      ```json
+      {
+        "customfield_10001": "value"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="JIRA_UPDATE_ISSUE">
+    **Descrição:** Atualiza uma issue no Jira.
+
+    **Parâmetros:**
+    - `issueKey` (string, obrigatório): Chave da Issue (exemplo: "TEST-1234").
+    - `summary` (string, opcional): Resumo - Breve resumo da issue. (exemplo: "A impressora parou de funcionar").
+    - `issueType` (string, opcional): Tipo de issue - Use as Configurações de Workflow do Portal de Conexão para permitir a seleção.
+    - `jiraIssueStatus` (string, opcional): Status - Use as Configurações de Workflow do Portal de Conexão para permitir a seleção.
+    - `assignee` (string, opcional): Responsável - Use as Configurações de Workflow do Portal de Conexão para permitir a seleção.
+    - `descriptionType` (string, opcional): Tipo de Descrição - Selecione o Tipo de Descrição.
+      - Opções: `description`, `descriptionJSON`
+    - `description` (string, opcional): Descrição - Descrição detalhada da issue. Este campo aparece apenas se 'descriptionType' = 'description'.
+    - `additionalFields` (string, opcional): Campos Adicionais - Especifique outros campos em formato JSON.
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ISSUE_BY_KEY">
+    **Descrição:** Obtém uma issue pelo identificador no Jira.
+
+    **Parâmetros:**
+    - `issueKey` (string, obrigatório): Chave da Issue (exemplo: "TEST-1234").
+  </Accordion>
+
+  <Accordion title="JIRA_FILTER_ISSUES">
+    **Descrição:** Busca issues no Jira usando filtros.
+
+    **Parâmetros:**
+    - `jqlQuery` (object, opcional): Filtro em forma normal disjuntiva - OU de grupos E de condições simples.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "status",
+                "operator": "$stringExactlyMatches",
+                "value": "Open"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      Operadores disponíveis: `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringIsIn`, `$stringIsNotIn`, `$stringContains`, `$stringDoesNotContain`, `$stringGreaterThan`, `$stringLessThan`
+    - `limit` (string, opcional): Limitar resultados - Limite máximo de issues retornados. Padrão para 10 se estiver em branco.
+  </Accordion>
+
+  <Accordion title="JIRA_SEARCH_BY_JQL">
+    **Descrição:** Busca issues no Jira utilizando JQL.
+
+    **Parâmetros:**
+    - `jqlQuery` (string, obrigatório): Query JQL (exemplo: "project = PROJECT").
+    - `paginationParameters` (object, opcional): Parâmetros de paginação para resultados paginados.
+      ```json
+      {
+        "pageCursor": "cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="JIRA_UPDATE_ISSUE_ANY">
+    **Descrição:** Atualiza qualquer issue no Jira. Use DESCRIBE_ACTION_SCHEMA para obter o schema de propriedades dessa função.
+
+    **Parâmetros:** Nenhum parâmetro específico - use JIRA_DESCRIBE_ACTION_SCHEMA primeiro para obter o schema esperado.
+  </Accordion>
+
+  <Accordion title="JIRA_DESCRIBE_ACTION_SCHEMA">
+    **Descrição:** Obtém o schema esperado para um tipo de issue. Use esta função caso nenhuma outra função atenda ao tipo de issue que deseja operar.
+
+    **Parâmetros:**
+    - `issueTypeId` (string, obrigatório): ID do Tipo de Issue.
+    - `projectKey` (string, obrigatório): Chave do projeto.
+    - `operation` (string, obrigatório): Tipo de Operação, por exemplo CREATE_ISSUE ou UPDATE_ISSUE.
+  </Accordion>
+
+  <Accordion title="JIRA_GET_PROJECTS">
+    **Descrição:** Obtém os projetos no Jira.
+
+    **Parâmetros:**
+    - `paginationParameters` (object, opcional): Parâmetros de Paginação.
+      ```json
+      {
+        "pageCursor": "cursor_string"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ISSUE_TYPES_BY_PROJECT">
+    **Descrição:** Obtém os tipos de issues por projeto no Jira.
+
+    **Parâmetros:**
+    - `project` (string, obrigatório): Chave do projeto.
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ISSUE_TYPES">
+    **Descrição:** Obtém todos os tipos de issues no Jira.
+
+    **Parâmetros:** Nenhum obrigatório.
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ISSUE_STATUS_BY_PROJECT">
+    **Descrição:** Obtém os status das issues de um projeto específico.
+
+    **Parâmetros:**
+    - `project` (string, obrigatório): Chave do projeto.
+  </Accordion>
+
+  <Accordion title="JIRA_GET_ALL_ASSIGNEES_BY_PROJECT">
+    **Descrição:** Obtém os responsáveis por um projeto específico.
+
+    **Parâmetros:**
+    - `project` (string, obrigatório): Chave do projeto.
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica de um Agente Jira
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha as ferramentas enterprise (incluirá ferramentas do Jira)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Criação de um agente com capacidades Jira
+jira_agent = Agent(
+    role="Issue Manager",
+    goal="Gerenciar issues do Jira e acompanhar o progresso do projeto de forma eficiente",
+    backstory="Um assistente de IA especializado em rastreamento de issues e gestão de projetos.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa para criar um relatório de bug
+create_bug_task = Task(
+    description="Criar um relatório de bug para a funcionalidade de login com alta prioridade e designar para o time de desenvolvimento",
+    agent=jira_agent,
+    expected_output="Bug report creado com sucesso e chave da issue"
+)
+
+# Executar a tarefa
+crew = Crew(
+    agents=[jira_agent],
+    tasks=[create_bug_task]
+)
+
+crew.kickoff()
+```
+
+### Filtrando Ferramentas Jira Específicas
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha apenas ferramentas Jira específicas
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["jira_create_issue", "jira_update_issue", "jira_search_by_jql"]
+)
+
+issue_coordinator = Agent(
+    role="Issue Coordinator",
+    goal="Criar e gerenciar issues Jira de forma eficiente",
+    backstory="Um assistente de IA focado na criação e gestão de issues.",
+    tools=enterprise_tools
+)
+
+# Tarefa para gerenciar workflow de issues
+issue_workflow = Task(
+    description="Criar uma issue de solicitação de feature e atualizar o status de issues relacionadas",
+    agent=issue_coordinator,
+    expected_output="Feature request criada e issues relacionadas atualizadas"
+)
+
+crew = Crew(
+    agents=[issue_coordinator],
+    tasks=[issue_workflow]
+)
+
+crew.kickoff()
+```
+
+### Análise e Relatórios de Projeto
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+project_analyst = Agent(
+    role="Project Analyst",
+    goal="Analisar dados de projetos e gerar insights a partir do Jira",
+    backstory="Um analista de projetos experiente que extrai insights de dados de gestão de projetos.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa para analisar status do projeto
+analysis_task = Task(
+    description="""
+    1. Obtenha todos os projetos e seus tipos de issues
+    2. Busque todas as issues abertas entre projetos
+    3. Analise distribuição de issues por status e responsável
+    4. Crie uma issue de relatório de resumo com os achados
+    """,
+    agent=project_analyst,
+    expected_output="Análise do projeto completa com relatório de resumo criado"
+)
+
+crew = Crew(
+    agents=[project_analyst],
+    tasks=[analysis_task]
+)
+
+crew.kickoff()
+```
+
+### Gestão Automatizada de Issues
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+automation_manager = Agent(
+    role="Automation Manager",
+    goal="Automatizar gestão de issues e processos de workflow",
+    backstory="Um assistente de IA que automatiza tarefas repetitivas de gestão de issues.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa para automatizar gestão de issues
+automation_task = Task(
+    description="""
+    1. Buscar todas as issues não atribuídas usando JQL
+    2. Obter responsáveis disponíveis de cada projeto
+    3. Atribuir issues automaticamente com base na carga de trabalho e especialidade
+    4. Atualizar prioridades das issues baseando-se na idade e tipo
+    5. Criar issues semanais de planejamento de sprint
+    """,
+    agent=automation_manager,
+    expected_output="Issues atribuídas automaticamente e issues de planejamento de sprint criadas"
+)
+
+crew = Crew(
+    agents=[automation_manager],
+    tasks=[automation_task]
+)
+
+crew.kickoff()
+```
+
+### Operações Avançadas Baseadas em Schema
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+schema_specialist = Agent(
+    role="Schema Specialist",
+    goal="Executar operações complexas no Jira usando schemas dinâmicos",
+    backstory="Um assistente de IA que manipula schemas dinâmicos e tipos de issues customizadas do Jira.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa usando operações baseadas em schema
+schema_task = Task(
+    description="""
+    1. Obtenha todos os projetos e seus tipos personalizados de issues
+    2. Para cada tipo personalizado, descreva o schema de ação
+    3. Crie issues usando schema dinâmico para campos complexos customizados
+    4. Atualize issues com valores de campos personalizados a partir de regras de negócio
+    """,
+    agent=schema_specialist,
+    expected_output="Issues customizadas criadas e atualizadas utilizando schemas dinâmicos"
+)
+
+crew = Crew(
+    agents=[schema_specialist],
+    tasks=[schema_task]
+)
+
+crew.kickoff()
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros de Permissão**
+- Certifique-se de que sua conta Jira tem as permissões necessárias nos projetos alvo
+- Verifique se a conexão OAuth inclui os escopos necessários da API Jira
+- Confira se você possui permissões de criar/editar issues nos projetos especificados
+
+**Chaves de Projeto ou Issue Inválidas**
+- Confira o formato das chaves dos projetos e issues (ex: "PROJ-123")
+- Verifique se os projetos existem e são acessíveis pela sua conta
+- Certifique-se de que chaves de issues referenciam issues existentes
+
+**Problemas de Tipo ou Status de Issue**
+- Use JIRA_GET_ISSUE_TYPES_BY_PROJECT para obter tipos válidos de issue para um projeto
+- Use JIRA_GET_ISSUE_STATUS_BY_PROJECT para obter status válidos
+- Certifique-se de que tipos e status de issue estão disponíveis no projeto alvo
+
+**Problemas com Queries JQL**
+- Teste as queries JQL na busca de issues do Jira antes de utilizar em chamadas de API
+- Certifique-se de que os nomes dos campos em JQL estejam corretos e existam em sua instância do Jira
+- Use a sintaxe correta de JQL para queries complexas
+
+**Problemas com Campos Customizados e Schemas**
+- Use JIRA_DESCRIBE_ACTION_SCHEMA para obter o schema correto para tipos de issues complexas
+- Certifique-se de que os IDs dos campos customizados estão corretos (ex: "customfield_10001")
+- Verifique se esses campos estão disponíveis no projeto e tipo de issue alvo
+
+**Problemas de Fórmulas de Filtro**
+- Garanta que as fórmulas de filtro sigam a estrutura JSON correta para forma normal disjuntiva
+- Use apenas campos válidos conforme configuração do seu Jira
+- Teste filtros simples antes de construir queries complexas com múltiplas condições
+
+### Obtenha Ajuda
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nosso time de suporte para obter assistência na configuração ou solução de problemas da integração Jira.
+</Card>

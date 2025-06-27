@@ -1,0 +1,382 @@
+---
+title: Integração com Shopify
+description: "Gestão de e-commerce e loja online com integração do Shopify para CrewAI."
+icon: "shopify"
+---
+
+## Visão Geral
+
+Permita que seus agentes gerenciem operações de e-commerce através do Shopify. Gerencie clientes, pedidos, produtos, inventário e análises da loja para otimizar sua empresa online com automação alimentada por IA.
+
+## Pré-requisitos
+
+Antes de utilizar a integração com o Shopify, certifique-se de que você possui:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com) com uma assinatura ativa
+- Uma loja Shopify com permissões administrativas adequadas
+- Sua loja Shopify conectada através da [página de Integrações](https://app.crewai.com/integrations)
+
+## Ferramentas Disponíveis
+
+### **Gerenciamento de Clientes**
+
+<AccordionGroup>
+  <Accordion title="SHOPIFY_GET_CUSTOMERS">
+    **Descrição:** Recupera uma lista de clientes da sua loja Shopify.
+
+    **Parâmetros:**
+    - `customerIds` (string, opcional): Lista de IDs de clientes separada por vírgula para filtrar (exemplo: "207119551, 207119552")
+    - `createdAtMin` (string, opcional): Retorna somente clientes criados após esta data (ISO ou timestamp Unix)
+    - `createdAtMax` (string, opcional): Retorna somente clientes criados antes desta data (ISO ou timestamp Unix)
+    - `updatedAtMin` (string, opcional): Retorna somente clientes atualizados após esta data (ISO ou timestamp Unix)
+    - `updatedAtMax` (string, opcional): Retorna somente clientes atualizados antes desta data (ISO ou timestamp Unix)
+    - `limit` (string, opcional): Número máximo de clientes a retornar (padrão 250)
+  </Accordion>
+
+  <Accordion title="SHOPIFY_SEARCH_CUSTOMERS">
+    **Descrição:** Pesquise por clientes usando critérios de filtragem avançados.
+
+    **Parâmetros:**
+    - `filterFormula` (object, opcional): Filtro avançado em forma normal disjuntiva com operadores específicos de campo
+    - `limit` (string, opcional): Número máximo de clientes a retornar (padrão 250)
+  </Accordion>
+
+  <Accordion title="SHOPIFY_CREATE_CUSTOMER">
+    **Descrição:** Crie um novo cliente em sua loja Shopify.
+
+    **Parâmetros:**
+    - `firstName` (string, obrigatório): Primeiro nome do cliente
+    - `lastName` (string, obrigatório): Sobrenome do cliente
+    - `email` (string, obrigatório): Endereço de e-mail do cliente
+    - `company` (string, opcional): Nome da empresa
+    - `streetAddressLine1` (string, opcional): Endereço
+    - `streetAddressLine2` (string, opcional): Complemento do endereço
+    - `city` (string, opcional): Cidade
+    - `state` (string, opcional): Estado ou código da província
+    - `country` (string, opcional): País
+    - `zipCode` (string, opcional): CEP
+    - `phone` (string, opcional): Telefone
+    - `tags` (string, opcional): Tags como array ou lista separada por vírgula
+    - `note` (string, opcional): Observação sobre o cliente
+    - `sendEmailInvite` (boolean, opcional): Se deve enviar convite por e-mail
+    - `metafields` (object, opcional): Metacampos adicionais em formato JSON
+  </Accordion>
+
+  <Accordion title="SHOPIFY_UPDATE_CUSTOMER">
+    **Descrição:** Atualize um cliente existente em sua loja Shopify.
+
+    **Parâmetros:**
+    - `customerId` (string, obrigatório): O ID do cliente a ser atualizado
+    - `firstName` (string, opcional): Primeiro nome do cliente
+    - `lastName` (string, opcional): Sobrenome do cliente
+    - `email` (string, opcional): Endereço de e-mail do cliente
+    - `company` (string, opcional): Nome da empresa
+    - `streetAddressLine1` (string, opcional): Endereço
+    - `streetAddressLine2` (string, opcional): Complemento do endereço
+    - `city` (string, opcional): Cidade
+    - `state` (string, opcional): Estado ou código da província
+    - `country` (string, opcional): País
+    - `zipCode` (string, opcional): CEP
+    - `phone` (string, opcional): Telefone
+    - `tags` (string, opcional): Tags como array ou lista separada por vírgula
+    - `note` (string, opcional): Observação sobre o cliente
+    - `sendEmailInvite` (boolean, opcional): Se deve enviar convite por e-mail
+    - `metafields` (object, opcional): Metacampos adicionais em formato JSON
+  </Accordion>
+</AccordionGroup>
+
+### **Gestão de Pedidos**
+
+<AccordionGroup>
+  <Accordion title="SHOPIFY_GET_ORDERS">
+    **Descrição:** Recupera uma lista de pedidos da sua loja Shopify.
+
+    **Parâmetros:**
+    - `orderIds` (string, opcional): Lista de IDs de pedidos separada por vírgula para filtrar (exemplo: "450789469, 450789470")
+    - `createdAtMin` (string, opcional): Retorna somente pedidos criados após esta data (ISO ou timestamp Unix)
+    - `createdAtMax` (string, opcional): Retorna somente pedidos criados antes desta data (ISO ou timestamp Unix)
+    - `updatedAtMin` (string, opcional): Retorna somente pedidos atualizados após esta data (ISO ou timestamp Unix)
+    - `updatedAtMax` (string, opcional): Retorna somente pedidos atualizados antes desta data (ISO ou timestamp Unix)
+    - `limit` (string, opcional): Número máximo de pedidos a retornar (padrão 250)
+  </Accordion>
+
+  <Accordion title="SHOPIFY_CREATE_ORDER">
+    **Descrição:** Crie um novo pedido em sua loja Shopify.
+
+    **Parâmetros:**
+    - `email` (string, obrigatório): Endereço de e-mail do cliente
+    - `lineItems` (object, obrigatório): Itens do pedido em formato JSON com título, preço, quantidade e variant_id
+    - `sendReceipt` (boolean, opcional): Se deve enviar recibo do pedido
+    - `fulfillmentStatus` (string, opcional): Status de atendimento - Opções: fulfilled, null, partial, restocked
+    - `financialStatus` (string, opcional): Status financeiro - Opções: pending, authorized, partially_paid, paid, partially_refunded, refunded, voided
+    - `inventoryBehaviour` (string, opcional): Comportamento de inventário - Opções: bypass, decrement_ignoring_policy, decrement_obeying_policy
+    - `note` (string, opcional): Observação do pedido
+  </Accordion>
+
+  <Accordion title="SHOPIFY_UPDATE_ORDER">
+    **Descrição:** Atualize um pedido existente em sua loja Shopify.
+
+    **Parâmetros:**
+    - `orderId` (string, obrigatório): O ID do pedido a ser atualizado
+    - `email` (string, opcional): Endereço de e-mail do cliente
+    - `lineItems` (object, opcional): Itens do pedido atualizados em formato JSON
+    - `sendReceipt` (boolean, opcional): Se deve enviar recibo do pedido
+    - `fulfillmentStatus` (string, opcional): Status de atendimento - Opções: fulfilled, null, partial, restocked
+    - `financialStatus` (string, opcional): Status financeiro - Opções: pending, authorized, partially_paid, paid, partially_refunded, refunded, voided
+    - `inventoryBehaviour` (string, opcional): Comportamento de inventário - Opções: bypass, decrement_ignoring_policy, decrement_obeying_policy
+    - `note` (string, opcional): Observação do pedido
+  </Accordion>
+
+  <Accordion title="SHOPIFY_GET_ABANDONED_CARTS">
+    **Descrição:** Recupera carrinhos abandonados da sua loja Shopify.
+
+    **Parâmetros:**
+    - `createdWithInLast` (string, opcional): Restringe os resultados para checkouts criados dentro do período especificado
+    - `createdAfterId` (string, opcional): Restringe os resultados após o ID especificado
+    - `status` (string, opcional): Mostra checkouts com o status especificado - Opções: open, closed (padrão open)
+    - `createdAtMin` (string, opcional): Retorna somente carrinhos criados após esta data (ISO ou timestamp Unix)
+    - `createdAtMax` (string, opcional): Retorna somente carrinhos criados antes desta data (ISO ou timestamp Unix)
+    - `limit` (string, opcional): Número máximo de carrinhos a retornar (padrão 250)
+  </Accordion>
+</AccordionGroup>
+
+### **Gestão de Produtos (REST API)**
+
+<AccordionGroup>
+  <Accordion title="SHOPIFY_GET_PRODUCTS">
+    **Descrição:** Recupera uma lista de produtos da sua loja Shopify utilizando a REST API.
+
+    **Parâmetros:**
+    - `productIds` (string, opcional): Lista de IDs de produtos separada por vírgula para filtrar (exemplo: "632910392, 632910393")
+    - `title` (string, opcional): Filtrar pelo título do produto
+    - `productType` (string, opcional): Filtrar pelo tipo de produto
+    - `vendor` (string, opcional): Filtrar por fornecedor
+    - `status` (string, opcional): Filtrar por status - Opções: active, archived, draft
+    - `createdAtMin` (string, opcional): Retorna somente produtos criados após esta data (ISO ou timestamp Unix)
+    - `createdAtMax` (string, opcional): Retorna somente produtos criados antes desta data (ISO ou timestamp Unix)
+    - `updatedAtMin` (string, opcional): Retorna somente produtos atualizados após esta data (ISO ou timestamp Unix)
+    - `updatedAtMax` (string, opcional): Retorna somente produtos atualizados antes desta data (ISO ou timestamp Unix)
+    - `limit` (string, opcional): Número máximo de produtos a retornar (padrão 250)
+  </Accordion>
+
+  <Accordion title="SHOPIFY_CREATE_PRODUCT">
+    **Descrição:** Crie um novo produto em sua loja Shopify utilizando a REST API.
+
+    **Parâmetros:**
+    - `title` (string, obrigatório): Título do produto
+    - `productType` (string, obrigatório): Tipo/categoria do produto
+    - `vendor` (string, obrigatório): Fornecedor do produto
+    - `productDescription` (string, opcional): Descrição do produto (aceita texto simples ou HTML)
+    - `tags` (string, opcional): Tags do produto como array ou lista separada por vírgula
+    - `price` (string, opcional): Preço do produto
+    - `inventoryPolicy` (string, opcional): Política de estoque - Opções: deny, continue
+    - `imageUrl` (string, opcional): URL da imagem do produto
+    - `isPublished` (boolean, opcional): Se o produto está publicado
+    - `publishToPointToSale` (boolean, opcional): Se deve publicar no ponto de venda
+  </Accordion>
+
+  <Accordion title="SHOPIFY_UPDATE_PRODUCT">
+    **Descrição:** Atualize um produto existente em sua loja Shopify utilizando a REST API.
+
+    **Parâmetros:**
+    - `productId` (string, obrigatório): O ID do produto a ser atualizado
+    - `title` (string, opcional): Título do produto
+    - `productType` (string, opcional): Tipo/categoria do produto
+    - `vendor` (string, opcional): Fornecedor do produto
+    - `productDescription` (string, opcional): Descrição do produto (aceita texto simples ou HTML)
+    - `tags` (string, opcional): Tags do produto como array ou lista separada por vírgula
+    - `price` (string, opcional): Preço do produto
+    - `inventoryPolicy` (string, opcional): Política de estoque - Opções: deny, continue
+    - `imageUrl` (string, opcional): URL da imagem do produto
+    - `isPublished` (boolean, opcional): Se o produto está publicado
+    - `publishToPointToSale` (boolean, opcional): Se deve publicar no ponto de venda
+  </Accordion>
+</AccordionGroup>
+
+### **Gestão de Produtos (GraphQL)**
+
+<AccordionGroup>
+  <Accordion title="SHOPIFY_GET_PRODUCTS_GRAPHQL">
+    **Descrição:** Recupere produtos utilizando filtros avançados do GraphQL.
+
+    **Parâmetros:**
+    - `productFilterFormula` (object, opcional): Filtro avançado em forma normal disjuntiva com suporte a campos como id, title, vendor, status, handle, tag, created_at, updated_at, published_at
+  </Accordion>
+
+  <Accordion title="SHOPIFY_CREATE_PRODUCT_GRAPHQL">
+    **Descrição:** Crie um novo produto utilizando a API GraphQL com suporte aprimorado a mídias.
+
+    **Parâmetros:**
+    - `title` (string, obrigatório): Título do produto
+    - `productType` (string, obrigatório): Tipo/categoria do produto
+    - `vendor` (string, obrigatório): Fornecedor do produto
+    - `productDescription` (string, opcional): Descrição do produto (aceita texto simples ou HTML)
+    - `tags` (string, opcional): Tags do produto como array ou lista separada por vírgula
+    - `media` (object, opcional): Objetos de mídia com texto alternativo, tipo de conteúdo e URL de origem
+    - `additionalFields` (object, opcional): Campos adicionais do produto como status, requiresSellingPlan, giftCard
+  </Accordion>
+
+  <Accordion title="SHOPIFY_UPDATE_PRODUCT_GRAPHQL">
+    **Descrição:** Atualize um produto existente utilizando a API GraphQL com suporte aprimorado a mídias.
+
+    **Parâmetros:**
+    - `productId` (string, obrigatório): O ID GraphQL do produto a ser atualizado (ex.: "gid://shopify/Product/913144112")
+    - `title` (string, opcional): Título do produto
+    - `productType` (string, opcional): Tipo/categoria do produto
+    - `vendor` (string, opcional): Fornecedor do produto
+    - `productDescription` (string, opcional): Descrição do produto (aceita texto simples ou HTML)
+    - `tags` (string, opcional): Tags do produto como array ou lista separada por vírgula
+    - `media` (object, opcional): Objetos de mídia atualizados com texto alternativo, tipo de conteúdo e URL de origem
+    - `additionalFields` (object, opcional): Campos adicionais do produto como status, requiresSellingPlan, giftCard
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente Shopify
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Shopify tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Shopify capabilities
+shopify_agent = Agent(
+    role="E-commerce Manager",
+    goal="Manage online store operations and customer relationships efficiently",
+    backstory="An AI assistant specialized in e-commerce operations and online store management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new customer
+create_customer_task = Task(
+    description="Create a new VIP customer Jane Smith with email jane.smith@example.com and phone +1-555-0123",
+    agent=shopify_agent,
+    expected_output="Customer created successfully with customer ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[shopify_agent],
+    tasks=[create_customer_task]
+)
+
+crew.kickoff()
+```
+
+### Filtrando Ferramentas Específicas do Shopify
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Shopify tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["shopify_create_customer", "shopify_create_order", "shopify_get_products"]
+)
+
+store_manager = Agent(
+    role="Store Manager",
+    goal="Manage customer orders and product catalog",
+    backstory="An experienced store manager who handles customer relationships and inventory management.",
+    tools=enterprise_tools
+)
+
+# Task to manage store operations
+store_task = Task(
+    description="Create a new customer and process their order for 2 Premium Coffee Mugs",
+    agent=store_manager,
+    expected_output="Customer created and order processed successfully"
+)
+
+crew = Crew(
+    agents=[store_manager],
+    tasks=[store_task]
+)
+
+crew.kickoff()
+```
+
+### Gestão de Produtos com GraphQL
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+product_manager = Agent(
+    role="Product Manager",
+    goal="Manage product catalog and inventory with advanced GraphQL capabilities",
+    backstory="An AI assistant that specializes in product management and catalog optimization.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage product catalog
+catalog_task = Task(
+    description="""
+    1. Create a new product "Premium Coffee Mug" from Coffee Co vendor
+    2. Add high-quality product images and descriptions
+    3. Search for similar products from the same vendor
+    4. Update product tags and pricing strategy
+    """,
+    agent=product_manager,
+    expected_output="Product created and catalog optimized successfully"
+)
+
+crew = Crew(
+    agents=[product_manager],
+    tasks=[catalog_task]
+)
+
+crew.kickoff()
+```
+
+### Análise de Pedidos e Clientes
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+analytics_agent = Agent(
+    role="E-commerce Analyst",
+    goal="Analyze customer behavior and order patterns to optimize store performance",
+    backstory="An analytical AI that excels at extracting insights from e-commerce data.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple operations
+analytics_task = Task(
+    description="""
+    1. Retrieve recent customer data and order history
+    2. Identify abandoned carts from the last 7 days
+    3. Analyze product performance and inventory levels
+    4. Generate recommendations for customer retention
+    """,
+    agent=analytics_agent,
+    expected_output="Comprehensive e-commerce analytics report with actionable insights"
+)
+
+crew = Crew(
+    agents=[analytics_agent],
+    tasks=[analytics_task]
+)
+
+crew.kickoff()
+```
+
+### Precisa de Ajuda?
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência na configuração ou resolução de problemas de integração com o Shopify.
+</Card>

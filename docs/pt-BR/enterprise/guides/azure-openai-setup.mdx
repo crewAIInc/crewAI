@@ -1,0 +1,51 @@
+---
+title: "Configuração do Azure OpenAI"
+description: "Configure o Azure OpenAI com o Crew Studio para conexões empresariais de LLM"
+icon: "microsoft"
+---
+
+Este guia orienta você na conexão do Azure OpenAI com o Crew Studio para operações de IA empresarial sem interrupções.
+
+## Processo de Configuração
+
+<Steps>
+    <Step title="Acesse o Azure OpenAI Studio">
+        1. No Azure, vá para `Serviços de IA do Azure > selecione sua implantação > abra o Azure OpenAI Studio`.
+        2. No menu à esquerda, clique em `Implantações`. Se não houver nenhuma, crie uma implantação com o modelo desejado.
+        3. Uma vez criada, selecione sua implantação e localize o `Target URI` e a `Key` no lado direito da página. Mantenha esta página aberta, pois você precisará dessas informações.
+            <Frame>
+                <img src="/images/enterprise/azure-openai-studio.png" alt="Azure OpenAI Studio" />
+            </Frame>
+    </Step>
+
+    <Step title="Configure a Conexão Enterprise do CrewAI">
+        4. Em outra aba, abra `CrewAI Enterprise > LLM Connections`. Dê um nome à sua LLM Connection, selecione Azure como provedor e escolha o mesmo modelo que você selecionou no Azure.
+        5. Na mesma página, adicione as variáveis de ambiente do passo 3:
+            - Uma chamada `AZURE_DEPLOYMENT_TARGET_URL` (usando o Target URI). A URL deve ser parecida com: https://your-deployment.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview
+            - Outra chamada `AZURE_API_KEY` (usando a Key).
+        6. Clique em `Add Connection` para salvar sua LLM Connection.
+    </Step>
+
+    <Step title="Defina Configurações Padrão">
+        7. Em `CrewAI Enterprise > Settings > Defaults > Crew Studio LLM Settings`, defina a nova LLM Connection e o modelo como padrão.
+    </Step>
+
+    <Step title="Configure o Acesso à Rede">
+        8. Certifique-se das configurações de acesso à rede:
+            - No Azure, vá para `Azure OpenAI > selecione sua implantação`.
+            - Navegue até `Resource Management > Networking`.
+            - Certifique-se de que a opção `Allow access from all networks` está habilitada. Se essa configuração estiver restrita, o CrewAI pode ser impedido de acessar seu endpoint do Azure OpenAI.
+    </Step>
+</Steps>
+
+## Verificação
+
+Tudo pronto! O Crew Studio agora utilizará sua conexão Azure OpenAI. Teste a conexão criando um crew ou task simples para garantir que tudo está funcionando corretamente.
+
+## Solução de Problemas
+
+Se você encontrar problemas:
+- Verifique se o formato do Target URI corresponde ao padrão esperado
+- Confira se a API key está correta e com as permissões adequadas
+- Certifique-se de que o acesso à rede está configurado para permitir conexões do CrewAI
+- Confirme se o modelo da implantação corresponde ao que você configurou no CrewAI

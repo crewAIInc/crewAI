@@ -1,0 +1,71 @@
+---
+title: "Visão Geral"
+description: "Realize pesquisas na web, encontre repositórios e pesquise informações em toda a internet"
+icon: "face-smile"
+---
+
+Essas ferramentas permitem que seus agentes pesquisem na web, explorem tópicos e encontrem informações em diversas plataformas, incluindo motores de busca, GitHub e YouTube.
+
+## **Ferramentas Disponíveis**
+
+<CardGroup cols={2}>
+  <Card title="Serper Dev Tool" icon="google" href="/pt-BR/tools/search-research/serperdevtool">
+    Integração com a API de busca do Google para capacidades abrangentes de pesquisa na web.
+  </Card>
+
+  <Card title="Brave Search Tool" icon="shield" href="/pt-BR/tools/search-research/bravesearchtool">
+    Pesquisa voltada para privacidade com o índice independente de busca do Brave.
+  </Card>
+
+  <Card title="Exa Search Tool" icon="magnifying-glass" href="/pt-BR/tools/search-research/exasearchtool">
+    Pesquisa impulsionada por IA para encontrar conteúdo específico e relevante.
+  </Card>
+
+  <Card title="LinkUp Search Tool" icon="link" href="/pt-BR/tools/search-research/linkupsearchtool">
+    Pesquisa em tempo real na web com indexação de conteúdo atualizado.
+  </Card>
+
+  <Card title="GitHub Search Tool" icon="github" href="/pt-BR/tools/search-research/githubsearchtool">
+    Pesquise repositórios do GitHub, códigos, issues e documentação.
+  </Card>
+
+  <Card title="Website Search Tool" icon="globe" href="/pt-BR/tools/search-research/websitesearchtool">
+    Pesquisa dentro de sites e domínios específicos.
+  </Card>
+
+  <Card title="Code Docs Search Tool" icon="code" href="/pt-BR/tools/search-research/codedocssearchtool">
+    Pesquise em documentação de código e recursos técnicos.
+  </Card>
+
+  <Card title="YouTube Channel Search" icon="youtube" href="/pt-BR/tools/search-research/youtubechannelsearchtool">
+    Pesquise canais do YouTube para encontrar conteúdos e criadores específicos.
+  </Card>
+
+  <Card title="YouTube Video Search" icon="play" href="/pt-BR/tools/search-research/youtubevideosearchtool">
+    Encontre e analise vídeos do YouTube por assunto, palavra-chave ou critério.
+  </Card>
+</CardGroup>
+
+## **Casos de Uso Comuns**
+
+- **Pesquisa de Mercado**: Pesquise tendências de mercado e análise de concorrentes
+- **Descoberta de Conteúdo**: Encontre artigos, vídeos e recursos relevantes
+- **Pesquisa de Código**: Pesquise repositórios e documentação em busca de soluções
+- **Geração de Leads**: Pesquise empresas e pessoas
+- **Pesquisa Acadêmica**: Encontre artigos científicos e trabalhos técnicos
+
+```python
+from crewai_tools import SerperDevTool, GitHubSearchTool, YoutubeVideoSearchTool
+
+# Create research tools
+web_search = SerperDevTool()
+code_search = GitHubSearchTool()
+video_research = YoutubeVideoSearchTool()
+
+# Add to your agent
+agent = Agent(
+    role="Research Analyst",
+    tools=[web_search, code_search, video_research],
+    goal="Gather comprehensive information on any topic"
+)
+```

@@ -1,0 +1,51 @@
+---
+title: Ferramenta DALL-E
+description: A `DallETool` é uma ferramenta poderosa projetada para gerar imagens a partir de descrições textuais.
+icon: image
+---
+
+# `DallETool`
+
+## Descrição
+
+Esta ferramenta é utilizada para dar ao Agente a capacidade de gerar imagens usando o modelo DALL-E. Trata-se de um modelo baseado em transformer que gera imagens a partir de descrições textuais.
+Esta ferramenta permite que o Agente gere imagens com base no texto de entrada fornecido pelo usuário.
+
+## Instalação
+
+Instale o pacote crewai_tools
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+Lembre-se de que, ao usar esta ferramenta, o texto deve ser gerado pelo próprio Agente. O texto deve ser uma descrição da imagem que você deseja gerar.
+
+```python Code
+from crewai_tools import DallETool
+
+Agent(
+    ...
+    tools=[DallETool()],
+)
+```
+
+Se necessário, você também pode ajustar os parâmetros do modelo DALL-E passando-os como argumentos para a classe `DallETool`. Por exemplo:
+
+```python Code
+from crewai_tools import DallETool
+
+dalle_tool = DallETool(model="dall-e-3",
+                       size="1024x1024",
+                       quality="standard",
+                       n=1)
+
+Agent(
+    ...
+    tools=[dalle_tool]
+)
+```
+
+Os parâmetros são baseados no método `client.images.generate` da API OpenAI. Para mais informações sobre os parâmetros,
+consulte a [documentação da API OpenAI](https://platform.openai.com/docs/guides/images/introduction?lang=python).

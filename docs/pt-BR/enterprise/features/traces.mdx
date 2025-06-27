@@ -1,0 +1,146 @@
+---
+title: Traces
+description: "Usando Traces para monitorar seus Crews"
+icon: "timeline"
+---
+
+## Visão Geral
+
+Traces fornecem visibilidade abrangente sobre as execuções dos seus crews, ajudando você a monitorar o desempenho, depurar problemas e otimizar os fluxos de trabalho dos seus agentes de IA.
+
+## O que são Traces?
+
+Traces no CrewAI Enterprise são registros detalhados de execução que capturam todos os aspectos da operação do seu crew, desde as entradas iniciais até as saídas finais. Eles registram:
+
+- Pensamentos e raciocínio do agente
+- Detalhes da execução das tarefas
+- Uso de ferramentas e resultados
+- Métricas de consumo de tokens
+- Tempos de execução
+- Estimativas de custo
+
+<Frame>
+  ![Traces Overview](/images/enterprise/traces-overview.png)
+</Frame>
+
+## Acessando os Traces
+
+<Steps>
+  <Step title="Navegue até a aba Traces">
+    No seu painel do CrewAI Enterprise, clique em **Traces** para ver todos os registros de execução.
+  </Step>
+  
+  <Step title="Selecione uma Execução">
+    Você verá uma lista de todas as execuções do crew, ordenadas por data. Clique em qualquer execução para visualizar seu trace detalhado.
+  </Step>
+</Steps>
+
+## Entendendo a Interface do Trace
+
+A interface do trace é dividida em várias seções, cada uma fornecendo diferentes insights sobre a execução do seu crew:
+
+### 1. Resumo da Execução
+
+A seção superior exibe métricas de alto nível sobre a execução:
+
+- **Total de Tokens**: Número de tokens consumidos em todas as tarefas
+- **Prompt Tokens**: Tokens usados em prompts para o LLM
+- **Completion Tokens**: Tokens gerados nas respostas do LLM
+- **Requisições**: Número de chamadas de API feitas
+- **Tempo de Execução**: Duração total da execução do crew
+- **Custo Estimado**: Custo aproximado com base no uso de tokens
+
+<Frame>
+  ![Execution Summary](/images/enterprise/trace-summary.png)
+</Frame>
+
+### 2. Tarefas & Agentes
+
+Esta seção mostra todas as tarefas e agentes que fizeram parte da execução do crew:
+
+- Nome da tarefa e atribuição do agente
+- Agentes e LLMs usados em cada tarefa
+- Status (concluído/falhou)
+- Tempo de execução individual da tarefa
+
+<Frame>
+  ![Task List](/images/enterprise/trace-tasks.png)
+</Frame>
+
+### 3. Saída Final
+
+Exibe o resultado final produzido pelo crew após a conclusão de todas as tarefas.
+
+<Frame>
+  ![Final Output](/images/enterprise/final-output.png)
+</Frame>
+
+### 4. Linha do Tempo da Execução
+
+Uma representação visual de quando cada tarefa começou e terminou, ajudando a identificar gargalos ou padrões de execução paralela.
+
+<Frame>
+  ![Execution Timeline](/images/enterprise/trace-timeline.png)
+</Frame>
+
+### 5. Visão Detalhada da Tarefa
+
+Ao clicar em uma tarefa específica na linha do tempo ou na lista de tarefas, você verá:
+
+<Frame>
+  ![Detailed Task View](/images/enterprise/trace-detailed-task.png)
+</Frame>
+
+- **Task Key**: Identificador único da tarefa
+- **Task ID**: Identificador técnico no sistema
+- **Status**: Estado atual (concluída/em execução/falhou)
+- **Agente**: Qual agente executou a tarefa
+- **LLM**: Modelo de linguagem usado nesta tarefa
+- **Início/Fim**: Quando a tarefa foi iniciada e concluída
+- **Tempo de Execução**: Duração desta tarefa específica
+- **Descrição da Tarefa**: O que o agente foi instruído a fazer
+- **Expected Output**: Qual formato de saída foi solicitado
+- **Input**: Qualquer entrada fornecida a essa tarefa vinda de tarefas anteriores
+- **Output**: O resultado real produzido pelo agente
+
+
+## Usando Traces para Depuração
+
+Traces são indispensáveis para solucionar problemas nos seus crews:
+
+<Steps>
+  <Step title="Identifique Pontos de Falha">
+    Quando uma execução de crew não produzir os resultados esperados, examine o trace para encontrar onde ocorreu o problema. Procure por:
+    
+    - Tarefas que falharam
+    - Decisões inesperadas dos agentes
+    - Erros no uso de ferramentas
+    - Instruções mal interpretadas
+
+    <Frame>
+      ![Failure Points](/images/enterprise/failure.png)
+    </Frame>
+  </Step>
+  
+  <Step title="Otimizar Desempenho">
+    Use métricas de execução para identificar gargalos de desempenho:
+    
+    - Tarefas que demoraram mais do que o esperado
+    - Uso excessivo de tokens
+    - Operações redundantes de ferramentas
+    - Chamadas de API desnecessárias
+  </Step>
+  
+  <Step title="Melhore a Eficiência de Custos">
+    Analise o uso de tokens e as estimativas de custo para otimizar a eficiência do seu crew:
+    
+    - Considere usar modelos menores para tarefas mais simples
+    - Refine prompts para serem mais concisos
+    - Faça cache de informações acessadas frequentemente
+    - Estruture tarefas para minimizar operações redundantes
+  </Step>
+</Steps>
+
+<Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com análise de traces ou outros recursos do CrewAI Enterprise.
+</Card>

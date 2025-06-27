@@ -1,0 +1,107 @@
+---
+title: Integração Langfuse
+description: Saiba como integrar o Langfuse ao CrewAI via OpenTelemetry usando OpenLit
+icon: vials
+---
+
+# Integre o Langfuse ao CrewAI
+
+Este notebook demonstra como integrar o **Langfuse** ao **CrewAI** usando OpenTelemetry via o SDK **OpenLit**. Ao final deste notebook, você será capaz de rastrear suas aplicações CrewAI com o Langfuse para melhorar a observabilidade e a depuração.
+
+> **O que é Langfuse?** [Langfuse](https://langfuse.com) é uma plataforma open-source de engenharia LLM. Ela fornece recursos de rastreamento e monitoramento para aplicações LLM, ajudando desenvolvedores a depurar, analisar e otimizar seus sistemas de IA. O Langfuse se integra com várias ferramentas e frameworks através de integrações nativas, OpenTelemetry e APIs/SDKs.
+
+[![Vídeo de Visão Geral do Langfuse](https://github.com/user-attachments/assets/3926b288-ff61-4b95-8aa1-45d041c70866)](https://langfuse.com/watch-demo)
+
+## Primeiros Passos
+
+Vamos passar por um exemplo simples usando CrewAI e integrando ao Langfuse via OpenTelemetry utilizando o OpenLit.
+
+### Passo 1: Instale as Dependências
+
+```python
+%pip install langfuse openlit crewai crewai_tools
+```
+
+### Passo 2: Configure as Variáveis de Ambiente
+
+Defina suas chaves de API do Langfuse e configure as opções de exportação do OpenTelemetry para enviar os traces ao Langfuse. Consulte a [Documentação Langfuse OpenTelemetry](https://langfuse.com/docs/opentelemetry/get-started) para mais informações sobre o endpoint Langfuse OpenTelemetry `/api/public/otel` e autenticação.
+
+```python
+import os
+ 
+# Obtenha as chaves do seu projeto na página de configurações do projeto: https://cloud.langfuse.com
+os.environ["LANGFUSE_PUBLIC_KEY"] = "pk-lf-..." 
+os.environ["LANGFUSE_SECRET_KEY"] = "sk-lf-..."
+os.environ["LANGFUSE_HOST"] = "https://cloud.langfuse.com" # 🇪🇺 Região UE
+# os.environ["LANGFUSE_HOST"] = "https://us.cloud.langfuse.com" # 🇺🇸 Região EUA
+ 
+ 
+# Sua chave OpenAI
+os.environ["OPENAI_API_KEY"] = "sk-proj-..."
+```
+Com as variáveis de ambiente configuradas, agora podemos inicializar o cliente Langfuse. A função get_client() inicializa o cliente Langfuse usando as credenciais fornecidas nas variáveis de ambiente.
+
+```python
+from langfuse import get_client
+ 
+langfuse = get_client()
+ 
+# Verificar conexão
+if langfuse.auth_check():
+    print("Cliente Langfuse autenticado e pronto!")
+else:
+    print("Falha na autenticação. Verifique suas credenciais e host.")
+```
+
+### Passo 3: Inicialize o OpenLit
+
+Inicialize o SDK de instrumentação OpenTelemetry do OpenLit para começar a capturar traces do OpenTelemetry.
+
+```python
+import openlit
+
+openlit.init()
+```
+
+### Passo 4: Crie uma Aplicação Simples CrewAI
+
+Vamos criar uma aplicação simples CrewAI onde múltiplos agentes colaboram para responder à pergunta de um usuário.
+
+```python
+from crewai import Agent, Task, Crew
+
+from crewai_tools import (
+    WebsiteSearchTool
+)
+
+web_rag_tool = WebsiteSearchTool()
+
+writer = Agent(
+        role="Writer",
+        goal="Você torna a matemática envolvente e compreensível para crianças pequenas através de poesias",
+        backstory="Você é especialista em escrever haicais mas não sabe nada de matemática.",
+        tools=[web_rag_tool],  
+    )
+
+task = Task(description=("O que é {multiplicação}?"),
+            expected_output=("Componha um haicai que inclua a resposta."),
+            agent=writer)
+
+crew = Crew(
+  agents=[writer],
+  tasks=[task],
+  share_crew=False
+)
+```
+
+### Passo 5: Veja os Traces no Langfuse
+
+Após rodar o agente, você pode visualizar os traces gerados pela sua aplicação CrewAI no [Langfuse](https://cloud.langfuse.com). Você verá etapas detalhadas das interações do LLM, o que pode ajudar na depuração e otimização do seu agente de IA.
+
+![Exemplo de trace CrewAI no Langfuse](https://langfuse.com/images/cookbook/integration_crewai/crewai-example-trace.png)
+
+_[Exemplo público de trace no Langfuse](https://cloud.langfuse.com/project/cloramnkj0002jz088vzn1ja4/traces/e2cf380ffc8d47d28da98f136140642b?timestamp=2025-02-05T15%3A12%3A02.717Z&observation=3b32338ee6a5d9af)_
+
+## Referências
+
+- [Documentação Langfuse OpenTelemetry](https://langfuse.com/docs/opentelemetry/get-started)

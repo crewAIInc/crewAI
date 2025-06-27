@@ -1,0 +1,88 @@
+---
+title: "Visão Geral"
+description: "Leia, escreva e pesquise em diversos formatos de arquivos com as ferramentas de processamento de documentos do CrewAI"
+icon: "face-smile"
+---
+
+Estas ferramentas permitem que seus agentes trabalhem com diversos formatos e tipos de documentos. De leitura de PDFs ao processamento de dados em JSON, essas ferramentas atendem a todas as suas necessidades de processamento de documentos.
+
+## **Ferramentas Disponíveis**
+
+<CardGroup cols={2}>
+  <Card title="Ferramenta de Leitura de Arquivos" icon="folders" href="/pt-BR/tools/file-document/filereadtool">
+    Leia conteúdo de qualquer tipo de arquivo, incluindo texto, markdown e mais.
+  </Card>
+
+  <Card title="Ferramenta de Escrita de Arquivos" icon="file-pen" href="/pt-BR/tools/file-document/filewritetool">
+    Escreva conteúdo em arquivos, crie novos documentos e salve dados processados.
+  </Card>
+
+  <Card title="Ferramenta de Pesquisa em PDF" icon="file-pdf" href="/pt-BR/tools/file-document/pdfsearchtool">
+    Pesquise e extraia conteúdo de texto de documentos PDF de forma eficiente.
+  </Card>
+
+  <Card title="Ferramenta de Pesquisa em DOCX" icon="file-word" href="/pt-BR/tools/file-document/docxsearchtool">
+    Pesquise em documentos do Microsoft Word e extraia conteúdo relevante.
+  </Card>
+
+  <Card title="Ferramenta de Pesquisa em JSON" icon="brackets-curly" href="/pt-BR/tools/file-document/jsonsearchtool">
+    Faça a análise e pesquisa em arquivos JSON com recursos avançados de consulta.
+  </Card>
+
+  <Card title="Ferramenta de Pesquisa em CSV" icon="table" href="/pt-BR/tools/file-document/csvsearchtool">
+    Processe e pesquise em arquivos CSV, extraia linhas e colunas específicas.
+  </Card>
+
+  <Card title="Ferramenta de Pesquisa em XML" icon="code" href="/pt-BR/tools/file-document/xmlsearchtool">
+    Analise arquivos XML e pesquise elementos e atributos específicos.
+  </Card>
+
+  <Card title="Ferramenta de Pesquisa em MDX" icon="markdown" href="/pt-BR/tools/file-document/mdxsearchtool">
+    Pesquise em arquivos MDX e extraia conteúdo de documentações.
+  </Card>
+
+  <Card title="Ferramenta de Pesquisa em TXT" icon="file-lines" href="/pt-BR/tools/file-document/txtsearchtool">
+    Pesquise em arquivos de texto simples com recursos de busca por padrões.
+  </Card>
+
+  <Card title="Ferramenta de Pesquisa em Diretório" icon="folder-open" href="/pt-BR/tools/file-document/directorysearchtool">
+    Pesquise arquivos e pastas dentro de estruturas de diretórios.
+  </Card>
+
+  <Card title="Ferramenta de Leitura de Diretório" icon="folder" href="/pt-BR/tools/file-document/directoryreadtool">
+    Leia e liste conteúdos de diretórios, estruturas de arquivos e metadados.
+  </Card>
+</CardGroup>
+
+## **Casos de Uso Comuns**
+
+- **Processamento de Documentos**: Extraia e analise conteúdo de vários formatos de arquivos
+- **Importação de Dados**: Leia dados estruturados de arquivos CSV, JSON e XML
+- **Busca por Conteúdo**: Encontre informações específicas em grandes coleções de documentos
+- **Gerenciamento de Arquivos**: Organize e manipule arquivos e diretórios
+- **Exportação de Dados**: Salve os resultados processados em vários formatos de arquivo
+
+## **Exemplo Rápido de Início**
+
+```python
+from crewai_tools import FileReadTool, PDFSearchTool, JSONSearchTool
+
+# Create tools
+file_reader = FileReadTool()
+pdf_searcher = PDFSearchTool()
+json_processor = JSONSearchTool()
+
+# Add to your agent
+agent = Agent(
+    role="Document Analyst",
+    tools=[file_reader, pdf_searcher, json_processor],
+    goal="Process and analyze various document types"
+)
+```
+
+## **Dicas para Processamento de Documentos**
+
+- **Permissões de Arquivo**: Certifique-se de que seu agente possui as permissões adequadas de leitura/escrita
+- **Arquivos Grandes**: Considere dividir documentos muito grandes em partes menores
+- **Suporte de Formatos**: Consulte a documentação da ferramenta para saber quais formatos de arquivos são suportados
+- **Tratamento de Erros**: Implemente tratamento de erros adequado para arquivos corrompidos ou inacessíveis

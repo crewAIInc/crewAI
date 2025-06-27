@@ -14,8 +14,50 @@ from crewai.cli.utils import copy_template, load_env_vars, write_env_file
 
 
 def create_folder_structure(name, parent_folder=None):
+    import keyword
+    import re
+    
+    name = name.rstrip('/')
+    
+    if not name.strip():
+        raise ValueError("Project name cannot be empty or contain only whitespace")
+    
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
+    folder_name = re.sub(r'[^a-zA-Z0-9_]', '', folder_name)
+    
+    # Check if the name starts with invalid characters or is primarily invalid
+    if re.match(r'^[^a-zA-Z0-9_-]+', name):
+        raise ValueError(f"Project name '{name}' contains no valid characters for a Python module name")
+    
+    if not folder_name:
+        raise ValueError(f"Project name '{name}' contains no valid characters for a Python module name")
+    
+    if folder_name[0].isdigit():
+        raise ValueError(f"Project name '{name}' would generate folder name '{folder_name}' which cannot start with a digit (invalid Python module name)")
+    
+    if keyword.iskeyword(folder_name):
+        raise ValueError(f"Project name '{name}' would generate folder name '{folder_name}' which is a reserved Python keyword")
+    
+    if not folder_name.isidentifier():
+        raise ValueError(f"Project name '{name}' would generate invalid Python module name '{folder_name}'")
+    
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
+    
+    class_name = re.sub(r'[^a-zA-Z0-9_]', '', class_name)
+    
+    if not class_name:
+        raise ValueError(f"Project name '{name}' contains no valid characters for a Python class name")
+    
+    if class_name[0].isdigit():
+        raise ValueError(f"Project name '{name}' would generate class name '{class_name}' which cannot start with a digit")
+    
+    # Check if the original name (before title casing) is a keyword
+    original_name_clean = re.sub(r'[^a-zA-Z0-9_]', '', name.replace("_", "").replace("-", "").lower())
+    if keyword.iskeyword(original_name_clean) or keyword.iskeyword(class_name) or class_name in ('True', 'False', 'None'):
+        raise ValueError(f"Project name '{name}' would generate class name '{class_name}' which is a reserved Python keyword")
+    
+    if not class_name.isidentifier():
+        raise ValueError(f"Project name '{name}' would generate invalid Python class name '{class_name}'")
 
     if parent_folder:
         folder_path = Path(parent_folder) / folder_name

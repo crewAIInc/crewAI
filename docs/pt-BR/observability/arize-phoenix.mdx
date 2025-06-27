@@ -1,0 +1,151 @@
+---
+title: Arize Phoenix
+description: Integração do Arize Phoenix para CrewAI com OpenTelemetry e OpenInference
+icon: magnifying-glass-chart
+---
+
+# Integração com Arize Phoenix
+
+Este guia demonstra como integrar o **Arize Phoenix** ao **CrewAI** usando o OpenTelemetry através do [OpenInference](https://github.com/openinference/openinference) SDK. Ao final deste guia, você será capaz de rastrear seus agentes CrewAI e depurá-los com facilidade.
+
+> **O que é o Arize Phoenix?** O [Arize Phoenix](https://phoenix.arize.com) é uma plataforma de observabilidade de LLM que oferece rastreamento e avaliação para aplicações de IA.
+
+[![Assista a um vídeo demonstrando a nossa integração com o Phoenix](https://storage.googleapis.com/arize-assets/fixtures/setup_crewai.png)](https://www.youtube.com/watch?v=Yc5q3l6F7Ww)
+
+## Primeiros Passos
+
+Vamos percorrer um exemplo simples de uso do CrewAI e integração com o Arize Phoenix via OpenTelemetry utilizando o OpenInference.
+
+Você também pode acessar este guia no [Google Colab](https://colab.research.google.com/github/Arize-ai/phoenix/blob/main/tutorials/tracing/crewai_tracing_tutorial.ipynb).
+
+### Passo 1: Instale as Dependências
+
+```bash
+pip install openinference-instrumentation-crewai crewai crewai-tools arize-phoenix-otel
+```
+
+### Passo 2: Configure as Variáveis de Ambiente
+
+Configure as chaves de API do Phoenix Cloud e ajuste o OpenTelemetry para enviar rastros ao Phoenix. O Phoenix Cloud é uma versão hospedada do Arize Phoenix, mas não é obrigatório para utilizar esta integração.
+
+Você pode obter uma chave de API gratuita do Serper [aqui](https://serper.dev/).
+
+```python
+import os
+from getpass import getpass
+
+# Obtenha suas credenciais do Phoenix Cloud
+PHOENIX_API_KEY = getpass("🔑 Digite sua Phoenix Cloud API Key: ")
+
+# Obtenha as chaves de API para os serviços
+OPENAI_API_KEY = getpass("🔑 Digite sua OpenAI API key: ")
+SERPER_API_KEY = getpass("🔑 Digite sua Serper API key: ")
+
+# Defina as variáveis de ambiente
+os.environ["PHOENIX_CLIENT_HEADERS"] = f"api_key={PHOENIX_API_KEY}"
+os.environ["PHOENIX_COLLECTOR_ENDPOINT"] = "https://app.phoenix.arize.com" # Phoenix Cloud, altere para seu endpoint se estiver utilizando uma instância self-hosted
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+os.environ["SERPER_API_KEY"] = SERPER_API_KEY
+```
+
+### Passo 3: Inicialize o OpenTelemetry com o Phoenix
+
+Inicialize o SDK de instrumentação OpenTelemetry do OpenInference para começar a capturar rastros e enviá-los ao Phoenix. 
+
+```python
+from phoenix.otel import register
+
+tracer_provider = register(
+    project_name="crewai-tracing-demo",
+    auto_instrument=True,
+)
+```
+
+### Passo 4: Crie uma Aplicação CrewAI
+
+Vamos criar uma aplicação CrewAI em que dois agentes colaboram para pesquisar e escrever um post de blog sobre avanços em IA.
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai_tools import SerperDevTool
+from openinference.instrumentation.crewai import CrewAIInstrumentor
+from phoenix.otel import register
+
+# configure o monitoramento para seu crew
+tracer_provider = register(
+    endpoint="http://localhost:6006/v1/traces")
+CrewAIInstrumentor().instrument(skip_dep_check=True, tracer_provider=tracer_provider)
+search_tool = SerperDevTool()
+
+# Defina seus agentes com papéis e objetivos
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Uncover cutting-edge developments in AI and data science",
+    backstory="""You work at a leading tech think tank.
+    Your expertise lies in identifying emerging trends.
+    You have a knack for dissecting complex data and presenting actionable insights.""",
+    verbose=True,
+    allow_delegation=False,
+    # You can pass an optional llm attribute specifying what model you wanna use.
+    # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7),
+    tools=[search_tool],
+)
+writer = Agent(
+    role="Tech Content Strategist",
+    goal="Craft compelling content on tech advancements",
+    backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
+    You transform complex concepts into compelling narratives.""",
+    verbose=True,
+    allow_delegation=True,
+)
+
+# Crie tarefas para seus agentes
+task1 = Task(
+    description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
+    Identify key trends, breakthrough technologies, and potential industry impacts.""",
+    expected_output="Full analysis report in bullet points",
+    agent=researcher,
+)
+
+task2 = Task(
+    description="""Using the insights provided, develop an engaging blog
+    post that highlights the most significant AI advancements.
+    Your post should be informative yet accessible, catering to a tech-savvy audience.
+    Make it sound cool, avoid complex words so it doesn't sound like AI.""",
+    expected_output="Full blog post of at least 4 paragraphs",
+    agent=writer,
+)
+
+# Instancie seu crew com um processo sequencial
+crew = Crew(
+    agents=[researcher, writer], tasks=[task1, task2], verbose=1, process=Process.sequential
+)
+
+# Coloque seu crew para trabalhar!
+result = crew.kickoff()
+
+print("######################")
+print(result)
+```
+
+### Passo 5: Visualize os Rastros no Phoenix
+
+Após executar o agente, você poderá visualizar os rastros gerados pela sua aplicação CrewAI no Phoenix. Você verá etapas detalhadas das interações dos agentes e chamadas de LLM, o que pode ajudar na depuração e otimização dos seus agentes de IA.
+
+Acesse sua conta Phoenix Cloud e navegue até o projeto que você especificou no parâmetro `project_name`. Você verá uma visualização de linha do tempo do seu rastro, incluindo todas as interações dos agentes, uso de ferramentas e chamadas LLM.
+
+![Exemplo de rastro no Phoenix mostrando interações de agentes](https://storage.googleapis.com/arize-assets/fixtures/crewai_traces.png)
+
+
+### Informações de Compatibilidade de Versão
+- Python 3.8+
+- CrewAI >= 0.86.0
+- Arize Phoenix >= 7.0.1
+- OpenTelemetry SDK >= 1.31.0
+
+
+### Referências
+- [Documentação do Phoenix](https://docs.arize.com/phoenix/) - Visão geral da plataforma Phoenix.
+- [Documentação do CrewAI](https://docs.crewai.com/) - Visão geral do framework CrewAI.
+- [Documentação do OpenTelemetry](https://opentelemetry.io/docs/) - Guia do OpenTelemetry
+- [OpenInference GitHub](https://github.com/openinference/openinference) - Código-fonte do SDK OpenInference.

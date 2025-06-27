@@ -1,0 +1,80 @@
+---
+title: Pesquisa TXT RAG
+description: O `TXTSearchTool` foi projetado para realizar uma busca RAG (Geração Aumentada por Recuperação) dentro do conteúdo de um arquivo de texto.
+icon: file-lines
+---
+
+## Visão Geral
+
+<Note>
+    Ainda estamos trabalhando para melhorar as ferramentas, por isso pode haver comportamentos inesperados ou mudanças no futuro.
+</Note>
+
+Esta ferramenta é utilizada para realizar uma busca RAG (Geração Aumentada por Recuperação) dentro do conteúdo de um arquivo de texto.
+Ela permite uma busca semântica de uma consulta dentro do conteúdo de um arquivo de texto especificado,
+tornando-se um recurso valioso para extrair rapidamente informações ou encontrar seções específicas do texto com base na consulta fornecida.
+
+## Instalação
+
+Para usar o `TXTSearchTool`, primeiro é necessário instalar o pacote `crewai_tools`.
+Isso pode ser feito usando o pip, um gerenciador de pacotes para Python.
+Abra seu terminal ou prompt de comando e digite o seguinte comando:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Este comando fará o download e instalará o TXTSearchTool junto com todas as dependências necessárias.
+
+## Exemplo
+
+O exemplo a seguir demonstra como usar o TXTSearchTool para pesquisar dentro de um arquivo de texto.
+Este exemplo mostra tanto a inicialização da ferramenta com um arquivo de texto específico quanto a pesquisa subsequente dentro do conteúdo desse arquivo.
+
+```python Code
+from crewai_tools import TXTSearchTool
+
+# Inicialize a ferramenta para pesquisar no conteúdo de qualquer arquivo de texto
+# que o agente aprender durante sua execução
+tool = TXTSearchTool()
+
+# OU
+
+# Inicialize a ferramenta com um arquivo de texto específico,
+# para que o agente possa pesquisar dentro do conteúdo desse arquivo de texto
+tool = TXTSearchTool(txt='path/to/text/file.txt')
+```
+
+## Argumentos
+- `txt` (str): **Opcional**. O caminho para o arquivo de texto que você deseja pesquisar.
+Este argumento só é necessário se a ferramenta não foi inicializada com um arquivo de texto específico;
+caso contrário, a pesquisa será realizada no arquivo de texto fornecido inicialmente.
+
+## Modelo e embeddings personalizados
+
+Por padrão, a ferramenta utiliza o OpenAI tanto para embeddings quanto para sumarização.
+Para personalizar o modelo, você pode usar um dicionário de configuração como o exemplo a seguir:
+
+```python Code
+tool = TXTSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

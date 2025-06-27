@@ -44,7 +44,7 @@ class TestAuthenticationCommand(unittest.TestCase):
         mock_print.assert_any_call("2. Enter the following code: ", "ABCDEF")
         mock_open.assert_called_once_with("https://example.com")
 
-    @patch("crewai.cli.authentication.main.ToolCommand")
+    @patch("crewai.cli.tools.main.ToolCommand")
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.validate_token")
     @patch("crewai.cli.authentication.main.console.print")

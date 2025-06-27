@@ -1,0 +1,77 @@
+---
+title: Pesquisa RAG em Sites
+description: O `WebsiteSearchTool` foi projetado para realizar uma busca RAG (Geração Aumentada por Recuperação) dentro do conteúdo de um site.
+icon: globe-stand
+---
+
+# `WebsiteSearchTool`
+
+<Note>
+    O WebsiteSearchTool está atualmente em fase experimental. Estamos trabalhando ativamente para incorporar esta ferramenta em nosso conjunto de ofertas e atualizaremos a documentação conforme necessário.
+</Note>
+
+## Descrição
+
+O WebsiteSearchTool foi concebido como um conceito para realizar buscas semânticas dentro do conteúdo de sites. 
+Ele visa aproveitar modelos avançados de aprendizado de máquina, como a Geração Aumentada por Recuperação (RAG), para navegar e extrair informações de URLs especificadas de forma eficiente. 
+Esta ferramenta pretende oferecer flexibilidade, permitindo que usuários realizem buscas em qualquer site ou foquem em sites específicos de seu interesse. 
+Por favor, note que os detalhes da implementação atual do WebsiteSearchTool estão em desenvolvimento, e as funcionalidades aqui descritas podem ainda não estar acessíveis.
+
+## Instalação
+
+Para preparar seu ambiente para quando o WebsiteSearchTool estiver disponível, você pode instalar o pacote fundamental com:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Este comando instala as dependências necessárias para garantir que, assim que a ferramenta estiver totalmente integrada, os usuários possam começar a usá-la imediatamente.
+
+## Exemplo de Uso
+
+Abaixo estão exemplos de como o WebsiteSearchTool poderá ser utilizado em diferentes cenários. Por favor, observe que esses exemplos são ilustrativos e representam funcionalidades planejadas:
+
+```python Code
+from crewai_tools import WebsiteSearchTool
+
+# Exemplo de inicialização da ferramenta que agentes podem usar 
+# para pesquisar em quaisquer sites descobertos
+tool = WebsiteSearchTool()
+
+# Exemplo de limitação da busca ao conteúdo de um site específico, 
+# assim os agentes podem buscar somente dentro desse site
+tool = WebsiteSearchTool(website='https://example.com')
+```
+
+## Argumentos
+
+- `website`: Um argumento opcional destinado a especificar a URL do site para buscas direcionadas. Este argumento foi projetado para aumentar a flexibilidade da ferramenta, permitindo buscas mais focadas quando necessário.
+
+## Opções de Personalização
+
+Por padrão, a ferramenta utiliza a OpenAI tanto para embeddings quanto para sumarização. Para personalizar o modelo, você pode usar um dicionário de configuração, conforme o exemplo abaixo:
+
+
+```python Code
+tool = WebsiteSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

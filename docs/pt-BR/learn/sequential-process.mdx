@@ -1,0 +1,127 @@
+---
+title: Processos Sequenciais
+description: Um guia abrangente para utilizar os processos sequenciais na execução de tarefas em projetos CrewAI.
+icon: forward
+---
+
+## Introdução
+
+O CrewAI oferece uma estrutura flexível para execução de tarefas de maneira estruturada, suportando tanto processos sequenciais quanto hierárquicos.
+Este guia descreve como implementar esses processos de forma eficaz para garantir execução eficiente das tarefas e a conclusão do projeto.
+
+## Visão Geral do Processo Sequencial
+
+O processo sequencial garante que as tarefas sejam executadas uma após a outra, seguindo um progresso linear.
+Essa abordagem é ideal para projetos nos quais as tarefas precisam ser concluídas em uma ordem específica.
+
+### Principais Características
+
+- **Fluxo Linear de Tarefas**: Garante o progresso ordenado ao tratar tarefas em uma sequência pré-determinada.
+- **Simplicidade**: Melhor opção para projetos com tarefas claras e passo a passo.
+- **Fácil Monitoramento**: Facilita o acompanhamento da conclusão das tarefas e do progresso do projeto.
+
+## Implementando o Processo Sequencial
+
+Para utilizar o processo sequencial, monte sua crew e defina as tarefas na ordem em que devem ser executadas.
+
+```python Code
+from crewai import Crew, Process, Agent, Task, TaskOutput, CrewOutput
+
+# Define your agents
+researcher = Agent(
+  role='Researcher',
+  goal='Conduct foundational research',
+  backstory='An experienced researcher with a passion for uncovering insights'
+)
+analyst = Agent(
+  role='Data Analyst',
+  goal='Analyze research findings',
+  backstory='A meticulous analyst with a knack for uncovering patterns'
+)
+writer = Agent(
+  role='Writer',
+  goal='Draft the final report',
+  backstory='A skilled writer with a talent for crafting compelling narratives'
+)
+
+# Define your tasks
+research_task = Task(
+  description='Gather relevant data...', 
+  agent=researcher, 
+  expected_output='Raw Data'
+)
+analysis_task = Task(
+  description='Analyze the data...', 
+  agent=analyst, 
+  expected_output='Data Insights'
+)
+writing_task = Task(
+  description='Compose the report...', 
+  agent=writer, 
+  expected_output='Final Report'
+)
+
+# Form the crew with a sequential process
+report_crew = Crew(
+  agents=[researcher, analyst, writer],
+  tasks=[research_task, analysis_task, writing_task],
+  process=Process.sequential
+)
+
+# Execute the crew
+result = report_crew.kickoff()
+
+# Accessing the type-safe output
+task_output: TaskOutput = result.tasks[0].output
+crew_output: CrewOutput = result.output
+```
+
+### Nota:
+
+Cada tarefa em um processo sequencial **deve** ter um agente atribuído. Certifique-se de que todo `Task` inclua um parâmetro `agent`.
+
+### Fluxo de Trabalho em Ação
+
+1. **Tarefa Inicial**: Em um processo sequencial, o primeiro agente conclui sua tarefa e sinaliza a finalização.
+2. **Tarefas Subsequentes**: Os agentes assumem suas tarefas conforme o tipo de processo, com os resultados das tarefas anteriores ou diretrizes orientando sua execução.
+3. **Finalização**: O processo é concluído assim que a última tarefa é executada, levando à conclusão do projeto.
+
+## Funcionalidades Avançadas
+
+### Delegação de Tarefas
+
+Em processos sequenciais, se um agente possui `allow_delegation` definido como `True`, ele pode delegar tarefas para outros agentes na crew.
+Esse recurso é configurado automaticamente quando há múltiplos agentes na crew.
+
+### Execução Assíncrona
+
+As tarefas podem ser executadas de forma assíncrona, permitindo processamento paralelo quando apropriado.
+Para criar uma tarefa assíncrona, defina `async_execution=True` ao criar a tarefa.
+
+### Memória e Cache
+
+O CrewAI suporta recursos de memória e cache:
+
+- **Memória**: Habilite definindo `memory=True` ao criar a Crew. Isso permite aos agentes reter informações entre as tarefas.
+- **Cache**: Por padrão, o cache está habilitado. Defina `cache=False` para desativá-lo.
+
+### Callbacks
+
+Você pode definir callbacks tanto no nível da tarefa quanto no nível de etapa:
+
+- `task_callback`: Executado após a conclusão de cada tarefa.
+- `step_callback`: Executado após cada etapa na execução de um agente.
+
+### Métricas de Uso
+
+O CrewAI rastreia o uso de tokens em todas as tarefas e agentes. Você pode acessar essas métricas após a execução.
+
+## Melhores Práticas para Processos Sequenciais
+
+1. **A Ordem Importa**: Organize as tarefas em uma sequência lógica, onde cada uma aproveite o resultado da anterior.
+2. **Descrições Claras de Tarefas**: Forneça descrições detalhadas para cada tarefa, orientando os agentes de forma eficaz.
+3. **Seleção Apropriada de Agentes**: Relacione as habilidades e funções dos agentes às necessidades de cada tarefa.
+4. **Use o Contexto**: Aproveite o contexto das tarefas anteriores para informar as seguintes.
+
+Esta documentação atualizada garante que os detalhes reflitam com precisão as últimas mudanças no código e descreve claramente como aproveitar novos recursos e configurações.
+O conteúdo foi mantido simples e direto para garantir fácil compreensão.

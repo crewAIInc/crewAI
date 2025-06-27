@@ -1,0 +1,316 @@
+---
+title: Personalizando Prompts
+description: Aprofunde-se na personalização de prompts de baixo nível no CrewAI, habilitando casos de uso super customizados e complexos para diferentes modelos e idiomas.
+icon: message-pen
+---
+
+## Por Que Personalizar Prompts?
+
+Embora os prompts padrão do CrewAI funcionem bem para muitos cenários, a personalização de baixo nível permite comportamentos de agentes significativamente mais flexíveis e poderosos. Veja por que você pode querer aproveitar esse controle mais profundo:
+
+1. **Otimizar para LLMs específicas** – Diferentes modelos (como GPT-4, Claude ou Llama) funcionam melhor com formatos de prompt adaptados às suas arquiteturas exclusivas.
+2. **Alterar o idioma** – Construa agentes que operam exclusivamente em idiomas além do inglês, lidando com nuances com precisão.
+3. **Especializar para domínios complexos** – Adapte prompts para setores altamente especializados como saúde, finanças ou jurídico.
+4. **Ajustar tom e estilo** – Torne os agentes mais formais, casuais, criativos ou analíticos.
+5. **Suportar casos de uso super customizados** – Utilize estruturas e formatações avançadas de prompt para atender requisitos detalhados e específicos do projeto.
+
+Este guia explora como acessar os prompts do CrewAI em um nível mais baixo, oferecendo controle granular sobre como os agentes pensam e interagem.
+
+## Entendendo o Sistema de Prompt do CrewAI
+
+Nos bastidores, o CrewAI adota um sistema de prompt modular que pode ser amplamente customizado:
+
+- **Templates de agente** – Determinam o modo como cada agente aborda o papel que lhe foi atribuído.
+- **Prompt slices** – Controlam comportamentos especializados como tarefas, o uso de ferramentas e a estrutura de saída.
+- **Tratamento de erros** – Definem como os agentes respondem a falhas, exceções ou timeouts.
+- **Prompts específicos de ferramentas** – Definem instruções detalhadas para como as ferramentas são invocadas ou utilizadas.
+
+Confira os [templates de prompt originais no repositório do CrewAI](https://github.com/crewAIInc/crewAI/blob/main/src/crewai/translations/en.json) para ver como esses elementos são organizados. A partir daí, você pode sobrescrever ou adaptar conforme necessário para desbloquear comportamentos avançados.
+
+## Entendendo as Instruções de Sistema Padrão
+
+<Warning>
+**Questão de Transparência em Produção**: O CrewAI injeta automaticamente instruções padrão nos seus prompts que talvez você não conheça. Esta seção explica o que acontece nos bastidores e como obter controle total.
+</Warning>
+
+Ao definir um agente com `role`, `goal` e `backstory`, o CrewAI automaticamente adiciona instruções de sistema adicionais que controlam a formatação e o comportamento. Entender essas injeções padrão é essencial para sistemas em produção onde você precisa de total transparência nos prompts.
+
+### O Que CrewAI Injeta Automaticamente
+
+Baseado na configuração do seu agente, o CrewAI adiciona diferentes instruções padrão:
+
+#### Para Agentes Sem Ferramentas
+```text
+"I MUST use these formats, my job depends on it!"
+```
+
+#### Para Agentes Com Ferramentas
+```text
+"IMPORTANT: Use the following format in your response:
+
+Thought: you should always think about what to do
+Action: the action to take, only one name of [tool_names]
+Action Input: the input to the action, just a simple JSON object...
+```
+
+#### Para Saídas Estruturadas (JSON/Pydantic)
+```text
+"Ensure your final answer contains only the content in the following format: {output_format}
+Ensure the final output does not include any code block markers like ```json or ```python."
+```
+
+### Visualizando o Prompt de Sistema Completo
+
+Para ver exatamente qual prompt está sendo enviado para seu LLM, você pode inspecionar o prompt gerado:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai.utilities.prompts import Prompts
+
+# Crie seu agente
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst with 10 years of experience.",
+    verbose=True
+)
+
+# Crie uma tarefa de exemplo
+task = Task(
+    description="Analyze the sales data and identify trends",
+    expected_output="A detailed analysis with key insights and trends",
+    agent=agent
+)
+
+# Crie o gerador de prompt
+prompt_generator = Prompts(
+    agent=agent,
+    has_tools=len(agent.tools) > 0,
+    use_system_prompt=agent.use_system_prompt
+)
+
+# Gere e inspecione o prompt atual
+generated_prompt = prompt_generator.task_execution()
+
+# Imprima o prompt completo de sistema que será enviado ao LLM
+if "system" in generated_prompt:
+    print("=== SYSTEM PROMPT ===")
+    print(generated_prompt["system"])
+    print("\n=== USER PROMPT ===")
+    print(generated_prompt["user"])
+else:
+    print("=== COMPLETE PROMPT ===")
+    print(generated_prompt["prompt"])
+
+# Você também pode ver como a descrição da tarefa é formatada
+print("\n=== TASK CONTEXT ===")
+print(f"Task Description: {task.description}")
+print(f"Expected Output: {task.expected_output}")
+```
+
+### Sobrescrevendo Instruções Padrão
+
+Você tem várias opções para obter controle total sobre os prompts:
+
+#### Opção 1: Templates Personalizados (Recomendado)
+```python
+from crewai import Agent
+
+# Defina seu próprio template de sistema sem instruções padrão
+custom_system_template = """You are {role}. {backstory}
+Your goal is: {goal}
+
+Respond naturally and conversationally. Focus on providing helpful, accurate information."""
+
+custom_prompt_template = """Task: {input}
+
+Please complete this task thoughtfully."""
+
+agent = Agent(
+    role="Research Assistant",
+    goal="Help users find accurate information",
+    backstory="You are a helpful research assistant.",
+    system_template=custom_system_template,
+    prompt_template=custom_prompt_template,
+    use_system_prompt=True  # Use mensagens separadas system/user
+)
+```
+
+#### Opção 2: Arquivo de Prompt Personalizado
+Crie um arquivo `custom_prompts.json` para sobrescrever slices específicas de prompt:
+
+```json
+{
+  "slices": {
+    "no_tools": "\nProvide your best answer in a natural, conversational way.",
+    "tools": "\nYou have access to these tools: {tools}\n\nUse them when helpful, but respond naturally.",
+    "formatted_task_instructions": "Format your response as: {output_format}"
+  }
+}
+```
+
+Em seguida, utilize no seu crew:
+
+```python
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    prompt_file="custom_prompts.json",
+    verbose=True
+)
+```
+
+#### Opção 3: Desativar Prompts de Sistema para Modelos o1
+```python
+agent = Agent(
+    role="Analyst",
+    goal="Analyze data",
+    backstory="Expert analyst",
+    use_system_prompt=False  # Desativa separação de mensagens system prompt
+)
+```
+
+### Depuração com Ferramentas de Observabilidade
+
+Para garantir transparência em produção, integre com plataformas de observabilidade para monitorar todos os prompts e interações com LLM. Isso permite que você veja exatamente quais prompts (incluindo instruções padrão) estão sendo enviados para os seus LLMs.
+
+Veja nossa [documentação sobre Observabilidade](/pt-BR/observability/overview) para guias detalhados de integração com diversas plataformas como Langfuse, MLflow, Weights & Biases e soluções de logging customizadas.
+
+### Boas Práticas para Produção
+
+1. **Sempre inspecione prompts gerados** antes de implantar em produção
+2. **Use templates customizados** quando precisar de controle total sobre o conteúdo do prompt
+3. **Integre ferramentas de observabilidade** para monitoramento contínuo de prompts (veja [docs de Observabilidade](/pt-BR/observability/overview))
+4. **Teste com diferentes LLMs** já que instruções padrão podem se comportar de maneira diferente em cada modelo
+5. **Documente suas customizações de prompt** para transparência da equipe
+
+<Tip>
+As instruções padrão existem para garantir comportamento consistente nos agentes, mas podem interferir com requisitos de domínio específicos. Use as opções de customização acima para manter controle total sobre o comportamento do seu agente em sistemas de produção.
+</Tip>
+
+## Melhores Práticas para Gerenciar Arquivos de Prompt
+
+Ao realizar personalização de prompts em baixo nível, siga estas diretrizes para manter tudo organizado e fácil de manter:
+
+1. **Mantenha arquivos separados** – Armazene seus prompts personalizados em arquivos JSON dedicados fora do código principal.
+2. **Controle de versão** – Acompanhe as alterações no seu repositório, garantindo documentação clara das mudanças nos prompts ao longo do tempo.
+3. **Organize por modelo ou idioma** – Utilize nomes como `prompts_llama.json` ou `prompts_es.json` para identificar rapidamente configurações especializadas.
+4. **Documente as alterações** – Adicione comentários ou mantenha um README detalhando o propósito e o escopo das customizações.
+5. **Minimize alterações** – Sobrescreva apenas os slices específicos que realmente precisam de ajuste, mantendo a funcionalidade padrão para o restante.
+
+## O Jeito Mais Simples de Personalizar Prompts
+
+Uma abordagem direta é criar um arquivo JSON para os prompts que deseja sobrescrever e então indicar este arquivo no seu Crew:
+
+1. Crie um arquivo JSON com os slices de prompt atualizados.
+2. Referencie este arquivo no parâmetro `prompt_file` do seu Crew.
+
+O CrewAI então mescla suas customizações com os padrões, assim você não precisa redefinir todos os prompts. Veja como:
+
+### Exemplo: Customização Básica de Prompt
+
+Crie um arquivo `custom_prompts.json` com os prompts que deseja modificar. Certifique-se de listar todos os prompts de nível superior que ele deve conter, não apenas suas alterações:
+
+```json
+{
+  "slices": {
+    "format": "When responding, follow this structure:\n\nTHOUGHTS: Your step-by-step thinking\nACTION: Any tool you're using\nRESULT: Your final answer or conclusion"
+  }
+}
+```
+
+Integre assim:
+
+```python
+from crewai import Agent, Crew, Task, Process
+
+# Crie agentes e tarefas normalmente
+researcher = Agent(
+    role="Research Specialist",
+    goal="Find information on quantum computing",
+    backstory="You are a quantum physics expert",
+    verbose=True
+)
+
+research_task = Task(
+    description="Research quantum computing applications",
+    expected_output="A summary of practical applications",
+    agent=researcher
+)
+
+# Crie um crew com seu arquivo de prompt personalizado
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    prompt_file="path/to/custom_prompts.json",
+    verbose=True
+)
+
+# Execute o crew
+result = crew.kickoff()
+```
+
+Com essas poucas edições, você conquista controle de baixo nível sobre como seus agentes se comunicam e solucionam tarefas.
+
+## Otimizando para Modelos Específicos
+
+Modelos diferentes respondem melhor a estruturas de prompt diferentes. Ajustes mais profundos podem aumentar significativamente o desempenho ao alinhar seus prompts às nuances de cada modelo.
+
+### Exemplo: Template de Prompt para Llama 3.3
+
+Por exemplo, ao lidar com o Llama 3.3 da Meta, a personalização de baixo nível pode refletir a estrutura recomendada descrita em:
+https://www.llama.com/docs/model-cards-and-prompt-formats/llama3_1/#prompt-template
+
+Veja um exemplo destacando como você pode ajustar um Agent para usar o Llama 3.3 em código:
+
+```python
+from crewai import Agent, Crew, Task, Process
+from crewai_tools import DirectoryReadTool, FileReadTool
+
+# Defina templates para mensagens de system, user (prompt) e assistant (resposta)
+system_template = """<|begin_of_text|><|start_header_id|>system<|end_header_id|>{{ .System }}<|eot_id|>"""
+prompt_template = """<|start_header_id|>user<|end_header_id|>{{ .Prompt }}<|eot_id|>"""
+response_template = """<|start_header_id|>assistant<|end_header_id|>{{ .Response }}<|eot_id|>"""
+
+# Crie um Agent usando layouts específicos do Llama
+principal_engineer = Agent(
+    role="Principal Engineer",
+    goal="Oversee AI architecture and make high-level decisions",
+    backstory="You are the lead engineer responsible for critical AI systems",
+    verbose=True,
+    llm="groq/llama-3.3-70b-versatile",  # Usando o modelo Llama 3
+    system_template=system_template,
+    prompt_template=prompt_template,
+    response_template=response_template,
+    tools=[DirectoryReadTool(), FileReadTool()]
+)
+
+# Defina uma tarefa de exemplo
+engineering_task = Task(
+    description="Review AI implementation files for potential improvements",
+    expected_output="A summary of key findings and recommendations",
+    agent=principal_engineer
+)
+
+# Crie um Crew para a tarefa
+llama_crew = Crew(
+    agents=[principal_engineer],
+    tasks=[engineering_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+# Execute o crew
+result = llama_crew.kickoff()
+print(result.raw)
+```
+
+Com essa configuração, você exerce controle abrangente e de baixo nível sobre seus fluxos de trabalho baseados em Llama sem precisar de um arquivo JSON separado.
+
+## Conclusão
+
+A personalização de prompts em baixo nível no CrewAI abre portas para casos de uso super customizados e complexos. Mantendo arquivos de prompt organizados (ou templates inline diretos), é possível acomodar diferentes modelos, idiomas e domínios especializados. Esse nível de flexibilidade garante que você possa criar exatamente o comportamento de IA que precisa, sabendo que o CrewAI ainda fornece padrões confiáveis quando você não sobrescreve.
+
+<Check>
+Agora você tem a base para customizações avançadas de prompt no CrewAI. Seja adaptando para estruturas específicas de modelo ou restrições de domínio, esta abordagem de baixo nível permite moldar as interações dos agentes de forma altamente especializada.
+</Check>

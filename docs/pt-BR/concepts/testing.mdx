@@ -1,0 +1,48 @@
+---
+title: Testes
+description: Saiba como testar sua CrewAI Crew e avaliar seu desempenho.
+icon: vial
+---
+
+## Visão Geral
+
+Testar é uma parte crucial do processo de desenvolvimento, sendo essencial para garantir que sua crew está performando conforme o esperado. Com o crewAI, você pode facilmente testar sua crew e avaliar seu desempenho utilizando as funcionalidades de teste integradas.
+
+### Utilizando o Recurso de Teste
+
+Adicionamos o comando de CLI `crewai test` para facilitar o teste da sua crew. Esse comando executará sua crew por um número especificado de iterações e fornecerá métricas de desempenho detalhadas. Os parâmetros são `n_iterations` e `model`, ambos opcionais e com valores padrão de 2 e `gpt-4o-mini`, respectivamente. Por enquanto, o único provedor disponível é a OpenAI.
+
+```bash
+crewai test
+```
+
+Se quiser rodar mais iterações ou utilizar um modelo diferente, você pode especificar os parâmetros assim:
+
+```bash
+crewai test --n_iterations 5 --model gpt-4o
+```
+
+ou usando as formas abreviadas:
+
+```bash
+crewai test -n 5 -m gpt-4o
+```
+
+Ao executar o comando `crewai test`, a crew será executada pelo número especificado de iterações, e as métricas de desempenho serão exibidas ao final da execução.
+
+Uma tabela de pontuações ao final mostrará o desempenho da crew em relação às seguintes métricas:
+
+<center>**Pontuações das Tarefas (1-10, quanto maior melhor)**</center>
+
+| Tarefas/Crew/Agentes | Exec. 1 | Exec. 2 | Méd. Total | Agentes                         | Informações Adicionais           |
+|:---------------------|:-------:|:-------:|:----------:|:------------------------------:|:---------------------------------|
+| Tarefa 1             |  9,0    |  9,5    |  **9,2**   | Professional Insights           |                                  |
+|                      |         |         |            | Researcher                      |                                  |
+| Tarefa 2             |  9,0    | 10,0    |  **9,5**   | Company Profile Investigator    |                                  |
+| Tarefa 3             |  9,0    |  9,0    |  **9,0**   | Automation Insights             |                                  |
+|                      |         |         |            | Specialist                      |                                  |
+| Tarefa 4             |  9,0    |  9,0    |  **9,0**   | Final Report Compiler           | Automation Insights Specialist   |
+| Crew                 |  9,00   |  9,38   |  **9,2**   |                                 |                                  |
+| Tempo de Execução (s)|  126    |  145    |  **135**   |                                 |                                  |
+
+O exemplo acima mostra os resultados dos testes para duas execuções da crew com duas tarefas, apresentando a pontuação média total de cada tarefa e da crew como um todo.

@@ -1,0 +1,133 @@
+---
+title: Impressão digital
+description: Saiba como usar o sistema de impressão digital da CrewAI para identificar e rastrear componentes de forma única durante todo o seu ciclo de vida.
+icon: fingerprint
+---
+
+## Visão geral
+
+As impressões digitais na CrewAI fornecem uma maneira de identificar e rastrear componentes de forma única durante todo o seu ciclo de vida. Cada `Agent`, `Crew` e `Task` recebe automaticamente uma impressão digital única quando criado, que não pode ser sobrescrita manualmente.
+
+Essas impressões digitais podem ser usadas para:
+- Auditoria e rastreamento do uso de componentes
+- Garantir a integridade da identidade dos componentes
+- Anexar metadados aos componentes
+- Criar uma cadeia rastreável de operações
+
+## Como funciona a impressão digital
+
+Uma impressão digital é uma instância da classe `Fingerprint` do módulo `crewai.security`. Cada impressão digital contém:
+
+- Uma string UUID: Um identificador único para o componente, gerado automaticamente e que não pode ser definido manualmente
+- Um timestamp de criação: Quando a impressão digital foi gerada, definido automaticamente e que não pode ser modificado manualmente
+- Metadados: Um dicionário de informações adicionais que pode ser customizado
+
+As impressões digitais são geradas e atribuídas automaticamente quando um componente é criado. Cada componente expõe sua impressão digital por meio de uma propriedade de somente leitura.
+
+## Uso básico
+
+### Acessando impressões digitais
+
+```python
+from crewai import Agent, Crew, Task
+
+# Criar componentes - impressões digitais são geradas automaticamente
+agent = Agent(
+    role="Data Scientist",
+    goal="Analyze data",
+    backstory="Expert in data analysis"
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[]
+)
+
+task = Task(
+    description="Analyze customer data",
+    expected_output="Insights from data analysis",
+    agent=agent
+)
+
+# Acessar as impressões digitais
+agent_fingerprint = agent.fingerprint
+crew_fingerprint = crew.fingerprint
+task_fingerprint = task.fingerprint
+
+# Imprimir as strings UUID
+print(f"Agent fingerprint: {agent_fingerprint.uuid_str}")
+print(f"Crew fingerprint: {crew_fingerprint.uuid_str}")
+print(f"Task fingerprint: {task_fingerprint.uuid_str}")
+```
+
+### Trabalhando com metadados das impressões digitais
+
+Você pode adicionar metadados às impressões digitais para fornecer contexto adicional:
+
+```python
+# Adicionar metadados à impressão digital do agente
+agent.security_config.fingerprint.metadata = {
+    "version": "1.0",
+    "department": "Data Science",
+    "project": "Customer Analysis"
+}
+
+# Acessar os metadados
+print(f"Agent metadata: {agent.fingerprint.metadata}")
+```
+
+## Persistência das impressões digitais
+
+As impressões digitais foram projetadas para persistir e permanecer inalteradas durante todo o ciclo de vida de um componente. Se você modificar um componente, a impressão digital permanece a mesma:
+
+```python
+original_fingerprint = agent.fingerprint.uuid_str
+
+# Modificar o agente
+agent.goal = "New goal for analysis"
+
+# A impressão digital permanece inalterada
+assert agent.fingerprint.uuid_str == original_fingerprint
+```
+
+## Impressões digitais determinísticas
+
+Apesar de não ser possível definir diretamente o UUID e o timestamp de criação, é possível criar impressões digitais determinísticas usando o método `generate` com uma seed:
+
+```python
+from crewai.security import Fingerprint
+
+# Criar uma impressão digital determinística usando uma string seed
+deterministic_fingerprint = Fingerprint.generate(seed="my-agent-id")
+
+# A mesma seed sempre gera a mesma impressão digital
+same_fingerprint = Fingerprint.generate(seed="my-agent-id")
+assert deterministic_fingerprint.uuid_str == same_fingerprint.uuid_str
+
+# Também é possível definir metadados
+custom_fingerprint = Fingerprint.generate(
+    seed="my-agent-id",
+    metadata={"version": "1.0"}
+)
+```
+
+## Uso avançado
+
+### Estrutura da impressão digital
+
+Cada impressão digital possui a seguinte estrutura:
+
+```python
+from crewai.security import Fingerprint
+
+fingerprint = agent.fingerprint
+
+# String UUID - identificador único (gerado automaticamente)
+uuid_str = fingerprint.uuid_str  # e.g., "123e4567-e89b-12d3-a456-426614174000"
+
+# Timestamp de criação (gerado automaticamente)
+created_at = fingerprint.created_at  # Um objeto datetime
+
+# Metadados - informações adicionais (podem ser customizadas)
+metadata = fingerprint.metadata  # Um dicionário, padrão {}
+```
