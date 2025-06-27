@@ -27,6 +27,7 @@ class CrewStructuredTool:
         result_as_answer: bool = False,
         max_usage_count: int | None = None,
         current_usage_count: int = 0,
+        cache_function: Callable = None,
     ) -> None:
         """Initialize the structured tool.
 
@@ -38,6 +39,7 @@ class CrewStructuredTool:
             result_as_answer: Whether to return the output directly
             max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
             current_usage_count: Current number of times this tool has been used.
+            cache_function: Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached.
         """
         self.name = name
         self.description = description
@@ -47,6 +49,7 @@ class CrewStructuredTool:
         self.result_as_answer = result_as_answer
         self.max_usage_count = max_usage_count
         self.current_usage_count = current_usage_count
+        self.cache_function = cache_function
 
         # Validate the function signature matches the schema
         self._validate_function_signature()
