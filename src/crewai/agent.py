@@ -123,10 +123,6 @@ class Agent(BaseAgent):
         default="%Y-%m-%d",
         description="Format string for date when inject_date is enabled.",
     )
-    code_execution_mode: Literal["safe", "unsafe"] = Field(
-        default="safe",
-        description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
-    )
     reasoning: bool = Field(
         default=False,
         description="Whether the agent should reflect and create a plan before executing a task.",
@@ -577,9 +573,8 @@ class Agent(BaseAgent):
         try:
             from crewai_tools import CodeInterpreterTool  # type: ignore
 
-            # Set the unsafe_mode based on the code_execution_mode attribute
-            unsafe_mode = self.code_execution_mode == "unsafe"
-            return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
+            # Unsafe mode is deprecated and no longer supported for security reasons.
+            return [CodeInterpreterTool(unsafe_mode=False)]
         except ModuleNotFoundError:
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "
@@ -637,32 +632,60 @@ class Agent(BaseAgent):
         """Inject the current date into the task description if inject_date is enabled."""
         if self.inject_date:
             from datetime import datetime
+            import re
 
             try:
+                # Enhanced validation: Check for valid format codes and prevent injection
                 valid_format_codes = [
-                    "%Y",
-                    "%m",
-                    "%d",
-                    "%H",
-                    "%M",
-                    "%S",
-                    "%B",
-                    "%b",
-                    "%A",
-                    "%a",
+                    "%Y", "%y",  # Year
+                    "%m", "%B", "%b",  # Month
+                    "%d", "%j",  # Day
+                    "%H", "%I", "%M", "%S", "%f", "%p",  # Time
+                    "%A", "%a",  # Weekday
+                    "%U", "%W", "%w",  # Week
+                    "%z", "%Z",  # Timezone
+                    "%%",  # Literal %
                 ]
+                
+                # Security: Validate format string to prevent injection attacks
+                # Only allow alphanumeric chars, spaces, hyphens, colons, slashes, and valid % codes
+                if not re.match(r'^[a-zA-Z0-9\s\-:/.,%]+$', self.date_format):
+                    raise ValueError(f"Invalid characters in date format: {self.date_format}")
+                
+                # Check for any % followed by characters that aren't valid format codes
+                format_pattern = r'%[^%a-zA-Z]|%[a-zA-Z]{2,}'
+                if re.search(format_pattern, self.date_format):
+                    raise ValueError(f"Invalid format specifiers in date format: {self.date_format}")
+                
+                # Ensure at least one valid format code is present
                 is_valid = any(code in self.date_format for code in valid_format_codes)
-
                 if not is_valid:
-                    raise ValueError(f"Invalid date format: {self.date_format}")
+                    raise ValueError(f"No valid date format codes found in: {self.date_format}")
+                
+                # Additional security: Prevent format string attacks by checking for suspicious patterns
+                suspicious_patterns = [
+                    r'\{.*\}',  # Brace injection
+                    r'%\([^)]*\)',  # Python format string injection
+                    r'%[0-9]*[hlL]',  # C-style format specifiers
+                    r'%n',  # Dangerous format specifier
+                ]
+                
+                for pattern in suspicious_patterns:
+                    if re.search(pattern, self.date_format):
+                        raise ValueError(f"Potentially malicious format pattern detected: {self.date_format}")
 
+                # Safe to use the format string after validation
                 current_date: str = datetime.now().strftime(self.date_format)
                 task.description += f"\n\nCurrent Date: {current_date}"
+                
             except Exception as e:
+                # Log security events for monitoring
+                error_msg = f"Date injection failed for security reasons: {str(e)}"
                 if hasattr(self, "_logger"):
-                    self._logger.log("warning", f"Failed to inject date: {str(e)}")
+                    self._logger.log("warning", error_msg)
                 else:
-                    print(f"Warning: Failed to inject date: {str(e)}")
+                    print(f"Warning: {error_msg}")
+                # NOTE: Task description remains unchanged when date injection fails for security
 
     def _validate_docker_installation(self) -> None:
         """Check if Docker is installed and running."""
