@@ -1,0 +1,343 @@
+---
+title: "Customize Agent Prompts"
+description: "Learn how to customize system and user prompts in CrewAI agents for precise control over agent behavior and output formatting."
+categoryId: "how-to-guides"
+priority: 1
+---
+
+# Customize Agent Prompts
+
+CrewAI provides fine-grained control over how agents generate and format their responses through a sophisticated prompt generation system. This guide explains how system and user prompts are constructed and how you can customize them for your specific use cases.
+
+## Understanding Prompt Generation
+
+CrewAI uses a template-based system to generate prompts, combining different components based on agent configuration:
+
+### Core Prompt Components
+
+All prompt templates are stored in the internationalization system and include:
+
+- **Role Playing**: `"You are {role}. {backstory}\nYour personal goal is: {goal}"`
+- **Tools**: Instructions for agents with access to tools
+- **No Tools**: Instructions for agents without tools  
+- **Task**: The specific task execution prompt
+- **Format Instructions**: Output formatting requirements
+
+### Prompt Assembly Process
+
+CrewAI assembles prompts differently based on agent type:
+
+1. **Regular Agents**: Use the `Prompts` class to combine template slices
+2. **LiteAgents**: Use dedicated system prompt methods with specific templates
+3. **System/User Split**: When `use_system_prompt=True`, prompts are split into system and user components
+
+## Basic Prompt Customization
+
+### Custom System and Prompt Templates
+
+You can override the default prompt structure using custom templates:
+
+```python showLineNumbers
+from crewai import Agent, Task, Crew
+
+# Define custom templates
+system_template = """{{ .System }}
+
+Additional context: You are working in a production environment.
+Always prioritize accuracy and provide detailed explanations."""
+
+prompt_template = """{{ .Prompt }}
+
+Remember to validate your approach before proceeding."""
+
+response_template = """Please format your response as follows:
+{{ .Response }}
+End of response."""
+
+# Create agent with custom templates
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data with precision and accuracy",
+    backstory="You are an experienced data analyst with expertise in statistical analysis.",
+    system_template=system_template,
+    prompt_template=prompt_template,
+    response_template=response_template,
+    use_system_prompt=True
+)
+```
+
+### Template Placeholders
+
+Custom templates support these placeholders:
+
+- `{{ .System }}`: Replaced with the assembled system prompt components
+- `{{ .Prompt }}`: Replaced with the task-specific prompt
+- `{{ .Response }}`: Placeholder for the agent's response (used in response_template)
+
+## System/User Prompt Split
+
+Enable system/user prompt separation for better LLM compatibility:
+
+```python showLineNumbers
+agent = Agent(
+    role="Research Assistant",
+    goal="Conduct thorough research on given topics",
+    backstory="You are a meticulous researcher with access to various information sources.",
+    use_system_prompt=True  # Enables system/user split
+)
+```
+
+When `use_system_prompt=True`:
+- **System Prompt**: Contains role, backstory, goal, and tool instructions
+- **User Prompt**: Contains the specific task and expected output format
+
+## Output Format Customization
+
+### Structured Output with Pydantic Models
+
+Control output formatting using Pydantic models:
+
+```python showLineNumbers
+from pydantic import BaseModel
+from typing import List
+
+class ResearchOutput(BaseModel):
+    summary: str
+    key_findings: List[str]
+    confidence_score: float
+
+task = Task(
+    description="Research the latest trends in AI development",
+    expected_output="A structured research report",
+    output_pydantic=ResearchOutput,
+    agent=agent
+)
+```
+
+### Custom Format Instructions
+
+Add specific formatting requirements using Pydantic models:
+
+```python showLineNumbers
+from pydantic import BaseModel
+from typing import List
+
+class SalesAnalysisOutput(BaseModel):
+    total_sales: float
+    growth_rate: str
+    top_products: List[str]
+    recommendations: str
+
+task = Task(
+    description="Analyze the quarterly sales data",
+    expected_output="Analysis in JSON format with specific fields",
+    output_json=SalesAnalysisOutput
+)
+```
+
+## Stop Words Configuration
+
+### Default Stop Words
+
+CrewAI automatically configures stop words based on agent setup:
+
+```python showLineNumbers
+# Default stop word is "\nObservation:" for tool-enabled agents
+agent = Agent(
+    role="Analyst",
+    goal="Perform analysis tasks",
+    backstory="You are a skilled analyst.",
+    tools=[some_tool]  # Stop words include "\nObservation:"
+)
+```
+
+> **Note:** If `system_template`, `prompt_template`, or `response_template` are not provided, the default templates from `translations/en.json` are used. The default system template includes role-playing instructions, tool descriptions (if applicable), and task formatting guidelines.
+
+### Custom Stop Words via Response Template
+
+Modify stop words by customizing the response template:
+
+```python showLineNumbers
+response_template = """Provide your analysis:
+{{ .Response }}
+---END---"""
+
+agent = Agent(
+    role="Analyst", 
+    goal="Perform detailed analysis",
+    backstory="You are an expert analyst.",
+    response_template=response_template  # Stop words will include "---END---"
+)
+```
+
+> ⚠️ **Warning:** If your stop sequence (e.g., `---END---`) can appear naturally within the model's response, this may cause premature output truncation. Always select distinctive, unlikely-to-occur sequences for stopping generation.
+
+## LiteAgent Prompt Customization
+
+LiteAgents use a simplified prompt system with direct customization:
+
+```python showLineNumbers
+from crewai import LiteAgent
+
+# LiteAgent with tools
+lite_agent = LiteAgent(
+    role="Code Reviewer",
+    goal="Review code for quality and security",
+    backstory="You are an experienced software engineer specializing in code review.",
+    tools=[code_analysis_tool],
+    response_format=CodeReviewOutput  # Pydantic model for structured output
+)
+
+# The system prompt will automatically include tool instructions and format requirements
+```
+
+## Advanced Customization Examples
+
+### Example 1: Multi-Language Support
+
+```python showLineNumbers
+# Custom templates for different languages
+spanish_system_template = """{{ .System }}
+
+Instrucciones adicionales: Responde siempre en español y proporciona explicaciones detalladas."""
+
+agent = Agent(
+    role="Asistente de Investigación",
+    goal="Realizar investigación exhaustiva en español",
+    backstory="Eres un investigador experimentado que trabaja en español.",
+    system_template=spanish_system_template,
+    use_system_prompt=True
+)
+```
+
+### Example 2: Domain-Specific Formatting
+
+```python showLineNumbers
+# Medical report formatting
+medical_response_template = """MEDICAL ANALYSIS REPORT
+{{ .Response }}
+
+DISCLAIMER: This analysis is for informational purposes only."""
+
+medical_agent = Agent(
+    role="Medical Data Analyst",
+    goal="Analyze medical data with clinical precision",
+    backstory="You are a certified medical data analyst with 10 years of experience.",
+    response_template=medical_response_template,
+    use_system_prompt=True
+)
+```
+
+### Example 3: Complex Workflow Integration
+
+```python showLineNumbers
+from crewai import Flow
+
+class CustomPromptFlow(Flow):
+    
+    @start()
+    def research_phase(self):
+        # Agent with research-specific prompts
+        researcher = Agent(
+            role="Senior Researcher",
+            goal="Gather comprehensive information",
+            backstory="You are a senior researcher with expertise in data collection.",
+            system_template="""{{ .System }}
+            
+Research Guidelines:
+- Verify all sources
+- Provide confidence ratings
+- Include methodology notes""",
+            use_system_prompt=True
+        )
+        
+        task = Task(
+            description="Research the given topic thoroughly",
+            expected_output="Detailed research report with sources",
+            agent=researcher
+        )
+        
+        return task.execute()
+    
+    @listen(research_phase)
+    def analysis_phase(self, research_result):
+        # Agent with analysis-specific prompts
+        analyst = Agent(
+            role="Data Analyst", 
+            goal="Provide actionable insights",
+            backstory="You are an expert data analyst specializing in trend analysis.",
+            response_template="""ANALYSIS RESULTS:
+{{ .Response }}
+
+CONFIDENCE LEVEL: [Specify confidence level]
+NEXT STEPS: [Recommend next actions]""",
+            use_system_prompt=True
+        )
+        
+        return f"Analysis based on: {research_result}"
+```
+
+## Best Practices
+
+#### Precision and Accuracy
+- Use specific role definitions and detailed backstories for consistent behavior
+- Include validation requirements in custom templates
+- Test prompt variations to ensure predictable outputs
+
+#### Security Considerations  
+- Validate all user inputs before including them in prompts
+- Use structured output formats to prevent prompt injection
+- Implement guardrails for sensitive operations
+
+> 🛡️ **Security Warning:** Never inject raw or untrusted user inputs directly into prompt templates without proper validation and sanitization. This can lead to prompt injection attacks where malicious users manipulate agent behavior. Always validate inputs, use parameterized templates, and consider implementing input filtering for production systems. Additionally, be cautious with custom stop sequences - if they can appear naturally in model responses, they may cause premature truncation of legitimate outputs.
+
+#### Performance Optimization
+- Keep system prompts concise while maintaining necessary context
+- Use appropriate stop words to prevent unnecessary token generation
+- Test prompt efficiency with your target LLM models
+
+#### Complexity Handling
+- Break complex requirements into multiple template components
+- Use conditional prompt assembly for different scenarios
+- Implement fallback templates for error handling
+
+## Troubleshooting
+
+### Common Issues
+
+**Prompt Not Applied**: Ensure you're using the correct template parameter names and that `use_system_prompt` is set appropriately. See the [Basic Prompt Customization](#basic-prompt-customization) section for examples.
+
+**Format Not Working**: Verify that your `output_json` or `output_pydantic` model matches the expected structure. Refer to [Output Format Customization](#output-format-customization) for details.
+
+**Stop Words Not Effective**: Check that your `response_template` includes the desired stop sequence after the `{{ .Response }}` placeholder. See [Stop Words Configuration](#stop-words-configuration) for guidance.
+
+**Template Injection Concerns**: Review the [Security Considerations](#security-considerations) section for guidance on preventing prompt injection attacks.
+
+For complete API details, see the [Agent API Reference](../reference/agent) and [Task API Reference](../reference/task) documentation.
+
+### Debugging Prompts
+
+Enable verbose mode to see the actual prompts being sent to the LLM:
+
+```python showLineNumbers
+agent = Agent(
+    role="Debug Agent",
+    goal="Help debug prompt issues", 
+    backstory="You are a debugging specialist.",
+    verbose=True  # Shows detailed prompt information
+)
+```
+
+### Additional Troubleshooting Steps
+
+- **Verify prompt payloads**: Use verbose mode to inspect the actual prompts sent to the LLM  
+- **Test stop word effects**: Carefully verify that stop sequences don't cause premature truncation
+- **Check template syntax**: Ensure placeholders like `{{ .System }}` are correctly formatted
+- **Validate security**: Review custom templates for potential injection vulnerabilities as described in [Security Considerations](#security-considerations)
+- **Revert to defaults**: If custom templates aren't working, temporarily remove them to isolate the issue
+- **Test incrementally**: Add one custom template at a time to identify which component is causing problems
+- **Validate template parameters**: Ensure all required parameters (role, goal, backstory) are provided when using custom templates
+
+For more troubleshooting guidance, see the sections above on [Best Practices](#best-practices) and [Security Considerations](#security-considerations).
+
+This comprehensive prompt customization system gives you precise control over agent behavior while maintaining the reliability and consistency that CrewAI is known for in production environments.
