@@ -1085,7 +1085,7 @@ class LLM(BaseLLM):
         if self._is_ollama_model(self.model):
             return
             
-        provider: str = self._get_custom_llm_provider()
+        provider: Optional[str] = self._get_custom_llm_provider()
         if self.response_format is not None and not supports_response_schema(
             model=self.model,
             custom_llm_provider=provider,
