@@ -363,6 +363,18 @@ class LLM(BaseLLM):
         ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
         return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
 
+    def _is_ollama_model(self, model: str) -> bool:
+        """Determine if the model is from Ollama provider.
+
+        Args:
+            model: The model identifier string.
+
+        Returns:
+            bool: True if the model is from Ollama, False otherwise.
+        """
+        OLLAMA_IDENTIFIERS = ("ollama/", "ollama:")
+        return any(identifier in model.lower() for identifier in OLLAMA_IDENTIFIERS)
+
     def _prepare_completion_params(
         self,
         messages: Union[str, List[Dict[str, str]]],
@@ -397,7 +409,6 @@ class LLM(BaseLLM):
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
             "logit_bias": self.logit_bias,
-            "response_format": self.response_format,
             "seed": self.seed,
             "logprobs": self.logprobs,
             "top_logprobs": self.top_logprobs,
@@ -410,6 +421,11 @@ class LLM(BaseLLM):
             "reasoning_effort": self.reasoning_effort,
             **self.additional_params,
         }
+
+        if self._is_ollama_model(self.model):
+            params.pop("response_format", None)  # Remove safely if exists
+        else:
+            params["response_format"] = self.response_format
 
         # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}
@@ -1065,7 +1081,11 @@ class LLM(BaseLLM):
           - "gemini/gemini-1.5-pro" yields "gemini"
           - If no slash is present, "openai" is assumed.
         """
-        provider = self._get_custom_llm_provider()
+        # Skip validation for Ollama models as they don't support response_format
+        if self._is_ollama_model(self.model):
+            return
+            
+        provider: Optional[str] = self._get_custom_llm_provider()
         if self.response_format is not None and not supports_response_schema(
             model=self.model,
             custom_llm_provider=provider,
