@@ -372,16 +372,8 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Ollama, False otherwise.
         """
-        # Check if model starts with ollama/ prefix
-        if model.startswith("ollama/"):
-            return True
-        
-        # Check if the provider extracted from the model is ollama
-        if "/" in model:
-            provider = model.split("/")[0]
-            return provider == "ollama"
-        
-        return False
+        OLLAMA_IDENTIFIERS = ("ollama/", "ollama:")
+        return any(identifier in model.lower() for identifier in OLLAMA_IDENTIFIERS)
 
     def _prepare_completion_params(
         self,
@@ -430,7 +422,9 @@ class LLM(BaseLLM):
             **self.additional_params,
         }
 
-        if not self._is_ollama_model(self.model):
+        if self._is_ollama_model(self.model):
+            params.pop("response_format", None)  # Remove safely if exists
+        else:
             params["response_format"] = self.response_format
 
         # Remove None values from params
@@ -1091,7 +1085,7 @@ class LLM(BaseLLM):
         if self._is_ollama_model(self.model):
             return
             
-        provider = self._get_custom_llm_provider()
+        provider: str = self._get_custom_llm_provider()
         if self.response_format is not None and not supports_response_schema(
             model=self.model,
             custom_llm_provider=provider,

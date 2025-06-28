@@ -1691,7 +1691,17 @@ def test_agent_execute_task_with_ollama():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_ollama_model_with_response_format():
-    """Test that Ollama models work correctly when response_format is provided."""
+    """
+    Test Ollama model compatibility with response_format parameter.
+    
+    Verifies:
+    - LLM initialization with response_format doesn't raise ValueError
+    - Agent creation with formatted LLM succeeds
+    - Successful execution without raising ValueError for unsupported response_format
+    
+    Note: This test may fail in CI due to Ollama server not being available,
+    but the core functionality (no ValueError on initialization) should work.
+    """
     from pydantic import BaseModel
     
     class TestOutput(BaseModel):
@@ -1719,7 +1729,14 @@ def test_ollama_model_with_response_format():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_ollama_model_response_format_filtered_in_params():
-    """Test that response_format is filtered out for Ollama models in _prepare_completion_params."""
+    """
+    Test that response_format is filtered out for Ollama models in _prepare_completion_params.
+    
+    Verifies:
+    - Ollama model detection works correctly for various model formats
+    - response_format parameter is excluded from completion params for Ollama models
+    - Model detection returns correct boolean values for different model types
+    """
     from pydantic import BaseModel
     
     class TestOutput(BaseModel):
@@ -1739,7 +1756,14 @@ def test_ollama_model_response_format_filtered_in_params():
 
 
 def test_non_ollama_model_keeps_response_format():
-    """Test that non-Ollama models still include response_format in params."""
+    """
+    Test that non-Ollama models still include response_format in params.
+    
+    Verifies:
+    - Non-Ollama models are correctly identified as such
+    - response_format parameter is preserved for non-Ollama models
+    - Backward compatibility is maintained for existing LLM providers
+    """
     from pydantic import BaseModel
     
     class TestOutput(BaseModel):
@@ -1754,6 +1778,35 @@ def test_non_ollama_model_keeps_response_format():
     
     params = llm._prepare_completion_params("Test message")
     assert params.get("response_format") == TestOutput
+
+
+def test_ollama_model_detection_edge_cases():
+    """
+    Test edge cases for Ollama model detection.
+    
+    Verifies:
+    - Various Ollama model naming patterns are correctly identified
+    - Case-insensitive detection works properly
+    - Non-Ollama models containing 'ollama' in name are not misidentified
+    - Different provider prefixes are handled correctly
+    """
+    from crewai.llm import LLM
+    
+    test_cases = [
+        ("ollama/llama3.2:3b", True, "Standard ollama/ prefix"),
+        ("OLLAMA/MODEL:TAG", True, "Uppercase ollama/ prefix"),
+        ("ollama:custom-model", True, "ollama: prefix"),
+        ("custom/ollama-model", False, "Contains 'ollama' but not prefix"),
+        ("gpt-4", False, "Non-Ollama model"),
+        ("anthropic/claude-3", False, "Different provider"),
+        ("openai/gpt-4", False, "OpenAI model"),
+        ("ollama/gemma3:latest", True, "Ollama with version tag"),
+    ]
+    
+    for model_name, expected, description in test_cases:
+        llm = LLM(model=model_name)
+        result = llm._is_ollama_model(model_name)
+        assert result == expected, f"Failed for {description}: {model_name} -> {result} (expected {expected})"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

@@ -1,6 +1,6 @@
 """
-Reproduction script for issue #3082 - Ollama response_format error.
-This script reproduces the original issue and verifies the fix.
+Integration tests for Ollama model handling.
+This module tests the Ollama-specific functionality including response_format handling.
 """
 
 from pydantic import BaseModel
@@ -12,7 +12,7 @@ class GuideOutline(BaseModel):
     sections: list[str]
 
 def test_original_issue():
-    """Test the original issue scenario from the GitHub issue."""
+    """Test the original issue scenario from GitHub issue #3082."""
     print("Testing original issue scenario...")
     
     try:
@@ -67,13 +67,40 @@ def test_non_ollama_models():
         print(f"❌ Error with non-Ollama model: {e}")
         return False
 
+def test_ollama_model_detection_edge_cases():
+    """Test edge cases for Ollama model detection."""
+    print("\nTesting Ollama model detection edge cases...")
+    
+    test_cases = [
+        ("ollama/llama3.2:3b", True, "Standard ollama/ prefix"),
+        ("OLLAMA/MODEL:TAG", True, "Uppercase ollama/ prefix"),
+        ("ollama:custom-model", True, "ollama: prefix"),
+        ("custom/ollama-model", False, "Contains 'ollama' but not prefix"),
+        ("gpt-4", False, "Non-Ollama model"),
+        ("anthropic/claude-3", False, "Different provider"),
+        ("openai/gpt-4", False, "OpenAI model"),
+    ]
+    
+    all_passed = True
+    for model, expected, description in test_cases:
+        llm = LLM(model=model)
+        result = llm._is_ollama_model(model)
+        if result == expected:
+            print(f"✅ {description}: {model} -> {result}")
+        else:
+            print(f"❌ {description}: {model} -> {result} (expected {expected})")
+            all_passed = False
+    
+    return all_passed
+
 if __name__ == "__main__":
     print("Testing Ollama response_format fix...")
     
     success1 = test_original_issue()
     success2 = test_non_ollama_models()
+    success3 = test_ollama_model_detection_edge_cases()
     
-    if success1 and success2:
+    if success1 and success2 and success3:
         print("\n🎉 All tests passed! The fix is working correctly.")
     else:
         print("\n💥 Some tests failed. The fix needs more work.")
