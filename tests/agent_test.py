@@ -1690,6 +1690,73 @@ def test_agent_execute_task_with_ollama():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_ollama_model_with_response_format():
+    """Test that Ollama models work correctly when response_format is provided."""
+    from pydantic import BaseModel
+    
+    class TestOutput(BaseModel):
+        result: str
+    
+    llm = LLM(
+        model="ollama/llama3.2:3b",
+        base_url="http://localhost:11434",
+        response_format=TestOutput
+    )
+    
+    result = llm.call("What is 2+2?")
+    assert result is not None
+    
+    agent = Agent(
+        role="test role",
+        goal="test goal", 
+        backstory="test backstory",
+        llm=llm
+    )
+    
+    output = agent.kickoff("What is 2+2?", response_format=TestOutput)
+    assert output is not None
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_ollama_model_response_format_filtered_in_params():
+    """Test that response_format is filtered out for Ollama models in _prepare_completion_params."""
+    from pydantic import BaseModel
+    
+    class TestOutput(BaseModel):
+        result: str
+    
+    llm = LLM(
+        model="ollama/llama3.2:3b",
+        base_url="http://localhost:11434",
+        response_format=TestOutput
+    )
+    
+    assert llm._is_ollama_model("ollama/llama3.2:3b") is True
+    assert llm._is_ollama_model("gpt-4") is False
+    
+    params = llm._prepare_completion_params("Test message")
+    assert "response_format" not in params or params.get("response_format") is None
+
+
+def test_non_ollama_model_keeps_response_format():
+    """Test that non-Ollama models still include response_format in params."""
+    from pydantic import BaseModel
+    
+    class TestOutput(BaseModel):
+        result: str
+    
+    llm = LLM(
+        model="gpt-4",
+        response_format=TestOutput
+    )
+    
+    assert llm._is_ollama_model("gpt-4") is False
+    
+    params = llm._prepare_completion_params("Test message")
+    assert params.get("response_format") == TestOutput
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
