@@ -311,6 +311,7 @@ class LLM(BaseLLM):
         callbacks: List[Any] = [],
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
+        return_full_completion: bool = False,
         **kwargs,
     ):
         self.model = model
@@ -337,6 +338,7 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+        self.return_full_completion = return_full_completion
 
         litellm.drop_params = True
 
@@ -419,16 +421,18 @@ class LLM(BaseLLM):
         params: Dict[str, Any],
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
-    ) -> str:
+        return_full_completion: bool = False,
+    ) -> Union[str, Dict[str, Any]]:
         """Handle a streaming response from the LLM.
 
         Args:
             params: Parameters for the completion call
             callbacks: Optional list of callback functions
             available_functions: Dict of available functions
+            return_full_completion: Whether to return full completion object
 
         Returns:
-            str: The complete response text
+            Union[str, Dict[str, Any]]: The complete response text or full completion object
 
         Raises:
             Exception: If no content is received from the streaming response
@@ -626,11 +630,46 @@ class LLM(BaseLLM):
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
                 # Emit completion event and return response
                 self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
+                
+                if return_full_completion:
+                    accumulated_choices = []
+                    if last_chunk and hasattr(last_chunk, "choices"):
+                        for choice in last_chunk.choices:
+                            accumulated_choices.append({
+                                "message": {"content": full_response},
+                                "finish_reason": getattr(choice, "finish_reason", None),
+                                "index": getattr(choice, "index", 0),
+                            })
+                    else:
+                        accumulated_choices = [{"message": {"content": full_response}, "finish_reason": "stop", "index": 0}]
+
+                    return {
+                        "content": full_response,
+                        "choices": accumulated_choices,
+                        "usage": usage_info,
+                        "model": params.get("model"),
+                        "created": getattr(last_chunk, "created", None) if last_chunk else None,
+                        "id": getattr(last_chunk, "id", None) if last_chunk else None,
+                        "object": "chat.completion",
+                        "system_fingerprint": getattr(last_chunk, "system_fingerprint", None) if last_chunk else None,
+                    }
+                
                 return full_response
 
             # --- 9) Handle tool calls if present
             tool_result = self._handle_tool_call(tool_calls, available_functions)
             if tool_result is not None:
+                if return_full_completion:
+                    return {
+                        "content": tool_result,
+                        "choices": [{"message": {"content": tool_result}}],
+                        "usage": usage_info,
+                        "model": params.get("model"),
+                        "created": getattr(last_chunk, "created", None) if last_chunk else None,
+                        "id": getattr(last_chunk, "id", None) if last_chunk else None,
+                        "object": "chat.completion",
+                        "system_fingerprint": getattr(last_chunk, "system_fingerprint", None) if last_chunk else None,
+                    }
                 return tool_result
 
             # --- 10) Log token usage if available in streaming mode
@@ -638,6 +677,30 @@ class LLM(BaseLLM):
 
             # --- 11) Emit completion event and return response
             self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
+            
+            if return_full_completion:
+                accumulated_choices = []
+                if last_chunk and hasattr(last_chunk, "choices"):
+                    for choice in last_chunk.choices:
+                        accumulated_choices.append({
+                            "message": {"content": full_response},
+                            "finish_reason": getattr(choice, "finish_reason", None),
+                            "index": getattr(choice, "index", 0),
+                        })
+                else:
+                    accumulated_choices = [{"message": {"content": full_response}, "finish_reason": "stop", "index": 0}]
+
+                return {
+                    "content": full_response,
+                    "choices": accumulated_choices,
+                    "usage": usage_info,
+                    "model": params.get("model"),
+                    "created": getattr(last_chunk, "created", None) if last_chunk else None,
+                    "id": getattr(last_chunk, "id", None) if last_chunk else None,
+                    "object": "chat.completion",
+                    "system_fingerprint": getattr(last_chunk, "system_fingerprint", None) if last_chunk else None,
+                }
+            
             return full_response
 
         except ContextWindowExceededError as e:
@@ -748,16 +811,18 @@ class LLM(BaseLLM):
         params: Dict[str, Any],
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
-    ) -> str:
+        return_full_completion: bool = False,
+    ) -> Union[str, Dict[str, Any]]:
         """Handle a non-streaming response from the LLM.
 
         Args:
             params: Parameters for the completion call
             callbacks: Optional list of callback functions
             available_functions: Dict of available functions
+            return_full_completion: Whether to return full completion object
 
         Returns:
-            str: The response text
+            Union[str, Dict[str, Any]]: The response text or full completion object
         """
         # --- 1) Make the completion call
         try:
@@ -793,18 +858,51 @@ class LLM(BaseLLM):
         # --- 4) Check for tool calls
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        # --- 5) If no tool calls or no available functions, return the text response directly
+        # --- 5) If no tool calls or no available functions, return the response
         if not tool_calls or not available_functions:
             self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL)
+            if return_full_completion:
+                return {
+                    "content": text_response,
+                    "choices": response.choices,
+                    "usage": getattr(response, "usage", None),
+                    "model": response.model,
+                    "created": getattr(response, "created", None),
+                    "id": getattr(response, "id", None),
+                    "object": getattr(response, "object", "chat.completion"),
+                    "system_fingerprint": getattr(response, "system_fingerprint", None),
+                }
             return text_response
 
         # --- 6) Handle tool calls if present
         tool_result = self._handle_tool_call(tool_calls, available_functions)
         if tool_result is not None:
+            if return_full_completion:
+                return {
+                    "content": tool_result,
+                    "choices": response.choices,
+                    "usage": getattr(response, "usage", None),
+                    "model": response.model,
+                    "created": getattr(response, "created", None),
+                    "id": getattr(response, "id", None),
+                    "object": getattr(response, "object", "chat.completion"),
+                    "system_fingerprint": getattr(response, "system_fingerprint", None),
+                }
             return tool_result
 
-        # --- 7) If tool call handling didn't return a result, emit completion event and return text response
+        # --- 7) If tool call handling didn't return a result, emit completion event and return response
         self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL)
+        if return_full_completion:
+            return {
+                "content": text_response,
+                "choices": response.choices,
+                "usage": getattr(response, "usage", None),
+                "model": response.model,
+                "created": getattr(response, "created", None),
+                "id": getattr(response, "id", None),
+                "object": getattr(response, "object", "chat.completion"),
+                "system_fingerprint": getattr(response, "system_fingerprint", None),
+            }
         return text_response
 
     def _handle_tool_call(
@@ -889,7 +987,8 @@ class LLM(BaseLLM):
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Union[str, Any]:
+        return_full_completion: Optional[bool] = None,
+    ) -> Union[str, Dict[str, Any]]:
         """High-level LLM call method.
 
         Args:
@@ -903,10 +1002,11 @@ class LLM(BaseLLM):
                       during and after the LLM call.
             available_functions: Optional dict mapping function names to callables
                                that can be invoked by the LLM.
+            return_full_completion: Optional override for returning full completion object
 
         Returns:
-            Union[str, Any]: Either a text response from the LLM (str) or
-                           the result of a tool function call (Any).
+            Union[str, Dict[str, Any]]: Either a text response from the LLM (str) or
+                           the full completion object with generations and metadata.
 
         Raises:
             TypeError: If messages format is invalid
@@ -944,17 +1044,20 @@ class LLM(BaseLLM):
                 self.set_callbacks(callbacks)
 
             try:
-                # --- 6) Prepare parameters for the completion call
+                # --- 6) Determine if we should return full completion
+                should_return_full = return_full_completion if return_full_completion is not None else self.return_full_completion
+
+                # --- 7) Prepare parameters for the completion call
                 params = self._prepare_completion_params(messages, tools)
 
-                # --- 7) Make the completion call and handle response
+                # --- 8) Make the completion call and handle response
                 if self.stream:
                     return self._handle_streaming_response(
-                        params, callbacks, available_functions
+                        params, callbacks, available_functions, should_return_full
                     )
                 else:
                     return self._handle_non_streaming_response(
-                        params, callbacks, available_functions
+                        params, callbacks, available_functions, should_return_full
                     )
 
             except LLMContextLengthExceededException:
