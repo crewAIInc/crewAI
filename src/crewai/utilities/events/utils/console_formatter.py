@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, Optional
 
 from rich.console import Console
@@ -6,6 +7,39 @@ from rich.text import Text
 from rich.tree import Tree
 from rich.live import Live
 from rich.syntax import Syntax
+
+DEFAULT_EMOJI_MAP = {
+    "✅": "[DONE]",
+    "❌": "[FAILED]", 
+    "🚀": "[CREW]",
+    "🔄": "[RUNNING]",
+    "📋": "[TASK]",
+    "🔧": "[TOOL]",
+    "🧠": "[THINKING]",
+    "🌊": "[FLOW]",
+    "✨": "[CREATED]",
+    "🧪": "[TEST]",
+    "📚": "[KNOWLEDGE]",
+    "🔍": "[SEARCH]",
+    "🔎": "[QUERY]",
+    "🤖": "[AGENT]",
+    "📊": "[METRICS]",
+    "⚡": "[QUICK]",
+    "🎯": "[TARGET]",
+    "🔗": "[LINK]",
+    "💡": "[IDEA]",
+    "⚠️": "[WARNING]",
+    "🎉": "[SUCCESS]",
+    "🔥": "[HOT]",
+    "💾": "[SAVE]",
+    "🔒": "[SECURE]",
+    "🌟": "[STAR]",
+}
+
+
+def _parse_bool_env(val: str) -> bool:
+    """Parse environment variable value to boolean."""
+    return val.lower() in ("true", "1", "yes") if val else False
 
 
 class ConsoleFormatter:
@@ -24,12 +58,30 @@ class ConsoleFormatter:
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
         self.verbose = verbose
+        self.disable_emojis = _parse_bool_env(os.getenv("CREWAI_DISABLE_EMOJIS", ""))
+        
+        self.emoji_map = DEFAULT_EMOJI_MAP.copy()
+        self.icon_cache: Dict[str, str] = {}
+        if self.disable_emojis:
+            self.icon_cache = {emoji: text for emoji, text in self.emoji_map.items()}
+        
         # Live instance to dynamically update a Tree renderable (e.g. the Crew tree)
         # When multiple Tree objects are printed sequentially we reuse this Live
         # instance so the previous render is replaced instead of writing a new one.
         # Once any non-Tree renderable is printed we stop the Live session so the
         # final Tree persists on the terminal.
         self._live: Optional[Live] = None
+
+    def _get_icon(self, emoji: str) -> str:
+        """Get emoji or text alternative based on disable_emojis setting."""
+        if self.disable_emojis:
+            if emoji in self.icon_cache:
+                return self.icon_cache[emoji]
+            ascii_fallback = emoji.encode('ascii', 'ignore').decode('ascii')
+            fallback = f"[ICON:{ascii_fallback or 'UNKNOWN'}]"
+            self.icon_cache[emoji] = fallback
+            return fallback
+        return emoji
 
     def create_panel(self, content: Text, title: str, style: str = "blue") -> Panel:
         """Create a standardized panel with consistent styling."""
@@ -167,15 +219,15 @@ class ConsoleFormatter:
             return
 
         if status == "completed":
-            prefix, style = "✅ Crew:", "green"
+            prefix, style = f"{self._get_icon('✅')} Crew:", "green"
             title = "Crew Completion"
             content_title = "Crew Execution Completed"
         elif status == "failed":
-            prefix, style = "❌ Crew:", "red"
+            prefix, style = f"{self._get_icon('❌')} Crew:", "red"
             title = "Crew Failure"
             content_title = "Crew Execution Failed"
         else:
-            prefix, style = "🚀 Crew:", "cyan"
+            prefix, style = f"{self._get_icon('🚀')} Crew:", "cyan"
             title = "Crew Execution"
             content_title = "Crew Execution Started"
 
@@ -202,7 +254,7 @@ class ConsoleFormatter:
             return None
 
         tree = Tree(
-            Text("🚀 Crew: ", style="cyan bold") + Text(crew_name, style="cyan")
+            Text(f"{self._get_icon('🚀')} Crew: ", style="cyan bold") + Text(crew_name, style="cyan")
         )
 
         content = self.create_status_content(
@@ -227,7 +279,7 @@ class ConsoleFormatter:
             return None
 
         task_content = Text()
-        task_content.append(f"📋 Task: {task_id}", style="yellow bold")
+        task_content.append(f"{self._get_icon('📋')} Task: {task_id}", style="yellow bold")
         task_content.append("\nStatus: ", style="white")
         task_content.append("Executing Task...", style="yellow dim")
 
@@ -258,11 +310,11 @@ class ConsoleFormatter:
 
         if status == "completed":
             style = "green"
-            status_text = "✅ Completed"
+            status_text = f"{self._get_icon('✅')} Completed"
             panel_title = "Task Completion"
         else:
             style = "red"
-            status_text = "❌ Failed"
+            status_text = f"{self._get_icon('❌')} Failed"
             panel_title = "Task Failure"
 
         # Update tree label
@@ -271,7 +323,7 @@ class ConsoleFormatter:
                 # Build label without introducing stray blank lines
                 task_content = Text()
                 # First line: Task ID
-                task_content.append(f"📋 Task: {task_id}", style=f"{style} bold")
+                task_content.append(f"{self._get_icon('📋')} Task: {task_id}", style=f"{style} bold")
 
                 # Second line: Assigned to
                 task_content.append("\nAssigned to: ", style="white")
@@ -330,14 +382,14 @@ class ConsoleFormatter:
 
         # Create initial tree with flow ID
         flow_label = Text()
-        flow_label.append("🌊 Flow: ", style="blue bold")
+        flow_label.append(f"{self._get_icon('🌊')} Flow: ", style="blue bold")
         flow_label.append(flow_name, style="blue")
         flow_label.append("\nID: ", style="white")
         flow_label.append(flow_id, style="blue")
 
         flow_tree = Tree(flow_label)
-        self.add_tree_node(flow_tree, "✨ Created", "blue")
-        self.add_tree_node(flow_tree, "✅ Initialization Complete", "green")
+        self.add_tree_node(flow_tree, f"{self._get_icon('✨')} Created", "blue")
+        self.add_tree_node(flow_tree, f"{self._get_icon('✅')} Initialization Complete", "green")
 
         return flow_tree
 
@@ -345,13 +397,13 @@ class ConsoleFormatter:
         """Initialize a flow execution tree."""
         flow_tree = Tree("")
         flow_label = Text()
-        flow_label.append("🌊 Flow: ", style="blue bold")
+        flow_label.append(f"{self._get_icon('🌊')} Flow: ", style="blue bold")
         flow_label.append(flow_name, style="blue")
         flow_label.append("\nID: ", style="white")
         flow_label.append(flow_id, style="blue")
         flow_tree.label = flow_label
 
-        self.add_tree_node(flow_tree, "🧠 Starting Flow...", "yellow")
+        self.add_tree_node(flow_tree, f"{self._get_icon('🧠')} Starting Flow...", "yellow")
 
         self.print(flow_tree)
         self.print()
@@ -373,7 +425,7 @@ class ConsoleFormatter:
         # Update main flow label
         self.update_tree_label(
             flow_tree,
-            "✅ Flow Finished:" if status == "completed" else "❌ Flow Failed:",
+            f"{self._get_icon('✅')} Flow Finished:" if status == "completed" else f"{self._get_icon('❌')} Flow Failed:",
             flow_name,
             "green" if status == "completed" else "red",
         )
@@ -383,9 +435,9 @@ class ConsoleFormatter:
             if "Starting Flow" in str(child.label):
                 child.label = Text(
                     (
-                        "✅ Flow Completed"
+                        f"{self._get_icon('✅')} Flow Completed"
                         if status == "completed"
-                        else "❌ Flow Failed"
+                        else f"{self._get_icon('❌')} Flow Failed"
                     ),
                     style="green" if status == "completed" else "red",
                 )
@@ -418,20 +470,20 @@ class ConsoleFormatter:
             return None
 
         if status == "running":
-            prefix, style = "🔄 Running:", "yellow"
+            prefix, style = f"{self._get_icon('🔄')} Running:", "yellow"
         elif status == "completed":
-            prefix, style = "✅ Completed:", "green"
+            prefix, style = f"{self._get_icon('✅')} Completed:", "green"
             # Update initialization node when a method completes successfully
             for child in flow_tree.children:
                 if "Starting Flow" in str(child.label):
                     child.label = Text("Flow Method Step", style="white")
                     break
         else:
-            prefix, style = "❌ Failed:", "red"
+            prefix, style = f"{self._get_icon('❌')} Failed:", "red"
             # Update initialization node on failure
             for child in flow_tree.children:
                 if "Starting Flow" in str(child.label):
-                    child.label = Text("❌ Flow Step Failed", style="red")
+                    child.label = Text(f"{self._get_icon('❌')} Flow Step Failed", style="red")
                     break
 
         if not method_branch:
@@ -453,7 +505,7 @@ class ConsoleFormatter:
 
     def get_llm_tree(self, tool_name: str):
         text = Text()
-        text.append(f"🔧 Using {tool_name} from LLM available_function", style="yellow")
+        text.append(f"{self._get_icon('🔧')} Using {tool_name} from LLM available_function", style="yellow")
 
         tree = self.current_flow_tree or self.current_crew_tree
 
@@ -484,7 +536,7 @@ class ConsoleFormatter:
         tool_name: str,
     ):
         tree = self.get_llm_tree(tool_name)
-        self.add_tree_node(tree, "✅ Tool Usage Completed", "green")
+        self.add_tree_node(tree, f"{self._get_icon('✅')} Tool Usage Completed", "green")
         self.print(tree)
         self.print()
 
@@ -494,7 +546,7 @@ class ConsoleFormatter:
         error: str,
     ):
         tree = self.get_llm_tree(tool_name)
-        self.add_tree_node(tree, "❌ Tool Usage Failed", "red")
+        self.add_tree_node(tree, f"{self._get_icon('❌')} Tool Usage Failed", "red")
         self.print(tree)
         self.print()
 
@@ -541,7 +593,7 @@ class ConsoleFormatter:
         # Update label with current count
         self.update_tree_label(
             tool_branch,
-            "🔧",
+            self._get_icon("🔧"),
             f"Using {tool_name} ({self.tool_usage_counts[tool_name]})",
             "yellow",
         )
@@ -570,7 +622,7 @@ class ConsoleFormatter:
         # Update the existing tool node's label
         self.update_tree_label(
             tool_branch,
-            "🔧",
+            self._get_icon("🔧"),
             f"Used {tool_name} ({self.tool_usage_counts[tool_name]})",
             "green",
         )
@@ -600,7 +652,7 @@ class ConsoleFormatter:
         if tool_branch:
             self.update_tree_label(
                 tool_branch,
-                "🔧 Failed",
+                f"{self._get_icon('🔧')} Failed",
                 f"{tool_name} ({self.tool_usage_counts[tool_name]})",
                 "red",
             )
@@ -646,7 +698,7 @@ class ConsoleFormatter:
 
         if should_add_thinking:
             tool_branch = branch_to_use.add("")
-            self.update_tree_label(tool_branch, "🧠", "Thinking...", "blue")
+            self.update_tree_label(tool_branch, self._get_icon("🧠"), "Thinking...", "blue")
             self.current_tool_branch = tool_branch
             self.print(tree_to_use)
             self.print()
@@ -756,7 +808,7 @@ class ConsoleFormatter:
 
         # Update the thinking branch to show failure
         if thinking_branch_to_update:
-            thinking_branch_to_update.label = Text("❌ LLM Failed", style="red bold")
+            thinking_branch_to_update.label = Text(f"{self._get_icon('❌')} LLM Failed", style="red bold")
             # Clear the current_tool_branch reference
             if self.current_tool_branch is thinking_branch_to_update:
                 self.current_tool_branch = None
@@ -766,7 +818,7 @@ class ConsoleFormatter:
 
         # Show error panel
         error_content = Text()
-        error_content.append("❌ LLM Call Failed\n", style="red bold")
+        error_content.append(f"{self._get_icon('❌')} LLM Call Failed\n", style="red bold")
         error_content.append("Error: ", style="white")
         error_content.append(str(error), style="red")
 
@@ -781,7 +833,7 @@ class ConsoleFormatter:
 
         # Create initial panel
         content = Text()
-        content.append("🧪 Starting Crew Test\n\n", style="blue bold")
+        content.append(f"{self._get_icon('🧪')} Starting Crew Test\n\n", style="blue bold")
         content.append("Crew: ", style="white")
         content.append(f"{crew_name}\n", style="blue")
         content.append("ID: ", style="white")
@@ -795,13 +847,13 @@ class ConsoleFormatter:
 
         # Create and display the test tree
         test_label = Text()
-        test_label.append("🧪 Test: ", style="blue bold")
+        test_label.append(f"{self._get_icon('🧪')} Test: ", style="blue bold")
         test_label.append(crew_name or "Crew", style="blue")
         test_label.append("\nStatus: ", style="white")
         test_label.append("In Progress", style="yellow")
 
         test_tree = Tree(test_label)
-        self.add_tree_node(test_tree, "🔄 Running tests...", "yellow")
+        self.add_tree_node(test_tree, f"{self._get_icon('🔄')} Running tests...", "yellow")
 
         self.print(test_tree)
         self.print()
@@ -817,7 +869,7 @@ class ConsoleFormatter:
         if flow_tree:
             # Update test tree label to show completion
             test_label = Text()
-            test_label.append("✅ Test: ", style="green bold")
+            test_label.append(f"{self._get_icon('✅')} Test: ", style="green bold")
             test_label.append(crew_name or "Crew", style="green")
             test_label.append("\nStatus: ", style="white")
             test_label.append("Completed", style="green bold")
@@ -826,7 +878,7 @@ class ConsoleFormatter:
             # Update the running tests node
             for child in flow_tree.children:
                 if "Running tests" in str(child.label):
-                    child.label = Text("✅ Tests completed successfully", style="green")
+                    child.label = Text(f"{self._get_icon('✅')} Tests completed successfully", style="green")
                     break
 
             self.print(flow_tree)
@@ -848,7 +900,7 @@ class ConsoleFormatter:
             return
 
         content = Text()
-        content.append("📋 Crew Training Started\n", style="blue bold")
+        content.append(f"{self._get_icon('📋')} Crew Training Started\n", style="blue bold")
         content.append("Crew: ", style="white")
         content.append(f"{crew_name}\n", style="blue")
         content.append("Time: ", style="white")
@@ -863,7 +915,7 @@ class ConsoleFormatter:
             return
 
         content = Text()
-        content.append("✅ Crew Training Completed\n", style="green bold")
+        content.append(f"{self._get_icon('✅')} Crew Training Completed\n", style="green bold")
         content.append("Crew: ", style="white")
         content.append(f"{crew_name}\n", style="green")
         content.append("Time: ", style="white")
@@ -878,7 +930,7 @@ class ConsoleFormatter:
             return
 
         failure_content = Text()
-        failure_content.append("❌ Crew Training Failed\n", style="red bold")
+        failure_content.append(f"{self._get_icon('❌')} Crew Training Failed\n", style="red bold")
         failure_content.append("Crew: ", style="white")
         failure_content.append(crew_name or "Crew", style="red")
 
@@ -891,7 +943,7 @@ class ConsoleFormatter:
             return
 
         failure_content = Text()
-        failure_content.append("❌ Crew Test Failed\n", style="red bold")
+        failure_content.append(f"{self._get_icon('❌')} Crew Test Failed\n", style="red bold")
         failure_content.append("Crew: ", style="white")
         failure_content.append(crew_name or "Crew", style="red")
 
@@ -906,7 +958,7 @@ class ConsoleFormatter:
         # Create initial tree for LiteAgent if it doesn't exist
         if not self.current_lite_agent_branch:
             lite_agent_label = Text()
-            lite_agent_label.append("🤖 LiteAgent: ", style="cyan bold")
+            lite_agent_label.append(f"{self._get_icon('🤖')} LiteAgent: ", style="cyan bold")
             lite_agent_label.append(lite_agent_role, style="cyan")
             lite_agent_label.append("\nStatus: ", style="white")
             lite_agent_label.append("In Progress", style="yellow")
@@ -931,15 +983,15 @@ class ConsoleFormatter:
 
         # Determine style based on status
         if status == "completed":
-            prefix, style = "✅ LiteAgent:", "green"
+            prefix, style = f"{self._get_icon('✅')} LiteAgent:", "green"
             status_text = "Completed"
             title = "LiteAgent Completion"
         elif status == "failed":
-            prefix, style = "❌ LiteAgent:", "red"
+            prefix, style = f"{self._get_icon('❌')} LiteAgent:", "red"
             status_text = "Failed"
             title = "LiteAgent Error"
         else:
-            prefix, style = "🤖 LiteAgent:", "yellow"
+            prefix, style = f"{self._get_icon('🤖')} LiteAgent:", "yellow"
             status_text = "In Progress"
             title = "LiteAgent Status"
 
@@ -1010,7 +1062,7 @@ class ConsoleFormatter:
 
         knowledge_branch = branch_to_use.add("")
         self.update_tree_label(
-            knowledge_branch, "🔍", "Knowledge Retrieval Started", "blue"
+            knowledge_branch, self._get_icon("🔍"), "Knowledge Retrieval Started", "blue"
         )
 
         self.print(tree_to_use)
@@ -1041,7 +1093,7 @@ class ConsoleFormatter:
 
                 knowledge_panel = Panel(
                     Text(knowledge_text, style="white"),
-                    title="📚 Retrieved Knowledge",
+                    title=f"{self._get_icon('📚')} Retrieved Knowledge",
                     border_style="green",
                     padding=(1, 2),
                 )
@@ -1053,7 +1105,7 @@ class ConsoleFormatter:
         for child in branch_to_use.children:
             if "Knowledge Retrieval Started" in str(child.label):
                 self.update_tree_label(
-                    child, "✅", "Knowledge Retrieval Completed", "green"
+                    child, self._get_icon("✅"), "Knowledge Retrieval Completed", "green"
                 )
                 knowledge_branch_found = True
                 break
@@ -1066,7 +1118,7 @@ class ConsoleFormatter:
                     and "Completed" not in str(child.label)
                 ):
                     self.update_tree_label(
-                        child, "✅", "Knowledge Retrieval Completed", "green"
+                        child, self._get_icon("✅"), "Knowledge Retrieval Completed", "green"
                     )
                     knowledge_branch_found = True
                     break
@@ -1074,7 +1126,7 @@ class ConsoleFormatter:
         if not knowledge_branch_found:
             knowledge_branch = branch_to_use.add("")
             self.update_tree_label(
-                knowledge_branch, "✅", "Knowledge Retrieval Completed", "green"
+                knowledge_branch, self._get_icon("✅"), "Knowledge Retrieval Completed", "green"
             )
 
         self.print(tree_to_use)
@@ -1086,7 +1138,7 @@ class ConsoleFormatter:
 
             knowledge_panel = Panel(
                 Text(knowledge_text, style="white"),
-                title="📚 Retrieved Knowledge",
+                title=f"{self._get_icon('📚')} Retrieved Knowledge",
                 border_style="green",
                 padding=(1, 2),
             )
@@ -1111,7 +1163,7 @@ class ConsoleFormatter:
 
         query_branch = branch_to_use.add("")
         self.update_tree_label(
-            query_branch, "🔎", f"Query: {task_prompt[:50]}...", "yellow"
+            query_branch, self._get_icon("🔎"), f"Query: {task_prompt[:50]}...", "yellow"
         )
 
         self.print(tree_to_use)
@@ -1132,7 +1184,7 @@ class ConsoleFormatter:
 
         if branch_to_use and tree_to_use:
             query_branch = branch_to_use.add("")
-            self.update_tree_label(query_branch, "❌", "Knowledge Query Failed", "red")
+            self.update_tree_label(query_branch, self._get_icon("❌"), "Knowledge Query Failed", "red")
             self.print(tree_to_use)
             self.print()
 
@@ -1158,7 +1210,7 @@ class ConsoleFormatter:
             return None
 
         query_branch = branch_to_use.add("")
-        self.update_tree_label(query_branch, "✅", "Knowledge Query Completed", "green")
+        self.update_tree_label(query_branch, self._get_icon("✅"), "Knowledge Query Completed", "green")
 
         self.print(tree_to_use)
         self.print()
@@ -1178,7 +1230,7 @@ class ConsoleFormatter:
 
         if branch_to_use and tree_to_use:
             query_branch = branch_to_use.add("")
-            self.update_tree_label(query_branch, "❌", "Knowledge Search Failed", "red")
+            self.update_tree_label(query_branch, self._get_icon("❌"), "Knowledge Search Failed", "red")
             self.print(tree_to_use)
             self.print()
 
@@ -1223,7 +1275,7 @@ class ConsoleFormatter:
         status_text = (
             f"Reasoning (Attempt {attempt})" if attempt > 1 else "Reasoning..."
         )
-        self.update_tree_label(reasoning_branch, "🧠", status_text, "blue")
+        self.update_tree_label(reasoning_branch, self._get_icon("🧠"), status_text, "blue")
 
         self.print(tree_to_use)
         self.print()
@@ -1254,7 +1306,7 @@ class ConsoleFormatter:
         )
 
         if reasoning_branch is not None:
-            self.update_tree_label(reasoning_branch, "✅", status_text, style)
+            self.update_tree_label(reasoning_branch, self._get_icon("✅"), status_text, style)
 
         if tree_to_use is not None:
             self.print(tree_to_use)
@@ -1263,7 +1315,7 @@ class ConsoleFormatter:
         if plan:
             plan_panel = Panel(
                 Text(plan, style="white"),
-                title="🧠 Reasoning Plan",
+                title=f"{self._get_icon('🧠')} Reasoning Plan",
                 border_style=style,
                 padding=(1, 2),
             )
@@ -1292,7 +1344,7 @@ class ConsoleFormatter:
         )
 
         if reasoning_branch is not None:
-            self.update_tree_label(reasoning_branch, "❌", "Reasoning Failed", "red")
+            self.update_tree_label(reasoning_branch, self._get_icon("❌"), "Reasoning Failed", "red")
 
         if tree_to_use is not None:
             self.print(tree_to_use)
@@ -1335,7 +1387,7 @@ class ConsoleFormatter:
         # Create and display the panel
         agent_panel = Panel(
             content,
-            title="🤖 Agent Started",
+            title=f"{self._get_icon('🤖')} Agent Started",
             border_style="magenta",
             padding=(1, 2),
         )
@@ -1406,7 +1458,7 @@ class ConsoleFormatter:
             # Create the main action panel
             action_panel = Panel(
                 main_content,
-                title="🔧 Agent Tool Execution",
+                title=f"{self._get_icon('🔧')} Agent Tool Execution",
                 border_style="magenta",
                 padding=(1, 2),
             )
@@ -1448,7 +1500,7 @@ class ConsoleFormatter:
             # Create and display the finish panel
             finish_panel = Panel(
                 content,
-                title="✅ Agent Final Answer",
+                title=f"{self._get_icon('✅')} Agent Final Answer",
                 border_style="green",
                 padding=(1, 2),
             )
