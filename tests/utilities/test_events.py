@@ -903,3 +903,56 @@ def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
     assert set(all_agent_id) == {base_agent.id}
     assert set(all_task_id) == {base_task.id}
     assert set(all_task_name) == {base_task.name}
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_emits_event_with_lite_agent():
+    completed_event = []
+    failed_event = []
+    started_event = []
+    stream_event = []
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(LLMCallFailedEvent)
+        def handle_llm_failed(source, event):
+            failed_event.append(event)
+
+        @crewai_event_bus.on(LLMCallStartedEvent)
+        def handle_llm_started(source, event):
+            started_event.append(event)
+
+        @crewai_event_bus.on(LLMCallCompletedEvent)
+        def handle_llm_completed(source, event):
+            completed_event.append(event)
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def handle_llm_stream_chunk(source, event):
+            stream_event.append(event)
+
+        agent = Agent(
+            role="Speaker",
+            llm=LLM(model="gpt-4o-mini", stream=True),
+            goal="Just say hi",
+            backstory="You are a helpful assistant that just says hi",
+        )
+        agent.kickoff(messages=[{"role": "user", "content": "say hi!"}])
+
+
+    assert len(completed_event) == 2
+    assert len(failed_event) == 0
+    assert len(started_event) == 2
+    assert len(stream_event) == 15
+
+    all_events = completed_event + failed_event + started_event + stream_event
+    all_agent_roles = [event.agent_role for event in all_events]
+    all_agent_id = [event.agent_id for event in all_events]
+    all_task_id = [event.task_id for event in all_events if event.task_id]
+    all_task_name = [event.task_name for event in all_events if event.task_name]
+
+    # ensure all events have the agent + task props set
+    assert len(all_agent_roles) == 19
+    assert len(all_agent_id) == 19
+    assert len(all_task_id) == 0
+    assert len(all_task_name) == 0
+
+    assert set(all_agent_roles) == {agent.role}
+    assert set(all_agent_id) == {agent.id}

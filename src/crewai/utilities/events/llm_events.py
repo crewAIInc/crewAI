@@ -18,9 +18,14 @@ class LLMEventBase(BaseEvent):
         self._set_task_params(data)
 
     def _set_agent_params(self, data: Dict[str, Any]):
-        if "from_task" in data and (agent := getattr(data["from_task"], "agent", None)):
-            self.agent_id = agent.id
-            self.agent_role = agent.role
+        task = data.get("from_task", None)
+        agent = task.agent if task else data.get("from_agent", None)
+
+        if not agent:
+            return
+
+        self.agent_id = agent.id
+        self.agent_role = agent.role
 
     def _set_task_params(self, data: Dict[str, Any]):
         if "from_task" in data and (task := data["from_task"]):

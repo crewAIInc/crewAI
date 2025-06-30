@@ -31,6 +31,7 @@ class CustomLLM(BaseLLM):
         callbacks=None,
         available_functions=None,
         from_task=None,
+        from_agent=None,
     ):
         """
         Mock LLM call that returns a predefined response.

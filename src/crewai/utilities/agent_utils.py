@@ -146,6 +146,7 @@ def get_llm_response(
     callbacks: List[Any],
     printer: Printer,
     from_task: Optional[Any] = None,
+    from_agent: Optional[Any] = None,
 ) -> str:
     """Call the LLM and return the response, handling any invalid responses."""
     try:
@@ -153,6 +154,7 @@ def get_llm_response(
             messages,
             callbacks=callbacks,
             from_task=from_task,
+            from_agent=from_agent,
         )
     except Exception as e:
         printer.print(
