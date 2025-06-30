@@ -57,23 +57,28 @@ def vcr_config(request) -> dict:
     }
 
 
-base_agent = Agent(
-    role="base_agent",
-    llm="gpt-4o-mini",
-    goal="Just say hi",
-    backstory="You are a helpful assistant that just says hi",
+@pytest.fixture(scope="module")
+def base_agent():
+    return Agent(
+        role="base_agent",
+        llm="gpt-4o-mini",
+        goal="Just say hi",
+        backstory="You are a helpful assistant that just says hi",
 )
 
-base_task = Task(
-    description="Just say hi",
-    expected_output="hi",
-    agent=base_agent,
-)
+@pytest.fixture(scope="module")
+def base_task(base_agent):
+    return Task(
+        description="Just say hi",
+        expected_output="hi",
+        agent=base_agent,
+    )
+
 event_listener = EventListener()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_start_kickoff_event():
+def test_crew_emits_start_kickoff_event(base_agent, base_task):
     received_events = []
     mock_span = Mock()
 
@@ -101,7 +106,7 @@ def test_crew_emits_start_kickoff_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_end_kickoff_event():
+def test_crew_emits_end_kickoff_event(base_agent, base_task):
     received_events = []
 
     @crewai_event_bus.on(CrewKickoffCompletedEvent)
@@ -119,7 +124,7 @@ def test_crew_emits_end_kickoff_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_test_kickoff_type_event():
+def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
     received_events = []
     mock_span = Mock()
 
@@ -165,7 +170,7 @@ def test_crew_emits_test_kickoff_type_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_kickoff_failed_event():
+def test_crew_emits_kickoff_failed_event(base_agent, base_task):
     received_events = []
 
     with crewai_event_bus.scoped_handlers():
@@ -190,7 +195,7 @@ def test_crew_emits_kickoff_failed_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_start_task_event():
+def test_crew_emits_start_task_event(base_agent, base_task):
     received_events = []
 
     @crewai_event_bus.on(TaskStartedEvent)
@@ -207,7 +212,7 @@ def test_crew_emits_start_task_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_end_task_event():
+def test_crew_emits_end_task_event(base_agent, base_task):
     received_events = []
 
     @crewai_event_bus.on(TaskCompletedEvent)
@@ -235,7 +240,7 @@ def test_crew_emits_end_task_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_task_emits_failed_event_on_execution_error():
+def test_task_emits_failed_event_on_execution_error(base_agent, base_task):
     received_events = []
     received_sources = []
 
@@ -272,7 +277,7 @@ def test_task_emits_failed_event_on_execution_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_emits_execution_started_and_completed_events():
+def test_agent_emits_execution_started_and_completed_events(base_agent, base_task):
     received_events = []
 
     @crewai_event_bus.on(AgentExecutionStartedEvent)
@@ -301,7 +306,7 @@ def test_agent_emits_execution_started_and_completed_events():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_emits_execution_error_event():
+def test_agent_emits_execution_error_event(base_agent, base_task):
     received_events = []
 
     @crewai_event_bus.on(AgentExecutionErrorEvent)
@@ -501,7 +506,7 @@ def test_flow_emits_method_execution_started_event():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_register_handler_adds_new_handler():
+def test_register_handler_adds_new_handler(base_agent, base_task):
     received_events = []
 
     def custom_handler(source, event):
@@ -519,7 +524,7 @@ def test_register_handler_adds_new_handler():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_handlers_for_same_event():
+def test_multiple_handlers_for_same_event(base_agent, base_task):
     received_events_1 = []
     received_events_2 = []
 
@@ -613,6 +618,11 @@ def test_llm_emits_call_started_event():
     assert received_events[0].type == "llm_call_started"
     assert received_events[1].type == "llm_call_completed"
 
+    assert received_events[0].task_name is None
+    assert received_events[0].agent_role is None
+    assert received_events[0].agent_id is None
+    assert received_events[0].task_id is None
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_emits_call_failed_event():
@@ -632,6 +642,10 @@ def test_llm_emits_call_failed_event():
         assert len(received_events) == 1
         assert received_events[0].type == "llm_call_failed"
         assert received_events[0].error == error_message
+        assert received_events[0].task_name is None
+        assert received_events[0].agent_role is None
+        assert received_events[0].agent_id is None
+        assert received_events[0].task_id is None
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -742,7 +756,6 @@ def test_streaming_empty_response_handling():
     received_chunks = []
 
     with crewai_event_bus.scoped_handlers():
-
         @crewai_event_bus.on(LLMStreamChunkEvent)
         def handle_stream_chunk(source, event):
             received_chunks.append(event.chunk)
@@ -779,3 +792,114 @@ def test_streaming_empty_response_handling():
         finally:
             # Restore the original method
             llm.call = original_call
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_stream_llm_emits_event_with_task_and_agent_info():
+    completed_event = []
+    failed_event = []
+    started_event = []
+    stream_event = []
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(LLMCallFailedEvent)
+        def handle_llm_failed(source, event):
+            failed_event.append(event)
+
+        @crewai_event_bus.on(LLMCallStartedEvent)
+        def handle_llm_started(source, event):
+            started_event.append(event)
+
+        @crewai_event_bus.on(LLMCallCompletedEvent)
+        def handle_llm_completed(source, event):
+            completed_event.append(event)
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def handle_llm_stream_chunk(source, event):
+            stream_event.append(event)
+
+        agent = Agent(
+            role="TestAgent",
+            llm=LLM(model="gpt-4o-mini", stream=True),
+            goal="Just say hi",
+            backstory="You are a helpful assistant that just says hi",
+        )
+        task = Task(
+            description="Just say hi",
+            expected_output="hi",
+            llm=LLM(model="gpt-4o-mini", stream=True),
+            agent=agent
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        crew.kickoff()
+
+    assert len(completed_event) == 1
+    assert len(failed_event) == 0
+    assert len(started_event) == 1
+    assert len(stream_event) == 12
+
+    all_events = completed_event + failed_event + started_event + stream_event
+    all_agent_roles = [event.agent_role for event in all_events]
+    all_agent_id = [event.agent_id for event in all_events]
+    all_task_id = [event.task_id for event in all_events]
+    all_task_name = [event.task_name for event in all_events]
+
+    # ensure all events have the agent + task props set
+    assert len(all_agent_roles) == 14
+    assert len(all_agent_id) == 14
+    assert len(all_task_id) == 14
+    assert len(all_task_name) == 14
+
+    assert set(all_agent_roles) == {agent.role}
+    assert set(all_agent_id) == {agent.id}
+    assert set(all_task_id) == {task.id}
+    assert set(all_task_name) == {task.name}
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
+    completed_event = []
+    failed_event = []
+    started_event = []
+    stream_event = []
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(LLMCallFailedEvent)
+        def handle_llm_failed(source, event):
+            failed_event.append(event)
+
+        @crewai_event_bus.on(LLMCallStartedEvent)
+        def handle_llm_started(source, event):
+            started_event.append(event)
+
+        @crewai_event_bus.on(LLMCallCompletedEvent)
+        def handle_llm_completed(source, event):
+            completed_event.append(event)
+
+        @crewai_event_bus.on(LLMStreamChunkEvent)
+        def handle_llm_stream_chunk(source, event):
+            stream_event.append(event)
+
+        crew = Crew(agents=[base_agent], tasks=[base_task])
+        crew.kickoff()
+
+    assert len(completed_event) == 1
+    assert len(failed_event) == 0
+    assert len(started_event) == 1
+    assert len(stream_event) == 0
+
+    all_events = completed_event + failed_event + started_event + stream_event
+    all_agent_roles = [event.agent_role for event in all_events]
+    all_agent_id = [event.agent_id for event in all_events]
+    all_task_id = [event.task_id for event in all_events]
+    all_task_name = [event.task_name for event in all_events]
+
+    # ensure all events have the agent + task props set
+    assert len(all_agent_roles) == 2
+    assert len(all_agent_id) == 2
+    assert len(all_task_id) == 2
+    assert len(all_task_name) == 2
+
+    assert set(all_agent_roles) == {base_agent.role}
+    assert set(all_agent_id) == {base_agent.id}
+    assert set(all_task_id) == {base_task.id}
+    assert set(all_task_name) == {base_task.name}

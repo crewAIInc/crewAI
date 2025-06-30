@@ -5,6 +5,27 @@ from pydantic import BaseModel
 
 from crewai.utilities.events.base_events import BaseEvent
 
+class LLMEventBase(BaseEvent):
+    task_name: Optional[str] = None
+    task_id: Optional[str] = None
+
+    agent_id: Optional[str] = None
+    agent_role: Optional[str] = None
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._set_agent_params(data)
+        self._set_task_params(data)
+
+    def _set_agent_params(self, data: Dict[str, Any]):
+        if "from_task" in data and (agent := getattr(data["from_task"], "agent", None)):
+            self.agent_id = agent.id
+            self.agent_role = agent.role
+
+    def _set_task_params(self, data: Dict[str, Any]):
+        if "from_task" in data and (task := data["from_task"]):
+            self.task_id = task.id
+            self.task_name = task.name
 
 class LLMCallType(Enum):
     """Type of LLM call being made"""
@@ -13,7 +34,7 @@ class LLMCallType(Enum):
     LLM_CALL = "llm_call"
 
 
-class LLMCallStartedEvent(BaseEvent):
+class LLMCallStartedEvent(LLMEventBase):
     """Event emitted when a LLM call starts
 
     Attributes:
@@ -28,7 +49,7 @@ class LLMCallStartedEvent(BaseEvent):
     available_functions: Optional[Dict[str, Any]] = None
 
 
-class LLMCallCompletedEvent(BaseEvent):
+class LLMCallCompletedEvent(LLMEventBase):
     """Event emitted when a LLM call completes"""
 
     type: str = "llm_call_completed"
@@ -36,7 +57,7 @@ class LLMCallCompletedEvent(BaseEvent):
     call_type: LLMCallType
 
 
-class LLMCallFailedEvent(BaseEvent):
+class LLMCallFailedEvent(LLMEventBase):
     """Event emitted when a LLM call fails"""
 
     error: str
@@ -55,7 +76,7 @@ class ToolCall(BaseModel):
     index: int
 
 
-class LLMStreamChunkEvent(BaseEvent):
+class LLMStreamChunkEvent(LLMEventBase):
     """Event emitted when a streaming chunk is received"""
 
     type: str = "llm_stream_chunk"
