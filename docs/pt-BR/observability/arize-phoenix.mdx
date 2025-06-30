@@ -78,14 +78,14 @@ CrewAIInstrumentor().instrument(skip_dep_check=True, tracer_provider=tracer_prov
 search_tool = SerperDevTool()
 
 # Defina seus agentes com papéis e objetivos
-researcher = Agent(
+pesquisador = Agent(
     role="Analista Sênior de Pesquisa",
     goal="Descobrir os avanços mais recentes em IA e ciência de dados",
-    backstory="Você trabalha em um importante think tank de tecnologia. Sua especialidade é identificar tendências emergentes. Você tem habilidade para dissecar dados complexos e apresentar insights acionáveis.",
+    backstory="""
+Você trabalha em um importante think tank de tecnologia. Sua especialidade é identificar tendências emergentes. Você tem habilidade para dissecar dados complexos e apresentar insights acionáveis.
+""",
     verbose=True,
     allow_delegation=False,
-    # Você pode passar um atributo opcional llm especificando qual modelo deseja usar.
-    # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7),
     tools=[search_tool],
 )
 writer = Agent(
@@ -100,7 +100,7 @@ writer = Agent(
 task1 = Task(
     description="Realize uma análise abrangente dos avanços mais recentes em IA em 2024. Identifique tendências-chave, tecnologias inovadoras e impactos potenciais na indústria.",
     expected_output="Relatório analítico completo em tópicos",
-    agent=researcher,
+    agent=pesquisador,
 )
 
 task2 = Task(
@@ -111,7 +111,7 @@ task2 = Task(
 
 # Instancie seu crew com um processo sequencial
 crew = Crew(
-    agents=[researcher, writer], tasks=[task1, task2], verbose=1, process=Process.sequential
+    agents=[pesquisador, writer], tasks=[task1, task2], verbose=1, process=Process.sequential
 )
 
 # Coloque seu crew para trabalhar!

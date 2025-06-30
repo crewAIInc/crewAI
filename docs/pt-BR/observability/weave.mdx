@@ -50,7 +50,7 @@ O Weave captura automaticamente rastreamentos (traces) de suas aplicações Crew
       llm = LLM(model="gpt-4o", temperature=0)
 
       # Crie os agentes
-      researcher = Agent(
+      pesquisador = Agent(
           role='Analista de Pesquisa',
           goal='Encontrar e analisar as melhores oportunidades de investimento',
           backstory='Especialista em análise financeira e pesquisa de mercado',
@@ -59,7 +59,7 @@ O Weave captura automaticamente rastreamentos (traces) de suas aplicações Crew
           allow_delegation=False,
       )
 
-      writer = Agent(
+      redator = Agent(
           role='Redator de Relatórios',
           goal='Escrever relatórios de investimento claros e concisos',
           backstory='Experiente na criação de relatórios financeiros detalhados',
@@ -69,29 +69,29 @@ O Weave captura automaticamente rastreamentos (traces) de suas aplicações Crew
       )
 
       # Crie as tarefas
-      research_task = Task(
-          description='Pesquisa aprofundada sobre o {topic}',
+      pesquisa = Task(
+          description='Pesquisa aprofundada sobre o {tema}',
           expected_output='Dados de mercado abrangentes incluindo principais players, tamanho de mercado e tendências de crescimento.',
-          agent=researcher
+          agent=pesquisador
       )
 
-      writing_task = Task(
+      redacao = Task(
           description='Escreva um relatório detalhado com base na pesquisa',
           expected_output='O relatório deve ser fácil de ler e entender. Use tópicos quando aplicável.',
-          agent=writer
+          agent=redator
       )
 
       # Crie o crew
-      crew = Crew(
-          agents=[researcher, writer],
-          tasks=[research_task, writing_task],
+      equipe = Crew(
+          agents=[pesquisador, redator],
+          tasks=[pesquisa, redacao],
           verbose=True,
           process=Process.sequential,
       )
 
       # Execute o crew
-      result = crew.kickoff(inputs={"topic": "AI in material science"})
-      print(result)
+      resultado = equipe.kickoff(inputs={"tema": "IA em ciência dos materiais"})
+      print(resultado)
       ```
     </Step>
     <Step title="Visualize rastreamentos no Weave">

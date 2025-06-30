@@ -70,18 +70,16 @@ O tracing fornece uma forma de registrar os inputs, outputs e metadados associad
 
       class TripAgents:
           def city_selection_agent(self):
-              return Agent(
+              especialista_cidades = Agent(
                   role="Especialista em Seleção de Cidades",
                   goal="Selecionar a melhor cidade com base no clima, estação e preços",
                   backstory="Especialista em analisar dados de viagem para escolher destinos ideais",
-                  tools=[
-                      search_tool,
-                  ],
+                  tools=[search_tool],
                   verbose=True,
               )
 
           def local_expert(self):
-              return Agent(
+              especialista_local = Agent(
                   role="Especialista Local nesta cidade",
                   goal="Fornecer as MELHORES informações sobre a cidade selecionada",
                   backstory="Um guia local experiente com amplo conhecimento sobre a cidade, suas atrações e costumes",
@@ -171,7 +169,7 @@ O tracing fornece uma forma de registrar os inputs, outputs e metadados associad
       trip_crew = TripCrew("California", "Tokyo", "Dec 12 - Dec 20", "sports")
       result = trip_crew.run()
 
-      print(result)
+      print("Resultado da equipe:", result)
       ```
       Consulte a [Documentação de Tracing do MLflow](https://mlflow.org/docs/latest/llms/tracing/index.html) para mais configurações e casos de uso.
     </Step>

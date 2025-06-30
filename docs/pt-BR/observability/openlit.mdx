@@ -69,7 +69,7 @@ Essa configuração permite acompanhar hiperparâmetros e monitorar problemas de
 
           openlit.init(disable_metrics=True)
           # Definir seus agentes
-          researcher = Agent(
+          pesquisador = Agent(
               role="Pesquisador",
               goal="Realizar pesquisas e análises aprofundadas sobre IA e agentes de IA",
               backstory="Você é um pesquisador especialista em tecnologia, engenharia de software, IA e startups. Trabalha como freelancer e está atualmente pesquisando para um novo cliente.",
@@ -85,19 +85,19 @@ Essa configuração permite acompanhar hiperparâmetros e monitorar problemas de
           )
 
           # Definir o agente gerente
-          manager = Agent(
+          gerente = Agent(
               role="Gerente de Projeto",
-              goal="Gerenciar eficientemente a crew e garantir a conclusão de tarefas de alta qualidade",
-              backstory="Você é um gerente de projetos experiente, habilidoso em supervisionar projetos complexos e guiar equipes para o sucesso. Sua função é coordenar os esforços dos membros da crew, garantindo que cada tarefa seja concluída no prazo e com o mais alto padrão.",
+              goal="Gerenciar eficientemente a equipe e garantir a conclusão de tarefas de alta qualidade",
+              backstory="Você é um gerente de projetos experiente, habilidoso em supervisionar projetos complexos e guiar equipes para o sucesso. Sua função é coordenar os esforços dos membros da equipe, garantindo que cada tarefa seja concluída no prazo e com o mais alto padrão.",
               allow_delegation=True,
               llm='command-r'
           )
 
           # Instanciar sua crew com um manager personalizado
           crew = Crew(
-              agents=[researcher],
+              agents=[pesquisador],
               tasks=[task],
-              manager_agent=manager,
+              manager_agent=gerente,
               process=Process.hierarchical,
           )
 

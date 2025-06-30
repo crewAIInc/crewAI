@@ -35,7 +35,7 @@ try:
     with MCPServerAdapter(server_params) as tools:
         print(f"Available tools from Streamable HTTP MCP server: {[tool.name for tool in tools]}")
 
-        http_agent = Agent(
+        agente_http = Agent(
             role="Integrador de Serviços HTTP",
             goal="Utilizar ferramentas de um servidor MCP remoto via Streamable HTTP.",
             backstory="Um agente de IA especializado em interagir com serviços web complexos.",
@@ -46,11 +46,11 @@ try:
         http_task = Task(
             description="Realizar uma consulta de dados complexa usando uma ferramenta do servidor Streamable HTTP.",
             expected_output="O resultado da consulta de dados complexa.",
-            agent=http_agent,
+            agent=agente_http,
         )
 
         http_crew = Crew(
-            agents=[http_agent],
+            agents=[agente_http],
             tasks=[http_task],
             verbose=True,
             process=Process.sequential

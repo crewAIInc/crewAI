@@ -38,7 +38,7 @@ with MCPServerAdapter(server_params) as tools:
     print(f"Available tools from Stdio MCP server: {[tool.name for tool in tools]}")
 
     # Exemplo: Usando as ferramentas do servidor MCP Stdio em um Agente CrewAI
-    research_agent = Agent(
+    pesquisador_local = Agent(
         role="Processador Local de Dados",
         goal="Processar dados usando uma ferramenta local baseada em Stdio.",
         backstory="Uma IA que utiliza scripts locais via MCP para tarefas especializadas.",
@@ -50,12 +50,12 @@ with MCPServerAdapter(server_params) as tools:
     processing_task = Task(
         description="Processar o arquivo de dados de entrada 'data.txt' e resumir seu conteúdo.",
         expected_output="Um resumo dos dados processados.",
-        agent=research_agent,
+        agent=pesquisador_local,
         markdown=True
     )
     
     data_crew = Crew(
-        agents=[research_agent],
+        agents=[pesquisador_local],
         tasks=[processing_task],
         verbose=True,
         process=Process.sequential 

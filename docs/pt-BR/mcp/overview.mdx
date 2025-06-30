@@ -73,7 +73,7 @@ server_params = {
 with MCPServerAdapter(server_params) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
 
-    my_agent = Agent(
+    meu_agente = Agent(
         role="Usuário de Ferramentas MCP",
         goal="Utilizar ferramentas de um servidor MCP.",
         backstory="Posso conectar a servidores MCP e usar suas ferramentas.",
@@ -91,7 +91,7 @@ Este padrão geral mostra como integrar ferramentas. Para exemplos específicos 
 with MCPServerAdapter(server_params) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
 
-    my_agent = Agent(
+    meu_agente = Agent(
         role="Usuário de Ferramentas MCP",
         goal="Utilizar ferramentas de um servidor MCP.",
         backstory="Posso conectar a servidores MCP e usar suas ferramentas.",

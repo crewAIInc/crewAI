@@ -58,8 +58,8 @@ Neste guia, utilizaremos o exemplo de início rápido da CrewAI.
       from crewai import Agent, Crew, Task, Process
 
 
-      class YourCrewName:
-          def agent_one(self) -> Agent:
+      class NomeDaEquipe:
+          def agente_um(self) -> Agent:
               return Agent(
                   role="Analista de Dados",
                   goal="Analisar tendências de dados no mercado",
@@ -67,7 +67,7 @@ Neste guia, utilizaremos o exemplo de início rápido da CrewAI.
                   verbose=True,
               )
 
-          def agent_two(self) -> Agent:
+          def agente_dois(self) -> Agent:
               return Agent(
                   role="Pesquisador de Mercado",
                   goal="Coletar informações sobre a dinâmica do mercado",
@@ -75,26 +75,26 @@ Neste guia, utilizaremos o exemplo de início rápido da CrewAI.
                   verbose=True,
               )
 
-          def task_one(self) -> Task:
+          def tarefa_um(self) -> Task:
               return Task(
-                  name="Collect Data Task",
+                  name="Tarefa de Coleta de Dados",
                   description="Coletar dados recentes do mercado e identificar tendências.",
                   expected_output="Um relatório resumindo as principais tendências do mercado.",
-                  agent=self.agent_one(),
+                  agent=self.agente_um(),
               )
 
-          def task_two(self) -> Task:
+          def tarefa_dois(self) -> Task:
               return Task(
-                  name="Market Research Task",
+                  name="Tarefa de Pesquisa de Mercado",
                   description="Pesquisar fatores que afetam a dinâmica do mercado.",
                   expected_output="Uma análise dos fatores que influenciam o mercado.",
-                  agent=self.agent_two(),
+                  agent=self.agente_dois(),
               )
 
-          def crew(self) -> Crew:
+          def equipe(self) -> Crew:
               return Crew(
-                  agents=[self.agent_one(), self.agent_two()],
-                  tasks=[self.task_one(), self.task_two()],
+                  agents=[self.agente_um(), self.agente_dois()],
+                  tasks=[self.tarefa_um(), self.tarefa_dois()],
                   process=Process.sequential,
                   verbose=True,
               )
@@ -108,7 +108,7 @@ Neste guia, utilizaremos o exemplo de início rápido da CrewAI.
 
       track_crewai(project_name="crewai-integration-demo")
 
-      my_crew = YourCrewName().crew()
+      my_crew = NomeDaEquipe().equipe()
       result = my_crew.kickoff()
 
       print(result)

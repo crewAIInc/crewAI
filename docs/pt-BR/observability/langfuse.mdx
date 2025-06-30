@@ -76,20 +76,20 @@ from crewai_tools import (
 
 web_rag_tool = WebsiteSearchTool()
 
-writer = Agent(
-        role="Escritor",
-        goal="Você torna a matemática envolvente e compreensível para crianças pequenas através de poesias",
-        backstory="Você é especialista em escrever haicais mas não sabe nada de matemática.",
-        tools=[web_rag_tool],  
-    )
+escritor = Agent(
+    role="Escritor",
+    goal="Você torna a matemática envolvente e compreensível para crianças pequenas através de poesias",
+    backstory="Você é especialista em escrever haicais mas não sabe nada de matemática.",
+    tools=[web_rag_tool],  
+)
 
-task = Task(description=("O que é {multiplicação}?"),
-            expected_output=("Componha um haicai que inclua a resposta."),
-            agent=writer)
+tarefa = Task(description=("O que é {multiplicação}?"),
+              expected_output=("Componha um haicai que inclua a resposta."),
+              agent=escritor)
 
-crew = Crew(
-  agents=[writer],
-  tasks=[task],
+equipe = Crew(
+  agents=[escritor],
+  tasks=[tarefa],
   share_crew=False
 )
 ```

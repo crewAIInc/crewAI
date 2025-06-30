@@ -37,7 +37,7 @@ try:
         print(f"Available tools from SSE MCP server: {[tool.name for tool in tools]}")
 
         # Example: Using a tool from the SSE MCP server
-        sse_agent = Agent(
+        agente_sse = Agent(
             role="Usuário de Serviço Remoto",
             goal="Utilizar uma ferramenta fornecida por um servidor MCP remoto via SSE.",
             backstory="Um agente de IA que conecta a serviços externos via SSE.",
@@ -49,12 +49,12 @@ try:
         sse_task = Task(
             description="Buscar atualizações em tempo real das ações 'AAPL' usando uma ferramenta SSE.",
             expected_output="O preço mais recente da ação AAPL.",
-            agent=sse_agent,
+            agent=agente_sse,
             markdown=True
         )
 
         sse_crew = Crew(
-            agents=[sse_agent],
+            agents=[agente_sse],
             tasks=[sse_task],
             verbose=True,
             process=Process.sequential
