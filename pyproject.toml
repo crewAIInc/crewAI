@@ -29,6 +29,7 @@ dependencies = [
     # Authentication and Security
     "auth0-python>=4.7.1",
     "python-dotenv>=1.0.0",
+    "pyjwt>=2.9.0",
     # Configuration and Utils
     "click>=8.1.7",
     "appdirs>=1.4.4",
