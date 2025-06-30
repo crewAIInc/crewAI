@@ -2,6 +2,7 @@ from importlib.metadata import version as get_version
 from typing import Optional
 
 import click
+from crewai.cli.config import Settings
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
@@ -226,6 +227,7 @@ def update():
 @crewai.command()
 def login():
     """Sign Up/Login to CrewAI Enterprise."""
+    Settings().clear()
     AuthenticationCommand().signup()
 
 
