@@ -74,9 +74,9 @@ with MCPServerAdapter(server_params) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
 
     my_agent = Agent(
-        role="MCP Tool User",
-        goal="Utilize tools from an MCP server.",
-        backstory="I can connect to MCP servers and use their tools.",
+        role="Usuário de Ferramentas MCP",
+        goal="Utilizar ferramentas de um servidor MCP.",
+        backstory="Posso conectar a servidores MCP e usar suas ferramentas.",
         tools=mcp_tools, # Passe as ferramentas carregadas para o seu agente
         reasoning=True,
         verbose=True
@@ -92,9 +92,9 @@ with MCPServerAdapter(server_params) as mcp_tools:
     print(f"Available tools: {[tool.name for tool in mcp_tools]}")
 
     my_agent = Agent(
-        role="MCP Tool User",
-        goal="Utilize tools from an MCP server.",
-        backstory="I can connect to MCP servers and use their tools.",
+        role="Usuário de Ferramentas MCP",
+        goal="Utilizar ferramentas de um servidor MCP.",
+        backstory="Posso conectar a servidores MCP e usar suas ferramentas.",
         tools=mcp_tools["tool_name"], # Passe as ferramentas filtradas para o seu agente
         reasoning=True,
         verbose=True

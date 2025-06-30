@@ -51,18 +51,18 @@ O Weave captura automaticamente rastreamentos (traces) de suas aplicações Crew
 
       # Crie os agentes
       researcher = Agent(
-          role='Research Analyst',
-          goal='Find and analyze the best investment opportunities',
-          backstory='Expert in financial analysis and market research',
+          role='Analista de Pesquisa',
+          goal='Encontrar e analisar as melhores oportunidades de investimento',
+          backstory='Especialista em análise financeira e pesquisa de mercado',
           llm=llm,
           verbose=True,
           allow_delegation=False,
       )
 
       writer = Agent(
-          role='Report Writer',
-          goal='Write clear and concise investment reports',
-          backstory='Experienced in creating detailed financial reports',
+          role='Redator de Relatórios',
+          goal='Escrever relatórios de investimento claros e concisos',
+          backstory='Experiente na criação de relatórios financeiros detalhados',
           llm=llm,
           verbose=True,
           allow_delegation=False,
@@ -70,14 +70,14 @@ O Weave captura automaticamente rastreamentos (traces) de suas aplicações Crew
 
       # Crie as tarefas
       research_task = Task(
-          description='Deep research on the {topic}',
-          expected_output='Comprehensive market data including key players, market size, and growth trends.',
+          description='Pesquisa aprofundada sobre o {topic}',
+          expected_output='Dados de mercado abrangentes incluindo principais players, tamanho de mercado e tendências de crescimento.',
           agent=researcher
       )
 
       writing_task = Task(
-          description='Write a detailed report based on the research',
-          expected_output='The report should be easy to read and understand. Use bullet points where applicable.',
+          description='Escreva um relatório detalhado com base na pesquisa',
+          expected_output='O relatório deve ser fácil de ler e entender. Use tópicos quando aplicável.',
           agent=writer
       )
 

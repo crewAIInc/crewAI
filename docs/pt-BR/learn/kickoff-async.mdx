@@ -45,17 +45,17 @@ from crewai import Crew, Agent, Task
 
 # Create an agent with code execution enabled
 coding_agent = Agent(
-    role="Python Data Analyst",
-    goal="Analyze data and provide insights using Python",
-    backstory="You are an experienced data analyst with strong Python skills.",
+    role="Analista de Dados Python",
+    goal="Analisar dados e fornecer insights usando Python",
+    backstory="Você é um analista de dados experiente com fortes habilidades em Python.",
     allow_code_execution=True
 )
 
 # Create a task that requires code execution
 data_analysis_task = Task(
-    description="Analyze the given dataset and calculate the average age of participants. Ages: {ages}",
+    description="Analise o conjunto de dados fornecido e calcule a idade média dos participantes. Idades: {ages}",
     agent=coding_agent,
-    expected_output="The average age of the participants."
+    expected_output="A idade média dos participantes."
 )
 
 # Create a crew and add the task
@@ -83,23 +83,23 @@ from crewai import Crew, Agent, Task
 
 # Create an agent with code execution enabled
 coding_agent = Agent(
-    role="Python Data Analyst",
-    goal="Analyze data and provide insights using Python",
-    backstory="You are an experienced data analyst with strong Python skills.",
+    role="Analista de Dados Python",
+    goal="Analisar dados e fornecer insights usando Python",
+    backstory="Você é um analista de dados experiente com fortes habilidades em Python.",
     allow_code_execution=True
 )
 
 # Create tasks that require code execution
 task_1 = Task(
-    description="Analyze the first dataset and calculate the average age of participants. Ages: {ages}",
+    description="Analise o primeiro conjunto de dados e calcule a idade média dos participantes. Idades: {ages}",
     agent=coding_agent,
-    expected_output="The average age of the participants."
+    expected_output="A idade média dos participantes."
 )
 
 task_2 = Task(
-    description="Analyze the second dataset and calculate the average age of participants. Ages: {ages}",
+    description="Analise o segundo conjunto de dados e calcule a idade média dos participantes. Idades: {ages}",
     agent=coding_agent,
-    expected_output="The average age of the participants."
+    expected_output="A idade média dos participantes."
 )
 
 # Create two crews and add tasks

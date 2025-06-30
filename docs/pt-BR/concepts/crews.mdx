@@ -153,32 +153,32 @@ from crewai_tools import YourCustomTool
 class YourCrewName:
     def agent_one(self) -> Agent:
         return Agent(
-            role="Data Analyst",
-            goal="Analyze data trends in the market",
-            backstory="An experienced data analyst with a background in economics",
+            role="Analista de Dados",
+            goal="Analisar tendências de dados no mercado brasileiro",
+            backstory="Analista experiente com formação em economia",
             verbose=True,
             tools=[YourCustomTool()]
         )
 
     def agent_two(self) -> Agent:
         return Agent(
-            role="Market Researcher",
-            goal="Gather information on market dynamics",
-            backstory="A diligent researcher with a keen eye for detail",
+            role="Pesquisador de Mercado",
+            goal="Coletar informações sobre a dinâmica do mercado nacional",
+            backstory="Pesquisador dedicado com olhar atento aos detalhes",
             verbose=True
         )
 
     def task_one(self) -> Task:
         return Task(
-            description="Collect recent market data and identify trends.",
-            expected_output="A report summarizing key trends in the market.",
+            description="Coletar dados recentes do mercado brasileiro e identificar tendências.",
+            expected_output="Um relatório resumido com as principais tendências do mercado.",
             agent=self.agent_one()
         )
 
     def task_two(self) -> Task:
         return Task(
-            description="Research factors affecting market dynamics.",
-            expected_output="An analysis of factors influencing the market.",
+            description="Pesquisar fatores que afetam a dinâmica do mercado nacional.",
+            expected_output="Uma análise dos fatores que influenciam o mercado.",
             agent=self.agent_two()
         )
 

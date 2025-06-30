@@ -71,9 +71,9 @@ O tracing fornece uma forma de registrar os inputs, outputs e metadados associad
       class TripAgents:
           def city_selection_agent(self):
               return Agent(
-                  role="City Selection Expert",
-                  goal="Select the best city based on weather, season, and prices",
-                  backstory="An expert in analyzing travel data to pick ideal destinations",
+                  role="Especialista em Seleção de Cidades",
+                  goal="Selecionar a melhor cidade com base no clima, estação e preços",
+                  backstory="Especialista em analisar dados de viagem para escolher destinos ideais",
                   tools=[
                       search_tool,
                   ],
@@ -82,10 +82,9 @@ O tracing fornece uma forma de registrar os inputs, outputs e metadados associad
 
           def local_expert(self):
               return Agent(
-                  role="Local Expert at this city",
-                  goal="Provide the BEST insights about the selected city",
-                  backstory="""A knowledgeable local guide with extensive information
-              about the city, it's attractions and customs""",
+                  role="Especialista Local nesta cidade",
+                  goal="Fornecer as MELHORES informações sobre a cidade selecionada",
+                  backstory="Um guia local experiente com amplo conhecimento sobre a cidade, suas atrações e costumes",
                   tools=[search_tool],
                   verbose=True,
               )
@@ -96,53 +95,36 @@ O tracing fornece uma forma de registrar os inputs, outputs e metadados associad
               return Task(
                   description=dedent(
                       f"""
-                      Analyze and select the best city for the trip based
-                      on specific criteria such as weather patterns, seasonal
-                      events, and travel costs. This task involves comparing
-                      multiple cities, considering factors like current weather
-                      conditions, upcoming cultural or seasonal events, and
-                      overall travel expenses.
-                      Your final answer must be a detailed
-                      report on the chosen city, and everything you found out
-                      about it, including the actual flight costs, weather
-                      forecast and attractions.
+                      Analise e selecione a melhor cidade para a viagem com base em critérios específicos como padrões climáticos, eventos sazonais e custos de viagem. Esta tarefa envolve comparar várias cidades, considerando fatores como condições climáticas atuais, eventos culturais ou sazonais e despesas gerais de viagem.
+                      Sua resposta final deve ser um relatório detalhado sobre a cidade escolhida e tudo o que você descobriu sobre ela, incluindo custos reais de voo, previsão do tempo e atrações.
 
-                      Traveling from: {origin}
-                      City Options: {cities}
-                      Trip Date: {range}
-                      Traveler Interests: {interests}
+                      Saindo de: {origin}
+                      Opções de cidades: {cities}
+                      Data da viagem: {range}
+                      Interesses do viajante: {interests}
                   """
                   ),
                   agent=agent,
-                  expected_output="Detailed report on the chosen city including flight costs, weather forecast, and attractions",
+                  expected_output="Relatório detalhado sobre a cidade escolhida incluindo custos de voo, previsão do tempo e atrações",
               )
 
           def gather_task(self, agent, origin, interests, range):
               return Task(
                   description=dedent(
                       f"""
-                      As a local expert on this city you must compile an
-                      in-depth guide for someone traveling there and wanting
-                      to have THE BEST trip ever!
-                      Gather information about key attractions, local customs,
-                      special events, and daily activity recommendations.
-                      Find the best spots to go to, the kind of place only a
-                      local would know.
-                      This guide should provide a thorough overview of what
-                      the city has to offer, including hidden gems, cultural
-                      hotspots, must-visit landmarks, weather forecasts, and
-                      high level costs.
-                      The final answer must be a comprehensive city guide,
-                      rich in cultural insights and practical tips,
-                      tailored to enhance the travel experience.
+                      Como especialista local nesta cidade, você deve compilar um guia aprofundado para alguém que está viajando para lá e quer ter a MELHOR viagem possível!
+                      Reúna informações sobre principais atrações, costumes locais, eventos especiais e recomendações de atividades diárias.
+                      Encontre os melhores lugares para ir, aqueles que só um local conhece.
+                      Este guia deve fornecer uma visão abrangente do que a cidade tem a oferecer, incluindo joias escondidas, pontos culturais, marcos imperdíveis, previsão do tempo e custos gerais.
+                      A resposta final deve ser um guia completo da cidade, rico em insights culturais e dicas práticas, adaptado para aprimorar a experiência de viagem.
 
-                      Trip Date: {range}
-                      Traveling from: {origin}
-                      Traveler Interests: {interests}
+                      Data da viagem: {range}
+                      Saindo de: {origin}
+                      Interesses do viajante: {interests}
                   """
                   ),
                   agent=agent,
-                  expected_output="Comprehensive city guide including hidden gems, cultural hotspots, and practical travel tips",
+                  expected_output="Guia completo da cidade incluindo joias escondidas, pontos culturais e dicas práticas",
               )
 
 

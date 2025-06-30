@@ -36,16 +36,16 @@ try:
         print(f"Available tools from Streamable HTTP MCP server: {[tool.name for tool in tools]}")
 
         http_agent = Agent(
-            role="HTTP Service Integrator",
-            goal="Utilize tools from a remote MCP server via Streamable HTTP.",
-            backstory="An AI agent adept at interacting with complex web services.",
+            role="Integrador de Serviços HTTP",
+            goal="Utilizar ferramentas de um servidor MCP remoto via Streamable HTTP.",
+            backstory="Um agente de IA especializado em interagir com serviços web complexos.",
             tools=tools,
             verbose=True,
         )
 
         http_task = Task(
-            description="Perform a complex data query using a tool from the Streamable HTTP server.",
-            expected_output="The result of the complex data query.",
+            description="Realizar uma consulta de dados complexa usando uma ferramenta do servidor Streamable HTTP.",
+            expected_output="O resultado da consulta de dados complexa.",
             agent=http_agent,
         )
 
@@ -91,16 +91,16 @@ try:
     print(f"Available tools (manual Streamable HTTP): {[tool.name for tool in tools]}")
 
     manual_http_agent = Agent(
-        role="Advanced Web Service User",
-        goal="Interact with an MCP server using manually managed Streamable HTTP connections.",
-        backstory="An AI specialist in fine-tuning HTTP-based service integrations.",
+        role="Usuário Avançado de Serviços Web",
+        goal="Interagir com um servidor MCP usando conexões HTTP Streamable gerenciadas manualmente.",
+        backstory="Um especialista em IA em ajustar integrações baseadas em HTTP.",
         tools=tools,
         verbose=True
     )
     
     data_processing_task = Task(
-        description="Submit data for processing and retrieve results via Streamable HTTP.",
-        expected_output="Processed data or confirmation.",
+        description="Enviar dados para processamento e recuperar resultados via Streamable HTTP.",
+        expected_output="Dados processados ou confirmação.",
         agent=manual_http_agent
     )
     

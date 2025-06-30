@@ -76,16 +76,16 @@ instrument_crewai(logger)
 
 # Crie seu agente
 researcher = Agent(
-    role='Senior Research Analyst',
-    goal='Uncover cutting-edge developments in AI',
-    backstory="You are an expert researcher at a tech think tank...",
+    role='Pesquisador Sênior',
+    goal='Descobrir os avanços mais recentes em IA',
+    backstory="Você é um pesquisador especialista em um think tank de tecnologia...",
     verbose=True,
     llm=llm
 )
 
 # Defina a tarefa
 research_task = Task(
-    description="Research the latest AI advancements...",
+    description="Pesquise os avanços mais recentes em IA...",
     expected_output="",
     agent=researcher
 )

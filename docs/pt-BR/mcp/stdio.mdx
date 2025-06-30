@@ -39,17 +39,17 @@ with MCPServerAdapter(server_params) as tools:
 
     # Exemplo: Usando as ferramentas do servidor MCP Stdio em um Agente CrewAI
     research_agent = Agent(
-        role="Local Data Processor",
-        goal="Process data using a local Stdio-based tool.",
-        backstory="An AI that leverages local scripts via MCP for specialized tasks.",
+        role="Processador Local de Dados",
+        goal="Processar dados usando uma ferramenta local baseada em Stdio.",
+        backstory="Uma IA que utiliza scripts locais via MCP para tarefas especializadas.",
         tools=tools,
         reasoning=True,
         verbose=True,
     )
     
     processing_task = Task(
-        description="Process the input data file 'data.txt' and summarize its contents.",
-        expected_output="A summary of the processed data.",
+        description="Processar o arquivo de dados de entrada 'data.txt' e resumir seu conteúdo.",
+        expected_output="Um resumo dos dados processados.",
         agent=research_agent,
         markdown=True
     )
@@ -95,16 +95,16 @@ try:
 
     # Exemplo: Usando as ferramentas com sua configuração de Agent, Task, Crew
     manual_agent = Agent(
-        role="Local Task Executor",
-        goal="Execute a specific local task using a manually managed Stdio tool.",
-        backstory="An AI proficient in controlling local processes via MCP.",
+        role="Executor Local de Tarefas",
+        goal="Executar uma tarefa local específica usando uma ferramenta Stdio gerenciada manualmente.",
+        backstory="Uma IA proficiente em controlar processos locais via MCP.",
         tools=tools,
         verbose=True
     )
     
     manual_task = Task(
-        description="Execute the 'perform_analysis' command via the Stdio tool.",
-        expected_output="Results of the analysis.",
+        description="Executar o comando 'perform_analysis' via ferramenta Stdio.",
+        expected_output="Resultados da análise.",
         agent=manual_agent
     )
     

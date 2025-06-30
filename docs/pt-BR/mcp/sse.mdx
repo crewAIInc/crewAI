@@ -38,17 +38,17 @@ try:
 
         # Example: Using a tool from the SSE MCP server
         sse_agent = Agent(
-            role="Remote Service User",
-            goal="Utilize a tool provided by a remote SSE MCP server.",
-            backstory="An AI agent that connects to external services via SSE.",
+            role="Usuário de Serviço Remoto",
+            goal="Utilizar uma ferramenta fornecida por um servidor MCP remoto via SSE.",
+            backstory="Um agente de IA que conecta a serviços externos via SSE.",
             tools=tools,
             reasoning=True,
             verbose=True,
         )
 
         sse_task = Task(
-            description="Fetch real-time stock updates for 'AAPL' using an SSE tool.",
-            expected_output="The latest stock price for AAPL.",
+            description="Buscar atualizações em tempo real das ações 'AAPL' usando uma ferramenta SSE.",
+            expected_output="O preço mais recente da ação AAPL.",
             agent=sse_agent,
             markdown=True
         )
@@ -101,16 +101,16 @@ try:
     print(f"Available tools (manual SSE): {[tool.name for tool in tools]}")
 
     manual_sse_agent = Agent(
-        role="Remote Data Analyst",
-        goal="Analyze data fetched from a remote SSE MCP server using manual connection management.",
-        backstory="An AI skilled in handling SSE connections explicitly.",
+        role="Analista Remoto de Dados",
+        goal="Analisar dados obtidos de um servidor MCP remoto SSE usando gerenciamento manual de conexão.",
+        backstory="Um agente de IA especializado em gerenciar conexões SSE explicitamente.",
         tools=tools,
         verbose=True
     )
     
     analysis_task = Task(
-        description="Fetch and analyze the latest user activity trends from the SSE server.",
-        expected_output="A summary report of user activity trends.",
+        description="Buscar e analisar as tendências mais recentes de atividade de usuários do servidor SSE.",
+        expected_output="Um relatório resumido das tendências de atividade dos usuários.",
         agent=manual_sse_agent
     )
     
