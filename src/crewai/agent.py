@@ -91,6 +91,9 @@ class Agent(BaseAgent):
     function_calling_llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
+    fallback_llms: Optional[List[Union[str, InstanceOf[BaseLLM], Any]]] = Field(
+        default=None, description="List of fallback language models to try if the primary LLM fails."
+    )
     system_template: Optional[str] = Field(
         default=None, description="System format for the agent."
     )
@@ -174,6 +177,8 @@ class Agent(BaseAgent):
         self.agent_ops_agent_name = self.role
 
         self.llm = create_llm(self.llm)
+        if self.fallback_llms:
+            self.fallback_llms = [create_llm(fallback_llm) for fallback_llm in self.fallback_llms]
         if self.function_calling_llm and not isinstance(
             self.function_calling_llm, BaseLLM
         ):
