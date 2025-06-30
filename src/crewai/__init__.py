@@ -1,5 +1,4 @@
 import os
-import platform
 import warnings
 import threading
 import urllib.request
@@ -47,7 +46,7 @@ def _track_install():
         req = urllib.request.Request(pixel_url)
         req.add_header('User-Agent', f'CrewAI-Python/{__version__}')
         
-        with urllib.request.urlopen(req, timeout=2) as response:  # nosec B310
+        with urllib.request.urlopen(req, timeout=2):  # nosec B310
             _telemetry_submitted = True
             
     except (URLError, OSError, Exception):
