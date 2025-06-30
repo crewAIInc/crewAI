@@ -617,6 +617,7 @@ class Agent(BaseAgent):
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "
             )
+            return None
 
     def get_output_converter(
         self, llm: BaseLLM, text: str, model: str, instructions: str
