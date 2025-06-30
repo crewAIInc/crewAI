@@ -1,8 +1,6 @@
-import os
 import warnings
 import threading
 import urllib.request
-from urllib.error import URLError
 
 from crewai.agent import Agent
 from crewai.crew import Crew
@@ -15,6 +13,7 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
+from crewai.telemetry.telemetry import Telemetry
 
 warnings.filterwarnings(
     "ignore",
@@ -25,19 +24,12 @@ warnings.filterwarnings(
 
 _telemetry_submitted = False
 
-def _is_tracking_disabled():
-    """Check if tracking should be disabled based on environment variables."""
-    return (
-        os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
-        or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
-    )
-
 
 def _track_install():
     """Track package installation/first-use via Scarf analytics."""
     global _telemetry_submitted
     
-    if _telemetry_submitted or _is_tracking_disabled():
+    if _telemetry_submitted or Telemetry._is_telemetry_disabled():
         return
     
     try:
@@ -49,13 +41,13 @@ def _track_install():
         with urllib.request.urlopen(req, timeout=2):  # nosec B310
             _telemetry_submitted = True
             
-    except (URLError, OSError, Exception):
+    except Exception:
         pass
 
 
 def _track_install_async():
     """Track installation in background thread to avoid blocking imports."""
-    if not _is_tracking_disabled():
+    if not Telemetry._is_telemetry_disabled():
         thread = threading.Thread(target=_track_install, daemon=True)
         thread.start()
 
