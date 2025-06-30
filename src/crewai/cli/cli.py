@@ -228,7 +228,7 @@ def update():
 def login():
     """Sign Up/Login to CrewAI Enterprise."""
     Settings().clear()
-    AuthenticationCommand().signup()
+    AuthenticationCommand().login()
 
 
 # DEPLOY CREWAI+ COMMANDS
