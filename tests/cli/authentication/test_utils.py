@@ -1,4 +1,5 @@
 import json
+import jwt
 import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
@@ -42,6 +43,68 @@ class TestValidateToken(unittest.TestCase):
         )
         mock_pyjwkclient.assert_called_once_with("https://mock_jwks_url")
         self.assertEqual(decoded_token, {"exp": 1719859200})
+
+    def test_validate_jwt_token_expired(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.ExpiredSignatureError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_invalid_audience(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.InvalidAudienceError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_invalid_issuer(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.InvalidIssuerError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_missing_required_claims(
+        self, mock_jwt, mock_pyjwkclient
+    ):
+        mock_jwt.decode.side_effect = jwt.MissingRequiredClaimError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_jwks_error(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.exceptions.PyJWKClientError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_invalid_token(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.InvalidTokenError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
 
 
 class TestTokenManager(unittest.TestCase):
