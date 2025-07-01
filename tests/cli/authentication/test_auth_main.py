@@ -102,9 +102,15 @@ class TestAuthenticationCommand(unittest.TestCase):
         mock_post.return_value = mock_response
 
         with self.assertRaises(requests.HTTPError):
-            self.auth_command._poll_for_token({"device_code": "123456"})
+            self.auth_command._poll_for_token(
+                {"device_code": "123456"},
+                client_id="CLIENT_ID",
+                token_poll_url="https://example.com",
+            )
 
-        mock_print.assert_not_called()
+        mock_print.assert_called_once_with(
+            "\nWaiting for authentication... ", style="bold blue", end=""
+        )
 
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.console.print")
