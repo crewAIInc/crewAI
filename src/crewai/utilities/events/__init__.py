@@ -51,6 +51,17 @@ from .llm_events import (
     LLMStreamChunkEvent,
 )
 
+from .memory_events import (
+    MemorySaveStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryRetrievalStartedEvent,
+    MemoryRetrievalCompletedEvent,
+)
+
 # events
 from .event_listener import EventListener
 from .third_party.agentops_listener import agentops_listener
