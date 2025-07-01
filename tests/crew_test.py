@@ -2489,7 +2489,7 @@ def test_using_contextual_memory():
         memory=True,
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
 
@@ -2500,35 +2500,35 @@ def test_memory_events_are_emitted():
     events = defaultdict(list)
 
     @crewai_event_bus.on(MemorySaveStartedEvent)
-    def handle_llm_failed(source, event):
+    def handle_memory_save_started(source, event):
         events["MemorySaveStartedEvent"].append(event)
 
     @crewai_event_bus.on(MemorySaveCompletedEvent)
-    def handle_llm_started(source, event):
+    def handle_memory_save_completed(source, event):
         events["MemorySaveCompletedEvent"].append(event)
 
     @crewai_event_bus.on(MemorySaveFailedEvent)
-    def handle_llm_completed(source, event):
+    def handle_memory_save_failed(source, event):
         events["MemorySaveFailedEvent"].append(event)
 
     @crewai_event_bus.on(MemoryQueryStartedEvent)
-    def handle_llm_failed(source, event):
+    def handle_memory_query_started(source, event):
         events["MemoryQueryStartedEvent"].append(event)
 
     @crewai_event_bus.on(MemoryQueryCompletedEvent)
-    def handle_llm_started(source, event):
+    def handle_memory_query_completed(source, event):
         events["MemoryQueryCompletedEvent"].append(event)
 
     @crewai_event_bus.on(MemoryQueryFailedEvent)
-    def handle_llm_completed(source, event):
+    def handle_memory_query_failed(source, event):
         events["MemoryQueryFailedEvent"].append(event)
 
     @crewai_event_bus.on(MemoryRetrievalStartedEvent)
-    def handle_llm_completed(source, event):
+    def handle_memory_retrieval_started(source, event):
         events["MemoryRetrievalStartedEvent"].append(event)
 
     @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
-    def handle_llm_completed(source, event):
+    def handle_memory_retrieval_completed(source, event):
         events["MemoryRetrievalCompletedEvent"].append(event)
 
     math_researcher = Agent(
@@ -2584,7 +2584,7 @@ def test_using_contextual_memory_with_long_term_memory():
         long_term_memory=LongTermMemory(),
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
         assert crew.memory is False
@@ -2685,7 +2685,7 @@ def test_using_contextual_memory_with_short_term_memory():
         short_term_memory=ShortTermMemory(),
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
         assert crew.memory is False
@@ -2714,7 +2714,7 @@ def test_disabled_memory_using_contextual_memory():
         memory=False,
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_not_called()
 
