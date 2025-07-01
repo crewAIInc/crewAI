@@ -22,7 +22,10 @@ class TestAuthenticationCommand(unittest.TestCase):
         }
         mock_post.return_value = mock_response
 
-        device_code_data = self.auth_command._get_device_code()
+        device_code_data = self.auth_command._get_device_code(
+            client_id="CLIENT_ID",
+            device_code_url="https://example.com/code/auth",
+        )
 
         self.assertEqual(device_code_data["device_code"], "123456")
         self.assertEqual(device_code_data["user_code"], "ABCDEF")
@@ -123,8 +126,18 @@ class TestAuthenticationCommand(unittest.TestCase):
         }
         mock_post.return_value = mock_response
 
-        self.auth_command._poll_for_token({"device_code": "123456", "interval": 0.01})
+        self.auth_command._poll_for_token(
+            {"device_code": "123456", "interval": 0.01},
+            client_id="CLIENT_ID",
+            token_poll_url="https://example.com",
+        )
 
-        mock_print.assert_called_once_with(
-            "Timeout: Failed to get the token. Please try again.", style="bold red"
+        mock_print.assert_has_calls(
+            [
+                call("\nWaiting for authentication... ", style="bold blue", end=""),
+                call(
+                    "Timeout: Failed to get the token. Please try again.",
+                    style="bold red",
+                ),
+            ]
         )
