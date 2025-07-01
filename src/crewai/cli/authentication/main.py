@@ -11,6 +11,7 @@ from .constants import (
     AUTH0_DOMAIN,
     WORKOS_DOMAIN,
     WORKOS_CLI_CONNECT_APP_ID,
+    WORKOS_ENVIRONMENT_ID,
 )
 
 from .utils import TokenManager, validate_jwt_token
@@ -126,23 +127,24 @@ class AuthenticationCommand:
     def _validate_and_save_token(self, token_data: Dict[str, Any]) -> None:
         """Validates the JWT token and saves the token to the token manager."""
 
+        jwt_token = token_data["access_token"]
         jwt_token_data = {
-            "jwt_token": token_data["id_token"],
+            "jwt_token": jwt_token,
             "jwks_url": f"https://{WORKOS_DOMAIN}/oauth2/jwks",
             "issuer": f"https://{WORKOS_DOMAIN}",
-            "audience": WORKOS_CLI_CONNECT_APP_ID,
+            "audience": WORKOS_ENVIRONMENT_ID,
         }
 
         # TODO: WORKOS - The following conditional is temporary until migration to WorkOS is complete.
         if self.user_provider == "auth0":
             jwt_token_data["jwks_url"] = f"https://{AUTH0_DOMAIN}/.well-known/jwks.json"
             jwt_token_data["issuer"] = f"https://{AUTH0_DOMAIN}/"
-            jwt_token_data["audience"] = AUTH0_CLIENT_ID
+            jwt_token_data["audience"] = AUTH0_AUDIENCE
 
-        validate_jwt_token(**jwt_token_data)
+        decoded_token = validate_jwt_token(**jwt_token_data)
 
-        expires_in = 360000  # Token expiration time in seconds
-        self.token_manager.save_tokens(token_data["access_token"], expires_in)
+        expires_at = decoded_token.get("exp", 0)
+        self.token_manager.save_tokens(jwt_token, expires_at)
 
     def _login_to_tool_repository(self) -> None:
         """Login to the tool repository."""

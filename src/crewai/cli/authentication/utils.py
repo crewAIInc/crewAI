@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 import jwt
@@ -87,14 +87,14 @@ class TokenManager:
         self.save_secure_file(key_filename, new_key)
         return new_key
 
-    def save_tokens(self, access_token: str, expires_in: int) -> None:
+    def save_tokens(self, access_token: str, expires_at: int) -> None:
         """
         Save the access token and its expiration time.
 
         :param access_token: The access token to save.
-        :param expires_in: The expiration time of the access token in seconds.
+        :param expires_at: The UNIX timestamp of the expiration time.
         """
-        expiration_time = datetime.now() + timedelta(seconds=expires_in)
+        expiration_time = datetime.fromtimestamp(expires_at)
         data = {
             "access_token": access_token,
             "expiration": expiration_time.isoformat(),
