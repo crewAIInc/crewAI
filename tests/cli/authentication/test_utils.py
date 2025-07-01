@@ -5,17 +5,17 @@ from unittest.mock import MagicMock, patch
 
 from cryptography.fernet import Fernet
 
-from crewai.cli.authentication.utils import TokenManager, validate_token
+from crewai.cli.authentication.utils import TokenManager, validate_jwt_token
 
 
 class TestValidateToken(unittest.TestCase):
     @patch("crewai.cli.authentication.utils.AsymmetricSignatureVerifier")
     @patch("crewai.cli.authentication.utils.TokenVerifier")
-    def test_validate_token(self, mock_token_verifier, mock_asymmetric_verifier):
+    def test_validate_jwt_token(self, mock_token_verifier, mock_asymmetric_verifier):
         mock_verifier_instance = mock_token_verifier.return_value
         mock_id_token = "mock_id_token"
 
-        validate_token(mock_id_token)
+        validate_jwt_token(mock_id_token)
 
         mock_asymmetric_verifier.assert_called_once_with(
             "https://crewai.us.auth0.com/.well-known/jwks.json"
