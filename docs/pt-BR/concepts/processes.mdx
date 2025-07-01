@@ -1,0 +1,66 @@
+---
+title: Processos
+description: Guia detalhado sobre o gerenciamento de fluxos de trabalho através de processos no CrewAI, com detalhes de implementação atualizados.
+icon: bars-staggered
+---
+
+## Visão Geral
+
+<Tip>
+  Processos orquestram a execução de tarefas por agentes, de maneira semelhante à gestão de projetos em equipes humanas.
+  Esses processos garantem que as tarefas sejam distribuídas e executadas de forma eficiente, alinhadas a uma estratégia predefinida.
+</Tip>
+
+## Implementações de Processos
+
+- **Sequencial**: Executa tarefas de forma sequencial, garantindo que as tarefas sejam concluídas em uma progressão ordenada.
+- **Hierárquico**: Organiza tarefas em uma hierarquia gerencial, onde as tarefas são delegadas e executadas com base numa cadeia de comando estruturada. Um modelo de linguagem de gerente (`manager_llm`) ou um agente gerente personalizado (`manager_agent`) deve ser especificado na crew para habilitar o processo hierárquico, facilitando a criação e o gerenciamento de tarefas pelo gerente.
+- **Processo Consensual (Planejado)**: Visando a tomada de decisão colaborativa entre agentes para execução de tarefas, esse tipo de processo introduz uma abordagem democrática ao gerenciamento de tarefas dentro do CrewAI. Está planejado para desenvolvimento futuro e ainda não está implementado no código-fonte.
+
+## O Papel dos Processos no Trabalho em Equipe
+Os processos permitem que agentes individuais atuem como uma unidade coesa, otimizando seus esforços para atingir objetivos comuns com eficiência e coerência.
+
+## Atribuindo Processos a uma Crew
+Para atribuir um processo a uma crew, especifique o tipo de processo ao criar a crew para definir a estratégia de execução. Para um processo hierárquico, garanta a definição de `manager_llm` ou `manager_agent` para o agente gerente.
+
+```python
+from crewai import Crew, Process
+
+# Exemplo: Criando uma crew com processo sequencial
+crew = Crew(
+    agents=my_agents,
+    tasks=my_tasks,
+    process=Process.sequential
+)
+
+# Exemplo: Criando uma crew com processo hierárquico
+# Certifique-se de fornecer um manager_llm ou manager_agent
+crew = Crew(
+    agents=my_agents,
+    tasks=my_tasks,
+    process=Process.hierarchical,
+    manager_llm="gpt-4o"
+    # ou
+    # manager_agent=my_manager_agent
+)
+```
+**Nota:** Certifique-se de que `my_agents` e `my_tasks` estejam definidos antes de criar o objeto `Crew`, e para o processo hierárquico, é necessário também fornecer o `manager_llm` ou `manager_agent`.
+
+## Processo Sequencial
+
+Este método reflete fluxos de trabalho dinâmicos de equipes, progredindo nas tarefas de maneira cuidadosa e sistemática. A execução das tarefas segue a ordem preestabelecida na lista de tarefas, com a saída de uma tarefa servindo de contexto para a próxima.
+
+Para personalizar o contexto das tarefas, utilize o parâmetro `context` na classe `Task` para especificar as saídas que devem ser usadas como contexto para as tarefas subsequentes.
+
+## Processo Hierárquico
+
+Emulando uma hierarquia corporativa, o CrewAI permite especificar um agente gerente personalizado ou criar um automaticamente, exigindo a especificação de um modelo de linguagem de gerente (`manager_llm`). Esse agente supervisiona a execução das tarefas, incluindo planejamento, delegação e validação. As tarefas não são pré-atribuídas; o gerente aloca tarefas aos agentes com base em suas capacidades, revisa as saídas e avalia a conclusão das tarefas.
+
+## Classe Process: Visão Detalhada
+
+A classe `Process` é implementada como uma enumeração (`Enum`), garantindo segurança de tipo e restringindo os valores de processos aos tipos definidos (`sequential`, `hierarchical`). O processo consensual está planejado para inclusão futura, reforçando nosso compromisso com o desenvolvimento contínuo e a inovação.
+
+## Conclusão
+
+A colaboração estruturada possibilitada pelos processos dentro do CrewAI é fundamental para permitir o trabalho em equipe sistemático entre agentes.
+Esta documentação foi atualizada para refletir os mais recentes recursos, melhorias e a planejada integração do Processo Consensual, garantindo que os usuários tenham acesso às informações mais atuais e abrangentes.

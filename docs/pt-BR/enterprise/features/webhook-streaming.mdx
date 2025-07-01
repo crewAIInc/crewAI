@@ -1,0 +1,81 @@
+---
+title: Webhook Streaming
+description: "Usando Webhook Streaming para transmitir eventos para o seu webhook"
+icon: "webhook"
+---
+
+## Visão Geral
+
+O Enterprise Event Streaming permite que você receba atualizações em tempo real via webhook sobre suas crews e flows implantados no CrewAI Enterprise, como chamadas de modelo, uso de ferramentas e etapas do flow.
+
+## Uso
+
+Ao utilizar a API Kickoff, inclua um objeto `webhooks` em sua requisição, por exemplo:
+
+```json
+{
+  "inputs": {"foo": "bar"},
+  "webhooks": {
+    "events": ["crew_kickoff_started", "llm_call_started"],
+    "url": "https://your.endpoint/webhook",
+    "realtime": false,
+    "authentication": {
+      "strategy": "bearer",
+      "token": "my-secret-token"
+    }
+  }
+}
+```
+
+Se `realtime` estiver definido como `true`, cada evento será entregue individualmente e imediatamente, com impacto no desempenho da crew/flow.
+
+## Formato do Webhook
+
+Cada webhook envia uma lista de eventos:
+
+```json
+{
+  "events": [
+    {
+      "id": "event-id",
+      "execution_id": "crew-run-id",
+      "timestamp": "2025-02-16T10:58:44.965Z",
+      "type": "llm_call_started",
+      "data": {
+        "model": "gpt-4",
+        "messages": [
+          {"role": "system", "content": "You are an assistant."},
+          {"role": "user", "content": "Summarize this article."}
+        ]
+      }
+    }
+  ]
+}
+```
+
+A estrutura do objeto `data` varia conforme o tipo de evento. Consulte a [lista de eventos](https://github.com/crewAIInc/crewAI/tree/main/src/crewai/utilities/events) no GitHub.
+
+Como as requisições são enviadas via HTTP, a ordem dos eventos não pode ser garantida. Caso precise de ordenação, utilize o campo `timestamp`.
+
+## Eventos Suportados
+
+O CrewAI oferece suporte a eventos do sistema e eventos personalizados no Enterprise Event Streaming. Esses eventos são enviados para o endpoint do seu webhook configurado durante a execução das crews e flows.
+
+- `crew_kickoff_started`
+- `crew_step_started`
+- `crew_step_completed`
+- `crew_execution_completed`
+- `llm_call_started`
+- `llm_call_completed`
+- `tool_usage_started`
+- `tool_usage_completed`
+- `crew_test_failed`
+- *...e outros*
+
+Os nomes dos eventos correspondem ao event bus interno. Veja o [código fonte no GitHub](https://github.com/crewAIInc/crewAI/tree/main/src/crewai/utilities/events) para a lista completa.
+
+Você pode emitir seus próprios eventos personalizados, e eles serão entregues através do webhook stream juntamente com os eventos do sistema.
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com integração de webhook ou solução de problemas.
+</Card>

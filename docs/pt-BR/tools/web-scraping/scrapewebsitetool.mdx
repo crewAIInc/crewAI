@@ -1,0 +1,47 @@
+---
+title: Raspar Site
+description: O `ScrapeWebsiteTool` foi desenvolvido para extrair e ler o conteúdo de um site especificado.
+icon: magnifying-glass-location
+---
+
+# `ScrapeWebsiteTool`
+
+<Note>
+    Ainda estamos trabalhando para melhorar as ferramentas, então pode haver comportamentos inesperados ou mudanças futuras.
+</Note>
+
+## Descrição
+
+Uma ferramenta desenvolvida para extrair e ler o conteúdo de um site especificado. Ela é capaz de lidar com diversos tipos de páginas web fazendo requisições HTTP e analisando o conteúdo HTML recebido.
+Esta ferramenta pode ser especialmente útil para tarefas de raspagem de dados, coleta de dados ou extração de informações específicas de sites.
+
+## Instalação
+
+Instale o pacote crewai_tools
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+```python
+from crewai_tools import ScrapeWebsiteTool
+
+# Para permitir a raspagem de qualquer site encontrado durante a execução
+tool = ScrapeWebsiteTool()
+
+# Inicialize a ferramenta com a URL do site,
+# assim o agente só poderá raspar o conteúdo do site especificado
+tool = ScrapeWebsiteTool(website_url='https://www.example.com')
+
+# Extraia o texto do site
+text = tool.run()
+print(text)
+```
+
+## Argumentos
+
+| Argumento       | Tipo     | Descrição                                                                                                                         |
+|:---------------|:---------|:-----------------------------------------------------------------------------------------------------------------------------------|
+| **website_url**  | `string`   | **Obrigatório** URL do site para leitura do arquivo. Esta é a entrada principal da ferramenta, especificando de qual site o conteúdo deve ser raspado e lido.                                                |

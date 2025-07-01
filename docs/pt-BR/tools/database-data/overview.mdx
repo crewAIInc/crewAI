@@ -1,0 +1,58 @@
+---
+title: "Visão Geral"
+description: "Conecte-se a bancos de dados, armazenamentos vetoriais e data warehouses para acesso abrangente aos dados"
+icon: "face-smile"
+---
+
+Essas ferramentas permitem que seus agentes interajam com diversos sistemas de banco de dados, desde bancos de dados SQL tradicionais até armazenamentos vetoriais modernos e data warehouses.
+
+## **Ferramentas Disponíveis**
+
+<CardGroup cols={2}>
+  <Card title="MySQL Tool" icon="database" href="/pt-BR/tools/database-data/mysqltool">
+    Conecte-se e faça consultas a bancos de dados MySQL com operações SQL.
+  </Card>
+
+  <Card title="PostgreSQL Search" icon="elephant" href="/pt-BR/tools/database-data/pgsearchtool">
+    Pesquise e consulte bancos de dados PostgreSQL de forma eficiente.
+  </Card>
+
+  <Card title="Snowflake Search" icon="snowflake" href="/pt-BR/tools/database-data/snowflakesearchtool">
+    Acesse o data warehouse Snowflake para análises e relatórios.
+  </Card>
+
+  <Card title="NL2SQL Tool" icon="language" href="/pt-BR/tools/database-data/nl2sqltool">
+    Converta automaticamente consultas em linguagem natural para comandos SQL.
+  </Card>
+
+  <Card title="Qdrant Vector Search" icon="vector-square" href="/pt-BR/tools/database-data/qdrantvectorsearchtool">
+    Pesquise embeddings vetoriais usando o banco de dados vetorial Qdrant.
+  </Card>
+
+  <Card title="Weaviate Vector Search" icon="network-wired" href="/pt-BR/tools/database-data/weaviatevectorsearchtool">
+    Realize buscas semânticas com o banco de dados vetorial Weaviate.
+  </Card>
+</CardGroup>
+
+## **Casos de Uso Comuns**
+
+- **Análise de Dados**: Consulte bancos de dados para inteligência de negócios e relatórios
+- **Busca Vetorial**: Encontre conteúdos similares utilizando embeddings semânticos
+- **Operações ETL**: Extraia, transforme e carregue dados entre sistemas
+- **Análise em Tempo Real**: Acesse dados ao vivo para tomada de decisões
+
+```python
+from crewai_tools import MySQLTool, QdrantVectorSearchTool, NL2SQLTool
+
+# Create database tools
+mysql_db = MySQLTool()
+vector_search = QdrantVectorSearchTool()
+nl_to_sql = NL2SQLTool()
+
+# Add to your agent
+agent = Agent(
+    role="Data Analyst",
+    tools=[mysql_db, vector_search, nl_to_sql],
+    goal="Extract insights from various data sources"
+)
+```

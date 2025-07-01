@@ -46,4 +46,6 @@ def setup_test_environment():
 def vcr_config(request) -> dict:
     return {
         "cassette_library_dir": "tests/cassettes",
+        "record_mode": "new_episodes",
+        "filter_headers": [("authorization", "AUTHORIZATION-XXX")],
     }

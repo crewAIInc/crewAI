@@ -1,0 +1,122 @@
+---
+title: Implementação de LLM Personalizada
+description: Aprenda a criar implementações personalizadas de LLM no CrewAI.
+icon: code
+---
+
+## Visão Geral
+
+O CrewAI oferece suporte a implementações personalizadas de LLM por meio da classe abstrata `BaseLLM`. Isso permite integrar qualquer provedor de LLM que não tenha suporte nativo no LiteLLM ou implementar mecanismos de autenticação personalizados.
+
+## Início Rápido
+
+Aqui está uma implementação mínima de LLM personalizada:
+
+```python
+# (não traduzir blocos de código)
+```
+
+## Usando Seu LLM Personalizado
+
+```python
+# (não traduzir blocos de código)
+```
+
+## Métodos Necessários
+
+### Construtor: `__init__()`
+
+**Crítico**: Você deve chamar `super().__init__(model, temperature)` com os parâmetros necessários:
+
+```python
+# (não traduzir blocos de código)
+```
+
+### Método Abstrato: `call()`
+
+O método `call()` é o núcleo da sua implementação de LLM. Ele deve:
+
+- Aceitar mensagens (string ou lista de dicionários com 'role' e 'content')
+- Retornar uma resposta como string
+- Lidar com ferramentas e chamada de funções, se suportado
+- Lançar exceções apropriadas para erros
+
+### Métodos Opcionais
+
+```python
+# (não traduzir blocos de código)
+```
+
+## Padrões Comuns
+
+### Tratamento de Erros
+
+```python
+# (não traduzir blocos de código)
+```
+
+### Autenticação Personalizada
+
+```python
+# (não traduzir blocos de código)
+```
+
+### Suporte a Stop Words
+
+O CrewAI adiciona automaticamente `"\nObservation:"` como stop word para controlar o comportamento do agente. Se o seu LLM suporta stop words:
+
+```python
+# (não traduzir blocos de código)
+```
+
+Se o seu LLM não suporta stop words nativamente:
+
+```python
+# (não traduzir blocos de código)
+```
+
+## Chamada de Funções
+
+Se o seu LLM suporta chamada de funções, implemente o fluxo completo:
+
+```python
+# (não traduzir blocos de código)
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros no Construtor**
+```python
+# ❌ Errado - parâmetros obrigatórios ausentes
+def __init__(self, api_key: str):
+    super().__init__()
+
+# ✅ Correto
+def __init__(self, model: str, api_key: str, temperature: Optional[float] = None):
+    super().__init__(model=model, temperature=temperature)
+```
+
+**Chamada de Funções Não Funciona**
+- Certifique-se de que `supports_function_calling()` retorna `True`
+- Verifique se você lida com `tool_calls` na resposta
+- Assegure-se de que o parâmetro `available_functions` está sendo corretamente utilizado
+
+**Falhas de Autenticação**
+- Verifique o formato e as permissões da chave de API
+- Confira o formato do header de autenticação
+- Certifique-se de que as URLs dos endpoints estão corretas
+
+**Erros de Parsing de Resposta**
+- Valide a estrutura da resposta antes de acessar campos aninhados
+- Trate casos em que o content pode ser None
+- Adicione tratamento de erros para respostas malformadas
+
+## Testando Seu LLM Personalizado
+
+```python
+# (não traduzir blocos de código)
+```
+
+Este guia cobre o essencial para implementar LLMs personalizados no CrewAI.

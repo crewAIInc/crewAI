@@ -1,0 +1,305 @@
+---
+title: Integração Stripe
+description: "Processamento de pagamentos e gerenciamento de assinaturas com integração Stripe para CrewAI."
+icon: "stripe"
+---
+
+## Visão Geral
+
+Permita que seus agentes gerenciem pagamentos, assinaturas e faturamento de clientes através do Stripe. Gerencie dados de clientes, processe assinaturas, gerencie produtos e acompanhe transações financeiras para otimizar seus fluxos de pagamento com automação impulsionada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração com o Stripe, certifique-se de que você tem:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com) com uma assinatura ativa
+- Uma conta Stripe com permissões apropriadas de API
+- Sua conta Stripe conectada através da [página de Integrações](https://app.crewai.com/integrations)
+
+## Ferramentas Disponíveis
+
+### **Gerenciamento de Clientes**
+
+<AccordionGroup>
+  <Accordion title="STRIPE_CREATE_CUSTOMER">
+    **Descrição:** Crie um novo cliente em sua conta Stripe.
+
+    **Parâmetros:**
+    - `emailCreateCustomer` (string, obrigatório): Endereço de e-mail do cliente
+    - `name` (string, opcional): Nome completo do cliente
+    - `description` (string, opcional): Descrição do cliente para referência interna
+    - `metadataCreateCustomer` (objeto, opcional): Metadados adicionais como pares chave-valor (exemplo: `{"field1": 1, "field2": 2}`)
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_CUSTOMER_BY_ID">
+    **Descrição:** Recupera um cliente específico pelo ID do cliente Stripe.
+
+    **Parâmetros:**
+    - `idGetCustomer` (string, obrigatório): O ID do cliente Stripe a ser recuperado
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_CUSTOMERS">
+    **Descrição:** Recupera uma lista de clientes com filtragem opcional.
+
+    **Parâmetros:**
+    - `emailGetCustomers` (string, opcional): Filtra clientes pelo endereço de e-mail
+    - `createdAfter` (string, opcional): Filtra clientes criados após esta data (timestamp Unix)
+    - `createdBefore` (string, opcional): Filtra clientes criados antes desta data (timestamp Unix)
+    - `limitGetCustomers` (string, opcional): Número máximo de clientes a retornar (padrão: 10)
+  </Accordion>
+
+  <Accordion title="STRIPE_UPDATE_CUSTOMER">
+    **Descrição:** Atualiza as informações de um cliente existente.
+
+    **Parâmetros:**
+    - `customerId` (string, obrigatório): O ID do cliente a ser atualizado
+    - `emailUpdateCustomer` (string, opcional): Novo endereço de e-mail
+    - `name` (string, opcional): Novo nome do cliente
+    - `description` (string, opcional): Nova descrição do cliente
+    - `metadataUpdateCustomer` (objeto, opcional): Novos metadados como pares chave-valor
+  </Accordion>
+</AccordionGroup>
+
+### **Gerenciamento de Assinaturas**
+
+<AccordionGroup>
+  <Accordion title="STRIPE_CREATE_SUBSCRIPTION">
+    **Descrição:** Cria uma nova assinatura para um cliente.
+
+    **Parâmetros:**
+    - `customerIdCreateSubscription` (string, obrigatório): O ID do cliente para o qual a assinatura será criada
+    - `plan` (string, obrigatório): O ID do plano para assinatura - Use as Configurações do Workflow do Portal Connect para permitir que usuários selecionem um plano
+    - `metadataCreateSubscription` (objeto, opcional): Metadados adicionais para a assinatura
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_SUBSCRIPTIONS">
+    **Descrição:** Recupera assinaturas com filtragem opcional.
+
+    **Parâmetros:**
+    - `customerIdGetSubscriptions` (string, opcional): Filtra assinaturas por ID do cliente
+    - `subscriptionStatus` (string, opcional): Filtra por status da assinatura - Opções: incomplete, incomplete_expired, trialing, active, past_due, canceled, unpaid
+    - `limitGetSubscriptions` (string, opcional): Número máximo de assinaturas a retornar (padrão: 10)
+  </Accordion>
+</AccordionGroup>
+
+### **Gerenciamento de Produtos**
+
+<AccordionGroup>
+  <Accordion title="STRIPE_CREATE_PRODUCT">
+    **Descrição:** Cria um novo produto no seu catálogo Stripe.
+
+    **Parâmetros:**
+    - `productName` (string, obrigatório): Nome do produto
+    - `description` (string, opcional): Descrição do produto
+    - `metadataProduct` (objeto, opcional): Metadados adicionais do produto como pares chave-valor
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_PRODUCT_BY_ID">
+    **Descrição:** Recupera um produto específico pelo ID do produto Stripe.
+
+    **Parâmetros:**
+    - `productId` (string, obrigatório): O ID do produto Stripe a ser recuperado
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_PRODUCTS">
+    **Descrição:** Recupera uma lista de produtos com filtragem opcional.
+
+    **Parâmetros:**
+    - `createdAfter` (string, opcional): Filtra produtos criados após esta data (timestamp Unix)
+    - `createdBefore` (string, opcional): Filtra produtos criados antes desta data (timestamp Unix)
+    - `limitGetProducts` (string, opcional): Número máximo de produtos a retornar (padrão: 10)
+  </Accordion>
+</AccordionGroup>
+
+### **Operações Financeiras**
+
+<AccordionGroup>
+  <Accordion title="STRIPE_GET_BALANCE_TRANSACTIONS">
+    **Descrição:** Recupera transações de saldo da sua conta Stripe.
+
+    **Parâmetros:**
+    - `balanceTransactionType` (string, opcional): Filtra por tipo de transação - Opções: charge, refund, payment, payment_refund
+    - `paginationParameters` (objeto, opcional): Configurações de paginação
+      - `pageCursor` (string, opcional): Cursor da página para paginação
+  </Accordion>
+
+  <Accordion title="STRIPE_GET_PLANS">
+    **Descrição:** Recupera planos de assinatura da sua conta Stripe.
+
+    **Parâmetros:**
+    - `isPlanActive` (boolean, opcional): Filtra por status do plano - true para planos ativos, false para inativos
+    - `paginationParameters` (objeto, opcional): Configurações de paginação
+      - `pageCursor` (string, opcional): Cursor da página para paginação
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente Stripe
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Stripe tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with Stripe capabilities
+stripe_agent = Agent(
+    role="Payment Manager",
+    goal="Manage customer payments, subscriptions, and billing operations efficiently",
+    backstory="An AI assistant specialized in payment processing and subscription management.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new customer
+create_customer_task = Task(
+    description="Create a new premium customer John Doe with email john.doe@example.com",
+    agent=stripe_agent,
+    expected_output="Customer created successfully with customer ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[stripe_agent],
+    tasks=[create_customer_task]
+)
+
+crew.kickoff()
+```
+
+### Filtrando Ferramentas Stripe Específicas
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific Stripe tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["stripe_create_customer", "stripe_create_subscription", "stripe_get_balance_transactions"]
+)
+
+billing_manager = Agent(
+    role="Billing Manager",
+    goal="Handle customer billing, subscriptions, and payment processing",
+    backstory="An experienced billing manager who handles subscription lifecycle and payment operations.",
+    tools=enterprise_tools
+)
+
+# Task to manage billing operations
+billing_task = Task(
+    description="Create a new customer and set up their premium subscription plan",
+    agent=billing_manager,
+    expected_output="Customer created and subscription activated successfully"
+)
+
+crew = Crew(
+    agents=[billing_manager],
+    tasks=[billing_task]
+)
+
+crew.kickoff()
+```
+
+### Gerenciamento de Assinaturas
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+subscription_manager = Agent(
+    role="Subscription Manager",
+    goal="Manage customer subscriptions and optimize recurring revenue",
+    backstory="An AI assistant that specializes in subscription lifecycle management and customer retention.",
+    tools=[enterprise_tools]
+)
+
+# Task to manage subscription operations
+subscription_task = Task(
+    description="""
+    1. Create a new product "Premium Service Plan" with advanced features
+    2. Set up subscription plans with different tiers
+    3. Create customers and assign them to appropriate plans
+    4. Monitor subscription status and handle billing issues
+    """,
+    agent=subscription_manager,
+    expected_output="Subscription management system configured with customers and active plans"
+)
+
+crew = Crew(
+    agents=[subscription_manager],
+    tasks=[subscription_task]
+)
+
+crew.kickoff()
+```
+
+### Análises e Relatórios Financeiros
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+financial_analyst = Agent(
+    role="Financial Analyst",
+    goal="Analyze payment data and generate financial insights",
+    backstory="An analytical AI that excels at extracting insights from payment and subscription data.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving financial analysis
+analytics_task = Task(
+    description="""
+    1. Retrieve balance transactions for the current month
+    2. Analyze customer payment patterns and subscription trends
+    3. Identify high-value customers and subscription performance
+    4. Generate monthly financial performance report
+    """,
+    agent=financial_analyst,
+    expected_output="Comprehensive financial analysis with payment insights and recommendations"
+)
+
+crew = Crew(
+    agents=[financial_analyst],
+    tasks=[analytics_task]
+)
+
+crew.kickoff()
+```
+
+## Referência de Status de Assinatura
+
+Compreendendo os status de assinaturas:
+
+- **incomplete** - A assinatura requer método de pagamento ou confirmação de pagamento
+- **incomplete_expired** - A assinatura expirou antes da confirmação do pagamento
+- **trialing** - A assinatura está em período de avaliação
+- **active** - A assinatura está ativa e em dia
+- **past_due** - O pagamento falhou mas a assinatura ainda está ativa
+- **canceled** - A assinatura foi cancelada
+- **unpaid** - O pagamento falhou e a assinatura não está mais ativa
+
+## Uso de Metadados
+
+Os metadados permitem que você armazene informações adicionais sobre clientes, assinaturas e produtos:
+
+```json
+{
+  "customer_segment": "enterprise",
+  "acquisition_source": "google_ads",
+  "lifetime_value": "high",
+  "custom_field_1": "value1"
+}
+```
+
+Esta integração permite uma automação abrangente do gerenciamento de pagamentos e assinaturas, possibilitando que seus agentes de IA administrem operações de faturamento perfeitamente dentro do seu ecossistema Stripe.

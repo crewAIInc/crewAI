@@ -1,0 +1,146 @@
+---
+title: Ferramenta LlamaIndex
+description: A `LlamaIndexTool` é um wrapper para ferramentas e mecanismos de consulta do LlamaIndex.
+icon: address-book
+---
+
+# `LlamaIndexTool`
+
+## Descrição
+
+A `LlamaIndexTool` foi projetada para ser um wrapper geral em torno das ferramentas e mecanismos de consulta do LlamaIndex, permitindo que você aproveite os recursos do LlamaIndex em pipelines de RAG/agent como ferramentas que podem ser acopladas aos agentes do CrewAI. Essa ferramenta permite integrar de forma transparente as poderosas capacidades de processamento e recuperação de dados do LlamaIndex em seus fluxos de trabalho com o CrewAI.
+
+## Instalação
+
+Para utilizar esta ferramenta, é necessário instalar o LlamaIndex:
+
+```shell
+uv add llama-index
+```
+
+## Passos para Começar
+
+Para utilizar a `LlamaIndexTool` de forma eficaz, siga os passos abaixo:
+
+1. **Instale o LlamaIndex**: Instale o pacote LlamaIndex usando o comando acima.
+2. **Configure o LlamaIndex**: Siga a [documentação do LlamaIndex](https://docs.llamaindex.ai/) para configurar um pipeline de RAG/agent.
+3. **Crie uma Ferramenta ou Mecanismo de Consulta**: Crie uma ferramenta ou mecanismo de consulta do LlamaIndex que você deseja usar com o CrewAI.
+
+## Exemplo
+
+Os exemplos a seguir demonstram como inicializar a ferramenta a partir de diferentes componentes do LlamaIndex:
+
+### A partir de uma ferramenta do LlamaIndex
+
+```python Code
+from crewai_tools import LlamaIndexTool
+from crewai import Agent
+from llama_index.core.tools import FunctionTool
+
+# Exemplo 1: Inicializando a partir do FunctionTool
+def search_data(query: str) -> str:
+    """Busca por informações nos dados."""
+    # Sua implementação aqui
+    return f"Results for: {query}"
+
+# Criação de um LlamaIndex FunctionTool
+og_tool = FunctionTool.from_defaults(
+    search_data, 
+    name="DataSearchTool",
+    description="Search for information in the data"
+)
+
+# Envolvendo com a LlamaIndexTool
+tool = LlamaIndexTool.from_tool(og_tool)
+
+# Definindo um agente que utiliza a ferramenta
+@agent
+def researcher(self) -> Agent:
+    '''
+    Este agente usa a LlamaIndexTool para buscar informações.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        tools=[tool]
+    )
+```
+
+### A partir de Ferramentas do LlamaHub
+
+```python Code
+from crewai_tools import LlamaIndexTool
+from llama_index.tools.wolfram_alpha import WolframAlphaToolSpec
+
+# Inicializando a partir das ferramentas do LlamaHub
+wolfram_spec = WolframAlphaToolSpec(app_id="your_app_id")
+wolfram_tools = wolfram_spec.to_tool_list()
+tools = [LlamaIndexTool.from_tool(t) for t in wolfram_tools]
+```
+
+### A partir de um mecanismo de consulta do LlamaIndex
+
+```python Code
+from crewai_tools import LlamaIndexTool
+from llama_index.core import VectorStoreIndex
+from llama_index.core.readers import SimpleDirectoryReader
+
+# Carregar documentos
+documents = SimpleDirectoryReader("./data").load_data()
+
+# Criar um índice
+index = VectorStoreIndex.from_documents(documents)
+
+# Criar um mecanismo de consulta
+query_engine = index.as_query_engine()
+
+# Criar uma LlamaIndexTool a partir do mecanismo de consulta
+query_tool = LlamaIndexTool.from_query_engine(
+    query_engine,
+    name="Company Data Query Tool",
+    description="Use this tool to lookup information in company documents"
+)
+```
+
+## Métodos da Classe
+
+A `LlamaIndexTool` oferece dois métodos de classe principais para criar instâncias:
+
+### from_tool
+
+Cria uma `LlamaIndexTool` a partir de uma ferramenta do LlamaIndex.
+
+```python Code
+@classmethod
+def from_tool(cls, tool: Any, **kwargs: Any) -> "LlamaIndexTool":
+    # Implementation details
+```
+
+### from_query_engine
+
+Cria uma `LlamaIndexTool` a partir de um mecanismo de consulta do LlamaIndex.
+
+```python Code
+@classmethod
+def from_query_engine(
+    cls,
+    query_engine: Any,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    return_direct: bool = False,
+    **kwargs: Any,
+) -> "LlamaIndexTool":
+    # Implementation details
+```
+
+## Parâmetros
+
+O método `from_query_engine` aceita os seguintes parâmetros:
+
+- **query_engine**: Obrigatório. O mecanismo de consulta do LlamaIndex a ser envolvido.
+- **name**: Opcional. O nome da ferramenta.
+- **description**: Opcional. A descrição da ferramenta.
+- **return_direct**: Opcional. Define se deve retornar a resposta diretamente. O padrão é `False`.
+
+## Conclusão
+
+A `LlamaIndexTool` oferece uma maneira poderosa de integrar as capacidades do LlamaIndex aos agentes do CrewAI. Ao envolver ferramentas e mecanismos de consulta do LlamaIndex, ela permite que os agentes utilizem funcionalidades sofisticadas de recuperação e processamento de dados, aprimorando sua capacidade de trabalhar com fontes de informação complexas.

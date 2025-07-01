@@ -1,9 +1,10 @@
-from unittest.mock import ANY, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from crewai import Agent, Task
 from crewai.llm import LLM
+from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.events import (
@@ -267,3 +268,37 @@ def test_guardrail_when_an_error_occurs(sample_agent, task_output):
             max_retries=0,
         )
         task.execute_sync(agent=sample_agent)
+
+
+def test_hallucination_guardrail_integration():
+    """Test that HallucinationGuardrail integrates properly with the task system."""
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "test result"
+    agent.crew = None
+
+    mock_llm = Mock(spec=LLM)
+    guardrail = HallucinationGuardrail(
+        context="Test reference context for validation", llm=mock_llm, threshold=8.0
+    )
+
+    task = Task(
+        description="Test task with hallucination guardrail",
+        expected_output="Valid output",
+        guardrail=guardrail,
+    )
+
+    result = task.execute_sync(agent=agent)
+    assert isinstance(result, TaskOutput)
+    assert result.raw == "test result"
+
+
+def test_hallucination_guardrail_description_in_events():
+    """Test that HallucinationGuardrail description appears correctly in events."""
+    mock_llm = Mock(spec=LLM)
+    guardrail = HallucinationGuardrail(context="Test context", llm=mock_llm)
+
+    assert guardrail.description == "HallucinationGuardrail (no-op)"
+
+    event = LLMGuardrailStartedEvent(guardrail=guardrail, retry_count=0)
+    assert event.guardrail == "HallucinationGuardrail (no-op)"

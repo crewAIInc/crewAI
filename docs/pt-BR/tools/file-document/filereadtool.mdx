@@ -1,0 +1,44 @@
+---
+title: Leitura de Arquivo
+description: O `FileReadTool` foi desenvolvido para ler arquivos do sistema de arquivos local.
+icon: folders
+---
+
+## Visão Geral
+
+<Note>
+    Ainda estamos trabalhando para melhorar as ferramentas, portanto pode haver comportamentos inesperados ou alterações no futuro.
+</Note>
+
+O FileReadTool representa conceitualmente um conjunto de funcionalidades dentro do pacote crewai_tools voltadas para facilitar a leitura e a recuperação de conteúdo de arquivos.
+Esse conjunto inclui ferramentas para processar arquivos de texto em lote, ler arquivos de configuração em tempo de execução e importar dados para análise.
+Ele suporta uma variedade de formatos de arquivo baseados em texto, como `.txt`, `.csv`, `.json` e outros. Dependendo do tipo de arquivo, o conjunto oferece funcionalidades especializadas,
+como converter conteúdo JSON em um dicionário Python para facilitar o uso.
+
+## Instalação
+
+Para utilizar as funcionalidades anteriormente atribuídas ao FileReadTool, instale o pacote crewai_tools:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo de Uso
+
+Para começar a usar o FileReadTool:
+
+```python Code
+from crewai_tools import FileReadTool
+
+# Inicialize a ferramenta para ler quaisquer arquivos que os agentes conhecem ou informe o caminho para
+file_read_tool = FileReadTool()
+
+# OU
+
+# Inicialize a ferramenta com um caminho de arquivo específico, assim o agente poderá ler apenas o conteúdo do arquivo especificado
+file_read_tool = FileReadTool(file_path='path/to/your/file.txt')
+```
+
+## Argumentos
+
+- `file_path`: O caminho para o arquivo que você deseja ler. Aceita caminhos absolutos e relativos. Certifique-se de que o arquivo exista e de que você tenha as permissões necessárias para acessá-lo.

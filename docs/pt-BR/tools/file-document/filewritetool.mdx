@@ -1,0 +1,50 @@
+---
+title: Escrita de Arquivo
+description: O `FileWriterTool` foi projetado para escrever conteúdo em arquivos.
+icon: file-pen
+---
+
+# `FileWriterTool`
+
+## Descrição
+
+O `FileWriterTool` é um componente do pacote crewai_tools, projetado para simplificar o processo de escrita de conteúdo em arquivos com compatibilidade multiplataforma (Windows, Linux, macOS).  
+É particularmente útil em cenários como geração de relatórios, salvamento de logs, criação de arquivos de configuração e mais.  
+Essa ferramenta lida com diferenças de caminhos entre sistemas operacionais, suporta codificação UTF-8 e cria diretórios automaticamente caso eles não existam, facilitando a organização da sua saída de forma confiável em diferentes plataformas.
+
+## Instalação
+
+Instale o pacote crewai_tools para utilizar o `FileWriterTool` em seus projetos:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+Para começar a usar o `FileWriterTool`:
+
+```python Code
+from crewai_tools import FileWriterTool
+
+# Inicialize a ferramenta
+file_writer_tool = FileWriterTool()
+
+# Escreva conteúdo em um arquivo em um diretório especificado
+result = file_writer_tool._run('example.txt', 'This is a test content.', 'test_directory')
+print(result)
+```
+
+## Argumentos
+
+- `filename`: O nome do arquivo que você deseja criar ou sobrescrever.
+- `content`: O conteúdo a ser escrito no arquivo.
+- `directory` (opcional): O caminho para o diretório onde o arquivo será criado. Por padrão, utiliza o diretório atual (`.`). Se o diretório não existir, ele será criado.
+
+## Conclusão
+
+Ao integrar o `FileWriterTool` aos seus crews, os agentes podem escrever conteúdo em arquivos de forma confiável em diferentes sistemas operacionais.  
+Esta ferramenta é essencial para tarefas que exigem salvamento de dados de saída, criação de sistemas de arquivos estruturados e manipulação de operações de arquivos multiplataforma.  
+É especialmente recomendada para usuários do Windows que possam enfrentar problemas ao escrever arquivos com as operações padrão do Python.
+
+Seguindo as orientações de configuração e uso fornecidas, incorporar essa ferramenta em projetos é simples e garante um comportamento consistente de escrita de arquivos em todas as plataformas.

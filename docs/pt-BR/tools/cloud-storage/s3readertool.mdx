@@ -1,0 +1,144 @@
+---
+title: S3 Reader Tool
+description: O `S3ReaderTool` permite que agentes CrewAI leiam arquivos de buckets Amazon S3.
+icon: aws
+---
+
+# `S3ReaderTool`
+
+## Descrição
+
+O `S3ReaderTool` foi projetado para ler arquivos de buckets Amazon S3. Esta ferramenta permite que os agentes CrewAI acessem e recuperem conteúdos armazenados no S3, tornando-a ideal para fluxos de trabalho que exigem leitura de dados, arquivos de configuração ou qualquer outro conteúdo armazenado no AWS S3.
+
+## Instalação
+
+Para utilizar esta ferramenta, é necessário instalar as dependências requeridas:
+
+```shell
+uv add boto3
+```
+
+## Passos para Começar
+
+Para usar o `S3ReaderTool` efetivamente, siga estes passos:
+
+1. **Instale as Dependências**: Instale os pacotes necessários usando o comando acima.
+2. **Configure as Credenciais AWS**: Defina suas credenciais AWS como variáveis de ambiente.
+3. **Inicialize a Ferramenta**: Crie uma instância da ferramenta.
+4. **Especifique o Caminho S3**: Forneça o caminho S3 do arquivo que deseja ler.
+
+## Exemplo
+
+O exemplo a seguir demonstra como utilizar o `S3ReaderTool` para ler um arquivo de um bucket S3:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.s3 import S3ReaderTool
+
+# Initialize the tool
+s3_reader_tool = S3ReaderTool()
+
+# Define an agent that uses the tool
+file_reader_agent = Agent(
+    role="File Reader",
+    goal="Read files from S3 buckets",
+    backstory="An expert in retrieving and processing files from cloud storage.",
+    tools=[s3_reader_tool],
+    verbose=True,
+)
+
+# Example task to read a configuration file
+read_task = Task(
+    description="Read the configuration file from {my_bucket} and summarize its contents.",
+    expected_output="A summary of the configuration file contents.",
+    agent=file_reader_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[file_reader_agent], tasks=[read_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/config/app-config.json"})
+```
+
+## Parâmetros
+
+O `S3ReaderTool` aceita o seguinte parâmetro quando utilizado por um agente:
+
+- **file_path**: Obrigatório. O caminho do arquivo S3 no formato `s3://nome-do-bucket/nome-do-arquivo`.
+
+## Credenciais AWS
+
+A ferramenta requer credenciais AWS para acessar buckets S3. Você pode configurar essas credenciais usando variáveis de ambiente:
+
+- **CREW_AWS_REGION**: Região AWS onde seu bucket S3 está localizado. O padrão é `us-east-1`.
+- **CREW_AWS_ACCESS_KEY_ID**: Sua AWS access key ID.
+- **CREW_AWS_SEC_ACCESS_KEY**: Sua AWS secret access key.
+
+## Uso
+
+Ao utilizar o `S3ReaderTool` com um agente, o agente deverá fornecer o caminho do arquivo S3:
+
+```python Code
+# Example of using the tool with an agent
+file_reader_agent = Agent(
+    role="File Reader",
+    goal="Read files from S3 buckets",
+    backstory="An expert in retrieving and processing files from cloud storage.",
+    tools=[s3_reader_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to read a specific file
+read_config_task = Task(
+    description="Read the application configuration file from {my_bucket} and extract the database connection settings.",
+    expected_output="The database connection settings from the configuration file.",
+    agent=file_reader_agent,
+)
+
+# Run the task
+crew = Crew(agents=[file_reader_agent], tasks=[read_config_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/config/app-config.json"})
+```
+
+## Tratamento de Erros
+
+O `S3ReaderTool` inclui tratamento para erros comuns do S3:
+
+- Formato inválido de caminho S3
+- Arquivos ausentes ou inacessíveis
+- Problemas de permissão
+- Problemas com credenciais AWS
+
+Quando um erro ocorre, a ferramenta retorna uma mensagem de erro com detalhes sobre o problema.
+
+## Detalhes da Implementação
+
+O `S3ReaderTool` utiliza o AWS SDK for Python (boto3) para interagir com o S3:
+
+```python Code
+class S3ReaderTool(BaseTool):
+    name: str = "S3 Reader Tool"
+    description: str = "Reads a file from Amazon S3 given an S3 file path"
+    
+    def _run(self, file_path: str) -> str:
+        try:
+            bucket_name, object_key = self._parse_s3_path(file_path)
+
+            s3 = boto3.client(
+                's3',
+                region_name=os.getenv('CREW_AWS_REGION', 'us-east-1'),
+                aws_access_key_id=os.getenv('CREW_AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.getenv('CREW_AWS_SEC_ACCESS_KEY')
+            )
+
+            # Read file content from S3
+            response = s3.get_object(Bucket=bucket_name, Key=object_key)
+            file_content = response['Body'].read().decode('utf-8')
+
+            return file_content
+        except ClientError as e:
+            return f"Error reading file from S3: {str(e)}"
+```
+
+## Conclusão
+
+O `S3ReaderTool` oferece uma maneira simples de ler arquivos de buckets Amazon S3. Ao permitir que agentes acessem conteúdos armazenados no S3, facilita fluxos de trabalho que necessitam de acesso a arquivos na nuvem. Esta ferramenta é especialmente útil para processamento de dados, gestão de configurações e qualquer tarefa que envolva a obtenção de informações do armazenamento AWS S3.

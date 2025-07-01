@@ -1,0 +1,53 @@
+---
+title: Leitura de Diretório
+description: O `DirectoryReadTool` é uma poderosa utilidade projetada para fornecer uma listagem abrangente do conteúdo de diretórios.
+icon: folder-tree
+---
+
+# `DirectoryReadTool`
+
+<Note>
+    Ainda estamos trabalhando para melhorar as ferramentas, então pode haver comportamentos inesperados ou alterações no futuro.
+</Note>
+
+## Descrição
+
+O DirectoryReadTool é uma poderosa utilidade projetada para fornecer uma listagem abrangente do conteúdo de diretórios. 
+Ele pode navegar recursivamente pelo diretório especificado, oferecendo aos usuários uma enumeração detalhada de todos os arquivos, incluindo aqueles que estão dentro de subdiretórios. 
+Essa ferramenta é fundamental para tarefas que exigem um inventário completo das estruturas de diretórios ou para validar a organização de arquivos em diretórios.
+
+## Instalação
+
+Para utilizar o DirectoryReadTool em seu projeto, instale o pacote `crewai_tools`. Se este pacote ainda não faz parte do seu ambiente, você pode instalá-lo usando o pip com o comando abaixo:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Esse comando instala a versão mais recente do pacote `crewai_tools`, permitindo o acesso ao DirectoryReadTool, entre outras utilidades.
+
+## Exemplo
+
+Empregar o DirectoryReadTool é simples. O snippet de código a seguir demonstra como configurá-lo e usar a ferramenta para listar o conteúdo de um diretório especificado:
+
+```python Code
+from crewai_tools import DirectoryReadTool
+
+# Initialize the tool so the agent can read any directory's content 
+# it learns about during execution
+tool = DirectoryReadTool()
+
+# OR
+
+# Initialize the tool with a specific directory, 
+# so the agent can only read the content of the specified directory
+tool = DirectoryReadTool(directory='/path/to/your/directory')
+```
+
+## Argumentos
+
+Os seguintes parâmetros podem ser usados para personalizar o comportamento do `DirectoryReadTool`:
+
+| Argumento      | Tipo     | Descrição                                                                                                                         |
+|:---------------|:---------|:----------------------------------------------------------------------------------------------------------------------------------|
+| **directory**  | `string` | _Opcional_. Um argumento que especifica o caminho para o diretório cujo conteúdo você deseja listar. Aceita caminhos absolutos e relativos, direcionando a ferramenta para o diretório desejado para a listagem do conteúdo. |

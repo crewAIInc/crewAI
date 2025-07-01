@@ -1,0 +1,185 @@
+---
+title: "Kickoff Crew"
+description: "Inicie um Crew no CrewAI Enterprise"
+icon: "flag-checkered"
+---
+
+## Visão Geral
+
+Uma vez que você tenha implantado seu crew na plataforma CrewAI Enterprise, é possível iniciar execuções pela interface web ou pela API. Este guia aborda ambos os métodos.
+
+## Método 1: Usando a Interface Web
+
+### Passo 1: Navegue até seu Crew Implantado
+
+1. Faça login no [CrewAI Enterprise](https://app.crewai.com)
+2. Clique no nome do crew na sua lista de projetos
+3. Você será direcionado para a página de detalhes do crew
+
+<Frame>
+  ![Crew Dashboard](/images/enterprise/crew-dashboard.png)
+</Frame>
+
+### Passo 2: Iniciar Execução
+
+Na página de detalhes do seu crew, você tem duas opções para iniciar uma execução:
+
+#### Opção A: Kickoff Rápido
+
+1. Clique no link `Kickoff` na seção Test Endpoints
+2. Insira os parâmetros de entrada necessários para seu crew no editor JSON
+3. Clique no botão `Send Request`
+
+<Frame>
+  ![Kickoff Endpoint](/images/enterprise/kickoff-endpoint.png)
+</Frame>
+
+#### Opção B: Usando a Interface Visual
+
+1. Clique na aba `Run` na página de detalhes do crew
+2. Insira os inputs necessários nos campos do formulário
+3. Clique no botão `Run Crew`
+
+<Frame>
+  ![Run Crew](/images/enterprise/run-crew.png)
+</Frame>
+
+### Passo 3: Monitorar o Progresso da Execução
+
+Após iniciar a execução:
+
+1. Você receberá uma resposta contendo um `kickoff_id` - **copie este ID**
+2. Esse ID é fundamental para o acompanhamento da sua execução
+
+<Frame>
+  ![Copy Task ID](/images/enterprise/copy-task-id.png)
+</Frame>
+
+### Passo 4: Verificar o Status da Execução
+
+Para monitorar o andamento da sua execução:
+
+1. Clique no endpoint "Status" na seção Test Endpoints
+2. Cole o `kickoff_id` no campo indicado
+3. Clique no botão "Get Status"
+
+<Frame>
+  ![Get Status](/images/enterprise/get-status.png)
+</Frame>
+
+A resposta de status mostrará:
+- Estado atual da execução (`running`, `completed`, etc.)
+- Detalhes sobre quais tarefas estão em andamento
+- Quaisquer outputs gerados até o momento
+
+### Passo 5: Visualizar Resultados Finais
+
+Quando a execução for concluída:
+
+1. O status mudará para `completed`
+2. Você poderá visualizar todos os resultados e outputs da execução
+3. Para uma visão mais detalhada, acesse a aba `Executions` na página de detalhes do crew
+
+## Método 2: Usando a API
+
+Você também pode iniciar crews programaticamente usando a REST API do CrewAI Enterprise.
+
+### Autenticação
+
+Todas as requisições à API exigem um bearer token para autenticação:
+
+```bash
+curl -H "Authorization: Bearer YOUR_CREW_TOKEN" https://your-crew-url.crewai.com
+```
+
+Seu bearer token está disponível na aba Status na página de detalhes do seu crew.
+
+### Verificando o Status do Crew
+
+Antes de executar operações, você pode verificar se seu crew está funcionando corretamente:
+
+```bash
+curl -H "Authorization: Bearer YOUR_CREW_TOKEN" https://your-crew-url.crewai.com
+```
+
+Uma resposta de sucesso trará uma mensagem indicando que o crew está operacional:
+
+```
+Healthy%
+```
+
+### Passo 1: Recuperar Entradas Necessárias
+
+Primeiro, descubra quais entradas seu crew exige:
+
+```bash
+curl -X GET \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  https://your-crew-url.crewai.com/inputs
+```
+
+A resposta será um objeto JSON contendo um array de parâmetros de entrada obrigatórios, por exemplo:
+
+```json
+{"inputs":["topic","current_year"]}
+```
+
+Este exemplo mostra que este crew em particular requer dois inputs: `topic` e `current_year`.
+
+### Passo 2: Iniciar Execução
+
+Inicie a execução fornecendo os inputs obrigatórios:
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  -d '{"inputs": {"topic": "AI Agent Frameworks", "current_year": "2025"}}' \
+  https://your-crew-url.crewai.com/kickoff
+```
+
+A resposta incluirá um `kickoff_id` que você precisará para o acompanhamento:
+
+```json
+{"kickoff_id":"abcd1234-5678-90ef-ghij-klmnopqrstuv"}
+```
+
+### Passo 3: Verificar Status da Execução
+
+Acompanhe o progresso da execução usando o kickoff_id:
+
+```bash
+curl -X GET \
+  -H "Authorization: Bearer YOUR_CREW_TOKEN" \
+  https://your-crew-url.crewai.com/status/abcd1234-5678-90ef-ghij-klmnopqrstuv
+```
+
+## Gerenciando Execuções
+
+### Execuções de Longa Duração
+
+Para execuções que possam demandar mais tempo:
+
+1. Considere implementar um mecanismo de polling para verificar status periodicamente
+2. Utilize webhooks (se disponíveis) para notificação quando a execução for concluída
+3. Implemente tratamento de erros para possíveis timeouts
+
+### Contexto da Execução
+
+O contexto da execução inclui:
+
+- Inputs fornecidos no momento do kickoff
+- Variáveis de ambiente configuradas durante o deploy
+- Qualquer estado mantido entre as tarefas
+
+### Depuração de Execuções com Falha
+
+Se uma execução falhar:
+
+1. Verifique a aba "Executions" para logs detalhados
+2. Avalie a aba "Traces" para detalhes passo a passo da execução
+3. Procure por respostas LLM e uso de ferramentas nos detalhes do trace
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para obter ajuda com problemas de execução ou dúvidas sobre a plataforma Enterprise.
+</Card>

@@ -1,0 +1,137 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You
+      are an expert at gathering and organizing information. You carefully collect
+      details and present them in a structured way.\nYour personal goal is: Gather
+      information about the best soccer players\n\nTo give my best complete final
+      answer to the task respond using the exact following format:\n\nThought: I now
+      can give a great answer\nFinal Answer: Your final answer must be the great and
+      the most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players
+      in the world?"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '694'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.78.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.78.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        AMMI9CsaDwAA
+    headers:
+      CF-RAY:
+      - 94d9be627c40f260-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 10 Jun 2025 15:02:05 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=qYkxv9nLxeWAtPBvECxNw8fLnoBHLorJdRI8.xVEVEA-1749567725-1.0.1.1-75sp4gwHGJocK1MFkSgRcB4xJUiCwz31VRD4LAmQGEmfYB0BMQZ5sgWS8e_UMbjCaEhaPNO88q5XdbLOCWA85_rO0vYTb4hp6tmIiaerhsM;
+        path=/; expires=Tue, 10-Jun-25 15:32:05 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=HRKCwkyTqSXpCj9_i_T5lDtlr_INA290o0b3k.26oi8-1749567725794-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '42674'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '42684'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999859'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_d92e6f33fa5e0fbe43349afee8f55921
+    status:
+      code: 200
+      message: OK
+version: 1

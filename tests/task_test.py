@@ -398,6 +398,79 @@ def test_output_json_hierarchical():
     assert result.json == '{"score": 4}'
     assert result.to_dict() == {"score": 4}
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_inject_date():
+    reporter = Agent(
+        role="Reporter",
+        goal="Report the date",
+        backstory="You're an expert reporter, specialized in reporting the date.",
+        allow_delegation=False,
+        inject_date=True,
+    )
+
+    task = Task(
+        description="What is the date today?",
+        expected_output="The date today as you were told, same format as the date you were told.",
+        agent=reporter,
+    )
+
+    crew = Crew(
+        agents=[reporter],
+        tasks=[task],
+        process=Process.sequential,
+    )
+    result = crew.kickoff()
+    assert "2025-05-21" in result.raw
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_inject_date_custom_format():
+    reporter = Agent(
+        role="Reporter",
+        goal="Report the date",
+        backstory="You're an expert reporter, specialized in reporting the date.",
+        allow_delegation=False,
+        inject_date=True,
+        date_format="%B %d, %Y",
+    )
+
+    task = Task(
+        description="What is the date today?",
+        expected_output="The date today.",
+        agent=reporter,
+    )
+
+    crew = Crew(
+        agents=[reporter],
+        tasks=[task],
+        process=Process.sequential,
+    )
+    result = crew.kickoff()
+    assert "May 21, 2025" in result.raw
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_no_inject_date():
+    reporter = Agent(
+        role="Reporter",
+        goal="Report the date",
+        backstory="You're an expert reporter, specialized in reporting the date.",
+        allow_delegation=False,
+        inject_date=False,
+    )
+
+    task = Task(
+        description="What is the date today?",
+        expected_output="The date today.",
+        agent=reporter,
+    )
+
+    crew = Crew(
+        agents=[reporter],
+        tasks=[task],
+        process=Process.sequential,
+    )
+    result = crew.kickoff()
+    assert "2025-05-21" not in result.raw
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_json_property_without_output_json():

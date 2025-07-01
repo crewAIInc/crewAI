@@ -1,0 +1,147 @@
+---
+title: Reasoning
+description: "Aprenda como habilitar e usar o reasoning do agente para aprimorar a execução de tarefas."
+icon: brain
+---
+
+## Visão Geral
+
+O reasoning do agente é um recurso que permite que agentes reflitam sobre uma tarefa e criem um plano antes da execução. Isso ajuda os agentes a abordarem tarefas de forma mais metódica e garante que estejam preparados para realizar o trabalho atribuído.
+
+## Uso
+
+Para habilitar o reasoning para um agente, basta definir `reasoning=True` ao criar o agente:
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze complex datasets and provide insights",
+    backstory="You are an experienced data analyst with expertise in finding patterns in complex data.",
+    reasoning=True,  # Enable reasoning
+    max_reasoning_attempts=3  # Optional: Set a maximum number of reasoning attempts
+)
+```
+
+## Como Funciona
+
+Quando o reasoning está habilitado, antes de executar uma tarefa, o agente irá:
+
+1. Refletir sobre a tarefa e criar um plano detalhado
+2. Avaliar se está pronto para executar a tarefa
+3. Refinar o plano conforme necessário até estar pronto ou até o limite de max_reasoning_attempts ser atingido
+4. Inserir o plano de reasoning na descrição da tarefa antes da execução
+
+Esse processo ajuda o agente a dividir tarefas complexas em etapas gerenciáveis e identificar potenciais desafios antes de começar.
+
+## Opções de Configuração
+
+<ParamField body="reasoning" type="bool" default="False">
+    Ativa ou desativa o reasoning
+</ParamField>
+
+<ParamField body="max_reasoning_attempts" type="int" default="None">
+    Número máximo de tentativas para refinar o plano antes de prosseguir com a execução. Se None (padrão), o agente continuará refinando até que esteja pronto.
+</ParamField>
+
+## Exemplo
+
+Aqui está um exemplo completo:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with reasoning enabled
+analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="You are an expert data analyst.",
+    reasoning=True,
+    max_reasoning_attempts=3  # Optional: Set a limit on reasoning attempts
+)
+
+# Create a task
+analysis_task = Task(
+    description="Analyze the provided sales data and identify key trends.",
+    expected_output="A report highlighting the top 3 sales trends.",
+    agent=analyst
+)
+
+# Create a crew and run the task
+crew = Crew(agents=[analyst], tasks=[analysis_task])
+result = crew.kickoff()
+
+print(result)
+```
+
+## Tratamento de Erros
+
+O processo de reasoning foi projetado para ser robusto, com tratamento de erros integrado. Se ocorrer um erro durante o reasoning, o agente prosseguirá com a execução da tarefa sem o plano de reasoning. Isso garante que as tarefas ainda possam ser executadas mesmo que o processo de reasoning falhe.
+
+Veja como lidar com possíveis erros no seu código:
+
+```python
+from crewai import Agent, Task
+import logging
+
+# Set up logging to capture any reasoning errors
+logging.basicConfig(level=logging.INFO)
+
+# Create an agent with reasoning enabled
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    reasoning=True,
+    max_reasoning_attempts=3
+)
+
+# Create a task
+task = Task(
+    description="Analyze the provided sales data and identify key trends.",
+    expected_output="A report highlighting the top 3 sales trends.",
+    agent=agent
+)
+
+# Execute the task
+# If an error occurs during reasoning, it will be logged and execution will continue
+result = agent.execute_task(task)
+```
+
+## Exemplo de Saída de reasoning
+
+Veja um exemplo de como pode ser um plano de reasoning para uma tarefa de análise de dados:
+
+```
+Task: Analyze the provided sales data and identify key trends.
+
+Reasoning Plan:
+I'll analyze the sales data to identify the top 3 trends.
+
+1. Understanding of the task:
+   I need to analyze sales data to identify key trends that would be valuable for business decision-making.
+
+2. Key steps I'll take:
+   - First, I'll examine the data structure to understand what fields are available
+   - Then I'll perform exploratory data analysis to identify patterns
+   - Next, I'll analyze sales by time periods to identify temporal trends
+   - I'll also analyze sales by product categories and customer segments
+   - Finally, I'll identify the top 3 most significant trends
+
+3. Approach to challenges:
+   - If the data has missing values, I'll decide whether to fill or filter them
+   - If the data has outliers, I'll investigate whether they're valid data points or errors
+   - If trends aren't immediately obvious, I'll apply statistical methods to uncover patterns
+
+4. Use of available tools:
+   - I'll use data analysis tools to explore and visualize the data
+   - I'll use statistical tools to identify significant patterns
+   - I'll use knowledge retrieval to access relevant information about sales analysis
+
+5. Expected outcome:
+   A concise report highlighting the top 3 sales trends with supporting evidence from the data.
+
+READY: I am ready to execute the task.
+```
+
+Esse plano de reasoning ajuda o agente a organizar sua abordagem para a tarefa, considerar possíveis desafios e garantir que entregará o resultado esperado.

@@ -1,0 +1,112 @@
+---
+title: Pesquisa Serper Google
+description: O `SerperDevTool` é projetado para pesquisar na internet e retornar os resultados mais relevantes.
+icon: google
+---
+
+# `SerperDevTool`
+
+<Note>
+    Ainda estamos trabalhando na melhoria das ferramentas, portanto, pode haver comportamentos inesperados ou mudanças no futuro.
+</Note>
+
+## Descrição
+
+Esta ferramenta foi projetada para realizar buscas semânticas para uma consulta especificada a partir do conteúdo de um texto na internet. Ela utiliza a API do [serper.dev](https://serper.dev) 
+para buscar e exibir os resultados de pesquisa mais relevantes com base na consulta fornecida pelo usuário.
+
+## Instalação
+
+Para incorporar esta ferramenta em seu projeto, siga as instruções de instalação abaixo:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma busca com uma consulta fornecida:
+
+```python Code
+from crewai_tools import SerperDevTool
+
+# Inicializar a ferramenta para capacidades de busca na internet
+tool = SerperDevTool()
+```
+
+## Etapas para Começar
+
+Para utilizar o `SerperDevTool` de forma eficaz, siga estes passos:
+
+1. **Instalação do Pacote**: Confirme se o pacote `crewai[tools]` está instalado em seu ambiente Python.
+2. **Obtenção da Chave de API**: Adquira uma chave de API do `serper.dev` registrando-se para uma conta gratuita em `serper.dev`.
+3. **Configuração do Ambiente**: Armazene sua chave de API obtida em uma variável de ambiente chamada `SERPER_API_KEY` para facilitar o uso pela ferramenta.
+
+## Parâmetros
+
+O `SerperDevTool` possui vários parâmetros que serão passados para a API:
+
+- **search_url**: O endpoint da URL para a API de busca. (Padrão é `https://google.serper.dev/search`)
+
+- **country**: Opcional. Especifica o país para os resultados de busca.
+- **location**: Opcional. Especifica a localização para os resultados de busca.
+- **locale**: Opcional. Especifica o local para os resultados de busca.
+- **n_results**: Número de resultados de busca a serem retornados. O padrão é `10`.
+
+Os valores para `country`, `location`, `locale` e `search_url` podem ser encontrados no [Serper Playground](https://serper.dev/playground).
+
+## Exemplo com Parâmetros
+
+Aqui está um exemplo demonstrando como usar a ferramenta com parâmetros adicionais:
+
+```python Code
+from crewai_tools import SerperDevTool
+
+tool = SerperDevTool(
+    search_url="https://google.serper.dev/scholar",
+    n_results=2,
+)
+
+print(tool.run(search_query="ChatGPT"))
+
+# Using Tool: Search the internet
+
+# Search results: Title: Role of chat gpt in public health
+# Link: https://link.springer.com/article/10.1007/s10439-023-03172-7
+# Snippet: … ChatGPT in public health. In this overview, we will examine the potential uses of ChatGPT in
+# ---
+# Title: Potential use of chat gpt in global warming
+# Link: https://link.springer.com/article/10.1007/s10439-023-03171-8
+# Snippet: … as ChatGPT, have the potential to play a critical role in advancing our understanding of climate
+# ---
+
+```
+
+```python Code
+from crewai_tools import SerperDevTool
+
+tool = SerperDevTool(
+    country="fr",
+    locale="fr",
+    location="Paris, Paris, Ile-de-France, France",
+    n_results=2,
+)
+
+print(tool.run(search_query="Jeux Olympiques"))
+
+# Using Tool: Search the internet
+
+# Search results: Title: Jeux Olympiques de Paris 2024 - Actualités, calendriers, résultats
+# Link: https://olympics.com/fr/paris-2024
+# Snippet: Quels sont les sports présents aux Jeux Olympiques de Paris 2024 ? · Athlétisme · Aviron · Badminton · Basketball · Basketball 3x3 · Boxe · Breaking · Canoë ...
+# ---
+# Title: Billetterie Officielle de Paris 2024 - Jeux Olympiques et Paralympiques
+# Link: https://tickets.paris2024.org/
+# Snippet: Achetez vos billets exclusivement sur le site officiel de la billetterie de Paris 2024 pour participer au plus grand événement sportif au monde.
+# ---
+```
+
+## Conclusão
+
+Ao integrar o `SerperDevTool` em projetos Python, os usuários obtêm a capacidade de realizar buscas em tempo real e relevantes na internet diretamente de suas aplicações. 
+Os parâmetros atualizados permitem resultados de busca mais personalizados e localizados. Seguindo as diretrizes de configuração e uso fornecidas, a incorporação desta ferramenta nos projetos é simplificada e direta.

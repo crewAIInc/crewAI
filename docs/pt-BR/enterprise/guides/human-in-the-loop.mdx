@@ -1,0 +1,78 @@
+---
+title: "Workflows HITL"
+description: "Aprenda como implementar workflows Human-In-The-Loop no CrewAI para decisões aprimoradas"
+icon: "user-check"
+---
+
+Human-In-The-Loop (HITL) é uma abordagem poderosa que combina inteligência artificial com expertise humana para aprimorar a tomada de decisão e melhorar os resultados das tarefas. Este guia mostra como implementar HITL dentro do CrewAI.
+
+## Configurando Workflows HITL
+
+<Steps>
+    <Step title="Configure Sua Tarefa">
+        Configure sua tarefa com a entrada humana habilitada:
+        <Frame>
+            <img src="/images/enterprise/crew-human-input.png" alt="Crew Human Input" />
+        </Frame>
+    </Step>
+
+    <Step title="Forneça o URL do Webhook">
+        Ao iniciar seu crew, inclua um URL de webhook para entrada humana:
+        <Frame>
+            <img src="/images/enterprise/crew-webhook-url.png" alt="Crew Webhook URL" />
+        </Frame>
+    </Step>
+
+    <Step title="Receba a Notificação do Webhook">
+        Assim que o crew concluir a tarefa que requer entrada humana, você receberá uma notificação do webhook contendo:
+            - **ID de Execução**
+            - **ID da Tarefa**
+            - **Saída da Tarefa**
+    </Step>
+
+    <Step title="Revise a Saída da Tarefa">
+        O sistema irá pausar no estado `Pending Human Input`. Revise cuidadosamente a saída da tarefa.
+    </Step>
+
+    <Step title="Envie o Feedback Humano">
+        Chame o endpoint de retomada do seu crew com as seguintes informações:
+        <Frame>
+            <img src="/images/enterprise/crew-resume-endpoint.png" alt="Crew Resume Endpoint" />
+        </Frame>
+        <Warning>
+            **Impacto do Feedback na Execução da Tarefa**:
+            É crucial ter cuidado ao fornecer o feedback, pois todo o conteúdo do feedback será incorporado como contexto adicional para as próximas execuções da tarefa.
+        </Warning>
+        Isso significa:
+        - Todas as informações do seu feedback passam a fazer parte do contexto da tarefa.
+        - Detalhes irrelevantes podem prejudicar a execução.
+        - Feedbacks concisos e relevantes ajudam a manter o foco e a eficiência da tarefa.
+        - Sempre revise atentamente seu feedback antes de enviá-lo para garantir que ele contém apenas informações pertinentes que irão guiar positivamente a execução da tarefa.
+    </Step>
+    <Step title="Lide com Feedback Negativo">
+        Se você fornecer um feedback negativo:
+        - O crew irá tentar executar novamente a tarefa com o contexto adicional do seu feedback.
+        - Você receberá uma nova notificação de webhook para nova revisão.
+        - Repita os passos 4-6 até estar satisfeito.
+    </Step>
+
+    <Step title="Continuação da Execução">
+        Quando você enviar um feedback positivo, a execução prosseguirá para as próximas etapas.
+    </Step>
+</Steps>
+
+## Melhores Práticas
+
+- **Seja Específico**: Forneça feedback claro e acionável que trate diretamente da tarefa em questão
+- **Mantenha a Relevância**: Inclua apenas informações que possam ajudar a melhorar a execução da tarefa
+- **Seja Ágil**: Responda rapidamente aos prompts HITL para evitar atrasos no workflow
+- **Revise Cuidadosamente**: Verifique duas vezes o seu feedback antes de enviá-lo para garantir precisão
+
+## Casos de Uso Comuns
+
+Workflows HITL são particularmente valiosos para:
+- Garantia de qualidade e validação
+- Cenários de tomada de decisão complexa
+- Operações sensíveis ou de alto risco
+- Tarefas criativas que exigem julgamento humano
+- Revisões de conformidade e regulatórias

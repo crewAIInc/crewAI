@@ -1,0 +1,103 @@
+---
+title: "Trigger Zapier"
+description: "Dispare crews do CrewAI a partir de fluxos de trabalho no Zapier para automatizar fluxos multiaplicativos"
+icon: "bolt"
+---
+
+Este guia irá conduzi-lo pelo processo de configuração de triggers no Zapier para o CrewAI Enterprise, permitindo automatizar fluxos de trabalho entre CrewAI Enterprise e outros aplicativos.
+
+## Pré-requisitos
+
+- Uma conta CrewAI Enterprise
+- Uma conta Zapier
+- Uma conta Slack (para este exemplo específico)
+
+## Configuração Passo a Passo
+
+<Steps>
+    <Step title="Configure o Trigger do Slack">
+        - No Zapier, crie um novo Zap.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-1.png" alt="Zapier 1" />
+        </Frame>
+    </Step>
+
+    <Step title="Escolha o Slack como seu app de trigger">
+        <Frame>
+            <img src="/images/enterprise/zapier-2.png" alt="Zapier 2" />
+        </Frame>
+        - Selecione `New Pushed Message` como o Evento de Trigger.
+        - Conecte sua conta Slack, caso ainda não tenha feito isso.
+    </Step>
+
+    <Step title="Configure a ação do CrewAI Enterprise">
+        - Adicione uma nova etapa de ação ao seu Zap.
+        - Escolha CrewAI+ como o app de ação e Kickoff como Evento de Ação.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-3.png" alt="Zapier 5" />
+        </Frame>
+    </Step>
+
+    <Step title="Conecte sua conta CrewAI Enterprise">
+        - Conecte sua conta CrewAI Enterprise.
+        - Selecione o Crew apropriado para seu fluxo de trabalho.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-4.png" alt="Zapier 6" />
+        </Frame>
+        - Configure as entradas para o Crew usando os dados da mensagem do Slack.
+    </Step>
+
+    <Step title="Formate a saída do CrewAI Enterprise">
+        - Adicione outra etapa de ação para formatar a saída de texto do CrewAI Enterprise.
+        - Utilize as ferramentas de formatação do Zapier para converter a saída em Markdown para HTML.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-5.png" alt="Zapier 8" />
+        </Frame>
+        <Frame>
+            <img src="/images/enterprise/zapier-6.png" alt="Zapier 9" />
+        </Frame>
+    </Step>
+
+    <Step title="Envie a saída por e-mail">
+        - Adicione uma etapa final de ação para enviar a saída formatada por e-mail.
+        - Escolha seu serviço de e-mail preferido (ex.: Gmail, Outlook).
+        - Configure os detalhes do e-mail, incluindo destinatário, assunto e corpo.
+        - Insira a saída formatada do CrewAI Enterprise no corpo do e-mail.
+
+        <Frame>
+            <img src="/images/enterprise/zapier-7.png" alt="Zapier 7" />
+        </Frame>
+    </Step>
+
+    <Step title="Dispare o crew a partir do Slack">
+        - Digite o texto no seu canal do Slack
+
+        <Frame>
+            <img src="/images/enterprise/zapier-7b.png" alt="Zapier 10" />
+        </Frame>
+
+        - Selecione o botão de três pontos e então escolha Push to Zapier
+
+        <Frame>
+            <img src="/images/enterprise/zapier-8.png" alt="Zapier 11" />
+        </Frame>
+    </Step>
+
+    <Step title="Selecione o crew e então pressione Push to Kick Off">
+        <Frame>
+            <img src="/images/enterprise/zapier-9.png" alt="Zapier 12" />
+        </Frame>
+    </Step>
+</Steps>
+
+## Dicas para o Sucesso
+
+- Certifique-se de que as entradas do CrewAI Enterprise estejam corretamente mapeadas a partir da mensagem do Slack.
+- Teste seu Zap cuidadosamente antes de ativá-lo para identificar possíveis problemas.
+- Considere adicionar etapas de tratamento de erros para gerenciar possíveis falhas no fluxo.
+
+Seguindo estes passos, você terá configurado com sucesso triggers no Zapier para o CrewAI Enterprise, permitindo fluxos de trabalho automatizados disparados por mensagens no Slack e resultando em notificações por e-mail com a saída do CrewAI Enterprise.

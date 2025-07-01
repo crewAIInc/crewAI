@@ -1,0 +1,84 @@
+---
+title: Github Search
+description: O `GithubSearchTool` foi desenvolvido para pesquisar sites e convertê-los em markdown limpo ou dados estruturados.
+icon: github
+---
+
+# `GithubSearchTool`
+
+<Note>
+    Ainda estamos trabalhando para melhorar as ferramentas, portanto pode haver comportamentos inesperados ou mudanças no futuro.
+</Note>
+
+## Descrição
+
+O GithubSearchTool é uma ferramenta de Recuperação Aprimorada por Geração (RAG) especificamente projetada para realizar buscas semânticas em repositórios GitHub. Utilizando funcionalidades avançadas de busca semântica, ele examina códigos, pull requests, issues e repositórios, tornando-se uma ferramenta essencial para desenvolvedores, pesquisadores ou qualquer pessoa que precise de informações precisas do GitHub.
+
+## Instalação
+
+Para usar o GithubSearchTool, primeiro certifique-se de que o pacote crewai_tools está instalado em seu ambiente Python:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Esse comando instala o pacote necessário para rodar o GithubSearchTool juntamente com outras ferramentas incluídas no pacote crewai_tools.
+
+## Exemplo
+
+Veja como você pode usar o GithubSearchTool para realizar buscas semânticas dentro de um repositório GitHub:
+
+```python Code
+from crewai_tools import GithubSearchTool
+
+# Inicialize a ferramenta para buscas semânticas em um repositório GitHub específico
+tool = GithubSearchTool(
+	github_repo='https://github.com/example/repo',
+	gh_token='your_github_personal_access_token',
+	content_types=['code', 'issue'] # Opções: code, repo, pr, issue
+)
+
+# OU
+
+# Inicialize a ferramenta para buscas semânticas em um repositório GitHub específico, permitindo que o agente pesquise em qualquer repositório caso tome conhecimento durante a execução
+tool = GithubSearchTool(
+	gh_token='your_github_personal_access_token',
+	content_types=['code', 'issue'] # Opções: code, repo, pr, issue
+)
+```
+
+## Argumentos
+
+- `github_repo` : A URL do repositório GitHub onde a busca será realizada. Este é um campo obrigatório e especifica o repositório alvo para sua pesquisa.
+- `gh_token` : Seu Personal Access Token (PAT) do GitHub necessário para autenticação. Você pode criar um nas configurações da sua conta GitHub em Developer Settings > Personal Access Tokens.
+- `content_types` : Especifica os tipos de conteúdo a serem incluídos na busca. É necessário fornecer uma lista dos tipos de conteúdo das seguintes opções: `code` para pesquisar dentro do código, 
+`repo` para pesquisar nas informações gerais do repositório, `pr` para pesquisar em pull requests, e `issue` para pesquisar nas issues. 
+Este campo é obrigatório e permite adaptar a busca para tipos específicos de conteúdo dentro do repositório GitHub.
+
+## Modelo e embeddings personalizados
+
+Por padrão, a ferramenta utiliza o OpenAI tanto para embeddings quanto para sumarização. Para personalizar o modelo, você pode usar um dicionário de configuração como no exemplo:
+
+```python Code
+tool = GithubSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

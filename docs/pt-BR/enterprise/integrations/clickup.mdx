@@ -1,0 +1,293 @@
+---
+title: Integração com ClickUp
+description: "Gerenciamento de tarefas e produtividade com integração ClickUp para CrewAI."
+icon: "list-check"
+---
+
+## Visão Geral
+
+Permita que seus agentes gerenciem tarefas, projetos e fluxos de produtividade por meio do ClickUp. Crie e atualize tarefas, organize projetos, gerencie a designação de equipes e otimize o gerenciamento da sua produtividade com automação impulsionada por IA.
+
+## Pré-requisitos
+
+Antes de utilizar a integração com o ClickUp, certifique-se de que você possui:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com) com assinatura ativa
+- Uma conta ClickUp com as permissões apropriadas
+- Sua conta ClickUp conectada pela [Página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração com o ClickUp
+
+### 1. Conecte sua Conta ClickUp
+
+1. Acesse [CrewAI Enterprise Integrações](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **ClickUp** na seção Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para gerenciamento de tarefas e projetos
+5. Copie seu Token Enterprise das [Configurações da Conta](https://app.crewai.com/crewai_plus/settings/account)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="CLICKUP_SEARCH_TASKS">
+    **Descrição:** Busque tarefas no ClickUp utilizando filtros avançados.
+
+    **Parâmetros:**
+    - `taskFilterFormula` (objeto, opcional): Um filtro em forma normal disjuntiva - OU de grupos E de condições individuais.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "statuses%5B%5D",
+                "operator": "$stringExactlyMatches",
+                "value": "open"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      Campos disponíveis: `space_ids%5B%5D`, `project_ids%5B%5D`, `list_ids%5B%5D`, `statuses%5B%5D`, `include_closed`, `assignees%5B%5D`, `tags%5B%5D`, `due_date_gt`, `due_date_lt`, `date_created_gt`, `date_created_lt`, `date_updated_gt`, `date_updated_lt`
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_TASK_IN_LIST">
+    **Descrição:** Obtenha tarefas em uma lista específica do ClickUp.
+
+    **Parâmetros:**
+    - `listId` (string, obrigatório): Lista - Selecione uma Lista da qual obter as tarefas. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem uma Lista ClickUp.
+    - `taskFilterFormula` (string, opcional): Busque tarefas que correspondam aos filtros especificados. Por exemplo: name=task1.
+  </Accordion>
+
+  <Accordion title="CLICKUP_CREATE_TASK">
+    **Descrição:** Crie uma tarefa no ClickUp.
+
+    **Parâmetros:**
+    - `listId` (string, obrigatório): Lista - Selecione uma Lista para criar esta tarefa. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem uma Lista ClickUp.
+    - `name` (string, obrigatório): Nome - O nome da tarefa.
+    - `description` (string, opcional): Descrição - Descrição da tarefa.
+    - `status` (string, opcional): Status - Selecione um Status para esta tarefa. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem um Status ClickUp.
+    - `assignees` (string, opcional): Responsáveis - Selecione um Membro (ou um array de IDs de membros) para ser responsável por esta tarefa. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem um Membro ClickUp.
+    - `dueDate` (string, opcional): Data de Vencimento - Especifique uma data para a conclusão desta tarefa.
+    - `additionalFields` (string, opcional): Campos Adicionais - Especifique campos adicionais para incluir nesta tarefa em formato JSON.
+  </Accordion>
+
+  <Accordion title="CLICKUP_UPDATE_TASK">
+    **Descrição:** Atualize uma tarefa no ClickUp.
+
+    **Parâmetros:**
+    - `taskId` (string, obrigatório): ID da tarefa - O ID da tarefa a ser atualizada.
+    - `listId` (string, obrigatório): Lista - Selecione uma Lista para criar esta tarefa. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem uma Lista ClickUp.
+    - `name` (string, opcional): Nome - O nome da tarefa.
+    - `description` (string, opcional): Descrição - Descrição da tarefa.
+    - `status` (string, opcional): Status - Selecione um Status para esta tarefa. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem um Status ClickUp.
+    - `assignees` (string, opcional): Responsáveis - Selecione um Membro (ou um array de IDs de membros) para ser responsável por esta tarefa. Use as Configurações do Usuário no Portal de Conexão para permitir que os usuários selecionem um Membro ClickUp.
+    - `dueDate` (string, opcional): Data de Vencimento - Especifique uma data para a conclusão desta tarefa.
+    - `additionalFields` (string, opcional): Campos Adicionais - Especifique campos adicionais para incluir nesta tarefa em formato JSON.
+  </Accordion>
+
+  <Accordion title="CLICKUP_DELETE_TASK">
+    **Descrição:** Exclua uma tarefa no ClickUp.
+
+    **Parâmetros:**
+    - `taskId` (string, obrigatório): ID da tarefa - O ID da tarefa a ser excluída.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_LIST">
+    **Descrição:** Obtenha informações da Lista no ClickUp.
+
+    **Parâmetros:**
+    - `spaceId` (string, obrigatório): ID do Espaço - O ID do espaço que contém as listas.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_CUSTOM_FIELDS_IN_LIST">
+    **Descrição:** Obtenha Campos Personalizados em uma Lista no ClickUp.
+
+    **Parâmetros:**
+    - `listId` (string, obrigatório): ID da Lista - O ID da lista da qual obter os campos personalizados.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_ALL_FIELDS_IN_LIST">
+    **Descrição:** Obtenha Todos os Campos em uma Lista no ClickUp.
+
+    **Parâmetros:**
+    - `listId` (string, obrigatório): ID da Lista - O ID da lista da qual obter todos os campos.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_SPACE">
+    **Descrição:** Obtenha informações do Espaço no ClickUp.
+
+    **Parâmetros:**
+    - `spaceId` (string, opcional): ID do Espaço - O ID do espaço a ser recuperado.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_FOLDERS">
+    **Descrição:** Obtenha Pastas no ClickUp.
+
+    **Parâmetros:**
+    - `spaceId` (string, obrigatório): ID do Espaço - O ID do espaço que contém as pastas.
+  </Accordion>
+
+  <Accordion title="CLICKUP_GET_MEMBER">
+    **Descrição:** Obtenha informações de Membro no ClickUp.
+
+    **Parâmetros:** Nenhum obrigatório.
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente ClickUp
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (ClickUp tools will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Create an agent with ClickUp capabilities
+clickup_agent = Agent(
+    role="Task Manager",
+    goal="Manage tasks and projects in ClickUp efficiently",
+    backstory="An AI assistant specialized in task management and productivity coordination.",
+    tools=[enterprise_tools]
+)
+
+# Task to create a new task
+create_task = Task(
+    description="Create a task called 'Review Q1 Reports' in the Marketing list with high priority",
+    agent=clickup_agent,
+    expected_output="Task created successfully with task ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[clickup_agent],
+    tasks=[create_task]
+)
+
+crew.kickoff()
+```
+
+### Filtrando Ferramentas Específicas do ClickUp
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get only specific ClickUp tools
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["clickup_create_task", "clickup_update_task", "clickup_search_tasks"]
+)
+
+task_coordinator = Agent(
+    role="Task Coordinator",
+    goal="Create and manage tasks efficiently",
+    backstory="An AI assistant that focuses on task creation and status management.",
+    tools=enterprise_tools
+)
+
+# Task to manage task workflow
+task_workflow = Task(
+    description="Create a task for project planning and assign it to the development team",
+    agent=task_coordinator,
+    expected_output="Task created and assigned successfully"
+)
+
+crew = Crew(
+    agents=[task_coordinator],
+    tasks=[task_workflow]
+)
+
+crew.kickoff()
+```
+
+### Gerenciamento Avançado de Projetos
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+project_manager = Agent(
+    role="Project Manager",
+    goal="Coordinate project activities and track team productivity",
+    backstory="An experienced project manager who ensures projects are delivered on time.",
+    tools=[enterprise_tools]
+)
+
+# Complex task involving multiple ClickUp operations
+project_coordination = Task(
+    description="""
+    1. Get all open tasks in the current space
+    2. Identify overdue tasks and update their status
+    3. Create a weekly report task summarizing project progress
+    4. Assign the report task to the team lead
+    """,
+    agent=project_manager,
+    expected_output="Project status updated and weekly report task created and assigned"
+)
+
+crew = Crew(
+    agents=[project_manager],
+    tasks=[project_coordination]
+)
+
+crew.kickoff()
+```
+
+### Busca e Gerenciamento de Tarefas
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+task_analyst = Agent(
+    role="Task Analyst",
+    goal="Analyze task patterns and optimize team productivity",
+    backstory="An AI assistant that analyzes task data to improve team efficiency.",
+    tools=[enterprise_tools]
+)
+
+# Task to analyze and optimize task distribution
+task_analysis = Task(
+    description="""
+    Search for all tasks assigned to team members in the last 30 days,
+    analyze completion patterns, and create optimization recommendations
+    """,
+    agent=task_analyst,
+    expected_output="Task analysis report with optimization recommendations"
+)
+
+crew = Crew(
+    agents=[task_analyst],
+    tasks=[task_analysis]
+)
+
+crew.kickoff()
+```
+
+### Precisa de Ajuda?
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para auxílio na configuração ou solução de problemas da integração com ClickUp.
+</Card>

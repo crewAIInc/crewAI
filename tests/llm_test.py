@@ -2,7 +2,6 @@ import os
 from time import sleep
 from unittest.mock import MagicMock, patch
 
-import litellm
 import pytest
 from pydantic import BaseModel
 
@@ -11,7 +10,11 @@ from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.utilities.events import (
     LLMCallCompletedEvent,
     LLMStreamChunkEvent,
+    ToolUsageStartedEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageErrorEvent,
 )
+
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 
@@ -222,7 +225,7 @@ def test_get_custom_llm_provider_gemini():
 
 def test_get_custom_llm_provider_openai():
     llm = LLM(model="gpt-4")
-    assert llm._get_custom_llm_provider() == None
+    assert llm._get_custom_llm_provider() is None
 
 
 def test_validate_call_params_supported():
@@ -511,12 +514,18 @@ def assert_event_count(
     expected_completed_tool_call: int = 0,
     expected_stream_chunk: int = 0,
     expected_completed_llm_call: int = 0,
+    expected_tool_usage_started: int = 0,
+    expected_tool_usage_finished: int = 0,
+    expected_tool_usage_error: int = 0,
     expected_final_chunk_result: str = "",
 ):
     event_count = {
         "completed_tool_call": 0,
         "stream_chunk": 0,
         "completed_llm_call": 0,
+        "tool_usage_started": 0,
+        "tool_usage_finished": 0,
+        "tool_usage_error": 0,
     }
     final_chunk_result = ""
     for _call in mock_emit.call_args_list:
@@ -535,12 +544,21 @@ def assert_event_count(
             and event.call_type.value == "llm_call"
         ):
             event_count["completed_llm_call"] += 1
+        elif isinstance(event, ToolUsageStartedEvent):
+            event_count["tool_usage_started"] += 1
+        elif isinstance(event, ToolUsageFinishedEvent):
+            event_count["tool_usage_finished"] += 1
+        elif isinstance(event, ToolUsageErrorEvent):
+            event_count["tool_usage_error"] += 1
         else:
             continue
 
     assert event_count["completed_tool_call"] == expected_completed_tool_call
     assert event_count["stream_chunk"] == expected_stream_chunk
     assert event_count["completed_llm_call"] == expected_completed_llm_call
+    assert event_count["tool_usage_started"] == expected_tool_usage_started
+    assert event_count["tool_usage_finished"] == expected_tool_usage_finished
+    assert event_count["tool_usage_error"] == expected_tool_usage_error
     assert final_chunk_result == expected_final_chunk_result
 
 
@@ -574,6 +592,34 @@ def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
         expected_completed_tool_call=1,
         expected_stream_chunk=10,
         expected_completed_llm_call=1,
+        expected_tool_usage_started=1,
+        expected_tool_usage_finished=1,
+        expected_final_chunk_result=expected_final_chunk_result,
+    )
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_emit):
+    def get_weather_error(location):
+        raise Exception("Error")
+        
+    llm = LLM(model="openai/gpt-4o", stream=True)
+    response = llm.call(
+        messages=[
+            {"role": "user", "content": "What is the weather in New York?"},
+        ],
+        tools=[get_weather_tool_schema],
+        available_functions={
+            "get_weather": get_weather_error
+        },
+    )
+    assert response == ""
+    expected_final_chunk_result = '{"location":"New York, NY"}'
+    assert_event_count(
+        mock_emit=mock_emit,
+        expected_stream_chunk=9,
+        expected_completed_llm_call=1,
+        expected_tool_usage_started=1,
+        expected_tool_usage_error=1,    
         expected_final_chunk_result=expected_final_chunk_result,
     )
 

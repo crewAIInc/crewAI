@@ -1,0 +1,43 @@
+---
+title: Firecrawl Scrape Website
+description: A ferramenta `FirecrawlScrapeWebsiteTool` foi projetada para fazer scraping de sites e convertê-los em markdown limpo ou dados estruturados.
+icon: fire-flame
+---
+
+# `FirecrawlScrapeWebsiteTool`
+
+## Descrição
+
+[Firecrawl](https://firecrawl.dev) é uma plataforma para rastrear e converter qualquer site em markdown limpo ou dados estruturados.
+
+## Instalação
+
+- Obtenha uma chave de API em [firecrawl.dev](https://firecrawl.dev) e defina-a nas variáveis de ambiente (`FIRECRAWL_API_KEY`).
+- Instale o [Firecrawl SDK](https://github.com/mendableai/firecrawl) junto com o pacote `crewai[tools]`:
+
+```shell
+pip install firecrawl-py 'crewai[tools]'
+```
+
+## Exemplo
+
+Utilize o FirecrawlScrapeWebsiteTool da seguinte forma para permitir que seu agente carregue sites:
+
+```python Code
+from crewai_tools import FirecrawlScrapeWebsiteTool
+
+tool = FirecrawlScrapeWebsiteTool(url='firecrawl.dev')
+```
+
+## Argumentos
+
+- `api_key`: Opcional. Especifica a chave de API do Firecrawl. O padrão é a variável de ambiente `FIRECRAWL_API_KEY`.
+- `url`: A URL a ser raspada.
+- `page_options`: Opcional.
+  - `onlyMainContent`: Opcional. Retorna apenas o conteúdo principal da página, excluindo cabeçalhos, navegações, rodapés, etc.
+  - `includeHtml`: Opcional. Inclui o conteúdo HTML bruto da página. Irá gerar uma chave html na resposta.
+- `extractor_options`: Opcional. Opções para extração baseada em LLM de informações estruturadas do conteúdo da página
+  - `mode`: O modo de extração a ser utilizado, atualmente suporta 'llm-extraction'
+  - `extractionPrompt`: Opcional. Um prompt descrevendo quais informações extrair da página
+  - `extractionSchema`: Opcional. O esquema para os dados a serem extraídos
+- `timeout`: Opcional. Timeout em milissegundos para a requisição

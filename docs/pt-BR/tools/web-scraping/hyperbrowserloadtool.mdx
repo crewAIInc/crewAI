@@ -1,0 +1,86 @@
+---
+title: Hyperbrowser Load Tool
+description: O `HyperbrowserLoadTool` permite realizar web scraping e crawling utilizando o Hyperbrowser.
+icon: globe
+---
+
+# `HyperbrowserLoadTool`
+
+## Descrição
+
+O `HyperbrowserLoadTool` permite realizar web scraping e crawling utilizando o [Hyperbrowser](https://hyperbrowser.ai), uma plataforma para executar e escalar browsers headless. Essa ferramenta possibilita extrair dados de uma única página ou rastrear um site inteiro, retornando o conteúdo em markdown ou HTML corretamente formatado.
+
+Principais Características:
+- Escalabilidade Instantânea – Inicie centenas de sessões de browser em segundos sem se preocupar com infraestrutura
+- Integração Simples – Funciona perfeitamente com ferramentas populares como Puppeteer e Playwright
+- APIs Poderosas – APIs fáceis de usar para scraping/crawling de qualquer site
+- Supera Medidas Anti-Bot – Inclui modo stealth, bloqueio de anúncios, resolução automática de CAPTCHA e proxies rotativos
+
+## Instalação
+
+Para utilizar esta ferramenta, você precisa instalar o SDK do Hyperbrowser:
+
+```shell
+uv add hyperbrowser
+```
+
+## Passos para Começar
+
+Para usar efetivamente o `HyperbrowserLoadTool`, siga estes passos:
+
+1. **Cadastre-se**: Vá até o [Hyperbrowser](https://app.hyperbrowser.ai/) para criar uma conta e gerar uma chave de API.
+2. **Chave de API**: Defina a variável de ambiente `HYPERBROWSER_API_KEY` ou passe-a diretamente no construtor da ferramenta.
+3. **Instale o SDK**: Instale o SDK do Hyperbrowser usando o comando acima.
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e utilizá-la para extrair dados de um site:
+
+```python Code
+from crewai_tools import HyperbrowserLoadTool
+from crewai import Agent
+
+# Initialize the tool with your API key
+tool = HyperbrowserLoadTool(api_key="your_api_key")  # Or use environment variable
+
+# Define an agent that uses the tool
+@agent
+def web_researcher(self) -> Agent:
+    '''
+    This agent uses the HyperbrowserLoadTool to scrape websites
+    and extract information.
+    '''
+    return Agent(
+        config=self.agents_config["web_researcher"],
+        tools=[tool]
+    )
+```
+
+## Parâmetros
+
+O `HyperbrowserLoadTool` aceita os seguintes parâmetros:
+
+### Parâmetros do Construtor
+- **api_key**: Opcional. Sua chave de API do Hyperbrowser. Se não fornecida, será lida da variável de ambiente `HYPERBROWSER_API_KEY`.
+
+### Parâmetros de Execução
+- **url**: Obrigatório. A URL do site a ser extraído ou rastreado.
+- **operation**: Opcional. A operação a ser realizada no site. Pode ser 'scrape' ou 'crawl'. O padrão é 'scrape'.
+- **params**: Opcional. Parâmetros adicionais para a operação de scraping ou crawling.
+
+## Parâmetros Suportados
+
+Para informações detalhadas sobre todos os parâmetros suportados, acesse:
+- [Parâmetros de Scrape](https://docs.hyperbrowser.ai/reference/sdks/python/scrape#start-scrape-job-and-wait)
+- [Parâmetros de Crawl](https://docs.hyperbrowser.ai/reference/sdks/python/crawl#start-crawl-job-and-wait)
+
+## Formato de Retorno
+
+A ferramenta retorna o conteúdo nos seguintes formatos:
+
+- Para operações **scrape**: O conteúdo da página no formato markdown ou HTML.
+- Para operações **crawl**: O conteúdo de cada página separado por divisores, incluindo a URL de cada página.
+
+## Conclusão
+
+O `HyperbrowserLoadTool` oferece uma maneira poderosa de realizar scraping e crawling em sites, lidando com cenários complexos como medidas anti-bot, CAPTCHAs e muito mais. Aproveitando a plataforma do Hyperbrowser, essa ferramenta permite que agentes acessem e extraiam conteúdo da web de forma eficiente.

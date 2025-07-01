@@ -1,0 +1,112 @@
+---
+title: Linkup Search Tool
+description: O `LinkupSearchTool` permite consultar a API do Linkup para obter informações contextuais.
+icon: link
+---
+
+# `LinkupSearchTool`
+
+## Descrição
+
+O `LinkupSearchTool` fornece a capacidade de consultar a API do Linkup para obter informações contextuais e recuperar resultados estruturados. Esta ferramenta é ideal para enriquecer fluxos de trabalho com informações atualizadas e confiáveis do Linkup, permitindo que agentes acessem dados relevantes durante a execução de suas tarefas.
+
+## Instalação
+
+Para utilizar esta ferramenta, é necessário instalar o Linkup SDK:
+
+```shell
+uv add linkup-sdk
+```
+
+## Passos para começar
+
+Para usar efetivamente o `LinkupSearchTool`, siga estes passos:
+
+1. **Chave de API**: Obtenha uma chave de API do Linkup.
+2. **Configuração do Ambiente**: Configure seu ambiente com a chave de API.
+3. **Instalar SDK**: Instale o Linkup SDK usando o comando acima.
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e usá-la em um agente:
+
+```python Code
+from crewai_tools import LinkupSearchTool
+from crewai import Agent
+import os
+
+# Initialize the tool with your API key
+linkup_tool = LinkupSearchTool(api_key=os.getenv("LINKUP_API_KEY"))
+
+# Define an agent that uses the tool
+@agent
+def researcher(self) -> Agent:
+    '''
+    This agent uses the LinkupSearchTool to retrieve contextual information
+    from the Linkup API.
+    '''
+    return Agent(
+        config=self.agents_config["researcher"],
+        tools=[linkup_tool]
+    )
+```
+
+## Parâmetros
+
+O `LinkupSearchTool` aceita os seguintes parâmetros:
+
+### Parâmetros do Construtor
+- **api_key**: Obrigatório. Sua chave de API do Linkup.
+
+### Parâmetros de Execução
+- **query**: Obrigatório. O termo ou frase de busca.
+- **depth**: Opcional. A profundidade da busca. O padrão é "standard".
+- **output_type**: Opcional. O tipo de saída. O padrão é "searchResults".
+
+## Uso Avançado
+
+Você pode personalizar os parâmetros de busca para resultados mais específicos:
+
+```python Code
+# Perform a search with custom parameters
+results = linkup_tool.run(
+    query="Women Nobel Prize Physics",
+    depth="deep",
+    output_type="searchResults"
+)
+```
+
+## Formato de Retorno
+
+A ferramenta retorna resultados no seguinte formato:
+
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "name": "Result Title",
+      "url": "https://example.com/result",
+      "content": "Content of the result..."
+    },
+    // Additional results...
+  ]
+}
+```
+
+Se ocorrer um erro, a resposta será:
+
+```json
+{
+  "success": false,
+  "error": "Error message"
+}
+```
+
+## Tratamento de Erros
+
+A ferramenta lida com erros de API de forma amigável e fornece feedback estruturado. Se a requisição à API falhar, a ferramenta retornará um dicionário com `success: false` e uma mensagem de erro.
+
+## Conclusão
+
+O `LinkupSearchTool` oferece uma forma integrada de incorporar as capacidades de busca de informações contextuais do Linkup aos seus agentes CrewAI. Ao utilizar esta ferramenta, os agentes podem acessar informações relevantes e atualizadas para aprimorar sua tomada de decisão e execução de tarefas.
