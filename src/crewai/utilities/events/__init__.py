@@ -50,7 +50,14 @@ from .llm_events import (
     LLMCallType,
     LLMStreamChunkEvent,
 )
-
+from .knowledge_events import (
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeQueryStartedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeQueryCompletedEvent,
+    KnowledgeSearchQueryFailedEvent,
+)
 # events
 from .event_listener import EventListener
 from .third_party.agentops_listener import agentops_listener
