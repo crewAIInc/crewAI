@@ -1,0 +1,84 @@
+---
+title: Pesquisa com RAG em Documentação de Código
+description: O `CodeDocsSearchTool` é uma poderosa ferramenta RAG (Geração Aumentada por Recuperação) projetada para buscas semânticas em documentação de código.
+icon: code
+---
+
+# `CodeDocsSearchTool`
+
+<Note>
+    **Experimental**: Ainda estamos trabalhando para melhorar as ferramentas, então pode haver comportamentos inesperados ou mudanças no futuro.
+</Note>
+
+## Descrição
+
+O CodeDocsSearchTool é uma poderosa ferramenta RAG (Geração Aumentada por Recuperação) projetada para buscas semânticas em documentação de código.
+Ela permite que usuários encontrem de forma eficiente informações ou tópicos específicos dentro da documentação de código. Ao fornecer um `docs_url` durante a inicialização,
+a ferramenta restringe a busca àquele site de documentação em particular. Alternativamente, sem um `docs_url` específico,
+ela realiza buscas em uma ampla variedade de documentações de código conhecidas ou descobertas durante sua execução, tornando-a versátil para diversas necessidades de busca em documentação.
+
+## Instalação
+
+Para começar a usar o CodeDocsSearchTool, primeiro instale o pacote crewai_tools via pip:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+Utilize o CodeDocsSearchTool conforme abaixo para realizar buscas em documentação de código:
+
+```python Code
+from crewai_tools import CodeDocsSearchTool
+
+# Para buscar qualquer conteúdo de documentação de código 
+# se a URL for conhecida ou descoberta durante a execução:
+tool = CodeDocsSearchTool()
+
+# OU
+
+# Para focar sua busca especificamente em um site de documentação 
+# fornecendo sua URL:
+tool = CodeDocsSearchTool(docs_url='https://docs.example.com/reference')
+```
+<Note>  
+    Substitua 'https://docs.example.com/reference' pela URL da documentação desejada
+    e 'How to use search tool' pela consulta de busca relevante às suas necessidades.
+</Note>
+
+## Argumentos
+
+Os seguintes parâmetros podem ser usados para personalizar o comportamento do `CodeDocsSearchTool`:
+
+| Argumento       | Tipo     | Descrição                                                                                                                            |
+|:----------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **docs_url**    | `string` | _Opcional_. Especifica a URL da documentação de código a ser pesquisada.                                              | 
+
+## Modelo e embeddings personalizados
+
+Por padrão, a ferramenta utiliza a OpenAI tanto para embeddings quanto para sumarização. Para customizar o modelo, você pode usar um dicionário de configuração conforme abaixo:
+
+```python Code
+tool = CodeDocsSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

@@ -1,0 +1,120 @@
+---
+title: "Visão Geral das Ferramentas"
+description: "Descubra a vasta biblioteca do CrewAI com mais de 40 ferramentas para potencializar seus agentes de IA"
+icon: "toolbox"
+---
+
+O CrewAI oferece uma biblioteca extensa de ferramentas pré-construídas para aprimorar as capacidades dos seus agentes. De processamento de arquivos a web scraping, consultas em bancos de dados a serviços de IA — temos tudo o que você precisa.
+
+## **Categorias de Ferramentas**
+
+<CardGroup cols={2}>
+  <Card
+    title="Arquivo & Documento"
+    icon="file-check"
+    href="/pt-BR/tools/file-document/overview"
+    color="#3B82F6"
+  >
+    Leia, escreva e pesquise em diversos formatos de arquivo, incluindo PDF, DOCX, JSON, CSV e muito mais. Perfeito para fluxos de processamento de documentos.
+  </Card>
+
+  <Card
+    title="Web Scraping & Navegação"
+    icon="globe"
+    href="/pt-BR/tools/web-scraping/overview"
+    color="#10B981"
+  >
+    Extraia dados de sites, automatize interações com navegadores e faça scraping de conteúdo em escala com ferramentas como Firecrawl, Selenium e outras.
+  </Card>
+
+  <Card
+    title="Pesquisa & Busca"
+    icon="magnifying-glass"
+    href="/pt-BR/tools/search-research/overview"
+    color="#F59E0B"
+  >
+    Realize buscas na web, encontre repositórios de código, pesquise conteúdo no YouTube e descubra informações em toda a internet.
+  </Card>
+
+  <Card
+    title="Banco de Dados & Dados"
+    icon="database"
+    href="/pt-BR/tools/database-data/overview"
+    color="#8B5CF6"
+  >
+    Conecte-se a bancos de dados SQL, repositórios vetoriais e data warehouses. Consulte MySQL, PostgreSQL, Snowflake, Qdrant e Weaviate.
+  </Card>
+
+  <Card
+    title="IA & Aprendizado de Máquina"
+    icon="brain"
+    href="/pt-BR/tools/ai-ml/overview"
+    color="#EF4444"
+  >
+    Gere imagens com DALL-E, execute tarefas de visão computacional, integre com LangChain, construa sistemas RAG e aproveite interpretadores de código.
+  </Card>
+
+  <Card
+    title="Nuvem & Armazenamento"
+    icon="cloud"
+    href="/pt-BR/tools/cloud-storage/overview"
+    color="#06B6D4"
+  >
+    Interaja com serviços em nuvem incluindo AWS S3, Amazon Bedrock e outros serviços de armazenamento e IA na nuvem.
+  </Card>
+
+  <Card
+    title="Automação & Integração"
+    icon="bolt"
+    href="/pt-BR/tools/automation/overview"
+    color="#84CC16"
+  >
+    Automatize fluxos de trabalho com Apify, Composio e outras plataformas de integração para conectar seus agentes a serviços externos.
+  </Card>
+</CardGroup>
+
+## **Acesso Rápido**
+
+Precisa de uma ferramenta específica? Aqui estão algumas opções populares:
+
+<CardGroup cols={3}>
+  <Card title="RAG Tool" icon="image" href="/pt-BR/tools/ai-ml/ragtool">
+    Implemente Geração com Recuperação de Dados (RAG)
+  </Card>
+  <Card title="Serper Dev" icon="book-atlas" href="/pt-BR/tools/search-research/serperdevtool">
+    API de busca do Google
+  </Card>
+  <Card title="File Read" icon="file" href="/pt-BR/tools/file-document/filereadtool">
+    Leia qualquer tipo de arquivo
+  </Card>
+  <Card title="Scrape Website" icon="globe" href="/pt-BR/tools/web-scraping/scrapewebsitetool">
+    Extraia conteúdo da web
+  </Card>
+  <Card title="Code Interpreter" icon="code" href="/pt-BR/tools/ai-ml/codeinterpretertool">
+    Execute código Python
+  </Card>
+  <Card title="S3 Reader" icon="cloud" href="/pt-BR/tools/cloud-storage/s3readertool">
+    Acesse arquivos no AWS S3
+  </Card>
+</CardGroup>
+
+## **Primeiros Passos**
+
+Para usar qualquer ferramenta em seu projeto CrewAI:
+
+1. **Importe** a ferramenta na configuração da sua crew
+2. **Adicione** à lista de ferramentas do seu agente
+3. **Configure** as chaves de API ou ajustes necessários
+
+```python
+from crewai_tools import FileReadTool, SerperDevTool
+
+# Adicione as ferramentas ao seu agente
+agent = Agent(
+    role="Research Analyst",
+    tools=[FileReadTool(), SerperDevTool()],
+    # ... outrAs configurações
+)
+```
+
+Pronto para explorar? Escolha uma categoria acima para descobrir as ferramentas que se encaixam no seu caso de uso!

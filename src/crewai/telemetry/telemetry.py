@@ -8,7 +8,8 @@ import platform
 import warnings
 from contextlib import contextmanager
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
+import threading
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
@@ -64,9 +65,24 @@ class Telemetry:
     attribute in the Crew class.
     """
 
-    def __init__(self):
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(Telemetry, cls).__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self) -> None:
+        if hasattr(self, '_initialized') and self._initialized:
+            return
+        
         self.ready: bool = False
         self.trace_set: bool = False
+        self._initialized: bool = True
 
         if self._is_telemetry_disabled():
             return
@@ -95,12 +111,18 @@ class Telemetry:
                 raise  # Re-raise the exception to not interfere with system signals
             self.ready = False
 
-    def _is_telemetry_disabled(self) -> bool:
+    @classmethod
+    def _is_telemetry_disabled(cls) -> bool:
         """Check if telemetry should be disabled based on environment variables."""
         return (
             os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
             or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
+            or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
         )
+
+    def _should_execute_telemetry(self) -> bool:
+        """Check if telemetry operations should be executed."""
+        return self.ready and not self._is_telemetry_disabled()
 
     def set_tracer(self):
         if self.ready and not self.trace_set:
@@ -112,8 +134,9 @@ class Telemetry:
                 self.ready = False
                 self.trace_set = False
 
-    def _safe_telemetry_operation(self, operation):
-        if not self.ready:
+    def _safe_telemetry_operation(self, operation: Callable[[], None]) -> None:
+        """Execute telemetry operation safely, checking both readiness and environment variables."""
+        if not self._should_execute_telemetry():
             return
         try:
             operation()
@@ -412,7 +435,8 @@ class Telemetry:
 
             return span
 
-        return self._safe_telemetry_operation(operation)
+        self._safe_telemetry_operation(operation)
+        return None
 
     def task_ended(self, span: Span, task: Task, crew: Crew):
         """Records the completion of a task execution in a crew.
@@ -762,7 +786,8 @@ class Telemetry:
             return span
 
         if crew.share_crew:
-            return self._safe_telemetry_operation(operation)
+            self._safe_telemetry_operation(operation)
+            return operation()
         return None
 
     def end_crew(self, crew, final_string_output):

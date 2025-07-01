@@ -1,6 +1,6 @@
 import shutil
 import subprocess
-from typing import Any, Dict, List, Literal, Optional, Sequence, Type, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Type, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -115,9 +115,25 @@ class Agent(BaseAgent):
         default=False,
         description="Whether the agent is multimodal.",
     )
+    inject_date: bool = Field(
+        default=False,
+        description="Whether to automatically inject the current date into tasks.",
+    )
+    date_format: str = Field(
+        default="%Y-%m-%d",
+        description="Format string for date when inject_date is enabled.",
+    )
     code_execution_mode: Literal["safe", "unsafe"] = Field(
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
+    )
+    reasoning: bool = Field(
+        default=False,
+        description="Whether the agent should reflect and create a plan before executing a task.",
+    )
+    max_reasoning_attempts: Optional[int] = Field(
+        default=None,
+        description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
     )
     embedder: Optional[Dict[str, Any]] = Field(
         default=None,
@@ -138,6 +154,13 @@ class Agent(BaseAgent):
     from_repository: Optional[str] = Field(
         default=None,
         description="The Agent's role to be used from your repository.",
+    )
+    guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
+        default=None,
+        description="Function or string description of a guardrail to validate agent output"
+    )
+    guardrail_max_retries: int = Field(
+        default=3, description="Maximum number of retries when guardrail fails"
     )
 
     @model_validator(mode="before")
@@ -184,6 +207,7 @@ class Agent(BaseAgent):
                         collection_name=self.role,
                         storage=self.knowledge_storage or None,
                     )
+                    self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
@@ -225,6 +249,30 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        if self.reasoning:
+            try:
+                from crewai.utilities.reasoning_handler import (
+                    AgentReasoning,
+                    AgentReasoningOutput,
+                )
+
+                reasoning_handler = AgentReasoning(task=task, agent=self)
+                reasoning_output: AgentReasoningOutput = (
+                    reasoning_handler.handle_agent_reasoning()
+                )
+
+                # Add the reasoning plan to the task description
+                task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
+            except Exception as e:
+                if hasattr(self, "_logger"):
+                    self._logger.log(
+                        "error", f"Error during reasoning process: {str(e)}"
+                    )
+                else:
+                    print(f"Error during reasoning process: {str(e)}")
+
+        self._inject_date_to_task(task)
+
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
@@ -585,6 +633,37 @@ class Agent(BaseAgent):
 
         return description
 
+    def _inject_date_to_task(self, task):
+        """Inject the current date into the task description if inject_date is enabled."""
+        if self.inject_date:
+            from datetime import datetime
+
+            try:
+                valid_format_codes = [
+                    "%Y",
+                    "%m",
+                    "%d",
+                    "%H",
+                    "%M",
+                    "%S",
+                    "%B",
+                    "%b",
+                    "%A",
+                    "%a",
+                ]
+                is_valid = any(code in self.date_format for code in valid_format_codes)
+
+                if not is_valid:
+                    raise ValueError(f"Invalid date format: {self.date_format}")
+
+                current_date: str = datetime.now().strftime(self.date_format)
+                task.description += f"\n\nCurrent Date: {current_date}"
+            except Exception as e:
+                if hasattr(self, "_logger"):
+                    self._logger.log("warning", f"Failed to inject date: {str(e)}")
+                else:
+                    print(f"Warning: Failed to inject date: {str(e)}")
+
     def _validate_docker_installation(self) -> None:
         """Check if Docker is installed and running."""
         if not shutil.which("docker"):
@@ -708,6 +787,8 @@ class Agent(BaseAgent):
             response_format=response_format,
             i18n=self.i18n,
             original_agent=self,
+            guardrail=self.guardrail,
+            guardrail_max_retries=self.guardrail_max_retries,
         )
 
         return lite_agent.kickoff(messages)

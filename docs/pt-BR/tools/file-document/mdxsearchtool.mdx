@@ -1,0 +1,73 @@
+---
+title: Pesquisa MDX RAG
+description: O `MDXSearchTool` foi projetado para pesquisar arquivos MDX e retornar os resultados mais relevantes.
+icon: markdown
+---
+
+# `MDXSearchTool`
+
+<Note>
+    O MDXSearchTool está em desenvolvimento contínuo. Recursos podem ser adicionados ou removidos, e a funcionalidade pode mudar de forma imprevisível à medida que refinamos a ferramenta.
+</Note>
+
+## Descrição
+
+A Ferramenta de Pesquisa MDX é um componente do pacote `crewai_tools` focado em facilitar a extração avançada de dados do markdown. Ela permite que usuários pesquisem e extraiam informações relevantes de arquivos MD utilizando buscas baseadas em consulta. Esta ferramenta é indispensável para análise de dados, gestão de informações e tarefas de pesquisa, agilizando o processo de encontrar informações específicas em grandes coleções de documentos.
+
+## Instalação
+
+Antes de utilizar a Ferramenta de Pesquisa MDX, certifique-se de que o pacote `crewai_tools` está instalado. Caso não esteja, você pode instalá-lo com o comando abaixo:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo de Uso
+
+Para utilizar a Ferramenta de Pesquisa MDX, primeiro defina as variáveis de ambiente necessárias. Em seguida, integre a ferramenta ao seu projeto crewAI para começar sua pesquisa de mercado. Veja abaixo um exemplo básico de como fazer isso:
+
+```python Code
+from crewai_tools import MDXSearchTool
+
+# Inicialize a ferramenta para pesquisar qualquer conteúdo MDX que ela conheça durante a execução
+tool = MDXSearchTool()
+
+# OU
+
+# Inicialize a ferramenta com um caminho específico para o arquivo MDX, realizando buscas exclusivamente neste documento
+tool = MDXSearchTool(mdx='path/to/your/document.mdx')
+```
+
+## Parâmetros
+
+- mdx: **Opcional**. Especifica o caminho do arquivo MDX para pesquisa. Pode ser informado durante a inicialização.
+
+## Personalização do Modelo e Embeddings
+
+A ferramenta utiliza, por padrão, o OpenAI para embeddings e sumarização. Para personalizar, utilize um dicionário de configuração conforme exemplo abaixo:
+
+```python Code
+tool = MDXSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # As opções incluem google, openai, anthropic, llama2, etc.
+            config=dict(
+                model="llama2",
+                # Parâmetros opcionais podem ser incluídos aqui.
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # Um título opcional para os embeddings pode ser adicionado aqui.
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

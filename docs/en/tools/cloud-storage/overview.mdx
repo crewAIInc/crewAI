@@ -1,0 +1,50 @@
+---
+title: "Overview"
+description: "Interact with cloud services, storage systems, and cloud-based AI platforms"
+icon: "face-smile"
+---
+
+These tools enable your agents to interact with cloud services, access cloud storage, and leverage cloud-based AI platforms for scalable operations.
+
+## **Available Tools**
+
+<CardGroup cols={2}>
+  <Card title="S3 Reader Tool" icon="cloud" href="/en/tools/cloud-storage/s3readertool">
+    Read files and data from Amazon S3 buckets.
+  </Card>
+
+  <Card title="S3 Writer Tool" icon="cloud-arrow-up" href="/en/tools/cloud-storage/s3writertool">
+    Write and upload files to Amazon S3 storage.
+  </Card>
+
+  <Card title="Bedrock Invoke Agent" icon="aws" href="/en/tools/cloud-storage/bedrockinvokeagenttool">
+    Invoke Amazon Bedrock agents for AI-powered tasks.
+  </Card>
+
+  <Card title="Bedrock KB Retriever" icon="database" href="/en/tools/cloud-storage/bedrockkbretriever">
+    Retrieve information from Amazon Bedrock knowledge bases.
+  </Card>
+</CardGroup>
+
+## **Common Use Cases**
+
+- **File Storage**: Store and retrieve files from cloud storage systems
+- **Data Backup**: Backup important data to cloud storage
+- **AI Services**: Access cloud-based AI models and services
+- **Knowledge Retrieval**: Query cloud-hosted knowledge bases
+- **Scalable Operations**: Leverage cloud infrastructure for processing
+
+```python
+from crewai_tools import S3ReaderTool, S3WriterTool, BedrockInvokeAgentTool
+
+# Create cloud tools
+s3_reader = S3ReaderTool()
+s3_writer = S3WriterTool()
+bedrock_agent = BedrockInvokeAgentTool()
+
+# Add to your agent
+agent = Agent(
+    role="Cloud Operations Specialist",
+    tools=[s3_reader, s3_writer, bedrock_agent],
+    goal="Manage cloud resources and AI services"
+)

@@ -1,0 +1,824 @@
+---
+title: Integração com Portkey
+description: Como usar Portkey com CrewAI
+icon: key
+---
+
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/main/Portkey-CrewAI.png" alt="Portkey CrewAI Header Image" width="70%" />
+
+
+
+## Introdução
+
+Portkey aprimora o CrewAI com recursos prontos para produção, transformando seus crews de agentes experimentais em sistemas robustos ao fornecer:
+
+- **Observabilidade completa** de cada etapa do agente, uso de ferramentas e interações
+- **Confiabilidade incorporada** com fallbacks, tentativas automáticas e balanceamento de carga
+- **Rastreamento e otimização de custos** para gerenciar seus gastos com IA
+- **Acesso a mais de 200 LLMs** por meio de uma única integração
+- **Guardrails** para manter o comportamento dos agentes seguro e em conformidade
+- **Prompts versionados** para desempenho consistente dos agentes
+
+
+### Instalação & Configuração
+
+<Steps>
+<Step title="Instale os pacotes necessários">
+```bash
+pip install -U crewai portkey-ai
+```
+</Step>
+
+<Step title="Gere a Chave de API" icon="lock">
+Crie uma chave de API Portkey com limites de orçamento/taxa opcionais no [painel da Portkey](https://app.portkey.ai/). Você também pode adicionar configurações para confiabilidade, cache e outros recursos a essa chave. Mais sobre isso em breve.
+</Step>
+
+<Step title="Configure o CrewAI com Portkey">
+A integração é simples – basta atualizar a configuração do LLM no seu setup do CrewAI:
+
+```python
+from crewai import LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Crie uma instância do LLM com integração Portkey
+gpt_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",  # Estamos usando uma chave virtual, então isso é apenas um placeholder
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_LLM_VIRTUAL_KEY",
+        trace_id="unique-trace-id",               # Opcional, para rastreamento da requisição
+    )
+)
+
+#Use-os nos seus Crew Agents assim:
+
+	@agent
+	def lead_market_analyst(self) -> Agent:
+		return Agent(
+			config=self.agents_config['lead_market_analyst'],
+			verbose=True,
+			memory=False,
+			llm=gpt_llm
+		)
+
+```
+
+<Info>
+**O que são Virtual Keys?** Virtual keys no Portkey armazenam com segurança suas chaves de API dos provedores LLM (OpenAI, Anthropic, etc.) em um cofre criptografado. Elas facilitam a rotação de chaves e o gerenciamento de orçamento. [Saiba mais sobre virtual keys aqui](https://portkey.ai/docs/product/ai-gateway/virtual-keys).
+</Info>
+</Step>
+</Steps>
+
+## Recursos para Produção
+
+### 1. Observabilidade Avançada
+
+Portkey oferece observabilidade abrangente para seus agentes CrewAI, ajudando você a entender exatamente o que está acontecendo durante cada execução.
+
+<Tabs>
+  <Tab title="Traces">
+<Frame>
+    <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Product%2011.1.webp"/>
+</Frame>
+
+Os traces fornecem uma visão hierárquica da execução do seu crew, mostrando a sequência de chamadas LLM, ativações de ferramentas e transições de estado.
+
+```python
+# Adicione trace_id para habilitar o tracing hierárquico no Portkey
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        trace_id="unique-session-id"  # Adicione um trace ID único
+    )
+)
+```
+  </Tab>
+
+  <Tab title="Logs">
+<Frame>
+    <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Portkey%20Docs%20Metadata.png"/>
+</Frame>
+
+Portkey registra cada interação com LLMs, incluindo:
+
+- Payloads completos das requisições e respostas
+- Métricas de latência e uso de tokens
+- Cálculos de custo
+- Chamadas de ferramentas e execuções de funções
+
+Todos os logs podem ser filtrados por metadados, trace IDs, modelos e mais, tornando mais fácil depurar execuções específicas do crew.
+  </Tab>
+
+  <Tab title="Métricas & Dashboards">
+<Frame>
+    <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Dashboard.png"/>
+</Frame>
+
+Portkey oferece dashboards integrados que ajudam você a:
+
+- Rastrear custos e uso de tokens em todas as execuções do crew
+- Analisar métricas de desempenho, como latência e taxas de sucesso
+- Identificar gargalos nos fluxos de trabalho dos agentes
+- Comparar diferentes configurações de crew e LLMs
+
+Você pode filtrar e segmentar todas as métricas por metadados personalizados para analisar tipos de crew, grupos de usuários ou casos de uso específicos.
+  </Tab>
+
+  <Tab title="Filtragem por Metadados">
+<Frame>
+  <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/Metadata%20Filters%20from%20CrewAI.png" alt="Analytics with metadata filters" />
+</Frame>
+
+Adicione metadados personalizados à configuração LLM do seu CrewAI para permitir filtragem e segmentação poderosas:
+
+```python
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        metadata={
+            "crew_type": "research_crew",
+            "environment": "production",
+            "_user": "user_123",   # Campo especial _user para analytics de usuários
+            "request_source": "mobile_app"
+        }
+    )
+)
+```
+
+Esses metadados podem ser usados para filtrar logs, traces e métricas no painel do Portkey, permitindo analisar execuções específicas do crew, usuários ou ambientes.
+  </Tab>
+</Tabs>
+
+### 2. Confiabilidade - Mantenha Seus Crews Funcionando Sem Interrupções
+
+Ao executar crews em produção, problemas podem ocorrer – limites de taxa da API, problemas de rede ou indisponibilidade do provedor. Os recursos de confiabilidade do Portkey garantem que seus agentes continuem funcionando mesmo quando problemas surgem.
+
+É simples habilitar fallback na sua configuração CrewAI usando um Config do Portkey:
+
+```python
+from crewai import LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Crie LLM com configuração de fallback
+portkey_llm = LLM(
+    model="gpt-4o",
+    max_tokens=1000,
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        config={
+            "strategy": {
+                "mode": "fallback"
+            },
+            "targets": [
+                {
+                    "provider": "openai",
+                    "api_key": "YOUR_OPENAI_API_KEY",
+                    "override_params": {"model": "gpt-4o"}
+                },
+                {
+                    "provider": "anthropic",
+                    "api_key": "YOUR_ANTHROPIC_API_KEY",
+                    "override_params": {"model": "claude-3-opus-20240229"}
+                }
+            ]
+        }
+    )
+)
+
+# Use essa configuração LLM com seus agentes
+```
+
+Essa configuração automaticamente tentará o Claude caso a requisição para o GPT-4o falhe, garantindo que seu crew continue funcionando.
+
+<CardGroup cols="2">
+  <Card title="Tentativas Automáticas" icon="rotate" href="https://portkey.ai/docs/product/ai-gateway/automatic-retries">
+    Lida automaticamente com falhas temporárias. Se uma chamada LLM falhar, o Portkey fará novas tentativas o número especificado de vezes – perfeito para limites de taxa ou instabilidades de rede.
+  </Card>
+  <Card title="Timeouts de Requisição" icon="clock" href="https://portkey.ai/docs/product/ai-gateway/request-timeouts">
+    Evite que seus agentes fiquem travados. Defina timeouts para garantir respostas (ou falhas controladas) dentro do tempo necessário.
+  </Card>
+  <Card title="Roteamento Condicional" icon="route" href="https://portkey.ai/docs/product/ai-gateway/conditional-routing">
+    Envie diferentes solicitações para diferentes provedores. Direcione raciocínios complexos para o GPT-4, tarefas criativas para Claude e respostas rápidas para Gemini conforme sua necessidade.
+  </Card>
+  <Card title="Fallbacks" icon="shield" href="https://portkey.ai/docs/product/ai-gateway/fallbacks">
+    Mantenha-se em funcionamento mesmo se seu provedor principal falhar. Troque automaticamente para provedores de backup para manter a disponibilidade.
+  </Card>
+  <Card title="Balanceamento de Carga" icon="scale-balanced" href="https://portkey.ai/docs/product/ai-gateway/load-balancing">
+    Distribua solicitações entre várias chaves de API ou provedores. Ótimo para operações de crew em grande escala e para permanecer dentro dos limites de taxa.
+  </Card>
+</CardGroup>
+
+### 3. Prompting no CrewAI
+
+O Prompt Engineering Studio do Portkey ajuda você a criar, gerenciar e otimizar os prompts usados em seus agentes CrewAI. Em vez de codificar prompts ou instruções manualmente, use a API de renderização de prompts do Portkey para buscar e aplicar dinâmicamente seus prompts versionados.
+
+<Frame caption="Gerencie prompts na Prompt Library do Portkey">
+![Prompt Playground Interface](https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Portkey%20Docs.webp)
+</Frame>
+
+<Tabs>
+  <Tab title="Prompt Playground">
+Prompt Playground é um local para comparar, testar e implantar prompts perfeitos para sua aplicação de IA. É onde você experimenta com diferentes modelos, testa variáveis, compara saídas e refina sua estratégia de engenharia de prompts antes de implantar em produção. Ele permite:
+
+1. Desenvolver prompts de forma iterativa antes de usá-los em seus agentes
+2. Testar prompts com diferentes variáveis e modelos
+3. Comparar saídas entre diferentes versões de prompts
+4. Colaborar com membros da equipe no desenvolvimento de prompts
+
+Esse ambiente visual facilita a criação de prompts eficazes para cada etapa do fluxo de trabalho dos seus agentes CrewAI.
+  </Tab>
+
+  <Tab title="Usando Templates de Prompt">
+A API Prompt Render recupera seus templates de prompt com todos os parâmetros configurados:
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL, Portkey
+
+# Inicialize o cliente admin do Portkey
+portkey_admin = Portkey(api_key="YOUR_PORTKEY_API_KEY")
+
+# Recupere o prompt usando a render API
+prompt_data = portkey_client.prompts.render(
+    prompt_id="YOUR_PROMPT_ID",
+    variables={
+        "agent_role": "Senior Research Scientist",
+    }
+)
+
+backstory_agent_prompt=prompt_data.data.messages[0]["content"]
+
+
+# Configure o LLM com integração Portkey
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY"
+    )
+)
+
+# Crie o agente utilizando o prompt renderizado
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory=backstory_agent,  # Use o prompt renderizado
+    verbose=True,
+    llm=portkey_llm
+)
+```
+  </Tab>
+
+  <Tab title="Versionamento de Prompts">
+Você pode:
+- Criar múltiplas versões do mesmo prompt
+- Comparar o desempenho entre versões
+- Voltar a versões anteriores se necessário
+- Especificar qual versão usar em seu código:
+
+```python
+# Use uma versão específica do prompt
+prompt_data = portkey_admin.prompts.render(
+    prompt_id="YOUR_PROMPT_ID@version_number",
+    variables={
+        "agent_role": "Senior Research Scientist",
+        "agent_goal": "Discover groundbreaking insights"
+    }
+)
+```
+  </Tab>
+
+  <Tab title="Mustache Templating para variáveis">
+Os prompts do Portkey usam modelos estilo Mustache para fácil substituição de variáveis:
+
+```
+You are a {{agent_role}} with expertise in {{domain}}.
+
+Your mission is to {{agent_goal}} by leveraging your knowledge
+and experience in the field.
+
+Always maintain a {{tone}} tone and focus on providing {{focus_area}}.
+```
+
+Ao renderizar, basta passar as variáveis:
+
+```python
+prompt_data = portkey_admin.prompts.render(
+    prompt_id="YOUR_PROMPT_ID",
+    variables={
+        "agent_role": "Senior Research Scientist",
+        "domain": "artificial intelligence",
+        "agent_goal": "discover groundbreaking insights",
+        "tone": "professional",
+        "focus_area": "practical applications"
+    }
+)
+```
+  </Tab>
+</Tabs>
+
+<Card title="Prompt Engineering Studio" icon="wand-magic-sparkles" href="https://portkey.ai/docs/product/prompt-library">
+  Saiba mais sobre os recursos de gerenciamento de prompts do Portkey
+</Card>
+
+### 4. Guardrails para Crews Seguros
+
+Guardrails garantem que seus agentes CrewAI operem com segurança e respondam adequadamente em todas as situações.
+
+**Por que usar Guardrails?**
+
+Os agentes CrewAI podem apresentar falhas de diversos tipos:
+- Gerar conteúdo nocivo ou inapropriado
+- Vazamento de informações sensíveis como PII
+- Alucinar informações incorretas
+- Gerar saídas em formatos incorretos
+
+Os guardrails do Portkey fornecem proteções tanto para entradas quanto para saídas.
+
+**Implementando Guardrails**
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Crie LLM com guardrails
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        config={
+            "input_guardrails": ["guardrails-id-xxx", "guardrails-id-yyy"],
+            "output_guardrails": ["guardrails-id-zzz"]
+        }
+    )
+)
+
+# Crie agente com LLM guardrailed
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+
+Os guardrails do Portkey podem:
+- Detectar e redigir PII tanto em entradas quanto em saídas
+- Filtrar conteúdo prejudicial ou inapropriado
+- Validar formatos de resposta contra schemas
+- Verificar alucinações comparando com ground truth
+- Aplicar lógica e regras de negócio personalizadas
+
+<Card title="Saiba Mais Sobre Guardrails" icon="shield-check" href="https://portkey.ai/docs/product/guardrails">
+  Explore os recursos de guardrails do Portkey para aumentar a segurança dos agentes
+</Card>
+
+### 5. Rastreamento de Usuário com Metadados
+
+Rastreie usuários individuais através dos seus agentes CrewAI utilizando o sistema de metadados do Portkey.
+
+**O que é Metadata no Portkey?**
+
+Metadados permitem associar dados personalizados a cada requisição, possibilitando filtragem, segmentação e analytics. O campo especial `_user` é projetado especificamente para rastreamento de usuário.
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Configure o LLM com rastreamento de usuário
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        metadata={
+            "_user": "user_123",  # Campo especial _user para analytics de usuários
+            "user_tier": "premium",
+            "user_company": "Acme Corp",
+            "session_id": "abc-123"
+        }
+    )
+)
+
+# Crie agente com LLM rastreado
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+
+**Filtre Analytics por Usuário**
+
+Com os metadados configurados, você pode filtrar analytics por usuário e analisar métricas de desempenho individualmente:
+
+<Frame caption="Filtre analytics por usuário">
+  <img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/Metadata%20Filters%20from%20CrewAI.png"/>
+</Frame>
+
+Isso permite:
+- Rastreamento de custos e orçamento por usuário
+- Analytics personalizados por usuário
+- Métricas por equipe ou organização
+- Monitoramento específico por ambiente (homologação x produção)
+
+<Card title="Saiba Mais Sobre Metadata" icon="tags" href="https://portkey.ai/docs/product/observability/metadata">
+  Veja como usar metadados personalizados para aprimorar seus analytics
+</Card>
+
+### 6. Cache para Crews Eficientes
+
+Implemente caching para tornar seus agentes CrewAI mais eficientes e econômicos:
+
+<Tabs>
+  <Tab title="Caching Simples">
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Configure o LLM com caching simples
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        config={
+            "cache": {
+                "mode": "simple"
+            }
+        }
+    )
+)
+
+# Crie agente com LLM cacheado
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+
+O caching simples realiza correspondências exatas de prompts de entrada, cacheando requisições idênticas para evitar execuções redundantes do modelo.
+  </Tab>
+
+  <Tab title="Cache Semântico">
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Configure o LLM com cache semântico
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY",
+        config={
+            "cache": {
+                "mode": "semantic"
+            }
+        }
+    )
+)
+
+# Crie agente com LLM com cache semântico
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+
+O cache semântico considera a similaridade contextual entre solicitações de entrada, armazenando respostas para entradas semanticamente similares.
+  </Tab>
+</Tabs>
+
+### 7. Interoperabilidade de Modelos
+
+O CrewAI oferece suporte a múltiplos provedores de LLM, e o Portkey amplia essa capacidade fornecendo acesso a mais de 200 LLMs por meio de uma interface unificada. Você pode facilmente alternar entre diferentes modelos sem alterar a lógica central do seu agente:
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import createHeaders, PORTKEY_GATEWAY_URL
+
+# Configure LLMs com diferentes provedores
+openai_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_OPENAI_VIRTUAL_KEY"
+    )
+)
+
+anthropic_llm = LLM(
+    model="claude-3-5-sonnet-latest",
+    max_tokens=1000,
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="dummy",
+    extra_headers=createHeaders(
+        api_key="YOUR_PORTKEY_API_KEY",
+        virtual_key="YOUR_ANTHROPIC_VIRTUAL_KEY"
+    )
+)
+
+# Escolha qual LLM usar para cada agente conforme necessário
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=openai_llm  # Use anthropic_llm para Anthropic
+)
+```
+
+Portkey oferece acesso a LLMs de provedores como:
+
+- OpenAI (GPT-4o, GPT-4 Turbo, etc.)
+- Anthropic (Claude 3.5 Sonnet, Claude 3 Opus, etc.)
+- Mistral AI (Mistral Large, Mistral Medium, etc.)
+- Google Vertex AI (Gemini 1.5 Pro, etc.)
+- Cohere (Command, Command-R, etc.)
+- AWS Bedrock (Claude, Titan, etc.)
+- Modelos locais/privados
+
+<Card title="Provedores Suportados" icon="server" href="https://portkey.ai/docs/integrations/llms">
+  Veja a lista completa de provedores LLM suportados pelo Portkey
+</Card>
+
+## Configure Governança Corporativa para o CrewAI
+
+**Por que Governança Corporativa?**
+Se você utiliza CrewAI dentro de sua organização, é importante considerar diversos aspectos de governança:
+- **Gestão de Custos**: Controlar e rastrear os gastos com IA entre equipes
+- **Controle de Acesso**: Gerenciar quais equipes podem usar modelos específicos
+- **Analytics de Uso**: Compreender como a IA está sendo utilizada na organização
+- **Segurança & Compliance**: Manutenção de padrões corporativos de segurança
+- **Confiabilidade**: Garantir serviço consistente para todos os usuários
+
+O Portkey adiciona uma camada abrangente de governança para atender a essas necessidades corporativas. Vamos implementar esses controles passo a passo.
+
+<Steps>
+<Step title="Crie uma Virtual Key">
+Virtual Keys são a maneira segura do Portkey para gerenciar as chaves de API dos provedores de LLM. Elas fornecem controles essenciais como:
+- Limites de orçamento para uso da API
+- Capacidade de rate limiting
+- Armazenamento seguro das chaves de API
+
+Para criar uma virtual key:
+Vá até [Virtual Keys](https://app.portkey.ai/virtual-keys) no app Portkey. Salve e copie o ID da virtual key
+
+<Frame>
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/Virtual%20Key%20from%20Portkey%20Docs.png" width="500"/>
+</Frame>
+
+<Note>
+Salve o ID da sua virtual key – você precisará dele no próximo passo.
+</Note>
+</Step>
+
+<Step title="Crie um Config Padrão">
+Os Configs no Portkey definem como suas requisições são roteadas, com recursos como roteamento avançado, fallbacks e tentativas automáticas.
+
+Para criar seu config:
+1. Vá até [Configs](https://app.portkey.ai/configs) no painel Portkey
+2. Crie um novo config com:
+    ```json
+    {
+        "virtual_key": "YOUR_VIRTUAL_KEY_FROM_STEP1",
+       	"override_params": {
+          "model": "gpt-4o" // Nome do seu modelo preferido
+        }
+    }
+    ```
+3. Salve e anote o nome do Config para o próximo passo
+
+<Frame>
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20Portkey%20Docs%20Config.png" width="500"/>
+
+</Frame>
+</Step>
+
+<Step title="Configure a Chave de API Portkey">
+Agora crie uma chave de API Portkey e anexe a config criada no Passo 2:
+
+1. Vá até [API Keys](https://app.portkey.ai/api-keys) na Portkey e crie uma nova chave de API
+2. Selecione sua config do `Passo 2`
+3. Gere e salve sua chave de API
+
+<Frame>
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/CrewAI%20API%20Key.png" width="500"/>
+
+</Frame>
+</Step>
+
+<Step title="Conecte ao CrewAI">
+Após configurar sua chave de API Portkey com a config anexada, conecte-a aos seus agentes CrewAI:
+
+```python
+from crewai import Agent, LLM
+from portkey_ai import PORTKEY_GATEWAY_URL
+
+# Configure o LLM com sua chave de API
+portkey_llm = LLM(
+    model="gpt-4o",
+    base_url=PORTKEY_GATEWAY_URL,
+    api_key="YOUR_PORTKEY_API_KEY"
+)
+
+# Crie agente com LLM habilitado para Portkey
+researcher = Agent(
+    role="Senior Research Scientist",
+    goal="Discover groundbreaking insights about the assigned topic",
+    backstory="You are an expert researcher with deep domain knowledge.",
+    verbose=True,
+    llm=portkey_llm
+)
+```
+</Step>
+</Steps>
+
+<AccordionGroup>
+  <Accordion title="Etapa 1: Implementar Controles de Orçamento & Rate Limits">
+### Etapa 1: Implementar Controles de Orçamento & Rate Limits
+
+Virtual Keys permitem controle granular sobre o acesso ao LLM por equipe/departamento. Isso ajuda você a:
+- Definir [limites de orçamento](https://portkey.ai/docs/product/ai-gateway/virtual-keys/budget-limits)
+- Prevenir picos inesperados de uso através de Rate limits
+- Rastrear gastos por departamento
+
+#### Configurando controles específicos de departamento:
+1. Vá até [Virtual Keys](https://app.portkey.ai/virtual-keys) no painel Portkey
+2. Crie uma nova Virtual Key para cada departamento com limites de orçamento e rate limits
+3. Configure limites específicos por departamento
+
+<Frame>
+<img src="https://raw.githubusercontent.com/siddharthsambharia-portkey/Portkey-Product-Images/refs/heads/main/Virtual%20Key%20from%20Portkey%20Docs.png" width="500"/>
+</Frame>
+  </Accordion>
+
+  <Accordion title="Etapa 2: Definir Regras de Acesso a Modelos">
+### Etapa 2: Definir Regras de Acesso a Modelos
+
+À medida que o uso de IA cresce, controlar quais equipes têm acesso a quais modelos se torna fundamental. Os Configs do Portkey fornecem essa camada de controle com recursos como:
+
+#### Recursos de Controle de Acesso:
+- **Restrições de Modelo**: Limite o acesso a modelos específicos
+- **Proteção de Dados**: Implemente guardrails para dados sensíveis
+- **Controles de Confiabilidade**: Adicione fallbacks e tentativas automáticas
+
+#### Exemplo de Configuração:
+Aqui está um exemplo básico para rotear requisições ao OpenAI, usando especificamente o GPT-4o:
+
+```json
+{
+	"strategy": {
+		"mode": "single"
+	},
+	"targets": [
+		{
+			"virtual_key": "YOUR_OPENAI_VIRTUAL_KEY",
+			"override_params": {
+				"model": "gpt-4o"
+			}
+		}
+	]
+}
+```
+
+  Crie seu config na [página de Configs](https://app.portkey.ai/configs) no painel do Portkey.
+
+    <Note>
+    Os configs podem ser atualizados a qualquer momento para ajustar controles sem afetar aplicações em execução.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Etapa 3: Implementar Controles de Acesso">
+    ### Etapa 3: Implementar Controles de Acesso
+
+    Crie chaves de API específicas por usuário que automaticamente:
+    - Rastreiam uso por usuário/equipe com o auxílio das virtual keys
+    - Aplicam configs adequadas para rotear requisições
+    - Coletam metadados relevantes para filtragem de logs
+    - Impõem permissões de acesso
+
+    Crie chaves de API através de:
+    - [Portkey App](https://app.portkey.ai/)
+    - [API Key Management API](/pt-BR/api-reference/admin-api/control-plane/api-keys/create-api-key)
+
+    Exemplo usando Python SDK:
+    ```python
+    from portkey_ai import Portkey
+
+    portkey = Portkey(api_key="YOUR_ADMIN_API_KEY")
+
+    api_key = portkey.api_keys.create(
+        name="engineering-team",
+        type="organisation",
+        workspace_id="YOUR_WORKSPACE_ID",
+        defaults={
+            "config_id": "your-config-id",
+            "metadata": {
+                "environment": "production",
+                "department": "engineering"
+            }
+        },
+        scopes=["logs.view", "configs.read"]
+    )
+    ```
+
+    Para instruções detalhadas de gerenciamento de chaves, veja nossa [documentação de API Keys](/pt-BR/api-reference/admin-api/control-plane/api-keys/create-api-key).
+  </Accordion>
+
+  <Accordion title="Etapa 4: Implante & Monitore">
+    ### Etapa 4: Implante & Monitore
+    Após distribuir as chaves de API para os membros da equipe, seu setup corporativo CrewAI está pronto. Cada membro pode agora usar suas chaves designadas com os níveis de acesso e controles de orçamento apropriados.
+
+    Monitore o uso no painel Portkey:
+    - Rastreamento de custos por departamento
+    - Padrões de uso de modelos
+    - Volume de requisições
+    - Taxa de erros
+  </Accordion>
+
+</AccordionGroup>
+
+<Note>
+### Recursos Corporativos Agora Disponíveis
+**Sua integração CrewAI agora conta com:**
+- Controles de orçamento departamental
+- Governança de acesso a modelos
+- Rastreamento de uso & atribuição
+- Guardrails de segurança
+- Recursos de confiabilidade
+</Note>
+
+## Perguntas Frequentes
+
+<AccordionGroup>
+  <Accordion title="Como o Portkey aprimora o CrewAI?">
+    Portkey adiciona prontidão para produção ao CrewAI através de observabilidade abrangente (traces, logs, métricas), recursos de confiabilidade (fallbacks, tentativas automáticas, cache) e acesso a mais de 200 LLMs por meio de uma interface unificada. Isso facilita depurar, otimizar e escalar suas aplicações de agentes.
+  </Accordion>
+
+  <Accordion title="Posso usar Portkey com aplicações CrewAI existentes?">
+    Sim! Portkey integra-se perfeitamente a aplicações CrewAI existentes. Basta atualizar o código de configuração do LLM com a versão habilitada do Portkey. O restante do seu código de agente e crew permanece inalterado.
+  </Accordion>
+
+  <Accordion title="Portkey funciona com todos os recursos do CrewAI?">
+    Portkey suporta todos os recursos do CrewAI, incluindo agentes, ferramentas, workflows human-in-the-loop e todos os tipos de processo de tarefas (sequencial, hierárquico, etc.). Ele adiciona observabilidade e confiabilidade sem limitar nenhuma funcionalidade do framework.
+  </Accordion>
+
+  <Accordion title="Posso rastrear o uso em múltiplos agentes de um crew?">
+    Sim, o Portkey permite que você use um `trace_id` consistente em múltiplos agentes de um crew para rastrear todo o fluxo de trabalho. Isso é especialmente útil para crews complexos onde você deseja entender o caminho completo de execução entre os agentes.
+  </Accordion>
+
+  <Accordion title="Como filtro logs e traces para execuções específicas de crew?">
+    O Portkey permite adicionar metadados personalizados à configuração do seu LLM, que podem ser usados para filtragem. Adicione campos como `crew_name`, `crew_type`, ou `session_id` para encontrar e analisar facilmente execuções específicas do crew.
+  </Accordion>
+
+  <Accordion title="Posso usar minhas próprias chaves de API com o Portkey?">
+    Sim! O Portkey utiliza suas próprias chaves de API dos provedores LLM. Elas são armazenadas com segurança como virtual keys, permitindo que você gerencie e gire as chaves facilmente sem alterar seu código.
+  </Accordion>
+
+</AccordionGroup>
+
+## Recursos
+
+<CardGroup cols="3">
+  <Card title="CrewAI Docs" icon="book" href="https://docs.crewai.com/">
+    <p>Documentação oficial do CrewAI</p>
+  </Card>
+  <Card title="Agende uma Demonstração" icon="calendar" href="https://calendly.com/portkey-ai">
+    <p>Receba orientação personalizada sobre como implementar essa integração</p>
+  </Card>
+</CardGroup>

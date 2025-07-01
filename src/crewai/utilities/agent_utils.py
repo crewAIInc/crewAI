@@ -20,7 +20,10 @@ from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
+from rich.console import Console
+from crewai.cli.config import Settings
 
+console = Console()
 
 def parse_tools(tools: List[BaseTool]) -> List[CrewStructuredTool]:
     """Parse tools to be used for the task."""
@@ -44,7 +47,7 @@ def render_text_description_and_args(
     tools: Sequence[Union[CrewStructuredTool, BaseTool]],
 ) -> str:
     """Render the tool name, description, and args in plain text.
-    
+
         search: This tool is used for search, args: {"query": {"type": "string"}}
         calculator: This tool is used for math, \
         args: {"expression": {"type": "string"}}
@@ -215,9 +218,6 @@ def handle_agent_action_core(
     if show_logs:
         show_logs(formatted_answer)
 
-    if messages is not None:
-        messages.append({"role": "assistant", "content": tool_result.result})
-
     return formatted_answer
 
 
@@ -309,7 +309,7 @@ def handle_context_length(
     """
     if respect_context_window:
         printer.print(
-            content="Context length exceeded. Summarizing content to fit the model context window.",
+            content="Context length exceeded. Summarizing content to fit the model context window. Might take a while...",
             color="yellow",
         )
         summarize_messages(messages, llm, callbacks, i18n)
@@ -337,15 +337,22 @@ def summarize_messages(
         callbacks: List of callbacks for LLM
         i18n: I18N instance for messages
     """
+    messages_string = " ".join([message["content"] for message in messages])
     messages_groups = []
-    for message in messages:
-        content = message["content"]
-        cut_size = llm.get_context_window_size()
-        for i in range(0, len(content), cut_size):
-            messages_groups.append({"content": content[i : i + cut_size]})
+
+    cut_size = llm.get_context_window_size()
+
+    for i in range(0, len(messages_string), cut_size):
+        messages_groups.append({"content": messages_string[i : i + cut_size]})
 
     summarized_contents = []
-    for group in messages_groups:
+
+    total_groups = len(messages_groups)
+    for idx, group in enumerate(messages_groups, 1):
+        Printer().print(
+            content=f"Summarizing {idx}/{total_groups}...",
+            color="yellow",
+        )
         summary = llm.call(
             [
                 format_message_for_llm(
@@ -431,6 +438,13 @@ def show_agent_logs(
             )
 
 
+def _print_current_organization():
+    settings = Settings()
+    if settings.org_uuid:
+        console.print(f"Fetching agent from organization: {settings.org_name} ({settings.org_uuid})", style="bold blue")
+    else:
+        console.print("No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.", style="yellow")
+
 def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
     attributes: Dict[str, Any] = {}
     if from_repository:
@@ -440,15 +454,18 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
         from crewai.cli.plus_api import PlusAPI
 
         client = PlusAPI(api_key=get_auth_token())
+        _print_current_organization()
         response = client.get_agent(from_repository)
         if response.status_code == 404:
             raise AgentRepositoryError(
-                f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization"
+                f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
+                f"\nIf you are using the wrong organization, switch to the correct one using `crewai org switch <org_id>` command.",
             )
 
         if response.status_code != 200:
             raise AgentRepositoryError(
                 f"Agent {from_repository} could not be loaded: {response.text}"
+                f"\nIf you are using the wrong organization, switch to the correct one using `crewai org switch <org_id>` command.",
             )
 
         agent = response.json()
@@ -457,9 +474,16 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
                 attributes[key] = []
                 for tool in value:
                     try:
-                        module = importlib.import_module("crewai_tools")
+                        module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
-                        attributes[key].append(tool_class())
+
+                        tool_value = tool_class(**tool["init_params"])
+
+                        if isinstance(tool_value, list):
+                            attributes[key].extend(tool_value)
+                        else:
+                            attributes[key].append(tool_value)
+
                     except Exception as e:
                         raise AgentRepositoryError(
                             f"Tool {tool['name']} could not be loaded: {e}"

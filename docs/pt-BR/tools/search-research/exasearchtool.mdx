@@ -1,0 +1,52 @@
+---
+title: Carregador Web EXA Search
+description: O `EXASearchTool` foi projetado para realizar uma busca semântica para uma consulta especificada a partir do conteúdo de um texto em toda a internet.
+icon: globe-pointer
+---
+
+# `EXASearchTool`
+
+## Descrição
+
+O EXASearchTool foi projetado para realizar uma busca semântica para uma consulta especificada a partir do conteúdo de um texto em toda a internet.
+Ele utiliza a API da [exa.ai](https://exa.ai/) para buscar e exibir os resultados de pesquisa mais relevantes com base na consulta fornecida pelo usuário.
+
+## Instalação
+
+Para incorporar esta ferramenta em seu projeto, siga as instruções de instalação abaixo:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma busca com uma consulta determinada:
+
+```python Code
+from crewai_tools import EXASearchTool
+
+# Initialize the tool for internet searching capabilities
+tool = EXASearchTool()
+```
+
+## Etapas para Começar
+
+Para usar o EXASearchTool de forma eficaz, siga estas etapas:
+
+<Steps>
+    <Step title="Instalação do Pacote">
+        Confirme se o pacote `crewai[tools]` está instalado em seu ambiente Python.
+    </Step>
+    <Step title="Obtenção da Chave de API">
+        Adquira uma chave de API da [exa.ai](https://exa.ai/) registrando-se gratuitamente em [exa.ai](https://exa.ai/).
+    </Step>
+    <Step title="Configuração de Ambiente">
+        Armazene a chave de API obtida em uma variável de ambiente chamada `EXA_API_KEY` para facilitar o uso pela ferramenta.
+    </Step>
+</Steps>
+
+## Conclusão
+
+Ao integrar o `EXASearchTool` em projetos Python, os usuários ganham a capacidade de realizar buscas relevantes e em tempo real pela internet diretamente de suas aplicações.
+Seguindo as orientações de configuração e uso fornecidas, a incorporação desta ferramenta em projetos torna-se simples e direta.

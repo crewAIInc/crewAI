@@ -1,0 +1,202 @@
+---
+title: Snowflake Search Tool
+description: O `SnowflakeSearchTool` permite que agentes CrewAI executem consultas SQL e realizem buscas semânticas em data warehouses Snowflake.
+icon: snowflake
+---
+
+# `SnowflakeSearchTool`
+
+## Descrição
+
+O `SnowflakeSearchTool` foi desenvolvido para conectar-se a data warehouses Snowflake e executar consultas SQL com recursos avançados como pool de conexões, lógica de tentativas e execução assíncrona. Esta ferramenta permite que agentes CrewAI interajam com bases de dados Snowflake, sendo ideal para tarefas de análise de dados, relatórios e inteligência de negócios que requerem acesso a dados empresariais armazenados no Snowflake.
+
+## Instalação
+
+Para utilizar esta ferramenta, é necessário instalar as dependências requeridas:
+
+```shell
+uv add cryptography snowflake-connector-python snowflake-sqlalchemy
+```
+
+Ou, alternativamente:
+
+```shell
+uv sync --extra snowflake
+```
+
+## Passos para Começar
+
+Para usar eficazmente o `SnowflakeSearchTool`, siga estes passos:
+
+1. **Instale as Dependências**: Instale os pacotes necessários usando um dos comandos acima.
+2. **Configure a Conexão com o Snowflake**: Crie um objeto `SnowflakeConfig` com suas credenciais do Snowflake.
+3. **Inicialize a Ferramenta**: Crie uma instância da ferramenta com a configuração necessária.
+4. **Execute Consultas**: Utilize a ferramenta para rodar consultas SQL no seu banco de dados Snowflake.
+
+## Exemplo
+
+O exemplo a seguir demonstra como usar o `SnowflakeSearchTool` para consultar dados de um banco de dados Snowflake:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import SnowflakeSearchTool, SnowflakeConfig
+
+# Create Snowflake configuration
+config = SnowflakeConfig(
+    account="your_account",
+    user="your_username",
+    password="your_password",
+    warehouse="COMPUTE_WH",
+    database="your_database",
+    snowflake_schema="your_schema"
+)
+
+# Initialize the tool
+snowflake_tool = SnowflakeSearchTool(config=config)
+
+# Define an agent that uses the tool
+data_analyst_agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data from Snowflake database",
+    backstory="An expert data analyst who can extract insights from enterprise data.",
+    tools=[snowflake_tool],
+    verbose=True,
+)
+
+# Example task to query sales data
+query_task = Task(
+    description="Query the sales data for the last quarter and summarize the top 5 products by revenue.",
+    expected_output="A summary of the top 5 products by revenue for the last quarter.",
+    agent=data_analyst_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[data_analyst_agent], 
+            tasks=[query_task])
+result = crew.kickoff()
+```
+
+Você também pode customizar a ferramenta com parâmetros adicionais:
+
+```python Code
+# Initialize the tool with custom parameters
+snowflake_tool = SnowflakeSearchTool(
+    config=config,
+    pool_size=10,
+    max_retries=5,
+    retry_delay=2.0,
+    enable_caching=True
+)
+```
+
+## Parâmetros
+
+### Parâmetros do SnowflakeConfig
+
+A classe `SnowflakeConfig` aceita os seguintes parâmetros:
+
+- **account**: Obrigatório. Identificador da conta Snowflake.
+- **user**: Obrigatório. Nome de usuário do Snowflake.
+- **password**: Opcional*. Senha do Snowflake.
+- **private_key_path**: Opcional*. Caminho para o arquivo de chave privada (alternativa à senha).
+- **warehouse**: Obrigatório. Nome do warehouse do Snowflake.
+- **database**: Obrigatório. Banco de dados padrão.
+- **snowflake_schema**: Obrigatório. Schema padrão.
+- **role**: Opcional. Papel de usuário Snowflake.
+- **session_parameters**: Opcional. Parâmetros de sessão personalizados como dicionário.
+
+*É necessário fornecer `password` ou `private_key_path`.
+
+### Parâmetros do SnowflakeSearchTool
+
+O `SnowflakeSearchTool` aceita os seguintes parâmetros durante a inicialização:
+
+- **config**: Obrigatório. Um objeto `SnowflakeConfig` contendo detalhes da conexão.
+- **pool_size**: Opcional. Número de conexões no pool. O padrão é 5.
+- **max_retries**: Opcional. Número máximo de tentativas para consultas que falharem. Padrão é 3.
+- **retry_delay**: Opcional. Intervalo entre tentativas em segundos. Padrão é 1.0.
+- **enable_caching**: Opcional. Define se o cache de resultados de consultas será habilitado. Padrão é True.
+
+## Uso
+
+Ao utilizar o `SnowflakeSearchTool`, você deve fornecer os seguintes parâmetros:
+
+- **query**: Obrigatório. Consulta SQL a ser executada.
+- **database**: Opcional. Sobrescreve o banco de dados padrão especificado na configuração.
+- **snowflake_schema**: Opcional. Sobrescreve o schema padrão especificado na configuração.
+- **timeout**: Opcional. Tempo limite da consulta em segundos. O padrão é 300.
+
+A ferramenta retornará os resultados da consulta como uma lista de dicionários, onde cada dicionário representa uma linha com os nomes das colunas como chaves.
+
+```python Code
+# Example of using the tool with an agent
+data_analyst = Agent(
+    role="Data Analyst",
+    goal="Analyze sales data from Snowflake",
+    backstory="An expert data analyst with experience in SQL and data visualization.",
+    tools=[snowflake_tool],
+    verbose=True
+)
+
+# The agent will use the tool with parameters like:
+# query="SELECT product_name, SUM(revenue) as total_revenue FROM sales GROUP BY product_name ORDER BY total_revenue DESC LIMIT 5"
+# timeout=600
+
+# Create a task for the agent
+analysis_task = Task(
+    description="Query the sales database and identify the top 5 products by revenue for the last quarter.",
+    expected_output="A detailed analysis of the top 5 products by revenue.",
+    agent=data_analyst
+)
+
+# Run the task
+crew = Crew(
+    agents=[data_analyst], 
+    tasks=[analysis_task]
+)
+result = crew.kickoff()
+```
+
+## Recursos Avançados
+
+### Pool de Conexões
+
+O `SnowflakeSearchTool` implementa pool de conexões para melhorar a performance reutilizando conexões com o banco de dados. Você pode controlar o tamanho do pool com o parâmetro `pool_size`.
+
+### Tentativas Automáticas
+
+A ferramenta tenta novamente consultas que falharem automaticamente, usando backoff exponencial. O comportamento das tentativas pode ser ajustado pelos parâmetros `max_retries` e `retry_delay`.
+
+### Cache de Resultados de Consultas
+
+Para melhorar a performance em consultas repetidas, a ferramenta pode armazenar resultados em cache. Este recurso está habilitado por padrão, mas pode ser desativado ao definir `enable_caching=False`.
+
+### Autenticação por Par de Chaves
+
+Além de autenticação por senha, a ferramenta também suporta autenticação por par de chaves para maior segurança:
+
+```python Code
+config = SnowflakeConfig(
+    account="your_account",
+    user="your_username",
+    private_key_path="/path/to/your/private/key.p8",
+    warehouse="COMPUTE_WH",
+    database="your_database",
+    snowflake_schema="your_schema"
+)
+```
+
+## Tratamento de Erros
+
+O `SnowflakeSearchTool` inclui uma gestão abrangente de erros para situações comuns no Snowflake:
+
+- Falhas de conexão
+- Timeout de consultas
+- Erros de autenticação
+- Erros de banco de dados e schema
+
+Quando um erro ocorrer, a ferramenta tentará repetir a operação (se estiver configurado) e fornecerá informações detalhadas sobre o erro.
+
+## Conclusão
+
+O `SnowflakeSearchTool` oferece uma maneira poderosa de integrar data warehouses Snowflake com agentes CrewAI. Com recursos como pool de conexões, tentativas automáticas e cache de consultas, ele possibilita acesso eficiente e confiável aos dados empresariais. Esta ferramenta é particularmente útil para tarefas de análise de dados, relatórios e inteligência de negócios que demandam acesso a dados estruturados armazenados no Snowflake.

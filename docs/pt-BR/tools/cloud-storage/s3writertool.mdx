@@ -1,0 +1,150 @@
+---
+title: Ferramenta S3 Writer
+description: A `S3WriterTool` permite que agentes CrewAI escrevam conteúdo em arquivos em buckets Amazon S3.
+icon: aws
+---
+
+# `S3WriterTool`
+
+## Descrição
+
+A `S3WriterTool` foi projetada para escrever conteúdo em arquivos em buckets Amazon S3. Esta ferramenta permite que agentes CrewAI criem ou atualizem arquivos no S3, tornando-a ideal para fluxos de trabalho que exigem armazenamento de dados, salvamento de arquivos de configuração ou persistência de qualquer outro conteúdo no armazenamento AWS S3.
+
+## Instalação
+
+Para usar esta ferramenta, você precisa instalar as dependências necessárias:
+
+```shell
+uv add boto3
+```
+
+## Passos para Começar
+
+Para usar a `S3WriterTool` de forma eficaz, siga estes passos:
+
+1. **Instale as Dependências**: Instale os pacotes necessários usando o comando acima.
+2. **Configure as Credenciais AWS**: Defina suas credenciais AWS como variáveis de ambiente.
+3. **Inicialize a Ferramenta**: Crie uma instância da ferramenta.
+4. **Especifique o Caminho no S3 e o Conteúdo**: Forneça o caminho no S3 onde deseja gravar o arquivo e o conteúdo a ser escrito.
+
+## Exemplo
+
+O exemplo a seguir demonstra como usar a `S3WriterTool` para gravar conteúdo em um arquivo em um bucket S3:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.s3 import S3WriterTool
+
+# Initialize the tool
+s3_writer_tool = S3WriterTool()
+
+# Define an agent that uses the tool
+file_writer_agent = Agent(
+    role="File Writer",
+    goal="Write content to files in S3 buckets",
+    backstory="An expert in storing and managing files in cloud storage.",
+    tools=[s3_writer_tool],
+    verbose=True,
+)
+
+# Example task to write a report
+write_task = Task(
+    description="Generate a summary report of the quarterly sales data and save it to {my_bucket}.",
+    expected_output="Confirmation that the report was successfully saved to S3.",
+    agent=file_writer_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[file_writer_agent], tasks=[write_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/reports/quarterly-summary.txt"})
+```
+
+## Parâmetros
+
+A `S3WriterTool` aceita os seguintes parâmetros quando utilizada por um agente:
+
+- **file_path**: Obrigatório. O caminho do arquivo S3 no formato `s3://bucket-name/file-name`.
+- **content**: Obrigatório. O conteúdo a ser escrito no arquivo.
+
+## Credenciais AWS
+
+A ferramenta requer credenciais AWS para acessar os buckets S3. Você pode configurar essas credenciais usando variáveis de ambiente:
+
+- **CREW_AWS_REGION**: A região AWS onde seu bucket S3 está localizado. O padrão é `us-east-1`.
+- **CREW_AWS_ACCESS_KEY_ID**: Sua AWS access key ID.
+- **CREW_AWS_SEC_ACCESS_KEY**: Sua AWS secret access key.
+
+## Uso
+
+Ao usar a `S3WriterTool` com um agente, o agente precisará fornecer tanto o caminho do arquivo no S3 quanto o conteúdo a ser gravado:
+
+```python Code
+# Example of using the tool with an agent
+file_writer_agent = Agent(
+    role="File Writer",
+    goal="Write content to files in S3 buckets",
+    backstory="An expert in storing and managing files in cloud storage.",
+    tools=[s3_writer_tool],
+    verbose=True,
+)
+
+# Create a task for the agent to write a specific file
+write_config_task = Task(
+    description="""
+    Create a configuration file with the following database settings:
+    - host: db.example.com
+    - port: 5432
+    - username: app_user
+    - password: secure_password
+    
+    Save this configuration as JSON to {my_bucket}.
+    """,
+    expected_output="Confirmation that the configuration file was successfully saved to S3.",
+    agent=file_writer_agent,
+)
+
+# Run the task
+crew = Crew(agents=[file_writer_agent], tasks=[write_config_task])
+result = crew.kickoff(inputs={"my_bucket": "s3://my-bucket/config/db-config.json"})
+```
+
+## Tratamento de Erros
+
+A `S3WriterTool` inclui tratamento de erros para problemas comuns no S3:
+
+- Formato de caminho S3 inválido
+- Problemas de permissão (ex: sem acesso de gravação ao bucket)
+- Problemas com credenciais AWS
+- Bucket inexistente
+
+Quando ocorre um erro, a ferramenta retorna uma mensagem de erro que inclui detalhes sobre o problema.
+
+## Detalhes de Implementação
+
+A `S3WriterTool` utiliza o AWS SDK para Python (boto3) para interagir com o S3:
+
+```python Code
+class S3WriterTool(BaseTool):
+    name: str = "S3 Writer Tool"
+    description: str = "Writes content to a file in Amazon S3 given an S3 file path"
+    
+    def _run(self, file_path: str, content: str) -> str:
+        try:
+            bucket_name, object_key = self._parse_s3_path(file_path)
+
+            s3 = boto3.client(
+                's3',
+                region_name=os.getenv('CREW_AWS_REGION', 'us-east-1'),
+                aws_access_key_id=os.getenv('CREW_AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.getenv('CREW_AWS_SEC_ACCESS_KEY')
+            )
+
+            s3.put_object(Bucket=bucket_name, Key=object_key, Body=content.encode('utf-8'))
+            return f"Successfully wrote content to {file_path}"
+        except ClientError as e:
+            return f"Error writing file to S3: {str(e)}"
+```
+
+## Conclusão
+
+A `S3WriterTool` oferece uma maneira direta de gravar conteúdo em arquivos em buckets Amazon S3. Ao permitir que agentes criem e atualizem arquivos no S3, ela facilita fluxos de trabalho que exigem armazenamento de arquivos em nuvem. Esta ferramenta é particularmente útil para persistência de dados, gerenciamento de configurações, geração de relatórios e qualquer tarefa que envolva armazenar informações no AWS S3.

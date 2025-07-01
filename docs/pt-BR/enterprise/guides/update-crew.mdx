@@ -1,0 +1,88 @@
+---
+title: "Atualizar Crew"
+description: "Atualizando uma Crew no CrewAI Enterprise"
+icon: "pencil"
+---
+
+<Note>
+Após implantar sua crew no CrewAI Enterprise, pode ser necessário fazer atualizações no código, configurações de segurança ou configuração. 
+Este guia explica como realizar essas operações de atualização comuns.
+</Note>
+
+## Por que atualizar sua Crew?
+
+Por padrão, o CrewAI não irá buscar atualizações do GitHub automaticamente, então você precisará acionar manualmente as atualizações, a menos que tenha marcado a opção `Auto-update` ao implantar sua crew.
+
+Há várias razões para querer atualizar sua implantação de crew:
+- Você deseja atualizar o código com o commit mais recente que enviou para o GitHub
+- Você deseja redefinir o bearer token por motivos de segurança
+- Você deseja atualizar variáveis de ambiente
+
+## 1. Atualizando o código da sua Crew para o último commit
+
+Quando você fizer push de novos commits no seu repositório do GitHub e quiser atualizar sua implantação:
+
+1. Navegue até sua crew na plataforma CrewAI Enterprise
+2. Clique no botão `Re-deploy` na página de detalhes da sua crew
+
+<Frame>
+  ![Botão Re-deploy](/images/enterprise/redeploy-button.png)
+</Frame>
+
+Isso irá acionar uma atualização que pode ser acompanhada pela barra de progresso. O sistema irá buscar o código mais recente do seu repositório e reconstruir sua implantação.
+
+## 2. Redefinindo o Bearer Token
+
+Se precisar gerar um novo bearer token (por exemplo, se suspeitar que o token atual possa ter sido comprometido):
+
+1. Navegue até sua crew na plataforma CrewAI Enterprise
+2. Encontre a seção `Bearer Token`
+3. Clique no botão `Reset` ao lado do token atual
+
+<Frame>
+  ![Reset Token](/images/enterprise/reset-token.png)
+</Frame>
+
+<Warning>
+A redefinição do bearer token invalidará imediatamente o token anterior. Certifique-se de atualizar quaisquer aplicações ou scripts que estejam utilizando o token antigo.
+</Warning>
+
+## 3. Atualizando Variáveis de Ambiente
+
+Para atualizar as variáveis de ambiente da sua crew:
+
+1. Primeiro, acesse a página de implantação clicando no nome da sua crew
+
+<Frame>
+  ![Botão Variáveis de Ambiente](/images/enterprise/env-vars-button.png)
+</Frame>
+
+2. Localize a seção `Environment Variables` (você deverá clicar no ícone de `Settings` para acessá-la)
+3. Edite as variáveis existentes ou adicione novas nos campos fornecidos
+4. Clique no botão `Update` ao lado de cada variável que você modificar
+
+<Frame>
+  ![Atualizar Variáveis de Ambiente](/images/enterprise/update-env-vars.png)
+</Frame>
+
+5. Por fim, clique no botão `Update Deployment` na parte inferior da página para aplicar as alterações
+
+<Note>
+A atualização das variáveis de ambiente irá acionar uma nova implantação, mas isso atualizará apenas a configuração de ambiente e não o código em si.
+</Note>
+
+## Após atualizar
+
+Após realizar qualquer atualização:
+
+1. O sistema irá reconstruir e reimplantar sua crew
+2. Você poderá monitorar o progresso da implantação em tempo real
+3. Quando finalizado, teste sua crew para garantir que as alterações estão funcionando como esperado
+
+<Tip>
+Se encontrar algum problema após a atualização, é possível visualizar os logs de implantação na plataforma ou entrar em contato com o suporte para obter assistência.
+</Tip>
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para obter assistência com a atualização da sua crew ou solução de problemas de implantação.
+</Card>

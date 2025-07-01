@@ -1,0 +1,61 @@
+---
+title: "Slack Trigger"
+description: "Acione crews do CrewAI diretamente do Slack usando comandos de barra"
+icon: "slack"
+---
+
+Este guia explica como iniciar um crew diretamente do Slack usando triggers do CrewAI.
+
+## Pré-requisitos
+
+- Trigger do CrewAI para Slack instalado e conectado ao seu workspace do Slack
+- Pelo menos um crew configurado no CrewAI
+
+## Etapas de Configuração
+
+<Steps>
+    <Step title="Garanta que o trigger do CrewAI para Slack está configurado">
+        No dashboard do CrewAI, navegue até a seção **Triggers**.
+
+        <Frame>
+            <img src="/images/enterprise/slack-integration.png" alt="Integração CrewAI Slack" />
+        </Frame>
+
+        Verifique se o Slack está listado e conectado.
+    </Step>
+    <Step title="Abra o canal do Slack">
+        - Navegue até o canal onde você deseja iniciar o crew.
+        - Digite o comando de barra "**/kickoff**" para iniciar o processo de kickoff do crew.
+        - Você deverá ver "**Kickoff crew**" aparecendo enquanto digita:
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew.png" alt="Kickoff crew" />
+            </Frame>
+        - Pressione Enter ou selecione a opção "**Kickoff crew**". Uma caixa de diálogo intitulada "**Kickoff an AI Crew**" aparecerá.
+    </Step>
+    <Step title="Selecione o crew que deseja iniciar">
+        - No menu suspenso rotulado "**Select of the crews online:**", escolha o crew que deseja iniciar.
+        - No exemplo abaixo, "**prep-for-meeting**" está selecionado:
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-dropdown.png" alt="Kickoff crew dropdown" />
+            </Frame>
+        - Se o seu crew exigir algum input, clique no botão "**Add Inputs**" para fornecê-los.
+            <Note>
+                O botão "**Add Inputs**" é mostrado no exemplo acima, mas ainda não foi clicado.
+            </Note>
+    </Step>
+    <Step title="Clique em Kickoff e aguarde o término do crew">
+        - Assim que você tiver selecionado o crew e adicionado os inputs necessários, clique em "**Kickoff**" para iniciar o crew.
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-kickoff.png" alt="Kickoff crew" />
+            </Frame>
+        - O crew começará a ser executado e você verá os resultados no canal do Slack.
+            <Frame>
+                <img src="/images/enterprise/kickoff-slack-crew-results.png" alt="Kickoff crew results" />
+            </Frame>
+    </Step>
+</Steps>
+
+## Dicas
+
+- Certifique-se de que você possui as permissões necessárias para usar o comando `/kickoff` em seu workspace do Slack.
+- Se você não visualizar o crew desejado no menu suspenso, verifique se ele está devidamente configurado e online no CrewAI.

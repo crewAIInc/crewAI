@@ -1,0 +1,79 @@
+---
+title: Pesquisa RAG em DOCX
+description: A `DOCXSearchTool` é uma ferramenta RAG projetada para busca semântica em documentos DOCX.
+icon: file-word
+---
+
+# `DOCXSearchTool`
+
+<Note>
+    Ainda estamos trabalhando na melhoria das ferramentas, portanto pode haver comportamentos inesperados ou alterações no futuro.
+</Note>
+
+## Descrição
+
+A `DOCXSearchTool` é uma ferramenta RAG desenvolvida para buscas semânticas dentro de documentos DOCX.
+Ela permite que os usuários pesquisem e extraiam informações relevantes de arquivos DOCX de forma eficiente, utilizando buscas baseadas em consultas.
+Esta ferramenta é inestimável para análise de dados, gestão da informação e tarefas de pesquisa,
+otimizando o processo de encontrar informações específicas em grandes coleções de documentos.
+
+## Instalação
+
+Instale o pacote crewai_tools executando o seguinte comando no seu terminal:
+
+```shell
+uv pip install docx2txt 'crewai[tools]'
+```
+
+## Exemplo
+
+O exemplo a seguir demonstra a inicialização da DOCXSearchTool para buscar dentro do conteúdo de qualquer arquivo DOCX ou com o caminho de um arquivo DOCX específico.
+
+```python Code
+from crewai_tools import DOCXSearchTool
+
+# Inicialize a ferramenta para buscar dentro do conteúdo de qualquer arquivo DOCX
+tool = DOCXSearchTool()
+
+# OU
+
+# Inicialize a ferramenta com um arquivo DOCX específico,
+# assim o agente só poderá buscar dentro do conteúdo do arquivo DOCX especificado
+tool = DOCXSearchTool(docx='path/to/your/document.docx')
+```
+
+## Argumentos
+
+Os seguintes parâmetros podem ser usados para customizar o comportamento da `DOCXSearchTool`:
+
+| Argumento      | Tipo      | Descrição                                                                                                                           |
+|:---------------|:----------|:------------------------------------------------------------------------------------------------------------------------------------|
+| **docx**        | `string`  | _Opcional_. Um argumento que especifica o caminho para o arquivo DOCX que você deseja pesquisar. Se não for fornecido durante a inicialização, a ferramenta permite a especificação posterior do caminho de qualquer arquivo DOCX para busca. |
+
+## Modelo e embeddings personalizados
+
+Por padrão, a ferramenta utiliza o OpenAI tanto para embeddings quanto para sumarização. Para customizar o modelo, você pode usar um dicionário de configuração como no exemplo:
+
+```python Code
+tool = DOCXSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # ou google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google", # ou openai, ollama, ...
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

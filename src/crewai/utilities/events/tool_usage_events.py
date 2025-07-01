@@ -7,11 +7,11 @@ from .base_events import BaseEvent
 class ToolUsageEvent(BaseEvent):
     """Base event for tool usage tracking"""
 
-    agent_key: str
-    agent_role: str
+    agent_key: Optional[str] = None
+    agent_role: Optional[str] = None
     tool_name: str
     tool_args: Dict[str, Any] | str
-    tool_class: str
+    tool_class: Optional[str] = None
     run_attempts: int | None = None
     delegations: int | None = None
     agent: Optional[Any] = None
