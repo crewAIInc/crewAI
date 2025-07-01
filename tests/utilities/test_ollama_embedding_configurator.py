@@ -1,9 +1,10 @@
 import os
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from crewai.utilities.embedding_configurator import EmbeddingConfigurator
 
 
+@pytest.mark.url_configuration
 class TestOllamaEmbeddingConfigurator:
     def setup_method(self):
         self.configurator = EmbeddingConfigurator()
@@ -12,7 +13,7 @@ class TestOllamaEmbeddingConfigurator:
     def test_ollama_default_url(self):
         config = {"provider": "ollama", "config": {"model": "llama2"}}
         
-        with patch("crewai.utilities.embedding_configurator.OllamaEmbeddingFunction") as mock_ollama:
+        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://localhost:11434/api/embeddings",
@@ -23,7 +24,7 @@ class TestOllamaEmbeddingConfigurator:
     def test_ollama_respects_api_base_env_var(self):
         config = {"provider": "ollama", "config": {"model": "llama2"}}
         
-        with patch("crewai.utilities.embedding_configurator.OllamaEmbeddingFunction") as mock_ollama:
+        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://custom-ollama:8080/api/embeddings",
@@ -40,7 +41,7 @@ class TestOllamaEmbeddingConfigurator:
             }
         }
         
-        with patch("crewai.utilities.embedding_configurator.OllamaEmbeddingFunction") as mock_ollama:
+        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://config-ollama:9090/api/embeddings",
@@ -57,7 +58,7 @@ class TestOllamaEmbeddingConfigurator:
             }
         }
         
-        with patch("crewai.utilities.embedding_configurator.OllamaEmbeddingFunction") as mock_ollama:
+        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://config-ollama:9090/api/embeddings",
@@ -75,7 +76,7 @@ class TestOllamaEmbeddingConfigurator:
             }
         }
         
-        with patch("crewai.utilities.embedding_configurator.OllamaEmbeddingFunction") as mock_ollama:
+        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://url-config:1111/api/embeddings",
@@ -86,7 +87,7 @@ class TestOllamaEmbeddingConfigurator:
     def test_ollama_handles_trailing_slash_in_api_base(self):
         config = {"provider": "ollama", "config": {"model": "llama2"}}
         
-        with patch("crewai.utilities.embedding_configurator.OllamaEmbeddingFunction") as mock_ollama:
+        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://localhost:11434/api/embeddings",
@@ -97,7 +98,7 @@ class TestOllamaEmbeddingConfigurator:
     def test_ollama_handles_full_url_in_api_base(self):
         config = {"provider": "ollama", "config": {"model": "llama2"}}
         
-        with patch("crewai.utilities.embedding_configurator.OllamaEmbeddingFunction") as mock_ollama:
+        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://localhost:11434/api/embeddings",
@@ -108,7 +109,7 @@ class TestOllamaEmbeddingConfigurator:
     def test_ollama_api_base_without_trailing_slash(self):
         config = {"provider": "ollama", "config": {"model": "llama2"}}
         
-        with patch("crewai.utilities.embedding_configurator.OllamaEmbeddingFunction") as mock_ollama:
+        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://localhost:11434/api/embeddings",
@@ -125,9 +126,61 @@ class TestOllamaEmbeddingConfigurator:
             }
         }
         
-        with patch("crewai.utilities.embedding_configurator.OllamaEmbeddingFunction") as mock_ollama:
+        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://config-ollama:9090/api/embeddings",
                 model_name="llama2"
             )
+
+@pytest.mark.error_handling
+class TestOllamaErrorHandling:
+    def setup_method(self):
+        self.configurator = EmbeddingConfigurator()
+
+    @pytest.mark.parametrize("invalid_url", [
+        "not-a-url",
+        "ftp://invalid-scheme",
+        "http://",
+        "://missing-scheme",
+        "http:///missing-netloc",
+    ])
+    def test_invalid_url_raises_error(self, invalid_url):
+        """Test that invalid URLs raise ValueError with clear error message."""
+        config = {
+            "provider": "ollama",
+            "config": {
+                "model": "llama2",
+                "url": invalid_url
+            }
+        }
+
+        with pytest.raises(ValueError, match="Invalid Ollama API URL"):
+            self.configurator.configure_embedder(config)
+
+    @pytest.mark.parametrize("invalid_api_base", [
+        "not-a-url",
+        "ftp://invalid-scheme", 
+        "http://",
+        "://missing-scheme",
+    ])
+    def test_invalid_api_base_raises_error(self, invalid_api_base):
+        """Test that invalid api_base URLs raise ValueError with clear error message."""
+        config = {
+            "provider": "ollama",
+            "config": {
+                "model": "llama2",
+                "api_base": invalid_api_base
+            }
+        }
+
+        with pytest.raises(ValueError, match="Invalid Ollama API URL"):
+            self.configurator.configure_embedder(config)
+
+    @patch.dict(os.environ, {"API_BASE": "not-a-valid-url"}, clear=True)
+    def test_invalid_env_var_raises_error(self):
+        """Test that invalid API_BASE environment variable raises ValueError."""
+        config = {"provider": "ollama", "config": {"model": "llama2"}}
+
+        with pytest.raises(ValueError, match="Invalid Ollama API URL"):
+            self.configurator.configure_embedder(config)

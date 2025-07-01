@@ -92,6 +92,29 @@ class EmbeddingConfigurator:
         )
 
     @staticmethod
+    def _validate_url(url):
+        """Validate that a URL is properly formatted."""
+        if not url:
+            return False
+        
+        from urllib.parse import urlparse
+        
+        try:
+            result = urlparse(url)
+            return all([result.scheme, result.netloc])
+        except ValueError:
+            return False
+
+    @staticmethod
+    def _construct_embeddings_url(base_url):
+        """Construct the full embeddings URL from a base URL."""
+        if not base_url:
+            return "http://localhost:11434/api/embeddings"
+        
+        base_url = base_url.rstrip('/')
+        return f"{base_url}/api/embeddings" if not base_url.endswith('/api/embeddings') else base_url
+
+    @staticmethod
     def _configure_ollama(config, model_name):
         from chromadb.utils.embedding_functions.ollama_embedding_function import (
             OllamaEmbeddingFunction,
@@ -103,13 +126,10 @@ class EmbeddingConfigurator:
             or os.getenv("API_BASE")
         )
         
-        if url and not url.endswith("/api/embeddings"):
-            if not url.endswith("/"):
-                url += "/"
-            url += "api/embeddings"
+        if url and not EmbeddingConfigurator._validate_url(url):
+            raise ValueError(f"Invalid Ollama API URL: {url}")
         
-        if not url:
-            url = "http://localhost:11434/api/embeddings"
+        url = EmbeddingConfigurator._construct_embeddings_url(url)
 
         return OllamaEmbeddingFunction(
             url=url,
