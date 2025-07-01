@@ -71,14 +71,10 @@ class RAGStorage(BaseRAGStorage):
 
         self.app = chroma_client
 
-        try:
-            self.collection = self.app.get_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
-        except Exception:
-            self.collection = self.app.create_collection(
-                name=self.type, embedding_function=self.embedder_config
-            )
+        self.collection = self.app.get_or_create_collection(
+            name=self.type, embedding_function=self.embedder_config
+        )
+        logging.info(f"Collection found or created: {self.collection}")
 
     def _sanitize_role(self, role: str) -> str:
         """
