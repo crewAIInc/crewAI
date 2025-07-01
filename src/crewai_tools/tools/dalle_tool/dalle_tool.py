@@ -1,7 +1,7 @@
 import json
-from typing import Type
+from typing import List, Type
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
@@ -21,6 +21,10 @@ class DallETool(BaseTool):
     size: str = "1024x1024"
     quality: str = "standard"
     n: int = 1
+
+    env_vars: List[EnvVar] = [
+        EnvVar(name="OPENAI_API_KEY", description="API key for OpenAI services", required=True),
+    ]
 
     def _run(self, **kwargs) -> str:
         client = OpenAI()

@@ -1,9 +1,9 @@
 import base64
 from pathlib import Path
-from typing import Optional, Type
+from typing import List, Optional, Type
 
 from crewai import LLM
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, PrivateAttr, field_validator
 
 
@@ -44,6 +44,9 @@ class VisionTool(BaseTool):
         "This tool uses OpenAI's Vision API to describe the contents of an image."
     )
     args_schema: Type[BaseModel] = ImagePromptSchema
+    env_vars: List[EnvVar] = [
+        EnvVar(name="OPENAI_API_KEY", description="API key for OpenAI services", required=True),
+    ]
 
     _model: str = PrivateAttr(default="gpt-4o-mini")
     _llm: Optional[LLM] = PrivateAttr(default=None)

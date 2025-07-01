@@ -1,7 +1,8 @@
 import os
-from typing import Any, Optional, Type
+from typing import Any, List, Optional, Type
 
 import requests
+from crewai.tools import EnvVar
 from pydantic import BaseModel, Field
 
 from crewai_tools.tools.rag.rag_tool import RagTool
@@ -25,6 +26,9 @@ class SerplyWebpageToMarkdownTool(RagTool):
     request_url: str = "https://api.serply.io/v1/request"
     proxy_location: Optional[str] = "US"
     headers: Optional[dict] = {}
+    env_vars: List[EnvVar] = [
+        EnvVar(name="SERPLY_API_KEY", description="API key for Serply services", required=True),
+    ]
 
     def __init__(self, proxy_location: Optional[str] = "US", **kwargs):
         """

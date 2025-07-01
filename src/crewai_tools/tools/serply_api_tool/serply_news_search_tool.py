@@ -1,9 +1,9 @@
 import os
-from typing import Any, Optional, Type
+from typing import Any, List, Optional, Type
 from urllib.parse import urlencode
 
 import requests
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 
@@ -23,6 +23,9 @@ class SerplyNewsSearchTool(BaseTool):
     proxy_location: Optional[str] = "US"
     headers: Optional[dict] = {}
     limit: Optional[int] = 10
+    env_vars: List[EnvVar] = [
+        EnvVar(name="SERPLY_API_KEY", description="API key for Serply services", required=True),
+    ]
 
     def __init__(
         self, limit: Optional[int] = 10, proxy_location: Optional[str] = "US", **kwargs

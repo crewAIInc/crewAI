@@ -5,13 +5,16 @@ Composio tools wrapper.
 import typing as t
 
 import typing_extensions as te
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 
 
 class ComposioTool(BaseTool):
     """Wrapper for composio tools."""
 
     composio_action: t.Callable
+    env_vars: t.List[EnvVar] = [
+        EnvVar(name="COMPOSIO_API_KEY", description="API key for Composio services", required=True),
+    ]
 
     def _run(self, *args: t.Any, **kwargs: t.Any) -> t.Any:
         """Run the composio action with given arguments."""
