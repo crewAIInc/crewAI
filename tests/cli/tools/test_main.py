@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 import unittest.mock
+from datetime import datetime, timedelta
 from contextlib import contextmanager
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -26,7 +27,9 @@ def in_temp_dir():
 
 @pytest.fixture
 def tool_command():
-    TokenManager().save_tokens("test-token", 36000)
+    TokenManager().save_tokens(
+        "test-token", (datetime.now() + timedelta(seconds=36000)).timestamp()
+    )
     tool_command = ToolCommand()
     with patch.object(tool_command, "login"):
         yield tool_command
@@ -57,7 +60,9 @@ def test_create_success(mock_subprocess, capsys, tool_command):
 @patch("crewai.cli.tools.main.subprocess.run")
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
 @patch("crewai.cli.tools.main.ToolCommand._print_current_organization")
-def test_install_success(mock_print_org, mock_get, mock_subprocess_run, capsys, tool_command):
+def test_install_success(
+    mock_print_org, mock_get, mock_subprocess_run, capsys, tool_command
+):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
     mock_get_response.json.return_value = {
@@ -88,6 +93,7 @@ def test_install_success(mock_print_org, mock_get, mock_subprocess_run, capsys, 
 
     # Verify _print_current_organization was called
     mock_print_org.assert_called_once()
+
 
 @patch("crewai.cli.tools.main.subprocess.run")
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
@@ -169,7 +175,10 @@ def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
 @patch("crewai.cli.tools.main.ToolCommand._print_current_organization")
 def test_publish_when_not_in_sync_and_force(
     mock_print_org,
@@ -223,7 +232,10 @@ def test_publish_when_not_in_sync_and_force(
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=True)
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
 def test_publish_success(
     mock_available_exports,
     mock_is_synced,
@@ -273,7 +285,10 @@ def test_publish_success(
     read_data=b"sample tarball content",
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
 def test_publish_failure(
     mock_available_exports,
     mock_publish,
@@ -311,7 +326,10 @@ def test_publish_failure(
     read_data=b"sample tarball content",
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
-@patch("crewai.cli.tools.main.extract_available_exports", return_value=[{"name": "SampleTool"}])
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
 def test_publish_api_error(
     mock_available_exports,
     mock_publish,
@@ -336,7 +354,6 @@ def test_publish_api_error(
     assert "Request to Enterprise API failed" in output
 
     mock_publish.assert_called_once()
-
 
 
 @patch("crewai.cli.tools.main.Settings")
