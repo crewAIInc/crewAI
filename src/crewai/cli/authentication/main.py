@@ -59,7 +59,7 @@ class AuthenticationCommand:
         return self._poll_for_token(device_code_data, client_id, token_url)
 
     def _get_device_code(
-        self, client_id: str, device_code_url: str, audience: str = None
+        self, client_id: str, device_code_url: str, audience: str | None = None
     ) -> Dict[str, Any]:
         """Get the device code to authenticate the user."""
 
