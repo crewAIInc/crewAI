@@ -39,7 +39,7 @@ import os
 linkup_ferramenta = LinkupSearchTool(api_key=os.getenv("LINKUP_API_KEY"))
 
 # Defina um agente que usa a ferramenta
-@agente
+@agent
 def pesquisador(self) -> Agent:
     '''
     Este agente usa o LinkupSearchTool para recuperar informações contextuais
@@ -49,29 +49,4 @@ def pesquisador(self) -> Agent:
         config=self.agentes_config["pesquisador"],
         tools=[linkup_ferramenta]
     )
-```
-
-## Parâmetros
-
-O `LinkupSearchTool` aceita os seguintes parâmetros:
-
-### Parâmetros do Construtor
-- **api_key**: Obrigatório. Sua chave de API do Linkup.
-
-### Parâmetros de Execução
-- **query**: Obrigatório. O termo ou frase de busca.
-- **depth**: Opcional. A profundidade da busca. O padrão é "standard".
-- **output_type**: Opcional. O tipo de saída. O padrão é "searchResults".
-
-## Uso Avançado
-
-Você pode personalizar os parâmetros de busca para resultados mais específicos:
-
-```python Code
-# Realize uma busca com parâmetros customizados
-resultados = linkup_ferramenta.run(
-    query="Mulheres Prêmio Nobel Física",
-    depth="deep",
-    output_type="searchResults"
-)
 ```

@@ -26,12 +26,12 @@ from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
 from crewai import LLM
 
 # Uso básico - utiliza o expected_output da tarefa como contexto
-proteção = HallucinationGuardrail(
+protecao = HallucinationGuardrail(
     llm=LLM(model="gpt-4o-mini")
 )
 
 # Com contexto de referência explícito
-proteção_com_contexto = HallucinationGuardrail(
+protecao_com_contexto = HallucinationGuardrail(
     context="IA ajuda em várias tarefas, incluindo análise e geração.",
     llm=LLM(model="gpt-4o-mini")
 )
@@ -47,7 +47,7 @@ minha_tarefa = Task(
     description="Escreva um resumo sobre as capacidades da IA",
     expected_output="Um resumo factual baseado no contexto fornecido",
     agent=meu_agente,
-    guardrail=proteção  # Adiciona a proteção para validar a saída
+    guardrail=protecao  # Adiciona a proteção para validar a saída
 )
 ```
 
@@ -59,7 +59,7 @@ Para validação mais rigorosa, é possível definir um limiar de fidelidade per
 
 ```python
 # Proteção rigorosa exigindo alta pontuação de fidelidade
-proteção_rigorosa = HallucinationGuardrail(
+protecao_rigorosa = HallucinationGuardrail(
     context="Computação quântica utiliza qubits que existem em estados de superposição.",
     llm=LLM(model="gpt-4o-mini"),
     threshold=8.0  # Requer pontuação >= 8 para validar
@@ -72,7 +72,7 @@ Se sua tarefa utiliza ferramentas, você pode incluir as respostas das ferrament
 
 ```python
 # Proteção com contexto de resposta da ferramenta
-proteção_clima = HallucinationGuardrail(
+protecao_clima = HallucinationGuardrail(
     context="Informações meteorológicas atuais para o local solicitado",
     llm=LLM(model="gpt-4o-mini"),
     tool_response="API do Clima retornou: Temperatura 22°C, Umidade 65%, Céu limpo"
@@ -124,7 +124,7 @@ Quando uma proteção é adicionada à tarefa, ela valida automaticamente a saí
 ```python
 # Fluxo de validação de saída da tarefa
 task_output = meu_agente.execute_task(minha_tarefa)
-resultado_validacao = proteção(task_output)
+resultado_validacao = protecao(task_output)
 
 if resultado_validacao.valid:
     # Tarefa concluída com sucesso
