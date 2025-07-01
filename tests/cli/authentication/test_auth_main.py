@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
+from unittest.mock import call
 
 import requests
 
@@ -46,15 +47,17 @@ class TestAuthenticationCommand(unittest.TestCase):
 
     @patch("crewai.cli.tools.main.ToolCommand")
     @patch("crewai.cli.authentication.main.requests.post")
-    @patch("crewai.cli.authentication.main.validate_token")
+    @patch(
+        "crewai.cli.authentication.main.AuthenticationCommand._validate_and_save_token"
+    )
     @patch("crewai.cli.authentication.main.console.print")
     def test_poll_for_token_success(
-        self, mock_print, mock_validate_token, mock_post, mock_tool
+        self, mock_print, mock_validate_and_save_token, mock_post, mock_tool
     ):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "id_token": "TOKEN",
+            "id_token": "ID_TOKEN",
             "access_token": "ACCESS_TOKEN",
         }
         mock_post.return_value = mock_response
@@ -62,11 +65,29 @@ class TestAuthenticationCommand(unittest.TestCase):
         mock_instance = mock_tool.return_value
         mock_instance.login.return_value = None
 
-        self.auth_command._poll_for_token({"device_code": "123456"})
+        self.auth_command._poll_for_token(
+            {"device_code": "123456"},
+            client_id="CLIENT_ID",
+            token_poll_url="https://example.com",
+        )
 
-        mock_validate_token.assert_called_once_with("TOKEN")
-        mock_print.assert_called_once_with(
-            "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"
+        mock_validate_and_save_token.assert_called_once_with(mock_response.json())
+        mock_print.assert_has_calls(
+            [
+                call("\nWaiting for authentication... ", style="bold blue", end=""),
+                call("Success!", style="bold green"),
+                call(
+                    "Now logging you in to the Tool Repository... ",
+                    style="bold blue",
+                    end="",
+                ),
+                call("Success!\n", style="bold green"),
+                call(
+                    "You are authenticated to the tool repository as [bold cyan]'CrewAI - Heitor'[/bold cyan] (cfe950ef-55fe-4dda-9a4c-3f76c17a75b7)",
+                    style="green",
+                ),
+                call("\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"),
+            ]
         )
 
     @patch("crewai.cli.authentication.main.requests.post")
