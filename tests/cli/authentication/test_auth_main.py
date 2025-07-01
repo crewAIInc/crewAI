@@ -48,6 +48,7 @@ class TestAuthenticationCommand(unittest.TestCase):
         mock_print.assert_any_call("2. Enter the following code: ", "ABCDEF")
         mock_open.assert_called_once_with("https://example.com")
 
+    @patch("crewai.cli.authentication.main.Settings")
     @patch("crewai.cli.tools.main.ToolCommand")
     @patch("crewai.cli.authentication.main.requests.post")
     @patch(
@@ -55,7 +56,12 @@ class TestAuthenticationCommand(unittest.TestCase):
     )
     @patch("crewai.cli.authentication.main.console.print")
     def test_poll_for_token_success(
-        self, mock_print, mock_validate_and_save_token, mock_post, mock_tool
+        self,
+        mock_print,
+        mock_validate_and_save_token,
+        mock_post,
+        mock_tool,
+        mock_settings,
     ):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -67,6 +73,9 @@ class TestAuthenticationCommand(unittest.TestCase):
 
         mock_instance = mock_tool.return_value
         mock_instance.login.return_value = None
+
+        mock_settings.return_value.org_name = "Sample Organization"
+        mock_settings.return_value.org_uuid = "cfe950ef-55fe-4dda-9a4c-3f76c17a75b7"
 
         self.auth_command._poll_for_token(
             {"device_code": "123456"},
@@ -86,7 +95,7 @@ class TestAuthenticationCommand(unittest.TestCase):
                 ),
                 call("Success!\n", style="bold green"),
                 call(
-                    "You are authenticated to the tool repository as [bold cyan]'CrewAI - Heitor'[/bold cyan] (cfe950ef-55fe-4dda-9a4c-3f76c17a75b7)",
+                    "You are authenticated to the tool repository as [bold cyan]'Sample Organization'[/bold cyan] (cfe950ef-55fe-4dda-9a4c-3f76c17a75b7)",
                     style="green",
                 ),
                 call("\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"),
