@@ -93,7 +93,7 @@ class EmbeddingConfigurator:
 
     @staticmethod
     def _validate_url(url):
-        """Validate that a URL is properly formatted."""
+        """Validate that a URL is properly formatted and uses HTTP/HTTPS scheme."""
         if not url:
             return False
         
@@ -101,7 +101,10 @@ class EmbeddingConfigurator:
         
         try:
             result = urlparse(url)
-            return all([result.scheme, result.netloc])
+            return all([
+                result.scheme in ('http', 'https'),
+                result.netloc
+            ])
         except ValueError:
             return False
 
