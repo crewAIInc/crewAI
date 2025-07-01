@@ -97,8 +97,22 @@ class EmbeddingConfigurator:
             OllamaEmbeddingFunction,
         )
 
+        url = (
+            config.get("url") 
+            or config.get("api_base") 
+            or os.getenv("API_BASE")
+        )
+        
+        if url and not url.endswith("/api/embeddings"):
+            if not url.endswith("/"):
+                url += "/"
+            url += "api/embeddings"
+        
+        if not url:
+            url = "http://localhost:11434/api/embeddings"
+
         return OllamaEmbeddingFunction(
-            url=config.get("url", "http://localhost:11434/api/embeddings"),
+            url=url,
             model_name=model_name,
         )
 
