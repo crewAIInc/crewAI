@@ -5,6 +5,7 @@ import json
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import ANY, MagicMock, patch
+from collections import defaultdict
 
 import pydantic_core
 import pytest
@@ -40,6 +41,16 @@ from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
+from crewai.utilities.events.memory_events import (
+    MemorySaveStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryRetrievalStartedEvent,
+    MemoryRetrievalCompletedEvent,
+)
 
 @pytest.fixture
 def ceo():
@@ -2482,6 +2493,73 @@ def test_using_contextual_memory():
         crew.kickoff()
         contextual_mem.assert_called_once()
 
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_memory_events_are_emitted():
+    events = defaultdict(list)
+
+    @crewai_event_bus.on(MemorySaveStartedEvent)
+    def handle_llm_failed(source, event):
+        events["MemorySaveStartedEvent"].append(event)
+
+    @crewai_event_bus.on(MemorySaveCompletedEvent)
+    def handle_llm_started(source, event):
+        events["MemorySaveCompletedEvent"].append(event)
+
+    @crewai_event_bus.on(MemorySaveFailedEvent)
+    def handle_llm_completed(source, event):
+        events["MemorySaveFailedEvent"].append(event)
+
+    @crewai_event_bus.on(MemoryQueryStartedEvent)
+    def handle_llm_failed(source, event):
+        events["MemoryQueryStartedEvent"].append(event)
+
+    @crewai_event_bus.on(MemoryQueryCompletedEvent)
+    def handle_llm_started(source, event):
+        events["MemoryQueryCompletedEvent"].append(event)
+
+    @crewai_event_bus.on(MemoryQueryFailedEvent)
+    def handle_llm_completed(source, event):
+        events["MemoryQueryFailedEvent"].append(event)
+
+    @crewai_event_bus.on(MemoryRetrievalStartedEvent)
+    def handle_llm_completed(source, event):
+        events["MemoryRetrievalStartedEvent"].append(event)
+
+    @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
+    def handle_llm_completed(source, event):
+        events["MemoryRetrievalCompletedEvent"].append(event)
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        memory=True,
+    )
+
+    crew.kickoff()
+
+    assert len(events["MemorySaveStartedEvent"]) == 6
+    assert len(events["MemorySaveCompletedEvent"]) == 6
+    assert len(events["MemorySaveFailedEvent"]) == 0
+    assert len(events["MemoryQueryStartedEvent"]) == 3
+    assert len(events["MemoryQueryCompletedEvent"]) == 3
+    assert len(events["MemoryQueryFailedEvent"]) == 0
+    assert len(events["MemoryRetrievalStartedEvent"]) == 1
+    assert len(events["MemoryRetrievalCompletedEvent"]) == 1
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory_with_long_term_memory():

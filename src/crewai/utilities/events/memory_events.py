@@ -39,7 +39,7 @@ class MemorySaveStartedEvent(BaseEvent):
     type: str = "memory_save_started"
     value: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
-    agent: Optional[str] = None
+    agent_role: Optional[str] = None
 
 
 class MemorySaveCompletedEvent(BaseEvent):
@@ -48,7 +48,7 @@ class MemorySaveCompletedEvent(BaseEvent):
     type: str = "memory_save_completed"
     value: str
     metadata: Optional[Dict[str, Any]] = None
-    agent: Optional[str] = None
+    agent_role: Optional[str] = None
     save_time_ms: float
 
 
@@ -58,7 +58,7 @@ class MemorySaveFailedEvent(BaseEvent):
     type: str = "memory_save_failed"
     value: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
-    agent: Optional[str] = None
+    agent_role: Optional[str] = None
     error: str
 
 

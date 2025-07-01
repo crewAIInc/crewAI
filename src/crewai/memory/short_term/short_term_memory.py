@@ -85,7 +85,7 @@ class ShortTermMemory(Memory):
                 event=MemorySaveCompletedEvent(
                     value=value,
                     metadata=metadata,
-                    agent=agent,
+                    agent_role=agent,
                     save_time_ms=(time.time() - start_time) * 1000,
                     source_type="short_term_memory",
                 ),
@@ -96,7 +96,7 @@ class ShortTermMemory(Memory):
                 event=MemorySaveFailedEvent(
                     value=value,
                     metadata=metadata,
-                    agent=agent,
+                    agent_role=agent,
                     error=str(e),
                     source_type="short_term_memory",
                 ),
