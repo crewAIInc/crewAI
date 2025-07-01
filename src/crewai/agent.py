@@ -775,6 +775,7 @@ class Agent(BaseAgent):
             LiteAgentOutput: The result of the agent execution.
         """
         lite_agent = LiteAgent(
+            id=self.id,
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,

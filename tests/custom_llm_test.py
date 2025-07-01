@@ -1,5 +1,4 @@
 from typing import Any, Dict, List, Optional, Union
-from unittest.mock import Mock
 
 import pytest
 
@@ -31,6 +30,8 @@ class CustomLLM(BaseLLM):
         tools=None,
         callbacks=None,
         available_functions=None,
+        from_task=None,
+        from_agent=None,
     ):
         """
         Mock LLM call that returns a predefined response.
