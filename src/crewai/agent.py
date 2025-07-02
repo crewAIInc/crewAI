@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+import time
 from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Type, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
@@ -32,6 +33,10 @@ from crewai.utilities.events.agent_events import (
     AgentExecutionStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.memory_events import (
+    MemoryRetrievalStartedEvent,
+    MemoryRetrievalCompletedEvent,
+)
 from crewai.utilities.events.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -302,6 +307,15 @@ class Agent(BaseAgent):
             )
 
         if self._is_any_available_memory():
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalStartedEvent(
+                    task_id=str(task.id) if task else None,
+                    source_type="agent",
+                ),
+            )
+
+            start_time = time.time()
             contextual_memory = ContextualMemory(
                 self.crew.memory_config,
                 self.crew._short_term_memory,
@@ -313,6 +327,16 @@ class Agent(BaseAgent):
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
+
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalCompletedEvent(
+                    task_id=str(task.id) if task else None,
+                    memory_content=memory,
+                    retrieval_time_ms=(time.time() - start_time) * 1000,
+                    source_type="agent",
+                ),
+            )
         knowledge_config = (
             self.knowledge_config.model_dump() if self.knowledge_config else {}
         )
@@ -775,6 +799,7 @@ class Agent(BaseAgent):
             LiteAgentOutput: The result of the agent execution.
         """
         lite_agent = LiteAgent(
+            id=self.id,
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,

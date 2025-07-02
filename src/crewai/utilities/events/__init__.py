@@ -50,6 +50,7 @@ from .llm_events import (
     LLMCallType,
     LLMStreamChunkEvent,
 )
+
 from .knowledge_events import (
     KnowledgeRetrievalStartedEvent,
     KnowledgeRetrievalCompletedEvent,
@@ -58,6 +59,79 @@ from .knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeSearchQueryFailedEvent,
 )
+
+from .memory_events import (
+    MemorySaveStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryRetrievalStartedEvent,
+    MemoryRetrievalCompletedEvent,
+)
+
+
 # events
 from .event_listener import EventListener
 from .third_party.agentops_listener import agentops_listener
+
+__all__ = [
+    "EventListener",
+    "agentops_listener",
+    "CrewAIEventsBus",
+    "crewai_event_bus",
+    "AgentExecutionStartedEvent",
+    "AgentExecutionCompletedEvent",
+    "AgentExecutionErrorEvent",
+    "TaskStartedEvent",
+    "TaskCompletedEvent",
+    "TaskFailedEvent",
+    "TaskEvaluationEvent",
+    "FlowCreatedEvent",
+    "FlowStartedEvent",
+    "FlowFinishedEvent",
+    "FlowPlotEvent",
+    "MethodExecutionStartedEvent",
+    "MethodExecutionFinishedEvent",
+    "MethodExecutionFailedEvent",
+    "LLMCallCompletedEvent",
+    "LLMCallFailedEvent",
+    "LLMCallStartedEvent",
+    "LLMCallType",
+    "LLMStreamChunkEvent",
+    "MemorySaveStartedEvent",
+    "MemorySaveCompletedEvent",
+    "MemorySaveFailedEvent",
+    "MemoryQueryStartedEvent",
+    "MemoryQueryCompletedEvent",
+    "MemoryQueryFailedEvent",
+    "MemoryRetrievalStartedEvent",
+    "MemoryRetrievalCompletedEvent",
+    "EventListener",
+    "agentops_listener",
+    "CrewKickoffStartedEvent",
+    "CrewKickoffCompletedEvent",
+    "CrewKickoffFailedEvent",
+    "CrewTrainStartedEvent",
+    "CrewTrainCompletedEvent",
+    "CrewTrainFailedEvent",
+    "CrewTestStartedEvent",
+    "CrewTestCompletedEvent",
+    "CrewTestFailedEvent",
+    "LLMGuardrailCompletedEvent",
+    "LLMGuardrailStartedEvent",
+    "ToolUsageFinishedEvent",
+    "ToolUsageErrorEvent",
+    "ToolUsageStartedEvent",
+    "ToolExecutionErrorEvent",
+    "ToolSelectionErrorEvent",
+    "ToolUsageEvent",
+    "ToolValidateInputErrorEvent",
+    "KnowledgeRetrievalStartedEvent",
+    "KnowledgeRetrievalCompletedEvent",
+    "KnowledgeQueryStartedEvent",
+    "KnowledgeQueryFailedEvent",
+    "KnowledgeQueryCompletedEvent",
+    "KnowledgeSearchQueryFailedEvent",
+]

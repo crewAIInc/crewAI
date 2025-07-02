@@ -57,6 +57,17 @@ from .knowledge_events import (
     KnowledgeSearchQueryFailedEvent,
 )
 
+from .memory_events import (
+    MemorySaveStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryRetrievalStartedEvent,
+    MemoryRetrievalCompletedEvent,
+)
+
 EventTypes = Union[
     CrewKickoffStartedEvent,
     CrewKickoffCompletedEvent,
@@ -96,4 +107,12 @@ EventTypes = Union[
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
     KnowledgeSearchQueryFailedEvent,
+    MemorySaveStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryRetrievalStartedEvent,
+    MemoryRetrievalCompletedEvent,
 ]
