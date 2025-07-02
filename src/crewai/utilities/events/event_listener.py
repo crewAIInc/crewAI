@@ -65,6 +65,8 @@ from .reasoning_events import (
     AgentReasoningFailedEvent,
 )
 
+from .listeners.memory_listener import MemoryListener
+
 
 class EventListener(BaseEventListener):
     _instance = None
@@ -90,6 +92,8 @@ class EventListener(BaseEventListener):
             self.execution_spans = {}
             self._initialized = True
             self.formatter = ConsoleFormatter(verbose=True)
+
+            MemoryListener(formatter=self.formatter)
 
     # ----------- CREW EVENTS -----------
 
