@@ -260,7 +260,7 @@ def handle_success(self):
     # Handle success case
     pass
 
-@listen("failure_path")  
+@listen("failure_path")
 def handle_failure(self):
     # Handle failure case
     pass
@@ -288,7 +288,7 @@ class SelectiveFlow(Flow):
     def critical_step(self):
         # Only this method's state is persisted
         self.state["important_data"] = "value"
-    
+
     @start()
     def temporary_step(self):
         # This method's state is not persisted
@@ -322,20 +322,20 @@ flow.plot("workflow_diagram")  # Generates HTML visualization
 class CyclicFlow(Flow):
     max_iterations = 5
     current_iteration = 0
-    
+
     @start("loop")
     def process_iteration(self):
         if self.current_iteration >= self.max_iterations:
             return
         # Process current iteration
         self.current_iteration += 1
-    
+
     @router(process_iteration)
     def check_continue(self):
         if self.current_iteration < self.max_iterations:
             return "loop"  # Continue cycling
         return "complete"
-    
+
     @listen("complete")
     def finalize(self):
         # Final processing
@@ -369,7 +369,7 @@ def risky_operation(self):
         self.state["success"] = False
         return None
 
-@listen(risky_operation)  
+@listen(risky_operation)
 def handle_result(self, result):
     if self.state.get("success", False):
         # Handle success case
@@ -390,7 +390,7 @@ class CrewOrchestrationFlow(Flow[WorkflowState]):
         result = research_crew.crew().kickoff(inputs={"topic": self.state.research_topic})
         self.state.research_results = result.raw
         return result
-    
+
     @listen(research_phase)
     def analysis_phase(self, research_results):
         analysis_crew = AnalysisCrew()
@@ -400,13 +400,13 @@ class CrewOrchestrationFlow(Flow[WorkflowState]):
         })
         self.state.analysis_results = result.raw
         return result
-    
+
     @router(analysis_phase)
     def decide_next_action(self):
         if self.state.analysis_results.confidence > 0.7:
             return "generate_report"
         return "additional_research"
-    
+
     @listen("generate_report")
     def final_report(self):
         reporting_crew = ReportingCrew()
@@ -439,7 +439,7 @@ class CrewOrchestrationFlow(Flow[WorkflowState]):
 ## CrewAI Version Compatibility:
 - Stay updated with CrewAI releases for new features and bug fixes
 - Test crew functionality when upgrading CrewAI versions
-- Use version constraints in pyproject.toml (e.g., "crewai[tools]>=0.134.0,<1.0.0")
+- Use version constraints in pyproject.toml (e.g., "crewai[tools]>=0.140.0,<1.0.0")
 - Monitor deprecation warnings for future compatibility
 
 ## Code Examples and Implementation Patterns
@@ -464,22 +464,22 @@ class ResearchOutput(BaseModel):
 @CrewBase
 class ResearchCrew():
     """Advanced research crew with structured outputs and validation"""
-    
+
     agents: List[BaseAgent]
     tasks: List[Task]
-    
+
     @before_kickoff
     def setup_environment(self):
         """Initialize environment before crew execution"""
         print("🚀 Setting up research environment...")
         # Validate API keys, create directories, etc.
-        
+
     @after_kickoff
     def cleanup_and_report(self, output):
         """Handle post-execution tasks"""
         print(f"✅ Research completed. Generated {len(output.tasks_output)} task outputs")
         print(f"📊 Token usage: {output.token_usage}")
-        
+
     @agent
     def researcher(self) -> Agent:
         return Agent(
@@ -490,7 +490,7 @@ class ResearchCrew():
             max_iter=15,
             max_execution_time=1800
         )
-    
+
     @agent
     def analyst(self) -> Agent:
         return Agent(
@@ -499,7 +499,7 @@ class ResearchCrew():
             verbose=True,
             memory=True
         )
-    
+
     @task
     def research_task(self) -> Task:
         return Task(
@@ -507,7 +507,7 @@ class ResearchCrew():
             agent=self.researcher(),
             output_pydantic=ResearchOutput
         )
-    
+
     @task
     def validation_task(self) -> Task:
         return Task(
@@ -517,7 +517,7 @@ class ResearchCrew():
             guardrail=self.validate_research_quality,
             max_retries=3
         )
-    
+
     def validate_research_quality(self, output) -> tuple[bool, str]:
         """Custom guardrail to ensure research quality"""
         content = output.raw
@@ -526,7 +526,7 @@ class ResearchCrew():
         if not any(keyword in content.lower() for keyword in ['conclusion', 'finding', 'result']):
             return False, "Missing key analytical elements."
         return True, content
-    
+
     @crew
     def crew(self) -> Crew:
         return Crew(
@@ -557,13 +557,13 @@ class RobustSearchTool(BaseTool):
     name: str = "robust_search"
     description: str = "Perform web search with retry logic and error handling"
     args_schema: Type[BaseModel] = SearchInput
-    
+
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("SEARCH_API_KEY")
         self.rate_limit_delay = 1.0
         self.last_request_time = 0
-        
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10)
@@ -575,43 +575,43 @@ class RobustSearchTool(BaseTool):
             time_since_last = time.time() - self.last_request_time
             if time_since_last < self.rate_limit_delay:
                 time.sleep(self.rate_limit_delay - time_since_last)
-            
+
             # Input validation
             if not query or len(query.strip()) == 0:
                 return "Error: Empty search query provided"
-            
+
             if len(query) > 500:
                 return "Error: Search query too long (max 500 characters)"
-            
+
             # Perform search
             results = self._perform_search(query, max_results, timeout)
             self.last_request_time = time.time()
-            
+
             return self._format_results(results)
-            
+
         except requests.exceptions.Timeout:
             return f"Search timed out after {timeout} seconds"
         except requests.exceptions.RequestException as e:
             return f"Search failed due to network error: {str(e)}"
         except Exception as e:
             return f"Unexpected error during search: {str(e)}"
-    
+
     def _perform_search(self, query: str, max_results: int, timeout: int) -> List[dict]:
         """Implement actual search logic here"""
         # Your search API implementation
         pass
-    
+
     def _format_results(self, results: List[dict]) -> str:
         """Format search results for LLM consumption"""
         if not results:
             return "No results found for the given query."
-        
+
         formatted = "Search Results:\n\n"
         for i, result in enumerate(results[:10], 1):
             formatted += f"{i}. {result.get('title', 'No title')}\n"
             formatted += f"   URL: {result.get('url', 'No URL')}\n"
             formatted += f"   Summary: {result.get('snippet', 'No summary')}\n\n"
-        
+
         return formatted
 ```
 
@@ -623,20 +623,20 @@ from crewai.memory.storage.mem0_storage import Mem0Storage
 
 class AdvancedMemoryManager:
     """Enhanced memory management for CrewAI applications"""
-    
+
     def __init__(self, crew, config: dict = None):
         self.crew = crew
         self.config = config or {}
         self.setup_memory_systems()
-    
+
     def setup_memory_systems(self):
         """Configure multiple memory systems"""
         # Short-term memory for current session
         self.short_term = ShortTermMemory()
-        
+
         # Long-term memory for cross-session persistence
         self.long_term = LongTermMemory()
-        
+
         # External memory with Mem0 (if configured)
         if self.config.get('use_external_memory'):
             self.external = ExternalMemory.create_storage(
@@ -649,8 +649,8 @@ class AdvancedMemoryManager:
                     }
                 }
             )
-    
-    def save_with_context(self, content: str, memory_type: str = "short_term", 
+
+    def save_with_context(self, content: str, memory_type: str = "short_term",
                          metadata: dict = None, agent: str = None):
         """Save content with enhanced metadata"""
         enhanced_metadata = {
@@ -659,14 +659,14 @@ class AdvancedMemoryManager:
             "crew_type": self.crew.__class__.__name__,
             **(metadata or {})
         }
-        
+
         if memory_type == "short_term":
             self.short_term.save(content, enhanced_metadata, agent)
         elif memory_type == "long_term":
             self.long_term.save(content, enhanced_metadata, agent)
         elif memory_type == "external" and hasattr(self, 'external'):
             self.external.save(content, enhanced_metadata, agent)
-    
+
     def search_across_memories(self, query: str, limit: int = 5) -> dict:
         """Search across all memory systems"""
         results = {
@@ -674,23 +674,23 @@ class AdvancedMemoryManager:
             "long_term": [],
             "external": []
         }
-        
+
         # Search short-term memory
         results["short_term"] = self.short_term.search(query, limit=limit)
-        
+
         # Search long-term memory
         results["long_term"] = self.long_term.search(query, limit=limit)
-        
+
         # Search external memory (if available)
         if hasattr(self, 'external'):
             results["external"] = self.external.search(query, limit=limit)
-        
+
         return results
-    
+
     def cleanup_old_memories(self, days_threshold: int = 30):
         """Clean up old memories based on age"""
         cutoff_time = time.time() - (days_threshold * 24 * 60 * 60)
-        
+
         # Implement cleanup logic based on timestamps in metadata
         # This would vary based on your specific storage implementation
         pass
@@ -719,12 +719,12 @@ class TaskMetrics:
 
 class CrewMonitor:
     """Comprehensive monitoring for CrewAI applications"""
-    
+
     def __init__(self, crew_name: str, log_level: str = "INFO"):
         self.crew_name = crew_name
         self.metrics: List[TaskMetrics] = []
         self.session_start = time.time()
-        
+
         # Setup logging
         logging.basicConfig(
             level=getattr(logging, log_level),
@@ -735,7 +735,7 @@ class CrewMonitor:
             ]
         )
         self.logger = logging.getLogger(f"CrewAI.{crew_name}")
-        
+
     def start_task_monitoring(self, task_name: str, agent_name: str) -> dict:
         """Start monitoring a task execution"""
         context = {
@@ -743,16 +743,16 @@ class CrewMonitor:
             "agent_name": agent_name,
             "start_time": time.time()
         }
-        
+
         self.logger.info(f"Task started: {task_name} by {agent_name}")
         return context
-        
-    def end_task_monitoring(self, context: dict, success: bool = True, 
+
+    def end_task_monitoring(self, context: dict, success: bool = True,
                            tokens_used: int = 0, error: str = None):
         """End monitoring and record metrics"""
         end_time = time.time()
         duration = end_time - context["start_time"]
-        
+
         # Get memory usage (if psutil is available)
         memory_usage = None
         try:
@@ -761,7 +761,7 @@ class CrewMonitor:
             memory_usage = process.memory_info().rss / 1024 / 1024  # MB
         except ImportError:
             pass
-        
+
         metrics = TaskMetrics(
             task_name=context["task_name"],
             agent_name=context["agent_name"],
@@ -773,29 +773,29 @@ class CrewMonitor:
             error_message=error,
             memory_usage_mb=memory_usage
         )
-        
+
         self.metrics.append(metrics)
-        
+
         # Log the completion
         status = "SUCCESS" if success else "FAILED"
         self.logger.info(f"Task {status}: {context['task_name']} "
                         f"(Duration: {duration:.2f}s, Tokens: {tokens_used})")
-        
+
         if error:
             self.logger.error(f"Task error: {error}")
-    
+
     def get_performance_summary(self) -> Dict[str, Any]:
         """Generate comprehensive performance summary"""
         if not self.metrics:
             return {"message": "No metrics recorded yet"}
-        
+
         successful_tasks = [m for m in self.metrics if m.success]
         failed_tasks = [m for m in self.metrics if not m.success]
-        
+
         total_duration = sum(m.duration for m in self.metrics)
         total_tokens = sum(m.tokens_used for m in self.metrics)
         avg_duration = total_duration / len(self.metrics)
-        
+
         return {
             "crew_name": self.crew_name,
             "session_duration": time.time() - self.session_start,
@@ -811,7 +811,7 @@ class CrewMonitor:
             "most_token_intensive": max(self.metrics, key=lambda x: x.tokens_used).task_name if self.metrics else None,
             "common_errors": self._get_common_errors()
         }
-    
+
     def _get_common_errors(self) -> Dict[str, int]:
         """Get frequency of common errors"""
         error_counts = {}
@@ -819,20 +819,20 @@ class CrewMonitor:
             if metric.error_message:
                 error_counts[metric.error_message] = error_counts.get(metric.error_message, 0) + 1
         return dict(sorted(error_counts.items(), key=lambda x: x[1], reverse=True))
-    
+
     def export_metrics(self, filename: str = None) -> str:
         """Export metrics to JSON file"""
         if not filename:
             filename = f"crew_metrics_{self.crew_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        
+
         export_data = {
             "summary": self.get_performance_summary(),
             "detailed_metrics": [asdict(m) for m in self.metrics]
         }
-        
+
         with open(filename, 'w') as f:
             json.dump(export_data, f, indent=2, default=str)
-        
+
         self.logger.info(f"Metrics exported to {filename}")
         return filename
 
@@ -847,10 +847,10 @@ def monitored_research_task(self) -> Task:
         if context:
             tokens = getattr(task_output, 'token_usage', {}).get('total', 0)
             monitor.end_task_monitoring(context, success=True, tokens_used=tokens)
-    
+
     # Start monitoring would be called before task execution
     # This is a simplified example - in practice you'd integrate this into the task execution flow
-    
+
     return Task(
         config=self.tasks_config['research_task'],
         agent=self.researcher(),
@@ -872,7 +872,7 @@ class ErrorSeverity(Enum):
 
 class CrewError(Exception):
     """Base exception for CrewAI applications"""
-    def __init__(self, message: str, severity: ErrorSeverity = ErrorSeverity.MEDIUM, 
+    def __init__(self, message: str, severity: ErrorSeverity = ErrorSeverity.MEDIUM,
                  context: dict = None):
         super().__init__(message)
         self.severity = severity
@@ -893,19 +893,19 @@ class ConfigurationError(CrewError):
 
 class ErrorHandler:
     """Centralized error handling for CrewAI applications"""
-    
+
     def __init__(self, crew_name: str):
         self.crew_name = crew_name
         self.error_log: List[CrewError] = []
         self.recovery_strategies: Dict[type, Callable] = {}
-        
+
     def register_recovery_strategy(self, error_type: type, strategy: Callable):
         """Register a recovery strategy for specific error types"""
         self.recovery_strategies[error_type] = strategy
-        
+
     def handle_error(self, error: Exception, context: dict = None) -> Any:
         """Handle errors with appropriate recovery strategies"""
-        
+
         # Convert to CrewError if needed
         if not isinstance(error, CrewError):
             crew_error = CrewError(
@@ -915,11 +915,11 @@ class ErrorHandler:
             )
         else:
             crew_error = error
-            
+
         # Log the error
         self.error_log.append(crew_error)
         self._log_error(crew_error)
-        
+
         # Apply recovery strategy if available
         error_type = type(error)
         if error_type in self.recovery_strategies:
@@ -931,21 +931,21 @@ class ErrorHandler:
                     ErrorSeverity.HIGH,
                     {"original_error": str(error), "recovery_error": str(recovery_error)}
                 ))
-        
+
         # If critical, re-raise
         if crew_error.severity == ErrorSeverity.CRITICAL:
             raise crew_error
-            
+
         return None
-    
+
     def _log_error(self, error: CrewError):
         """Log error with appropriate level based on severity"""
         logger = logging.getLogger(f"CrewAI.{self.crew_name}.ErrorHandler")
-        
+
         error_msg = f"[{error.severity.value.upper()}] {error}"
         if error.context:
             error_msg += f" | Context: {error.context}"
-            
+
         if error.severity in [ErrorSeverity.HIGH, ErrorSeverity.CRITICAL]:
             logger.error(error_msg)
             logger.error(f"Stack trace: {traceback.format_exc()}")
@@ -953,16 +953,16 @@ class ErrorHandler:
             logger.warning(error_msg)
         else:
             logger.info(error_msg)
-    
+
     def get_error_summary(self) -> Dict[str, Any]:
         """Get summary of errors encountered"""
         if not self.error_log:
             return {"total_errors": 0}
-            
+
         severity_counts = {}
         for error in self.error_log:
             severity_counts[error.severity.value] = severity_counts.get(error.severity.value, 0) + 1
-            
+
         return {
             "total_errors": len(self.error_log),
             "severity_breakdown": severity_counts,
@@ -1004,7 +1004,7 @@ def robust_task(self) -> Task:
                     # Use fallback response
                     return "Task failed, using fallback response"
         return wrapper
-    
+
     return Task(
         config=self.tasks_config['research_task'],
         agent=self.researcher()
@@ -1020,60 +1020,60 @@ from pydantic import BaseSettings, Field, validator
 
 class Environment(str, Enum):
     DEVELOPMENT = "development"
-    TESTING = "testing"  
+    TESTING = "testing"
     STAGING = "staging"
     PRODUCTION = "production"
 
 class CrewAISettings(BaseSettings):
     """Comprehensive settings management for CrewAI applications"""
-    
+
     # Environment
     environment: Environment = Field(default=Environment.DEVELOPMENT)
     debug: bool = Field(default=True)
-    
+
     # API Keys (loaded from environment)
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
     anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
     serper_api_key: Optional[str] = Field(default=None, env="SERPER_API_KEY")
     mem0_api_key: Optional[str] = Field(default=None, env="MEM0_API_KEY")
-    
+
     # CrewAI Configuration
     crew_max_rpm: int = Field(default=100)
     crew_max_execution_time: int = Field(default=3600)  # 1 hour
     default_llm_model: str = Field(default="gpt-4")
     fallback_llm_model: str = Field(default="gpt-3.5-turbo")
-    
+
     # Memory and Storage
     crewai_storage_dir: str = Field(default="./storage", env="CREWAI_STORAGE_DIR")
     memory_enabled: bool = Field(default=True)
     memory_cleanup_interval: int = Field(default=86400)  # 24 hours in seconds
-    
+
     # Performance
     enable_caching: bool = Field(default=True)
     max_retries: int = Field(default=3)
     retry_delay: float = Field(default=1.0)
-    
+
     # Monitoring
     enable_monitoring: bool = Field(default=True)
     log_level: str = Field(default="INFO")
     metrics_export_interval: int = Field(default=3600)  # 1 hour
-    
+
     # Security
     input_sanitization: bool = Field(default=True)
     max_input_length: int = Field(default=10000)
     allowed_file_types: list = Field(default=["txt", "md", "pdf", "docx"])
-    
+
     @validator('environment', pre=True)
     def set_debug_based_on_env(cls, v):
         return v
-    
+
     @validator('debug')
     def set_debug_from_env(cls, v, values):
         env = values.get('environment')
         if env == Environment.PRODUCTION:
             return False
         return v
-    
+
     @validator('openai_api_key')
     def validate_openai_key(cls, v):
         if not v:
@@ -1081,15 +1081,15 @@ class CrewAISettings(BaseSettings):
         if not v.startswith('sk-'):
             raise ValueError("Invalid OpenAI API key format")
         return v
-    
+
     @property
     def is_production(self) -> bool:
         return self.environment == Environment.PRODUCTION
-    
+
     @property
     def is_development(self) -> bool:
         return self.environment == Environment.DEVELOPMENT
-        
+
     def get_llm_config(self) -> Dict[str, Any]:
         """Get LLM configuration based on environment"""
         config = {
@@ -1098,12 +1098,12 @@ class CrewAISettings(BaseSettings):
             "max_tokens": 4000 if self.is_production else 2000,
             "timeout": 60
         }
-        
+
         if self.is_development:
             config["model"] = self.fallback_llm_model
-            
+
         return config
-    
+
     def get_memory_config(self) -> Dict[str, Any]:
         """Get memory configuration"""
         return {
@@ -1112,7 +1112,7 @@ class CrewAISettings(BaseSettings):
             "cleanup_interval": self.memory_cleanup_interval,
             "provider": "mem0" if self.mem0_api_key and self.is_production else "local"
         }
-        
+
     class Config:
         env_file = ".env"
         env_file_encoding = 'utf-8'
@@ -1125,25 +1125,25 @@ settings = CrewAISettings()
 @CrewBase
 class ConfigurableCrew():
     """Crew that uses centralized configuration"""
-    
+
     def __init__(self):
         self.settings = settings
         self.validate_configuration()
-        
+
     def validate_configuration(self):
         """Validate configuration before crew execution"""
         required_keys = [self.settings.openai_api_key]
         if not all(required_keys):
             raise ConfigurationError("Missing required API keys")
-            
+
         if not os.path.exists(self.settings.crewai_storage_dir):
             os.makedirs(self.settings.crewai_storage_dir, exist_ok=True)
-    
+
     @agent
     def adaptive_agent(self) -> Agent:
         """Agent that adapts to configuration"""
         llm_config = self.settings.get_llm_config()
-        
+
         return Agent(
             config=self.agents_config['researcher'],
             llm=llm_config["model"],
@@ -1163,7 +1163,7 @@ from crewai.tasks.task_output import TaskOutput
 
 class CrewAITestFramework:
     """Comprehensive testing framework for CrewAI applications"""
-    
+
     @staticmethod
     def create_mock_agent(role: str = "test_agent", tools: list = None) -> Mock:
         """Create a mock agent for testing"""
@@ -1175,9 +1175,9 @@ class CrewAITestFramework:
         mock_agent.llm = "gpt-3.5-turbo"
         mock_agent.verbose = False
         return mock_agent
-    
+
     @staticmethod
-    def create_mock_task_output(content: str, success: bool = True, 
+    def create_mock_task_output(content: str, success: bool = True,
                                tokens: int = 100) -> TaskOutput:
         """Create a mock task output for testing"""
         return TaskOutput(
@@ -1187,13 +1187,13 @@ class CrewAITestFramework:
             pydantic=None,
             json_dict=None
         )
-    
+
     @staticmethod
     def create_test_crew(agents: list = None, tasks: list = None) -> Crew:
         """Create a test crew with mock components"""
         test_agents = agents or [CrewAITestFramework.create_mock_agent()]
         test_tasks = tasks or []
-        
+
         return Crew(
             agents=test_agents,
             tasks=test_tasks,
@@ -1203,53 +1203,53 @@ class CrewAITestFramework:
 # Example test cases
 class TestResearchCrew:
     """Test cases for research crew functionality"""
-    
+
     def setup_method(self):
         """Setup test environment"""
         self.framework = CrewAITestFramework()
         self.mock_serper = Mock()
-        
+
     @patch('crewai_tools.SerperDevTool')
     def test_agent_creation(self, mock_serper_tool):
         """Test agent creation with proper configuration"""
         mock_serper_tool.return_value = self.mock_serper
-        
+
         crew = ResearchCrew()
         researcher = crew.researcher()
-        
+
         assert researcher.role == "Senior Research Analyst"
         assert len(researcher.tools) > 0
         assert researcher.verbose is True
-        
+
     def test_task_validation(self):
         """Test task validation logic"""
         crew = ResearchCrew()
-        
+
         # Test valid output
         valid_output = self.framework.create_mock_task_output(
             "This is a comprehensive research summary with conclusions and findings."
         )
         is_valid, message = crew.validate_research_quality(valid_output)
         assert is_valid is True
-        
+
         # Test invalid output (too short)
         invalid_output = self.framework.create_mock_task_output("Too short")
         is_valid, message = crew.validate_research_quality(invalid_output)
         assert is_valid is False
         assert "brief" in message.lower()
-        
+
     @patch('requests.get')
     def test_tool_error_handling(self, mock_requests):
         """Test tool error handling and recovery"""
         # Simulate network error
         mock_requests.side_effect = requests.exceptions.RequestException("Network error")
-        
+
         tool = RobustSearchTool()
         result = tool._run("test query")
-        
+
         assert "network error" in result.lower()
         assert "failed" in result.lower()
-        
+
     @pytest.mark.asyncio
     async def test_crew_execution_flow(self):
         """Test complete crew execution with mocked dependencies"""
@@ -1257,18 +1257,18 @@ class TestResearchCrew:
             mock_execute.return_value = self.framework.create_mock_task_output(
                 "Research completed successfully with findings and recommendations."
             )
-            
+
             crew = ResearchCrew()
             result = crew.crew().kickoff(inputs={"topic": "AI testing"})
-            
+
             assert result is not None
             assert "successfully" in result.raw.lower()
-            
+
     def test_memory_integration(self):
         """Test memory system integration"""
         crew = ResearchCrew()
         memory_manager = AdvancedMemoryManager(crew)
-        
+
         # Test saving to memory
         test_content = "Important research finding about AI"
         memory_manager.save_with_context(
@@ -1277,34 +1277,34 @@ class TestResearchCrew:
             metadata={"importance": "high"},
             agent="researcher"
         )
-        
+
         # Test searching memory
         results = memory_manager.search_across_memories("AI research")
         assert "short_term" in results
-        
+
     def test_error_handling_workflow(self):
         """Test error handling and recovery mechanisms"""
         error_handler = ErrorHandler("test_crew")
-        
+
         # Test error registration and handling
         test_error = TaskExecutionError("Test task failed", ErrorSeverity.MEDIUM)
         result = error_handler.handle_error(test_error)
-        
+
         assert len(error_handler.error_log) == 1
         assert error_handler.error_log[0].severity == ErrorSeverity.MEDIUM
-        
+
     def test_configuration_validation(self):
         """Test configuration validation"""
         # Test with missing API key
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError):
                 settings = CrewAISettings()
-                
+
         # Test with valid configuration
         with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test-key"}):
             settings = CrewAISettings()
             assert settings.openai_api_key == "sk-test-key"
-            
+
     @pytest.mark.integration
     def test_end_to_end_workflow(self):
         """Integration test for complete workflow"""
@@ -1315,41 +1315,41 @@ class TestResearchCrew:
 # Performance testing
 class TestCrewPerformance:
     """Performance tests for CrewAI applications"""
-    
+
     def test_memory_usage(self):
         """Test memory usage during crew execution"""
         import psutil
         import gc
-        
+
         process = psutil.Process()
         initial_memory = process.memory_info().rss
-        
+
         # Create and run crew multiple times
         for i in range(10):
             crew = ResearchCrew()
             # Simulate crew execution
             del crew
             gc.collect()
-        
+
         final_memory = process.memory_info().rss
         memory_increase = final_memory - initial_memory
-        
+
         # Assert memory increase is reasonable (less than 100MB)
         assert memory_increase < 100 * 1024 * 1024
-        
+
     def test_concurrent_execution(self):
         """Test concurrent crew execution"""
         import concurrent.futures
-        
+
         def run_crew(crew_id):
             crew = ResearchCrew()
             # Simulate execution
             return f"crew_{crew_id}_completed"
-        
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             futures = [executor.submit(run_crew, i) for i in range(5)]
             results = [future.result() for future in futures]
-        
+
         assert len(results) == 5
         assert all("completed" in result for result in results)
 
@@ -1400,7 +1400,7 @@ class TestCrewPerformance:
 
 ### Development:
 1. Always use .env files for sensitive configuration
-2. Implement comprehensive error handling and logging  
+2. Implement comprehensive error handling and logging
 3. Use structured outputs with Pydantic for reliability
 4. Test crew functionality with different input scenarios
 5. Follow CrewAI patterns and conventions consistently
@@ -1426,4 +1426,4 @@ class TestCrewPerformance:
 5. Use async patterns for I/O-bound operations
 6. Implement proper connection pooling and resource management
 7. Profile and optimize critical paths
-8. Plan for horizontal scaling when needed 
+8. Plan for horizontal scaling when needed
