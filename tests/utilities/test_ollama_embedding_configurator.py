@@ -20,7 +20,7 @@ class TestOllamaEmbeddingConfigurator:
                 model_name="llama2"
             )
 
-    @patch.dict(os.environ, {"API_BASE": "http://custom-ollama:8080"}, clear=True)
+    @patch.dict(os.environ, {"API_BASE": "http://custom-ollama:8080/api/embeddings"}, clear=True)
     def test_ollama_respects_api_base_env_var(self):
         config = {"provider": "ollama", "config": {"model": "llama2"}}
         
@@ -48,13 +48,13 @@ class TestOllamaEmbeddingConfigurator:
                 model_name="llama2"
             )
 
-    @patch.dict(os.environ, {"API_BASE": "http://env-ollama:8080"}, clear=True)
+    @patch.dict(os.environ, {"API_BASE": "http://env-ollama:8080/api/embeddings"}, clear=True)
     def test_ollama_config_api_base_overrides_env_var(self):
         config = {
             "provider": "ollama", 
             "config": {
                 "model": "llama2",
-                "api_base": "http://config-ollama:9090"
+                "api_base": "http://config-ollama:9090/api/embeddings"
             }
         }
         
@@ -72,7 +72,7 @@ class TestOllamaEmbeddingConfigurator:
             "config": {
                 "model": "llama2",
                 "url": "http://url-config:1111/api/embeddings",
-                "api_base": "http://api-base-config:2222"
+                "api_base": "http://api-base-config:2222/api/embeddings"
             }
         }
         
@@ -80,17 +80,6 @@ class TestOllamaEmbeddingConfigurator:
             self.configurator.configure_embedder(config)
             mock_ollama.assert_called_once_with(
                 url="http://url-config:1111/api/embeddings",
-                model_name="llama2"
-            )
-
-    @patch.dict(os.environ, {"API_BASE": "http://localhost:11434/"}, clear=True)
-    def test_ollama_handles_trailing_slash_in_api_base(self):
-        config = {"provider": "ollama", "config": {"model": "llama2"}}
-        
-        with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
-            self.configurator.configure_embedder(config)
-            mock_ollama.assert_called_once_with(
-                url="http://localhost:11434/api/embeddings",
                 model_name="llama2"
             )
 
@@ -105,8 +94,8 @@ class TestOllamaEmbeddingConfigurator:
                 model_name="llama2"
             )
 
-    @patch.dict(os.environ, {"API_BASE": "http://localhost:11434"}, clear=True)
-    def test_ollama_api_base_without_trailing_slash(self):
+    @patch.dict(os.environ, {"API_BASE": "http://localhost:11434/api/embeddings"}, clear=True)
+    def test_ollama_uses_provided_url_as_is(self):
         config = {"provider": "ollama", "config": {"model": "llama2"}}
         
         with patch("chromadb.utils.embedding_functions.ollama_embedding_function.OllamaEmbeddingFunction") as mock_ollama:
@@ -122,7 +111,7 @@ class TestOllamaEmbeddingConfigurator:
             "provider": "ollama", 
             "config": {
                 "model": "llama2",
-                "api_base": "http://config-ollama:9090"
+                "api_base": "http://config-ollama:9090/api/embeddings"
             }
         }
         
