@@ -38,20 +38,21 @@ def short_term_memory():
 def test_short_term_memory_search_events(short_term_memory):
     events = defaultdict(list)
 
-    @crewai_event_bus.on(MemoryQueryStartedEvent)
-    def on_search_started(source, event):
-        events["MemoryQueryStartedEvent"].append(event)
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(MemoryQueryStartedEvent)
+        def on_search_started(source, event):
+            events["MemoryQueryStartedEvent"].append(event)
 
-    @crewai_event_bus.on(MemoryQueryCompletedEvent)
-    def on_search_completed(source, event):
-        events["MemoryQueryCompletedEvent"].append(event)
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def on_search_completed(source, event):
+            events["MemoryQueryCompletedEvent"].append(event)
 
-    # Call the save method
-    short_term_memory.search(
-        query="test value",
-        limit=3,
-        score_threshold=0.35,
-    )
+        # Call the save method
+        short_term_memory.search(
+            query="test value",
+            limit=3,
+            score_threshold=0.35,
+        )
 
     assert len(events["MemoryQueryStartedEvent"]) == 1
     assert len(events["MemoryQueryCompletedEvent"]) == 1
@@ -81,25 +82,23 @@ def test_short_term_memory_search_events(short_term_memory):
         'query_time_ms': ANY
     }
 
-    crewai_event_bus._handlers.clear()
-
 
 def test_short_term_memory_save_events(short_term_memory):
     events = defaultdict(list)
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(MemorySaveStartedEvent)
+        def on_save_started(source, event):
+            events["MemorySaveStartedEvent"].append(event)
 
-    @crewai_event_bus.on(MemorySaveStartedEvent)
-    def on_save_started(source, event):
-        events["MemorySaveStartedEvent"].append(event)
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def on_save_completed(source, event):
+            events["MemorySaveCompletedEvent"].append(event)
 
-    @crewai_event_bus.on(MemorySaveCompletedEvent)
-    def on_save_completed(source, event):
-        events["MemorySaveCompletedEvent"].append(event)
-
-    short_term_memory.save(
-        value="test value",
-        metadata={"task": "test_task"},
-        agent="test_agent",
-    )
+        short_term_memory.save(
+            value="test value",
+            metadata={"task": "test_task"},
+            agent="test_agent",
+        )
 
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1
@@ -127,8 +126,6 @@ def test_short_term_memory_save_events(short_term_memory):
         'agent_role': "test_agent",
         'save_time_ms': ANY
     }
-
-    crewai_event_bus._handlers.clear()
 
 def test_save_and_search(short_term_memory):
     memory = ShortTermMemoryItem(

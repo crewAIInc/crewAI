@@ -2499,58 +2499,59 @@ def test_using_contextual_memory():
 def test_memory_events_are_emitted():
     events = defaultdict(list)
 
-    @crewai_event_bus.on(MemorySaveStartedEvent)
-    def handle_memory_save_started(source, event):
-        events["MemorySaveStartedEvent"].append(event)
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(MemorySaveStartedEvent)
+        def handle_memory_save_started(source, event):
+            events["MemorySaveStartedEvent"].append(event)
 
-    @crewai_event_bus.on(MemorySaveCompletedEvent)
-    def handle_memory_save_completed(source, event):
-        events["MemorySaveCompletedEvent"].append(event)
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def handle_memory_save_completed(source, event):
+            events["MemorySaveCompletedEvent"].append(event)
 
-    @crewai_event_bus.on(MemorySaveFailedEvent)
-    def handle_memory_save_failed(source, event):
-        events["MemorySaveFailedEvent"].append(event)
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def handle_memory_save_failed(source, event):
+            events["MemorySaveFailedEvent"].append(event)
 
-    @crewai_event_bus.on(MemoryQueryStartedEvent)
-    def handle_memory_query_started(source, event):
-        events["MemoryQueryStartedEvent"].append(event)
+        @crewai_event_bus.on(MemoryQueryStartedEvent)
+        def handle_memory_query_started(source, event):
+            events["MemoryQueryStartedEvent"].append(event)
 
-    @crewai_event_bus.on(MemoryQueryCompletedEvent)
-    def handle_memory_query_completed(source, event):
-        events["MemoryQueryCompletedEvent"].append(event)
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def handle_memory_query_completed(source, event):
+            events["MemoryQueryCompletedEvent"].append(event)
 
-    @crewai_event_bus.on(MemoryQueryFailedEvent)
-    def handle_memory_query_failed(source, event):
-        events["MemoryQueryFailedEvent"].append(event)
+        @crewai_event_bus.on(MemoryQueryFailedEvent)
+        def handle_memory_query_failed(source, event):
+            events["MemoryQueryFailedEvent"].append(event)
 
-    @crewai_event_bus.on(MemoryRetrievalStartedEvent)
-    def handle_memory_retrieval_started(source, event):
-        events["MemoryRetrievalStartedEvent"].append(event)
+        @crewai_event_bus.on(MemoryRetrievalStartedEvent)
+        def handle_memory_retrieval_started(source, event):
+            events["MemoryRetrievalStartedEvent"].append(event)
 
-    @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
-    def handle_memory_retrieval_completed(source, event):
-        events["MemoryRetrievalCompletedEvent"].append(event)
+        @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
+        def handle_memory_retrieval_completed(source, event):
+            events["MemoryRetrievalCompletedEvent"].append(event)
 
-    math_researcher = Agent(
-        role="Researcher",
-        goal="You research about math.",
-        backstory="You're an expert in research and you love to learn new things.",
-        allow_delegation=False,
-    )
+        math_researcher = Agent(
+            role="Researcher",
+            goal="You research about math.",
+            backstory="You're an expert in research and you love to learn new things.",
+            allow_delegation=False,
+        )
 
-    task1 = Task(
-        description="Research a topic to teach a kid aged 6 about math.",
-        expected_output="A topic, explanation, angle, and examples.",
-        agent=math_researcher,
-    )
+        task1 = Task(
+            description="Research a topic to teach a kid aged 6 about math.",
+            expected_output="A topic, explanation, angle, and examples.",
+            agent=math_researcher,
+        )
 
-    crew = Crew(
-        agents=[math_researcher],
-        tasks=[task1],
-        memory=True,
-    )
+        crew = Crew(
+            agents=[math_researcher],
+            tasks=[task1],
+            memory=True,
+        )
 
-    crew.kickoff()
+        crew.kickoff()
 
     assert len(events["MemorySaveStartedEvent"]) == 6
     assert len(events["MemorySaveCompletedEvent"]) == 6
