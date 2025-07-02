@@ -23,7 +23,7 @@ def is_ipv4_pattern(name: str) -> bool:
     return bool(IPV4_PATTERN.match(name))
 
 
-def sanitize_collection_name(name: Optional[str]) -> str:
+def sanitize_collection_name(name: Optional[str], max_collection_length: int = MAX_COLLECTION_LENGTH) -> str:
     """
     Sanitize a collection name to meet ChromaDB requirements:
     1. 3-63 characters long
@@ -54,8 +54,8 @@ def sanitize_collection_name(name: Optional[str]) -> str:
 
     if len(sanitized) < MIN_COLLECTION_LENGTH:
         sanitized = sanitized + "x" * (MIN_COLLECTION_LENGTH - len(sanitized))
-    if len(sanitized) > MAX_COLLECTION_LENGTH:
-        sanitized = sanitized[:MAX_COLLECTION_LENGTH]
+    if len(sanitized) > max_collection_length:
+        sanitized = sanitized[:max_collection_length]
         if not sanitized[-1].isalnum():
             sanitized = sanitized[:-1] + "z"
 

@@ -1,0 +1,187 @@
+---
+title: Ferramenta Bedrock Invoke Agent
+description: Permite que agentes CrewAI invoquem Amazon Bedrock Agents e aproveitem suas capacidades em seus fluxos de trabalho
+icon: aws
+---
+
+# `BedrockInvokeAgentTool`
+
+A `BedrockInvokeAgentTool` permite que agentes CrewAI invoquem Amazon Bedrock Agents e aproveitem suas capacidades em seus fluxos de trabalho.
+
+## Instalação
+
+```bash
+uv pip install 'crewai[tools]'
+```
+
+## Requisitos
+
+- Credenciais AWS configuradas (através de variáveis de ambiente ou AWS CLI)
+- Pacotes `boto3` e `python-dotenv`
+- Acesso aos Amazon Bedrock Agents
+
+## Uso
+
+Veja como usar a ferramenta com um agente CrewAI:
+
+```python {2, 4-8}
+from crewai import Agent, Task, Crew
+from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
+
+# Initialize the tool
+agent_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id"
+)
+
+# Create a CrewAI agent that uses the tool
+aws_expert = Agent(
+    role='AWS Service Expert',
+    goal='Help users understand AWS services and quotas',
+    backstory='I am an expert in AWS services and can provide detailed information about them.',
+    tools=[agent_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+quota_task = Task(
+    description="Find out the current service quotas for EC2 in us-west-2 and explain any recent changes.",
+    agent=aws_expert
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[aws_expert],
+    tasks=[quota_task],
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+## Argumentos da Ferramenta
+
+| Argumento | Tipo | Obrigatório | Padrão   | Descrição                                           |
+|:----------|:-----|:------------|:---------|:----------------------------------------------------|
+| **agent_id** | `str` | Sim       | None     | O identificador único do agente Bedrock              |
+| **agent_alias_id** | `str` | Sim  | None     | O identificador único do alias do agente             |
+| **session_id** | `str` | Não     | timestamp | O identificador único da sessão                      |
+| **enable_trace** | `bool` | Não  | False    | Define se o trace deve ser habilitado para debug     |
+| **end_session** | `bool` | Não   | False    | Define se a sessão deve ser encerrada após invocação |
+| **description** | `str` | Não    | None     | Descrição personalizada para a ferramenta            |
+
+## Variáveis de Ambiente
+
+```bash
+BEDROCK_AGENT_ID=your-agent-id           # Alternativa para passar agent_id
+BEDROCK_AGENT_ALIAS_ID=your-agent-alias-id # Alternativa para passar agent_alias_id
+AWS_REGION=your-aws-region               # Padrão é us-west-2
+AWS_ACCESS_KEY_ID=your-access-key        # Necessário para autenticação AWS
+AWS_SECRET_ACCESS_KEY=your-secret-key    # Necessário para autenticação AWS
+```
+
+## Uso Avançado
+
+### Fluxo de Trabalho Multiagente com Gerenciamento de Sessão
+
+```python {2, 4-22}
+from crewai import Agent, Task, Crew, Process
+from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
+
+# Initialize tools with session management
+initial_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id",
+    session_id="custom-session-id"
+)
+
+followup_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id",
+    session_id="custom-session-id"
+)
+
+final_tool = BedrockInvokeAgentTool(
+    agent_id="your-agent-id",
+    agent_alias_id="your-agent-alias-id",
+    session_id="custom-session-id",
+    end_session=True
+)
+
+# Create agents for different stages
+researcher = Agent(
+    role='AWS Service Researcher',
+    goal='Gather information about AWS services',
+    backstory='I am specialized in finding detailed AWS service information.',
+    tools=[initial_tool]
+)
+
+analyst = Agent(
+    role='Service Compatibility Analyst',
+    goal='Analyze service compatibility and requirements',
+    backstory='I analyze AWS services for compatibility and integration possibilities.',
+    tools=[followup_tool]
+)
+
+summarizer = Agent(
+    role='Technical Documentation Writer',
+    goal='Create clear technical summaries',
+    backstory='I specialize in creating clear, concise technical documentation.',
+    tools=[final_tool]
+)
+
+# Create tasks
+research_task = Task(
+    description="Find all available AWS services in us-west-2 region.",
+    agent=researcher
+)
+
+analysis_task = Task(
+    description="Analyze which services support IPv6 and their implementation requirements.",
+    agent=analyst
+)
+
+summary_task = Task(
+    description="Create a summary of IPv6-compatible services and their key features.",
+    agent=summarizer
+)
+
+# Create a crew with the agents and tasks
+crew = Crew(
+    agents=[researcher, analyst, summarizer],
+    tasks=[research_task, analysis_task, summary_task],
+    process=Process.sequential,
+    verbose=2
+)
+
+# Run the crew
+result = crew.kickoff()
+```
+
+## Casos de Uso
+
+### Colaborações Híbridas Multiagente
+- Crie fluxos de trabalho onde agentes CrewAI colaboram com agentes Bedrock gerenciados executando como serviços na AWS
+- Permita cenários em que o processamento de dados sensíveis ocorre dentro do seu ambiente AWS enquanto outros agentes operam externamente
+- Conecte agentes CrewAI on-premises a agentes Bedrock baseados na nuvem para fluxos de trabalho distribuídos de inteligência
+
+### Soberania e Conformidade de Dados
+- Mantenha fluxos de trabalho agentivos sensíveis a dados dentro do seu ambiente AWS enquanto permite que agentes CrewAI externos orquestrem tarefas
+- Mantenha conformidade com requisitos de residência de dados processando informações sensíveis somente em sua conta AWS
+- Permita colaborações multiagentes seguras onde alguns agentes não podem acessar dados privados da sua organização
+
+### Integração Transparente com Serviços AWS
+- Acesse qualquer serviço AWS por meio do Amazon Bedrock Actions sem escrever código de integração complexo
+- Permita que agentes CrewAI interajam com serviços AWS usando solicitações em linguagem natural
+- Aproveite as capacidades pré-construídas dos agentes Bedrock para interagir com serviços AWS como Bedrock Knowledge Bases, Lambda e outros
+
+### Arquiteturas de Agentes Híbridos Escaláveis
+- Realize tarefas computacionalmente intensivas em agentes Bedrock gerenciados enquanto tarefas leves rodam em CrewAI
+- Escale o processamento de agentes distribuindo cargas de trabalho entre agentes CrewAI locais e agentes Bedrock na nuvem
+
+### Colaboração de Agentes Entre Organizações
+- Permita colaboração segura entre agentes CrewAI da sua organização e agentes Bedrock de organizações parceiras
+- Crie fluxos de trabalho onde a expertise externa de agentes Bedrock pode ser incorporada sem expor dados sensíveis
+- Construa ecossistemas de agentes que abrangem fronteiras organizacionais mantendo segurança e controle de dados

@@ -1,0 +1,185 @@
+---
+title: Integração com MLflow
+description: Comece rapidamente a monitorar seus Agents com MLflow.
+icon: bars-staggered
+---
+
+# Visão Geral do MLflow
+
+[MLflow](https://mlflow.org/) é uma plataforma open-source que auxilia profissionais e equipes de machine learning a lidar com as complexidades do processo de aprendizagem de máquina.
+
+Ela oferece um recurso de tracing que aprimora a observabilidade de LLMs em suas aplicações de IA Generativa, capturando informações detalhadas sobre a execução dos serviços de sua aplicação.
+O tracing fornece uma forma de registrar os inputs, outputs e metadados associados a cada etapa intermediária de uma requisição, permitindo que você identifique facilmente a origem de bugs e comportamentos inesperados.
+
+![Visão geral do uso de tracing MLflow com crewAI](/images/mlflow-tracing.gif)
+
+### Funcionalidades
+
+- **Painel de Tracing**: Monitore as atividades dos seus agentes crewAI com painéis detalhados que incluem entradas, saídas e metadados dos spans.
+- **Tracing Automatizado**: Uma integração totalmente automatizada com crewAI, que pode ser habilitada executando `mlflow.crewai.autolog()`.
+- **Instrumentação Manual de Tracing com pouco esforço**: Personalize a instrumentação dos traces usando as APIs de alto nível do MLflow, como decorators, wrappers de funções e context managers.
+- **Compatibilidade com OpenTelemetry**: O MLflow Tracing suporta a exportação de traces para um OpenTelemetry Collector, que pode então ser usado para exportar traces para diversos backends como Jaeger, Zipkin e AWS X-Ray.
+- **Empacote e Faça Deploy dos Agents**: Empacote e faça deploy de seus agents crewAI em um servidor de inferência com diversas opções de destino.
+- **Hospede LLMs com Segurança**: Hospede múltiplos LLMs de vários provedores em um endpoint unificado através do gateway do MFflow.
+- **Avaliação**: Avalie seus agents crewAI com uma ampla variedade de métricas utilizando a API conveniente `mlflow.evaluate()`.
+
+## Instruções de Configuração
+
+<Steps>
+    <Step title="Instale o pacote MLflow">
+      ```shell
+      # A integração crewAI está disponível no mlflow>=2.19.0
+      pip install mlflow
+      ```
+    </Step>
+    <Step title="Inicie o servidor de tracking do MFflow">
+      ```shell
+      # Este processo é opcional, mas é recomendado utilizar o servidor de tracking do MLflow para melhor visualização e mais funcionalidades.
+      mlflow server
+      ```
+    </Step>
+    <Step title="Inicialize o MLflow em sua aplicação">
+      Adicione as duas linhas a seguir ao código da sua aplicação:
+
+      ```python
+      import mlflow
+
+      mlflow.crewai.autolog()
+
+      # Opcional: Defina uma tracking URI e um nome de experimento caso utilize um servidor de tracking
+      mlflow.set_tracking_uri("http://localhost:5000")
+      mlflow.set_experiment("CrewAI")
+      ```
+      
+      Exemplo de uso para tracing de Agents do CrewAI:
+
+      ```python
+      from crewai import Agent, Crew, Task
+      from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+      from crewai_tools import SerperDevTool, WebsiteSearchTool
+
+      from textwrap import dedent
+
+      content = "Users name is John. He is 30 years old and lives in San Francisco."
+      string_source = StringKnowledgeSource(
+          content=content, metadata={"preference": "personal"}
+      )
+
+      search_tool = WebsiteSearchTool()
+
+
+      class TripAgents:
+          def city_selection_agent(self):
+              especialista_cidades = Agent(
+                  role="Especialista em Seleção de Cidades",
+                  goal="Selecionar a melhor cidade com base no clima, estação e preços",
+                  backstory="Especialista em analisar dados de viagem para escolher destinos ideais",
+                  tools=[search_tool],
+                  verbose=True,
+              )
+
+          def local_expert(self):
+              especialista_local = Agent(
+                  role="Especialista Local nesta cidade",
+                  goal="Fornecer as MELHORES informações sobre a cidade selecionada",
+                  backstory="Um guia local experiente com amplo conhecimento sobre a cidade, suas atrações e costumes",
+                  tools=[search_tool],
+                  verbose=True,
+              )
+
+
+      class TripTasks:
+          def identify_task(self, agent, origin, cities, interests, range):
+              return Task(
+                  description=dedent(
+                      f"""
+                      Analise e selecione a melhor cidade para a viagem com base em critérios específicos como padrões climáticos, eventos sazonais e custos de viagem. Esta tarefa envolve comparar várias cidades, considerando fatores como condições climáticas atuais, eventos culturais ou sazonais e despesas gerais de viagem.
+                      Sua resposta final deve ser um relatório detalhado sobre a cidade escolhida e tudo o que você descobriu sobre ela, incluindo custos reais de voo, previsão do tempo e atrações.
+
+                      Saindo de: {origin}
+                      Opções de cidades: {cities}
+                      Data da viagem: {range}
+                      Interesses do viajante: {interests}
+                  """
+                  ),
+                  agent=agent,
+                  expected_output="Relatório detalhado sobre a cidade escolhida incluindo custos de voo, previsão do tempo e atrações",
+              )
+
+          def gather_task(self, agent, origin, interests, range):
+              return Task(
+                  description=dedent(
+                      f"""
+                      Como especialista local nesta cidade, você deve compilar um guia aprofundado para alguém que está viajando para lá e quer ter a MELHOR viagem possível!
+                      Reúna informações sobre principais atrações, costumes locais, eventos especiais e recomendações de atividades diárias.
+                      Encontre os melhores lugares para ir, aqueles que só um local conhece.
+                      Este guia deve fornecer uma visão abrangente do que a cidade tem a oferecer, incluindo joias escondidas, pontos culturais, marcos imperdíveis, previsão do tempo e custos gerais.
+                      A resposta final deve ser um guia completo da cidade, rico em insights culturais e dicas práticas, adaptado para aprimorar a experiência de viagem.
+
+                      Data da viagem: {range}
+                      Saindo de: {origin}
+                      Interesses do viajante: {interests}
+                  """
+                  ),
+                  agent=agent,
+                  expected_output="Guia completo da cidade incluindo joias escondidas, pontos culturais e dicas práticas",
+              )
+
+
+      class TripCrew:
+          def __init__(self, origin, cities, date_range, interests):
+              self.cities = cities
+              self.origin = origin
+              self.interests = interests
+              self.date_range = date_range
+
+          def run(self):
+              agents = TripAgents()
+              tasks = TripTasks()
+
+              city_selector_agent = agents.city_selection_agent()
+              local_expert_agent = agents.local_expert()
+
+              identify_task = tasks.identify_task(
+                  city_selector_agent,
+                  self.origin,
+                  self.cities,
+                  self.interests,
+                  self.date_range,
+              )
+              gather_task = tasks.gather_task(
+                  local_expert_agent, self.origin, self.interests, self.date_range
+              )
+
+              crew = Crew(
+                  agents=[city_selector_agent, local_expert_agent],
+                  tasks=[identify_task, gather_task],
+                  verbose=True,
+                  memory=True,
+                  knowledge={
+                      "sources": [string_source],
+                      "metadata": {"preference": "personal"},
+                  },
+              )
+
+              result = crew.kickoff()
+              return result
+
+
+      trip_crew = TripCrew("California", "Tokyo", "Dec 12 - Dec 20", "sports")
+      result = trip_crew.run()
+
+      print("Resultado da equipe:", result)
+      ```
+      Consulte a [Documentação de Tracing do MLflow](https://mlflow.org/docs/latest/llms/tracing/index.html) para mais configurações e casos de uso.
+    </Step>
+    <Step title="Visualize as atividades dos Agents">
+      Agora os traces dos seus agentes crewAI estão sendo capturados pelo MLflow.
+      Vamos acessar o servidor de tracking do MLflow para visualizar os traces e obter insights dos seus Agents.
+
+      Abra `127.0.0.1:5000` em seu navegador para acessar o servidor de tracking do MLflow.
+      <Frame caption="Painel de Tracing do MLflow">
+        <img src="/images/mlflow1.png" alt="Exemplo de tracing do MLflow com crewai" />
+      </Frame>
+    </Step>
+</Steps>

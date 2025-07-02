@@ -1,0 +1,64 @@
+---
+title: Conectando a Múltiplos Servidores MCP
+description: Saiba como usar o MCPServerAdapter no CrewAI para conectar-se simultaneamente a múltiplos servidores MCP e agregar suas ferramentas.
+icon: layer-group
+---
+
+## Visão Geral
+
+O `MCPServerAdapter` em `crewai-tools` permite que você conecte-se a vários servidores MCP simultaneamente. Isso é útil quando seus agentes precisam acessar ferramentas distribuídas entre diferentes serviços ou ambientes. O adaptador agrega as ferramentas de todos os servidores especificados, tornando-as disponíveis para seus agentes CrewAI.
+
+## Configuração
+
+Para conectar-se a múltiplos servidores, você fornece uma lista de dicionários de parâmetros de servidor para o `MCPServerAdapter`. Cada dicionário na lista deve definir os parâmetros para um servidor MCP.
+
+Os tipos de transporte suportados para cada servidor na lista incluem `stdio`, `sse` e `streamable-http`.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters # Needed for Stdio example
+
+# Define parameters for multiple MCP servers
+server_params_list = [
+    # Streamable HTTP Server
+    {
+        "url": "http://localhost:8001/mcp", 
+        "transport": "streamable-http"
+    },
+    # SSE Server
+    {
+        "url": "http://localhost:8000/sse",
+        "transport": "sse"
+    },
+    # StdIO Server
+    StdioServerParameters(
+        command="python3",
+        args=["servers/your_stdio_server.py"],
+        env={"UV_PYTHON": "3.12", **os.environ},
+    )
+]
+
+try:
+    with MCPServerAdapter(server_params_list) as aggregated_tools:
+        print(f"Available aggregated tools: {[tool.name for tool in aggregated_tools]}")
+
+        agente_multiservidor = Agent(
+            role="Assistente Versátil",
+            goal="Utilizar ferramentas de servidores MCP locais Stdio, remotos SSE e remotos HTTP.",
+            backstory="Um agente de IA capaz de aproveitar um conjunto diversificado de ferramentas de múltiplas fontes.",
+            tools=aggregated_tools, # Todas as ferramentas estão disponíveis aqui
+            verbose=True,
+        )
+
+        ... # Your other agent, tasks, and crew code here
+
+except Exception as e:
+    print(f"Error connecting to or using multiple MCP servers (Managed): {e}")
+    print("Ensure all MCP servers are running and accessible with correct configurations.")
+
+```
+
+## Gerenciamento de Conexão
+
+Ao utilizar o gerenciador de contexto (`with` statement), o `MCPServerAdapter` gerencia o ciclo de vida (início e término) de todas as conexões aos servidores MCP configurados. Isso simplifica o gerenciamento de recursos e garante que todas as conexões sejam devidamente fechadas ao sair do contexto.

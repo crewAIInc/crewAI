@@ -1,0 +1,111 @@
+---
+title: Processo Hierárquico
+description: Um guia abrangente para compreender e aplicar o processo hierárquico em seus projetos CrewAI, atualizado para refletir as práticas de codificação e funcionalidades mais recentes.
+icon: sitemap
+---
+
+## Introdução
+
+O processo hierárquico no CrewAI introduz uma abordagem estruturada para a gestão de tarefas, simulando hierarquias organizacionais tradicionais para uma delegação e execução eficiente de tarefas.
+Esse fluxo de trabalho sistemático melhora os resultados do projeto ao garantir que as tarefas sejam tratadas com máxima eficiência e precisão.
+
+<Tip>
+    O processo hierárquico foi projetado para alavancar modelos avançados como o GPT-4, otimizando o uso de tokens enquanto lida com tarefas complexas de forma mais eficiente.
+</Tip>
+
+## Visão Geral do Processo Hierárquico
+
+Por padrão, as tarefas no CrewAI são gerenciadas por meio de um processo sequencial. No entanto, adotar uma abordagem hierárquica permite uma hierarquia clara na gestão de tarefas,
+onde um agente 'gerente' coordena o fluxo de trabalho, delega tarefas e valida os resultados para uma execução eficaz e simplificada. Esse agente gerente pode agora ser
+criado automaticamente pelo CrewAI ou explicitamente definido pelo usuário.
+
+### Principais Características
+
+- **Delegação de Tarefas**: Um agente gerente distribui tarefas entre os membros da crew com base em seus papéis e capacidades.
+- **Validação de Resultados**: O gerente avalia os resultados para garantir que atendam aos padrões exigidos.
+- **Fluxo de Trabalho Eficiente**: Emula estruturas corporativas, oferecendo uma abordagem organizada para a gestão de tarefas.
+- **Manipulação de System Prompt**: Opcionalmente, especifique se o sistema deve usar prompts predefinidos.
+- **Controle de Stop Words**: Opcionalmente, especifique se stop words devem ser usadas, oferecendo suporte a diversos modelos, incluindo os modelos o1.
+- **Respeito à Context Window**: Priorização de contexto relevante ativando o respeito à context window, que agora é o comportamento padrão.
+- **Controle de Delegação**: A delegação agora está desativada por padrão para dar controle explícito ao usuário.
+- **Máximo de Requisições por Minuto**: Opção configurável para definir o número máximo de requisições por minuto.
+- **Máximo de Iterações**: Limitação do número máximo de iterações até a obtenção de uma resposta final.
+
+## Implementando o Processo Hierárquico
+
+Para utilizar o processo hierárquico, é essencial definir explicitamente o atributo de processo como `Process.hierarchical`, já que o comportamento padrão é `Process.sequential`.
+Defina uma crew com um gerente designado e estabeleça uma cadeia de comando clara.
+
+<Tip>
+    Atribua ferramentas no nível do agente para facilitar a delegação e execução de tarefas pelos agentes designados sob a orientação do gerente.
+    Ferramentas também podem ser especificadas no nível da tarefa, para um controle preciso sobre a disponibilidade de ferramentas durante a execução das tarefas.
+</Tip>
+
+<Tip>
+    Configurar o parâmetro `manager_llm` é fundamental para o processo hierárquico.
+    O sistema exige a configuração de um LLM do gerente para funcionar corretamente, garantindo tomadas de decisão personalizadas.
+</Tip>
+
+```python Code
+from crewai import Crew, Process, Agent
+
+# Agents are defined with attributes for backstory, cache, and verbose mode
+researcher = Agent(
+    role='Researcher',
+    goal='Conduct in-depth analysis',
+    backstory='Experienced data analyst with a knack for uncovering hidden trends.',
+)
+writer = Agent(
+    role='Writer',
+    goal='Create engaging content',
+    backstory='Creative writer passionate about storytelling in technical domains.',
+)
+
+# Establishing the crew with a hierarchical process and additional configurations
+project_crew = Crew(
+    tasks=[...],  # Tasks to be delegated and executed under the manager's supervision
+    agents=[researcher, writer],
+    manager_llm="gpt-4o",  # Specify which LLM the manager should use
+    process=Process.hierarchical,  
+    planning=True, 
+)
+```
+
+### Usando um Agente Gerente Personalizado
+
+Alternativamente, você pode criar um agente gerente personalizado com atributos específicos adaptados às necessidades de gestão do seu projeto. Isso oferece maior controle sobre o comportamento e as capacidades do gerente.
+
+```python
+# Define a custom manager agent
+manager = Agent(
+    role="Project Manager",
+    goal="Efficiently manage the crew and ensure high-quality task completion",
+    backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success.",
+    allow_delegation=True,
+)
+
+# Use the custom manager in your crew
+project_crew = Crew(
+    tasks=[...],
+    agents=[researcher, writer],
+    manager_agent=manager,  # Use your custom manager agent
+    process=Process.hierarchical,
+    planning=True,
+)
+```
+
+<Tip>
+    Para mais detalhes sobre a criação e personalização de um agente gerente, confira a [documentação do Custom Manager Agent](https://docs.crewai.com/how-to/custom-manager-agent#custom-manager-agent).
+</Tip>
+
+
+### Fluxo de Trabalho na Prática
+
+1. **Atribuição de Tarefas**: O gerente atribui as tarefas estrategicamente, considerando as capacidades de cada agente e as ferramentas disponíveis.
+2. **Execução e Revisão**: Os agentes concluem suas tarefas com a opção de execução assíncrona e funções de callback para fluxos de trabalho otimizados.
+3. **Progresso Sequencial das Tarefas**: Apesar de ser um processo hierárquico, as tarefas seguem uma ordem lógica para um progresso fluido, facilitado pela supervisão do gerente.
+
+## Conclusão
+
+Adotar o processo hierárquico no CrewAI, com as configurações corretas e o entendimento das capacidades do sistema, facilita uma abordagem organizada e eficiente para o gerenciamento de projetos.
+Aproveite os recursos avançados e as personalizações para ajustar o fluxo de trabalho conforme suas necessidades, garantindo a execução ideal das tarefas e o sucesso do projeto.

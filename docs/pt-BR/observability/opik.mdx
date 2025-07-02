@@ -1,0 +1,129 @@
+---
+title: Integração Opik
+description: Saiba como usar o Comet Opik para depurar, avaliar e monitorar suas aplicações CrewAI com rastreamento abrangente, avaliações automatizadas e dashboards prontos para produção.
+icon: meteor
+---
+
+# Visão Geral do Opik
+
+Com o [Comet Opik](https://www.comet.com/docs/opik/), depure, avalie e monitore suas aplicações LLM, sistemas RAG e fluxos de trabalho agentic com rastreamento detalhado, avaliações automatizadas e dashboards prontos para produção.
+
+<Frame caption="Dashboard do Agente Opik">
+  <img src="/images/opik-crewai-dashboard.png" alt="Exemplo de monitoramento de agente Opik com CrewAI" />
+</Frame>
+
+O Opik oferece suporte abrangente para cada etapa do desenvolvimento da sua aplicação CrewAI:
+
+- **Registrar Traces e Spans**: Acompanhe automaticamente chamadas LLM e lógica da aplicação para depurar e analisar sistemas em desenvolvimento e em produção. Anote manualmente ou programaticamente, visualize e compare respostas entre projetos.
+- **Avalie a Performance da sua Aplicação LLM**: Avalie contra um conjunto de testes personalizado e execute métricas de avaliação nativas ou defina suas próprias métricas via SDK ou UI.
+- **Teste no Pipeline CI/CD**: Estabeleça bases de performance confiáveis com os testes unitários LLM do Opik, baseados em PyTest. Execute avaliações online para monitoramento contínuo em produção.
+- **Monitore & Analise Dados de Produção**: Entenda a performance dos seus modelos em dados inéditos em produção e gere conjuntos de dados para novas iterações de desenvolvimento.
+
+## Configuração
+A Comet oferece uma versão hospedada da plataforma Opik, ou você pode rodar a plataforma localmente.
+
+Para usar a versão hospedada, basta [criar uma conta gratuita na Comet](https://www.comet.com/signup?utm_medium=github&utm_source=crewai_docs) e obter sua chave de API.
+
+Para rodar a plataforma Opik localmente, veja nosso [guia de instalação](https://www.comet.com/docs/opik/self-host/overview/) para mais informações.
+
+Neste guia, utilizaremos o exemplo de início rápido da CrewAI.
+
+<Steps>
+    <Step title="Instale os pacotes necessários">
+      ```shell
+      pip install crewai crewai-tools opik --upgrade
+      ```
+    </Step>
+    <Step title="Configure o Opik">
+      ```python
+      import opik
+      opik.configure(use_local=False)
+      ```
+    </Step>
+    <Step title="Prepare o ambiente">
+      Primeiro, configuramos nossas chaves de API do provedor LLM como variáveis de ambiente:
+  
+      ```python
+      import os
+      import getpass
+
+      if "OPENAI_API_KEY" not in os.environ:
+      os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
+      ```
+    </Step>
+    <Step title="Usando a CrewAI">
+      O primeiro passo é criar nosso projeto. Vamos utilizar um exemplo da documentação do CrewAI:
+
+      ```python
+      from crewai import Agent, Crew, Task, Process
+
+
+      class NomeDaEquipe:
+          def agente_um(self) -> Agent:
+              return Agent(
+                  role="Analista de Dados",
+                  goal="Analisar tendências de dados no mercado",
+                  backstory="Analista de dados experiente com formação em economia",
+                  verbose=True,
+              )
+
+          def agente_dois(self) -> Agent:
+              return Agent(
+                  role="Pesquisador de Mercado",
+                  goal="Coletar informações sobre a dinâmica do mercado",
+                  backstory="Pesquisador dedicado com olhar atento para detalhes",
+                  verbose=True,
+              )
+
+          def tarefa_um(self) -> Task:
+              return Task(
+                  name="Tarefa de Coleta de Dados",
+                  description="Coletar dados recentes do mercado e identificar tendências.",
+                  expected_output="Um relatório resumindo as principais tendências do mercado.",
+                  agent=self.agente_um(),
+              )
+
+          def tarefa_dois(self) -> Task:
+              return Task(
+                  name="Tarefa de Pesquisa de Mercado",
+                  description="Pesquisar fatores que afetam a dinâmica do mercado.",
+                  expected_output="Uma análise dos fatores que influenciam o mercado.",
+                  agent=self.agente_dois(),
+              )
+
+          def equipe(self) -> Crew:
+              return Crew(
+                  agents=[self.agente_um(), self.agente_dois()],
+                  tasks=[self.tarefa_um(), self.tarefa_dois()],
+                  process=Process.sequential,
+                  verbose=True,
+              )
+
+      ```
+
+      Agora podemos importar o tracker do Opik e executar nossa crew:
+  
+      ```python
+      from opik.integrations.crewai import track_crewai
+
+      track_crewai(project_name="crewai-integration-demo")
+
+      my_crew = NomeDaEquipe().equipe()
+      result = my_crew.kickoff()
+
+      print(result)
+      ```
+      Após rodar sua aplicação CrewAI, acesse o app Opik para visualizar:
+      - Traces LLM, spans e seus metadados
+      - Interações dos agentes e fluxo de execução das tarefas
+      - Métricas de performance, como latência e uso de tokens
+      - Métricas de avaliação (nativas ou personalizadas)
+    </Step>
+</Steps>
+
+## Recursos
+
+- [🦉 Documentação Opik](https://www.comet.com/docs/opik/)
+- [👉 Opik + CrewAI Colab](https://colab.research.google.com/github/comet-ml/opik/blob/main/apps/opik-documentation/documentation/docs/cookbook/crewai.ipynb)
+- [🐦 X](https://x.com/cometml)
+- [💬 Slack](https://slack.comet.com/)

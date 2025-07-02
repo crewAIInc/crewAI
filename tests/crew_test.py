@@ -2,22 +2,20 @@
 
 import hashlib
 import json
-import os
-import tempfile
 from concurrent.futures import Future
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
+from collections import defaultdict
 
 import pydantic_core
 import pytest
 
 from crewai.agent import Agent
 from crewai.agents import CacheHandler
-from crewai.agents.cache import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
-from crewai.flow import Flow, listen, start
+from crewai.flow import Flow, start
+from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
@@ -43,6 +41,16 @@ from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
+from crewai.utilities.events.memory_events import (
+    MemorySaveStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryRetrievalStartedEvent,
+    MemoryRetrievalCompletedEvent,
+)
 
 @pytest.fixture
 def ceo():
@@ -859,18 +867,22 @@ def test_crew_verbose_output(researcher, writer, capsys):
     )
 
     expected_strings = [
-        "\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mResearcher",
-        "\x1b[00m\n\x1b[95m## Task:\x1b[00m \x1b[92mResearch AI advancements.",
-        "\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mSenior Writer",
-        "\x1b[95m## Task:\x1b[00m \x1b[92mWrite about AI in healthcare.",
-        "\n\n\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mResearcher",
-        "\x1b[00m\n\x1b[95m## Final Answer:",
-        "\n\n\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mSenior Writer",
-        "\x1b[00m\n\x1b[95m## Final Answer:",
+        "🤖 Agent Started",
+        "Agent: Researcher",
+        "Task: Research AI advancements.",
+        "✅ Agent Final Answer",
+        "Agent: Researcher",
+        "🤖 Agent Started",
+        "Agent: Senior Writer",
+        "Task: Write about AI in healthcare.",
+        "✅ Agent Final Answer",
+        "Agent: Senior Writer",
     ]
 
     for expected_string in expected_strings:
-        assert expected_string in filtered_output
+        assert (
+            expected_string in filtered_output
+        ), f"Expected '{expected_string}' in output, but it was not found."
 
     # Now test with verbose set to False
     crew.verbose = False
@@ -1768,6 +1780,76 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     )
 
 
+def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
+    """Ensure Crew.kickoff() sums UsageMetrics from both regular and manager agents."""
+
+    # ── 1.  Build the manager and a simple task ──────────────────────────────────
+    manager = Agent(
+        role="Manager",
+        goal="Coordinate everything.",
+        backstory="Keeps the project on track.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Say hello",
+        expected_output="Hello",
+        agent=researcher,  # *regular* agent
+    )
+
+    # ── 2.  Stub out each agent’s _token_process.get_summary() ───────────────────
+    researcher_metrics = UsageMetrics(
+        total_tokens=120, prompt_tokens=80, completion_tokens=40, successful_requests=2
+    )
+    manager_metrics = UsageMetrics(
+        total_tokens=30, prompt_tokens=20, completion_tokens=10, successful_requests=1
+    )
+
+    # Replace the internal _token_process objects with simple mocks
+    researcher._token_process = MagicMock(
+        get_summary=MagicMock(return_value=researcher_metrics)
+    )
+    manager._token_process = MagicMock(
+        get_summary=MagicMock(return_value=manager_metrics)
+    )
+
+    # ── 3.  Create the crew (hierarchical!) and kick it off ──────────────────────
+    crew = Crew(
+        agents=[researcher],  # regular agents
+        manager_agent=manager,  # manager to be included
+        tasks=[task],
+        process=Process.hierarchical,
+    )
+
+    # We don’t care about LLM output here; patch execute_sync to avoid network
+    with patch.object(
+        Task,
+        "execute_sync",
+        return_value=TaskOutput(
+            description="dummy", raw="Hello", agent=researcher.role
+        ),
+    ):
+        crew.kickoff()
+
+    # ── 4.  Assert the aggregated numbers are the *sum* of both agents ───────────
+    assert (
+        crew.usage_metrics.total_tokens
+        == researcher_metrics.total_tokens + manager_metrics.total_tokens
+    )
+    assert (
+        crew.usage_metrics.prompt_tokens
+        == researcher_metrics.prompt_tokens + manager_metrics.prompt_tokens
+    )
+    assert (
+        crew.usage_metrics.completion_tokens
+        == researcher_metrics.completion_tokens + manager_metrics.completion_tokens
+    )
+    assert (
+        crew.usage_metrics.successful_requests
+        == researcher_metrics.successful_requests + manager_metrics.successful_requests
+    )
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
     """
@@ -2407,10 +2489,78 @@ def test_using_contextual_memory():
         memory=True,
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
 
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_memory_events_are_emitted():
+    events = defaultdict(list)
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(MemorySaveStartedEvent)
+        def handle_memory_save_started(source, event):
+            events["MemorySaveStartedEvent"].append(event)
+
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def handle_memory_save_completed(source, event):
+            events["MemorySaveCompletedEvent"].append(event)
+
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def handle_memory_save_failed(source, event):
+            events["MemorySaveFailedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryQueryStartedEvent)
+        def handle_memory_query_started(source, event):
+            events["MemoryQueryStartedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def handle_memory_query_completed(source, event):
+            events["MemoryQueryCompletedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryQueryFailedEvent)
+        def handle_memory_query_failed(source, event):
+            events["MemoryQueryFailedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryRetrievalStartedEvent)
+        def handle_memory_retrieval_started(source, event):
+            events["MemoryRetrievalStartedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
+        def handle_memory_retrieval_completed(source, event):
+            events["MemoryRetrievalCompletedEvent"].append(event)
+
+        math_researcher = Agent(
+            role="Researcher",
+            goal="You research about math.",
+            backstory="You're an expert in research and you love to learn new things.",
+            allow_delegation=False,
+        )
+
+        task1 = Task(
+            description="Research a topic to teach a kid aged 6 about math.",
+            expected_output="A topic, explanation, angle, and examples.",
+            agent=math_researcher,
+        )
+
+        crew = Crew(
+            agents=[math_researcher],
+            tasks=[task1],
+            memory=True,
+        )
+
+        crew.kickoff()
+
+    assert len(events["MemorySaveStartedEvent"]) == 6
+    assert len(events["MemorySaveCompletedEvent"]) == 6
+    assert len(events["MemorySaveFailedEvent"]) == 0
+    assert len(events["MemoryQueryStartedEvent"]) == 3
+    assert len(events["MemoryQueryCompletedEvent"]) == 3
+    assert len(events["MemoryQueryFailedEvent"]) == 0
+    assert len(events["MemoryRetrievalStartedEvent"]) == 1
+    assert len(events["MemoryRetrievalCompletedEvent"]) == 1
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory_with_long_term_memory():
@@ -2435,7 +2585,7 @@ def test_using_contextual_memory_with_long_term_memory():
         long_term_memory=LongTermMemory(),
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
         assert crew.memory is False
@@ -2536,7 +2686,7 @@ def test_using_contextual_memory_with_short_term_memory():
         short_term_memory=ShortTermMemory(),
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
         assert crew.memory is False
@@ -2565,7 +2715,7 @@ def test_disabled_memory_using_contextual_memory():
         memory=False,
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_not_called()
 
@@ -3139,6 +3289,30 @@ def test_replay_with_context():
         crew.replay(str(task2.id))
 
         assert crew.tasks[1].context[0].output.raw == "context raw output"
+
+
+def test_replay_with_context_set_to_nullable():
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(
+        description="Context Task", expected_output="Say Task Output", agent=agent
+    )
+    task2 = Task(
+        description="Test Task", expected_output="Say Hi", agent=agent, context=[]
+    )
+    task3 = Task(
+        description="Test Task 3", expected_output="Say Hi", agent=agent, context=None
+    )
+
+    crew = Crew(agents=[agent], tasks=[task1, task2, task3], process=Process.sequential)
+    with patch("crewai.task.Task.execute_sync") as mock_execute_task:
+        mock_execute_task.return_value = TaskOutput(
+            description="Test Task Output",
+            raw="test raw output",
+            agent="test_agent",
+        )
+        crew.kickoff()
+
+    mock_execute_task.assert_called_with(agent=ANY, context="", tools=ANY)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -4383,3 +4557,177 @@ def test_sets_parent_flow_when_inside_flow(researcher, writer):
     flow = MyFlow()
     result = flow.kickoff()
     assert result.parent_flow is flow
+
+
+def test_reset_knowledge_with_no_crew_knowledge(researcher, writer):
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+    )
+
+    with pytest.raises(RuntimeError) as excinfo:
+        crew.reset_memories(command_type="knowledge")
+
+        # Optionally, you can also check the error message
+    assert "Crew Knowledge and Agent Knowledge memory system is not initialized" in str(
+        excinfo.value
+    )  # Replace with the expected message
+
+
+def test_reset_knowledge_with_only_crew_knowledge(researcher, writer):
+    mock_ks = MagicMock(spec=Knowledge)
+
+    with patch.object(Crew, "reset_knowledge") as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+            knowledge=mock_ks,
+        )
+
+        crew.reset_memories(command_type="knowledge")
+        mock_reset_agent_knowledge.assert_called_once_with([mock_ks])
+
+
+def test_reset_knowledge_with_crew_and_agent_knowledge(researcher, writer):
+    mock_ks_crew = MagicMock(spec=Knowledge)
+    mock_ks_research = MagicMock(spec=Knowledge)
+    mock_ks_writer = MagicMock(spec=Knowledge)
+
+    researcher.knowledge = mock_ks_research
+    writer.knowledge = mock_ks_writer
+
+    with patch.object(Crew, "reset_knowledge") as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+            knowledge=mock_ks_crew,
+        )
+
+        crew.reset_memories(command_type="knowledge")
+        mock_reset_agent_knowledge.assert_called_once_with(
+            [mock_ks_crew, mock_ks_research, mock_ks_writer]
+        )
+
+
+def test_reset_knowledge_with_only_agent_knowledge(researcher, writer):
+    mock_ks_research = MagicMock(spec=Knowledge)
+    mock_ks_writer = MagicMock(spec=Knowledge)
+
+    researcher.knowledge = mock_ks_research
+    writer.knowledge = mock_ks_writer
+
+    with patch.object(Crew, "reset_knowledge") as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+        )
+
+        crew.reset_memories(command_type="knowledge")
+        mock_reset_agent_knowledge.assert_called_once_with(
+            [mock_ks_research, mock_ks_writer]
+        )
+
+
+def test_reset_agent_knowledge_with_no_agent_knowledge(researcher, writer):
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+    )
+
+    with pytest.raises(RuntimeError) as excinfo:
+        crew.reset_memories(command_type="agent_knowledge")
+
+    # Optionally, you can also check the error message
+    assert "Agent Knowledge memory system is not initialized" in str(
+        excinfo.value
+    )  # Replace with the expected message
+
+
+def test_reset_agent_knowledge_with_only_crew_knowledge(researcher, writer):
+    mock_ks = MagicMock(spec=Knowledge)
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+            Task(description="Task 2", expected_output="output", agent=writer),
+        ],
+        knowledge=mock_ks,
+    )
+
+    with pytest.raises(RuntimeError) as excinfo:
+        crew.reset_memories(command_type="agent_knowledge")
+
+    # Optionally, you can also check the error message
+    assert "Agent Knowledge memory system is not initialized" in str(
+        excinfo.value
+    )  # Replace with the expected message
+
+
+def test_reset_agent_knowledge_with_crew_and_agent_knowledge(researcher, writer):
+    mock_ks_crew = MagicMock(spec=Knowledge)
+    mock_ks_research = MagicMock(spec=Knowledge)
+    mock_ks_writer = MagicMock(spec=Knowledge)
+
+    researcher.knowledge = mock_ks_research
+    writer.knowledge = mock_ks_writer
+
+    with patch.object(Crew, "reset_knowledge") as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+            knowledge=mock_ks_crew,
+        )
+
+        crew.reset_memories(command_type="agent_knowledge")
+        mock_reset_agent_knowledge.assert_called_once_with(
+            [mock_ks_research, mock_ks_writer]
+        )
+
+
+def test_reset_agent_knowledge_with_only_agent_knowledge(researcher, writer):
+    mock_ks_research = MagicMock(spec=Knowledge)
+    mock_ks_writer = MagicMock(spec=Knowledge)
+
+    researcher.knowledge = mock_ks_research
+    writer.knowledge = mock_ks_writer
+
+    with patch.object(Crew, "reset_knowledge") as mock_reset_agent_knowledge:
+        crew = Crew(
+            agents=[researcher, writer],
+            process=Process.sequential,
+            tasks=[
+                Task(description="Task 1", expected_output="output", agent=researcher),
+                Task(description="Task 2", expected_output="output", agent=writer),
+            ],
+        )
+
+        crew.reset_memories(command_type="agent_knowledge")
+        mock_reset_agent_knowledge.assert_called_once_with(
+            [mock_ks_research, mock_ks_writer]
+        )

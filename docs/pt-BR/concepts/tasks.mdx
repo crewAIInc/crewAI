@@ -1,0 +1,996 @@
+---
+title: Tarefas
+description: Guia detalhado sobre como gerenciar e criar tarefas dentro do framework CrewAI.
+icon: list-check
+---
+
+## Visão Geral
+
+No framework CrewAI, uma `Task` (Tarefa) é uma atribuição específica executada por um `Agent` (Agente).
+
+As tarefas fornecem todos os detalhes necessários para sua execução, como descrição, agente responsável, ferramentas exigidas e mais, facilitando uma ampla gama de complexidades de ação.
+
+As tarefas dentro do CrewAI podem ser colaborativas, exigindo que múltiplos agentes trabalhem juntos. Isso é gerenciado por meio das propriedades da tarefa e orquestrado pelo processo do Crew, potencializando o trabalho em equipe e a eficiência.
+
+<Note type="info" title="Aprimoramento Empresarial: Construtor Visual de Tarefas">
+O CrewAI Enterprise inclui um Construtor Visual de Tarefas no Crew Studio, que simplifica a criação e o encadeamento de tarefas complexas. Projete seus fluxos de tarefas visualmente e teste-os em tempo real sem necessidade de escrever código.
+
+![Task Builder Screenshot](/images/enterprise/crew-studio-interface.png)
+
+O Construtor Visual de Tarefas permite:
+- Criação de tarefas via arrastar-e-soltar
+- Visualização de dependências e fluxo de tarefas
+- Testes e validações em tempo real
+- Fácil compartilhamento e colaboração
+</Note>
+
+### Fluxo de Execução de Tarefas
+
+As tarefas podem ser executadas de duas maneiras:
+- **Sequencial**: As tarefas são executadas na ordem em que são definidas
+- **Hierárquica**: As tarefas são atribuídas aos agentes com base em seus papéis e especialidades
+
+O fluxo de execução é definido ao criar o crew:
+```python Code
+crew = Crew(
+    agents=[agent1, agent2],
+    tasks=[task1, task2],
+    process=Process.sequential  # ou Process.hierarchical
+)
+```
+
+## Atributos da Tarefa
+
+| Atributo                         | Parâmetros        | Tipo                         | Descrição                                                                                                          |
+| :------------------------------- | :---------------- | :--------------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| **Descrição**                    | `description`     | `str`                        | Uma declaração clara e concisa do que a tarefa envolve.                                                            |
+| **Saída Esperada**               | `expected_output` | `str`                        | Uma descrição detalhada de como deve ser o resultado da tarefa concluída.                                          |
+| **Nome** _(opcional)_            | `name`            | `Optional[str]`              | Um identificador de nome para a tarefa.                                                                            |
+| **Agente** _(opcional)_          | `agent`           | `Optional[BaseAgent]`        | O agente responsável por executar a tarefa.                                                                        |
+| **Ferramentas** _(opcional)_     | `tools`           | `List[BaseTool]`             | As ferramentas/recursos que o agente pode usar para esta tarefa.                                                   |
+| **Contexto** _(opcional)_        | `context`         | `Optional[List["Task"]]`     | Outras tarefas cujas saídas serão usadas como contexto para esta tarefa.                                           |
+| **Execução Assíncrona** _(opc.)_ | `async_execution` | `Optional[bool]`             | Se a tarefa deve ser executada de forma assíncrona. O padrão é False.                                              |
+| **Input Humano** _(opcional)_    | `human_input`     | `Optional[bool]`             | Se a tarefa deve ter uma revisão humana da resposta final do agente. O padrão é False.                             |
+| **Markdown** _(opcional)_        | `markdown`        | `Optional[bool]`             | Se a tarefa deve instruir o agente a retornar a resposta final formatada em Markdown. O padrão é False.            |
+| **Config** _(opcional)_          | `config`          | `Optional[Dict[str, Any]]`   | Parâmetros de configuração específicos da tarefa.                                                                  |
+| **Arquivo de Saída** _(opcional)_| `output_file`     | `Optional[str]`              | Caminho do arquivo para armazenar a saída da tarefa.                                                               |
+| **Saída JSON** _(opcional)_      | `output_json`     | `Optional[Type[BaseModel]]`  | Um modelo Pydantic para estruturar a saída em JSON.                                                                |
+| **Output Pydantic** _(opcional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`  | Um modelo Pydantic para a saída da tarefa.                                                                         |
+| **Callback** _(opcional)_        | `callback`        | `Optional[Any]`              | Função/objeto a ser executado após a conclusão da tarefa.                                                          |
+
+## Criando Tarefas
+
+Existem duas maneiras de criar tarefas no CrewAI: utilizando **configuração YAML (recomendado)** ou definindo-as **diretamente no código**.
+
+### Configuração YAML (Recomendado)
+
+Utilizar configuração YAML oferece uma forma mais limpa e de fácil manutenção para definir tarefas. Recomendamos fortemente esse método em seus projetos CrewAI.
+
+Após criar seu projeto CrewAI conforme indicado na seção [Instalação](/pt-BR/installation), navegue até o arquivo `src/latest_ai_development/config/tasks.yaml` e modifique o template para refletir os requisitos específicos das tarefas.
+
+<Note>
+Variáveis em seus arquivos YAML (como `{topic}`) serão substituídas por valores vindos dos seus inputs ao executar o crew:
+```python Code
+crew.kickoff(inputs={'topic': 'AI Agents'})
+```
+</Note>
+
+Veja um exemplo de configuração de tarefas usando YAML:
+
+```yaml tasks.yaml
+research_task:
+  description: >
+    Realize uma pesquisa detalhada sobre {topic}
+    Certifique-se de encontrar informações interessantes e relevantes considerando
+    que o ano atual é 2025.
+  expected_output: >
+    Uma lista com 10 tópicos em bullet points das informações mais relevantes sobre {topic}
+  agent: researcher
+
+reporting_task:
+  description: >
+    Revise o contexto recebido e expanda cada tópico em uma seção completa de um relatório.
+    Certifique-se de que o relatório seja detalhado e contenha todas as informações relevantes.
+  expected_output: >
+    Um relatório completo com os principais tópicos, cada um com uma seção cheia de informações.
+    Formatado em markdown sem '```'
+  agent: reporting_analyst
+  markdown: true
+  output_file: report.md
+```
+
+Para usar essa configuração YAML em seu código, crie uma classe crew que herda de `CrewBase`:
+
+```python crew.py
+# src/latest_ai_development/crew.py
+
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai_tools import SerperDevTool
+
+@CrewBase
+class LatestAiDevelopmentCrew():
+  """LatestAiDevelopment crew"""
+
+  @agent
+  def researcher(self) -> Agent:
+    return Agent(
+      config=self.agents_config['researcher'], # type: ignore[index]
+      verbose=True,
+      tools=[SerperDevTool()]
+    )
+
+  @agent
+  def reporting_analyst(self) -> Agent:
+    return Agent(
+      config=self.agents_config['reporting_analyst'], # type: ignore[index]
+      verbose=True
+    )
+
+  @task
+  def research_task(self) -> Task:
+    return Task(
+      config=self.tasks_config['research_task'] # type: ignore[index]
+    )
+
+  @task
+  def reporting_task(self) -> Task:
+    return Task(
+      config=self.tasks_config['reporting_task'] # type: ignore[index]
+    )
+
+  @crew
+  def crew(self) -> Crew:
+    return Crew(
+      agents=[
+        self.researcher(),
+        self.reporting_analyst()
+      ],
+      tasks=[
+        self.research_task(),
+        self.reporting_task()
+      ],
+      process=Process.sequential
+    )
+```
+
+<Note>
+Os nomes usados em seus arquivos YAML (`agents.yaml` e `tasks.yaml`) devem corresponder aos nomes dos métodos no seu código Python.
+</Note>
+
+### Definição Direta no Código (Alternativa)
+
+Alternativamente, você pode definir tarefas diretamente no seu código sem usar configuração YAML:
+
+```python task.py
+from crewai import Task
+
+research_task = Task(
+    description="""
+        Realize uma pesquisa detalhada sobre AI Agents.
+        Certifique-se de encontrar informações interessantes e relevantes considerando
+        que o ano atual é 2025.
+    """,
+    expected_output="""
+        Uma lista com 10 tópicos em bullet points das informações mais relevantes sobre AI Agents
+    """,
+    agent=researcher
+)
+
+reporting_task = Task(
+    description="""
+        Revise o contexto recebido e expanda cada tópico em uma seção completa de um relatório.
+        Certifique-se de que o relatório seja detalhado e contenha todas as informações relevantes.
+    """,
+    expected_output="""
+        Um relatório completo com os principais tópicos, cada um com uma seção cheia de informações.
+    """,
+    agent=reporting_analyst,
+    markdown=True,  # Ativa formatação markdown para a saída final
+    output_file="report.md"
+)
+```
+
+<Tip>
+  Especifique diretamente um `agent` para a tarefa ou permita que o processo `hierarchical` do CrewAI decida com base em papéis, disponibilidade, etc.
+</Tip>
+
+## Saída da Tarefa
+
+Compreender as saídas das tarefas é crucial para construir fluxos de trabalho de IA eficazes. O CrewAI oferece uma maneira estruturada de lidar com resultados usando a classe `TaskOutput`, que suporta múltiplos formatos de saída e pode ser facilmente passada entre tarefas.
+
+A saída de uma tarefa no framework CrewAI é encapsulada na classe `TaskOutput`. Essa classe fornece uma maneira estruturada de acessar os resultados da tarefa, incluindo vários formatos como saída bruta, JSON e modelos Pydantic.
+
+Por padrão, o `TaskOutput` incluirá apenas a saída `raw`. Um `TaskOutput` só terá as saídas `pydantic` ou `json_dict` se o objeto original da `Task` estiver configurado com `output_pydantic` ou `output_json`, respectivamente.
+
+### Atributos do Task Output
+
+| Atributo          | Parâmetros     | Tipo                       | Descrição                                                                                   |
+| :---------------- | :------------- | :------------------------- | :------------------------------------------------------------------------------------------ |
+| **Description**   | `description`  | `str`                      | Descrição da tarefa.                                                                        |
+| **Summary**       | `summary`      | `Optional[str]`            | Resumo da tarefa, gerado automaticamente a partir das primeiras 10 palavras da descrição.   |
+| **Raw**           | `raw`          | `str`                      | Saída bruta da tarefa. Este é o formato padrão da saída.                                    |
+| **Pydantic**      | `pydantic`     | `Optional[BaseModel]`      | Objeto modelo Pydantic representando a saída da tarefa de forma estruturada.                |
+| **JSON Dict**     | `json_dict`    | `Optional[Dict[str, Any]]` | Dicionário representando a saída da tarefa em JSON.                                         |
+| **Agent**         | `agent`        | `str`                      | O agente que executou a tarefa.                                                             |
+| **Output Format** | `output_format`| `OutputFormat`             | O formato da saída da tarefa, podendo ser RAW, JSON e Pydantic. O padrão é RAW.             |
+
+### Métodos e Propriedades da Tarefa
+
+| Método/Propriedade | Descrição                                                                                       |
+| :----------------- | :--------------------------------------------------------------------------------------------- |
+| **json**           | Retorna a representação da saída da tarefa em JSON como string, se o formato de saída for JSON.|
+| **to_dict**        | Converte as saídas JSON e Pydantic para um dicionário.                                         |
+| **str**            | Retorna a representação em string da saída da tarefa, priorizando Pydantic, depois JSON, depois raw. |
+
+### Acessando Saídas das Tarefas
+
+Uma vez que a tarefa é executada, sua saída pode ser acessada pelo atributo `output` do objeto `Task`. A classe `TaskOutput` oferece várias formas de interagir e apresentar esse resultado.
+
+#### Exemplo
+
+```python Code
+# Exemplo de tarefa
+task = Task(
+    description='Encontre e resuma as últimas notícias de IA',
+    expected_output='Uma lista em bullet points com o resumo das 5 notícias mais importantes de IA',
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+# Executando o crew
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task],
+    verbose=True
+)
+
+result = crew.kickoff()
+
+# Acessando a saída da tarefa
+task_output = task.output
+
+print(f"Descrição da Tarefa: {task_output.description}")
+print(f"Resumo da Tarefa: {task_output.summary}")
+print(f"Saída Bruta: {task_output.raw}")
+if task_output.json_dict:
+    print(f"Saída em JSON: {json.dumps(task_output.json_dict, indent=2)}")
+if task_output.pydantic:
+    print(f"Saída Pydantic: {task_output.pydantic}")
+```
+
+## Formatação Markdown na Saída
+
+O parâmetro `markdown` ativa a formatação automática em markdown na saída das tarefas. Quando configurado como `True`, a tarefa irá instruir o agente a formatar a resposta final utilizando a sintaxe Markdown correta.
+
+### Usando Formatação Markdown
+
+```python Code
+# Exemplo de tarefa com formatação markdown ativada
+formatted_task = Task(
+    description="Crie um relatório abrangente sobre tendências em IA",
+    expected_output="Um relatório bem estruturado com títulos, seções e bullet points",
+    agent=reporter_agent,
+    markdown=True  # Habilita a formatação automática em markdown
+)
+```
+
+Quando `markdown=True`, o agente recebe instruções extras para formatar a saída usando:
+- `#` para títulos
+- `**texto**` para negrito
+- `*texto*` para itálico
+- `-` ou `*` para bullet points
+- `` `código` `` para código inline
+- ``` ```linguagem ``` para blocos de código
+
+### Configuração YAML com Markdown
+
+```yaml tasks.yaml
+analysis_task:
+  description: >
+    Analise os dados de mercado e crie um relatório detalhado
+  expected_output: >
+    Uma análise completa com gráficos e descobertas-chave
+  agent: analyst
+  markdown: true  # Habilita formatação em markdown
+  output_file: analysis.md
+```
+
+### Benefícios da Saída Markdown
+
+- **Formatação Consistente**: Garante que todas as saídas sigam as convenções de markdown
+- **Maior Legibilidade**: Conteúdo estruturado com títulos, listas e ênfase
+- **Pronto para Documentação**: A saída pode ser usada diretamente em sistemas de documentação
+- **Compatibilidade Multi-plataforma**: Markdown é universalmente suportado
+
+<Note>
+As instruções de formatação em markdown são adicionadas automaticamente ao prompt da tarefa quando `markdown=True`, então não é necessário detalhar os requisitos de formatação na descrição da tarefa.
+</Note>
+
+## Dependências de Tarefas e Contexto
+
+As tarefas podem depender da saída de outras tarefas utilizando o atributo `context`. Por exemplo:
+
+```python Code
+research_task = Task(
+    description="Pesquise os últimos avanços em IA",
+    expected_output="Uma lista de avanços recentes em IA",
+    agent=researcher
+)
+
+analysis_task = Task(
+    description="Analise os achados da pesquisa e identifique as tendências principais",
+    expected_output="Relatório de análise das tendências em IA",
+    agent=analyst,
+    context=[research_task]  # Esta tarefa aguardará a conclusão da research_task
+)
+```
+
+## Guardrails em Tarefas
+
+Guardrails (trilhas de proteção) de tarefas fornecem uma maneira de validar e transformar as saídas das tarefas antes que elas sejam passadas para a próxima tarefa. Esse recurso assegura a qualidade dos dados e oferece feedback aos agentes quando sua saída não atende a critérios específicos.
+
+### Usando Guardrails em Tarefas
+
+Para adicionar um guardrail a uma tarefa, forneça uma função de validação por meio do parâmetro `guardrail`:
+
+```python Code
+from typing import Tuple, Union, Dict, Any
+from crewai import TaskOutput
+
+def validate_blog_content(result: TaskOutput) -> Tuple[bool, Any]:
+    """Valida se o conteúdo do blog atende aos requisitos."""
+    try:
+        # Verifica a contagem de palavras
+        word_count = len(result.split())
+        if word_count > 200:
+            return (False, "O conteúdo do blog excede 200 palavras")
+
+        # Lógica adicional de validação aqui
+        return (True, result.strip())
+    except Exception as e:
+        return (False, "Erro inesperado durante a validação")
+
+blog_task = Task(
+    description="Escreva um post de blog sobre IA",
+    expected_output="Um post de blog com menos de 200 palavras",
+    agent=blog_agent,
+    guardrail=validate_blog_content  # Adiciona a função guardrail
+)
+```
+
+### Requisitos da Função Guardrail
+
+1. **Assinatura da Função**:
+   - Deve aceitar exatamente um parâmetro (a saída da tarefa)
+   - Deve retornar uma tupla `(bool, Any)`
+   - Type hints são recomendados, mas opcionais
+
+2. **Valores de Retorno**:
+   - Em caso de sucesso: retorna uma tupla `(True, resultado_validado)`
+   - Em caso de falha: retorna uma tupla `(False, "mensagem de erro explicando a falha")`
+
+### LLMGuardrail
+
+A classe `LLMGuardrail` oferece um mecanismo robusto para validação das saídas das tarefas.
+
+### Melhores Práticas de Tratamento de Erros
+
+1. **Respostas de Erro Estruturadas**:
+```python Code
+from crewai import TaskOutput, LLMGuardrail
+
+def validate_with_context(result: TaskOutput) -> Tuple[bool, Any]:
+    try:
+        # Lógica principal de validação
+        validated_data = perform_validation(result)
+        return (True, validated_data)
+    except ValidationError as e:
+        return (False, f"ERRO_DE_VALIDACAO: {str(e)}")
+    except Exception as e:
+        return (False, str(e))
+```
+
+2. **Categorias de Erro**:
+   - Use códigos de erro específicos
+   - Inclua contexto relevante
+   - Forneça feedback acionável
+
+3. **Cadeia de Validação**:
+```python Code
+from typing import Any, Dict, List, Tuple, Union
+from crewai import TaskOutput
+
+def complex_validation(result: TaskOutput) -> Tuple[bool, Any]:
+    """Encadeia múltiplas etapas de validação."""
+    # Passo 1: Validação básica
+    if not result:
+        return (False, "Resultado vazio")
+
+    # Passo 2: Validação de conteúdo
+    try:
+        validated = validate_content(result)
+        if not validated:
+            return (False, "Conteúdo inválido")
+
+        # Passo 3: Validação de formato
+        formatted = format_output(validated)
+        return (True, formatted)
+    except Exception as e:
+        return (False, str(e))
+```
+
+### Tratamento dos Resultados do Guardrail
+
+Quando um guardrail retorna `(False, erro)`:
+1. O erro é enviado de volta para o agente
+2. O agente tenta corrigir o problema
+3. O processo se repete até:
+   - O guardrail retornar `(True, resultado)`
+   - O número máximo de tentativas ser atingido
+
+Exemplo com manipulação de tentativas:
+```python Code
+from typing import Optional, Tuple, Union
+from crewai import TaskOutput, Task
+
+def validate_json_output(result: TaskOutput) -> Tuple[bool, Any]:
+    """Valida e faz o parsing da saída como JSON."""
+    try:
+        # Tenta realizar o parsing como JSON
+        data = json.loads(result)
+        return (True, data)
+    except json.JSONDecodeError as e:
+        return (False, "Formato JSON inválido")
+
+task = Task(
+    description="Gere um relatório em JSON",
+    expected_output="Um objeto JSON válido",
+    agent=analyst,
+    guardrail=validate_json_output,
+    max_retries=3  # Limite de tentativas
+)
+```
+
+## Obtendo Saídas Estruturadas e Consistentes das Tarefas
+
+<Note>
+É importante também observar que a saída da última tarefa de um crew se torna a saída final do próprio crew.
+</Note>
+
+### Usando `output_pydantic`
+A propriedade `output_pydantic` permite que você defina um modelo Pydantic que a saída da tarefa deve seguir. Isso garante que a saída seja não apenas estruturada, mas também validada de acordo com o modelo.
+
+Veja um exemplo de uso do output_pydantic:
+
+```python Code
+import json
+
+from crewai import Agent, Crew, Process, Task
+from pydantic import BaseModel
+
+
+class Blog(BaseModel):
+    title: str
+    content: str
+
+
+blog_agent = Agent(
+    role="Blog Content Generator Agent",
+    goal="Gerar um título e conteúdo para blog",
+    backstory="""Você é um especialista em criação de conteúdo, habilidoso em escrever posts de blogs engajadores e informativos.""",
+    verbose=False,
+    allow_delegation=False,
+    llm="gpt-4o",
+)
+
+task1 = Task(
+    description="""Crie um título e conteúdo para blog sobre um tópico. Certifique-se de que o conteúdo tenha menos de 200 palavras.""",
+    expected_output="Um título atraente e um conteúdo bem escrito para blog.",
+    agent=blog_agent,
+    output_pydantic=Blog,
+)
+
+# Instanciando o crew com processo sequencial
+crew = Crew(
+    agents=[blog_agent],
+    tasks=[task1],
+    verbose=True,
+    process=Process.sequential,
+)
+
+result = crew.kickoff()
+
+# Opção 1: Acessando propriedades via indexação de dicionário
+print("Acessando propriedades - Opção 1")
+title = result["title"]
+content = result["content"]
+print("Título:", title)
+print("Conteúdo:", content)
+
+# Opção 2: Acessando diretamente do modelo Pydantic
+print("Acessando propriedades - Opção 2")
+title = result.pydantic.title
+content = result.pydantic.content
+print("Título:", title)
+print("Conteúdo:", content)
+
+# Opção 3: Usando o método to_dict()
+print("Acessando propriedades - Opção 3")
+output_dict = result.to_dict()
+title = output_dict["title"]
+content = output_dict["content"]
+print("Título:", title)
+print("Conteúdo:", content)
+
+# Opção 4: Imprimindo o objeto Blog inteiro
+print("Acessando propriedades - Opção 5")
+print("Blog:", result)
+
+```
+Neste exemplo:
+* Um modelo Pydantic Blog é definido com os campos title e content.
+* A tarefa task1 utiliza a propriedade output_pydantic para especificar que sua saída deve seguir o modelo Blog.
+* Após executar o crew, você pode acessar a saída estruturada de várias formas, como mostrado.
+
+#### Explicação sobre o acesso à saída
+1. Indexação estilo dicionário: Acesse os campos diretamente usando result["nome_do_campo"]. Isso funciona porque a classe CrewOutput implementa o método __getitem__.
+2. Diretamente do modelo Pydantic: Acesse os atributos diretamente do objeto result.pydantic.
+3. Usando o método to_dict(): Converta a saída para um dicionário e acesse os campos.
+4. Imprimindo o objeto inteiro: Simplesmente imprima o objeto result para ver a saída estruturada.
+
+### Usando `output_json`
+A propriedade `output_json` permite definir o formato de saída esperado em JSON. Isso garante que a saída da tarefa seja uma estrutura JSON válida que pode ser facilmente analisada e utilizada na aplicação.
+
+Veja um exemplo de uso do `output_json`:
+
+```python Code
+import json
+
+from crewai import Agent, Crew, Process, Task
+from pydantic import BaseModel
+
+
+# Define o modelo Pydantic para o blog
+class Blog(BaseModel):
+    title: str
+    content: str
+
+
+# Define o agente
+blog_agent = Agent(
+    role="Blog Content Generator Agent",
+    goal="Gerar um título e conteúdo para blog",
+    backstory="""Você é um especialista em criação de conteúdo, habilidoso em escrever posts de blogs engajadores e informativos.""",
+    verbose=False,
+    allow_delegation=False,
+    llm="gpt-4o",
+)
+
+# Define a tarefa com output_json configurado para o modelo Blog
+task1 = Task(
+    description="""Crie um título e conteúdo para blog sobre um tópico. Certifique-se de que o conteúdo tenha menos de 200 palavras.""",
+    expected_output="Um objeto JSON com os campos 'title' e 'content'.",
+    agent=blog_agent,
+    output_json=Blog,
+)
+
+# Instancia o crew com processo sequencial
+crew = Crew(
+    agents=[blog_agent],
+    tasks=[task1],
+    verbose=True,
+    process=Process.sequential,
+)
+
+# Executa o crew para realizar a tarefa
+result = crew.kickoff()
+
+# Opção 1: Acessando propriedades via indexação de dicionário
+print("Acessando propriedades - Opção 1")
+title = result["title"]
+content = result["content"]
+print("Título:", title)
+print("Conteúdo:", content)
+
+# Opção 2: Imprimindo o objeto Blog inteiro
+print("Acessando propriedades - Opção 2")
+print("Blog:", result)
+```
+
+Neste exemplo:
+* Um modelo Pydantic Blog é definido com os campos title e content, usado para especificar a estrutura do JSON de saída.
+* A tarefa task1 utiliza a propriedade output_json para indicar que espera uma saída JSON que segue o modelo Blog.
+* Após executar o crew, você pode acessar a saída estruturada em JSON conforme demonstrado.
+
+#### Explicação sobre o acesso à saída
+
+1. Acessando propriedades via indexação de dicionário: Você pode acessar os campos diretamente usando result["nome_do_campo"]. Isso é possível pois a classe CrewOutput implementa o método __getitem__, permitindo tratar a saída como um dicionário. Nesse caso, estamos acessando title e content do resultado.
+2. Imprimindo o objeto Blog inteiro: Ao imprimir result, você obterá a representação em string do objeto CrewOutput. Como o método __str__ é implementado para retornar a saída em JSON, isso exibirá toda a saída como uma string formatada representando o objeto Blog.
+
+---
+
+Utilizando `output_pydantic` ou `output_json`, você garante que suas tarefas produzam saídas em um formato estruturado e consistente, facilitando o processamento e uso dos dados na sua aplicação ou entre múltiplas tarefas.
+
+## Integrando Ferramentas com Tarefas
+
+Utilize ferramentas do [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) e [LangChain Tools](https://python.langchain.com/docs/integrations/tools) para ampliar o desempenho das tarefas e aprimorar a interação dos agentes.
+
+## Criando uma Tarefa com Ferramentas
+
+```python Code
+import os
+os.environ["OPENAI_API_KEY"] = "Sua Chave"
+os.environ["SERPER_API_KEY"] = "Sua Chave" # Chave serper.dev
+
+from crewai import Agent, Task, Crew
+from crewai_tools import SerperDevTool
+
+research_agent = Agent(
+  role='Researcher',
+  goal='Encontrar e resumir as últimas notícias de IA',
+  backstory="""Você é um pesquisador em uma grande empresa.
+  Sua responsabilidade é analisar dados e fornecer insights
+  para o negócio.""",
+  verbose=True
+)
+
+# Para realizar buscas semânticas de um termo a partir de textos da internet
+search_tool = SerperDevTool()
+
+task = Task(
+  description='Encontre e resuma as últimas notícias de IA',
+  expected_output='Uma lista em bullet points com o resumo das 5 notícias mais importantes de IA',
+  agent=research_agent,
+  tools=[search_tool]
+)
+
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+Isso demonstra como tarefas com ferramentas específicas podem sobrescrever o conjunto padrão de um agente para uma execução mais personalizada da tarefa.
+
+## Referenciando Outras Tarefas
+
+No CrewAI, a saída de uma tarefa é automaticamente repassada para a próxima, mas você pode definir explicitamente de quais tarefas a saída deve ser utilizada como contexto por outra, inclusive múltiplas saídas.
+
+É útil especialmente quando você precisa que uma tarefa dependa do resultado de outra que não é executada imediatamente antes dela. Isso é feito pelo atributo `context`:
+
+```python Code
+# ...
+
+research_ai_task = Task(
+    description="Pesquise os avanços mais recentes em IA",
+    expected_output="Uma lista de avanços recentes em IA",
+    async_execution=True,
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+research_ops_task = Task(
+    description="Pesquise os avanços mais recentes em AI Ops",
+    expected_output="Uma lista de avanços recentes em AI Ops",
+    async_execution=True,
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+write_blog_task = Task(
+    description="Escreva um post de blog completo sobre a importância da IA e suas últimas notícias",
+    expected_output="Post de blog completo com 4 parágrafos",
+    agent=writer_agent,
+    context=[research_ai_task, research_ops_task]
+)
+
+#...
+```
+
+## Execução Assíncrona
+
+Você pode definir que uma tarefa seja executada de forma assíncrona. Isso significa que o crew não aguardará sua conclusão para seguir para a próxima tarefa. É útil para tarefas demoradas, ou que não são cruciais para as seguintes.
+
+Depois, utilize o atributo `context` para indicar, em uma tarefa futura, que ela deve aguardar os resultados da tarefa assíncrona.
+
+```python Code
+#...
+
+list_ideas = Task(
+    description="Liste 5 ideias interessantes para explorar em um artigo sobre IA.",
+    expected_output="Lista em bullet points com 5 ideias para um artigo.",
+    agent=researcher,
+    async_execution=True # Será executada de forma assíncrona
+)
+
+list_important_history = Task(
+    description="Pesquise a história da IA e forneça os 5 eventos mais importantes.",
+    expected_output="Lista em bullet points com 5 eventos importantes.",
+    agent=researcher,
+    async_execution=True # Será executada de forma assíncrona
+)
+
+write_article = Task(
+    description="Escreva um artigo sobre IA, sua história e ideias interessantes.",
+    expected_output="Artigo de 4 parágrafos sobre IA.",
+    agent=writer,
+    context=[list_ideas, list_important_history] # Vai esperar o resultado das duas tarefas
+)
+
+#...
+```
+
+## Mecanismo de Callback
+
+A função callback é executada após a conclusão da tarefa, permitindo acionar ações ou notificações baseadas no resultado da tarefa.
+
+```python Code
+# ...
+
+def callback_function(output: TaskOutput):
+    # Realiza algo após a conclusão da tarefa
+    # Exemplo: Envia um e-mail ao gerente
+    print(f"""
+        Tarefa concluída!
+        Tarefa: {output.description}
+        Saída: {output.raw}
+    """)
+
+research_task = Task(
+    description='Encontre e resuma as últimas notícias de IA',
+    expected_output='Uma lista em bullet points com o resumo das 5 notícias mais importantes de IA',
+    agent=research_agent,
+    tools=[search_tool],
+    callback=callback_function
+)
+
+#...
+```
+
+## Acessando a Saída de uma Tarefa Específica
+
+Assim que um crew finaliza sua execução, você pode acessar a saída de uma tarefa específica por meio do atributo `output` do objeto da tarefa:
+
+```python Code
+# ...
+task1 = Task(
+    description='Encontre e resuma as últimas notícias de IA',
+    expected_output='Uma lista em bullet points com o resumo das 5 notícias mais importantes de IA',
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+#...
+
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task1, task2, task3],
+    verbose=True
+)
+
+result = crew.kickoff()
+
+# Retorna um objeto TaskOutput com a descrição e resultado da tarefa
+print(f"""
+    Tarefa concluída!
+    Tarefa: {task1.output.description}
+    Saída: {task1.output.raw}
+""")
+```
+
+## Mecanismo de Sobrescrição de Ferramentas
+
+Especificar ferramentas em uma tarefa permite a adaptação dinâmica das capacidades do agente, destacando a flexibilidade do CrewAI.
+
+## Mecanismos de Validação e Tratamento de Erros
+
+Ao criar e executar tarefas, determinados mecanismos de validação garantem a robustez e confiabilidade dos atributos das tarefas. Isso inclui, mas não se limita a:
+
+- Garantir que apenas um tipo de saída seja definido por tarefa para manter expectativas de saída claras.
+- Impedir a atribuição manual do atributo `id`, preservando a integridade do sistema de identificadores únicos.
+
+Estas validações colaboram para a consistência e confiabilidade das execuções de tarefas no framework CrewAI.
+
+## Guardrails em Tarefas
+
+Guardrails de tarefas oferecem uma maneira poderosa de validar, transformar ou filtrar as saídas das tarefas antes de serem encaminhadas à próxima. São funções opcionais que executam antes do início da próxima tarefa, garantindo que as saídas estejam em conformidade com requisitos ou formatos esperados.
+
+### Uso Básico
+
+#### Defina sua própria lógica de validação
+
+```python Code
+from typing import Tuple, Union
+from crewai import Task
+
+def validate_json_output(result: str) -> Tuple[bool, Union[dict, str]]:
+    """Valida se a saída é um JSON válido."""
+    try:
+        json_data = json.loads(result)
+        return (True, json_data)
+    except json.JSONDecodeError:
+        return (False, "A saída deve ser um JSON válido")
+
+task = Task(
+    description="Gerar dados em JSON",
+    expected_output="Objeto JSON válido",
+    guardrail=validate_json_output
+)
+```
+
+#### Use uma abordagem no-code para validação
+
+```python Code
+from crewai import Task
+
+task = Task(
+    description="Gerar dados em JSON",
+    expected_output="Objeto JSON válido",
+    guardrail="Garanta que a resposta é um objeto JSON válido"
+)
+```
+
+#### Usando YAML
+
+```yaml
+research_task:
+  ...
+  guardrail: garanta que cada bullet tenha no mínimo 100 palavras
+  ...
+```
+
+```python Code
+@CrewBase
+class InternalCrew:
+    agents_config = "config/agents.yaml"
+    tasks_config = "config/tasks.yaml"
+
+    ...
+    @task
+    def research_task(self):
+        return Task(config=self.tasks_config["research_task"])  # type: ignore[index]
+    ...
+```
+
+#### Use modelos customizados para geração de código
+
+```python Code
+from crewai import Task
+from crewai.llm import LLM
+
+task = Task(
+    description="Gerar dados em JSON",
+    expected_output="Objeto JSON válido",
+    guardrail=LLMGuardrail(
+        description="Garanta que a resposta é um objeto JSON válido",
+        llm=LLM(model="gpt-4o-mini"),
+    )
+)
+```
+
+### Como Guardrails Funcionam
+
+1. **Atributo Opcional**: Guardrails são opcionais por tarefa, permitindo adicionar validação só onde for necessário.
+2. **Momento de Execução**: A função guardrail é executada antes do início da próxima tarefa, garantindo fluxo de dados válido entre tarefas.
+3. **Formato de Retorno**: Guardrails devem retornar uma tupla `(sucesso, dados)`:
+   - Se `sucesso` é `True`, `dados` é o resultado validado/transformado
+   - Se `sucesso` é `False`, `dados` é a mensagem de erro
+4. **Roteamento do Resultado**:
+   - Sucesso (`True`): o resultado é automaticamente passado para a próxima tarefa
+   - Falha (`False`): o erro é enviado de volta ao agente para gerar uma nova resposta
+
+### Casos Comuns de Uso
+
+#### Validação de Formato de Dados
+```python Code
+def validate_email_format(result: str) -> Tuple[bool, Union[str, str]]:
+    """Garante que a saída contenha um e-mail válido."""
+    import re
+    email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    if re.match(email_pattern, result.strip()):
+        return (True, result.strip())
+    return (False, "A saída deve ser um e-mail válido")
+```
+
+#### Filtragem de Conteúdo
+```python Code
+def filter_sensitive_info(result: str) -> Tuple[bool, Union[str, str]]:
+    """Remove ou valida informações sensíveis."""
+    sensitive_patterns = ['SSN:', 'password:', 'secret:']
+    for pattern in sensitive_patterns:
+        if pattern.lower() in result.lower():
+            return (False, f"A saída contém informação sensível ({pattern})")
+    return (True, result)
+```
+
+#### Transformação de Dados
+```python Code
+def normalize_phone_number(result: str) -> Tuple[bool, Union[str, str]]:
+    """Garante que números de telefone estejam em formato consistente."""
+    import re
+    digits = re.sub(r'\D', '', result)
+    if len(digits) == 10:
+        formatted = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        return (True, formatted)
+    return (False, "A saída deve ser um telefone com 10 dígitos")
+```
+
+### Recursos Avançados
+
+#### Encadeando Múltiplas Validações
+```python Code
+def chain_validations(*validators):
+    """Encadeia múltiplos validadores."""
+    def combined_validator(result):
+        for validator in validators:
+            success, data = validator(result)
+            if not success:
+                return (False, data)
+            result = data
+        return (True, result)
+    return combined_validator
+
+# Uso
+task = Task(
+    description="Obtenha informações de contato do usuário",
+    expected_output="E-mail e telefone",
+    guardrail=chain_validations(
+        validate_email_format,
+        filter_sensitive_info
+    )
+)
+```
+
+#### Lógica Customizada de Retentativas
+```python Code
+task = Task(
+    description="Gerar dados",
+    expected_output="Dados válidos",
+    guardrail=validate_data,
+    max_retries=5  # Sobrescreve o limite padrão de tentativas
+)
+```
+
+## Criando Diretórios ao Salvar Arquivos
+
+Agora é possível especificar se uma tarefa deve criar diretórios ao salvar sua saída em arquivo. Isso é útil para organizar outputs e garantir que os caminhos estejam corretos.
+
+```python Code
+# ...
+
+save_output_task = Task(
+    description='Salve o resumo das notícias de IA em um arquivo',
+    expected_output='Arquivo salvo com sucesso',
+    agent=research_agent,
+    tools=[file_save_tool],
+    output_file='outputs/ai_news_summary.txt',
+    create_directory=True
+)
+
+#...
+```
+
+Veja o vídeo abaixo para aprender como utilizar saídas estruturadas no CrewAI:
+
+<iframe
+  width="560"
+  height="315"
+  src="https://www.youtube.com/embed/dNpKQk5uxHw"
+  title="YouTube video player"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  referrerpolicy="strict-origin-when-cross-origin"
+  allowfullscreen
+></iframe>
+
+## Conclusão
+
+Tarefas são a força motriz por trás das ações dos agentes no CrewAI.
+Ao definir corretamente as tarefas e seus resultados, você prepara seus agentes de IA para trabalhar de forma eficaz, seja de forma independente ou colaborativa.
+Equipar tarefas com as ferramentas adequadas, compreender o processo de execução e seguir práticas sólidas de validação são fundamentais para maximizar o potencial do CrewAI,
+assegurando que os agentes estejam devidamente preparados para suas atribuições e que as tarefas sejam executadas conforme o esperado.

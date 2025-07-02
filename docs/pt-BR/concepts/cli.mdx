@@ -1,0 +1,326 @@
+---
+title: CLI
+description: Aprenda a usar o CLI do CrewAI para interagir com o CrewAI.
+icon: terminal
+---
+
+## Visão Geral
+
+O CLI do CrewAI fornece um conjunto de comandos para interagir com o CrewAI, permitindo que você crie, treine, execute e gerencie crews & flows.
+
+## Instalação
+
+Para usar o CLI do CrewAI, certifique-se de que o CrewAI está instalado:
+
+```shell Terminal
+pip install crewai
+```
+
+## Uso Básico
+
+A estrutura básica de um comando CLI do CrewAI é:
+
+```shell Terminal
+crewai [COMMAND] [OPTIONS] [ARGUMENTS]
+```
+
+## Comandos Disponíveis
+
+### 1. Create
+
+Crie um novo crew ou flow.
+
+```shell Terminal
+crewai create [OPTIONS] TYPE NAME
+```
+
+- `TYPE`: Escolha entre "crew" ou "flow"
+- `NAME`: Nome do crew ou flow
+
+Exemplo:
+```shell Terminal
+crewai create crew my_new_crew
+crewai create flow my_new_flow
+```
+
+### 2. Version
+
+Mostre a versão instalada do CrewAI.
+
+```shell Terminal
+crewai version [OPTIONS]
+```
+
+- `--tools`: (Opcional) Mostra a versão instalada das ferramentas do CrewAI
+
+Exemplo:
+```shell Terminal
+crewai version
+crewai version --tools
+```
+
+### 3. Train
+
+Treine o crew por um número específico de iterações.
+
+```shell Terminal
+crewai train [OPTIONS]
+```
+
+- `-n, --n_iterations INTEGER`: Número de iterações para treinar o crew (padrão: 5)
+- `-f, --filename TEXT`: Caminho para um arquivo customizado para treinamento (padrão: "trained_agents_data.pkl")
+
+Exemplo:
+```shell Terminal
+crewai train -n 10 -f my_training_data.pkl
+```
+
+# Exemplo de uso programático do comando train
+n_iterations = 2
+inputs = {"topic": "Treinamento CrewAI"}
+filename = "seu_modelo.pkl"
+
+try:
+    SuaCrew().crew().train(
+      n_iterations=n_iterations, 
+      inputs=inputs, 
+      filename=filename
+    )
+except Exception as e:
+    raise Exception(f"Ocorreu um erro ao treinar a crew: {e}")
+
+### 4. Replay
+
+Reexecute a execução do crew a partir de uma tarefa específica.
+
+```shell Terminal
+crewai replay [OPTIONS]
+```
+
+- `-t, --task_id TEXT`: Reexecuta o crew a partir deste task ID, incluindo todas as tarefas subsequentes
+
+Exemplo:
+```shell Terminal    
+crewai replay -t task_123456
+```
+
+### 5. Log-tasks-outputs
+
+Recupere as saídas mais recentes das tarefas crew.kickoff() do seu crew.
+
+```shell Terminal
+crewai log-tasks-outputs
+```
+
+### 6. Reset-memories
+
+Redefine as memórias do crew (longa, curta, de entidades, latest_crew_kickoff_outputs).
+
+```shell Terminal
+crewai reset-memories [OPTIONS]
+```
+
+- `-l, --long`: Redefine a memória de LONGO PRAZO
+- `-s, --short`: Redefine a memória de CURTO PRAZO
+- `-e, --entities`: Redefine a memória de ENTIDADES
+- `-k, --kickoff-outputs`: Redefine as OUTPUTS DA TAREFA KICKOFF MAIS RECENTE
+- `-kn, --knowledge`: Redefine o armazenamento de CONHECIMENTO
+- `-akn, --agent-knowledge`: Redefine o armazenamento de CONHECIMENTO DOS AGENTES
+- `-a, --all`: Redefine TODAS as memórias
+
+Exemplo:
+```shell Terminal
+crewai reset-memories --long --short
+crewai reset-memories --all
+```
+
+### 7. Test
+
+Teste o crew e avalie os resultados.
+
+```shell Terminal
+crewai test [OPTIONS]
+```
+
+- `-n, --n_iterations INTEGER`: Número de iterações para testar o crew (padrão: 3)
+- `-m, --model TEXT`: Modelo LLM para executar os testes no Crew (padrão: "gpt-4o-mini")
+
+Exemplo:
+```shell Terminal    
+crewai test -n 5 -m gpt-3.5-turbo
+```
+
+### 8. Run
+
+Execute o crew ou flow.
+
+```shell Terminal
+crewai run
+```
+
+<Note>
+A partir da versão 0.103.0, o comando `crewai run` pode ser usado para executar tanto crews padrão quanto flows. Para flows, ele detecta automaticamente o tipo a partir do pyproject.toml e executa o comando apropriado. Este é agora o modo recomendado de executar tanto crews quanto flows.
+</Note>
+
+<Note>
+Certifique-se de executar estes comandos a partir do diretório onde seu projeto CrewAI está configurado.
+Alguns comandos podem exigir configuração ou ajustes adicionais dentro da estrutura do seu projeto.
+</Note>
+
+### 9. Chat
+
+A partir da versão `0.98.0`, ao rodar o comando `crewai chat`, você inicia uma sessão interativa com seu crew. O assistente de IA irá guiá-lo solicitando as entradas necessárias para executar o crew. Uma vez que todas as entradas são fornecidas, o crew executará suas tarefas.
+
+Depois de receber os resultados, você pode continuar interagindo com o assistente para instruções ou perguntas adicionais.
+
+```shell Terminal
+crewai chat
+```
+<Note>
+Garanta que você execute estes comandos a partir do diretório raiz do seu projeto CrewAI.
+</Note>
+<Note>
+IMPORTANTE: Defina a propriedade `chat_llm` no seu arquivo `crew.py` para habilitar este comando.
+
+```python
+@crew
+def crew(self) -> Crew:
+    return Crew(
+        agents=self.agents,
+        tasks=self.tasks,
+        process=Process.sequential,
+        verbose=True,
+        chat_llm="gpt-4o",  # LLM para orquestração de chat
+    )
+```
+</Note>
+
+### 10. Deploy
+
+Implemente o crew ou flow no [CrewAI Enterprise](https://app.crewai.com).
+
+- **Autenticação**: Você precisa estar autenticado para implementar no CrewAI Enterprise.
+    ```shell Terminal
+    crewai signup
+    ```
+    Caso já tenha uma conta, você pode fazer login com:
+    ```shell Terminal
+    crewai login
+    ```
+
+- **Criar um deployment**: Depois de autenticado, você pode criar um deployment para seu crew ou flow a partir da raiz do seu projeto local.
+    ```shell Terminal
+    crewai deploy create
+    ```
+    - Lê a configuração do seu projeto local.
+    - Solicita a confirmação das variáveis de ambiente (como `OPENAI_API_KEY`, `SERPER_API_KEY`) encontradas localmente. Elas serão armazenadas de forma segura junto ao deployment na plataforma Enterprise. Verifique se suas chaves sensíveis estão corretamente configuradas localmente (por exemplo, em um arquivo `.env`) antes de executar este comando.
+
+### 11. Gerenciamento de Organização
+
+Gerencie suas organizações no CrewAI Enterprise.
+
+```shell Terminal
+crewai org [COMMAND] [OPTIONS]
+```
+
+#### Comandos:
+
+- `list`: Liste todas as organizações das quais você faz parte
+```shell Terminal
+crewai org list
+```
+
+- `current`: Exibe sua organização ativa atualmente
+```shell Terminal
+crewai org current
+```
+
+- `switch`: Mude para uma organização específica
+```shell Terminal
+crewai org switch <organization_id>
+```
+
+<Note>
+Você deve estar autenticado no CrewAI Enterprise para usar estes comandos de gerenciamento de organização.
+</Note>
+
+- **Criar um deployment** (continuação):
+    - Vincula o deployment ao respectivo repositório remoto do GitHub (normalmente detectado automaticamente).
+
+- **Implantar o Crew**: Depois de autenticado, você pode implantar seu crew ou flow no CrewAI Enterprise.
+    ```shell Terminal
+    crewai deploy push
+    ``` 
+    - Inicia o processo de deployment na plataforma CrewAI Enterprise.
+    - Após a iniciação bem-sucedida, será exibida a mensagem Deployment created successfully! juntamente com o Nome do Deployment e um Deployment ID (UUID) único.
+
+- **Status do Deployment**: Você pode verificar o status do seu deployment com:
+    ```shell Terminal
+    crewai deploy status
+    ```
+    Isso retorna o status mais recente do último deployment iniciado (por exemplo, `Building Images for Crew`, `Deploy Enqueued`, `Online`).
+
+- **Logs do Deployment**: Você pode checar os logs do seu deployment com:
+    ```shell Terminal
+    crewai deploy logs
+    ```
+    Isso faz o streaming dos logs do deployment para seu terminal.
+
+- **Listar deployments**: Você pode listar todos os seus deployments com:
+    ```shell Terminal
+    crewai deploy list
+    ```
+    Isto lista todos os seus deployments.
+
+- **Deletar um deployment**: Você pode deletar um deployment com:
+    ```shell Terminal
+    crewai deploy remove
+    ```
+    Isto exclui o deployment da plataforma CrewAI Enterprise.
+
+- **Comando de Ajuda**: Você pode obter ajuda sobre o CLI com:
+    ```shell Terminal
+    crewai deploy --help
+    ```
+    Isto exibe a mensagem de ajuda para o CLI CrewAI Deploy.
+
+Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantação do seu crew no [CrewAI Enterprise](http://app.crewai.com) usando o CLI.
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/3EqSV-CYDZA"
+  title="CrewAI Deployment Guide"
+  frameborder="0"
+  style={{ borderRadius: '10px' }}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+### 11. Chaves de API
+
+Ao executar o comando ```crewai create crew```, o CLI primeiro mostrará os 5 provedores de LLM mais comuns e pedirá para você selecionar um.
+
+Após selecionar um provedor de LLM, será solicitado que você informe as chaves de API.
+
+#### Provedores iniciais de chave de API
+
+Inicialmente, o CLI solicitará as chaves de API para os seguintes serviços:
+
+* OpenAI
+* Groq
+* Anthropic
+* Google Gemini
+* SambaNova
+
+Ao selecionar um provedor, o CLI solicitará que você insira sua chave de API.
+
+#### Outras opções
+
+Se você selecionar a opção 6, será possível escolher de uma lista de provedores suportados pelo LiteLLM.
+
+Ao escolher um provedor, o CLI solicitará que você informe o nome da chave e a chave de API.
+
+Veja o seguinte link para o nome de chave de cada provedor:
+
+* [LiteLLM Providers](https://docs.litellm.ai/docs/providers)

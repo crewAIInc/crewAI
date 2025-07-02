@@ -6,7 +6,6 @@ import threading
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
-from types import SimpleNamespace
 from typing import (
     Any,
     DefaultDict,
@@ -19,7 +18,7 @@ from typing import (
     Union,
     cast,
 )
-
+from datetime import datetime
 from dotenv import load_dotenv
 from litellm.types.utils import ChatCompletionDeltaToolCall
 from pydantic import BaseModel, Field
@@ -31,7 +30,11 @@ from crewai.utilities.events.llm_events import (
     LLMCallType,
     LLMStreamChunkEvent,
 )
-from crewai.utilities.events.tool_usage_events import ToolExecutionErrorEvent
+from crewai.utilities.events.tool_usage_events import (
+    ToolUsageStartedEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageErrorEvent,
+)
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
@@ -44,6 +47,9 @@ with warnings.catch_warnings():
     from litellm.types.utils import ModelResponse
     from litellm.utils import supports_response_schema
 
+
+import io
+from typing import TextIO
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.events import crewai_event_bus
@@ -61,40 +67,84 @@ if "GEMINI_API_KEY" not in os.environ and "GOOGLE_API_KEY" in os.environ:
     logging.info("[CrewAI Gemini Patch] Set GEMINI_API_KEY from GOOGLE_API_KEY")
 
 
-class FilteredStream:
-    def __init__(self, original_stream):
+class FilteredStream(io.TextIOBase):
+    _lock = None
+
+    def __init__(self, original_stream: TextIO):
         self._original_stream = original_stream
         self._lock = threading.Lock()
 
-    def write(self, s) -> int:
+    def write(self, s: str) -> int:
+        if not self._lock:
+            self._lock = threading.Lock()
+
         with self._lock:
-            # Filter out extraneous messages from LiteLLM
+            lower_s = s.lower()
+
+            # Skip common noisy LiteLLM banners and any other lines that contain "litellm"
             if (
-                "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
-                in s
-                or "LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()`"
-                in s
+                "give feedback / get help" in lower_s
+                or "litellm.info:" in lower_s
+                or "litellm" in lower_s
+                or "Consider using a smaller input or implementing a text splitting strategy" in lower_s
             ):
                 return 0
+
             return self._original_stream.write(s)
 
     def flush(self):
         with self._lock:
             return self._original_stream.flush()
 
+    def __getattr__(self, name):
+        """Delegate attribute access to the wrapped original stream.
+
+        This ensures compatibility with libraries (e.g., Rich) that rely on
+        attributes such as `encoding`, `isatty`, `buffer`, etc., which may not
+        be explicitly defined on this proxy class.
+        """
+        return getattr(self._original_stream, name)
+
+    # Delegate common properties/methods explicitly so they aren't shadowed by
+    # the TextIOBase defaults (e.g., .encoding returns None by default, which
+    # confuses Rich). These explicit pass-throughs ensure the wrapped Console
+    # still sees a fully-featured stream.
+    @property
+    def encoding(self):
+        return getattr(self._original_stream, "encoding", "utf-8")
+
+    def isatty(self):
+        return self._original_stream.isatty()
+
+    def fileno(self):
+        return self._original_stream.fileno()
+
+    def writable(self):
+        return True
+
+
+# Apply the filtered stream globally so that any subsequent writes containing the filtered
+# keywords (e.g., "litellm") are hidden from terminal output. We guard against double
+# wrapping to ensure idempotency in environments where this module might be reloaded.
+if not isinstance(sys.stdout, FilteredStream):
+    sys.stdout = FilteredStream(sys.stdout)
+if not isinstance(sys.stderr, FilteredStream):
+    sys.stderr = FilteredStream(sys.stderr)
+
 
 LLM_CONTEXT_WINDOW_SIZES = {
     # openai
     "gpt-4": 8192,
     "gpt-4o": 128000,
-    "gpt-4o-mini": 128000,
+    "gpt-4o-mini": 200000,
     "gpt-4-turbo": 128000,
     "gpt-4.1": 1047576,  # Based on official docs
     "gpt-4.1-mini-2025-04-14": 1047576,
     "gpt-4.1-nano-2025-04-14": 1047576,
     "o1-preview": 128000,
     "o1-mini": 128000,
-    "o3-mini": 200000,  # Based on official o3-mini specifications
+    "o3-mini": 200000,
+    "o4-mini": 200000,
     # gemini
     "gemini-2.0-flash": 1048576,
     "gemini-2.0-flash-thinking-exp-01-21": 32768,
@@ -209,7 +259,7 @@ LLM_CONTEXT_WINDOW_SIZES = {
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
-CONTEXT_WINDOW_USAGE_RATIO = 0.75
+CONTEXT_WINDOW_USAGE_RATIO = 0.85
 
 
 @contextmanager
@@ -220,16 +270,7 @@ def suppress_warnings():
             "ignore", message="open_text is deprecated*", category=DeprecationWarning
         )
 
-        # Redirect stdout and stderr
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
-        sys.stdout = FilteredStream(old_stdout)
-        sys.stderr = FilteredStream(old_stderr)
-        try:
-            yield
-        finally:
-            sys.stdout = old_stdout
-            sys.stderr = old_stderr
+        yield
 
 
 class Delta(TypedDict):
@@ -414,6 +455,8 @@ class LLM(BaseLLM):
         params: Dict[str, Any],
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
     ) -> str:
         """Handle a streaming response from the LLM.
 
@@ -421,6 +464,8 @@ class LLM(BaseLLM):
             params: Parameters for the completion call
             callbacks: Optional list of callback functions
             available_functions: Dict of available functions
+            from_task: Optional task object
+            from_agent: Optional agent object
 
         Returns:
             str: The complete response text
@@ -505,6 +550,8 @@ class LLM(BaseLLM):
                                         tool_calls=tool_calls,
                                         accumulated_tool_args=accumulated_tool_args,
                                         available_functions=available_functions,
+                                        from_task=from_task,
+                                        from_agent=from_agent,
                                     )
                                     if result is not None:
                                         chunk_content = result
@@ -522,7 +569,7 @@ class LLM(BaseLLM):
                     assert hasattr(crewai_event_bus, "emit")
                     crewai_event_bus.emit(
                         self,
-                        event=LLMStreamChunkEvent(chunk=chunk_content),
+                        event=LLMStreamChunkEvent(chunk=chunk_content, from_task=from_task, from_agent=from_agent),
                     )
             # --- 4) Fallback to non-streaming if no content received
             if not full_response.strip() and chunk_count == 0:
@@ -535,7 +582,7 @@ class LLM(BaseLLM):
                     "stream_options", None
                 )  # Remove stream_options for non-streaming call
                 return self._handle_non_streaming_response(
-                    non_streaming_params, callbacks, available_functions
+                    non_streaming_params, callbacks, available_functions, from_task, from_agent
                 )
 
             # --- 5) Handle empty response with chunks
@@ -620,7 +667,7 @@ class LLM(BaseLLM):
                 # Log token usage if available in streaming mode
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
                 # Emit completion event and return response
-                self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
+                self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL, from_task, from_agent)
                 return full_response
 
             # --- 9) Handle tool calls if present
@@ -632,7 +679,7 @@ class LLM(BaseLLM):
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             # --- 11) Emit completion event and return response
-            self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
+            self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL, from_task, from_agent)
             return full_response
 
         except ContextWindowExceededError as e:
@@ -644,14 +691,14 @@ class LLM(BaseLLM):
             logging.error(f"Error in streaming response: {str(e)}")
             if full_response.strip():
                 logging.warning(f"Returning partial response despite error: {str(e)}")
-                self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL)
+                self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL, from_task, from_agent)
                 return full_response
 
             # Emit failed event and re-raise the exception
             assert hasattr(crewai_event_bus, "emit")
             crewai_event_bus.emit(
                 self,
-                event=LLMCallFailedEvent(error=str(e)),
+                event=LLMCallFailedEvent(error=str(e), from_task=from_task, from_agent=from_agent),
             )
             raise Exception(f"Failed to get streaming response: {str(e)}")
 
@@ -660,6 +707,8 @@ class LLM(BaseLLM):
         tool_calls: List[ChatCompletionDeltaToolCall],
         accumulated_tool_args: DefaultDict[int, AccumulatedToolArgs],
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
     ) -> None | str:
         for tool_call in tool_calls:
             current_tool_accumulator = accumulated_tool_args[tool_call.index]
@@ -677,6 +726,8 @@ class LLM(BaseLLM):
                 event=LLMStreamChunkEvent(
                     tool_call=tool_call.to_dict(),
                     chunk=tool_call.function.arguments,
+                    from_task=from_task,
+                    from_agent=from_agent,
                 ),
             )
 
@@ -743,6 +794,8 @@ class LLM(BaseLLM):
         params: Dict[str, Any],
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
     ) -> str:
         """Handle a non-streaming response from the LLM.
 
@@ -750,6 +803,8 @@ class LLM(BaseLLM):
             params: Parameters for the completion call
             callbacks: Optional list of callback functions
             available_functions: Dict of available functions
+            from_task: Optional Task that invoked the LLM
+            from_agent: Optional Agent that invoked the LLM
 
         Returns:
             str: The response text
@@ -790,7 +845,7 @@ class LLM(BaseLLM):
 
         # --- 5) If no tool calls or no available functions, return the text response directly
         if not tool_calls or not available_functions:
-            self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL)
+            self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL, from_task, from_agent)
             return text_response
 
         # --- 6) Handle tool calls if present
@@ -799,7 +854,7 @@ class LLM(BaseLLM):
             return tool_result
 
         # --- 7) If tool call handling didn't return a result, emit completion event and return text response
-        self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL)
+        self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL, from_task, from_agent)
         return text_response
 
     def _handle_tool_call(
@@ -833,7 +888,26 @@ class LLM(BaseLLM):
                 fn = available_functions[function_name]
 
                 # --- 3.2) Execute function
+                assert hasattr(crewai_event_bus, "emit")
+                started_at = datetime.now()
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageStartedEvent(
+                        tool_name=function_name,
+                        tool_args=function_args,
+                    ),
+                )
                 result = fn(**function_args)
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageFinishedEvent(
+                        output=result,
+                        tool_name=function_name,
+                        tool_args=function_args,
+                        started_at=started_at,
+                        finished_at=datetime.now(),
+                    ),
+                )
 
                 # --- 3.3) Emit success event
                 self._handle_emit_call_events(result, LLMCallType.TOOL_CALL)
@@ -849,6 +923,14 @@ class LLM(BaseLLM):
                     self,
                     event=LLMCallFailedEvent(error=f"Tool execution error: {str(e)}"),
                 )
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(
+                        tool_name=function_name,
+                        tool_args=function_args,
+                        error=f"Tool execution error: {str(e)}"
+                    ),
+                )
         return None
 
     def call(
@@ -857,6 +939,8 @@ class LLM(BaseLLM):
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
     ) -> Union[str, Any]:
         """High-level LLM call method.
 
@@ -871,6 +955,8 @@ class LLM(BaseLLM):
                       during and after the LLM call.
             available_functions: Optional dict mapping function names to callables
                                that can be invoked by the LLM.
+            from_task: Optional Task that invoked the LLM
+            from_agent: Optional Agent that invoked the LLM
 
         Returns:
             Union[str, Any]: Either a text response from the LLM (str) or
@@ -890,6 +976,8 @@ class LLM(BaseLLM):
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
             ),
         )
 
@@ -918,11 +1006,11 @@ class LLM(BaseLLM):
                 # --- 7) Make the completion call and handle response
                 if self.stream:
                     return self._handle_streaming_response(
-                        params, callbacks, available_functions
+                        params, callbacks, available_functions, from_task, from_agent
                     )
                 else:
                     return self._handle_non_streaming_response(
-                        params, callbacks, available_functions
+                        params, callbacks, available_functions, from_task, from_agent
                     )
 
             except LLMContextLengthExceededException:
@@ -934,12 +1022,12 @@ class LLM(BaseLLM):
                 assert hasattr(crewai_event_bus, "emit")
                 crewai_event_bus.emit(
                     self,
-                    event=LLMCallFailedEvent(error=str(e)),
+                    event=LLMCallFailedEvent(error=str(e), from_task=from_task, from_agent=from_agent),
                 )
                 logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
-    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType):
+    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType, from_task: Optional[Any] = None, from_agent: Optional[Any] = None):
         """Handle the events for the LLM call.
 
         Args:
@@ -949,7 +1037,7 @@ class LLM(BaseLLM):
         assert hasattr(crewai_event_bus, "emit")
         crewai_event_bus.emit(
             self,
-            event=LLMCallCompletedEvent(response=response, call_type=call_type),
+            event=LLMCallCompletedEvent(response=response, call_type=call_type, from_task=from_task, from_agent=from_agent),
         )
 
     def _format_messages_for_provider(

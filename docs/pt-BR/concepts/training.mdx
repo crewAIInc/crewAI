@@ -1,0 +1,65 @@
+---
+title: Treinamento
+description: Aprenda como treinar seus agentes CrewAI fornecendo feedback desde o início e obtenha resultados consistentes.
+icon: dumbbell
+---
+
+## Visão Geral
+
+O recurso de treinamento no CrewAI permite que você treine seus agentes de IA usando a interface de linha de comando (CLI). 
+Ao executar o comando `crewai train -n <n_iterations>`, você pode especificar o número de iterações para o processo de treinamento.
+
+Durante o treinamento, o CrewAI utiliza técnicas para otimizar o desempenho dos seus agentes juntamente com o feedback humano. 
+Isso ajuda os agentes a aprimorar sua compreensão, tomada de decisão e habilidades de resolução de problemas.
+
+### Treinando sua Crew Usando a CLI
+
+Para utilizar o recurso de treinamento, siga estes passos:
+
+1. Abra seu terminal ou prompt de comando.
+2. Navegue até o diretório onde seu projeto CrewAI está localizado.
+3. Execute o seguinte comando:
+
+```shell
+crewai train -n <n_iterations> <filename> (optional)
+```
+<Tip>
+  Substitua `<n_iterations>` pelo número desejado de iterações de treinamento e `<filename>` pelo nome de arquivo apropriado terminando com `.pkl`.
+</Tip>
+
+### Treinando sua Crew Programaticamente
+
+Para treinar sua crew de forma programática, siga estes passos:
+
+1. Defina o número de iterações para o treinamento.
+2. Especifique os parâmetros de entrada para o processo de treinamento.
+3. Execute o comando de treinamento dentro de um bloco try-except para tratar possíveis erros.
+
+```python Code
+n_iteracoes = 2
+entradas = {"topic": "Treinamento CrewAI"}
+nome_arquivo = "seu_modelo.pkl"
+
+try:
+    SuaCrew().crew().train(
+      n_iterations=n_iteracoes, 
+      inputs=entradas, 
+      filename=nome_arquivo
+    )
+except Exception as e:
+    raise Exception(f"Ocorreu um erro ao treinar a crew: {e}")
+```
+
+### Pontos Importantes
+
+- **Requisito de Número Inteiro Positivo:** Certifique-se de que o número de iterações (`n_iterations`) seja um inteiro positivo. O código lançará um `ValueError` se essa condição não for atendida.
+- **Requisito de Nome de Arquivo:** Certifique-se de que o nome do arquivo termine com `.pkl`. O código lançará um `ValueError` se essa condição não for atendida.
+- **Tratamento de Erros:** O código trata erros de subprocessos e exceções inesperadas, fornecendo mensagens de erro ao usuário.
+
+É importante observar que o processo de treinamento pode levar algum tempo, dependendo da complexidade dos seus agentes e também exigirá seu feedback em cada iteração.
+
+Uma vez concluído o treinamento, seus agentes estarão equipados com capacidades e conhecimentos aprimorados, prontos para enfrentar tarefas complexas e fornecer insights mais consistentes e valiosos.
+
+Lembre-se de atualizar e treinar seus agentes regularmente para garantir que permaneçam atualizados com as últimas informações e avanços na área.
+
+Bom treinamento com o CrewAI! 🚀

@@ -1,0 +1,133 @@
+---
+title: Transporte Stdio
+description: Aprenda como conectar o CrewAI a servidores MCP locais usando o mecanismo de transporte Stdio (Entrada/Saída Padrão).
+icon: server
+---
+
+## Visão Geral
+
+O transporte Stdio (Entrada/Saída Padrão) é projetado para conectar o `MCPServerAdapter` a servidores MCP locais que se comunicam por meio de seus fluxos de entrada e saída padrão. Isso é normalmente utilizado quando o servidor MCP é um script ou executável rodando na mesma máquina da sua aplicação CrewAI.
+
+## Conceitos-Chave
+
+- **Execução Local**: O transporte Stdio gerencia um processo localmente em execução para o servidor MCP.
+- **`StdioServerParameters`**: Esta classe da biblioteca `mcp` é usada para configurar o comando, argumentos e variáveis de ambiente para iniciar o servidor Stdio.
+
+## Conectando via Stdio
+
+Você pode se conectar a um servidor MCP baseado em Stdio usando duas abordagens principais para gerenciar o ciclo de vida da conexão:
+
+### 1. Conexão Totalmente Gerenciada (Recomendado)
+
+Usar um context manager do Python (declaração `with`) é a abordagem recomendada. Ela lida automaticamente com o início do processo do servidor MCP e sua finalização quando o contexto é encerrado.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters
+import os
+
+# Criar um objeto StdioServerParameters
+server_params=StdioServerParameters(
+    command="python3", 
+    args=["servers/your_stdio_server.py"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+with MCPServerAdapter(server_params) as tools:
+    print(f"Available tools from Stdio MCP server: {[tool.name for tool in tools]}")
+
+    # Exemplo: Usando as ferramentas do servidor MCP Stdio em um Agente CrewAI
+    pesquisador_local = Agent(
+        role="Processador Local de Dados",
+        goal="Processar dados usando uma ferramenta local baseada em Stdio.",
+        backstory="Uma IA que utiliza scripts locais via MCP para tarefas especializadas.",
+        tools=tools,
+        reasoning=True,
+        verbose=True,
+    )
+    
+    processing_task = Task(
+        description="Processar o arquivo de dados de entrada 'data.txt' e resumir seu conteúdo.",
+        expected_output="Um resumo dos dados processados.",
+        agent=pesquisador_local,
+        markdown=True
+    )
+    
+    data_crew = Crew(
+        agents=[pesquisador_local],
+        tasks=[processing_task],
+        verbose=True,
+        process=Process.sequential 
+    )
+   
+    result = data_crew.kickoff()
+    print("\nCrew Task Result (Stdio - Managed):\n", result)
+
+```
+
+### 2. Ciclo de Vida Manual da Conexão
+
+Se você precisa de um controle mais refinado sobre quando o processo do servidor MCP Stdio é iniciado e finalizado, pode gerenciar o ciclo de vida do `MCPServerAdapter` manualmente.
+
+<Info>
+Você **DEVE** chamar `mcp_server_adapter.stop()` para garantir que o processo do servidor seja finalizado e os recursos, liberados. Recomenda-se fortemente o uso de um bloco `try...finally`.
+</Info>
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters
+import os
+
+# Criar um objeto StdioServerParameters
+stdio_params=StdioServerParameters(
+    command="python3", 
+    args=["servers/your_stdio_server.py"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+mcp_server_adapter = MCPServerAdapter(server_params=stdio_params)
+try:
+    mcp_server_adapter.start()  # Inicia manualmente a conexão e o processo do servidor
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual Stdio): {[tool.name for tool in tools]}")
+
+    # Exemplo: Usando as ferramentas com sua configuração de Agent, Task, Crew
+    manual_agent = Agent(
+        role="Executor Local de Tarefas",
+        goal="Executar uma tarefa local específica usando uma ferramenta Stdio gerenciada manualmente.",
+        backstory="Uma IA proficiente em controlar processos locais via MCP.",
+        tools=tools,
+        verbose=True
+    )
+    
+    manual_task = Task(
+        description="Executar o comando 'perform_analysis' via ferramenta Stdio.",
+        expected_output="Resultados da análise.",
+        agent=manual_agent
+    )
+    
+    manual_crew = Crew(
+        agents=[manual_agent],
+        tasks=[manual_task],
+        verbose=True,
+        process=Process.sequential
+    )
+        
+       
+    result = manual_crew.kickoff() # As entradas reais dependem da sua ferramenta
+    print("\nCrew Task Result (Stdio - Manual):\n", result)
+            
+except Exception as e:
+    print(f"An error occurred during manual Stdio MCP integration: {e}")
+finally:
+    if mcp_server_adapter and mcp_server_adapter.is_connected: # Verifica se está conectado antes de parar
+        print("Stopping Stdio MCP server connection (manual)...")
+        mcp_server_adapter.stop()  # **Crucial: Assegure que stop seja chamado**
+    elif mcp_server_adapter: # Se o adaptador existe mas não está conectado (ex.: start falhou)
+        print("Stdio MCP server adapter was not connected. No stop needed or start failed.")
+
+```
+
+Lembre-se de substituir caminhos e comandos de exemplo pelos detalhes reais do seu servidor Stdio. O parâmetro `env` em `StdioServerParameters` pode ser usado para definir variáveis de ambiente para o processo do servidor, o que pode ser útil para configurar seu comportamento ou fornecer caminhos necessários (como `PYTHONPATH`).

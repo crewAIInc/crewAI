@@ -1,0 +1,589 @@
+---
+title: Agentes
+description: Guia detalhado sobre como criar e gerenciar agentes no framework CrewAI.
+icon: robot
+---
+
+## Visão Geral de um Agente
+
+No framework CrewAI, um `Agent` é uma unidade autônoma que pode:
+- Executar tarefas específicas
+- Tomar decisões com base em seu papel e objetivo
+- Utilizar ferramentas para alcançar objetivos
+- Comunicar e colaborar com outros agentes
+- Manter a memória de interações
+- Delegar tarefas, quando permitido
+
+<Tip>
+Pense em um agente como um membro especializado da equipe com habilidades, competências e responsabilidades específicas. Por exemplo, um agente `Researcher` pode ser excelente em coletar e analisar informações, enquanto um agente `Writer` pode ser melhor na criação de conteúdo.
+</Tip>
+
+<Note type="info" title="Aprimoramento Empresarial: Construtor Visual de Agentes">
+O CrewAI Enterprise inclui um Construtor Visual de Agentes, que simplifica a criação e configuração de agentes sem escrever código. Projete seus agentes visualmente e teste-os em tempo real.
+
+![Visual Agent Builder Screenshot](/images/enterprise/crew-studio-interface.png)
+
+O Construtor Visual de Agentes permite:
+- Configuração intuitiva de agentes com interfaces baseadas em formulários
+- Testes e validação em tempo real
+- Biblioteca de modelos com tipos de agentes pré-configurados
+- Fácil personalização de atributos e comportamentos do agente
+</Note>
+
+## Atributos do Agente
+
+| Atributo                               | Parâmetro                | Tipo                          | Descrição                                                                                                          |
+| :-------------------------------------- | :----------------------- | :---------------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| **Role (Função)**                      | `role`                   | `str`                         | Define a função e a área de especialização do agente dentro da equipe.                                              |
+| **Goal (Objetivo)**                     | `goal`                   | `str`                         | O objetivo individual que guia a tomada de decisão do agente.                                                       |
+| **Backstory (História de fundo)**       | `backstory`              | `str`                         | Fornece contexto e personalidade ao agente, enriquecendo as interações.                                             |
+| **LLM** _(opcional)_                    | `llm`                    | `Union[str, LLM, Any]`        | Modelo de linguagem que alimenta o agente. Padrão: modelo especificado em `OPENAI_MODEL_NAME` ou "gpt-4".           |
+| **Tools (Ferramentas)** _(opcional)_    | `tools`                  | `List[BaseTool]`              | Capacidades ou funções disponíveis para o agente. Padrão: lista vazia.                                              |
+| **Function Calling LLM** _(opcional)_   | `function_calling_llm`   | `Optional[Any]`               | Modelo de linguagem usado para chamada de ferramentas, sobrescreve LLM principal se especificado.                   |
+| **Max Iterations** _(opcional)_         | `max_iter`               | `int`                         | Número máximo de iterações antes do agente fornecer sua melhor resposta. Padrão: 20.                                 |
+| **Max RPM** _(opcional)_                | `max_rpm`                | `Optional[int]`               | Quantidade máxima de requisições por minuto para evitar limites de taxa.                                             |
+| **Max Execution Time** _(opcional)_     | `max_execution_time`     | `Optional[int]`               | Tempo máximo (em segundos) de execução da tarefa.                                                                   |
+| **Verbose** _(opcional)_                | `verbose`                | `bool`                        | Habilita logs detalhados de execução para depuração. Padrão: False.                                                 |
+| **Allow Delegation** _(opcional)_       | `allow_delegation`       | `bool`                        | Permite que o agente delegue tarefas para outros agentes. Padrão: False.                                            |
+| **Step Callback** _(opcional)_          | `step_callback`          | `Optional[Any]`               | Função chamada após cada passo do agente, sobrescreve callback da equipe.                                           |
+| **Cache** _(opcional)_                  | `cache`                  | `bool`                        | Ativa cache para o uso de ferramentas. Padrão: True.                                                                |
+| **System Template** _(opcional)_        | `system_template`        | `Optional[str]`               | Template personalizado de prompt de sistema para o agente.                                                          |
+| **Prompt Template** _(opcional)_        | `prompt_template`        | `Optional[str]`               | Template de prompt personalizado para o agente.                                                                     |
+| **Response Template** _(opcional)_      | `response_template`      | `Optional[str]`               | Template de resposta personalizado para o agente.                                                                   |
+| **Allow Code Execution** _(opcional)_   | `allow_code_execution`   | `Optional[bool]`              | Ativa execução de código pelo agente. Padrão: False.                                                                |
+| **Max Retry Limit** _(opcional)_        | `max_retry_limit`        | `int`                         | Número máximo de tentativas (retries) em caso de erro. Padrão: 2.                                                   |
+| **Respect Context Window** _(opcional)_ | `respect_context_window` | `bool`                        | Mantém as mensagens dentro do tamanho da janela de contexto, resumindo quando necessário. Padrão: True.             |
+| **Code Execution Mode** _(opcional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`   | Modo de execução de código: 'safe' (usando Docker) ou 'unsafe' (direto). Padrão: 'safe'.                            |
+| **Multimodal** _(opcional)_             | `multimodal`             | `bool`                        | Se o agente suporta capacidades multimodais. Padrão: False.                                                         |
+| **Inject Date** _(opcional)_            | `inject_date`            | `bool`                        | Se deve injetar automaticamente a data atual nas tarefas. Padrão: False.                                            |
+| **Date Format** _(opcional)_            | `date_format`            | `str`                         | Formato de data utilizado quando `inject_date` está ativo. Padrão: "%Y-%m-%d" (formato ISO).                        |
+| **Reasoning** _(opcional)_              | `reasoning`              | `bool`                        | Se o agente deve refletir e criar um plano antes de executar uma tarefa. Padrão: False.                             |
+| **Max Reasoning Attempts** _(opcional)_ | `max_reasoning_attempts` | `Optional[int]`               | Número máximo de tentativas de raciocínio antes de executar a tarefa. Se None, tentará até estar pronto.            |
+| **Embedder** _(opcional)_               | `embedder`               | `Optional[Dict[str, Any]]`    | Configuração do embedder utilizado pelo agente.                                                                     |
+| **Knowledge Sources** _(opcional)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | Fontes de conhecimento disponíveis para o agente.                                                     |
+| **Use System Prompt** _(opcional)_      | `use_system_prompt`      | `Optional[bool]`              | Se deve usar o system prompt (suporte para modelo o1). Padrão: True.                                                |
+
+## Criando Agentes
+
+Existem duas maneiras de criar agentes no CrewAI: usando **configuração YAML (recomendado)** ou definindo-os **diretamente em código**.
+
+### Configuração em YAML (Recomendado)
+
+Usar configuração em YAML proporciona uma maneira mais limpa e fácil de manter para definir agentes. Recomendamos fortemente esse método em seus projetos CrewAI.
+
+Depois de criar seu projeto CrewAI conforme descrito na seção de [Instalação](/pt-BR/installation), navegue até o arquivo `src/latest_ai_development/config/agents.yaml` e edite o template para atender aos seus requisitos.
+
+<Note>
+Variáveis em seus arquivos YAML (como `{topic}`) serão substituídas pelos valores fornecidos em seus inputs ao executar o crew:
+```python Code
+crew.kickoff(inputs={'topic': 'AI Agents'})
+```
+</Note>
+
+Veja um exemplo de como configurar agentes usando YAML:
+
+```yaml agents.yaml
+# src/latest_ai_development/config/agents.yaml
+researcher:
+  role: >
+    {topic} Senior Data Researcher
+  goal: >
+    Uncover cutting-edge developments in {topic}
+  backstory: >
+    You're a seasoned researcher with a knack for uncovering the latest
+    developments in {topic}. Known for your ability to find the most relevant
+    information and present it in a clear and concise manner.
+
+reporting_analyst:
+  role: >
+    {topic} Reporting Analyst
+  goal: >
+    Create detailed reports based on {topic} data analysis and research findings
+  backstory: >
+    You're a meticulous analyst with a keen eye for detail. You're known for
+    your ability to turn complex data into clear and concise reports, making
+    it easy for others to understand and act on the information you provide.
+```
+
+Para usar essa configuração YAML no seu código, crie uma classe de crew que herda de `CrewBase`:
+
+```python Code
+# src/latest_ai_development/crew.py
+from crewai import Agent, Crew, Process
+from crewai.project import CrewBase, agent, crew
+from crewai_tools import SerperDevTool
+
+@CrewBase
+class LatestAiDevelopmentCrew():
+  """LatestAiDevelopment crew"""
+
+  agents_config = "config/agents.yaml"
+
+  @agent
+  def researcher(self) -> Agent:
+    return Agent(
+      config=self.agents_config['researcher'], # type: ignore[index]
+      verbose=True,
+      tools=[SerperDevTool()]
+    )
+
+  @agent
+  def reporting_analyst(self) -> Agent:
+    return Agent(
+      config=self.agents_config['reporting_analyst'], # type: ignore[index]
+      verbose=True
+    )
+```
+
+<Note>
+Os nomes utilizados em seus arquivos YAML (`agents.yaml`) devem ser iguais aos nomes dos métodos no seu código Python.
+</Note>
+
+### Definição Direta em Código
+
+Você pode criar agentes diretamente em código instanciando a classe `Agent`. Veja um exemplo abrangente mostrando todos os parâmetros disponíveis:
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool
+
+# Crie um agente com todos os parâmetros disponíveis
+agent = Agent(
+    role="Cientista de Dados Sênior",
+    goal="Analisar e interpretar conjuntos de dados complexos para fornecer insights acionáveis",
+    backstory="Com mais de 10 anos de experiência em ciência de dados e aprendizado de máquina, você é especialista em encontrar padrões em grandes volumes de dados.",
+    llm="gpt-4",  # Padrão: OPENAI_MODEL_NAME ou "gpt-4"
+    function_calling_llm=None,  # Opcional: LLM separado para chamadas de ferramentas
+    verbose=False,  # Padrão: False
+    allow_delegation=False,  # Padrão: False
+    max_iter=20,  # Padrão: 20 iterações
+    max_rpm=None,  # Opcional: Limite de requisições por minuto
+    max_execution_time=None,  # Opcional: Tempo máximo de execução em segundos
+    max_retry_limit=2,  # Padrão: 2 tentativas em caso de erro
+    allow_code_execution=False,  # Padrão: False
+    code_execution_mode="safe",  # Padrão: "safe" (opções: "safe", "unsafe")
+    respect_context_window=True,  # Padrão: True
+    use_system_prompt=True,  # Padrão: True
+    multimodal=False,  # Padrão: False
+    inject_date=False,  # Padrão: False
+    date_format="%Y-%m-%d",  # Padrão: formato ISO
+    reasoning=False,  # Padrão: False
+    max_reasoning_attempts=None,  # Padrão: None
+    tools=[SerperDevTool()],  # Opcional: Lista de ferramentas
+    knowledge_sources=None,  # Opcional: Lista de fontes de conhecimento
+    embedder=None,  # Opcional: Configuração de embedder customizado
+    system_template=None,  # Opcional: Template de prompt de sistema
+    prompt_template=None,  # Opcional: Template de prompt customizado
+    response_template=None,  # Opcional: Template de resposta customizado
+    step_callback=None,  # Opcional: Função de callback para monitoramento
+)
+```
+
+Vamos detalhar algumas combinações de parâmetros-chave para casos de uso comuns:
+
+#### Agente de Pesquisa Básico
+```python Code
+research_agent = Agent(
+    role="Analista de Pesquisa",
+    goal="Encontrar e resumir informações sobre tópicos específicos",
+    backstory="Você é um pesquisador experiente com atenção aos detalhes",
+    tools=[SerperDevTool()],
+    verbose=True  # Ativa logs para depuração
+)
+```
+
+#### Agente de Desenvolvimento de Código
+```python Code
+dev_agent = Agent(
+    role="Desenvolvedor Python Sênior",
+    goal="Escrever e depurar códigos Python",
+    backstory="Desenvolvedor Python especialista com 10 anos de experiência",
+    allow_code_execution=True,
+    code_execution_mode="safe",  # Usa Docker para segurança
+    max_execution_time=300,  # Limite de 5 minutos
+    max_retry_limit=3  # Mais tentativas para tarefas complexas
+)
+```
+
+#### Agente de Análise de Longa Duração
+```python Code
+analysis_agent = Agent(
+    role="Analista de Dados",
+    goal="Realizar análise aprofundada de grandes conjuntos de dados",
+    backstory="Especialista em análise de big data e reconhecimento de padrões",
+    memory=True,
+    respect_context_window=True,
+    max_rpm=10,  # Limite de requisições por minuto
+    function_calling_llm="gpt-4o-mini"  # Modelo mais econômico para chamadas de ferramentas
+)
+```
+
+#### Agente com Template Personalizado
+```python Code
+custom_agent = Agent(
+    role="Atendente de Suporte ao Cliente",
+    goal="Auxiliar clientes com suas dúvidas e solicitações",
+    backstory="Experiente em atendimento ao cliente com foco em satisfação",
+    system_template="""<|start_header_id|>system<|end_header_id|>\n                        {{ .System }}<|eot_id|>""",
+    prompt_template="""<|start_header_id|>user<|end_header_id|>\n                        {{ .Prompt }}<|eot_id|>""",
+    response_template="""<|start_header_id|>assistant<|end_header_id|>\n                        {{ .Response }}<|eot_id|>""",
+)
+```
+
+#### Agente Ciente de Data, com Raciocínio
+```python Code
+strategic_agent = Agent(
+    role="Analista de Mercado",
+    goal="Acompanhar movimentos do mercado com referências de datas precisas e planejamento estratégico",
+    backstory="Especialista em análise financeira sensível ao tempo e relatórios estratégicos",
+    inject_date=True,  # Injeta automaticamente a data atual nas tarefas
+    date_format="%d de %B de %Y",  # Exemplo: "21 de maio de 2025"
+    reasoning=True,  # Ativa planejamento estratégico
+    max_reasoning_attempts=2,  # Limite de iterações de planejamento
+    verbose=True
+)
+```
+
+#### Agente de Raciocínio
+```python Code
+reasoning_agent = Agent(
+    role="Planejador Estratégico",
+    goal="Analisar problemas complexos e criar planos de execução detalhados",
+    backstory="Especialista em planejamento estratégico que desmembra desafios complexos metodicamente",
+    reasoning=True,  # Ativa raciocínio e planejamento
+    max_reasoning_attempts=3,  # Limite de tentativas de raciocínio
+    max_iter=30,  # Permite mais iterações para planejamento complexo
+    verbose=True
+)
+```
+
+#### Agente Multimodal
+```python Code
+multimodal_agent = Agent(
+    role="Analista de Conteúdo Visual",
+    goal="Analisar e processar tanto conteúdo textual quanto visual",
+    backstory="Especialista em análise multimodal combinando compreensão de texto e imagem",
+    multimodal=True,  # Ativa capacidades multimodais
+    verbose=True
+)
+```
+
+### Detalhes dos Parâmetros
+
+#### Parâmetros Críticos
+- `role`, `goal` e `backstory` são obrigatórios e definem o comportamento do agente
+- `llm` determina o modelo de linguagem utilizado (padrão: GPT-4 da OpenAI)
+
+#### Memória e Contexto
+- `memory`: Ative para manter o histórico de conversas
+- `respect_context_window`: Evita problemas com limites de tokens
+- `knowledge_sources`: Adicione bases de conhecimento específicas do domínio
+
+#### Controle de Execução
+- `max_iter`: Número máximo de tentativas antes da melhor resposta
+- `max_execution_time`: Tempo limite em segundos
+- `max_rpm`: Limite de requisições por minuto
+- `max_retry_limit`: Tentativas de correção em erros
+
+#### Execução de Código
+- `allow_code_execution`: Deve ser True para permitir execução de código
+- `code_execution_mode`:
+  - `"safe"`: Usa Docker (recomendado para produção)
+  - `"unsafe"`: Execução direta (apenas em ambientes confiáveis)
+
+<Note>
+  Isso executa uma imagem Docker padrão. Se você deseja configurar a imagem Docker, veja a ferramenta Code Interpreter na seção de ferramentas.
+  Adicione a ferramenta de interpretação de código como um parâmetro em ferramentas no agente.
+</Note>
+
+#### Funcionalidades Avançadas
+- `multimodal`: Habilita capacidades multimodais para processar texto e conteúdo visual
+- `reasoning`: Permite que o agente reflita e crie planos antes de executar tarefas
+- `inject_date`: Injeta a data atual automaticamente nas descrições das tarefas
+
+#### Templates
+- `system_template`: Define o comportamento central do agente
+- `prompt_template`: Estrutura o formato da entrada
+- `response_template`: Formata as respostas do agente
+
+<Note>
+Ao usar templates personalizados, assegure-se de definir tanto `system_template` quanto `prompt_template`. O `response_template` é opcional, mas recomendado para formatação consistente de saída.
+</Note>
+
+<Note>
+Ao usar templates personalizados, você pode usar variáveis como `{role}`, `{goal}` e `{backstory}` em seus templates. Elas serão automaticamente preenchidas durante a execução.
+</Note>
+
+## Ferramentas do Agente
+
+Agentes podem ser equipados com diversas ferramentas para ampliar suas capacidades. O CrewAI suporta ferramentas do:
+- [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools)
+- [LangChain Tools](https://python.langchain.com/docs/integrations/tools)
+
+Veja como adicionar ferramentas a um agente:
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool, WikipediaTools
+
+# Criar ferramentas
+search_tool = SerperDevTool()
+wiki_tool = WikipediaTools()
+
+# Adicionar ferramentas ao agente
+researcher = Agent(
+    role="Pesquisador de Tecnologia em IA",
+    goal="Pesquisar os últimos avanços em IA",
+    tools=[search_tool, wiki_tool],
+    verbose=True
+)
+```
+
+## Memória e Contexto do Agente
+
+Agentes podem manter a memória de suas interações e usar contexto de tarefas anteriores. Isto é especialmente útil para fluxos de trabalho complexos onde é necessário reter informações ao longo de várias tarefas.
+
+```python Code
+from crewai import Agent
+
+analyst = Agent(
+    role="Analista de Dados",
+    goal="Analisar e memorizar padrões complexos de dados",
+    memory=True,  # Ativa memória
+    verbose=True
+)
+```
+
+<Note>
+Quando `memory` está ativo, o agente manterá o contexto ao longo de múltiplas interações, melhorando a capacidade de lidar com tarefas complexas, em múltiplos passos.
+</Note>
+
+## Gerenciamento da Janela de Contexto
+
+O CrewAI inclui um gerenciamento automático sofisticado de janela de contexto para lidar com situações onde as conversas excedem o limite de tokens do modelo de linguagem. Esse poderoso recurso é controlado pelo parâmetro `respect_context_window`.
+
+### Como Funciona o Gerenciamento de Janela de Contexto
+
+Quando o histórico de conversas de um agente se torna muito grande para a janela de contexto do LLM, o CrewAI detecta essa situação automaticamente e pode:
+
+1. **Resumir o conteúdo automaticamente** (com `respect_context_window=True`)
+2. **Parar a execução com erro** (com `respect_context_window=False`)
+
+### Manipulação Automática de Contexto (`respect_context_window=True`)
+
+Esta é a **configuração padrão e recomendada** para a maioria dos casos. Quando ativada, CrewAI irá:
+
+```python Code
+# Agente com gerenciamento automático de contexto (padrão)
+smart_agent = Agent(
+    role="Analista de Pesquisa",
+    goal="Analisar grandes documentos e conjuntos de dados",
+    backstory="Especialista em processar informações extensas",
+    respect_context_window=True,  # 🔑 Padrão: gerencia limites de contexto automaticamente
+    verbose=True
+)
+```
+
+**O que acontece quando os limites de contexto são excedidos:**
+- ⚠️ **Mensagem de aviso**: `"Context length exceeded. Summarizing content to fit the model context window."`
+- 🔄 **Resumir automaticamente**: O CrewAI resume o histórico da conversa de forma inteligente
+- ✅ **Execução contínua**: A execução da tarefa prossegue normalmente com o contexto resumido
+- 📝 **Informação preservada**: Informações-chave são mantidas enquanto reduz a contagem de tokens
+
+### Limites Estritos de Contexto (`respect_context_window=False`)
+
+Quando você precisa de controle total e prefere que a execução pare a perder qualquer informação:
+
+```python Code
+# Agente com limites estritos de contexto
+strict_agent = Agent(
+    role="Legal Document Reviewer",
+    goal="Provide precise legal analysis without information loss",
+    backstory="Legal expert requiring complete context for accurate analysis",
+    respect_context_window=False,  # ❌ Stop execution on context limit
+    verbose=True
+)
+```
+
+**O que acontece quando os limites de contexto são excedidos:**
+- ❌ **Mensagem de erro**: `"Context length exceeded. Consider using smaller text or RAG tools from crewai_tools."`
+- 🛑 **Execução interrompida**: A execução da tarefa é parada imediatamente
+- 🔧 **Intervenção manual necessária**: Você precisará modificar sua abordagem
+
+### Como Escolher a Melhor Configuração
+
+#### Use `respect_context_window=True` (padrão) quando:
+- **Processar documentos grandes** que podem ultrapassar os limites de contexto
+- **Conversas longas** onde certo grau de resumo é aceitável
+- **Tarefas de pesquisa** onde o contexto geral é mais importante que detalhes exatos
+- **Prototipagem e desenvolvimento** quando se deseja execução robusta
+
+```python Code
+# Ideal para processamento de documentos
+document_processor = Agent(
+    role="Document Analyst",
+    goal="Extract insights from large research papers",
+    backstory="Expert at analyzing extensive documentation",
+    respect_context_window=True,  # Lida com documentos grandes sem problemas
+    max_iter=50,  # Permite mais iterações para análises complexas
+    verbose=True
+)
+```
+
+#### Use `respect_context_window=False` quando:
+- **Precisão é crítica** e perda de informação é inaceitável
+- **Tarefas jurídicas ou médicas** que requerem contexto completo
+- **Revisão de código** onde detalhes perdidos podem causar bugs
+- **Análise financeira** onde precisão é fundamental
+
+```python Code
+# Ideal para tarefas de precisão
+precision_agent = Agent(
+    role="Code Security Auditor",
+    goal="Identify security vulnerabilities in code",
+    backstory="Security expert requiring complete code context",
+    respect_context_window=False,  # Prefere falhar do que análise incompleta
+    max_retry_limit=1,  # Falha rápida em caso de problemas de contexto
+    verbose=True
+)
+```
+
+### Abordagens Alternativas para Grandes Volumes de Dados
+
+Ao lidar com conjuntos de dados muito grandes, considere as seguintes estratégias:
+
+#### 1. Use Ferramentas RAG
+```python Code
+from crewai_tools import RagTool
+
+# Crie uma ferramenta RAG para processamento de documentos grandes
+rag_tool = RagTool()
+
+rag_agent = Agent(
+    role="Research Assistant",
+    goal="Query large knowledge bases efficiently",
+    backstory="Expert at using RAG tools for information retrieval",
+    tools=[rag_tool],  # Usar RAG ao invés de grandes janelas de contexto
+    respect_context_window=True,
+    verbose=True
+)
+```
+
+#### 2. Use Fontes de Conhecimento
+```python Code
+# Use fontes de conhecimento ao invés de prompts grandes
+knowledge_agent = Agent(
+    role="Knowledge Expert",
+    goal="Answer questions using curated knowledge",
+    backstory="Expert at leveraging structured knowledge sources",
+    knowledge_sources=[your_knowledge_sources],  # Conhecimento pré-processado
+    respect_context_window=True,
+    verbose=True
+)
+```
+
+### Boas Práticas para Janela de Contexto
+
+1. **Monitore o uso de contexto**: Ative `verbose=True` para visualizar o gerenciamento de contexto em ação
+2. **Otimize para eficiência**: Estruture tarefas para minimizar o acúmulo de contexto
+3. **Use modelos apropriados**: Escolha LLMs com janelas de contexto adequadas à sua tarefa
+4. **Teste ambos os modos**: Experimente `True` e `False` para descobrir o que funciona melhor para seu caso
+5. **Combine com RAG**: Utilize ferramentas RAG para grandes conjuntos de dados ao invés de depender apenas da janela de contexto
+
+### Solucionando Problemas de Contexto
+
+**Se você receber erros de limite de contexto:**
+```python Code
+# Solução rápida: Habilite manipulação automática
+agent.respect_context_window = True
+
+# Solução melhor: Use ferramentas RAG para dados volumosos
+from crewai_tools import RagTool
+agent.tools = [RagTool()]
+
+# Alternativa: Divida as tarefas em partes menores
+# Ou use fontes de conhecimento no lugar de prompts extensos
+```
+
+**Se o resumo automático perder informações importantes:**
+```python Code
+# Desative o resumo automático e use RAG
+agent = Agent(
+    role="Detailed Analyst",
+    goal="Maintain complete information accuracy",
+    backstory="Expert requiring full context",
+    respect_context_window=False,  # Sem resumo automático
+    tools=[RagTool()],  # Use RAG para grandes volumes de dados
+    verbose=True
+)
+```
+
+<Note>
+O recurso de gerenciamento da janela de contexto funciona automaticamente em segundo plano. Você não precisa chamar funções especiais – basta definir `respect_context_window` conforme deseja e o CrewAI cuida do resto!
+</Note>
+
+## Considerações e Boas Práticas Importantes
+
+### Segurança e Execução de Código
+- Ao usar `allow_code_execution`, seja cauteloso com entradas do usuário e sempre as valide
+- Use `code_execution_mode: "safe"` (Docker) em ambientes de produção
+- Considere definir limites adequados de `max_execution_time` para evitar loops infinitos
+
+### Otimização de Performance
+- Use `respect_context_window: true` para evitar problemas com limite de tokens
+- Ajuste `max_rpm` para evitar rate limiting
+- Ative `cache: true` para melhorar performance em tarefas repetitivas
+- Ajuste `max_iter` e `max_retry_limit` conforme a complexidade da tarefa
+
+### Gerenciamento de Memória e Contexto
+- Considere `knowledge_sources` para informações específicas de domínio
+- Configure `embedder` ao usar modelos de embedding personalizados
+- Use templates personalizados (`system_template`, `prompt_template`, `response_template`) para controle fino do comportamento do agente
+
+### Funcionalidades Avançadas
+- Ative `reasoning: true` para agentes que precisam planejar e refletir antes de tarefas complexas
+- Defina `max_reasoning_attempts` para controlar as iterações de planejamento (`None` para ilimitadas)
+- Use `inject_date: true` para dar consciência temporal a agentes em tarefas que dependem de datas
+- Personalize o formato de data com `date_format` usando códigos padrões do Python datetime
+- Ative `multimodal: true` para agentes que precisam processar texto e imagem
+
+### Colaboração entre Agentes
+- Ative `allow_delegation: true` quando agentes precisarem trabalhar juntos
+- Use `step_callback` para monitorar e registrar interações dos agentes
+- Considere usar LLMs diferentes para propósitos distintos:
+  - `llm` principal para raciocínio complexo
+  - `function_calling_llm` para uso eficiente de ferramentas
+
+### Consciência de Data e Raciocínio
+- Use `inject_date: true` para fornecer consciência temporal aos agentes em tarefas sensíveis ao tempo
+- Customize o formato de data com `date_format` usando códigos standards de datetime do Python
+- Códigos válidos incluem: %Y (ano), %m (mês), %d (dia), %B (nome completo do mês), etc.
+- Formatos de data inválidos serão registrados como avisos e não modificarão a descrição da tarefa
+- Ative `reasoning: true` para tarefas complexas que se beneficiam de planejamento e reflexão antecipados
+
+### Compatibilidade de Modelos
+- Defina `use_system_prompt: false` para modelos antigos que não suportam mensagens de sistema
+- Certifique-se que o `llm` escolhido suporta as funcionalidades necessárias (como function calling)
+
+## Solução de Problemas Comuns
+
+1. **Limite de Taxa (Rate Limiting)**: Se atingir limites de API:
+   - Implemente o `max_rpm` adequado
+   - Use cache para operações repetitivas
+   - Considere agrupar requisições em lote
+
+2. **Erros de Janela de Contexto**: Se exceder limites de contexto:
+   - Habilite `respect_context_window`
+   - Otimize seus prompts
+   - Limpe periodicamente a memória do agente
+
+3. **Problemas de Execução de Código**: Se a execução de código falhar:
+   - Verifique se o Docker está instalado para o modo seguro
+   - Cheque permissões de execução
+   - Revise as configurações do sandbox de código
+
+4. **Problemas de Memória**: Se as respostas do agente parecerem inconsistentes:
+   - Cheque a configuração das fontes de conhecimento
+   - Analise o gerenciamento do histórico de conversas
+
+Lembre-se de que agentes são mais eficientes quando configurados de acordo com o caso de uso específico. Reserve um tempo para entender seus requisitos e ajustar esses parâmetros conforme necessário.

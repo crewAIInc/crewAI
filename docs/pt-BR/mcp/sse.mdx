@@ -1,0 +1,150 @@
+---
+title: Transporte SSE
+description: Saiba como conectar o CrewAI a servidores MCP remotos usando Server-Sent Events (SSE) para comunicação em tempo real.
+icon: wifi
+---
+
+## Visão Geral
+
+Server-Sent Events (SSE) fornecem uma forma padrão para um servidor web enviar atualizações a um cliente através de uma única conexão HTTP de longa duração. No contexto do MCP, SSE é utilizado para que servidores remotos transmitam dados (como respostas de ferramentas) para sua aplicação CrewAI em tempo real.
+
+## Conceitos-Chave
+
+- **Servidores Remotos**: SSE é adequado para servidores MCP hospedados remotamente.
+- **Fluxo Unidirecional**: Normalmente, SSE é um canal de comunicação de mão única, do servidor para o cliente.
+- **Configuração do `MCPServerAdapter`**: Para SSE, você fornecerá a URL do servidor e especificará o tipo de transporte.
+
+## Conectando via SSE
+
+Você pode se conectar a um servidor MCP baseado em SSE usando duas abordagens principais para gerenciar o ciclo de vida da conexão:
+
+### 1. Conexão Totalmente Gerenciada (Recomendado)
+
+Utilizar um gerenciador de contexto Python (`with` statement) é a abordagem recomendada. Ele lida automaticamente com o estabelecimento e o encerramento da conexão com o servidor MCP SSE.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8000/sse", # Replace with your actual SSE server URL
+    "transport": "sse" 
+}
+
+# Using MCPServerAdapter with a context manager
+try:
+    with MCPServerAdapter(server_params) as tools:
+        print(f"Available tools from SSE MCP server: {[tool.name for tool in tools]}")
+
+        # Example: Using a tool from the SSE MCP server
+        agente_sse = Agent(
+            role="Usuário de Serviço Remoto",
+            goal="Utilizar uma ferramenta fornecida por um servidor MCP remoto via SSE.",
+            backstory="Um agente de IA que conecta a serviços externos via SSE.",
+            tools=tools,
+            reasoning=True,
+            verbose=True,
+        )
+
+        sse_task = Task(
+            description="Buscar atualizações em tempo real das ações 'AAPL' usando uma ferramenta SSE.",
+            expected_output="O preço mais recente da ação AAPL.",
+            agent=agente_sse,
+            markdown=True
+        )
+
+        sse_crew = Crew(
+            agents=[agente_sse],
+            tasks=[sse_task],
+            verbose=True,
+            process=Process.sequential
+        )
+        
+        if tools: # Only kickoff if tools were loaded
+            result = sse_crew.kickoff() # Add inputs={'stock_symbol': 'AAPL'} if tool requires it
+            print("\nCrew Task Result (SSE - Managed):\n", result)
+        else:
+            print("Skipping crew kickoff as tools were not loaded (check server connection).")
+
+except Exception as e:
+    print(f"Error connecting to or using SSE MCP server (Managed): {e}")
+    print("Ensure the SSE MCP server is running and accessible at the specified URL.")
+
+```
+
+<Note>
+Substitua `"http://localhost:8000/sse"` pela URL real do seu servidor MCP SSE.
+</Note>
+
+### 2. Ciclo de Vida Manual da Conexão
+
+Caso precise de um controle mais detalhado, você pode gerenciar manualmente o ciclo de vida da conexão do `MCPServerAdapter`.
+
+<Info>
+Você **DEVE** chamar `mcp_server_adapter.stop()` para garantir que a conexão seja encerrada e os recursos liberados. O uso de um bloco `try...finally` é altamente recomendado.
+</Info>
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8000/sse", # Replace with your actual SSE server URL
+    "transport": "sse"
+}
+
+mcp_server_adapter = None 
+try:
+    mcp_server_adapter = MCPServerAdapter(server_params)
+    mcp_server_adapter.start()
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual SSE): {[tool.name for tool in tools]}")
+
+    manual_sse_agent = Agent(
+        role="Analista Remoto de Dados",
+        goal="Analisar dados obtidos de um servidor MCP remoto SSE usando gerenciamento manual de conexão.",
+        backstory="Um agente de IA especializado em gerenciar conexões SSE explicitamente.",
+        tools=tools,
+        verbose=True
+    )
+    
+    analysis_task = Task(
+        description="Buscar e analisar as tendências mais recentes de atividade de usuários do servidor SSE.",
+        expected_output="Um relatório resumido das tendências de atividade dos usuários.",
+        agent=manual_sse_agent
+    )
+    
+    analysis_crew = Crew(
+        agents=[manual_sse_agent],
+        tasks=[analysis_task],
+        verbose=True,
+        process=Process.sequential
+    )
+    
+    result = analysis_crew.kickoff()
+    print("\nCrew Task Result (SSE - Manual):\n", result)
+
+except Exception as e:
+    print(f"An error occurred during manual SSE MCP integration: {e}")
+    print("Ensure the SSE MCP server is running and accessible.")
+finally:
+    if mcp_server_adapter and mcp_server_adapter.is_connected:
+        print("Stopping SSE MCP server connection (manual)...")
+        mcp_server_adapter.stop()  # **Crucial: Ensure stop is called**
+    elif mcp_server_adapter:
+        print("SSE MCP server adapter was not connected. No stop needed or start failed.")
+
+```
+
+## Considerações de Segurança para SSE
+
+<Warning>
+**Ataques de DNS Rebinding**: Transportes SSE podem ser vulneráveis a ataques de DNS rebinding se o servidor MCP não estiver devidamente protegido. Isso pode permitir que sites maliciosos interajam com servidores MCP locais ou da intranet.
+</Warning>
+
+Para mitigar esse risco:
+- As implementações do servidor MCP devem **validar os cabeçalhos `Origin`** em conexões SSE recebidas.
+- Ao rodar servidores MCP SSE locais para desenvolvimento, **faça o bind apenas em `localhost` (`127.0.0.1`)** ao invés de todas as interfaces de rede (`0.0.0.0`).
+- Implemente **autenticação adequada** para todas as conexões SSE caso exponham ferramentas ou dados sensíveis.
+
+Para uma visão abrangente das melhores práticas de segurança, consulte nossa página de [Considerações de Segurança](./security.mdx) e a documentação oficial [MCP Transport Security](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations).

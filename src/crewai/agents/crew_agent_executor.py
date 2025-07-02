@@ -1,5 +1,3 @@
-import json
-import re
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -27,12 +25,16 @@ from crewai.utilities.agent_utils import (
     has_reached_max_iterations,
     is_context_length_exceeded,
     process_llm_response,
-    show_agent_logs,
 )
 from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
 from crewai.utilities.logger import Logger
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.events.agent_events import (
+    AgentLogsStartedEvent,
+    AgentLogsExecutionEvent,
+)
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -157,6 +159,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     messages=self.messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
+                    from_task=self.task
                 )
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
@@ -265,26 +268,32 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """Show logs for the start of agent execution."""
         if self.agent is None:
             raise ValueError("Agent cannot be None")
-        show_agent_logs(
-            printer=self._printer,
-            agent_role=self.agent.role,
-            task_description=(
-                getattr(self.task, "description") if self.task else "Not Found"
+
+        crewai_event_bus.emit(
+            self.agent,
+            AgentLogsStartedEvent(
+                agent_role=self.agent.role,
+                task_description=(
+                    getattr(self.task, "description") if self.task else "Not Found"
+                ),
+                verbose=self.agent.verbose
+                or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
             ),
-            verbose=self.agent.verbose
-            or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
         )
 
     def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
         """Show logs for the agent's execution."""
         if self.agent is None:
             raise ValueError("Agent cannot be None")
-        show_agent_logs(
-            printer=self._printer,
-            agent_role=self.agent.role,
-            formatted_answer=formatted_answer,
-            verbose=self.agent.verbose
-            or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
+
+        crewai_event_bus.emit(
+            self.agent,
+            AgentLogsExecutionEvent(
+                agent_role=self.agent.role,
+                formatted_answer=formatted_answer,
+                verbose=self.agent.verbose
+                or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
+            ),
         )
 
     def _summarize_messages(self) -> None:

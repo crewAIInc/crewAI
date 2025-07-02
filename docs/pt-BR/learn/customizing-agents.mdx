@@ -1,0 +1,106 @@
+---
+title: Personalize Agentes
+description: Um guia abrangente para adaptar agentes a funções específicas, tarefas e customizações avançadas dentro do framework CrewAI.
+icon: user-pen
+---
+
+## Atributos Personalizáveis
+
+A construção de uma equipe CrewAI eficiente depende da capacidade de adaptar dinamicamente seus agentes de IA para atender aos requisitos únicos de qualquer projeto. Esta seção aborda os atributos fundamentais que você pode personalizar.
+
+### Principais Atributos para Personalização
+
+| Atributo                | Descrição                                                                                                                                                   |
+|:------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Role**                | Especifica a função do agente dentro da equipe, como 'Analista' ou 'Representante de Atendimento ao Cliente'.                                               |
+| **Goal**                | Define os objetivos do agente, alinhados à sua função e à missão geral da equipe.                                                                           |
+| **Backstory**           | Fornece profundidade à persona do agente, aprimorando motivações e engajamento dentro da equipe.                                                           |
+| **Tools** *(Opcional)*         | Representa as capacidades ou métodos que o agente utiliza para tarefas, desde funções simples até integrações complexas.                                      |
+| **Cache** *(Opcional)*          | Determina se o agente deve usar cache para o uso de ferramentas.                                                                                     |
+| **Max RPM**             | Define o número máximo de requisições por minuto (`max_rpm`). Pode ser definido como `None` para requisições ilimitadas a serviços externos.                |
+| **Verbose** *(Opcional)*        | Ativa registros detalhados para depuração e otimização, fornecendo insights sobre os processos de execução.                                             |
+| **Allow Delegation** *(Opcional)* | Controla a delegação de tarefas para outros agentes, padrão é `False`.                                                                                |
+| **Max Iter** *(Opcional)*       | Limita o número máximo de iterações (`max_iter`) para uma tarefa, prevenindo loops infinitos, com valor padrão de 25.                                 |
+| **Max Execution Time** *(Opcional)* | Define o tempo máximo permitido para que o agente complete uma tarefa.                                                                           |
+| **System Template** *(Opcional)*   | Define o formato do sistema para o agente.                                                                                                       |
+| **Prompt Template** *(Opcional)*   | Define o formato do prompt para o agente.                                                                                                        |
+| **Response Template** *(Opcional)* | Define o formato da resposta para o agente.                                                                                                      |
+| **Use System Prompt** *(Opcional)* | Controla se o agente irá usar um prompt de sistema durante a execução de tarefas.                                                                 |
+| **Respect Context Window**         | Ativa uma janela deslizante de contexto por padrão, mantendo o tamanho do contexto.                                                               |
+| **Max Retry Limit**                | Define o número máximo de tentativas (`max_retry_limit`) para um agente em caso de erros.                                                         |
+
+## Opções Avançadas de Personalização
+
+Além dos atributos básicos, o CrewAI permite customizações mais profundas para aprimorar significativamente o comportamento e as capacidades de um agente.
+
+### Personalização de Modelo de Linguagem
+
+Agentes podem ser personalizados com modelos de linguagem específicos (`llm`) e modelos de linguagem com chamada de função (`function_calling_llm`), oferecendo controle avançado sobre o processamento e a tomada de decisão. 
+É importante notar que definir o `function_calling_llm` permite sobrescrever o modelo padrão de chamada de função da equipe, proporcionando maior grau de personalização.
+
+## Ajustes de Performance e Depuração
+
+Ajustar a performance do agente e monitorar suas operações é fundamental para a execução eficiente de tarefas.
+
+### Modo Verbose e Limite de RPM
+
+- **Modo Verbose**: Ativa o registro detalhado das ações do agente, útil para depuração e otimização. Especificamente, fornece insights sobre os processos de execução do agente, auxiliando na otimização de performance.
+- **Limite de RPM**: Define o número máximo de requisições por minuto (`max_rpm`). Este atributo é opcional e pode ser definido como `None` para não haver limite, permitindo consultas ilimitadas a serviços externos, se necessário.
+
+### Máximo de Iterações por Execução de Tarefa
+
+O atributo `max_iter` permite ao usuário definir o número máximo de iterações que um agente pode executar para uma única tarefa, prevenindo loops infinitos ou execuções excessivamente longas. 
+O valor padrão é 25, fornecendo um equilíbrio entre profundidade e eficiência. Quando o agente chega próximo a esse número, ele tentará entregar a melhor resposta possível.
+
+## Personalizando Agentes e Ferramentas
+
+Agentes são personalizados definindo seus atributos e ferramentas durante a inicialização. As ferramentas são críticas para a funcionalidade do agente, permitindo que realizem tarefas especializadas. 
+O atributo `tools` deve ser um array de ferramentas que o agente pode utilizar, e, por padrão, é inicializado como uma lista vazia. As ferramentas podem ser adicionadas ou modificadas após a criação do agente para se adaptar a novos requisitos.
+
+```shell
+pip install 'crewai[tools]'
+```
+
+### Exemplo: Atribuindo Ferramentas a um Agente
+
+```python Code
+import os
+from crewai import Agent
+from crewai_tools import SerperDevTool
+
+# Defina as chaves de API para inicialização da ferramenta
+os.environ["OPENAI_API_KEY"] = "Sua Chave"
+os.environ["SERPER_API_KEY"] = "Sua Chave"
+
+# Inicialize uma ferramenta de busca
+search_tool = SerperDevTool()
+
+# Inicialize o agente com opções avançadas
+agent = Agent(
+  role='Analista de Pesquisa',
+  goal='Fornecer análises de mercado atualizadas',
+  backstory='Um analista especialista com olhar atento para tendências de mercado.',
+  tools=[search_tool],
+  memory=True, # Ativa memória
+  verbose=True,
+  max_rpm=None, # Sem limite de requisições por minuto
+  max_iter=25, # Valor padrão de máximo de iterações
+)
+```
+
+## Delegação e Autonomia
+
+Controlar a capacidade de um agente delegar tarefas ou fazer perguntas é fundamental para ajustar sua autonomia e a dinâmica de colaboração dentro do framework CrewAI. Por padrão, 
+o atributo `allow_delegation` agora é definido como `False`, desabilitando para que agentes busquem assistência ou deleguem tarefas conforme necessário. Esse comportamento padrão pode ser alterado para promover resolução colaborativa de problemas e 
+eficiência dentro do ecossistema CrewAI. Se necessário, a delegação pode ser ativada para atender requisitos operacionais específicos.
+
+### Exemplo: Desabilitando Delegação para um Agente
+
+```python Code
+agent = Agent(
+  role='Redator de Conteúdo',
+  goal='Escrever conteúdo envolvente sobre tendências de mercado',
+  backstory='Um redator experiente com expertise em análise de mercado.',
+  allow_delegation=True # Habilitando delegação
+)
+```

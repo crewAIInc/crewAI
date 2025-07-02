@@ -1,5 +1,12 @@
-from unittest.mock import MagicMock, patch
-
+from unittest.mock import MagicMock, patch, ANY
+from collections import defaultdict
+from crewai.utilities.events import crewai_event_bus
+from crewai.utilities.events.memory_events import (
+    MemorySaveStartedEvent,
+    MemorySaveCompletedEvent,
+    MemoryQueryStartedEvent,
+    MemoryQueryCompletedEvent,
+)
 import pytest
 from mem0.memory.main import Memory
 
@@ -9,7 +16,6 @@ from crewai.memory.external.external_memory import ExternalMemory
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.storage.interface import Storage
 from crewai.task import Task
-
 
 @pytest.fixture
 def mock_mem0_memory():
@@ -188,7 +194,8 @@ def test_crew_external_memory_save_using_crew_without_memory_flag(
         assert mock_method.call_count > 0
 
 
-def test_external_memory_custom_storage(crew_with_external_memory):
+@pytest.fixture
+def custom_storage():
     class CustomStorage(Storage):
         def __init__(self):
             self.memories = []
@@ -203,6 +210,9 @@ def test_external_memory_custom_storage(crew_with_external_memory):
             self.memories = []
 
     custom_storage = CustomStorage()
+    return custom_storage
+
+def test_external_memory_custom_storage(custom_storage, crew_with_external_memory):
     external_memory = ExternalMemory(storage=custom_storage)
 
     # by ensuring the crew is set, we can test that the storage is used
@@ -221,3 +231,101 @@ def test_external_memory_custom_storage(crew_with_external_memory):
     external_memory.reset()
     results = external_memory.search("test")
     assert len(results) == 0
+
+
+
+def test_external_memory_search_events(custom_storage, external_memory_with_mocked_config):
+    events = defaultdict(list)
+
+    external_memory_with_mocked_config.storage = custom_storage
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(MemoryQueryStartedEvent)
+        def on_search_started(source, event):
+            events["MemoryQueryStartedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def on_search_completed(source, event):
+            events["MemoryQueryCompletedEvent"].append(event)
+
+        external_memory_with_mocked_config.search(
+            query="test value",
+            limit=3,
+            score_threshold=0.35,
+        )
+
+    assert len(events["MemoryQueryStartedEvent"]) == 1
+    assert len(events["MemoryQueryCompletedEvent"]) == 1
+    assert len(events["MemoryQueryFailedEvent"]) == 0
+
+    assert dict(events["MemoryQueryStartedEvent"][0]) == {
+        'timestamp': ANY,
+        'type': 'memory_query_started',
+        'source_fingerprint': None,
+        'source_type': 'external_memory',
+        'fingerprint_metadata': None,
+        'query': 'test value',
+        'limit': 3,
+        'score_threshold': 0.35
+    }
+
+    assert dict(events["MemoryQueryCompletedEvent"][0]) == {
+        'timestamp': ANY,
+        'type': 'memory_query_completed',
+        'source_fingerprint': None,
+        'source_type': 'external_memory',
+        'fingerprint_metadata': None,
+        'query': 'test value',
+        'results': [],
+        'limit': 3,
+        'score_threshold': 0.35,
+        'query_time_ms': ANY
+    }
+
+
+
+def test_external_memory_save_events(custom_storage, external_memory_with_mocked_config):
+    events = defaultdict(list)
+
+    external_memory_with_mocked_config.storage = custom_storage
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(MemorySaveStartedEvent)
+        def on_save_started(source, event):
+            events["MemorySaveStartedEvent"].append(event)
+
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def on_save_completed(source, event):
+            events["MemorySaveCompletedEvent"].append(event)
+
+        external_memory_with_mocked_config.save(
+            value="saving value",
+            metadata={"task": "test_task"},
+            agent="test_agent",
+        )
+
+    assert len(events["MemorySaveStartedEvent"]) == 1
+    assert len(events["MemorySaveCompletedEvent"]) == 1
+    assert len(events["MemorySaveFailedEvent"]) == 0
+
+    assert dict(events["MemorySaveStartedEvent"][0]) == {
+        'timestamp': ANY,
+        'type': 'memory_save_started',
+        'source_fingerprint': None,
+        'source_type': 'external_memory',
+        'fingerprint_metadata': None,
+        'value': 'saving value',
+        'metadata': {'task': 'test_task'},
+        'agent_role': "test_agent"
+    }
+
+    assert dict(events["MemorySaveCompletedEvent"][0]) == {
+        'timestamp': ANY,
+        'type': 'memory_save_completed',
+        'source_fingerprint': None,
+        'source_type': 'external_memory',
+        'fingerprint_metadata': None,
+        'value': 'saving value',
+        'metadata': {'task': 'test_task', 'agent': 'test_agent'},
+        'agent_role': "test_agent",
+        'save_time_ms': ANY
+    }

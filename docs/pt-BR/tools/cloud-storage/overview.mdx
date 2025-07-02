@@ -1,0 +1,51 @@
+---
+title: "Visão Geral"
+description: "Interaja com serviços em nuvem, sistemas de armazenamento e plataformas de IA baseadas em nuvem"
+icon: "face-smile"
+---
+
+Essas ferramentas permitem que seus agentes interajam com serviços em nuvem, acessem o armazenamento em nuvem e aproveitem plataformas de IA baseadas em nuvem para operações em escala.
+
+## **Ferramentas Disponíveis**
+
+<CardGroup cols={2}>
+  <Card title="S3 Reader Tool" icon="cloud" href="/pt-BR/tools/cloud-storage/s3readertool">
+    Leia arquivos e dados de buckets Amazon S3.
+  </Card>
+
+  <Card title="S3 Writer Tool" icon="cloud-arrow-up" href="/pt-BR/tools/cloud-storage/s3writertool">
+    Escreva e faça upload de arquivos para o armazenamento Amazon S3.
+  </Card>
+
+  <Card title="Bedrock Invoke Agent" icon="aws" href="/pt-BR/tools/cloud-storage/bedrockinvokeagenttool">
+    Acione agentes Amazon Bedrock para tarefas orientadas por IA.
+  </Card>
+
+  <Card title="Bedrock KB Retriever" icon="database" href="/pt-BR/tools/cloud-storage/bedrockkbretriever">
+    Recupere informações das bases de conhecimento Amazon Bedrock.
+  </Card>
+</CardGroup>
+
+## **Casos de Uso Comuns**
+
+- **Armazenamento de Arquivos**: Armazene e recupere arquivos de sistemas de armazenamento em nuvem
+- **Backup de Dados**: Faça backup de dados importantes no armazenamento em nuvem
+- **Serviços de IA**: Acesse modelos e serviços de IA baseados em nuvem
+- **Recuperação de Conhecimento**: Consulte bases de conhecimento hospedadas na nuvem
+- **Operações Escaláveis**: Aproveite a infraestrutura de nuvem para processamento
+
+```python
+from crewai_tools import S3ReaderTool, S3WriterTool, BedrockInvokeAgentTool
+
+# Create cloud tools
+s3_reader = S3ReaderTool()
+s3_writer = S3WriterTool()
+bedrock_agent = BedrockInvokeAgentTool()
+
+# Add to your agent
+agent = Agent(
+    role="Cloud Operations Specialist",
+    tools=[s3_reader, s3_writer, bedrock_agent],
+    goal="Manage cloud resources and AI services"
+)
+```
