@@ -198,7 +198,7 @@ class AuthenticationCommand:
         )
 
         if response.status_code == 200:
-            if response.json()["provider"] == "auth0":
+            if response.json().get("provider") == "auth0":
                 return "auth0"
             else:
                 return "workos"
