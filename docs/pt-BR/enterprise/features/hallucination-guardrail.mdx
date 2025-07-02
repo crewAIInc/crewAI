@@ -26,13 +26,13 @@ from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
 from crewai import LLM
 
 # Uso básico - utiliza o expected_output da tarefa como contexto
-guardrail = HallucinationGuardrail(
+protecao = HallucinationGuardrail(
     llm=LLM(model="gpt-4o-mini")
 )
 
 # Com contexto de referência explícito
-context_guardrail = HallucinationGuardrail(
-    context="AI helps with various tasks including analysis and generation.",
+protecao_com_contexto = HallucinationGuardrail(
+    context="IA ajuda em várias tarefas, incluindo análise e geração.",
     llm=LLM(model="gpt-4o-mini")
 )
 ```
@@ -43,11 +43,11 @@ context_guardrail = HallucinationGuardrail(
 from crewai import Task
 
 # Crie sua tarefa com a proteção
-task = Task(
-    description="Write a summary about AI capabilities",
-    expected_output="A factual summary based on the provided context",
-    agent=my_agent,
-    guardrail=guardrail  # Adiciona a proteção para validar a saída
+minha_tarefa = Task(
+    description="Escreva um resumo sobre as capacidades da IA",
+    expected_output="Um resumo factual baseado no contexto fornecido",
+    agent=meu_agente,
+    guardrail=protecao  # Adiciona a proteção para validar a saída
 )
 ```
 
@@ -59,8 +59,8 @@ Para validação mais rigorosa, é possível definir um limiar de fidelidade per
 
 ```python
 # Proteção rigorosa exigindo alta pontuação de fidelidade
-strict_guardrail = HallucinationGuardrail(
-    context="Quantum computing uses qubits that exist in superposition states.",
+protecao_rigorosa = HallucinationGuardrail(
+    context="Computação quântica utiliza qubits que existem em estados de superposição.",
     llm=LLM(model="gpt-4o-mini"),
     threshold=8.0  # Requer pontuação >= 8 para validar
 )
@@ -72,10 +72,10 @@ Se sua tarefa utiliza ferramentas, você pode incluir as respostas das ferrament
 
 ```python
 # Proteção com contexto de resposta da ferramenta
-weather_guardrail = HallucinationGuardrail(
-    context="Current weather information for the requested location",
+protecao_clima = HallucinationGuardrail(
+    context="Informações meteorológicas atuais para o local solicitado",
     llm=LLM(model="gpt-4o-mini"),
-    tool_response="Weather API returned: Temperature 22°C, Humidity 65%, Clear skies"
+    tool_response="API do Clima retornou: Temperatura 22°C, Umidade 65%, Céu limpo"
 )
 ```
 
@@ -123,15 +123,15 @@ Quando uma proteção é adicionada à tarefa, ela valida automaticamente a saí
 
 ```python
 # Fluxo de validação de saída da tarefa
-task_output = agent.execute_task(task)
-validation_result = guardrail(task_output)
+task_output = meu_agente.execute_task(minha_tarefa)
+resultado_validacao = protecao(task_output)
 
-if validation_result.valid:
+if resultado_validacao.valid:
     # Tarefa concluída com sucesso
     return task_output
 else:
     # Tarefa falha com feedback de validação
-    raise ValidationError(validation_result.feedback)
+    raise ValidationError(resultado_validacao.feedback)
 ```
 
 ### Rastreamento de Eventos
@@ -151,10 +151,10 @@ A proteção se integra ao sistema de eventos do CrewAI para fornecer observabil
     Inclua todas as informações factuais relevantes nas quais a IA deve basear sua saída:
 
     ```python
-    context = """
-    Company XYZ was founded in 2020 and specializes in renewable energy solutions.
-    They have 150 employees and generated $50M revenue in 2023.
-    Their main products include solar panels and wind turbines.
+    contexto = """
+    Empresa XYZ foi fundada em 2020 e é especializada em soluções de energia renovável.
+    Possui 150 funcionários e faturou R$ 50 milhões em 2023.
+    Seus principais produtos incluem painéis solares e turbinas eólicas.
     """
     ```
   </Step>
@@ -164,10 +164,10 @@ A proteção se integra ao sistema de eventos do CrewAI para fornecer observabil
 
     ```python
     # Bom: Contexto focado
-    context = "The current weather in New York is 18°C with light rain."
+    contexto = "O clima atual em Nova York é 18°C com chuva leve."
 
     # Evite: Informações irrelevantes
-    context = "The weather is 18°C. The city has 8 million people. Traffic is heavy."
+    contexto = "The weather is 18°C. The city has 8 million people. Traffic is heavy."
     ```
   </Step>
 

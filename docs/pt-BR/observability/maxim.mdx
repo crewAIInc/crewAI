@@ -73,26 +73,24 @@ instrument_crewai(logger)
 ### 4. Crie e execute sua aplicação CrewAI normalmente
 
 ```python
-
-# Crie seu agente
-researcher = Agent(
-    role='Senior Research Analyst',
-    goal='Uncover cutting-edge developments in AI',
-    backstory="You are an expert researcher at a tech think tank...",
+pesquisador = Agent(
+    role='Pesquisador Sênior',
+    goal='Descobrir os avanços mais recentes em IA',
+    backstory="Você é um pesquisador especialista em um think tank de tecnologia...",
     verbose=True,
     llm=llm
 )
 
 # Defina a tarefa
 research_task = Task(
-    description="Research the latest AI advancements...",
+    description="Pesquise os avanços mais recentes em IA...",
     expected_output="",
-    agent=researcher
+    agent=pesquisador
 )
 
 # Configure e execute a crew
 crew = Crew(
-    agents=[researcher],
+    agents=[pesquisador],
     tasks=[research_task],
     verbose=True
 )
