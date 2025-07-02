@@ -33,7 +33,7 @@ dependencies = [
     "click>=8.1.7",
     "appdirs>=1.4.4",
     "jsonref>=1.1.0",
-    "json-repair>=0.25.2",
+    "json-repair==0.25.2",
     "uv>=0.4.25",
     "tomli-w>=1.1.0",
     "tomli>=2.0.2",

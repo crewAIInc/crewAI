@@ -771,7 +771,7 @@ requires-dist = [
     { name = "crewai-tools", marker = "extra == 'tools'", specifier = "~=0.49.0" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.12.0" },
     { name = "instructor", specifier = ">=1.3.3" },
-    { name = "json-repair", specifier = ">=0.25.2" },
+    { name = "json-repair", specifier = "==0.25.2" },
     { name = "json5", specifier = ">=0.10.0" },
     { name = "jsonref", specifier = ">=1.1.0" },
     { name = "litellm", specifier = "==1.72.6" },
@@ -1962,11 +1962,11 @@ wheels = [
 
 [[package]]
 name = "json-repair"
-version = "0.47.6"
+version = "0.25.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ae/9e/e8bcda4fd47b16fcd4f545af258d56ba337fa43b847beb213818d7641515/json_repair-0.47.6.tar.gz", hash = "sha256:4af5a14b9291d4d005a11537bae5a6b7912376d7584795f0ac1b23724b999620", size = 34400, upload-time = "2025-07-01T15:42:07.458Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/cb/50b0bbc3e504ef875aea0062cdc108077e4923fb8c1209c70c80dc043933/json_repair-0.25.2.tar.gz", hash = "sha256:161a56d7e6bbfd4cad3a614087e3e0dbd0e10d402dd20dc7db418432428cb32b", size = 20458, upload-time = "2024-06-27T16:26:15.492Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/f8/f464ce2afc4be5decf53d0171c2d399d9ee6cd70d2273b8e85e7c6d00324/json_repair-0.47.6-py3-none-any.whl", hash = "sha256:1c9da58fb6240f99b8405f63534e08f8402793f09074dea25800a0b232d4fb19", size = 25754, upload-time = "2025-07-01T15:42:06.418Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/43/ac6691c7b5aa7191c964a04ae926d2bb06d9297dba1f2287df5b85cb3715/json_repair-0.25.2-py3-none-any.whl", hash = "sha256:51d67295c3184b6c41a3572689661c6128cef6cfc9fb04db63130709adfc5bf0", size = 12740, upload-time = "2024-06-27T16:26:13.823Z" },
 ]
 
 [[package]]
