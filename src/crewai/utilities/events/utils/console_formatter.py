@@ -1454,3 +1454,250 @@ class ConsoleFormatter:
             )
             self.print(finish_panel)
             self.print()
+
+    def handle_memory_retrieval_started(
+        self,
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree],
+    ) -> Optional[Tree]:
+        if not self.verbose:
+            return None
+
+        branch_to_use = agent_branch or self.current_lite_agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None or tree_to_use is None:
+            if crew_tree is not None:
+                branch_to_use = tree_to_use = crew_tree
+            else:
+                return None
+
+        memory_branch = branch_to_use.add("")
+        self.update_tree_label(
+            memory_branch, "🧠", "Memory Retrieval Started", "blue"
+        )
+
+        self.print(tree_to_use)
+        self.print()
+        return memory_branch
+
+    def handle_memory_retrieval_completed(
+        self,
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree],
+        memory_content: str,
+        retrieval_time_ms: float,
+    ) -> None:
+        if not self.verbose:
+            return None
+
+        branch_to_use = self.current_lite_agent_branch or agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None and tree_to_use is not None:
+            branch_to_use = tree_to_use
+
+        def add_panel():
+            memory_text = str(memory_content)
+            if len(memory_text) > 500:
+                memory_text = memory_text[:497] + "..."
+
+            memory_panel = Panel(
+                Text(memory_text, style="white"),
+                title="🧠 Retrieved Memory",
+                subtitle=f"Retrieval Time: {retrieval_time_ms:.2f}ms",
+                border_style="green",
+                padding=(1, 2),
+            )
+            self.print(memory_panel)
+            self.print()
+
+        if branch_to_use is None or tree_to_use is None:
+            add_panel()
+            return None
+
+        memory_branch_found = False
+        for child in branch_to_use.children:
+            if "Memory Retrieval Started" in str(child.label):
+                self.update_tree_label(
+                    child, "✅", "Memory Retrieval Completed", "green"
+                )
+                memory_branch_found = True
+                break
+
+        if not memory_branch_found:
+            for child in branch_to_use.children:
+                if (
+                    "Memory Retrieval" in str(child.label)
+                    and "Started" not in str(child.label)
+                    and "Completed" not in str(child.label)
+                ):
+                    self.update_tree_label(
+                        child, "✅", "Memory Retrieval Completed", "green"
+                    )
+                    memory_branch_found = True
+                    break
+
+        if not memory_branch_found:
+            memory_branch = branch_to_use.add("")
+            self.update_tree_label(
+                memory_branch, "✅", "Memory Retrieval Completed", "green"
+            )
+
+        self.print(tree_to_use)
+
+        if memory_content:
+            add_panel()
+
+
+    def handle_memory_query_completed(
+        self,
+        agent_branch: Optional[Tree],
+        source_type: str,
+        query_time_ms: float,
+        crew_tree: Optional[Tree],
+    ) -> None:
+        if not self.verbose:
+            return None
+
+        branch_to_use = self.current_lite_agent_branch or agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None and tree_to_use is not None:
+            branch_to_use = tree_to_use
+
+        if branch_to_use is None:
+            return None
+
+        memory_type = source_type.replace("_", " ").title()
+
+        for child in branch_to_use.children:
+            if "Memory Retrieval" in str(child.label):
+                for child in child.children:
+                    sources_branch = child
+                    if "Sources Used" in str(child.label):
+                        sources_branch.add(f"✅ {memory_type} ({query_time_ms:.2f}ms)")
+                        break
+                else:
+                    sources_branch = child.add("Sources Used")
+                    sources_branch.add(f"✅ {memory_type} ({query_time_ms:.2f}ms)")
+                    break
+
+    def handle_memory_query_failed(
+        self,
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree],
+        error: str,
+        source_type: str,
+    ) -> None:
+        if not self.verbose:
+            return None
+
+        branch_to_use = self.current_lite_agent_branch or agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None and tree_to_use is not None:
+            branch_to_use = tree_to_use
+
+        if branch_to_use is None:
+            return None
+
+        memory_type = source_type.replace("_", " ").title()
+
+        for child in branch_to_use.children:
+            if "Memory Retrieval" in str(child.label):
+                for child in child.children:
+                    sources_branch = child
+                    if "Sources Used" in str(child.label):
+                        sources_branch.add(f"❌ {memory_type} - Error: {error}")
+                        break
+                else:
+                    sources_branch = child.add("🧠 Sources Used")
+                    sources_branch.add(f"❌ {memory_type} - Error: {error}")
+                    break
+
+
+    def handle_memory_save_started(
+        self,
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree]
+    ) -> None:
+        if not self.verbose:
+            return None
+
+        branch_to_use = agent_branch or self.current_lite_agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if tree_to_use is None:
+            return None
+
+        for child in tree_to_use.children:
+            if "Memory Update" in str(child.label):
+               break
+        else:
+            memory_branch = tree_to_use.add("")
+            self.update_tree_label(
+                memory_branch, "🧠", "Memory Update Overall", "white"
+            )
+
+        self.print(tree_to_use)
+        self.print()
+
+    def handle_memory_save_completed(
+        self,
+        agent_branch: Optional[Tree],
+        crew_tree: Optional[Tree],
+        save_time_ms: float,
+        source_type: str,
+    ) -> None:
+        if not self.verbose:
+            return None
+
+        branch_to_use = agent_branch or self.current_lite_agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if tree_to_use is None:
+            return None
+
+        memory_type = source_type.replace("_", " ").title()
+        content = f"✅ {memory_type} Memory Saved ({save_time_ms:.2f}ms)"
+
+        for child in tree_to_use.children:
+            if "Memory Update" in str(child.label):
+                child.add(content)
+                break
+        else:
+            memory_branch = tree_to_use.add("")
+            memory_branch.add(content)
+
+        self.print(tree_to_use)
+        self.print()
+
+    def handle_memory_save_failed(
+        self,
+        agent_branch: Optional[Tree],
+        error: str,
+        source_type: str,
+        crew_tree: Optional[Tree],
+    ) -> None:
+        if not self.verbose:
+            return None
+
+        branch_to_use = agent_branch or self.current_lite_agent_branch
+        tree_to_use = branch_to_use or crew_tree
+
+        if branch_to_use is None or tree_to_use is None:
+            return None
+
+        memory_type = source_type.replace("_", " ").title()
+        content = f"❌ {memory_type} Memory Save Failed"
+        for child in branch_to_use.children:
+            if "Memory Update" in str(child.label):
+                child.add(content)
+                break
+        else:
+            memory_branch = branch_to_use.add("")
+            memory_branch.add(content)
+
+        self.print(tree_to_use)
+        self.print()
