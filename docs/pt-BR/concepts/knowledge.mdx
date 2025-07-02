@@ -39,17 +39,17 @@ llm = LLM(model="gpt-4o-mini", temperature=0)
 
 # Create an agent with the knowledge store
 agent = Agent(
-    role="About User",
-    goal="You know everything about the user.",
-    backstory="You are a master at understanding people and their preferences.",
+    role="Sobre o Usuário",
+    goal="Você sabe tudo sobre o usuário.",
+    backstory="Você é mestre em entender pessoas e suas preferências.",
     verbose=True,
     allow_delegation=False,
     llm=llm,
 )
 
 task = Task(
-    description="Answer the following questions about the user: {question}",
-    expected_output="An answer to the question.",
+    description="Responda às seguintes perguntas sobre o usuário: {question}",
+    expected_output="Uma resposta para a pergunta.",
     agent=agent,
 )
 
@@ -87,17 +87,17 @@ llm = LLM(model="gpt-4o-mini", temperature=0)
 
 # Create an agent with the knowledge store
 agent = Agent(
-    role="About papers",
-    goal="You know everything about the papers.",
-    backstory="You are a master at understanding papers and their content.",
+    role="Sobre artigos",
+    goal="Você sabe tudo sobre os artigos.",
+    backstory="Você é mestre em entender artigos e seus conteúdos.",
     verbose=True,
     allow_delegation=False,
     llm=llm,
 )
 
 task = Task(
-    description="Answer the following questions about the papers: {question}",
-    expected_output="An answer to the question.",
+    description="Responda às seguintes perguntas sobre os artigos: {question}",
+    expected_output="Uma resposta para a pergunta.",
     agent=agent,
 )
 
@@ -201,16 +201,16 @@ specialist_knowledge = StringKnowledgeSource(
 )
 
 specialist_agent = Agent(
-    role="Technical Specialist",
-    goal="Provide technical expertise",
-    backstory="Expert in specialized technical domains",
-    knowledge_sources=[specialist_knowledge]  # Agent-specific knowledge
+    role="Especialista Técnico",
+    goal="Fornecer expertise técnica",
+    backstory="Especialista em domínios técnicos especializados",
+    knowledge_sources=[specialist_knowledge]  # Conhecimento específico do agente
 )
 
 task = Task(
-    description="Answer technical questions",
+    description="Responda perguntas técnicas",
     agent=specialist_agent,
-    expected_output="Technical answer"
+    expected_output="Resposta técnica"
 )
 
 # No crew-level knowledge required
@@ -240,7 +240,7 @@ Cada nível de knowledge usa coleções de armazenamento independentes:
 
 ```python
 # Agent knowledge storage
-agent_collection_name = agent.role  # e.g., "Technical Specialist"
+agent_collection_name = agent.role  # e.g., "Especialista Técnico"
 
 # Crew knowledge storage
 crew_collection_name = "crew"
@@ -248,7 +248,7 @@ crew_collection_name = "crew"
 # Both stored in same ChromaDB instance but different collections
 # Path: ~/.local/share/CrewAI/{project}/knowledge/
 #   ├── crew/                    # Crew knowledge collection
-#   ├── Technical Specialist/    # Agent knowledge collection
+#   ├── Especialista Técnico/    # Agent knowledge collection
 #   └── Another Agent Role/      # Another agent's collection
 ```
 
@@ -265,7 +265,7 @@ agent_knowledge = StringKnowledgeSource(
 )
 
 agent = Agent(
-    role="Specialist",
+    role="Especialista",
     goal="Use specialized knowledge",
     backstory="Expert with specific knowledge",
     knowledge_sources=[agent_knowledge],
@@ -299,10 +299,10 @@ specialist_knowledge = StringKnowledgeSource(
 )
 
 specialist = Agent(
-    role="Technical Specialist",
-    goal="Provide technical expertise",
-    backstory="Technical expert",
-    knowledge_sources=[specialist_knowledge]  # Agent-specific
+    role="Especialista Técnico",
+    goal="Fornecer expertise técnica",
+    backstory="Especialista em domínios técnicos especializados",
+    knowledge_sources=[specialist_knowledge]  # Conhecimento específico do agente
 )
 
 generalist = Agent(

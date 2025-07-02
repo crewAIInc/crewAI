@@ -28,23 +28,23 @@ from crewai import Crew, Process
 
 # Exemplo: Criando uma crew com processo sequencial
 crew = Crew(
-    agents=my_agents,
-    tasks=my_tasks,
+    agents=meus_agentes,
+    tasks=minhas_tarefas,
     process=Process.sequential
 )
 
 # Exemplo: Criando uma crew com processo hierárquico
 # Certifique-se de fornecer um manager_llm ou manager_agent
 crew = Crew(
-    agents=my_agents,
-    tasks=my_tasks,
+    agents=meus_agentes,
+    tasks=minhas_tarefas,
     process=Process.hierarchical,
     manager_llm="gpt-4o"
     # ou
-    # manager_agent=my_manager_agent
+    # manager_agent=meu_agente_gerente
 )
 ```
-**Nota:** Certifique-se de que `my_agents` e `my_tasks` estejam definidos antes de criar o objeto `Crew`, e para o processo hierárquico, é necessário também fornecer o `manager_llm` ou `manager_agent`.
+**Nota:** Certifique-se de que `meus_agentes` e `minhas_tarefas` estejam definidos antes de criar o objeto `Crew`, e para o processo hierárquico, é necessário também fornecer o `manager_llm` ou `manager_agent`.
 
 ## Processo Sequencial
 

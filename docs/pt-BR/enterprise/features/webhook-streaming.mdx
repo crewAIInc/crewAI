@@ -12,16 +12,17 @@ O Enterprise Event Streaming permite que você receba atualizações em tempo re
 
 Ao utilizar a API Kickoff, inclua um objeto `webhooks` em sua requisição, por exemplo:
 
+# Exemplo de uso da API Kickoff com webhooks
 ```json
 {
   "inputs": {"foo": "bar"},
   "webhooks": {
     "events": ["crew_kickoff_started", "llm_call_started"],
-    "url": "https://your.endpoint/webhook",
+    "url": "https://seu.endpoint/webhook",
     "realtime": false,
     "authentication": {
       "strategy": "bearer",
-      "token": "my-secret-token"
+      "token": "meu-token-secreto"
     }
   }
 }
@@ -33,19 +34,20 @@ Se `realtime` estiver definido como `true`, cada evento será entregue individua
 
 Cada webhook envia uma lista de eventos:
 
+# Exemplo de evento enviado pelo webhook
 ```json
 {
   "events": [
     {
-      "id": "event-id",
-      "execution_id": "crew-run-id",
+      "id": "id-do-evento",
+      "execution_id": "id-da-execucao-do-crew",
       "timestamp": "2025-02-16T10:58:44.965Z",
       "type": "llm_call_started",
       "data": {
         "model": "gpt-4",
         "messages": [
-          {"role": "system", "content": "You are an assistant."},
-          {"role": "user", "content": "Summarize this article."}
+          {"role": "system", "content": "Você é um assistente."},
+          {"role": "user", "content": "Resuma este artigo."}
         ]
       }
     }
