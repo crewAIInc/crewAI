@@ -5,6 +5,7 @@ import json
 from concurrent.futures import Future
 from unittest import mock
 from unittest.mock import ANY, MagicMock, patch
+from collections import defaultdict
 
 import pydantic_core
 import pytest
@@ -40,6 +41,16 @@ from crewai.utilities.events.event_listener import EventListener
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
+from crewai.utilities.events.memory_events import (
+    MemorySaveStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemoryQueryStartedEvent,
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemoryRetrievalStartedEvent,
+    MemoryRetrievalCompletedEvent,
+)
 
 @pytest.fixture
 def ceo():
@@ -2478,10 +2489,78 @@ def test_using_contextual_memory():
         memory=True,
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
 
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_memory_events_are_emitted():
+    events = defaultdict(list)
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(MemorySaveStartedEvent)
+        def handle_memory_save_started(source, event):
+            events["MemorySaveStartedEvent"].append(event)
+
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def handle_memory_save_completed(source, event):
+            events["MemorySaveCompletedEvent"].append(event)
+
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def handle_memory_save_failed(source, event):
+            events["MemorySaveFailedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryQueryStartedEvent)
+        def handle_memory_query_started(source, event):
+            events["MemoryQueryStartedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def handle_memory_query_completed(source, event):
+            events["MemoryQueryCompletedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryQueryFailedEvent)
+        def handle_memory_query_failed(source, event):
+            events["MemoryQueryFailedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryRetrievalStartedEvent)
+        def handle_memory_retrieval_started(source, event):
+            events["MemoryRetrievalStartedEvent"].append(event)
+
+        @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
+        def handle_memory_retrieval_completed(source, event):
+            events["MemoryRetrievalCompletedEvent"].append(event)
+
+        math_researcher = Agent(
+            role="Researcher",
+            goal="You research about math.",
+            backstory="You're an expert in research and you love to learn new things.",
+            allow_delegation=False,
+        )
+
+        task1 = Task(
+            description="Research a topic to teach a kid aged 6 about math.",
+            expected_output="A topic, explanation, angle, and examples.",
+            agent=math_researcher,
+        )
+
+        crew = Crew(
+            agents=[math_researcher],
+            tasks=[task1],
+            memory=True,
+        )
+
+        crew.kickoff()
+
+    assert len(events["MemorySaveStartedEvent"]) == 6
+    assert len(events["MemorySaveCompletedEvent"]) == 6
+    assert len(events["MemorySaveFailedEvent"]) == 0
+    assert len(events["MemoryQueryStartedEvent"]) == 3
+    assert len(events["MemoryQueryCompletedEvent"]) == 3
+    assert len(events["MemoryQueryFailedEvent"]) == 0
+    assert len(events["MemoryRetrievalStartedEvent"]) == 1
+    assert len(events["MemoryRetrievalCompletedEvent"]) == 1
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_using_contextual_memory_with_long_term_memory():
@@ -2506,7 +2585,7 @@ def test_using_contextual_memory_with_long_term_memory():
         long_term_memory=LongTermMemory(),
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
         assert crew.memory is False
@@ -2607,7 +2686,7 @@ def test_using_contextual_memory_with_short_term_memory():
         short_term_memory=ShortTermMemory(),
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_called_once()
         assert crew.memory is False
@@ -2636,7 +2715,7 @@ def test_disabled_memory_using_contextual_memory():
         memory=False,
     )
 
-    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+    with patch.object(ContextualMemory, "build_context_for_task", return_value="") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_not_called()
 

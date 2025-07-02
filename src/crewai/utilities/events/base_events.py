@@ -12,7 +12,7 @@ class BaseEvent(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.now)
     type: str
     source_fingerprint: Optional[str] = None  # UUID string of the source entity
-    source_type: Optional[str] = None  # "agent", "task", "crew"
+    source_type: Optional[str] = None  # "agent", "task", "crew", "memory", "entity_memory", "short_term_memory", "long_term_memory", "external_memory"
     fingerprint_metadata: Optional[Dict[str, Any]] = None  # Any relevant metadata
 
     def to_json(self, exclude: set[str] | None = None):
