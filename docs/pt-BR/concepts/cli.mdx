@@ -76,6 +76,20 @@ Exemplo:
 crewai train -n 10 -f my_training_data.pkl
 ```
 
+# Exemplo de uso programático do comando train
+n_iterations = 2
+inputs = {"topic": "Treinamento CrewAI"}
+filename = "seu_modelo.pkl"
+
+try:
+    SuaCrew().crew().train(
+      n_iterations=n_iterations, 
+      inputs=inputs, 
+      filename=filename
+    )
+except Exception as e:
+    raise Exception(f"Ocorreu um erro ao treinar a crew: {e}")
+
 ### 4. Replay
 
 Reexecute a execução do crew a partir de uma tarefa específica.

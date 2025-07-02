@@ -78,15 +78,15 @@ Existem diferentes locais no código do CrewAI onde você pode especificar o mod
 
     # Configuração avançada com parâmetros detalhados
     llm = LLM(
-        model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
-        temperature=0.7,        # Mais alto para saídas criativas
-        timeout=120,            # Segundos para aguardar resposta
-        max_tokens=4000,        # Comprimento máximo da resposta
-        top_p=0.9,              # Parâmetro de amostragem nucleus
-        frequency_penalty=0.1 , # Reduz repetição
-        presence_penalty=0.1,   # Incentiva diversidade de tópicos
-        response_format={"type": "json"},  # Para respostas estruturadas
-        seed=42                 # Para resultados reproduzíveis
+        model="openai/gpt-4", 
+        temperature=0.8,
+        max_tokens=150,
+        top_p=0.9,
+        frequency_penalty=0.1,
+        presence_penalty=0.1,
+        response_format={"type":"json"},
+        stop=["FIM"],
+        seed=42
     )
     ```
 
@@ -127,13 +127,13 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     from crewai import LLM
 
     llm = LLM(
-        model="openai/gpt-4", # chamar modelo por provider/model_name
+        model="openai/gpt-4",
         temperature=0.8,
         max_tokens=150,
         top_p=0.9,
         frequency_penalty=0.1,
         presence_penalty=0.1,
-        stop=["END"],
+        stop=["FIM"],
         seed=42
     )
     ```
@@ -169,7 +169,7 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     llm = LLM(
         model="meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8",
         temperature=0.8,
-        stop=["END"],
+        stop=["FIM"],
         seed=42
     )
     ```

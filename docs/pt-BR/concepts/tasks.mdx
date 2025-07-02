@@ -386,7 +386,7 @@ def validate_with_context(result: TaskOutput) -> Tuple[bool, Any]:
         validated_data = perform_validation(result)
         return (True, validated_data)
     except ValidationError as e:
-        return (False, f"VALIDATION_ERROR: {str(e)}")
+        return (False, f"ERRO_DE_VALIDACAO: {str(e)}")
     except Exception as e:
         return (False, str(e))
 ```

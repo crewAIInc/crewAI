@@ -39,23 +39,19 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
     # src/latest_ai_development/config/agents.yaml
     researcher:
       role: >
-        {topic} Senior Data Researcher
+        Pesquisador Sênior de Dados em {topic}
       goal: >
-        Uncover cutting-edge developments in {topic}
+        Descobrir os avanços mais recentes em {topic}
       backstory: >
-        You're a seasoned researcher with a knack for uncovering the latest
-        developments in {topic}. Known for your ability to find the most relevant
-        information and present it in a clear and concise manner.
+        Você é um pesquisador experiente com talento para descobrir os últimos avanços em {topic}. Conhecido por sua habilidade em encontrar as informações mais relevantes e apresentá-las de forma clara e concisa.
 
     reporting_analyst:
       role: >
-        {topic} Reporting Analyst
+        Analista de Relatórios em {topic}
       goal: >
-        Create detailed reports based on {topic} data analysis and research findings
+        Criar relatórios detalhados com base na análise de dados e descobertas de pesquisa em {topic}
       backstory: >
-        You're a meticulous analyst with a keen eye for detail. You're known for
-        your ability to turn complex data into clear and concise reports, making
-        it easy for others to understand and act on the information you provide.
+        Você é um analista meticuloso com um olhar atento aos detalhes. É conhecido por sua capacidade de transformar dados complexos em relatórios claros e concisos, facilitando o entendimento e a tomada de decisão por parte dos outros.
     ```
   </Step>
   <Step title="Modifique seu arquivo `tasks.yaml`">
@@ -63,20 +59,19 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
     # src/latest_ai_development/config/tasks.yaml
     research_task:
       description: >
-        Conduct a thorough research about {topic}
-        Make sure you find any interesting and relevant information given
-        the current year is 2025.
+        Realize uma pesquisa aprofundada sobre {topic}.
+        Certifique-se de encontrar informações interessantes e relevantes considerando que o ano atual é 2025.
       expected_output: >
-        A list with 10 bullet points of the most relevant information about {topic}
+        Uma lista com 10 tópicos dos dados mais relevantes sobre {topic}
       agent: researcher
 
     reporting_task:
       description: >
-        Review the context you got and expand each topic into a full section for a report.
-        Make sure the report is detailed and contains any and all relevant information.
+        Revise o contexto obtido e expanda cada tópico em uma seção completa para um relatório.
+        Certifique-se de que o relatório seja detalhado e contenha todas as informações relevantes.
       expected_output: >
-        A fully fledge reports with the mains topics, each with a full section of information.
-        Formatted as markdown without '```'
+        Um relatório completo com os principais tópicos, cada um com uma seção detalhada de informações.
+        Formate como markdown sem usar '```'
       agent: reporting_analyst
       output_file: report.md
     ```
@@ -122,15 +117,15 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
       def reporting_task(self) -> Task:
         return Task(
           config=self.tasks_config['reporting_task'], # type: ignore[index]
-          output_file='output/report.md' # This is the file that will be contain the final report.
+          output_file='output/report.md' # Este é o arquivo que conterá o relatório final.
         )
 
       @crew
       def crew(self) -> Crew:
         """Creates the LatestAiDevelopment crew"""
         return Crew(
-          agents=self.agents, # Automatically created by the @agent decorator
-          tasks=self.tasks, # Automatically created by the @task decorator
+          agents=self.agents, # Criado automaticamente pelo decorador @agent
+          tasks=self.tasks, # Criado automaticamente pelo decorador @task
           process=Process.sequential,
           verbose=True,
         )
@@ -229,7 +224,7 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
 
   <CodeGroup>
     ```markdown output/report.md
-    # Comprehensive Report on the Rise and Impact of AI Agents in 2025
+    # Relatório Abrangente sobre a Ascensão e o Impacto dos Agentes de IA em 2025
 
     ## 1. Introduction to AI Agents
     In 2025, Artificial Intelligence (AI) agents are at the forefront of innovation across various industries. As intelligent systems that can perform tasks typically requiring human cognition, AI agents are paving the way for significant advancements in operational efficiency, decision-making, and overall productivity within sectors like Human Resources (HR) and Finance. This report aims to detail the rise of AI agents, their frameworks, applications, and potential implications on the workforce.

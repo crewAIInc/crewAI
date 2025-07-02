@@ -77,9 +77,9 @@ search_tool = SerperDevTool()
 
 # Inicialize o agente com opções avançadas
 agent = Agent(
-  role='Research Analyst',
-  goal='Provide up-to-date market analysis',
-  backstory='An expert analyst with a keen eye for market trends.',
+  role='Analista de Pesquisa',
+  goal='Fornecer análises de mercado atualizadas',
+  backstory='Um analista especialista com olhar atento para tendências de mercado.',
   tools=[search_tool],
   memory=True, # Ativa memória
   verbose=True,
@@ -98,14 +98,9 @@ eficiência dentro do ecossistema CrewAI. Se necessário, a delegação pode ser
 
 ```python Code
 agent = Agent(
-  role='Content Writer',
-  goal='Write engaging content on market trends',
-  backstory='A seasoned writer with expertise in market analysis.',
+  role='Redator de Conteúdo',
+  goal='Escrever conteúdo envolvente sobre tendências de mercado',
+  backstory='Um redator experiente com expertise em análise de mercado.',
   allow_delegation=True # Habilitando delegação
 )
 ```
-
-## Conclusão
-
-Personalizar agentes no CrewAI definindo seus papéis, objetivos, histórias e ferramentas, juntamente com opções avançadas como personalização de modelo de linguagem, memória, ajustes de performance e preferências de delegação, 
-proporciona uma equipe de IA sofisticada e preparada para enfrentar desafios complexos.

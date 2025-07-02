@@ -36,19 +36,18 @@ Para treinar sua crew de forma programática, siga estes passos:
 3. Execute o comando de treinamento dentro de um bloco try-except para tratar possíveis erros.
 
 ```python Code
-n_iterations = 2
-inputs = {"topic": "CrewAI Training"}
-filename = "your_model.pkl"
+n_iteracoes = 2
+entradas = {"topic": "Treinamento CrewAI"}
+nome_arquivo = "seu_modelo.pkl"
 
 try:
-    YourCrewName_Crew().crew().train(
-      n_iterations=n_iterations, 
-      inputs=inputs, 
-      filename=filename
+    SuaCrew().crew().train(
+      n_iterations=n_iteracoes, 
+      inputs=entradas, 
+      filename=nome_arquivo
     )
-
 except Exception as e:
-    raise Exception(f"An error occurred while training the crew: {e}")
+    raise Exception(f"Ocorreu um erro ao treinar a crew: {e}")
 ```
 
 ### Pontos Importantes

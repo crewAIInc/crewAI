@@ -15,12 +15,12 @@ Para habilitar o reasoning para um agente, basta definir `reasoning=True` ao cri
 ```python
 from crewai import Agent
 
-agent = Agent(
-    role="Data Analyst",
-    goal="Analyze complex datasets and provide insights",
-    backstory="You are an experienced data analyst with expertise in finding patterns in complex data.",
-    reasoning=True,  # Enable reasoning
-    max_reasoning_attempts=3  # Optional: Set a maximum number of reasoning attempts
+analista = Agent(
+    role="Analista de Dados",
+    goal="Analisar dados e fornecer insights",
+    backstory="Você é um analista de dados especialista.",
+    reasoning=True,
+    max_reasoning_attempts=3  # Opcional: Defina um limite de tentativas de reasoning
 )
 ```
 
@@ -53,23 +53,23 @@ Aqui está um exemplo completo:
 from crewai import Agent, Task, Crew
 
 # Create an agent with reasoning enabled
-analyst = Agent(
-    role="Data Analyst",
-    goal="Analyze data and provide insights",
-    backstory="You are an expert data analyst.",
+analista = Agent(
+    role="Analista de Dados",
+    goal="Analisar dados e fornecer insights",
+    backstory="Você é um analista de dados especialista.",
     reasoning=True,
-    max_reasoning_attempts=3  # Optional: Set a limit on reasoning attempts
+    max_reasoning_attempts=3  # Opcional: Defina um limite de tentativas de reasoning
 )
 
 # Create a task
 analysis_task = Task(
-    description="Analyze the provided sales data and identify key trends.",
-    expected_output="A report highlighting the top 3 sales trends.",
-    agent=analyst
+    description="Analise os dados de vendas fornecidos e identifique as principais tendências.",
+    expected_output="Um relatório destacando as 3 principais tendências de vendas.",
+    agent=analista
 )
 
 # Create a crew and run the task
-crew = Crew(agents=[analyst], tasks=[analysis_task])
+crew = Crew(agents=[analista], tasks=[analysis_task])
 result = crew.kickoff()
 
 print(result)
@@ -90,16 +90,16 @@ logging.basicConfig(level=logging.INFO)
 
 # Create an agent with reasoning enabled
 agent = Agent(
-    role="Data Analyst",
-    goal="Analyze data and provide insights",
+    role="Analista de Dados",
+    goal="Analisar dados e fornecer insights",
     reasoning=True,
     max_reasoning_attempts=3
 )
 
 # Create a task
 task = Task(
-    description="Analyze the provided sales data and identify key trends.",
-    expected_output="A report highlighting the top 3 sales trends.",
+    description="Analise os dados de vendas fornecidos e identifique as principais tendências.",
+    expected_output="Um relatório destacando as 3 principais tendências de vendas.",
     agent=agent
 )
 
@@ -113,7 +113,7 @@ result = agent.execute_task(task)
 Veja um exemplo de como pode ser um plano de reasoning para uma tarefa de análise de dados:
 
 ```
-Task: Analyze the provided sales data and identify key trends.
+Task: Analise os dados de vendas fornecidos e identifique as principais tendências.
 
 Reasoning Plan:
 I'll analyze the sales data to identify the top 3 trends.

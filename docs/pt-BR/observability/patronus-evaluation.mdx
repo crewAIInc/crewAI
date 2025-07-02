@@ -64,17 +64,17 @@ patronus_eval_tool = PatronusEvalTool()
 
 # Define an agent that uses the tool
 coding_agent = Agent(
-    role="Coding Agent",
-    goal="Generate high quality code and verify that the output is code",
-    backstory="An experienced coder who can generate high quality python code.",
+    role="Agente de Programação",
+    goal="Gerar código de alta qualidade e verificar se a saída é código",
+    backstory="Um programador experiente que pode gerar código Python de alta qualidade.",
     tools=[patronus_eval_tool],
     verbose=True,
 )
 
 # Example task to generate and evaluate code
 generate_code_task = Task(
-    description="Create a simple program to generate the first N numbers in the Fibonacci sequence. Select the most appropriate evaluator and criteria for evaluating your output.",
-    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    description="Crie um programa simples para gerar os N primeiros números da sequência de Fibonacci. Selecione o avaliador e os critérios mais apropriados para avaliar sua saída.",
+    expected_output="Programa que gera os N primeiros números da sequência de Fibonacci.",
     agent=coding_agent,
 )
 
@@ -98,17 +98,17 @@ patronus_eval_tool = PatronusPredefinedCriteriaEvalTool(
 
 # Define an agent that uses the tool
 coding_agent = Agent(
-    role="Coding Agent",
-    goal="Generate high quality code",
-    backstory="An experienced coder who can generate high quality python code.",
+    role="Agente de Programação",
+    goal="Gerar código de alta qualidade",
+    backstory="Um programador experiente que pode gerar código Python de alta qualidade.",
     tools=[patronus_eval_tool],
     verbose=True,
 )
 
 # Example task to generate code
 generate_code_task = Task(
-    description="Create a simple program to generate the first N numbers in the Fibonacci sequence.",
-    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    description="Crie um programa simples para gerar os N primeiros números da sequência de Fibonacci.",
+    expected_output="Programa que gera os N primeiros números da sequência de Fibonacci.",
     agent=coding_agent,
 )
 
@@ -149,17 +149,17 @@ patronus_eval_tool = PatronusLocalEvaluatorTool(
 
 # Define an agent that uses the tool
 coding_agent = Agent(
-    role="Coding Agent",
-    goal="Generate high quality code",
-    backstory="An experienced coder who can generate high quality python code.",
+    role="Agente de Programação",
+    goal="Gerar código de alta qualidade",
+    backstory="Um programador experiente que pode gerar código Python de alta qualidade.",
     tools=[patronus_eval_tool],
     verbose=True,
 )
 
 # Example task to generate code
 generate_code_task = Task(
-    description="Create a simple program to generate the first N numbers in the Fibonacci sequence.",
-    expected_output="Program that generates the first N numbers in the Fibonacci sequence.",
+    description="Crie um programa simples para gerar os N primeiros números da sequência de Fibonacci.",
+    expected_output="Programa que gera os N primeiros números da sequência de Fibonacci.",
     agent=coding_agent,
 )
 

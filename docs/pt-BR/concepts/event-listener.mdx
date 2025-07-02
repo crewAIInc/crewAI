@@ -51,24 +51,24 @@ from crewai.utilities.events import (
 )
 from crewai.utilities.events.base_event_listener import BaseEventListener
 
-class MyCustomListener(BaseEventListener):
+class MeuListenerPersonalizado(BaseEventListener):
     def __init__(self):
         super().__init__()
 
     def setup_listeners(self, crewai_event_bus):
         @crewai_event_bus.on(CrewKickoffStartedEvent)
-        def on_crew_started(source, event):
-            print(f"Crew '{event.crew_name}' has started execution!")
+        def ao_iniciar_crew(source, event):
+            print(f"Crew '{event.crew_name}' iniciou a execução!")
 
         @crewai_event_bus.on(CrewKickoffCompletedEvent)
-        def on_crew_completed(source, event):
-            print(f"Crew '{event.crew_name}' has completed execution!")
-            print(f"Output: {event.output}")
+        def ao_finalizar_crew(source, event):
+            print(f"Crew '{event.crew_name}' finalizou a execução!")
+            print(f"Saída: {event.output}")
 
         @crewai_event_bus.on(AgentExecutionCompletedEvent)
-        def on_agent_execution_completed(source, event):
-            print(f"Agent '{event.agent.role}' completed task")
-            print(f"Output: {event.output}")
+        def ao_finalizar_execucao_agente(source, event):
+            print(f"Agente '{event.agent.role}' concluiu a tarefa")
+            print(f"Saída: {event.output}")
 ```
 
 ## Registrando Corretamente Seu Listener
