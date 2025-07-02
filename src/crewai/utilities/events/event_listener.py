@@ -22,6 +22,10 @@ from crewai.utilities.events.llm_events import (
     LLMCallStartedEvent,
     LLMStreamChunkEvent,
 )
+from crewai.utilities.events.llm_guardrail_events import (
+    LLMGuardrailStartedEvent,
+    LLMGuardrailCompletedEvent,
+)
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 
 from .agent_events import (
@@ -369,6 +373,23 @@ class EventListener(BaseEventListener):
             content = self.text_stream.read()
             print(content, end="", flush=True)
             self.next_chunk = self.text_stream.tell()
+
+        # ----------- LLM GUARDRAIL EVENTS -----------
+
+        @crewai_event_bus.on(LLMGuardrailStartedEvent)
+        def on_llm_guardrail_started(source, event: LLMGuardrailStartedEvent):
+            guardrail_str = str(event.guardrail)
+            guardrail_name = (
+                guardrail_str[:50] + "..." if len(guardrail_str) > 50 else guardrail_str
+            )
+
+            self.formatter.handle_guardrail_started(guardrail_name, event.retry_count)
+
+        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+        def on_llm_guardrail_completed(source, event: LLMGuardrailCompletedEvent):
+            self.formatter.handle_guardrail_completed(
+                event.success, event.error, event.retry_count
+            )
 
         @crewai_event_bus.on(CrewTestStartedEvent)
         def on_crew_test_started(source, event: CrewTestStartedEvent):

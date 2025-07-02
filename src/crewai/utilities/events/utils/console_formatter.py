@@ -1473,9 +1473,7 @@ class ConsoleFormatter:
                 return None
 
         memory_branch = branch_to_use.add("")
-        self.update_tree_label(
-            memory_branch, "🧠", "Memory Retrieval Started", "blue"
-        )
+        self.update_tree_label(memory_branch, "🧠", "Memory Retrieval Started", "blue")
 
         self.print(tree_to_use)
         self.print()
@@ -1549,7 +1547,6 @@ class ConsoleFormatter:
         if memory_content:
             add_panel()
 
-
     def handle_memory_query_completed(
         self,
         agent_branch: Optional[Tree],
@@ -1616,11 +1613,8 @@ class ConsoleFormatter:
                     sources_branch.add(f"❌ {memory_type} - Error: {error}")
                     break
 
-
     def handle_memory_save_started(
-        self,
-        agent_branch: Optional[Tree],
-        crew_tree: Optional[Tree]
+        self, agent_branch: Optional[Tree], crew_tree: Optional[Tree]
     ) -> None:
         if not self.verbose:
             return None
@@ -1633,7 +1627,7 @@ class ConsoleFormatter:
 
         for child in tree_to_use.children:
             if "Memory Update" in str(child.label):
-               break
+                break
         else:
             memory_branch = tree_to_use.add("")
             self.update_tree_label(
@@ -1701,3 +1695,61 @@ class ConsoleFormatter:
 
         self.print(tree_to_use)
         self.print()
+
+    def handle_guardrail_started(
+        self,
+        guardrail_name: str,
+        retry_count: int,
+    ) -> None:
+        """Display guardrail evaluation started status.
+
+        Args:
+            guardrail_name: Name/description of the guardrail being evaluated.
+            retry_count: Zero-based retry count (0 = first attempt).
+        """
+        if not self.verbose:
+            return
+
+        content = self.create_status_content(
+            "Guardrail Evaluation Started",
+            guardrail_name,
+            "yellow",
+            Status="🔄 Evaluating",
+            Attempt=f"{retry_count + 1}",
+        )
+        self.print_panel(content, "🛡️ Guardrail Check", "yellow")
+
+    def handle_guardrail_completed(
+        self,
+        success: bool,
+        error: Optional[str],
+        retry_count: int,
+    ) -> None:
+        """Display guardrail evaluation result.
+
+        Args:
+            success: Whether validation passed.
+            error: Error message if validation failed.
+            retry_count: Zero-based retry count.
+        """
+        if not self.verbose:
+            return
+
+        if success:
+            content = self.create_status_content(
+                "Guardrail Passed",
+                "Validation Successful",
+                "green",
+                Status="✅ Validated",
+                Attempts=f"{retry_count + 1}",
+            )
+            self.print_panel(content, "🛡️ Guardrail Success", "green")
+        else:
+            content = self.create_status_content(
+                "Guardrail Failed",
+                "Validation Error",
+                "red",
+                Error=str(error) if error else "Unknown error",
+                Attempts=f"{retry_count + 1}",
+            )
+            self.print_panel(content, "🛡️ Guardrail Failed", "red")
