@@ -749,8 +749,57 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
     ```
 
     <Tip>
-      [Click here](https://docs.crewai.com/concepts/event-listener#event-listeners) for more details 
+      [Click here](https://docs.crewai.com/concepts/event-listener#event-listeners) for more details
     </Tip>
+  </Tab>
+
+  <Tab title="Agent & Task Tracking">
+    All LLM events in CrewAI include agent and task information, allowing you to track and filter LLM interactions by specific agents or tasks:
+
+    ```python
+    from crewai import LLM, Agent, Task, Crew
+    from crewai.utilities.events import LLMStreamChunkEvent
+    from crewai.utilities.events.base_event_listener import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(source, event):
+                if researcher.id == event.agent_id:
+                    print("\n==============\n Got event:", event, "\n==============\n")
+
+
+    my_listener = MyCustomListener()
+
+    llm = LLM(model="gpt-4o-mini", temperature=0, stream=True)
+
+    researcher = Agent(
+        role="About User",
+        goal="You know everything about the user.",
+        backstory="""You are a master at understanding people and their preferences.""",
+        llm=llm,
+    )
+
+    search = Task(
+        description="Answer the following questions about the user: {question}",
+        expected_output="An answer to the question.",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[search])
+
+    result = crew.kickoff(
+        inputs={"question": "..."}
+    )
+    ```
+
+    <Info>
+      This feature is particularly useful for:
+      - Debugging specific agent behaviors
+      - Logging LLM usage by task type
+      - Auditing which agents are making what types of LLM calls
+      - Performance monitoring of specific tasks
+    </Info>
   </Tab>
 </Tabs>
 
@@ -847,7 +896,7 @@ Learn how to get the most out of your LLM configuration:
       Remember to regularly monitor your token usage and adjust your configuration as needed to optimize costs and performance.
     </Info>
   </Accordion>
-  
+
   <Accordion title="Drop Additional Parameters">
     CrewAI internally uses Litellm for LLM calls, which allows you to drop additional parameters that are not needed for your specific use case. This can help simplify your code and reduce the complexity of your LLM configuration.
     For example, if you don't need to send the <code>stop</code> parameter, you can simply omit it from your LLM call:

@@ -16,6 +16,8 @@ class AISuiteLLM(BaseLLM):
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
     ) -> Union[str, Any]:
         completion_params = self._prepare_completion_params(messages, tools)
         response = self.client.chat.completions.create(**completion_params)

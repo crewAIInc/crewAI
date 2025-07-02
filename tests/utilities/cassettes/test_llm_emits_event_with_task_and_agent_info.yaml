@@ -1,0 +1,118 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Just say hi\n\nThis is the expected criteria for
+      your final answer: hi\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '838'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.78.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.78.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSTW/bMAy9+1cQOsdDnI9m861ZMGAbBuyyHbYWBiMxtjaZEiS5aVHkvw+y09jd
+        OqAXA+bje3qP5GMGILQSJQjZYJStM/nW7j6z+vb9R739+mm707vj7sv2gffq/v2VEbPEsPtfJOMT
+        6420rTMUteUBlp4wUlItNutiOd8s15seaK0ik2i1i/nK5q1mnS/mi1U+3+TF2zO7sVpSECX8zAAA
+        Hvtv8smK7kUJ89lTpaUQsCZRXpoAhLcmVQSGoENEjmI2gtJyJO6tfwS2R5DIUOs7AoQ62QbkcCQP
+        cMMfNKOB6/6/hEZPdTwduoApC3fGTABkthHTLPoEt2fkdPFsbO283Ye/qOKgWYem8oTBcvIXonWi
+        R08ZwG0/m+5ZXOG8bV2sov1N/XPFVTHoiXElE3RxBqONaCb1zXL2gl6lKKI2YTJdIVE2pEbquArs
+        lLYTIJuk/tfNS9pDcs31a+RHQEpykVTlPCktnyce2zyli/1f22XKvWERyN9pSVXU5NMmFB2wM8Md
+        ifAQIrXVQXNN3nk9HNPBVcsVrldI75ZSZKfsDwAAAP//AwBulbOoWgMAAA==
+    headers:
+      CF-RAY:
+      - 957fa6e91a22023d-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 30 Jun 2025 18:15:58 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=9WXNY0u6p0Nlyb1G36cXHDgtwb1538JzaUNoS4tgrpo-1751307358-1.0.1.1-BAvg6Fgqsv3ITFxrC3z3E42AqgSZcGq4Gr1Wrjx56TOsljYynqCePNzQ79oAncT9KXehFnUMxA6JSf2lAfQOeSLVREY3_P6GjPkbcwIsVXw;
+        path=/; expires=Mon, 30-Jun-25 18:45:58 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=N5kr6p8e26f8scPW5s2uVOatzh2RYjlQb13eQUBsrts-1751307358295-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '308'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '310'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999823'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_78bb0375ac6e0939c8e05f66869e0137
+    status:
+      code: 200
+      message: OK
+version: 1
