@@ -41,7 +41,7 @@ jobs:
         run: |
           uv run pytest \
             --block-network \
-            --timeout=60 \
+            --timeout=30 \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
