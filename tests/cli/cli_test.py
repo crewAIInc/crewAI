@@ -13,7 +13,7 @@ from crewai.cli.cli import (
     deply_status,
     flow_add_crew,
     reset_memories,
-    signup,
+    login,
     test,
     train,
     version,
@@ -261,12 +261,12 @@ def test_test_invalid_string_iterations(evaluate_crew, runner):
 
 
 @mock.patch("crewai.cli.cli.AuthenticationCommand")
-def test_signup(command, runner):
+def test_login(command, runner):
     mock_auth = command.return_value
-    result = runner.invoke(signup)
+    result = runner.invoke(login)
 
     assert result.exit_code == 0
-    mock_auth.signup.assert_called_once()
+    mock_auth.login.assert_called_once()
 
 
 @mock.patch("crewai.cli.cli.DeployCommand")

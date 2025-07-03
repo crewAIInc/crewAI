@@ -3,6 +3,7 @@ title: CLI
 description: Aprenda a usar o CLI do CrewAI para interagir com o CrewAI.
 icon: terminal
 ---
+<Warning>A partir da versão 0.140.0, a plataforma CrewAI Enterprise iniciou um processo de migração de seu provedor de login. Como resultado, o fluxo de autenticação via CLI foi atualizado. Usuários que utlizam o Google para fazer login, ou que criaram conta após 3 de julho de 2025 não poderão fazer login com versões anteriores da biblioteca `crewai`.</Warning>
 
 ## Visão Geral
 
@@ -74,6 +75,20 @@ Exemplo:
 ```shell Terminal
 crewai train -n 10 -f my_training_data.pkl
 ```
+
+# Exemplo de uso programático do comando train
+n_iterations = 2
+inputs = {"topic": "Treinamento CrewAI"}
+filename = "seu_modelo.pkl"
+
+try:
+    SuaCrew().crew().train(
+      n_iterations=n_iterations, 
+      inputs=inputs, 
+      filename=filename
+    )
+except Exception as e:
+    raise Exception(f"Ocorreu um erro ao treinar a crew: {e}")
 
 ### 4. Replay
 

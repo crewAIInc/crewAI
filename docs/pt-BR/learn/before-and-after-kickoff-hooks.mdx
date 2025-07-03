@@ -16,17 +16,17 @@ from crewai import CrewBase
 from crewai.project import before_kickoff
 
 @CrewBase
-class MyCrew:
+class MinhaEquipe:
     @before_kickoff
-    def prepare_data(self, inputs):
-        # Preprocess or modify inputs
-        inputs['processed'] = True
-        return inputs
+    def preparar_dados(self, entradas):
+        # Pré-processa ou modifica as entradas
+        entradas['processado'] = True
+        return entradas
 
 #...
 ```
 
-Neste exemplo, a função prepare_data modifica as entradas adicionando um novo par chave-valor indicando que as entradas foram processadas.
+Neste exemplo, a função preparar_dados modifica as entradas adicionando um novo par chave-valor indicando que as entradas foram processadas.
 
 ## Hook Depois do Kickoff
 
@@ -39,17 +39,17 @@ from crewai import CrewBase
 from crewai.project import after_kickoff
 
 @CrewBase
-class MyCrew:
+class MinhaEquipe:
     @after_kickoff
-    def log_results(self, result):
-        # Log or modify the results
-        print("Crew execution completed with result:", result)
-        return result
+    def registrar_resultados(self, resultado):
+        # Registra ou modifica os resultados
+        print("Execução da equipe concluída com resultado:", resultado)
+        return resultado
 
 # ...
 ```
 
-Na função `log_results`, os resultados da execução da crew são simplesmente impressos. Você pode estender isso para realizar operações mais complexas, como enviar notificações ou integrar com outros serviços.
+Na função `registrar_resultados`, os resultados da execução da crew são simplesmente impressos. Você pode estender isso para realizar operações mais complexas, como enviar notificações ou integrar com outros serviços.
 
 ## Utilizando Ambos os Hooks
 

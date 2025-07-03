@@ -67,17 +67,17 @@ web_rag_tool = WebsiteSearchTool()
 
 # Criar agentes
 researcher = Agent(
-    role='Market Research Analyst',
-    goal='Provide up-to-date market analysis of the AI industry',
-    backstory='An expert analyst with a keen eye for market trends.',
+    role='Analista de Mercado',
+    goal='Fornecer análise de mercado atualizada da indústria de IA',
+    backstory='Analista especialista com olhar atento para tendências de mercado.',
     tools=[search_tool, web_rag_tool],
     verbose=True
 )
 
 writer = Agent(
-    role='Content Writer',
-    goal='Craft engaging blog posts about the AI industry',
-    backstory='A skilled writer with a passion for technology.',
+    role='Redator de Conteúdo',
+    goal='Criar posts de blog envolventes sobre a indústria de IA',
+    backstory='Redator habilidoso com paixão por tecnologia.',
     tools=[docs_tool, file_tool],
     verbose=True
 )

@@ -43,11 +43,11 @@ try:
     with MCPServerAdapter(server_params_list) as aggregated_tools:
         print(f"Available aggregated tools: {[tool.name for tool in aggregated_tools]}")
 
-        multi_server_agent = Agent(
-            role="Versatile Assistant",
-            goal="Utilize tools from local Stdio, remote SSE, and remote HTTP MCP servers.",
-            backstory="An AI agent capable of leveraging a diverse set of tools from multiple sources.",
-            tools=aggregated_tools, # All tools are available here
+        agente_multiservidor = Agent(
+            role="Assistente Versátil",
+            goal="Utilizar ferramentas de servidores MCP locais Stdio, remotos SSE e remotos HTTP.",
+            backstory="Um agente de IA capaz de aproveitar um conjunto diversificado de ferramentas de múltiplas fontes.",
+            tools=aggregated_tools, # Todas as ferramentas estão disponíveis aqui
             verbose=True,
         )
 
