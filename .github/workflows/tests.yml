@@ -11,6 +11,7 @@ env:
 
 jobs:
   tests:
+    name: tests (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
