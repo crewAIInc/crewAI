@@ -154,9 +154,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                messages = self.messages.copy()
+                if len(messages) > 2:
+                    messages.append(self._continue_message())
+
                 answer = get_llm_response(
                     llm=self.llm,
-                    messages=self.messages,
+                    messages=messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
                     from_task=self.task
@@ -461,3 +465,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ),
             color="red",
         )
+
+    def _continue_message(self) -> Dict[str, str]:
+        content = self._i18n.slice("continue")
+        return {"role": "user", "content": content}
