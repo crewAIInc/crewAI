@@ -7,14 +7,18 @@ permissions:
 
 env:
   OPENAI_API_KEY: fake-api-key
+  PYTHONUNBUFFERED: 1
 
 jobs:
   tests:
+    name: tests (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
+      fail-fast: true
       matrix:
         python-version: ['3.10', '3.11', '3.12', '3.13']
+        group: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,6 +27,9 @@ jobs:
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
@@ -30,5 +37,14 @@ jobs:
       - name: Install the project
         run: uv sync --dev --all-extras
 
-      - name: Run tests
-        run: uv run pytest --block-network --timeout=60 -vv
+      - name: Run tests (group ${{ matrix.group }} of 8)
+        run: |
+          uv run pytest \
+            --block-network \
+            --timeout=30 \
+            -vv \
+            --splits 8 \
+            --group ${{ matrix.group }} \
+            --durations=10 \
+            -n auto \
+            --maxfail=3
