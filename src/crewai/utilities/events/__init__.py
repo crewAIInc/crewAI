@@ -51,6 +51,15 @@ from .llm_events import (
     LLMStreamChunkEvent,
 )
 
+from .knowledge_events import (
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+    KnowledgeQueryStartedEvent,
+    KnowledgeQueryFailedEvent,
+    KnowledgeQueryCompletedEvent,
+    KnowledgeSearchQueryFailedEvent,
+)
+
 from .memory_events import (
     MemorySaveStartedEvent,
     MemorySaveCompletedEvent,
@@ -61,6 +70,7 @@ from .memory_events import (
     MemoryRetrievalStartedEvent,
     MemoryRetrievalCompletedEvent,
 )
+
 
 # events
 from .event_listener import EventListener
@@ -118,4 +128,10 @@ __all__ = [
     "ToolSelectionErrorEvent",
     "ToolUsageEvent",
     "ToolValidateInputErrorEvent",
+    "KnowledgeRetrievalStartedEvent",
+    "KnowledgeRetrievalCompletedEvent",
+    "KnowledgeQueryStartedEvent",
+    "KnowledgeQueryFailedEvent",
+    "KnowledgeQueryCompletedEvent",
+    "KnowledgeSearchQueryFailedEvent",
 ]
