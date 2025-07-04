@@ -83,6 +83,8 @@ dev-dependencies = [
     "pytest-recording>=0.13.2",
     "pytest-randomly>=3.16.0",
     "pytest-timeout>=2.3.1",
+    "pytest-xdist>=3.6.1",
+    "pytest-split>=0.9.0",
 ]
 
 [project.scripts]
