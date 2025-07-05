@@ -111,7 +111,7 @@ def run_crew_evaluation_example():
         # Each role might have multiple evaluation results (one per task)
         for result in results:
             # Use the string representation of the evaluation result
-            print(str(result))
+            print(result)
         print("\n")
 
     return evaluation_results

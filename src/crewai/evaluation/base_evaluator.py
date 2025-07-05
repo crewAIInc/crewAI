@@ -130,7 +130,7 @@ class AgentEvaluationResult(BaseModel):
 
         # Add individual metrics with enhanced display for tool usage
         for category, score in self.metrics.items():
-            result += f"- {category.value.upper()}: {score.score}/10\n"
+            result += f"\n\n- {category.value.upper()}: {score.score}/10\n"
 
             # Special handling for tool usage to show detailed feedback
             if score.feedback:

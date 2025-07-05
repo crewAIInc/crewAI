@@ -97,7 +97,7 @@ Evaluate how well the agent's output aligns with the assigned task goal.
             return json.loads(text)
         except:
             # Try to extract JSON from markdown code blocks
-            json_pattern = r'``[(?:json)?\s*([\s\S]*?)\s*](cci:2://file:///Users/luzk/workspace/crewAIInc/crewAI/src/crewai/agent.py:52:0-854:55)``|{[\s\S]*}'
+            json_pattern = r'```[(?:json)?\s*([\s\S]*?)\s*]```|{[\s\S]*}'
             match = re.search(json_pattern, text)
 
             if match:

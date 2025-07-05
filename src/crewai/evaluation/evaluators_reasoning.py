@@ -110,7 +110,6 @@ class ReasoningEfficiencyEvaluator(BaseEvaluator):
 
         # Prepare metrics for LLM evaluation
         loop_info = f"Detected {len(loop_details)} potential reasoning loops." if loop_detected else "No significant reasoning loops detected."
-        pattern_info = f"Primary reasoning pattern: {pattern_analysis['primary_pattern'].value.upper()}. {pattern_analysis['details']}"
 
         # Call structure is ['user', 'assistant', 'user', 'assistant', ...] in chronological order
         call_samples = self._get_call_samples(llm_calls)
