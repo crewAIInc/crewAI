@@ -27,6 +27,10 @@ from crewai.utilities.events.knowledge_events import (
     KnowledgeRetrievalStartedEvent,
     KnowledgeRetrievalCompletedEvent
 )
+from crewai.utilities.events.llm_events import (
+    LLMCallStartedEvent,
+    LLMCallCompletedEvent
+)
 
 # Import only what's needed for type hints, avoid importing AgentEvaluator to prevent circular import
 from crewai.evaluation.base_evaluator import (
@@ -94,6 +98,14 @@ class EvaluationTraceCallback(BaseEventListener):
             self.on_knowledge_retrieval(event.query, event.documents)
             self.on_step_end(event.documents)
 
+        @event_bus.on(LLMCallStartedEvent)
+        def on_llm_call_started(source, event: LLMCallStartedEvent):
+            self.on_llm_call_start(event.messages, event.tools)
+
+        @event_bus.on(LLMCallCompletedEvent)
+        def on_llm_call_completed(source, event: LLMCallCompletedEvent):
+            self.on_llm_call_end(event.messages, event.response)
+
     def on_agent_start(self, agent: Agent, task: Task):
         """Called when an agent starts executing a task.
 
@@ -112,6 +124,7 @@ class EvaluationTraceCallback(BaseEventListener):
             "steps": [],
             "tool_uses": [],
             "knowledge_retrievals": [],
+            "llm_calls": [],
             "start_time": datetime.now(),
             "final_output": None
         }
@@ -189,23 +202,93 @@ class EvaluationTraceCallback(BaseEventListener):
             self.traces[trace_key]["tool_uses"].append(tool_use)
 
     def on_knowledge_retrieval(self, query: str, documents: List[str]):
-        """Called when knowledge is retrieved.
+        """Called when a knowledge retrieval operation is completed.
 
         Args:
-            query: The query used for retrieval
+            query: The query that was used for retrieval
             documents: The documents that were retrieved
         """
         if not self.current_agent_id or not self.current_task_id:
             return
 
         trace_key = f"{self.current_agent_id}_{self.current_task_id}"
-        if trace_key in self.traces:
-            retrieval = {
-                "query": query,
-                "documents": documents,
-                "timestamp": datetime.now()
-            }
-            self.traces[trace_key]["knowledge_retrievals"].append(retrieval)
+        if trace_key not in self.traces:
+            return
+
+        self.traces[trace_key]["knowledge_retrievals"].append({
+            "query": query,
+            "documents": documents,
+            "timestamp": datetime.now()
+        })
+
+    def on_llm_call_start(self, messages: Union[str, List[Dict[str, Any]]], tools: Optional[List[Dict]] = None):
+        """Called when an LLM call is started.
+
+        Args:
+            messages: The messages being sent to the LLM
+            tools: Any tools provided to the LLM
+        """
+        if not self.current_agent_id or not self.current_task_id:
+            return
+
+        trace_key = f"{self.current_agent_id}_{self.current_task_id}"
+        if trace_key not in self.traces:
+            return
+
+        # Store the start information in the current step for later completion
+        self.current_llm_call = {
+            "messages": messages,
+            "tools": tools,
+            "start_time": datetime.now(),
+            "response": None,
+            "end_time": None
+        }
+
+    def on_llm_call_end(self, messages: Union[str, List[Dict[str, Any]]], response: Any):
+        """Called when an LLM call is completed.
+
+        Args:
+            messages: The messages that were sent to the LLM
+            response: The response from the LLM
+        """
+        if not self.current_agent_id or not self.current_task_id:
+            return
+
+        trace_key = f"{self.current_agent_id}_{self.current_task_id}"
+        if trace_key not in self.traces:
+            return
+
+        # Calculate token usage if possible (simplified estimation)
+        total_tokens = 0
+        if hasattr(response, "usage") and hasattr(response.usage, "total_tokens"):
+            total_tokens = response.usage.total_tokens
+
+        # Use the stored start time if available, otherwise use the current time
+        current_time = datetime.now()
+        start_time = None
+        if hasattr(self, "current_llm_call") and self.current_llm_call:
+            start_time = self.current_llm_call.get("start_time")
+        
+        # If we don't have a start time, just use the current time for both
+        # This means we won't have duration info, but we'll still record the call
+        if not start_time:
+            start_time = current_time
+
+        # Complete the LLM call record
+        llm_call = {
+            "messages": messages,
+            "response": response,
+            "start_time": start_time,
+            "end_time": current_time,
+            "total_tokens": total_tokens
+        }
+
+        # Store the completed LLM call
+        self.traces[trace_key]["llm_calls"].append(llm_call)
+
+        # Clear the current LLM call record
+        if hasattr(self, "current_llm_call"):
+            self.current_llm_call = None
 
     def get_trace(self, agent_id: str, task_id: str) -> Optional[Dict[str, Any]]:
         """Get the execution trace for a specific agent-task pair.
@@ -310,6 +393,7 @@ def create_default_evaluator(llm=None, with_meta_evaluator=True): # -> 'AgentEva
     """
     from crewai.evaluation.evaluators import GoalAlignmentEvaluator, KnowledgeRetrievalEvaluator, SemanticQualityEvaluator
     from crewai.evaluation.evaluators_tools import ToolUsageEvaluator, StepEfficiencyEvaluator
+    from crewai.evaluation.evaluators_reasoning import ReasoningEfficiencyEvaluator
     from crewai.evaluation.meta_evaluator import MetaEvaluator
 
     evaluators = [
@@ -318,6 +402,7 @@ def create_default_evaluator(llm=None, with_meta_evaluator=True): # -> 'AgentEva
         ToolUsageEvaluator(llm=llm),
         StepEfficiencyEvaluator(llm=llm),
         KnowledgeRetrievalEvaluator(llm=llm),
+        ReasoningEfficiencyEvaluator(llm=llm),
     ]
 
     meta_evaluator = MetaEvaluator(llm=llm) if with_meta_evaluator else None

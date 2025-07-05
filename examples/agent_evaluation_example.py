@@ -16,6 +16,7 @@ from crewai.evaluation import (
     ToolUsageEvaluator,
     create_evaluation_callbacks
 )
+from crewai.evaluation.evaluators_reasoning import ReasoningEfficiencyEvaluator
 
 # Load environment variables
 load_dotenv()
@@ -86,8 +87,8 @@ def run_crew_evaluation_example():
         evaluators=[
             GoalAlignmentEvaluator(),
             ToolUsageEvaluator(),
-            KnowledgeRetrievalEvaluator(),
-            SemanticQualityEvaluator()
+            SemanticQualityEvaluator(),
+            ReasoningEfficiencyEvaluator()  # Add our new evaluator
         ],
         crew=crew
     )

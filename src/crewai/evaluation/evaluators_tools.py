@@ -344,7 +344,7 @@ class StepEfficiencyEvaluator(BaseEvaluator):
     """Evaluates the efficiency of agent execution steps."""
 
     @property
-    def category(self) -> MetricCategory:
+    def metric_category(self) -> MetricCategory:
         return MetricCategory.STEP_EFFICIENCY
 
     def evaluate(

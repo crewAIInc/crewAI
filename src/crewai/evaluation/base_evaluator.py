@@ -24,6 +24,7 @@ class MetricCategory(enum.Enum):
     SEMANTIC_QUALITY = "semantic_quality"
     TOOL_USAGE = "tool_usage"
     STEP_EFFICIENCY = "step_efficiency"
+    REASONING_EFFICIENCY = "reasoning_efficiency"
     OVERALL = "overall"
 
 
@@ -130,9 +131,9 @@ class AgentEvaluationResult(BaseModel):
         # Add individual metrics with enhanced display for tool usage
         for category, score in self.metrics.items():
             result += f"- {category.value.upper()}: {score.score}/10\n"
-            
+
             # Special handling for tool usage to show detailed feedback
-            if category == MetricCategory.TOOL_USAGE and '\n' in score.feedback:
+            if score.feedback:
                 # Add indented detailed feedback
                 detailed_feedback = "\n  ".join(score.feedback.split('\n'))
                 result += f"  {detailed_feedback}\n"
@@ -177,6 +178,10 @@ class AgentEvaluator:
 
         # Callback will be set from outside
         self.callback = None
+
+    def set_crew(self, crew):
+        self.crew = crew
+        return self
 
     def get_evaluation_results(self):
         """Get evaluation results for all agents in the crew.

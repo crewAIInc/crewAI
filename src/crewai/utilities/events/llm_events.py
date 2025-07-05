@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
+from datetime import datetime
 
 from crewai.utilities.events.base_events import BaseEvent
 
@@ -48,7 +49,7 @@ class LLMCallStartedEvent(LLMEventBase):
     """
 
     type: str = "llm_call_started"
-    messages: Union[str, List[Dict[str, Any]]]
+    messages: Optional[Union[str, List[Dict[str, Any]]]] = None
     tools: Optional[List[dict]] = None
     callbacks: Optional[List[Any]] = None
     available_functions: Optional[Dict[str, Any]] = None
@@ -58,9 +59,9 @@ class LLMCallCompletedEvent(LLMEventBase):
     """Event emitted when a LLM call completes"""
 
     type: str = "llm_call_completed"
+    messages: Union[str, List[Dict[str, Any]]]
     response: Any
     call_type: LLMCallType
-
 
 class LLMCallFailedEvent(LLMEventBase):
     """Event emitted when a LLM call fails"""

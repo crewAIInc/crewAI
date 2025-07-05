@@ -631,7 +631,7 @@ class LLM(BaseLLM):
                 # Log token usage if available in streaming mode
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
                 # Emit completion event and return response
-                self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL, from_task, from_agent)
+                self._handle_emit_call_events(response=full_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
                 return full_response
 
             # --- 9) Handle tool calls if present
@@ -643,7 +643,7 @@ class LLM(BaseLLM):
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             # --- 11) Emit completion event and return response
-            self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL, from_task, from_agent)
+            self._handle_emit_call_events(response=full_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
             return full_response
 
         except ContextWindowExceededError as e:
@@ -655,7 +655,7 @@ class LLM(BaseLLM):
             logging.error(f"Error in streaming response: {str(e)}")
             if full_response.strip():
                 logging.warning(f"Returning partial response despite error: {str(e)}")
-                self._handle_emit_call_events(full_response, LLMCallType.LLM_CALL, from_task, from_agent)
+                self._handle_emit_call_events(response=full_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
                 return full_response
 
             # Emit failed event and re-raise the exception
@@ -809,7 +809,7 @@ class LLM(BaseLLM):
 
         # --- 5) If no tool calls or no available functions, return the text response directly
         if not tool_calls or not available_functions:
-            self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL, from_task, from_agent)
+            self._handle_emit_call_events(response=text_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
             return text_response
 
         # --- 6) Handle tool calls if present
@@ -818,7 +818,7 @@ class LLM(BaseLLM):
             return tool_result
 
         # --- 7) If tool call handling didn't return a result, emit completion event and return text response
-        self._handle_emit_call_events(text_response, LLMCallType.LLM_CALL, from_task, from_agent)
+        self._handle_emit_call_events(response=text_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
         return text_response
 
     def _handle_tool_call(
@@ -874,7 +874,7 @@ class LLM(BaseLLM):
                 )
 
                 # --- 3.3) Emit success event
-                self._handle_emit_call_events(result, LLMCallType.TOOL_CALL)
+                self._handle_emit_call_events(response=result, call_type=LLMCallType.TOOL_CALL)
                 return result
             except Exception as e:
                 # --- 3.4) Handle execution errors
@@ -991,17 +991,20 @@ class LLM(BaseLLM):
                 logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
-    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType, from_task: Optional[Any] = None, from_agent: Optional[Any] = None):
+    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType, from_task: Optional[Any] = None, from_agent: Optional[Any] = None, messages: Optional[Union[str, List[Dict[str, Any]]]] = None):
         """Handle the events for the LLM call.
 
         Args:
             response (str): The response from the LLM call.
             call_type (str): The type of call, either "tool_call" or "llm_call".
+            from_task: Optional task object
+            from_agent: Optional agent object
+            messages: Optional messages object
         """
         assert hasattr(crewai_event_bus, "emit")
         crewai_event_bus.emit(
             self,
-            event=LLMCallCompletedEvent(response=response, call_type=call_type, from_task=from_task, from_agent=from_agent),
+            event=LLMCallCompletedEvent(messages=messages, response=response, call_type=call_type, from_task=from_task, from_agent=from_agent),
         )
 
     def _format_messages_for_provider(
