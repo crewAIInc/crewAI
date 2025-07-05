@@ -1,0 +1,135 @@
+---
+title: Transporte HTTP Streamable
+description: Saiba como conectar o CrewAI a servidores MCP remotos usando o transporte HTTP Streamable flexível.
+icon: globe
+---
+
+## Visão Geral
+
+O transporte HTTP Streamable oferece uma maneira flexível de se conectar a servidores MCP remotos. Ele é frequentemente baseado em HTTP e pode suportar vários padrões de comunicação, incluindo requisição-resposta e streaming, às vezes utilizando Server-Sent Events (SSE) para fluxos do servidor para o cliente dentro de uma interação HTTP mais ampla.
+
+## Conceitos-Chave
+
+- **Servidores Remotos**: Projetado para servidores MCP hospedados remotamente.
+- **Flexibilidade**: Pode suportar padrões de interação mais complexos do que SSE puro, potencialmente incluindo comunicação bidirecional se o servidor implementá-la.
+- **Configuração do `MCPServerAdapter`**: Você precisará fornecer a URL base do servidor para comunicação MCP e especificar `"streamable-http"` como o tipo de transporte.
+
+## Conectando via HTTP Streamable
+
+Você tem dois métodos principais para gerenciar o ciclo de vida da conexão com um servidor MCP HTTP Streamable:
+
+### 1. Conexão Totalmente Gerenciada (Recomendado)
+
+A abordagem recomendada é usar um gerenciador de contexto Python (`with` statement), que lida automaticamente com a configuração e encerramento da conexão.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8001/mcp", # Replace with your actual Streamable HTTP server URL
+    "transport": "streamable-http"
+}
+
+try:
+    with MCPServerAdapter(server_params) as tools:
+        print(f"Available tools from Streamable HTTP MCP server: {[tool.name for tool in tools]}")
+
+        agente_http = Agent(
+            role="Integrador de Serviços HTTP",
+            goal="Utilizar ferramentas de um servidor MCP remoto via Streamable HTTP.",
+            backstory="Um agente de IA especializado em interagir com serviços web complexos.",
+            tools=tools,
+            verbose=True,
+        )
+
+        http_task = Task(
+            description="Realizar uma consulta de dados complexa usando uma ferramenta do servidor Streamable HTTP.",
+            expected_output="O resultado da consulta de dados complexa.",
+            agent=agente_http,
+        )
+
+        http_crew = Crew(
+            agents=[agente_http],
+            tasks=[http_task],
+            verbose=True,
+            process=Process.sequential
+        )
+        
+        result = http_crew.kickoff() 
+        print("\nCrew Task Result (Streamable HTTP - Managed):\n", result)
+
+except Exception as e:
+    print(f"Error connecting to or using Streamable HTTP MCP server (Managed): {e}")
+    print("Ensure the Streamable HTTP MCP server is running and accessible at the specified URL.")
+
+```
+**Nota:** Substitua `"http://localhost:8001/mcp"` pela URL real do seu servidor MCP HTTP Streamable.
+
+### 2. Ciclo de Vida da Conexão Manual
+
+Para cenários que exigem controle mais explícito, você pode gerenciar a conexão do `MCPServerAdapter` manualmente.
+
+<Info>
+É **crítico** chamar `mcp_server_adapter.stop()` quando terminar para fechar a conexão e liberar recursos. Usar um bloco `try...finally` é a forma mais segura de garantir isso.
+</Info>
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "http://localhost:8001/mcp", # Replace with your actual Streamable HTTP server URL
+    "transport": "streamable-http"
+}
+
+mcp_server_adapter = None 
+try:
+    mcp_server_adapter = MCPServerAdapter(server_params)
+    mcp_server_adapter.start()
+    tools = mcp_server_adapter.tools
+    print(f"Available tools (manual Streamable HTTP): {[tool.name for tool in tools]}")
+
+    manual_http_agent = Agent(
+        role="Usuário Avançado de Serviços Web",
+        goal="Interagir com um servidor MCP usando conexões HTTP Streamable gerenciadas manualmente.",
+        backstory="Um especialista em IA em ajustar integrações baseadas em HTTP.",
+        tools=tools,
+        verbose=True
+    )
+    
+    data_processing_task = Task(
+        description="Enviar dados para processamento e recuperar resultados via Streamable HTTP.",
+        expected_output="Dados processados ou confirmação.",
+        agent=manual_http_agent
+    )
+    
+    data_crew = Crew(
+        agents=[manual_http_agent],
+        tasks=[data_processing_task],
+        verbose=True,
+        process=Process.sequential
+    )
+    
+    result = data_crew.kickoff()
+    print("\nCrew Task Result (Streamable HTTP - Manual):\n", result)
+
+except Exception as e:
+    print(f"An error occurred during manual Streamable HTTP MCP integration: {e}")
+    print("Ensure the Streamable HTTP MCP server is running and accessible.")
+finally:
+    if mcp_server_adapter and mcp_server_adapter.is_connected:
+        print("Stopping Streamable HTTP MCP server connection (manual)...")
+        mcp_server_adapter.stop()  # **Crucial: Ensure stop is called**
+    elif mcp_server_adapter:
+        print("Streamable HTTP MCP server adapter was not connected. No stop needed or start failed.")
+```
+
+## Considerações de Segurança
+
+Ao utilizar o transporte HTTP Streamable, as melhores práticas gerais de segurança web são fundamentais:
+- **Use HTTPS**: Sempre prefira HTTPS (HTTP Seguro) para as URLs do seu servidor MCP para criptografar os dados em trânsito.
+- **Autenticação**: Implemente mecanismos robustos de autenticação se seu servidor MCP expuser ferramentas ou dados sensíveis.
+- **Validação de Entrada**: Garanta que seu servidor MCP valide todas as requisições e parâmetros recebidos.
+
+Para um guia abrangente sobre como proteger suas integrações MCP, consulte nossa página de [Considerações de Segurança](./security.mdx) e a documentação oficial de [Segurança em Transportes MCP](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations).

@@ -1,0 +1,123 @@
+---
+title: Inicie uma Crew de Forma Assíncrona
+description: Inicie uma Crew de Forma Assíncrona
+icon: rocket-launch
+---
+
+## Introdução
+
+A CrewAI oferece a capacidade de iniciar uma crew de forma assíncrona, permitindo que você comece a execução da crew de maneira não bloqueante. 
+Esse recurso é especialmente útil quando você deseja executar múltiplas crews simultaneamente ou quando precisa realizar outras tarefas enquanto a crew está em execução.
+
+## Execução Assíncrona de Crew
+
+Para iniciar uma crew de forma assíncrona, utilize o método `kickoff_async()`. Este método inicia a execução da crew em uma thread separada, permitindo que a thread principal continue executando outras tarefas.
+
+### Assinatura do Método
+
+```python Code
+def kickoff_async(self, inputs: dict) -> CrewOutput:
+```
+
+### Parâmetros
+
+- `inputs` (dict): Um dicionário contendo os dados de entrada necessários para as tarefas.
+
+### Retorno
+
+- `CrewOutput`: Um objeto que representa o resultado da execução da crew.
+
+## Possíveis Casos de Uso
+
+- **Geração Paralela de Conteúdo**: Inicie múltiplas crews independentes de forma assíncrona, cada uma responsável por gerar conteúdo sobre temas diferentes. Por exemplo, uma crew pode pesquisar e redigir um artigo sobre tendências em IA, enquanto outra gera posts para redes sociais sobre o lançamento de um novo produto. Cada crew atua de forma independente, permitindo a escala eficiente da produção de conteúdo.
+
+- **Tarefas Conjuntas de Pesquisa de Mercado**: Lance múltiplas crews de forma assíncrona para realizar pesquisas de mercado em paralelo. Uma crew pode analisar tendências do setor, outra examinar estratégias de concorrentes e ainda outra avaliar o sentimento do consumidor. Cada crew conclui sua tarefa de forma independente, proporcionando insights mais rápidos e abrangentes.
+
+- **Módulos Independentes de Planejamento de Viagem**: Execute crews separadas para planejar diferentes aspectos de uma viagem de forma independente. Uma crew pode cuidar das opções de voo, outra das acomodações e uma terceira do planejamento das atividades. Cada crew trabalha de maneira assíncrona, permitindo que os vários componentes da viagem sejam planejados ao mesmo tempo e de maneira independente, para resultados mais rápidos.
+
+## Exemplo: Execução Assíncrona de uma Única Crew
+
+Veja um exemplo de como iniciar uma crew de forma assíncrona utilizando asyncio e aguardando o resultado:
+
+```python Code
+import asyncio
+from crewai import Crew, Agent, Task
+
+# Create an agent with code execution enabled
+coding_agent = Agent(
+    role="Analista de Dados Python",
+    goal="Analisar dados e fornecer insights usando Python",
+    backstory="Você é um analista de dados experiente com fortes habilidades em Python.",
+    allow_code_execution=True
+)
+
+# Create a task that requires code execution
+data_analysis_task = Task(
+    description="Analise o conjunto de dados fornecido e calcule a idade média dos participantes. Idades: {ages}",
+    agent=coding_agent,
+    expected_output="A idade média dos participantes."
+)
+
+# Create a crew and add the task
+analysis_crew = Crew(
+    agents=[coding_agent],
+    tasks=[data_analysis_task]
+)
+
+# Async function to kickoff the crew asynchronously
+async def async_crew_execution():
+    result = await analysis_crew.kickoff_async(inputs={"ages": [25, 30, 35, 40, 45]})
+    print("Crew Result:", result)
+
+# Run the async function
+asyncio.run(async_crew_execution())
+```
+
+## Exemplo: Execução Assíncrona de Múltiplas Crews
+
+Neste exemplo, mostraremos como iniciar múltiplas crews de forma assíncrona e aguardar todas serem concluídas usando `asyncio.gather()`:
+
+```python Code
+import asyncio
+from crewai import Crew, Agent, Task
+
+# Create an agent with code execution enabled
+coding_agent = Agent(
+    role="Analista de Dados Python",
+    goal="Analisar dados e fornecer insights usando Python",
+    backstory="Você é um analista de dados experiente com fortes habilidades em Python.",
+    allow_code_execution=True
+)
+
+# Create tasks that require code execution
+task_1 = Task(
+    description="Analise o primeiro conjunto de dados e calcule a idade média dos participantes. Idades: {ages}",
+    agent=coding_agent,
+    expected_output="A idade média dos participantes."
+)
+
+task_2 = Task(
+    description="Analise o segundo conjunto de dados e calcule a idade média dos participantes. Idades: {ages}",
+    agent=coding_agent,
+    expected_output="A idade média dos participantes."
+)
+
+# Create two crews and add tasks
+crew_1 = Crew(agents=[coding_agent], tasks=[task_1])
+crew_2 = Crew(agents=[coding_agent], tasks=[task_2])
+
+# Async function to kickoff multiple crews asynchronously and wait for all to finish
+async def async_multiple_crews():
+    # Create coroutines for concurrent execution
+    result_1 = crew_1.kickoff_async(inputs={"ages": [25, 30, 35, 40, 45]})
+    result_2 = crew_2.kickoff_async(inputs={"ages": [20, 22, 24, 28, 30]})
+
+    # Wait for both crews to finish
+    results = await asyncio.gather(result_1, result_2)
+
+    for i, result in enumerate(results, 1):
+        print(f"Crew {i} Result:", result)
+
+# Run the async function
+asyncio.run(async_multiple_crews())
+```

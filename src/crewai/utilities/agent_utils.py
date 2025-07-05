@@ -145,12 +145,16 @@ def get_llm_response(
     messages: List[Dict[str, str]],
     callbacks: List[Any],
     printer: Printer,
+    from_task: Optional[Any] = None,
+    from_agent: Optional[Any] = None,
 ) -> str:
     """Call the LLM and return the response, handling any invalid responses."""
     try:
         answer = llm.call(
             messages,
             callbacks=callbacks,
+            from_task=from_task,
+            from_agent=from_agent,
         )
     except Exception as e:
         printer.print(
@@ -476,7 +480,14 @@ def load_agent_from_repository(from_repository: str) -> Dict[str, Any]:
                     try:
                         module = importlib.import_module(tool["module"])
                         tool_class = getattr(module, tool["name"])
-                        attributes[key].append(tool_class())
+
+                        tool_value = tool_class(**tool["init_params"])
+
+                        if isinstance(tool_value, list):
+                            attributes[key].extend(tool_value)
+                        else:
+                            attributes[key].append(tool_value)
+
                     except Exception as e:
                         raise AgentRepositoryError(
                             f"Tool {tool['name']} could not be loaded: {e}"

@@ -1,0 +1,884 @@
+---
+title: 'LLMs'
+description: 'Um guia abrangente para configurar e usar Modelos de Linguagem de Grande Escala (LLMs) em seus projetos CrewAI'
+icon: 'microchip-ai'
+---
+
+## Visão Geral
+
+O CrewAI integra-se com múltiplos provedores de LLM através do LiteLLM, oferecendo flexibilidade para você escolher o modelo certo para o seu caso de uso específico. Este guia irá ajudá-lo a entender como configurar e usar diferentes provedores de LLM em seus projetos CrewAI.
+
+## O que são LLMs?
+
+Modelos de Linguagem de Grande Escala (LLMs) são a inteligência central por trás dos agentes CrewAI. Eles permitem que os agentes compreendam o contexto, tomem decisões e gerem respostas semelhantes às humanas. Veja o que você precisa saber:
+
+<CardGroup cols={2}>
+  <Card title="Noções Básicas de LLM" icon="brain">
+    Modelos de Linguagem de Grande Escala são sistemas de IA treinados em grandes volumes de dados textuais. Eles potencializam a inteligência dos agentes CrewAI, permitindo compreender e gerar textos de voz humana.
+  </Card>
+  <Card title="Janela de Contexto" icon="window">
+    A janela de contexto determina quanto texto um LLM pode processar de uma só vez. Janelas maiores (por exemplo, 128K tokens) permitem mais contexto, porém podem ser mais caras e lentas.
+  </Card>
+  <Card title="Temperatura" icon="temperature-three-quarters">
+    A temperatura (0.0 a 1.0) controla a aleatoriedade das respostas. Valores mais baixos (ex.: 0.2) produzem respostas mais focadas e determinísticas, enquanto valores mais altos (ex.: 0.8) aumentam criatividade e variabilidade.
+  </Card>
+  <Card title="Seleção de Provedor" icon="server">
+    Cada provedor de LLM (ex.: OpenAI, Anthropic, Google) oferece modelos diferentes, com capacidades, preços e recursos variados. Escolha conforme suas necessidades de precisão, velocidade e custo.
+  </Card>
+</CardGroup>
+
+## Configurando seu LLM
+
+Existem diferentes locais no código do CrewAI onde você pode especificar o modelo a ser utilizado. Após definir o modelo usado, será necessário fornecer a configuração (como uma chave de API) para cada provedor de modelo. Veja a seção de [exemplos de configuração de provedores](#provider-configuration-examples) para seu provedor.
+
+<Tabs>
+  <Tab title="1. Variáveis de Ambiente">
+    A maneira mais simples de começar. Defina o modelo diretamente em seu ambiente, usando um arquivo `.env` ou no código do seu aplicativo. Se você utilizou `crewai create` para iniciar seu projeto, já estará configurado.
+
+    ```bash .env
+    MODEL=model-id  # e.g. gpt-4o, gemini-2.0-flash, claude-3-sonnet-...
+
+    # Lembre-se de definir suas chaves de API aqui também. Veja a seção
+    # do Provedor abaixo.
+    ```
+
+    <Warning>
+      Nunca envie chaves de API para controle de versão. Use arquivos de ambiente (.env) ou o gerenciamento de segredos do seu sistema.
+    </Warning>
+  </Tab>
+  <Tab title="2. Configuração YAML">
+    Crie um arquivo YAML para definir as configurações dos seus agentes. Este método é ótimo para controle de versão e colaboração em equipe:
+
+    ```yaml agents.yaml {6}
+    researcher:
+        role: Research Specialist
+        goal: Conduct comprehensive research and analysis
+        backstory: A dedicated research professional with years of experience
+        verbose: true
+        llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+        # (veja exemplos de configuração de provedores abaixo para mais)
+    ```
+
+    <Info>
+      A configuração YAML permite:
+      - Controlar versões das configurações dos agentes
+      - Trocar facilmente entre diferentes modelos
+      - Compartilhar configurações entre membros da equipe
+      - Documentar escolhas de modelos e seus propósitos
+    </Info>
+  </Tab>
+  <Tab title="3. Código Direto">
+    Para máxima flexibilidade, configure os LLMs diretamente no seu código Python:
+
+    ```python {4,8}
+    from crewai import LLM
+
+    # Configuração básica
+    llm = LLM(model="model-id-here")  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+
+    # Configuração avançada com parâmetros detalhados
+    llm = LLM(
+        model="openai/gpt-4", 
+        temperature=0.8,
+        max_tokens=150,
+        top_p=0.9,
+        frequency_penalty=0.1,
+        presence_penalty=0.1,
+        response_format={"type":"json"},
+        stop=["FIM"],
+        seed=42
+    )
+    ```
+
+    <Info>
+      Explicações dos parâmetros:
+      - `temperature`: Controla a aleatoriedade (0.0-1.0)
+      - `timeout`: Tempo máximo de espera pela resposta
+      - `max_tokens`: Limita o comprimento da resposta
+      - `top_p`: Alternativa à temperatura para amostragem
+      - `frequency_penalty`: Reduz repetição de palavras
+      - `presence_penalty`: Incentiva novos tópicos
+      - `response_format`: Especifica formato de saída
+      - `seed`: Garante resultados consistentes
+    </Info>
+  </Tab>
+</Tabs>
+
+## Exemplos de Configuração de Provedores
+
+O CrewAI suporta uma grande variedade de provedores de LLM, cada um com recursos, métodos de autenticação e capacidades de modelo únicos.
+Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, configurar e otimizar o LLM que melhor atende às necessidades do seu projeto.
+
+<AccordionGroup>
+  <Accordion title="OpenAI">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+
+    ```toml Code
+    # Obrigatório
+    OPENAI_API_KEY=sk-...
+
+    # Opcional
+    OPENAI_API_BASE=<custom-base-url>
+    OPENAI_ORGANIZATION=<your-org-id>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/gpt-4",
+        temperature=0.8,
+        max_tokens=150,
+        top_p=0.9,
+        frequency_penalty=0.1,
+        presence_penalty=0.1,
+        stop=["FIM"],
+        seed=42
+    )
+    ```
+
+    OpenAI é um dos líderes em modelos LLM com uma ampla gama de modelos e recursos.
+
+    | Modelo               | Janela de Contexto   | Melhor Para                              |
+    |----------------------|---------------------|------------------------------------------|
+    | GPT-4                | 8.192 tokens        | Tarefas de alta precisão, raciocínio complexo |
+    | GPT-4 Turbo          | 128.000 tokens      | Conteúdo longo, análise de documentos    |
+    | GPT-4o & GPT-4o-mini | 128.000 tokens      | Processamento de contexto amplo com bom custo-benefício |
+    | o3-mini              | 200.000 tokens      | Raciocínio rápido, tarefas complexas     |
+    | o1-mini              | 128.000 tokens      | Raciocínio rápido, tarefas complexas     |
+    | o1-preview           | 128.000 tokens      | Raciocínio rápido, tarefas complexas     |
+    | o1                   | 200.000 tokens      | Raciocínio rápido, tarefas complexas     |
+  </Accordion>
+
+  <Accordion title="Meta-Llama">
+    A API Llama da Meta fornece acesso à família de modelos de linguagem de grande escala da Meta.
+    A API está disponível através da [Meta Llama API](https://llama.developer.meta.com?utm_source=partner-crewai&utm_medium=website).
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+
+    ```toml Code
+    # Configuração chave da API Meta Llama
+    LLAMA_API_KEY=LLM|your_api_key_here
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    from crewai import LLM
+
+    # Inicializar Meta Llama LLM
+    llm = LLM(
+        model="meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8",
+        temperature=0.8,
+        stop=["FIM"],
+        seed=42
+    )
+    ```
+
+    Todos os modelos listados em https://llama.developer.meta.com/docs/models/ são suportados.
+
+    | ID do Modelo | Comprimento contexto entrada | Comprimento contexto saída | Modalidades de entrada | Modalidades de saída |
+    | --- | --- | --- | --- | --- |
+    | `meta_llama/Llama-4-Scout-17B-16E-Instruct-FP8` | 128k | 4028 | Texto, Imagem | Texto |
+    | `meta_llama/Llama-4-Maverick-17B-128E-Instruct-FP8` | 128k | 4028 | Texto, Imagem | Texto |
+    | `meta_llama/Llama-3.3-70B-Instruct` | 128k | 4028 | Texto | Texto |
+    | `meta_llama/Llama-3.3-8B-Instruct` | 128k | 4028 | Texto | Texto |
+  </Accordion>
+
+  <Accordion title="Anthropic">
+    ```toml Code
+    # Obrigatório
+    ANTHROPIC_API_KEY=sk-ant-...
+
+    # Opcional
+    ANTHROPIC_API_BASE=<custom-base-url>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="anthropic/claude-3-sonnet-20240229-v1:0",
+        temperature=0.7
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Google (Gemini API)">
+    Defina sua chave de API no seu arquivo `.env`. Se precisar de uma chave, ou encontrar uma existente, verifique o [AI Studio](https://aistudio.google.com/apikey).
+
+    ```toml .env
+    # https://ai.google.dev/gemini-api/docs/api-key
+    GEMINI_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash",
+        temperature=0.7,
+    )
+    ```
+
+    ### Modelos Gemini
+
+    O Google oferece uma variedade de modelos poderosos otimizados para diferentes casos de uso.
+
+    | Modelo                          | Janela de Contexto | Melhor Para                                                         |
+    |----------------------------------|--------------------|---------------------------------------------------------------------|
+    | gemini-2.5-flash-preview-04-17   | 1M tokens          | Pensamento adaptativo, eficiência de custo                          |
+    | gemini-2.5-pro-preview-05-06     | 1M tokens          | Pensamento e raciocínio avançados, compreensão multimodal, codificação avançada, etc. |
+    | gemini-2.0-flash                 | 1M tokens          | Próxima geração de recursos, velocidade, raciocínio e streaming em tempo real |
+    | gemini-2.0-flash-lite            | 1M tokens          | Eficiência de custo e baixa latência                                 |
+    | gemini-1.5-flash                 | 1M tokens          | Modelo multimodal equilibrado, bom para maioria das tarefas          |
+    | gemini-1.5-flash-8B              | 1M tokens          | Mais rápido, mais eficiente em custo, adequado para tarefas de alta frequência |
+    | gemini-1.5-pro                   | 2M tokens          | Melhor desempenho para uma ampla variedade de tarefas de raciocínio, incluindo lógica, codificação e colaboração criativa |
+
+    A lista completa de modelos está disponível na [documentação dos modelos Gemini](https://ai.google.dev/gemini-api/docs/models).
+
+    ### Gemma
+
+    A API Gemini também permite uso de sua chave de API para acessar [modelos Gemma](https://ai.google.dev/gemma/docs) hospedados na infraestrutura Google.
+
+    | Modelo          | Janela de Contexto |
+    |----------------|-------------------|
+    | gemma-3-1b-it  | 32k tokens        |
+    | gemma-3-4b-it  | 32k tokens        |
+    | gemma-3-12b-it | 32k tokens        |
+    | gemma-3-27b-it | 128k tokens       |
+
+  </Accordion>
+  <Accordion title="Google (Vertex AI)">
+    Obtenha as credenciais pelo Google Cloud Console, salve em um arquivo JSON e carregue com o código a seguir:
+    ```python Code
+    import json
+
+    file_path = 'path/to/vertex_ai_service_account.json'
+
+    # Carregar o arquivo JSON
+    with open(file_path, 'r') as file:
+        vertex_credentials = json.load(file)
+
+    # Converter credenciais em string JSON
+    vertex_credentials_json = json.dumps(vertex_credentials)
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-1.5-pro-latest",
+        temperature=0.7,
+        vertex_credentials=vertex_credentials_json
+    )
+    ```
+
+    O Google oferece uma variedade de modelos poderosos otimizados para diferentes casos de uso:
+
+    | Modelo                          | Janela de Contexto | Melhor Para                                                         |
+    |----------------------------------|--------------------|---------------------------------------------------------------------|
+    | gemini-2.5-flash-preview-04-17   | 1M tokens          | Pensamento adaptativo, eficiência de custo                          |
+    | gemini-2.5-pro-preview-05-06     | 1M tokens          | Pensamento e raciocínio avançados, compreensão multimodal, codificação avançada, etc. |
+    | gemini-2.0-flash                 | 1M tokens          | Próxima geração de recursos, velocidade, raciocínio e streaming em tempo real |
+    | gemini-2.0-flash-lite            | 1M tokens          | Eficiência de custo e baixa latência                                |
+    | gemini-1.5-flash                 | 1M tokens          | Modelo multimodal equilibrado, bom para maioria das tarefas         |
+    | gemini-1.5-flash-8B              | 1M tokens          | Mais rápido, mais eficiente em custo, adequado para tarefas de alta frequência |
+    | gemini-1.5-pro                   | 2M tokens          | Melhor desempenho para uma ampla variedade de tarefas de raciocínio, incluindo lógica, codificação e colaboração criativa |
+  </Accordion>
+
+  <Accordion title="Azure">
+    ```toml Code
+    # Obrigatório
+    AZURE_API_KEY=<your-api-key>
+    AZURE_API_BASE=<your-resource-url>
+    AZURE_API_VERSION=<api-version>
+
+    # Opcional
+    AZURE_AD_TOKEN=<your-azure-ad-token>
+    AZURE_API_TYPE=<your-azure-api-type>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="azure/gpt-4",
+        api_version="2023-05-15"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="AWS Bedrock">
+    ```toml Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+    )
+    ```
+
+    Antes de usar o Amazon Bedrock, certifique-se de ter o boto3 instalado em seu ambiente
+
+    [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) é um serviço gerenciado que fornece acesso a múltiplos modelos fundamentais dos principais provedores de IA através de uma API unificada, permitindo o desenvolvimento seguro e responsável de aplicações de IA.
+
+    | Modelo                   | Janela de Contexto      | Melhor Para                                                         |
+    |--------------------------|------------------------|---------------------------------------------------------------------|
+    | Amazon Nova Pro          | Até 300k tokens        | Alto desempenho, equilíbrio entre precisão, velocidade e custo em tarefas diversas. |
+    | Amazon Nova Micro        | Até 128k tokens        | Modelo texto-only de alta performance, custo-benefício, otimizado para baixa latência. |
+    | Amazon Nova Lite         | Até 300k tokens        | Alto desempenho, processamento multimodal acessível para texto, imagem, vídeo em tempo real. |
+    | Claude 3.7 Sonnet        | Até 128k tokens        | Alto desempenho para raciocínio complexo, programação & agentes de IA|
+    | Claude 3.5 Sonnet v2     | Até 200k tokens        | Modelo avançado especializado em engenharia de software, capacidades agenticas e interação computacional com custo otimizado. |
+    | Claude 3.5 Sonnet        | Até 200k tokens        | Alto desempenho com inteligência e raciocínio excepcionais, equilíbrio entre velocidade-custo. |
+    | Claude 3.5 Haiku         | Até 200k tokens        | Modelo multimodal rápido e compacto, otimizado para respostas rápidas e interações humanas naturais |
+    | Claude 3 Sonnet          | Até 200k tokens        | Modelo multimodal equilibrando inteligência e velocidade para grandes volumes de uso. |
+    | Claude 3 Haiku           | Até 200k tokens        | Compacto, multimodal, otimizado para respostas rápidas e diálogo natural |
+    | Claude 3 Opus            | Até 200k tokens        | Modelo multimodal mais avançado para tarefas complexas com raciocínio humano e entendimento contextual superior. |
+    | Claude 2.1               | Até 200k tokens        | Versão aprimorada com janela de contexto aumentada, maior confiabilidade, menos alucinações para aplicações longas e RAG |
+    | Claude                   | Até 100k tokens        | Modelo versátil para diálogos sofisticados, conteúdo criativo e instruções precisas. |
+    | Claude Instant           | Até 100k tokens        | Modelo rápido e de baixo custo para tarefas diárias, como diálogos, análise, sumarização e Q&A em documentos |
+    | Llama 3.1 405B Instruct  | Até 128k tokens        | LLM avançado para geração de dados sintéticos, distilação e inferência para chatbots, programação, tarefas de domínio específico. |
+    | Llama 3.1 70B Instruct   | Até 128k tokens        | Potencializa conversas complexas com entendimento contextual superior, raciocínio e geração de texto. |
+    | Llama 3.1 8B Instruct    | Até 128k tokens        | Modelo de última geração, entendimento de linguagem, raciocínio e geração de texto. |
+    | Llama 3 70B Instruct     | Até 8k tokens          | Potencializa conversas complexas com entendimento contextual superior, raciocínio e geração de texto. |
+    | Llama 3 8B Instruct      | Até 8k tokens          | LLM de última geração com excelente desempenho em linguagem e geração de texto. |
+    | Titan Text G1 - Lite     | Até 4k tokens          | Modelo leve e econômico para tarefas em inglês e ajuste fino, focado em sumarização e geração de conteúdo. |
+    | Titan Text G1 - Express  | Até 8k tokens          | Modelo versátil para tarefas gerais de linguagem, chat e aplicações RAG com suporte a inglês e 100+ línguas. |
+    | Cohere Command           | Até 4k tokens          | Modelo especializado em seguir comandos do usuário e entregar soluções empresariais práticas. |
+    | Jurassic-2 Mid           | Até 8.191 tokens       | Modelo econômico equilibrando qualidade e custo para tarefas como Q&A, sumarização e geração de conteúdo. |
+    | Jurassic-2 Ultra         | Até 8.191 tokens       | Geração avançada de texto e compreensão, excelente em análise e criação de conteúdo complexo. |
+    | Jamba-Instruct           | Até 256k tokens        | Modelo com janela de contexto extendida para geração de texto, sumarização e Q&A de baixo custo. |
+    | Mistral 7B Instruct      | Até 32k tokens         | LLM atende instruções, solicitações e gera texto criativo. |
+    | Mistral 8x7B Instruct    | Até 32k tokens         | MOE LLM que atende instruções, solicitações e gera texto criativo. |
+  </Accordion>
+
+  <Accordion title="Amazon SageMaker">
+    ```toml Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="sagemaker/<my-endpoint>"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Mistral">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    MISTRAL_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="mistral/mistral-large-latest",
+        temperature=0.7
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Nvidia NIM">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    NVIDIA_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="nvidia_nim/meta/llama3-70b-instruct",
+        temperature=0.7
+    )
+    ```
+
+    O Nvidia NIM oferece uma suíte abrangente de modelos para diversos usos, desde tarefas gerais até aplicações especializadas.
+
+    | Modelo                                                                   | Janela de Contexto | Melhor Para                                                         |
+    |--------------------------------------------------------------------------|--------------------|---------------------------------------------------------------------|
+    | nvidia/mistral-nemo-minitron-8b-8k-instruct                              | 8.192 tokens       | Modelo pequeno de linguagem topo de linha para chatbots, assistentes virtuais e geração de conteúdo. |
+    | nvidia/nemotron-4-mini-hindi-4b-instruct                                 | 4.096 tokens       | SLM bilíngue Hindi-Inglês para inferência no dispositivo, específico para língua hindi. |
+    | nvidia/llama-3.1-nemotron-70b-instruct                                   | 128k tokens        | Personalizado para respostas mais úteis                             |
+    | nvidia/llama3-chatqa-1.5-8b                                              | 128k tokens        | LLM avançado para respostas contextuais de alta qualidade em chatbots e mecanismos de busca. |
+    | nvidia/llama3-chatqa-1.5-70b                                             | 128k tokens        | LLM avançado para respostas contextuais de alta qualidade para chatbots e mecanismos de busca. |
+    | nvidia/vila                                                              | 128k tokens        | Modelo multmodal visão-linguagem para compreensão de texto/img/vídeo com respostas informativas |
+    | nvidia/neva-22                                                           | 4.096 tokens       | Modelo de visão-linguagem multimodal para compreensão textos/imagens e respostas informativas |
+    | nvidia/nemotron-mini-4b-instruct                                         | 8.192 tokens       | Tarefas gerais                                                     |
+    | nvidia/usdcode-llama3-70b-instruct                                       | 128k tokens        | LLM de ponta para queries OpenUSD e geração de código USD-Python.   |
+    | nvidia/nemotron-4-340b-instruct                                          | 4.096 tokens       | Gera dados sintéticos diversos simulando características reais.     |
+    | meta/codellama-70b                                                       | 100k tokens        | LLM capaz de gerar código a partir de linguagem natural e vice-versa.|
+    | meta/llama2-70b                                                          | 4.096 tokens       | Modelo de IA avançado para geração de textos e códigos.             |
+    | meta/llama3-8b-instruct                                                  | 8.192 tokens       | LLM de última geração, entendimento de linguagem, raciocínio e geração de texto. |
+    | meta/llama3-70b-instruct                                                 | 8.192 tokens       | Potencializa conversas complexas com entendimento contextual superior, raciocínio e geração de texto.|
+    | meta/llama-3.1-8b-instruct                                               | 128k tokens        | Modelo compacto de última geração, com compreensão, raciocínio e geração de texto superior. |
+    | meta/llama-3.1-70b-instruct                                              | 128k tokens        | Potencializa conversas complexas com entendimento contextual superior, raciocínio e geração de texto. |
+    | meta/llama-3.1-405b-instruct                                             | 128k tokens        | LLM avançado para geração sintética de dados, destilação e inferência para chatbots, código, tarefas de domínio específico. |
+    | meta/llama-3.2-1b-instruct                                               | 128k tokens        | Pequeno modelo de linguagem de última geração, entendimento, raciocínio e geração textual.|
+    | meta/llama-3.2-3b-instruct                                               | 128k tokens        | Pequeno modelo de linguagem de última geração, entendimento, raciocínio e geração textual.|
+    | meta/llama-3.2-11b-vision-instruct                                       | 128k tokens        | Pequeno modelo de linguagem de última geração, entendimento, raciocínio e geração textual multimodal.|
+    | meta/llama-3.2-90b-vision-instruct                                       | 128k tokens        | Pequeno modelo de linguagem de última geração, entendimento, raciocínio e geração textual multimodal.|
+    | google/gemma-7b                                                          | 8.192 tokens       | Modelo avançado de geração de texto, compreensão, transformação e programação.|
+    | google/gemma-2b                                                          | 8.192 tokens       | Modelo avançado de geração de texto, compreensão, transformação e programação.|
+    | google/codegemma-7b                                                      | 8.192 tokens       | Modelo avançado baseado no Gemma-7B do Google, especializado em geração de códigos e autocomplete.|
+    | google/codegemma-1.1-7b                                                  | 8.192 tokens       | Modelo avançado para geração, complemento, raciocínio e instrução em código.|
+    | google/recurrentgemma-2b                                                 | 8.192 tokens       | Modelo baseado em arquitetura recorrente para inferência mais rápida em sequências longas.|
+    | google/gemma-2-9b-it                                                     | 8.192 tokens       | Modelo avançado de geração de texto, compreensão, transformação e programação.|
+    | google/gemma-2-27b-it                                                    | 8.192 tokens       | Modelo avançado de geração de texto, compreensão, transformação e programação.|
+    | google/gemma-2-2b-it                                                     | 8.192 tokens       | Modelo avançado de geração de texto, compreensão, transformação e programação.|
+    | google/deplot                                                            | 512 tokens         | Modelo visual por linguagem para entender gráficos e converter em tabelas.|
+    | google/paligemma                                                         | 8.192 tokens       | Modelo visão-linguagem experto em compreender texto e visual, gerando respostas informativas.|
+    | mistralai/mistral-7b-instruct-v0.2                                       | 32k tokens         | LLM que segue instruções, completa pedidos e gera texto criativo.   |
+    | mistralai/mixtral-8x7b-instruct-v0.1                                     | 8.192 tokens       | MOE LLM para seguir instruções e gerar versões criativas de texto.  |
+    | mistralai/mistral-large                                                  | 4.096 tokens       | Geração de dados sintéticos.                                        |
+    | mistralai/mixtral-8x22b-instruct-v0.1                                    | 8.192 tokens       | Geração de dados sintéticos.                                        |
+    | mistralai/mistral-7b-instruct-v0.3                                       | 32k tokens         | LLM que segue instruções, completa pedidos e gera texto criativo.   |
+    | nv-mistralai/mistral-nemo-12b-instruct                                   | 128k tokens        | Modelo de linguagem avançado para raciocínio, código, tarefas multilíngues; roda em uma única GPU.|
+    | mistralai/mamba-codestral-7b-v0.1                                        | 256k tokens        | Modelo para escrita e interação com código em múltiplas linguagens e tarefas.|
+    | microsoft/phi-3-mini-128k-instruct                                       | 128K tokens        | LLM leve, de última geração, com habilidades de lógica e matemática.|
+    | microsoft/phi-3-mini-4k-instruct                                         | 4.096 tokens       | LLM leve, de última geração, com habilidades de lógica e matemática.|
+    | microsoft/phi-3-small-8k-instruct                                        | 8.192 tokens       | LLM leve, de última geração, com habilidades de lógica e matemática.|
+    | microsoft/phi-3-small-128k-instruct                                      | 128K tokens        | LLM leve, de última geração, com habilidades de lógica e matemática.|
+    | microsoft/phi-3-medium-4k-instruct                                       | 4.096 tokens       | LLM leve, de última geração, com habilidades de lógica e matemática.|
+    | microsoft/phi-3-medium-128k-instruct                                     | 128K tokens        | LLM leve, de última geração, com habilidades de lógica e matemática.|
+    | microsoft/phi-3.5-mini-instruct                                          | 128K tokens        | LLM multilíngue leve para aplicações de IA restritas em memória e tempo.|
+    | microsoft/phi-3.5-moe-instruct                                           | 128K tokens        | LLM avançada baseada em Mixture of Experts para geração eficiente de conteúdo.|
+    | microsoft/kosmos-2                                                       | 1.024 tokens       | Modelo multimodal revolucionário para compreender e raciocinar elementos visuais em imagens.|
+    | microsoft/phi-3-vision-128k-instruct                                     | 128k tokens        | Modelo multimodal aberto de ponta para raciocínio de alta qualidade a partir de imagens.|
+    | microsoft/phi-3.5-vision-instruct                                        | 128k tokens        | Modelo multimodal aberto de ponta para raciocínio de alta qualidade a partir de imagens.|
+    | databricks/dbrx-instruct                                                 | 12k tokens         | LLM de uso geral com desempenho no estado da arte para linguagem, programação e RAG.|
+    | snowflake/arctic                                                         | 1.024 tokens       | Inferência eficiente para aplicações empresariais focadas em SQL e programação.|
+    | aisingapore/sea-lion-7b-instruct                                         | 4.096 tokens       | LLM para representação e diversidade linguística e cultural do sudeste asiático.|
+    | ibm/granite-8b-code-instruct                                             | 4.096 tokens       | LLM para programação: geração, explicação e diálogo multi-turn de código.|
+    | ibm/granite-34b-code-instruct                                            | 8.192 tokens       | LLM para programação: geração, explicação e diálogo multi-turn de código.|
+    | ibm/granite-3.0-8b-instruct                                              | 4.096 tokens       | Pequeno modelo avançado, com suporte a RAG, sumário, classificação, código e IA agentica.|
+    | ibm/granite-3.0-3b-a800m-instruct                                        | 4.096 tokens       | Modelo Mixture of Experts eficiente para RAG, sumário, extração de entidades, classificação.|
+    | mediatek/breeze-7b-instruct                                              | 4.096 tokens       | Gera dados sintéticos diversos.|
+    | upstage/solar-10.7b-instruct                                             | 4.096 tokens       | Excelente em tarefas de PLN, especialmente seguir instruções, raciocínio e matemática.|
+    | writer/palmyra-med-70b-32k                                               | 32k tokens         | LLM líder para respostas médicas precisas e contextuais.|
+    | writer/palmyra-med-70b                                                   | 32k tokens         | LLM líder para respostas médicas precisas e contextuais.|
+    | writer/palmyra-fin-70b-32k                                               | 32k tokens         | LLM especializada em análise financeira, relatórios e processamento de dados.|
+    | 01-ai/yi-large                                                           | 32k tokens         | Poderoso para inglês e chinês, incluindo chatbot e escrita criativa.|
+    | deepseek-ai/deepseek-coder-6.7b-instruct                                 | 2k tokens          | Modelo avançado para geração de código, autocomplete, infilling.|
+    | rakuten/rakutenai-7b-instruct                                            | 1.024 tokens       | LLM topo de linha, compreensão, raciocínio e geração textual.|
+    | rakuten/rakutenai-7b-chat                                                | 1.024 tokens       | LLM topo de linha, compreensão, raciocínio e geração textual.|
+    | baichuan-inc/baichuan2-13b-chat                                          | 4.096 tokens       | Suporte a chat em chinês/inglês, programação, matemática, seguir instruções, resolver quizzes.|
+  </Accordion>
+
+  <Accordion title="Local NVIDIA NIM Deployed using WSL2">
+
+    O NVIDIA NIM permite rodar LLMs potentes localmente em máquinas Windows usando WSL2 (Windows Subsystem for Linux).
+    Este método aproveita o GPU NVIDIA para inferência privativa, segura e econômica, sem depender de serviços em nuvem.
+    Perfeito para desenvolvimento, testes ou produção onde privacidade ou funcionalidades offline são necessárias.
+
+    Aqui está um guia passo a passo para configurar um modelo local NVIDIA NIM:
+
+    1. Siga as instruções de instalação no [site da NVIDIA](https://docs.nvidia.com/nim/wsl2/latest/getting-started.html)
+
+    2. Instale o modelo local. Para Llama 3.1-8b siga as [instruções](https://build.nvidia.com/meta/llama-3_1-8b-instruct/deploy)
+
+    3. Configure seus modelos locais crewai:
+
+    ```python Code
+    from crewai.llm import LLM
+
+    local_nvidia_nim_llm = LLM(
+        model="openai/meta/llama-3.1-8b-instruct", # é compatível com openai-api
+        base_url="http://localhost:8000/v1",
+        api_key="<your_api_key|any text if you have not configured it>", # api_key obrigatório, pode usar qualquer texto
+    )
+
+    # Então pode usá-lo no seu crew:
+
+    @CrewBase
+    class MyCrew():
+        # ...
+
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                config=self.agents_config['researcher'], # type: ignore[index]
+                llm=local_nvidia_nim_llm
+            )
+
+        # ...
+    ```
+  </Accordion>
+
+  <Accordion title="Groq">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+
+    ```toml Code
+    GROQ_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="groq/llama-3.2-90b-text-preview",
+        temperature=0.7
+    )
+    ```
+    | Modelo            | Janela de Contexto   | Melhor Para                             |
+    |-------------------|---------------------|------------------------------------------|
+    | Llama 3.1 70B/8B  | 131.072 tokens      | Alta performance e tarefas de contexto grande|
+    | Llama 3.2 Série   | 8.192 tokens        | Tarefas gerais                          |
+    | Mixtral 8x7B      | 32.768 tokens       | Equilíbrio entre performance e contexto  |
+  </Accordion>
+
+  <Accordion title="IBM watsonx.ai">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Obrigatório
+    WATSONX_URL=<your-url>
+    WATSONX_APIKEY=<your-apikey>
+    WATSONX_PROJECT_ID=<your-project-id>
+
+    # Opcional
+    WATSONX_TOKEN=<your-token>
+    WATSONX_DEPLOYMENT_SPACE_ID=<your-space-id>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="watsonx/meta-llama/llama-3-1-70b-instruct",
+        base_url="https://api.watsonx.ai/v1"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Ollama (LLMs Locais)">
+    1. Instale o Ollama: [ollama.ai](https://ollama.ai/)
+    2. Rode um modelo: `ollama run llama3`
+    3. Configure:
+
+    ```python Code
+    llm = LLM(
+        model="ollama/llama3:70b",
+        base_url="http://localhost:11434"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Fireworks AI">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    FIREWORKS_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",
+        temperature=0.7
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Perplexity AI">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    PERPLEXITY_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="llama-3.1-sonar-large-128k-online",
+        base_url="https://api.perplexity.ai/"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Hugging Face">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    HF_TOKEN=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct"
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="SambaNova">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+
+    ```toml Code
+    SAMBANOVA_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="sambanova/Meta-Llama-3.1-8B-Instruct",
+        temperature=0.7
+    )
+    ```
+    | Modelo            | Janela de Contexto         | Melhor Para                                  |
+    |-------------------|---------------------------|----------------------------------------------|
+    | Llama 3.1 70B/8B  | Até 131.072 tokens        | Alto desempenho, tarefas com grande contexto |
+    | Llama 3.1 405B    | 8.192 tokens              | Desempenho e qualidade de saída elevada      |
+    | Llama 3.2 Série   | 8.192 tokens              | Tarefas gerais e multimodais                 |
+    | Llama 3.3 70B     | Até 131.072 tokens        | Desempenho e qualidade de saída elevada      |
+    | Família Qwen2     | 8.192 tokens              | Desempenho e qualidade de saída elevada      |
+  </Accordion>
+
+  <Accordion title="Cerebras">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    # Obrigatório
+    CEREBRAS_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="cerebras/llama3.1-70b",
+        temperature=0.7,
+        max_tokens=8192
+    )
+    ```
+
+    <Info>
+      Recursos do Cerebras:
+      - Altas velocidades de inferência
+      - Preços competitivos
+      - Equilíbrio entre velocidade e qualidade
+      - Suporte a longas janelas de contexto
+    </Info>
+  </Accordion>
+
+  <Accordion title="Open Router">
+    Defina as seguintes variáveis de ambiente no seu arquivo `.env`:
+    ```toml Code
+    OPENROUTER_API_KEY=<your-api-key>
+    ```
+
+    Exemplo de uso em seu projeto CrewAI:
+    ```python Code
+    llm = LLM(
+        model="openrouter/deepseek/deepseek-r1",
+        base_url="https://openrouter.ai/api/v1",
+        api_key=OPENROUTER_API_KEY
+    )
+    ```
+
+    <Info>
+      Modelos do Open Router:
+      - openrouter/deepseek/deepseek-r1
+      - openrouter/deepseek/deepseek-chat
+    </Info>
+  </Accordion>
+</AccordionGroup>
+
+## Respostas em streaming
+
+O CrewAI suporta respostas em streaming de LLMs, permitindo que sua aplicação receba e processe saídas em tempo real assim que são geradas.
+
+<Tabs>
+  <Tab title="Configuração Básica">
+    Ative o streaming definindo o parâmetro `stream` como `True` ao inicializar seu LLM:
+
+    ```python
+    from crewai import LLM
+
+    # Crie um LLM com streaming ativado
+    llm = LLM(
+        model="openai/gpt-4o",
+        stream=True  # Ativar streaming
+    )
+    ```
+
+    Quando o streaming está ativado, as respostas são entregues em partes à medida que vão sendo geradas, criando uma experiência mais responsiva para o usuário.
+  </Tab>
+
+  <Tab title="Manipulação de Eventos">
+    O CrewAI emite eventos para cada chunk recebido durante o streaming:
+
+    ```python
+    from crewai.utilities.events import (
+      LLMStreamChunkEvent
+    )
+    from crewai.utilities.events.base_event_listener import BaseEventListener
+
+    class MyCustomListener(BaseEventListener):
+        def setup_listeners(self, crewai_event_bus):
+            @crewai_event_bus.on(LLMStreamChunkEvent)
+            def on_llm_stream_chunk(self, event: LLMStreamChunkEvent):
+              # Clique para cada chunk assim que chegar
+              print(f"Received chunk: {event.chunk}")
+
+    my_listener = MyCustomListener()
+    ```
+
+    <Tip>
+      [Clique aqui](https://docs.crewai.com/concepts/event-listener#event-listeners) para mais detalhes 
+    </Tip>
+  </Tab>
+</Tabs>
+
+## Chamada Estruturada de LLM
+
+O CrewAI suporta respostas estruturadas de LLMs permitindo que você defina um `response_format` usando um modelo Pydantic. Isso permite que o framework automaticamente faça o parsing e valide a saída, facilitando a integração da resposta em sua aplicação sem pós-processamento manual.
+
+Por exemplo, é possível definir um modelo Pydantic para representar a resposta esperada e passá-lo como `response_format` ao instanciar o LLM. O modelo será utilizado para converter a resposta do LLM em um objeto Python estruturado.
+
+```python Code
+from crewai import LLM
+
+class Dog(BaseModel):
+    name: str
+    age: int
+    breed: str
+
+
+llm = LLM(model="gpt-4o", response_format=Dog)
+
+response = llm.call(
+    "Analyze the following messages and return the name, age, and breed. "
+    "Meet Kona! She is 3 years old and is a black german shepherd."
+)
+print(response)
+
+# Output:
+# Dog(name='Kona', age=3, breed='black german shepherd')
+```
+
+## Recursos Avançados e Otimização
+
+Saiba como obter o máximo da configuração do seu LLM:
+
+<AccordionGroup>
+  <Accordion title="Gestão da Janela de Contexto">
+    O CrewAI inclui recursos inteligentes para gerenciamento de contexto:
+
+    ```python
+    from crewai import LLM
+
+    # O CrewAI automaticamente gerencia:
+    # 1. Contagem e acompanhamento de tokens
+    # 2. Resumo de conteúdo quando necessário
+    # 3. Divisão de tarefas para grandes contextos
+
+    llm = LLM(
+        model="gpt-4",
+        max_tokens=4000,  # Limitar tamanho da resposta
+    )
+    ```
+
+    <Info>
+      Boas práticas para o gerenciamento de contexto:
+      1. Prefira modelos com janelas apropriadas
+      2. Pré-processe entradas muito longas
+      3. Utilize divisão para documentos grandes
+      4. Monitore tokens para otimizar custos
+    </Info>
+  </Accordion>
+
+  <Accordion title="Otimização de Performance">
+    <Steps>
+      <Step title="Otimização do Uso de Tokens">
+        Escolha a janela de contexto certa para sua tarefa:
+        - Tarefas pequenas (até 4K tokens): Modelos padrão
+        - Tarefas médias (entre 4K-32K): Modelos aprimorados
+        - Tarefas grandes (acima de 32K): Modelos com contexto expandido
+
+        ```python
+        # Configure o modelo com as opções certas
+        llm = LLM(
+            model="openai/gpt-4-turbo-preview",
+            temperature=0.7,    # Ajuste conforme a tarefa
+            max_tokens=4096,    # Defina conforme a necessidade da saída
+            timeout=300        # Timeout maior para tarefas complexas
+        )
+        ```
+        <Tip>
+          - Temperaturas baixas (0.1 a 0.3) para respostas factuais
+          - Temperaturas altas (0.7 a 0.9) para tarefas criativas
+        </Tip>
+      </Step>
+
+      <Step title="Boas Práticas">
+        1. Monitore o uso de tokens
+        2. Implemente limites de taxa (rate limiting)
+        3. Use cache quando possível
+        4. Defina limites apropriados para max_tokens
+      </Step>
+    </Steps>
+
+    <Info>
+      Lembre-se de monitorar regularmente o uso de tokens e ajustar suas configurações para otimizar custos e desempenho.
+    </Info>
+  </Accordion>
+  
+  <Accordion title="Descartar Parâmetros Adicionais">
+    O CrewAI usa Litellm internamente para chamadas LLM, permitindo descartar parâmetros adicionais desnecessários para seu caso de uso. Isso pode simplificar seu código e reduzir a complexidade da configuração do LLM.
+    Por exemplo, se não precisar enviar o parâmetro <code>stop</code>, basta omiti-lo na chamada do LLM:
+
+    ```python
+    from crewai import LLM
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "<api-key>"
+
+    o3_llm = LLM(
+        model="o3",
+        drop_params=True,
+        additional_drop_params=["stop"]
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Problemas Comuns e Soluções
+
+<Tabs>
+  <Tab title="Autenticação">
+    <Warning>
+      A maioria dos problemas de autenticação pode ser resolvida verificando o formato da chave da API e os nomes das variáveis de ambiente.
+    </Warning>
+
+    ```bash
+    # OpenAI
+    OPENAI_API_KEY=sk-...
+
+    # Anthropic
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
+  </Tab>
+  <Tab title="Nomes dos Modelos">
+    <Check>
+      Sempre inclua o prefixo do provedor nos nomes dos modelos
+    </Check>
+
+    ```python
+    # Correto
+    llm = LLM(model="openai/gpt-4")
+
+    # Incorreto
+    llm = LLM(model="gpt-4")
+    ```
+  </Tab>
+  <Tab title="Comprimento do Contexto">
+    <Tip>
+      Use modelos de contexto expandido para tarefas extensas
+    </Tip>
+
+    ```python
+    # Modelo com contexto expandido
+    llm = LLM(model="openai/gpt-4o")  # 128K tokens
+    ```
+  </Tab>
+</Tabs>

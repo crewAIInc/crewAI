@@ -1,0 +1,510 @@
+---
+title: Flows
+description: Saiba como criar e gerenciar fluxos de trabalho de IA usando CrewAI Flows.
+icon: arrow-progress
+---
+
+## Visão Geral
+
+O CrewAI Flows é um recurso poderoso projetado para simplificar a criação e o gerenciamento de fluxos de trabalho de IA. Os flows permitem que desenvolvedores combinem e coordenem tarefas de codificação e crews de forma eficiente, proporcionando uma estrutura robusta para a construção de automações de IA sofisticadas.
+
+Os flows permitem que você crie fluxos de trabalho estruturados e orientados por eventos. Eles oferecem uma forma integrada de conectar múltiplas tarefas, gerenciar estado e controlar o fluxo de execução nas suas aplicações de IA. Com flows, você pode facilmente projetar e implementar processos de múltiplas etapas que exploram todo o potencial das capacidades do CrewAI.
+
+1. **Criação Simplificada de Fluxos de Trabalho**: Conecte facilmente múltiplas crews e tarefas para criar workflows de IA complexos.
+
+2. **Gerenciamento de Estado**: Flows facilitam muito o gerenciamento e o compartilhamento de estados entre diferentes tarefas do seu fluxo de trabalho.
+
+3. **Arquitetura Orientada a Eventos**: Construído sobre um modelo orientado a eventos, permitindo fluxos dinâmicos e responsivos.
+
+4. **Controle de Fluxo Flexível**: Implemente lógica condicional, loops e ramificações dentro dos seus fluxos.
+
+## Primeiros Passos
+
+Vamos criar um Flow simples no qual você usará a OpenAI para gerar uma cidade aleatória em uma tarefa e, em seguida, usará essa cidade para gerar uma curiosidade em outra tarefa.
+
+```python Code
+# (O código não é traduzido)
+```
+
+Na ilustração acima, criamos um Flow simples que gera uma cidade aleatória usando a OpenAI e depois cria uma curiosidade sobre essa cidade. O Flow consiste em duas tarefas: `generate_city` e `generate_fun_fact`. A tarefa `generate_city` é o ponto de início do Flow, enquanto a tarefa `generate_fun_fact` fica escutando o resultado da tarefa `generate_city`.
+
+Cada instância de Flow recebe automaticamente um identificador único (UUID) em seu estado, que auxilia no rastreamento e gerenciamento das execuções. O estado também pode armazenar dados adicionais (como a cidade gerada e a curiosidade) que permanecem durante toda a execução do flow.
+
+Ao executar o Flow, ele irá:
+1. Gerar um ID único para o estado do flow
+2. Gerar uma cidade aleatória e armazená-la no estado
+3. Gerar uma curiosidade sobre essa cidade e armazená-la no estado
+4. Imprimir os resultados no console
+
+O ID único do estado e os dados armazenados podem ser úteis para rastrear execuções do flow e manter contexto entre as tarefas.
+
+**Nota:** Certifique-se de configurar seu arquivo `.env` para armazenar sua `OPENAI_API_KEY`. Essa chave é necessária para autenticar as requisições à API da OpenAI.
+
+### @start()
+
+O decorador `@start()` é utilizado para marcar um método como ponto inicial de um Flow. Quando um Flow é iniciado, todos os métodos decorados com `@start()` são executados em paralelo. É possível ter múltiplos métodos start em um Flow, e todos eles serão executados quando o Flow iniciar.
+
+### @listen()
+
+O decorador `@listen()` é utilizado para marcar um método como ouvinte da saída de outra tarefa do Flow. O método decorado com `@listen()` será executado quando a tarefa especificada emitir uma saída. O método pode acessar a saída da tarefa à qual está escutando como argumento.
+
+#### Utilização
+
+O decorador `@listen()` pode ser usado de várias formas:
+
+1. **Escutando um Método pelo Nome**: Você pode passar o nome do método ao qual deseja escutar como string. Quando esse método concluir, o método ouvinte será chamado.
+
+   ```python Code
+   # (O código não é traduzido)
+   ```
+
+2. **Escutando um Método Diretamente**: Você pode passar o próprio método. Quando esse método concluir, o método ouvinte será chamado.
+   ```python Code
+   # (O código não é traduzido)
+   ```
+
+### Saída de um Flow
+
+Acessar e manipular a saída de um Flow é essencial para integrar seus workflows de IA a aplicações ou sistemas maiores. O CrewAI Flows fornece mecanismos fáceis para recuperar a saída final, acessar resultados intermediários e gerenciar o estado geral do seu Flow.
+
+#### Recuperando a Saída Final
+
+Ao executar um Flow, a saída final é determinada pelo último método concluído. O método `kickoff()` retorna a saída desse método final.
+
+Veja como acessar a saída final:
+
+<CodeGroup>
+```python Code
+# (O código não é traduzido)
+```
+
+```text Output
+---- Final Output ----
+Second method received: Output from first_method
+```
+
+</CodeGroup>
+![Flow Visual image](/images/crewai-flow-2.png)
+
+Neste exemplo, o `second_method` é o último método a ser concluído, logo sua saída será a saída final do Flow.
+O método `kickoff()` retorna essa saída, que é impressa no console. O método `plot()` irá gerar o arquivo HTML para visualizar o fluxo.
+
+#### Acessando e Atualizando o Estado
+
+Além de recuperar a saída final, você pode acessar e atualizar o estado dentro do seu Flow. O estado pode ser usado para armazenar e compartilhar dados entre diferentes métodos do Flow. Após a execução do Flow, você pode acessar o estado para recuperar informações adicionadas ou alteradas durante o processo.
+
+Veja um exemplo de como atualizar e acessar o estado:
+
+<CodeGroup>
+```python Code
+# (O código não é traduzido)
+```
+
+```text Output
+Final Output: Hello from first_method - updated by second_method
+Final State:
+counter=2 message='Hello from first_method - updated by second_method'
+```
+</CodeGroup>
+
+![Flow Visual image](/images/crewai-flow-2.png)
+
+Neste exemplo, o estado é atualizado tanto por `first_method` quanto por `second_method`.
+Após o término da execução, é possível acessar o estado final e observar as atualizações realizadas por esses métodos.
+
+Ao garantir que a saída do método final seja retornada e oferecer acesso ao estado, o CrewAI Flows facilita a integração dos resultados dos seus workflows de IA em aplicações maiores,
+além de permitir o gerenciamento e o acesso ao estado durante toda a execução do Flow.
+
+## Gerenciamento de Estado em Flows
+
+Gerenciar o estado de forma eficaz é fundamental para construir fluxos de trabalho de IA confiáveis e de fácil manutenção. O CrewAI Flows oferece mecanismos robustos para o gerenciamento de estado tanto não estruturado quanto estruturado,
+permitindo que o desenvolvedor escolha a abordagem que melhor se adapta à sua aplicação.
+
+### Gerenciamento de Estado Não Estruturado
+
+No gerenciamento de estado não estruturado, todo o estado é armazenado no atributo `state` da classe `Flow`.
+Essa abordagem oferece flexibilidade, permitindo que o desenvolvedor adicione ou modifique atributos do estado conforme necessário sem precisar definir um esquema rígido.
+Mesmo com estados não estruturados, os flows do CrewAI geram e mantêm automaticamente um identificador único (UUID) para cada instância de estado.
+
+```python Code
+# (O código não é traduzido)
+```
+
+![Flow Visual image](/images/crewai-flow-3.png)
+
+**Nota:** O campo `id` é gerado e preservado automaticamente durante toda a execução do flow. Não é necessário gerenciá-lo ou defini-lo manualmente, e ele permanecerá mesmo ao atualizar o estado com novos dados.
+
+**Pontos-Chave:**
+
+- **Flexibilidade:** É possível adicionar atributos dinamicamente ao `self.state` sem restrições pré-definidas.
+- **Simplicidade:** Ideal para fluxos de trabalho diretos em que a estrutura do estado é mínima ou varia bastante.
+
+### Gerenciamento de Estado Estruturado
+
+No gerenciamento de estado estruturado, utilizam-se esquemas pré-definidos para garantir consistência e segurança de tipos em todo o workflow.
+Ao usar modelos como o `BaseModel` da Pydantic, os desenvolvedores podem definir a forma exata do estado, melhorando a validação e fornecendo auto-complete nos ambientes de desenvolvimento.
+
+Cada estado nos flows do CrewAI recebe automaticamente um identificador único (UUID) para ajudar no rastreamento e gerenciamento. Esse ID é gerado e mantido automaticamente pelo sistema de flows.
+
+```python Code
+# (O código não é traduzido)
+```
+
+![Flow Visual image](/images/crewai-flow-3.png)
+
+**Pontos-Chave:**
+
+- **Esquema Definido:** `ExampleState` deixa claro a estrutura do estado, aumentando a legibilidade e a manutenção do código.
+- **Segurança de Tipos:** O uso da Pydantic garante que os atributos do estado tenham os tipos certos, reduzindo os erros em tempo de execução.
+- **Auto-Completar:** IDEs conseguem oferecer auto-completar e checagem de erros, graças ao modelo definido do estado.
+
+### Escolhendo entre Estado Não Estruturado e Estruturado
+
+- **Use Estado Não Estruturado quando:**
+  - O estado do fluxo é simples ou altamente dinâmico.
+  - Flexibilidade é mais importante do que uma definição rígida do estado.
+  - Prototipagem rápida é necessária sem a sobrecarga de definição de esquemas.
+
+- **Use Estado Estruturado quando:**
+  - O flow exige uma estrutura de estado bem definida e consistente.
+  - Segurança de tipos e validação são importantes para a confiabilidade da aplicação.
+  - É desejado usar recursos da IDE como auto-completar e checagem de tipos para uma melhor experiência de desenvolvimento.
+
+Ao oferecer as duas opções de gerenciamento de estado, o CrewAI Flows permite que desenvolvedores criem fluxos de IA que sejam ao mesmo tempo flexíveis e robustos, atendendo a uma ampla variedade de requisitos de aplicação.
+
+## Persistência de Flow
+
+O decorador @persist permite a persistência automática do estado nos flows do CrewAI, garantindo que você mantenha o estado do flow entre reinicializações ou execuções diferentes do workflow. Esse decorador pode ser aplicado tanto ao nível de classe, quanto ao nível de método, oferecendo flexibilidade sobre como gerenciar a persistência do estado.
+
+### Persistência no Nível de Classe
+
+Quando aplicado no nível da classe, o decorador @persist garante a persistência automática de todos os estados dos métodos do flow:
+
+```python
+# (O código não é traduzido)
+```
+
+### Persistência no Nível de Método
+
+Para um controle mais granular, você pode aplicar @persist em métodos específicos:
+
+```python
+# (O código não é traduzido)
+```
+
+### Como Funciona
+
+1. **Identificação Única do Estado**
+   - Cada estado do flow recebe automaticamente um UUID único
+   - O ID é preservado entre atualizações do estado e chamadas de métodos
+   - Suporta tanto estados estruturados (Pydantic BaseModel) quanto não estruturados (dicionário)
+
+2. **Backend SQLite Padrão**
+   - O SQLiteFlowPersistence é o backend de armazenamento padrão
+   - Os estados são salvos automaticamente em um banco de dados SQLite local
+   - O tratamento de erros é robusto, oferecendo mensagens claras caso ocorram falhas nas operações de banco de dados
+
+3. **Tratamento de Erros**
+   - Mensagens de erro abrangentes para operações de banco de dados
+   - Validação automática do estado ao salvar e carregar
+   - Feedback claro quando houver problemas de persistência
+
+### Considerações Importantes
+
+- **Tipos de Estado**: São suportados tanto estados estruturados (Pydantic BaseModel) quanto não estruturados (dicionário)
+- **ID Automático**: O campo `id` é adicionado automaticamente se não estiver presente
+- **Recuperação de Estado**: Flows que falharem ou forem reiniciados podem recarregar automaticamente seu estado anterior
+- **Implementação Personalizada**: Você pode fornecer sua própria implementação de FlowPersistence para necessidades de armazenamento especializadas
+
+### Vantagens Técnicas
+
+1. **Controle Preciso Através de Acesso de Baixo Nível**
+   - Acesso direto às operações de persistência para casos avançados
+   - Controle detalhado via decoradores de persistência no nível do método
+   - Inspeção de estado e recursos de depuração embutidos
+   - Visibilidade total das mudanças e operações de persistência do estado
+
+2. **Maior Confiabilidade**
+   - Recuperação automática do estado após falhas no sistema ou reinicializações
+   - Atualizações de estado baseadas em transações para garantir integridade dos dados
+   - Mensagens de erro abrangentes e claras
+   - Validação robusta durante operações de salvar e carregar estado
+
+3. **Arquitetura Extensível**
+   - Backend de persistência personalizável através da interface FlowPersistence
+   - Suporte para soluções de armazenamento especializadas além do SQLite
+   - Compatibilidade tanto com estados estruturados (Pydantic) quanto não estruturados (dict)
+   - Integração perfeita com os padrões de flow existentes no CrewAI
+
+A arquitetura de persistência enfatiza precisão técnica e opções de personalização, permitindo que desenvolvedores mantenham controle total sobre o gerenciamento de estado enquanto se beneficiam dos recursos de confiabilidade integrados.
+
+## Controle de Flow
+
+### Lógica Condicional: `or`
+
+A função `or_` nos flows permite escutar múltiplos métodos e acionar o método ouvinte quando qualquer um dos métodos especificados gerar uma saída.
+
+<CodeGroup>
+```python Code
+# (O código não é traduzido)
+```
+
+```text Output
+Logger: Hello from the start method
+Logger: Hello from the second method
+```
+</CodeGroup>
+
+![Flow Visual image](/images/crewai-flow-4.png)
+
+Ao executar esse Flow, o método `logger` será acionado pela saída tanto do `start_method` quanto do `second_method`.
+A função `or_` serve para escutar vários métodos e disparar o método ouvinte quando qualquer um emitir um resultado.
+
+### Lógica Condicional: `and`
+
+A função `and_` nos flows permite escutar múltiplos métodos e acionar o método ouvinte apenas quando todos os métodos especificados emitirem uma saída.
+
+<CodeGroup>
+```python Code
+# (O código não é traduzido)
+```
+
+```text Output
+---- Logger ----
+{'greeting': 'Hello from the start method', 'joke': 'What do computers eat? Microchips.'}
+```
+</CodeGroup>
+
+![Flow Visual image](/images/crewai-flow-5.png)
+
+Ao executar esse Flow, o método `logger` só será disparado quando ambos `start_method` e `second_method` emitirem uma saída.
+A função `and_` é usada para escutar vários métodos e acionar o método ouvinte apenas quando todas as condições forem atendidas.
+
+### Router
+
+O decorador `@router()` nos flows permite definir lógica de roteamento condicional baseada na saída de um método.
+Você pode especificar diferentes rotas conforme a saída do método, permitindo controlar o fluxo de execução de forma dinâmica.
+
+<CodeGroup>
+```python Code
+# (O código não é traduzido)
+```
+
+```text Output
+Starting the structured flow
+Third method running
+Fourth method running
+```
+</CodeGroup>
+
+![Flow Visual image](/images/crewai-flow-6.png)
+
+No exemplo, o `start_method` gera um valor booleano aleatório e armazena no estado.
+O `second_method` usa o decorador `@router()` para decidir o roteamento conforme o valor booleano.
+Se o valor for `True`, retorna `"success"`, senão retorna `"failed"`.
+Os métodos `third_method` e `fourth_method` escutam a saída do `second_method` e executam com base no valor retornado.
+
+Ao executar esse Flow, a saída será diferente dependendo do valor booleano aleatório gerado pelo `start_method`.
+
+## Adicionando Agentes aos Flows
+
+Os agentes podem ser integrados facilmente aos seus flows, oferecendo uma alternativa leve às crews completas quando você precisar executar tarefas simples e focadas. Veja um exemplo de como utilizar um agente em um flow para realizar uma pesquisa de mercado:
+
+```python
+# (O código não é traduzido)
+```
+
+![Flow Visual image](/images/crewai-flow-7.png)
+
+Esse exemplo demonstra diversos recursos fundamentais do uso de agentes em flows:
+
+1. **Saída Estruturada**: O uso de modelos Pydantic para definir o formato esperado da saída (`MarketAnalysis`) garante segurança de tipos e dados estruturados em todo o flow.
+
+2. **Gerenciamento de Estado**: O estado do flow (`MarketResearchState`) mantém o contexto entre as etapas e armazena entradas e saídas.
+
+3. **Integração de Ferramentas**: Os agentes podem usar ferramentas (como `WebsiteSearchTool`) para potencializar suas habilidades.
+
+## Adicionando Crews aos Flows
+
+Criar um flow com múltiplas crews no CrewAI é simples.
+
+Você pode gerar um novo projeto CrewAI que já inclui toda a estrutura para criar um flow com várias crews executando o seguinte comando:
+
+```bash
+crewai create flow name_of_flow
+```
+
+Esse comando irá gerar um novo projeto CrewAI com a estrutura de pastas necessária. O projeto gerado inclui uma crew pré-criada chamada `poem_crew`, já funcional. Você pode usar essa crew como modelo, copiando, colando e editando para criar outras crews.
+
+### Estrutura de Pastas
+
+Após rodar o comando `crewai create flow name_of_flow`, você verá uma estrutura parecida com:
+
+| Diretório/Arquivo         | Descrição                                                           |
+| :------------------------ | :------------------------------------------------------------------- |
+| `name_of_flow/`           | Diretório raiz do flow.                                              |
+| ├── `crews/`              | Contém diretórios para crews específicas.                            |
+| │ └── `poem_crew/`        | Diretório da "poem_crew" com configurações e scripts.                |
+| │ ├── `config/`           | Arquivos de configuração da "poem_crew".                             |
+| │ │ ├── `agents.yaml`     | YAML que define os agentes da "poem_crew".                           |
+| │ │ └── `tasks.yaml`      | YAML que define as tarefas da "poem_crew".                           |
+| │ ├── `poem_crew.py`      | Script da funcionalidade da "poem_crew".                             |
+| ├── `tools/`              | Ferramentas adicionais usadas no flow.                               |
+| │ └── `custom_tool.py`    | Implementação de ferramenta customizada.                             |
+| ├── `main.py`             | Script principal do flow.                                            |
+| ├── `README.md`           | Descrição do projeto e instruções.                                   |
+| ├── `pyproject.toml`      | Arquivo de configurações e dependências do projeto.                  |
+| └── `.gitignore`          | Arquivos e pastas a serem ignorados no controle de versão.           |
+
+### Construindo suas Crews
+
+Na pasta `crews`, você pode definir múltiplas crews. Cada crew tem sua própria pasta, com arquivos de configuração e o arquivo de definição da crew. Por exemplo, a pasta `poem_crew` contém:
+
+- `config/agents.yaml`: Define os agentes da crew.
+- `config/tasks.yaml`: Define as tarefas da crew.
+- `poem_crew.py`: Contém a definição da crew, incluindo agentes, tarefas, etc.
+
+Você pode copiar, colar e editar a `poem_crew` para criar outras crews.
+
+### Conectando Crews no `main.py`
+
+No arquivo `main.py`, você cria seu flow e conecta as crews. É possível definir o fluxo usando a classe `Flow` e os decoradores `@start` e `@listen` para definir a ordem de execução.
+
+Veja um exemplo de como conectar a `poem_crew` no arquivo `main.py`:
+
+```python Code
+# (O código não é traduzido)
+```
+
+Neste exemplo, a classe `PoemFlow` define um fluxo que gera a quantidade de frases, usa a `PoemCrew` para gerar um poema e, depois, salva o poema em um arquivo. O flow inicia com o método `kickoff()`, e o gráfico é gerado pelo método `plot()`.
+
+![Flow Visual image](/images/crewai-flow-8.png)
+
+### Executando o Flow
+
+(Opcional) Antes de rodar o flow, instale as dependências executando:
+
+```bash
+crewai install
+```
+
+Após instalar as dependências, ative o ambiente virtual com:
+
+```bash
+source .venv/bin/activate
+```
+
+Com o ambiente ativado, execute o flow usando um dos comandos:
+
+```bash
+crewai flow kickoff
+```
+
+ou
+
+```bash
+uv run kickoff
+```
+
+O flow será executado, e você verá a saída no console.
+
+## Plotando Flows
+
+Visualizar seus fluxos de trabalho de IA proporciona insights valiosos sobre a estrutura e os caminhos de execução dos flows. O CrewAI oferece uma ferramenta de visualização poderosa que permite gerar plots interativos dos flows, facilitando o entendimento e a otimização dos workflows de IA.
+
+### O que são Plots?
+
+No CrewAI, plots são representações gráficas dos fluxos de trabalho de IA. Eles mostram as tarefas, suas conexões e o fluxo de dados entre elas. Essa visualização ajuda a compreender a sequência de operações, identificar gargalos e garantir que a lógica do workflow está alinhada com o esperado.
+
+### Como Gerar um Plot
+
+O CrewAI oferece duas formas práticas de gerar plots dos seus flows:
+
+#### Opção 1: Usando o método `plot()`
+
+Se estiver trabalhando diretamente com uma instância do flow, basta chamar o método `plot()` do objeto. Isso criará um arquivo HTML com o plot interativo do seu flow.
+
+```python Code
+# (O código não é traduzido)
+```
+
+Esse comando gera um arquivo chamado `my_flow_plot.html` no diretório atual. Abra esse arquivo em um navegador para visualizar o plot interativo.
+
+#### Opção 2: Usando a Linha de Comando
+
+Em projetos CrewAI estruturados, é possível gerar um plot pela linha de comando. Isso é útil para projetos maiores, onde você deseja visualizar toda a configuração do flow.
+
+```bash
+crewai flow plot
+```
+
+O comando gera um arquivo HTML com o plot do flow, semelhante ao método `plot()`. Basta abrir o arquivo no navegador para explorar o workflow.
+
+### Entendendo o Plot
+
+O plot gerado mostra nós representando as tarefas do seu flow, com setas indicando o fluxo de execução. A visualização é interativa, permitindo zoom, navegação e detalhes ao passar o mouse nos nós.
+
+Ao visualizar seus flows, você tem clareza do formato do workflow, facilitando debug, otimização e comunicação dos seus processos de IA para outras pessoas.
+
+### Conclusão
+
+A plotagem dos flows é um recurso poderoso do CrewAI para aprimorar o design e o gerenciamento de fluxos de IA complexos. Usando o método `plot()` ou a linha de comando, você obtém uma visão visual dos workflows, benefício tanto para desenvolvimento quanto para apresentação.
+
+## Próximos Passos
+
+Se você deseja explorar exemplos adicionais de flows, acompanhe alguns exemplos em nosso repositório de exemplos. Aqui estão quatro sugestões específicas de flows, cada uma demonstrando casos de uso distintos para você escolher conforme seu problema:
+
+1. **Email Auto Responder Flow**: Este exemplo demonstra um loop infinito, onde um job de background roda continuamente automatizando respostas de email. É ideal para tarefas rotineiras sem intervenção manual. [Ver Exemplo](https://github.com/crewAIInc/crewAI-examples/tree/main/email_auto_responder_flow)
+
+2. **Lead Score Flow**: Destaca como adicionar feedback humano e manipular diferentes ramos condicionais usando router. Um ótimo aprendizado para workflows com decisão dinâmica e supervisão humana. [Ver Exemplo](https://github.com/crewAIInc/crewAI-examples/tree/main/lead-score-flow)
+
+3. **Write a Book Flow**: Exemplo ideal para encadear múltiplas crews, onde a saída de uma é usada por outra. Uma crew faz um sumário do livro inteiro, outra gera capítulos... Tudo conectado para entregar um livro completo. Perfeito para processos longos e coordenados. [Ver Exemplo](https://github.com/crewAIInc/crewAI-examples/tree/main/write_a_book_with_flows)
+
+4. **Meeting Assistant Flow**: Demonstra como transmitir um evento para desencadear múltiplas ações posteriores. Exemplo: ao finalizar uma reunião, atualizar um Trello, enviar mensagem no Slack e salvar resultados ao mesmo tempo. Indicado para gerenciamento completo de tarefas e notificações. [Ver Exemplo](https://github.com/crewAIInc/crewAI-examples/tree/main/meeting_assistant_flow)
+
+Explore esses exemplos para descobrir como aproveitar CrewAI Flows em diferentes contextos – desde automação de tarefas repetitivas até o gerenciamento de processos dinâmicos com decisões e feedback humano.
+
+Além disso, confira nosso vídeo no YouTube sobre como utilizar flows no CrewAI abaixo!
+
+<iframe
+  width="560"
+  height="315"
+  src="https://www.youtube.com/embed/MTb5my6VOT8"
+  title="YouTube video player"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  referrerpolicy="strict-origin-when-cross-origin"
+  allowfullscreen
+></iframe>
+
+## Executando Flows
+
+Existem duas formas de executar um flow:
+
+### Usando a API do Flow
+
+Você pode executar um flow programaticamente criando uma instância da sua classe de flow e chamando o método `kickoff()`:
+
+```python
+# Exemplo de execução de flow em português
+flow = ExemploFlow()
+resultado = flow.kickoff()
+```
+
+### Usando a CLI
+
+A partir da versão 0.103.0, é possível executar flows usando o comando `crewai run`:
+
+```shell
+crewai run
+```
+
+O comando detecta automaticamente se seu projeto é um flow (com base na configuração `type = "flow"` no pyproject.toml) e executa conforme o esperado. Esse é o método recomendado para executar flows pelo terminal.
+
+Por compatibilidade retroativa, também é possível usar:
+
+```shell
+crewai flow kickoff
+```
+
+No entanto, o comando `crewai run` é agora o preferido, pois funciona tanto para crews quanto para flows.

@@ -1,0 +1,124 @@
+---
+title: Integração com Weave
+description: Saiba como usar o Weights & Biases (W&B) Weave para rastrear, experimentar, avaliar e melhorar suas aplicações CrewAI.
+icon: radar
+---
+
+# Visão Geral do Weave
+
+[Weights & Biases (W&B) Weave](https://weave-docs.wandb.ai/) é um framework para rastreamento, experimentação, avaliação, implementação e aprimoramento de aplicações baseadas em LLM.
+
+![Visão geral do uso do tracing do W&B Weave com CrewAI](/images/weave-tracing.gif)
+
+O Weave oferece suporte completo para todas as etapas do desenvolvimento da sua aplicação CrewAI:
+
+- **Rastreamento e Monitoramento**: Acompanhe automaticamente chamadas LLM e a lógica da aplicação para depuração e análise de sistemas em produção
+- **Iteração Sistemática**: Aperfeiçoe e itere em prompts, conjuntos de dados e modelos
+- **Avaliação**: Utilize avaliadores personalizados ou pré-construídos para avaliar e aprimorar sistematicamente o desempenho dos agentes
+- **Guardrails**: Proteja seus agentes com salvaguardas pré e pós-execução para moderação de conteúdo e segurança de prompts
+
+O Weave captura automaticamente rastreamentos (traces) de suas aplicações CrewAI, permitindo monitorar e analisar o desempenho, as interações e o fluxo de execução dos seus agentes. Isso te ajuda a construir melhores conjuntos de dados para avaliação e a otimizar os fluxos de trabalho dos agentes.
+
+## Instruções de Configuração
+
+<Steps>
+    <Step title="Instale os pacotes necessários">
+      ```shell
+      pip install crewai weave
+      ```
+    </Step>
+    <Step title="Crie uma conta no W&B">
+      Cadastre-se em uma [conta Weights & Biases](https://wandb.ai) caso ainda não tenha uma. Você precisará dela para visualizar rastreamentos e métricas.
+    </Step>
+    <Step title="Inicialize o Weave na sua aplicação">
+      Adicione o seguinte código à sua aplicação:
+
+      ```python
+      import weave
+
+      # Inicialize o Weave com o nome do seu projeto
+      weave.init(project_name="crewai_demo")
+      ```
+      
+      Após a inicialização, o Weave fornecerá uma URL onde você poderá visualizar seus rastreamentos e métricas.
+    </Step>
+    <Step title="Crie seus Crews/Flows">
+      ```python
+      from crewai import Agent, Task, Crew, LLM, Process
+
+      # Crie um LLM com temperatura 0 para garantir saídas determinísticas
+      llm = LLM(model="gpt-4o", temperature=0)
+
+      # Crie os agentes
+      pesquisador = Agent(
+          role='Analista de Pesquisa',
+          goal='Encontrar e analisar as melhores oportunidades de investimento',
+          backstory='Especialista em análise financeira e pesquisa de mercado',
+          llm=llm,
+          verbose=True,
+          allow_delegation=False,
+      )
+
+      redator = Agent(
+          role='Redator de Relatórios',
+          goal='Escrever relatórios de investimento claros e concisos',
+          backstory='Experiente na criação de relatórios financeiros detalhados',
+          llm=llm,
+          verbose=True,
+          allow_delegation=False,
+      )
+
+      # Crie as tarefas
+      pesquisa = Task(
+          description='Pesquisa aprofundada sobre o {tema}',
+          expected_output='Dados de mercado abrangentes incluindo principais players, tamanho de mercado e tendências de crescimento.',
+          agent=pesquisador
+      )
+
+      redacao = Task(
+          description='Escreva um relatório detalhado com base na pesquisa',
+          expected_output='O relatório deve ser fácil de ler e entender. Use tópicos quando aplicável.',
+          agent=redator
+      )
+
+      # Crie o crew
+      equipe = Crew(
+          agents=[pesquisador, redator],
+          tasks=[pesquisa, redacao],
+          verbose=True,
+          process=Process.sequential,
+      )
+
+      # Execute o crew
+      resultado = equipe.kickoff(inputs={"tema": "IA em ciência dos materiais"})
+      print(resultado)
+      ```
+    </Step>
+    <Step title="Visualize rastreamentos no Weave">
+      Após executar sua aplicação CrewAI, acesse a URL do Weave fornecida durante a inicialização para visualizar:
+      - Chamadas LLM e seus metadados
+      - Interações dos agentes e fluxo de execução das tarefas
+      - Métricas de desempenho como latência e uso de tokens
+      - Quaisquer erros ou problemas ocorridos durante a execução
+
+      <Frame caption="Painel de Rastreamento do Weave">
+        <img src="/images/weave-tracing.png" alt="Exemplo de rastreamento do Weave com CrewAI" />
+      </Frame>
+    </Step>
+</Steps>
+
+## Funcionalidades
+
+- O Weave captura automaticamente todas as operações do CrewAI: interações dos agentes e execuções das tarefas; chamadas LLM com metadados e uso de tokens; uso de ferramentas e resultados.
+- A integração suporta todos os métodos de execução do CrewAI: `kickoff()`, `kickoff_for_each()`, `kickoff_async()` e `kickoff_for_each_async()`.
+- Rastreamento automático de todas as [crewAI-tools](https://github.com/crewAIInc/crewAI-tools).
+- Suporte ao recurso flow com patching por decorador (`@start`, `@listen`, `@router`, `@or_`, `@and_`).
+- Rastreie guardrails personalizados passados para o `Task` do CrewAI com `@weave.op()`.
+
+Para informações detalhadas sobre o que é suportado, acesse a [documentação do Weave CrewAI](https://weave-docs.wandb.ai/guides/integrations/crewai/#getting-started-with-flow).
+
+## Recursos
+
+- [📘 Documentação do Weave](https://weave-docs.wandb.ai)
+- [📊 Exemplo de dashboard Weave x CrewAI](https://wandb.ai/ayut/crewai_demo/weave/traces?cols=%7B%22wb_run_id%22%3Afalse%2C%22attributes.weave.client_version%22%3Afalse%2C%22attributes.weave.os_name%22%3Afalse%2C%22attributes.weave.os_release%22%3Afalse%2C%22attributes.weave.os_version%22%3Afalse%2C%22attributes.weave.source%22%3Afalse%2C%22attributes.weave.sys_version%22%3Afalse%7D&peekPath=%2Fayut%2Fcrewai_demo%2Fcalls%2F0195c838-38cb-71a2-8a15-651ecddf9d89)
+- [🐦 X](https://x.com/weave_wb)

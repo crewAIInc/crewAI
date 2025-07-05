@@ -15,12 +15,14 @@ from typing import (
     get_origin,
 )
 
+
 try:
     from typing import Self
 except ImportError:
     from typing_extensions import Self
 
 from pydantic import (
+    UUID4,
     BaseModel,
     Field,
     InstanceOf,
@@ -129,6 +131,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     # Core Agent Properties
+    id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Goal of the agent")
     backstory: str = Field(description="Backstory of the agent")
@@ -517,6 +520,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         messages=self._messages,
                         tools=None,
                         callbacks=self._callbacks,
+                        from_agent=self,
                     ),
                 )
 
@@ -526,6 +530,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         messages=self._messages,
                         callbacks=self._callbacks,
                         printer=self._printer,
+                        from_agent=self,
                     )
 
                     # Emit LLM call completed event
@@ -534,13 +539,14 @@ class LiteAgent(FlowTrackable, BaseModel):
                         event=LLMCallCompletedEvent(
                             response=answer,
                             call_type=LLMCallType.LLM_CALL,
+                            from_agent=self,
                         ),
                     )
                 except Exception as e:
                     # Emit LLM call failed event
                     crewai_event_bus.emit(
                         self,
-                        event=LLMCallFailedEvent(error=str(e)),
+                        event=LLMCallFailedEvent(error=str(e), from_agent=self),
                     )
                     raise e
 

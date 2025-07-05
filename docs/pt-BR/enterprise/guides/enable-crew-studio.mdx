@@ -1,0 +1,165 @@
+---
+title: "Ativar Crew Studio"
+description: "Ativando o Crew Studio no CrewAI Enterprise"
+icon: "comments"
+---
+
+<Tip>
+Crew Studio é uma poderosa ferramenta **no-code/low-code** que permite criar ou estruturar Crews rapidamente por meio de uma interface conversacional.
+</Tip>
+
+## O que é o Crew Studio?
+
+O Crew Studio é uma forma inovadora de criar equipes de agentes de IA sem escrever código.
+
+<Frame>
+  ![Crew Studio Interface](/images/enterprise/crew-studio-interface.png)
+</Frame>
+
+Com o Crew Studio, você pode:
+
+- Conversar com o Crew Assistant para descrever seu problema
+- Gerar automaticamente agentes e tarefas
+- Selecionar as ferramentas apropriadas
+- Configurar os inputs necessários
+- Gerar código para download e personalização
+- Fazer deploy diretamente na plataforma CrewAI Enterprise
+
+## Etapas de Configuração
+
+Antes de começar a usar o Crew Studio, você precisa configurar suas conexões LLM:
+
+<Steps>
+  <Step title="Configurar a Conexão LLM">
+    Acesse a aba **LLM Connections** no painel do CrewAI Enterprise e crie uma nova conexão LLM.
+
+    <Note>
+      Sinta-se à vontade para utilizar qualquer provedor LLM suportado pelo CrewAI.
+    </Note>
+    
+    Configure sua conexão LLM:
+    
+    - Insira um `Connection Name` (por exemplo, `OpenAI`)
+    - Selecione o provedor do modelo: `openai` ou `azure`
+    - Selecione os modelos que deseja usar em suas Crews geradas pelo Studio
+      - Recomendamos pelo menos `gpt-4o`, `o1-mini` e `gpt-4o-mini`
+    - Adicione sua chave de API como uma variável de ambiente:
+      - Para OpenAI: adicione `OPENAI_API_KEY` com sua chave de API
+      - Para Azure OpenAI: consulte [este artigo](https://blog.crewai.com/configuring-azure-openai-with-crewai-a-comprehensive-guide/) para detalhes de configuração
+    - Clique em `Add Connection` para salvar sua configuração
+    
+    <Frame>
+      ![LLM Connection Configuration](/images/enterprise/llm-connection-config.png)
+    </Frame>
+  </Step>
+  
+  <Step title="Verificar Conexão Adicionada">
+    Assim que concluir a configuração, você verá sua nova conexão adicionada à lista de conexões disponíveis.
+    
+    <Frame>
+      ![Connection Added](/images/enterprise/connection-added.png)
+    </Frame>
+  </Step>
+  
+  <Step title="Configurar Padrões do LLM">
+    No menu principal, vá em **Settings → Defaults** e configure as opções padrão do LLM:
+    
+    - Selecione os modelos padrão para agentes e outros componentes
+    - Defina as configurações padrão para o Crew Studio
+    
+    Clique em `Save Settings` para aplicar as alterações.
+    
+    <Frame>
+      ![LLM Defaults Configuration](/images/enterprise/llm-defaults.png)
+    </Frame>
+  </Step>
+</Steps>
+
+## Usando o Crew Studio
+
+Agora que você configurou sua conexão LLM e os padrões, está pronto para começar a usar o Crew Studio!
+
+<Steps>
+  <Step title="Acessar o Studio">
+    Navegue até a seção **Studio** no painel do CrewAI Enterprise.
+  </Step>
+  
+  <Step title="Iniciar uma Conversa">
+    Inicie uma conversa com o Crew Assistant descrevendo o problema que deseja resolver:
+    
+    ```md
+    I need a crew that can research the latest AI developments and create a summary report.
+    ```
+    
+    O Crew Assistant fará perguntas de esclarecimento para entender melhor suas necessidades.
+  </Step>
+  
+  <Step title="Revisar o Crew Gerado">
+    Revise a configuração do crew gerado, incluindo:
+    
+    - Agentes e seus papéis
+    - Tarefas a serem realizadas
+    - Inputs necessários
+    - Ferramentas a serem utilizadas
+    
+    Esta é sua oportunidade para refinar a configuração antes de prosseguir.
+  </Step>
+  
+  <Step title="Fazer Deploy ou Baixar">
+    Quando estiver satisfeito com a configuração, você pode:
+    
+    - Baixar o código gerado para personalização local
+    - Fazer deploy do crew diretamente na plataforma CrewAI Enterprise
+    - Modificar a configuração e gerar o crew novamente
+  </Step>
+  
+  <Step title="Testar seu Crew">
+    Após o deploy, teste seu crew com inputs de exemplo para garantir que ele funcione conforme esperado.
+  </Step>
+</Steps>
+
+<Tip>
+Para melhores resultados, forneça descrições claras e detalhadas do que deseja que seu crew realize. Inclua inputs específicos e outputs esperados em sua descrição.
+</Tip>
+
+## Exemplo de Fluxo de Trabalho
+
+Veja um fluxo de trabalho típico para criação de um crew com o Crew Studio:
+
+<Steps>
+  <Step title="Descreva seu Problema">
+    Comece descrevendo seu problema:
+    
+    ```md
+    I need a crew that can analyze financial news and provide investment recommendations
+    ```
+  </Step>
+  
+  <Step title="Responder Perguntas">
+    Responda às perguntas de esclarecimento do Crew Assistant para refinar seus requisitos.
+  </Step>
+  
+  <Step title="Revisar o Plano">
+    Revise o plano do crew gerado, que pode incluir:
+    
+    - Um Research Agent para coletar notícias financeiras
+    - Um Analysis Agent para interpretar os dados
+    - Um Recommendations Agent para fornecer conselhos de investimento
+  </Step>
+  
+  <Step title="Aprovar ou Modificar">
+    Aprove o plano ou solicite alterações, se necessário.
+  </Step>
+  
+  <Step title="Baixar ou Fazer Deploy">
+    Baixe o código para personalização ou faça o deploy diretamente na plataforma.
+  </Step>
+  
+  <Step title="Testar e Refinar">
+    Teste seu crew com inputs de exemplo e faça ajustes conforme necessário.
+  </Step>
+</Steps>
+
+<Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para obter assistência com o Crew Studio ou qualquer outro recurso do CrewAI Enterprise.
+</Card>

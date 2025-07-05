@@ -1,0 +1,95 @@
+---
+title: Agentes de Codificação
+description: Aprenda como habilitar seus Agentes CrewAI para escrever e executar código, e explore funcionalidades avançadas para maior potencial.
+icon: rectangle-code
+---
+
+## Introdução
+
+Os Agentes CrewAI agora têm a poderosa capacidade de escrever e executar código, aumentando significativamente suas habilidades de resolução de problemas. Esse recurso é particularmente útil para tarefas que exigem soluções computacionais ou programáticas.
+
+## Habilitando a Execução de Código
+
+Para habilitar a execução de código para um agente, defina o parâmetro `allow_code_execution` como `True` ao criar o agente.
+
+Veja um exemplo:
+
+```python Code
+from crewai import Agent
+
+coding_agent = Agent(
+    role="Senior Python Developer",
+    goal="Craft well-designed and thought-out code",
+    backstory="You are a senior Python developer with extensive experience in software architecture and best practices.",
+    allow_code_execution=True
+)
+```
+
+<Note>
+Observe que o parâmetro `allow_code_execution` é `False` por padrão.
+</Note>
+
+## Considerações Importantes
+
+1. **Seleção de Modelo**: É fortemente recomendado utilizar modelos mais avançados como Claude 3.5 Sonnet e GPT-4 ao habilitar a execução de código.
+Esses modelos têm melhor compreensão de conceitos de programação e tendem a gerar códigos mais corretos e eficientes.
+
+2. **Tratamento de Erros**: O recurso de execução de código inclui tratamento de erros. Se o código executado gerar uma exceção, o agente receberá a mensagem de erro e poderá tentar corrigir o código ou
+fornecer soluções alternativas. O parâmetro `max_retry_limit`, que por padrão é 2, controla o número máximo de tentativas para uma tarefa.
+
+3. **Dependências**: Para usar o recurso de execução de código, é necessário instalar o pacote `crewai_tools`. Caso não esteja instalado, o agente registrará uma mensagem informativa:
+"Ferramentas de codificação não disponíveis. Instale crewai_tools."
+
+## Processo de Execução de Código
+
+Quando um agente com execução de código habilitada encontra uma tarefa que requer programação:
+
+<Steps>
+    <Step title="Análise da Tarefa">
+    O agente analisa a tarefa e determina que a execução de código é necessária.
+    </Step>
+    <Step title="Formulação do Código">
+    Ele formula o código Python necessário para resolver o problema.
+    </Step>
+    <Step title="Execução do Código">
+    O código é enviado para a ferramenta interna de execução de código (`CodeInterpreterTool`).
+    </Step>
+    <Step title="Interpretação dos Resultados">
+    O agente interpreta o resultado e o incorpora na sua resposta ou o utiliza para aprofundar a solução do problema.
+    </Step>
+</Steps>
+
+## Exemplo de Uso
+
+Veja um exemplo detalhado de como criar um agente com capacidade de execução de código e utilizá-lo em uma tarefa:
+
+```python Code
+from crewai import Agent, Task, Crew
+
+# Create an agent with code execution enabled
+coding_agent = Agent(
+    role="Python Data Analyst",
+    goal="Analyze data and provide insights using Python",
+    backstory="You are an experienced data analyst with strong Python skills.",
+    allow_code_execution=True
+)
+
+# Create a task that requires code execution
+data_analysis_task = Task(
+    description="Analyze the given dataset and calculate the average age of participants.",
+    agent=coding_agent
+)
+
+# Create a crew and add the task
+analysis_crew = Crew(
+    agents=[coding_agent],
+    tasks=[data_analysis_task]
+)
+
+# Execute the crew
+result = analysis_crew.kickoff()
+
+print(result)
+```
+
+Neste exemplo, o `coding_agent` pode escrever e executar código Python para realizar tarefas de análise de dados.

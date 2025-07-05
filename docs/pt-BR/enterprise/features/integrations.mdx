@@ -1,0 +1,179 @@
+---
+title: Integrações
+description: "Aplicativos conectados para que seus agentes possam tomar ações."
+icon: "plug"
+---
+
+## Visão Geral
+
+Permita que seus agentes autentiquem com qualquer provedor habilitado para OAuth e tomem ações. Do Salesforce e HubSpot ao Google e GitHub, você conta com mais de 16 serviços integrados.
+
+<Frame>
+  ![Integrações](/images/enterprise/crew_connectors.png)
+</Frame>
+
+## Integrações Suportadas
+
+### **Comunicação & Colaboração**
+- **Gmail** - Gerencie e-mails e rascunhos
+- **Slack** - Notificações e alertas do workspace
+- **Microsoft** - Integração com Office 365 e Teams
+
+### **Gerenciamento de Projetos**
+- **Jira** - Rastreamento de issues e gerenciamento de projetos
+- **ClickUp** - Gerenciamento de tarefas e produtividade
+- **Asana** - Coordenação de tarefas e projetos de equipe
+- **Notion** - Gerenciamento de páginas e bases de dados
+- **Linear** - Gerenciamento de projetos de software e bugs
+- **GitHub** - Gerenciamento de repositórios e issues
+
+### **Gestão de Relacionamento com o Cliente**
+- **Salesforce** - Gerenciamento de contas e oportunidades de CRM
+- **HubSpot** - Gestão de pipeline de vendas e contatos
+- **Zendesk** - Administração de chamados de suporte ao cliente
+
+### **Negócios & Finanças**
+- **Stripe** - Processamento de pagamentos e gerenciamento de clientes
+- **Shopify** - Gestão de loja de e-commerce e produtos
+
+### **Produtividade & Armazenamento**
+- **Google Sheets** - Sincronização de dados de planilhas
+- **Google Calendar** - Gerenciamento de eventos e agendas
+- **Box** - Armazenamento de arquivos e gerenciamento de documentos
+
+e mais estão por vir!
+
+## Pré-requisitos
+
+Antes de usar as Integrações de Autenticação, certifique-se de que você possui:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com). Você pode começar com uma avaliação gratuita.
+
+## Configurando Integrações
+
+### 1. Conecte sua Conta
+
+1. Acesse o [CrewAI Enterprise](https://app.crewai.com)
+2. Vá até a aba **Integrações** - https://app.crewai.com/crewai_plus/connectors
+3. Clique em **Conectar** no serviço desejado na seção Integrações de Autenticação
+4. Complete o fluxo de autenticação OAuth
+5. Conceda as permissões necessárias para seu caso de uso
+6. Obtenha seu Token Enterprise na sua página de conta do [CrewAI Enterprise](https://app.crewai.com) - https://app.crewai.com/crewai_plus/settings/account
+
+<Frame>
+  ![Integrações](/images/enterprise/enterprise_action_auth_token.png)
+</Frame>
+
+### 2. Instale as Ferramentas de Integração
+
+Tudo o que você precisa é da versão mais recente do pacote `crewai-tools`.
+
+```bash
+uv add crewai-tools
+```
+
+## Exemplos de Uso
+
+### Uso Básico
+<Tip>
+  Todos os serviços nos quais você estiver autenticado estarão disponíveis como ferramentas. Portanto, tudo que você precisa fazer é adicionar o `CrewaiEnterpriseTools` ao seu agente e pronto.
+</Tip>
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha ferramentas enterprise (a ferramenta Gmail será incluída)
+ferramentas_enterprise = CrewaiEnterpriseTools(
+    enterprise_token="seu_token_enterprise"
+)
+# imprima as ferramentas
+printf(ferramentas_enterprise)
+
+# Crie um agente com capacidades do Gmail
+agente_email = Agent(
+    role="Gerente de E-mails",
+    goal="Gerenciar e organizar comunicações por e-mail",
+    backstory="Um assistente de IA especializado em gestão de e-mails e comunicação.",
+    tools=ferramentas_enterprise
+)
+
+# Tarefa para enviar um e-mail
+tarefa_email = Task(
+    description="Redigir e enviar um e-mail de acompanhamento para john@example.com sobre a atualização do projeto",
+    agent=agente_email,
+    expected_output="Confirmação de que o e-mail foi enviado com sucesso"
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[agente_email],
+    tasks=[tarefa_email]
+)
+
+# Execute o crew
+crew.kickoff()
+```
+
+### Filtrando Ferramentas
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    actions_list=["gmail_find_email"] # apenas a ferramenta gmail_find_email estará disponível
+)
+gmail_tool = enterprise_tools["gmail_find_email"]
+
+agente_gmail = Agent(
+    role="Gerente do Gmail",
+    goal="Gerenciar comunicações e notificações do gmail",
+    backstory="Um assistente de IA que ajuda a coordenar comunicações no gmail.",
+    tools=[gmail_tool]
+)
+
+tarefa_notificacao = Task(
+    description="Encontrar o e-mail de john@example.com",
+    agent=agente_gmail,
+    expected_output="E-mail encontrado de john@example.com"
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[agente_gmail],
+    tasks=[tarefa_notificacao]
+)
+```
+
+## Melhores Práticas
+
+### Segurança
+- **Princípio do Menor Privilégio**: Conceda apenas as permissões mínimas exigidas para as tarefas dos seus agentes
+- **Auditorias Regulares**: Revise periodicamente as integrações conectadas e suas permissões
+- **Credenciais Seguras**: Nunca insira credenciais diretamente no código; utilize o fluxo seguro de autenticação do CrewAI
+
+### Filtrando Ferramentas
+Em um crew implantado, você pode especificar quais ações estão disponíveis para cada integração a partir da página de configurações do serviço ao qual você se conectou.
+
+<Frame>
+  ![Integrações](/images/enterprise/filtering_enterprise_action_tools.png)
+</Frame>
+
+### Implantações com Escopo para organizações multiusuário
+Você pode implantar seu crew e associar cada integração a um usuário específico. Por exemplo, um crew que se conecta ao Google pode usar a conta do Gmail de um usuário específico.
+
+<Tip>
+  Isso é útil para organizações multiusuário, onde você deseja direcionar a integração para um usuário específico.
+</Tip>
+
+Use o `user_bearer_token` para direcionar a integração a um usuário específico; assim, quando o crew for iniciado, ele usará o bearer token desse usuário para autenticar com a integração. Se o usuário não estiver logado, o crew não utilizará nenhuma integração conectada. Use o bearer token padrão para autenticar com as integrações que estão sendo implantadas com o crew.
+
+<Frame>
+  ![Integrações](/images/enterprise/user_bearer_token.png)
+</Frame>
+
+### Precisa de Ajuda?
+
+<Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nosso time de suporte para assistência com a configuração de integrações ou solução de problemas.
+</Card>
