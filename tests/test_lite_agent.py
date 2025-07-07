@@ -433,7 +433,23 @@ def test_lite_agent_with_custom_llm_and_guardrails():
 
         def call(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None) -> str:
             self.call_count += 1
+            
+            if "valid" in str(messages) and "feedback" in str(messages):
+                return '{"valid": true, "feedback": null}'
+            
+            if "Thought:" in str(messages):
+                return f"Thought: I will analyze soccer players\nFinal Answer: {self.response}"
+            
             return self.response
+
+        def supports_function_calling(self) -> bool:
+            return False
+
+        def supports_stop_words(self) -> bool:
+            return False
+
+        def get_context_window_size(self) -> int:
+            return 4096
 
     custom_llm = CustomLLM(response="Brazilian soccer players are the best!")
     
@@ -469,12 +485,14 @@ def test_lite_agent_with_custom_llm_and_guardrails():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_lite_agent_with_invalid_llm():
-    """Test that Agent raises proper error with invalid LLM type."""
+    """Test that LiteAgent raises proper error with invalid LLM type."""
+    from crewai.lite_agent import LiteAgent
+    
     class InvalidLLM:
         pass
     
     with pytest.raises(ValueError) as exc_info:
-        Agent(
+        LiteAgent(
             role="Test Agent",
             goal="Test goal", 
             backstory="Test backstory",
