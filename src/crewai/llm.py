@@ -52,6 +52,8 @@ import io
 from typing import TextIO
 
 from crewai.llms.base_llm import BaseLLM
+from crewai.llms.oauth2_config import OAuth2ConfigLoader
+from crewai.llms.oauth2_token_manager import OAuth2TokenManager
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -311,6 +313,7 @@ class LLM(BaseLLM):
         callbacks: List[Any] = [],
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
+        oauth2_config_path: Optional[str] = None,
         **kwargs,
     ):
         self.model = model
@@ -337,6 +340,10 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+
+        self.oauth2_config_loader = OAuth2ConfigLoader(oauth2_config_path)
+        self.oauth2_token_manager = OAuth2TokenManager()
+        self.oauth2_configs = self.oauth2_config_loader.load_config()
 
         litellm.drop_params = True
 
@@ -384,7 +391,19 @@ class LLM(BaseLLM):
             messages = [{"role": "user", "content": messages}]
         formatted_messages = self._format_messages_for_provider(messages)
 
-        # --- 2) Prepare the parameters for the completion call
+        api_key = self.api_key
+        provider = self._get_custom_llm_provider()
+        
+        if provider and provider in self.oauth2_configs:
+            oauth2_config = self.oauth2_configs[provider]
+            try:
+                access_token = self.oauth2_token_manager.get_access_token(oauth2_config)
+                api_key = access_token
+            except RuntimeError as e:
+                logging.error(f"OAuth2 authentication failed for provider {provider}: {e}")
+                raise
+
+        # --- 3) Prepare the parameters for the completion call
         params = {
             "model": self.model,
             "messages": formatted_messages,
@@ -404,7 +423,7 @@ class LLM(BaseLLM):
             "api_base": self.api_base,
             "base_url": self.base_url,
             "api_version": self.api_version,
-            "api_key": self.api_key,
+            "api_key": api_key,
             "stream": self.stream,
             "tools": tools,
             "reasoning_effort": self.reasoning_effort,
