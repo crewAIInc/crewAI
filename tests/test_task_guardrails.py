@@ -12,6 +12,7 @@ from crewai.utilities.events import (
     LLMGuardrailStartedEvent,
 )
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.crew.crew_context import crew_context
 
 
 def test_task_without_guardrail():
@@ -302,3 +303,87 @@ def test_hallucination_guardrail_description_in_events():
 
     event = LLMGuardrailStartedEvent(guardrail=guardrail, retry_count=0)
     assert event.guardrail == "HallucinationGuardrail (no-op)"
+
+
+def test_guardrail_events_capture_crew_context():
+    import uuid
+
+    crew_id = uuid.uuid4()
+
+    def simple_guardrail(result: TaskOutput):
+        return (True, result.raw)
+
+    started_events = []
+    completed_events = []
+
+    with crew_context(crew_id=crew_id, crew_key="test-crew"):
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(LLMGuardrailStartedEvent)
+            def handle_started(source, event):
+                started_events.append(event)
+
+            @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+            def handle_completed(source, event):
+                completed_events.append(event)
+
+            agent = Mock()
+            agent.role = "test_agent"
+            agent.execute_task.return_value = "test result"
+            agent.crew = None
+
+            task = Task(
+                description="Test task",
+                expected_output="Output",
+                guardrail=simple_guardrail,
+            )
+
+            task.execute_sync(agent=agent)
+
+    assert len(started_events) == 1
+    assert len(completed_events) == 1
+
+    assert started_events[0].crew_context is not None
+    assert started_events[0].crew_context.id == crew_id
+    assert started_events[0].crew_context.key == "test-crew"
+
+    assert completed_events[0].crew_context is not None
+    assert completed_events[0].crew_context.id == crew_id
+    assert completed_events[0].crew_context.key == "test-crew"
+
+
+def test_guardrail_events_without_crew_context():
+    def simple_guardrail(result: TaskOutput):
+        return (True, result.raw)
+
+    started_events = []
+    completed_events = []
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(LLMGuardrailStartedEvent)
+        def handle_started(source, event):
+            started_events.append(event)
+
+        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+        def handle_completed(source, event):
+            completed_events.append(event)
+
+        agent = Mock()
+        agent.role = "test_agent"
+        agent.execute_task.return_value = "test result"
+        agent.crew = None
+
+        task = Task(
+            description="Test task",
+            expected_output="Output",
+            guardrail=simple_guardrail,
+        )
+
+        task.execute_sync(agent=agent)
+
+    assert len(started_events) == 1
+    assert len(completed_events) == 1
+
+    assert started_events[0].crew_context is None
+    assert completed_events[0].crew_context is None
