@@ -485,17 +485,16 @@ def test_lite_agent_with_custom_llm_and_guardrails():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_lite_agent_with_invalid_llm():
-    """Test that LiteAgent raises proper error with invalid LLM type."""
+    """Test that LiteAgent raises proper error when create_llm returns None."""
     from crewai.lite_agent import LiteAgent
+    from unittest.mock import patch
     
-    class InvalidLLM:
-        pass
-    
-    with pytest.raises(ValueError) as exc_info:
-        LiteAgent(
-            role="Test Agent",
-            goal="Test goal", 
-            backstory="Test backstory",
-            llm=InvalidLLM()
-        )
-    assert "Expected LLM instance of type BaseLLM" in str(exc_info.value)
+    with patch('crewai.lite_agent.create_llm', return_value=None):
+        with pytest.raises(ValueError) as exc_info:
+            LiteAgent(
+                role="Test Agent",
+                goal="Test goal", 
+                backstory="Test backstory",
+                llm="invalid-model"
+            )
+        assert "Expected LLM instance of type BaseLLM" in str(exc_info.value)
