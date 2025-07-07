@@ -1,7 +1,9 @@
 from pathlib import Path
 from typing import Dict, Optional
 import json
-from pydantic import BaseModel, Field
+import re
+from pydantic import BaseModel, Field, field_validator
+from .oauth2_errors import OAuth2ConfigurationError, OAuth2ValidationError
 
 
 class OAuth2Config(BaseModel):
@@ -11,6 +13,31 @@ class OAuth2Config(BaseModel):
     scope: Optional[str] = Field(default=None, description="OAuth2 scope")
     provider_name: str = Field(description="Custom provider name")
     refresh_token: Optional[str] = Field(default=None, description="OAuth2 refresh token")
+
+    @field_validator('token_url')
+    @classmethod
+    def validate_token_url(cls, v: str) -> str:
+        """Validate that token_url is a valid HTTP/HTTPS URL."""
+        url_pattern = re.compile(
+            r'^https?://'  # http:// or https://
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+            r'localhost|'  # localhost...
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+            r'(?::\d+)?'  # optional port
+            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+        
+        if not url_pattern.match(v):
+            raise OAuth2ValidationError(f"Invalid token URL format: {v}")
+        return v
+
+    @field_validator('scope')
+    @classmethod
+    def validate_scope(cls, v: Optional[str]) -> Optional[str]:
+        """Validate OAuth2 scope format."""
+        if v:
+            if '  ' in v:
+                raise OAuth2ValidationError("Invalid scope format: scope cannot contain empty values")
+        return v
 
 
 class OAuth2ConfigLoader:
@@ -35,4 +62,4 @@ class OAuth2ConfigLoader:
             
             return oauth2_configs
         except (json.JSONDecodeError, KeyError, ValueError) as e:
-            raise ValueError(f"Invalid OAuth2 configuration in {self.config_path}: {e}")
+            raise OAuth2ConfigurationError(f"Invalid OAuth2 configuration in {self.config_path}: {e}")

@@ -54,6 +54,7 @@ from typing import TextIO
 from crewai.llms.base_llm import BaseLLM
 from crewai.llms.oauth2_config import OAuth2ConfigLoader
 from crewai.llms.oauth2_token_manager import OAuth2TokenManager
+from crewai.llms.oauth2_errors import OAuth2ConfigurationError
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -397,9 +398,11 @@ class LLM(BaseLLM):
         if provider and provider in self.oauth2_configs:
             oauth2_config = self.oauth2_configs[provider]
             try:
+                self._validate_oauth2_provider(provider)
                 access_token = self.oauth2_token_manager.get_access_token(oauth2_config)
                 api_key = access_token
-            except RuntimeError as e:
+                logging.debug(f"Using OAuth2 authentication for provider {provider}")
+            except Exception as e:
                 logging.error(f"OAuth2 authentication failed for provider {provider}: {e}")
                 raise
 
@@ -1094,6 +1097,12 @@ class LLM(BaseLLM):
         if "/" in self.model:
             return self.model.split("/")[0]
         return None
+
+    def _validate_oauth2_provider(self, provider: str) -> bool:
+        """Validate that OAuth2 provider exists in configuration"""
+        if provider not in self.oauth2_configs:
+            raise OAuth2ConfigurationError(f"Unknown OAuth2 provider: {provider}")
+        return True
 
     def _validate_call_params(self) -> None:
         """
