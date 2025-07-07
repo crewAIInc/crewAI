@@ -41,6 +41,7 @@ from crewai.agents.parser import (
 )
 from crewai.flow.flow_trackable import FlowTrackable
 from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities import I18N
@@ -209,7 +210,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     def setup_llm(self):
         """Set up the LLM and other components after initialization."""
         self.llm = create_llm(self.llm)
-        if not isinstance(self.llm, LLM):
+        if not isinstance(self.llm, BaseLLM):
             raise ValueError("Unable to create LLM instance")
 
         # Initialize callbacks
@@ -232,7 +233,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         elif isinstance(self.guardrail, str):
             from crewai.tasks.llm_guardrail import LLMGuardrail
 
-            assert isinstance(self.llm, LLM)
+            assert isinstance(self.llm, BaseLLM)
 
             self._guardrail = LLMGuardrail(description=self.guardrail, llm=self.llm)
 
