@@ -2,6 +2,7 @@ import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Callable
+from unittest.mock import patch
 
 import pytest
 
@@ -44,7 +45,9 @@ def crew_factory(simple_agent_factory, simple_task_factory):
 
 
 class TestCrewThreadSafety:
-    def test_parallel_crews_thread_safety(self, crew_factory):
+    @patch("crewai.Agent.execute_task")
+    def test_parallel_crews_thread_safety(self, mock_execute_task, crew_factory):
+        mock_execute_task.return_value = "Task completed"
         num_crews = 5
 
         def run_crew_with_context_check(crew_id: str) -> Dict[str, Any]:
@@ -126,7 +129,9 @@ class TestCrewThreadSafety:
             ), f"Should run in thread pool for {result['crew_id']}"
 
     @pytest.mark.asyncio
-    async def test_async_crews_thread_safety(self, crew_factory):
+    @patch("crewai.Agent.execute_task")
+    async def test_async_crews_thread_safety(self, mock_execute_task, crew_factory):
+        mock_execute_task.return_value = "Task completed"
         num_crews = 5
 
         async def run_crew_async(crew_id: str) -> Dict[str, Any]:
@@ -164,7 +169,9 @@ class TestCrewThreadSafety:
                 task_ctx["crew_id"] == crew_uuid
             ), f"Context mismatch for {result['crew_id']}"
 
-    def test_concurrent_kickoff_for_each(self, crew_factory):
+    @patch("crewai.Agent.execute_task")
+    def test_concurrent_kickoff_for_each(self, mock_execute_task, crew_factory):
+        mock_execute_task.return_value = "Task completed"
         contexts_captured = []
 
         def capture_context(output):
@@ -190,7 +197,9 @@ class TestCrewThreadSafety:
             inputs
         ), "Each execution should have unique context"
 
-    def test_no_context_leakage_between_crews(self, crew_factory):
+    @patch("crewai.Agent.execute_task")
+    def test_no_context_leakage_between_crews(self, mock_execute_task, crew_factory):
+        mock_execute_task.return_value = "Task completed"
         contexts = []
 
         def check_context(output):
