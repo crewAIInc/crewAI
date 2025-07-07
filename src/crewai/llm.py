@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import threading
+import time
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
@@ -22,6 +23,16 @@ from datetime import datetime
 from dotenv import load_dotenv
 from litellm.types.utils import ChatCompletionDeltaToolCall
 from pydantic import BaseModel, Field
+
+try:
+    import google.generativeai as genai
+    from google.generativeai.types import BatchCreateJobRequest, BatchJob
+    GOOGLE_GENAI_AVAILABLE = True
+except ImportError:
+    GOOGLE_GENAI_AVAILABLE = False
+    # Create dummy types for type annotations when genai is not available
+    BatchJob = object
+    BatchCreateJobRequest = object
 
 from crewai.utilities.events.llm_events import (
     LLMCallCompletedEvent,
@@ -56,6 +67,32 @@ from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
+
+
+class BatchJobStartedEvent:
+    """Event emitted when a batch job is started."""
+    def __init__(self, messages, tools=None, from_task=None, from_agent=None):
+        self.messages = messages
+        self.tools = tools
+        self.from_task = from_task
+        self.from_agent = from_agent
+
+
+class BatchJobCompletedEvent:
+    """Event emitted when a batch job is completed."""
+    def __init__(self, response, job_name, from_task=None, from_agent=None):
+        self.response = response
+        self.job_name = job_name
+        self.from_task = from_task
+        self.from_agent = from_agent
+
+
+class BatchJobFailedEvent:
+    """Event emitted when a batch job fails."""
+    def __init__(self, error, from_task=None, from_agent=None):
+        self.error = error
+        self.from_task = from_task
+        self.from_agent = from_agent
 
 load_dotenv()
 
@@ -311,6 +348,9 @@ class LLM(BaseLLM):
         callbacks: List[Any] = [],
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
+        batch_mode: bool = False,
+        batch_size: Optional[int] = None,
+        batch_timeout: Optional[int] = 300,
         **kwargs,
     ):
         self.model = model
@@ -337,6 +377,11 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+        self.batch_mode = batch_mode
+        self.batch_size = batch_size or 10
+        self.batch_timeout = batch_timeout
+        self._batch_requests = []
+        self._current_batch_job = None
 
         litellm.drop_params = True
 
@@ -362,6 +407,10 @@ class LLM(BaseLLM):
         """
         ANTHROPIC_PREFIXES = ("anthropic/", "claude-", "claude/")
         return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
+
+    def _is_gemini_model(self) -> bool:
+        """Check if the model is a Gemini model that supports batch mode."""
+        return "gemini" in self.model.lower() and GOOGLE_GENAI_AVAILABLE
 
     def _prepare_completion_params(
         self,
@@ -413,6 +462,100 @@ class LLM(BaseLLM):
 
         # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}
+
+    def _prepare_batch_request(
+        self, 
+        messages: List[Dict[str, str]], 
+        tools: Optional[List[dict]] = None
+    ) -> Dict[str, Any]:
+        """Prepare a single request for batch processing."""
+        if not self._is_gemini_model():
+            raise ValueError("Batch mode is only supported for Gemini models")
+        
+        formatted_messages = self._format_messages_for_provider(messages)
+        
+        request = {
+            "contents": [],
+            "generationConfig": {
+                "temperature": self.temperature,
+                "topP": self.top_p,
+                "maxOutputTokens": self.max_tokens or self.max_completion_tokens,
+                "stopSequences": self.stop if isinstance(self.stop, list) else [self.stop] if self.stop else None,
+            }
+        }
+        
+        for message in formatted_messages:
+            role = "user" if message["role"] == "user" else "model"
+            request["contents"].append({
+                "role": role,
+                "parts": [{"text": message["content"]}]
+            })
+        
+        if tools:
+            request["tools"] = tools
+            
+        return {"model": self.model.replace("gemini/", ""), "contents": request["contents"], "generationConfig": request["generationConfig"]}
+
+    def _submit_batch_job(self, requests: List[Dict[str, Any]]) -> str:
+        """Submit a batch job to Google GenAI API."""
+        if not GOOGLE_GENAI_AVAILABLE:
+            raise ImportError("google-generativeai is required for batch mode")
+        
+        if not self.api_key:
+            raise ValueError("API key is required for batch mode")
+        
+        genai.configure(api_key=self.api_key)
+        
+        batch_request = BatchCreateJobRequest(
+            requests=requests,
+            display_name=f"crewai-batch-{int(time.time())}"
+        )
+        
+        batch_job = genai.create_batch_job(batch_request)
+        return batch_job.name
+
+    def _poll_batch_job(self, job_name: str) -> BatchJob:
+        """Poll batch job status until completion."""
+        if not GOOGLE_GENAI_AVAILABLE:
+            raise ImportError("google-generativeai is required for batch mode")
+        
+        genai.configure(api_key=self.api_key)
+        
+        start_time = time.time()
+        while time.time() - start_time < self.batch_timeout:
+            batch_job = genai.get_batch_job(job_name)
+            
+            if batch_job.state in ["JOB_STATE_SUCCEEDED", "JOB_STATE_FAILED", "JOB_STATE_CANCELLED"]:
+                return batch_job
+            
+            time.sleep(5)
+        
+        raise TimeoutError(f"Batch job {job_name} did not complete within {self.batch_timeout} seconds")
+
+    def _retrieve_batch_results(self, job_name: str) -> List[str]:
+        """Retrieve results from a completed batch job."""
+        if not GOOGLE_GENAI_AVAILABLE:
+            raise ImportError("google-generativeai is required for batch mode")
+        
+        genai.configure(api_key=self.api_key)
+        
+        batch_job = genai.get_batch_job(job_name)
+        
+        if batch_job.state != "JOB_STATE_SUCCEEDED":
+            raise RuntimeError(f"Batch job failed with state: {batch_job.state}")
+        
+        results = []
+        for response in genai.list_batch_job_responses(job_name):
+            if response.response and response.response.candidates:
+                content = response.response.candidates[0].content
+                if content and content.parts:
+                    results.append(content.parts[0].text)
+                else:
+                    results.append("")
+            else:
+                results.append("")
+        
+        return results
 
     def _handle_streaming_response(
         self,
@@ -952,6 +1095,11 @@ class LLM(BaseLLM):
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
+        if self.batch_mode and self._is_gemini_model():
+            return self._handle_batch_request(
+                messages, tools, callbacks, available_functions, from_task, from_agent
+            )
+
         # --- 4) Handle O1 model special case (system messages not supported)
         if "o1" in self.model.lower():
             for message in messages:
@@ -990,6 +1138,77 @@ class LLM(BaseLLM):
                 )
                 logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
+
+    def _handle_batch_request(
+        self,
+        messages: List[Dict[str, str]],
+        tools: Optional[List[dict]] = None,
+        callbacks: Optional[List[Any]] = None,
+        available_functions: Optional[Dict[str, Any]] = None,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
+    ) -> str:
+        """Handle batch mode request for Gemini models."""
+        if not self._is_gemini_model():
+            raise ValueError("Batch mode is only supported for Gemini models")
+        
+        assert hasattr(crewai_event_bus, "emit")
+        crewai_event_bus.emit(
+            self,
+            event=BatchJobStartedEvent(
+                messages=messages,
+                tools=tools,
+                from_task=from_task,
+                from_agent=from_agent,
+            ),
+        )
+        
+        try:
+            batch_request = self._prepare_batch_request(messages, tools)
+            self._batch_requests.append(batch_request)
+            
+            if len(self._batch_requests) >= self.batch_size:
+                job_name = self._submit_batch_job(self._batch_requests)
+                self._current_batch_job = job_name
+                
+                self._poll_batch_job(job_name)
+                results = self._retrieve_batch_results(job_name)
+                
+                self._batch_requests.clear()
+                self._current_batch_job = None
+                
+                if results:
+                    response = results[0]
+                    
+                    assert hasattr(crewai_event_bus, "emit")
+                    crewai_event_bus.emit(
+                        self,
+                        event=BatchJobCompletedEvent(
+                            response=response,
+                            job_name=job_name,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                        ),
+                    )
+                    
+                    return response
+                else:
+                    raise RuntimeError("No results returned from batch job")
+            else:
+                return "Batch request queued. Call with more requests to trigger batch processing."
+                
+        except Exception as e:
+            assert hasattr(crewai_event_bus, "emit")
+            crewai_event_bus.emit(
+                self,
+                event=BatchJobFailedEvent(
+                    error=str(e),
+                    from_task=from_task,
+                    from_agent=from_agent,
+                ),
+            )
+            logging.error(f"Batch request failed: {str(e)}")
+            raise
 
     def _handle_emit_call_events(self, response: Any, call_type: LLMCallType, from_task: Optional[Any] = None, from_agent: Optional[Any] = None):
         """Handle the events for the LLM call.
