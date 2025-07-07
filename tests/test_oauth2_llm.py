@@ -4,7 +4,7 @@ import requests
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from crewai.llm import LLM
 from crewai.llms.oauth2_config import OAuth2Config, OAuth2ConfigLoader
 from crewai.llms.oauth2_token_manager import OAuth2TokenManager

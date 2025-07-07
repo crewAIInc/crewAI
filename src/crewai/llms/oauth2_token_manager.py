@@ -1,6 +1,6 @@
 import time
 import requests
-from typing import Dict, Optional
+from typing import Dict, Any
 from .oauth2_config import OAuth2Config
 
 
@@ -19,7 +19,7 @@ class OAuth2TokenManager:
         
         return self._acquire_new_token(config)
     
-    def _is_token_valid(self, token_data: Dict[str, any]) -> bool:
+    def _is_token_valid(self, token_data: Dict[str, Any]) -> bool:
         """Check if token is still valid (not expired)"""
         if "expires_at" not in token_data:
             return False
