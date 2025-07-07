@@ -426,18 +426,13 @@ def test_lite_agent_with_custom_llm_and_guardrails():
     from crewai.llms.base_llm import BaseLLM
     
     class CustomLLM(BaseLLM):
-        def __init__(self, response="Custom response"):
+        def __init__(self, response: str = "Custom response"):
             super().__init__(model="custom-model")
             self.response = response
             self.call_count = 0
 
-        def call(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None):
+        def call(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None) -> str:
             self.call_count += 1
-            if isinstance(messages, str):
-                messages = [{"role": "user", "content": messages}]
-            for message in messages:
-                if isinstance(message["content"], str):
-                    message["content"] = [{"type": "text", "text": message["content"]}]
             return self.response
 
     custom_llm = CustomLLM(response="Brazilian soccer players are the best!")
@@ -470,3 +465,19 @@ def test_lite_agent_with_custom_llm_and_guardrails():
     
     result2 = agent2.kickoff("Test message")
     assert result2.raw == "Modified by guardrail"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_lite_agent_with_invalid_llm():
+    """Test that Agent raises proper error with invalid LLM type."""
+    class InvalidLLM:
+        pass
+    
+    with pytest.raises(ValueError) as exc_info:
+        Agent(
+            role="Test Agent",
+            goal="Test goal", 
+            backstory="Test backstory",
+            llm=InvalidLLM()
+        )
+    assert "Expected LLM instance of type BaseLLM" in str(exc_info.value)

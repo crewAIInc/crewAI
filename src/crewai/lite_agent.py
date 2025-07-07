@@ -211,7 +211,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         """Set up the LLM and other components after initialization."""
         self.llm = create_llm(self.llm)
         if not isinstance(self.llm, BaseLLM):
-            raise ValueError("Unable to create LLM instance")
+            raise ValueError(f"Expected LLM instance of type BaseLLM, got {self.llm.__class__.__name__}")
 
         # Initialize callbacks
         token_callback = TokenCalcHandler(token_cost_process=self._token_process)
@@ -233,7 +233,8 @@ class LiteAgent(FlowTrackable, BaseModel):
         elif isinstance(self.guardrail, str):
             from crewai.tasks.llm_guardrail import LLMGuardrail
 
-            assert isinstance(self.llm, BaseLLM)
+            if not isinstance(self.llm, BaseLLM):
+                raise TypeError(f"Guardrail requires LLM instance of type BaseLLM, got {self.llm.__class__.__name__}")
 
             self._guardrail = LLMGuardrail(description=self.guardrail, llm=self.llm)
 
