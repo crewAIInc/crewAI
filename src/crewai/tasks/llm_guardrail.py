@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from crewai.agent import Agent, LiteAgentOutput
 from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 
@@ -32,11 +33,11 @@ class LLMGuardrail:
     def __init__(
         self,
         description: str,
-        llm: LLM,
+        llm: BaseLLM,
     ):
         self.description = description
 
-        self.llm: LLM = llm
+        self.llm: BaseLLM = llm
 
     def _validate_output(self, task_output: TaskOutput) -> LiteAgentOutput:
         agent = Agent(

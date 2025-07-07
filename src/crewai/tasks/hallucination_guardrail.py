@@ -9,6 +9,7 @@ Classes:
 from typing import Any, Optional, Tuple
 
 from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.logger import Logger
 
@@ -47,7 +48,7 @@ class HallucinationGuardrail:
     def __init__(
         self,
         context: str,
-        llm: LLM,
+        llm: BaseLLM,
         threshold: Optional[float] = None,
         tool_response: str = "",
     ):
@@ -60,7 +61,7 @@ class HallucinationGuardrail:
             tool_response: Optional tool response information that would be used in evaluation.
         """
         self.context = context
-        self.llm: LLM = llm
+        self.llm: BaseLLM = llm
         self.threshold = threshold
         self.tool_response = tool_response
         self._logger = Logger(verbose=True)
