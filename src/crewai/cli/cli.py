@@ -33,18 +33,21 @@ def crewai():
 
 
 @crewai.command()
-@click.argument("type", type=click.Choice(["crew", "flow"]))
+@click.argument("type", type=click.Choice(["crew", "flow", "tool"]))
 @click.argument("name")
 @click.option("--provider", type=str, help="The provider to use for the crew")
 @click.option("--skip_provider", is_flag=True, help="Skip provider validation")
 def create(type, name, provider, skip_provider=False):
-    """Create a new crew, or flow."""
+    """Create a new crew, flow, or tool."""
     if type == "crew":
         create_crew(name, provider, skip_provider)
     elif type == "flow":
         create_flow(name)
+    elif type == "tool":
+        tool_cmd = ToolCommand()
+        tool_cmd.create(name)
     else:
-        click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
+        click.secho("Error: Invalid type. Must be 'crew', 'flow', or 'tool'.", fg="red")
 
 
 @crewai.command()
@@ -357,7 +360,7 @@ def chat():
     and using the Chat LLM to generate responses.
     """
     click.secho(
-        "\nStarting a conversation with the Crew\n" "Type 'exit' or Ctrl+C to quit.\n",
+        "\nStarting a conversation with the Crew\nType 'exit' or Ctrl+C to quit.\n",
     )
 
     run_chat()
