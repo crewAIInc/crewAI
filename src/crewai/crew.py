@@ -18,6 +18,11 @@ from typing import (
     cast,
 )
 
+from opentelemetry import baggage
+from opentelemetry.context import attach, detach
+
+from crewai.utilities.crew.models import CrewContext
+
 from pydantic import (
     UUID4,
     BaseModel,
@@ -616,6 +621,11 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
+        ctx = baggage.set_baggage(
+            "crew_context", CrewContext(id=str(self.id), key=self.key)
+        )
+        token = attach(ctx)
+
         try:
             for before_callback in self.before_kickoff_callbacks:
                 if inputs is None:
@@ -676,6 +686,8 @@ class Crew(FlowTrackable, BaseModel):
                 CrewKickoffFailedEvent(error=str(e), crew_name=self.name or "crew"),
             )
             raise
+        finally:
+            detach(token)
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
         """Executes the Crew's workflow for each input in the list and aggregates results."""
