@@ -112,7 +112,6 @@ class Mem0Storage(Storage):
         if params:
             # MemoryClient-specific overrides
             if isinstance(self.memory, MemoryClient):
-                params["version"] = "v2"
                 params["includes"] = self.includes
                 params["excludes"] = self.excludes
 
