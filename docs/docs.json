@@ -94,7 +94,7 @@
                     "pages": [
                       "en/guides/advanced/customizing-prompts",
                       "en/guides/advanced/fingerprinting"
-                 
+
                     ]
                   }
                 ]
@@ -296,7 +296,8 @@
                   "en/enterprise/features/webhook-streaming",
                   "en/enterprise/features/traces",
                   "en/enterprise/features/hallucination-guardrail",
-                  "en/enterprise/features/integrations"
+                  "en/enterprise/features/integrations",
+                  "en/enterprise/features/agent-repositories"
                 ]
               },
               {
@@ -373,7 +374,7 @@
               }
             ]
           }
- 
+
         ]
       },
       {
@@ -730,7 +731,7 @@
               }
             ]
           }
- 
+
         ]
       }
     ]
@@ -774,7 +775,7 @@
       "destination": "/en/introduction"
     },
     {
-      "source": "/installation", 
+      "source": "/installation",
       "destination": "/en/installation"
     },
     {
