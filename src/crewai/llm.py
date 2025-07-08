@@ -154,6 +154,11 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gemini/gemma-3-27b-it": 128000,
     # deepseek
     "deepseek-chat": 128000,
+    "deepseek/deepseek-chat": 128000,
+    "deepseek/deepseek-coder": 128000,
+    "deepseek/deepseek-r1": 128000,
+    "deepseek/deepseek-v3": 128000,
+    "deepseek/deepseek-reasoner": 128000,
     # groq
     "gemma2-9b-it": 8192,
     "gemma-7b-it": 8192,
