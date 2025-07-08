@@ -1,5 +1,3 @@
-import contextlib
-import io
 import logging
 import os
 import uuid
@@ -219,80 +217,11 @@ class WeaviateStorage(BaseRAGStorage):
 
     def __del__(self):
         """Cleanup Weaviate client connection"""
-        try:
-            if self.client:
-                self.client.close()
-        except:
-            pass
+        if self.client:
+            self.client.close()
     
     def _generate_embedding(
         self, text: str, metadata: Optional[Dict[str, Any]] = None
     ) -> Any:
         """Generate an embedding for the given text and metadata."""
         pass
-
-import os
-import json
-import time
-from weaviate_storage import WeaviateStorage  # Import your WeaviateStorage class
-
-
-class MockAgent:
-    def __init__(self, role):
-        self.role = role
-
-
-class MockCrew:
-    def __init__(self, agents):
-        self.agents = agents
-
-
-def main():
-    # Check environment variables
-    if not os.getenv("WEAVIATE_URL") or not os.getenv("WEAVIATE_API_KEY"):
-        print("❌ Please set WEAVIATE_URL and WEAVIATE_API_KEY environment variables")
-        return
-
-    print("Testing WeaviateStorage\n")
-
-    # 1. Create storage
-    print("1. Creating storage...")
-    crew = MockCrew([
-        MockAgent("Developer"),
-        MockAgent("Analyst")
-    ])
-    
-    storage = WeaviateStorage(type="short_term", crew=crew)
-    print(f"✅ Created collection: {storage.collection_name}\n")
-
-    # 2. Save some memories
-    print("2. Saving memories...")
-    memories = [
-        ("Project deadline is Friday", {"agent_role": "Developer"}),
-        ("User count increased by 45%", {"agent_role": "Analyst"}),
-        ("Need to implement OAuth2", {"agent_role": "Developer"})
-    ]
-    
-    for content, metadata in memories:
-        storage.save(content, metadata)
-        print(f"✅ Saved: {content}")
-    
-    # Wait for indexing
-    time.sleep(2)
-    print()
-
-    # 3. Search memories
-    print("3. Searching memories...")
-    queries = ["deadline", "OAuth2", "user metrics"]
-    
-    for query in queries:
-        results = storage.search(query, limit=2)
-        print(f"\nQuery: '{query}' - Found {len(results)} results")
-        for r in results:
-            print(f"  - {r['context']}")
-
-    print("\n✅ All tests passed!")
-
-
-if __name__ == "__main__":
-    main()
