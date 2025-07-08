@@ -1,7 +1,6 @@
 """Tests for DeepSeek integration in CrewAI."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from crewai.llm import LLM
 from crewai.cli.constants import ENV_VARS, PROVIDERS, MODELS
