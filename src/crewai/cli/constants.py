@@ -103,6 +103,12 @@ ENV_VARS = {
             "key_name": "SAMBANOVA_API_KEY",
         }
     ],
+    "deepseek": [
+        {
+            "prompt": "Enter your DeepSeek API key (press Enter to skip)",
+            "key_name": "DEEPSEEK_API_KEY",
+        }
+    ],
 }
 
 
@@ -119,6 +125,7 @@ PROVIDERS = [
     "azure",
     "cerebras",
     "sambanova",
+    "deepseek",
 ]
 
 MODELS = {
@@ -313,6 +320,13 @@ MODELS = {
         "sambanova/Llama-3.2-11B-Vision-Instruct",
         "sambanova/Meta-Llama-3.2-3B-Instruct",
         "sambanova/Meta-Llama-3.2-1B-Instruct",
+    ],
+    "deepseek": [
+        "deepseek/deepseek-chat",
+        "deepseek/deepseek-coder",
+        "deepseek/deepseek-r1",
+        "deepseek/deepseek-v3",
+        "deepseek/deepseek-reasoner",
     ],
 }
 
