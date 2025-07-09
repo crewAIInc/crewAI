@@ -5,7 +5,6 @@ from typing import List, Dict, Any
 from crewai.tasks.task_output import TaskOutput
 from crewai.evaluation.metrics.reasoning_metrics import (
     ReasoningEfficiencyEvaluator,
-    ReasoningPatternType
 )
 from tests.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
 from crewai.utilities.llm_utils import LLM

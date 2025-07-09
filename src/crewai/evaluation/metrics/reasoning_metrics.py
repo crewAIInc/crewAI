@@ -14,7 +14,6 @@ import numpy as np
 
 from crewai.agent import Agent
 from crewai.task import Task
-from crewai.llm import BaseLLM, LLM
 
 from crewai.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
 from crewai.evaluation.json_parser import extract_json_from_llm_response
@@ -60,7 +59,7 @@ class ReasoningEfficiencyEvaluator(BaseEvaluator):
                 try:
                     interval = end_time - start_time
                     time_intervals.append(interval.total_seconds() if hasattr(interval, 'total_seconds') else 0)
-                except:
+                except Exception:
                     has_reliable_timing = False
             else:
                 has_reliable_timing = False
@@ -241,7 +240,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
             if start_time and end_time:
                 try:
                     response_times.append(end_time - start_time)
-                except:
+                except Exception:
                     pass
 
         avg_length = np.mean(call_lengths) if call_lengths else 0
@@ -293,7 +292,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
                 normalized_slope = slope / max_possible_slope
                 return max(min(normalized_slope, 1.0), -1.0)
             return 0.0
-        except:
+        except Exception:
             return 0.0
 
     def _calculate_loop_likelihood(self, call_lengths: List[float], response_times: List[float]) -> float:
@@ -319,7 +318,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
                 if mean_time > 0:
                     time_consistency = 1.0 - (std_time / mean_time)
                     indicators.append(max(0, time_consistency - 0.3) * 1.5)
-            except:
+            except Exception:
                 pass
 
         return np.mean(indicators) if indicators else 0.0

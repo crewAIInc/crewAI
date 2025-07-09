@@ -1,15 +1,12 @@
-from crewai.evaluation.base_evaluator import AgentEvaluationResult, AgentAggregatedEvaluationResult, AggregationStrategy
-from crewai.utilities.events.base_event_listener import BaseEventListener
+from crewai.evaluation.base_evaluator import AgentEvaluationResult, AggregationStrategy
 from crewai.agent import Agent
 from crewai.task import Task
-from crewai.utilities.llm_utils import create_llm
 from crewai.evaluation.evaluation_display import EvaluationDisplayFormatter
 
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any
 from collections import defaultdict
-from crewai.evaluation import EvaluationScore, BaseEvaluator, create_evaluation_callbacks
+from crewai.evaluation import BaseEvaluator, create_evaluation_callbacks
 from crewai.crew import Crew
-from rich.table import Table
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 

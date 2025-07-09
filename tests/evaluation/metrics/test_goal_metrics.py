@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch, MagicMock
 from tests.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
 

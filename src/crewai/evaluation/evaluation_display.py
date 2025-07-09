@@ -340,5 +340,5 @@ class EvaluationDisplayFormatter:
 
             return response
 
-        except Exception as e:
+        except Exception:
             return "Synthesized from multiple tasks: " + "\n\n".join([f"- {fb[:500]}..." for fb in feedbacks])

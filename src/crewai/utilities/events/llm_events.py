@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
-from datetime import datetime
 
 from crewai.utilities.events.base_events import BaseEvent
 

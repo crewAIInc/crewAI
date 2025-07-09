@@ -1,9 +1,5 @@
-import pytest
-from unittest.mock import patch, MagicMock, ANY
+from unittest.mock import patch, MagicMock
 
-from crewai.agent import Agent
-from crewai.task import Task
-from crewai.evaluation.base_evaluator import EvaluationScore
 from crewai.evaluation.metrics.tools_metrics import (
     ToolSelectionEvaluator,
     ParameterExtractionEvaluator,

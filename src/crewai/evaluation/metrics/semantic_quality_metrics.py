@@ -55,7 +55,7 @@ Evaluate the semantic quality and reasoning of this output.
                 feedback=evaluation_data.get("feedback", response),
                 raw_response=response
             )
-        except Exception as e:
+        except Exception:
             return EvaluationScore(
                 score=None,
                 feedback=f"Failed to parse evaluation. Raw response: {response}",

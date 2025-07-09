@@ -97,7 +97,7 @@ IMPORTANT:
             coverage = scores.get("coverage", 5.0)
             overall_score = float(evaluation_data.get("overall_score", 5.0))
 
-            feedback = f"Tool Selection Evaluation:\n"
+            feedback = "Tool Selection Evaluation:\n"
             feedback += f"• Relevance: {relevance}/10 - Selection of appropriate tool types for the task\n"
             feedback += f"• Coverage: {coverage}/10 - Selection of all necessary tool types\n"
             if "improvement_suggestions" in evaluation_data:
@@ -164,7 +164,7 @@ class ParameterExtractionEvaluator(BaseEvaluator):
             sample += f"- Success: {'No' if not success else 'Yes'}"
 
             if is_validation_error:
-                sample += f" (PARAMETER VALIDATION ERROR)\n"
+                sample += " (PARAMETER VALIDATION ERROR)\n"
                 sample += f"- Error: {tool_use.get('result', 'Unknown error')}"
             elif not success:
                 sample += f" (Other error: {error_type})\n"
@@ -231,7 +231,7 @@ Evaluate the quality of the agent's parameter extraction for this task.
 
             overall_score = float(evaluation_data.get("overall_score", 5.0))
 
-            feedback = f"Parameter Extraction Evaluation:\n"
+            feedback = "Parameter Extraction Evaluation:\n"
             feedback += f"• Accuracy: {accuracy}/10 - Correctly identifying required parameters\n"
             feedback += f"• Formatting: {formatting}/10 - Properly formatting parameters for tools\n"
             feedback += f"• Completeness: {completeness}/10 - Including all necessary information\n\n"
@@ -370,7 +370,7 @@ Evaluate the quality of the agent's tool invocation structure during this task.
 
             overall_score = float(evaluation_data.get("overall_score", 5.0))
 
-            feedback = f"Tool Invocation Evaluation:\n"
+            feedback = "Tool Invocation Evaluation:\n"
             feedback += f"• Structure: {structure}/10 - Following proper syntax and format\n"
             feedback += f"• Error Handling: {error_handling}/10 - Appropriately handling tool errors\n"
             feedback += f"• Invocation Patterns: {invocation_patterns}/10 - Proper sequencing and management of calls\n\n"

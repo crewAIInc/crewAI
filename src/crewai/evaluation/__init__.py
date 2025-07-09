@@ -1,4 +1,3 @@
-# First, import the core base classes without AgentEvaluator
 from crewai.evaluation.base_evaluator import (
     BaseEvaluator,
     EvaluationScore,
@@ -6,7 +5,6 @@ from crewai.evaluation.base_evaluator import (
     AgentEvaluationResult
 )
 
-# Now import the evaluators which depend on base classes
 from crewai.evaluation.metrics.semantic_quality_metrics import (
     SemanticQualityEvaluator
 )
@@ -26,7 +24,6 @@ from crewai.evaluation.metrics.tools_metrics import (
     ToolInvocationEvaluator
 )
 
-# Next import integration which uses the base classes but not AgentEvaluator
 from crewai.evaluation.evaluation_listener import (
     EvaluationTraceCallback,
     create_evaluation_callbacks
@@ -37,3 +34,20 @@ from crewai.evaluation.agent_evaluator import (
     AgentEvaluator,
     create_default_evaluator
 )
+
+__all__ = [
+    "BaseEvaluator",
+    "EvaluationScore",
+    "MetricCategory",
+    "AgentEvaluationResult",
+    "SemanticQualityEvaluator",
+    "GoalAlignmentEvaluator",
+    "ReasoningEfficiencyEvaluator",
+    "ToolSelectionEvaluator",
+    "ParameterExtractionEvaluator",
+    "ToolInvocationEvaluator",
+    "EvaluationTraceCallback",
+    "create_evaluation_callbacks",
+    "AgentEvaluator",
+    "create_default_evaluator"
+]
