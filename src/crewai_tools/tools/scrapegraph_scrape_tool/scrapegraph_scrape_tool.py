@@ -102,9 +102,8 @@ class ScrapegraphScrapeTool(BaseTool):
                     "`scrapegraph-py` package not found, please run `uv add scrapegraph-py`"
                 )
 
-        self._client = Client(api_key=api_key)
-
         self.api_key = api_key or os.getenv("SCRAPEGRAPH_API_KEY")
+        self._client = Client(api_key=self.api_key)
 
         if not self.api_key:
             raise ValueError("Scrapegraph API key is required")
