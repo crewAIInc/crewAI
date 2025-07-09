@@ -30,6 +30,9 @@ def validate_jwt_token(
         jwk_client = PyJWKClient(jwks_url)
         signing_key = jwk_client.get_signing_key_from_jwt(jwt_token)
 
+        _unverified_decoded_token = jwt.decode(
+            jwt_token, options={"verify_signature": False}
+        )
         decoded_token = jwt.decode(
             jwt_token,
             signing_key.key,
@@ -49,9 +52,15 @@ def validate_jwt_token(
     except jwt.ExpiredSignatureError:
         raise Exception("Token has expired.")
     except jwt.InvalidAudienceError:
-        raise Exception(f"Invalid token audience. Expected: '{audience}'")
+        actual_audience = _unverified_decoded_token.get("aud", "[no audience found]")
+        raise Exception(
+            f"Invalid token audience. Got: '{actual_audience}'. Expected: '{audience}'"
+        )
     except jwt.InvalidIssuerError:
-        raise Exception(f"Invalid token issuer. Expected: '{issuer}'")
+        actual_issuer = _unverified_decoded_token.get("iss", "[no issuer found]")
+        raise Exception(
+            f"Invalid token issuer. Got: '{actual_issuer}'. Expected: '{issuer}'"
+        )
     except jwt.MissingRequiredClaimError as e:
         raise Exception(f"Token is missing required claims: {str(e)}")
     except jwt.exceptions.PyJWKClientError as e:
