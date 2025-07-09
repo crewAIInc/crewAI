@@ -25,6 +25,7 @@ CrewAI provides an extensive collection of powerful tools ready to enhance your 
 - **File Management**: `FileReadTool`, `FileWriteTool`
 - **Web Scraping**: `ScrapeWebsiteTool`, `SeleniumScrapingTool`
 - **Database Integrations**: `PGSearchTool`, `MySQLSearchTool`
+- **Vector Database Integrations**: `MongoDBVectorSearchTool`, `QdrantVectorSearchTool`, `WeaviateVectorSearchTool`
 - **API Integrations**: `SerperApiTool`, `EXASearchTool`
 - **AI-powered Tools**: `DallETool`, `VisionTool`, `StagehandTool`
 
@@ -226,4 +227,3 @@ Join our rapidly growing community and receive real-time support:
 - [Open an Issue](https://github.com/crewAIInc/crewAI/issues)
 
 Build smarter, faster, and more powerful AI solutions—powered by CrewAI Tools.
-
