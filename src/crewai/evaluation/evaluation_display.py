@@ -19,7 +19,7 @@ class EvaluationDisplayFormatter:
         for agent_role, result in agent_results.items():
             self.console_formatter.print(f"\n[bold cyan]Agent: {agent_role}[/bold cyan]\n")
 
-            table = Table(title=f"{agent_role} Evaluation Results", box=ROUNDED)
+            table = Table(box=ROUNDED)
             table.add_column("Metric", style="cyan")
             table.add_column("Score (1-10)", justify="center")
             table.add_column("Feedback", style="green")
@@ -70,12 +70,6 @@ class EvaluationDisplayFormatter:
             self.console_formatter.print("[yellow]No evaluation results to display[/yellow]")
             return
 
-        title = Panel(
-            "[bold]Agent Evaluation Summary[/bold]",
-            style="blue",
-            box=ROUNDED
-        )
-        self.console_formatter.print(title, justify="center")
         self.console_formatter.print("\n")
 
         table = Table(title="Agent Performance Scores \n (1-10 Higher is better)", box=HEAVY_EDGE)

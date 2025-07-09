@@ -45,8 +45,6 @@ class AgentEvaluator:
             raise ValueError("Cannot evaluate: no callback was set. Use set_callback() method first.")
 
         from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-        self.console_formatter.print(f"\n[bold blue]📊 Running agent evaluations for iteration {self.iteration}...[/bold blue]\n")
-
         evaluation_results = defaultdict(list)
 
         total_evals = 0
@@ -101,7 +99,7 @@ class AgentEvaluator:
     def display_results_with_iterations(self):
         self.display_formatter.display_summary_results(self.iterations_results)
 
-    def get_agent_evaluation(self, strategy: AggregationStrategy = AggregationStrategy.SIMPLE_AVERAGE):
+    def get_agent_evaluation(self, strategy: AggregationStrategy = AggregationStrategy.SIMPLE_AVERAGE, include_evaluation_feedback: bool = False):
         agent_results = {}
         with crewai_event_bus.scoped_handlers():
             task_results = self.get_evaluation_results()
@@ -120,9 +118,11 @@ class AgentEvaluator:
 
                 agent_results[agent_role] = aggregated_result
 
-            if len(self.iterations_results) > 1 and self.iteration == max(self.iterations_results.keys()):
+
+            if self.iteration == max(self.iterations_results.keys()):
                 self.display_results_with_iterations()
-            elif agent_results:
+
+            if include_evaluation_feedback:
                 self.display_evaluation_results(agent_results)
 
         return agent_results
