@@ -63,7 +63,7 @@ ENV_VARS = {
             "key_name": "AWS_REGION_NAME",
         },
         {
-            "prompt": "Enter your AWS Bedrock API Key (press Enter to skip)",
+            "prompt": "Enter your AWS Bedrock API Key (30-day key from AWS console, press Enter to skip)",
             "key_name": "AWS_BEARER_TOKEN_BEDROCK",
         },
     ],

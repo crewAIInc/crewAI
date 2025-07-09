@@ -328,12 +328,14 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
-    # Using IAM role authentication
+    # Method 1: IAM Role Authentication (uses AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY)
+    # Set environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
     llm = LLM(
         model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
     )
 
-    # Using API key authentication  
+    # Method 2: API Key Authentication (uses AWS_BEARER_TOKEN_BEDROCK)
+    # Set environment variables: AWS_BEARER_TOKEN_BEDROCK, AWS_DEFAULT_REGION
     llm = LLM(
         model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
     )
@@ -343,6 +345,13 @@ In this section, you'll find detailed examples that help you select, configure, 
     - Before using Amazon Bedrock, make sure you have boto3 v1.393+ installed in your environment
     - For API key authentication, you can generate a 30-day API key from the [Amazon Bedrock console](https://console.aws.amazon.com/bedrock/)
     - For production applications, use IAM roles or temporary credentials instead of long-term API keys
+
+    **Security Best Practices:**
+    - API keys expire after 30 days and should be rotated regularly
+    - Use IAM roles for production environments for better security
+    - Store API keys securely and never commit them to version control
+    - Monitor API usage and set up alerts for unusual activity
+    - Consider using temporary credentials for enhanced security
 
     [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) is a managed service that provides access to multiple foundation models from top AI companies through a unified API, enabling secure and responsible AI application development.
 

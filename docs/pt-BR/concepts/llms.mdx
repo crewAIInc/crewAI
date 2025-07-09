@@ -326,12 +326,14 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
 
     Exemplo de uso em seu projeto CrewAI:
     ```python Code
-    # Usando autenticação por função IAM
+    # Método 1: Autenticação por Função IAM (usa AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY)
+    # Configure as variáveis de ambiente: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
     llm = LLM(
         model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
     )
 
-    # Usando autenticação por chave de API
+    # Método 2: Autenticação por Chave de API (usa AWS_BEARER_TOKEN_BEDROCK)
+    # Configure as variáveis de ambiente: AWS_BEARER_TOKEN_BEDROCK, AWS_DEFAULT_REGION
     llm = LLM(
         model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
     )
@@ -341,6 +343,13 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     - Antes de usar o Amazon Bedrock, certifique-se de ter o boto3 v1.393+ instalado em seu ambiente
     - Para autenticação por chave de API, você pode gerar uma chave de 30 dias no [console do Amazon Bedrock](https://console.aws.amazon.com/bedrock/)
     - Para aplicações de produção, use funções IAM ou credenciais temporárias em vez de chaves de API de longo prazo
+
+    **Melhores Práticas de Segurança:**
+    - Chaves de API expiram após 30 dias e devem ser rotacionadas regularmente
+    - Use funções IAM para ambientes de produção para melhor segurança
+    - Armazene chaves de API com segurança e nunca as confirme no controle de versão
+    - Monitore o uso da API e configure alertas para atividades incomuns
+    - Considere usar credenciais temporárias para segurança aprimorada
 
     [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) é um serviço gerenciado que fornece acesso a múltiplos modelos fundamentais dos principais provedores de IA através de uma API unificada, permitindo o desenvolvimento seguro e responsável de aplicações de IA.
 
