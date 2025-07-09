@@ -311,20 +311,38 @@ In this section, you'll find detailed examples that help you select, configure, 
   </Accordion>
 
   <Accordion title="AWS Bedrock">
+    Amazon Bedrock supports two authentication methods:
+
+    **Method 1: IAM Role Authentication (Recommended for Production)**
     ```toml Code
     AWS_ACCESS_KEY_ID=<your-access-key>
     AWS_SECRET_ACCESS_KEY=<your-secret-key>
     AWS_DEFAULT_REGION=<your-region>
     ```
 
+    **Method 2: API Key Authentication (Recommended for Development)**
+    ```toml Code
+    AWS_BEARER_TOKEN_BEDROCK=<your-api-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+
     Example usage in your CrewAI project:
     ```python Code
+    # Using IAM role authentication
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
+    )
+
+    # Using API key authentication  
     llm = LLM(
         model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
     )
     ```
 
-    Before using Amazon Bedrock, make sure you have boto3 installed in your environment
+    **Requirements:**
+    - Before using Amazon Bedrock, make sure you have boto3 v1.393+ installed in your environment
+    - For API key authentication, you can generate a 30-day API key from the [Amazon Bedrock console](https://console.aws.amazon.com/bedrock/)
+    - For production applications, use IAM roles or temporary credentials instead of long-term API keys
 
     [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) is a managed service that provides access to multiple foundation models from top AI companies through a unified API, enabling secure and responsible AI application development.
 

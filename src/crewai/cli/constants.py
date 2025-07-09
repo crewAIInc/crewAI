@@ -62,6 +62,10 @@ ENV_VARS = {
             "prompt": "Enter your AWS Region Name (press Enter to skip)",
             "key_name": "AWS_REGION_NAME",
         },
+        {
+            "prompt": "Enter your AWS Bedrock API Key (press Enter to skip)",
+            "key_name": "AWS_BEARER_TOKEN_BEDROCK",
+        },
     ],
     "azure": [
         {
