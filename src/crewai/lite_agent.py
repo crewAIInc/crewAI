@@ -28,8 +28,7 @@ from pydantic import (
     InstanceOf,
     PrivateAttr,
     model_validator,
-    field_validator,
-    ConfigDict
+    field_validator
 )
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
