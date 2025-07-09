@@ -123,12 +123,12 @@ class AgentEvaluator:
                 self.display_results_with_iterations()
 
             if include_evaluation_feedback:
-                self.display_evaluation_results(agent_results)
+                self.display_evaluation_with_feedback()
 
         return agent_results
 
-    def display_evaluation_results(self, agent_results: Dict[str, AgentAggregatedEvaluationResult]):
-        self.display_formatter.display_evaluation_results(agent_results)
+    def display_evaluation_with_feedback(self):
+        self.display_formatter.display_evaluation_with_feedback(self.iterations_results)
 
     def evaluate(
         self,

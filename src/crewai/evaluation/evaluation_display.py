@@ -1,7 +1,6 @@
 from typing import Dict, Any, List
 from rich.table import Table
 from rich.box import HEAVY_EDGE, ROUNDED
-from rich.panel import Panel
 from crewai.evaluation.base_evaluator import AgentAggregatedEvaluationResult, AggregationStrategy
 from crewai.evaluation import EvaluationScore
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
@@ -11,59 +10,87 @@ class EvaluationDisplayFormatter:
     def __init__(self):
         self.console_formatter = ConsoleFormatter()
 
-    def display_evaluation_results(self, agent_results: Dict[str, AgentAggregatedEvaluationResult]):
-        if not agent_results:
+    def display_evaluation_with_feedback(self, iterations_results: Dict[int, Dict[str, List[Any]]]):
+        if not iterations_results:
             self.console_formatter.print("[yellow]No evaluation results to display[/yellow]")
             return
 
-        for agent_role, result in agent_results.items():
-            self.console_formatter.print(f"\n[bold cyan]Agent: {agent_role}[/bold cyan]\n")
+        # Get all agent roles across all iterations
+        all_agent_roles = set()
+        for iter_results in iterations_results.values():
+            all_agent_roles.update(iter_results.keys())
 
-            table = Table(box=ROUNDED)
-            table.add_column("Metric", style="cyan")
-            table.add_column("Score (1-10)", justify="center")
-            table.add_column("Feedback", style="green")
+        for agent_role in sorted(all_agent_roles):
+            self.console_formatter.print(f"\n[bold cyan]Agent: {agent_role}[/bold cyan]")
 
-            for metric, evaluation_score in result.metrics.items():
-                score = evaluation_score.score if evaluation_score.score is not None else "N/A"
+            # Process each iteration
+            for iter_num, results in sorted(iterations_results.items()):
+                if agent_role not in results or not results[agent_role]:
+                    continue
 
-                if isinstance(score, (int, float)) and score is not None:
-                    if score >= 8.0:
-                        score_text = f"[green]{score:.1f}[/green]"
-                    elif score >= 6.0:
-                        score_text = f"[cyan]{score:.1f}[/cyan]"
-                    elif score >= 4.0:
-                        score_text = f"[yellow]{score:.1f}[/yellow]"
+                agent_results = results[agent_role]
+                agent_id = agent_results[0].agent_id
+
+                # Aggregate results for this agent in this iteration
+                aggregated_result = self._aggregate_agent_results(
+                    agent_id=agent_id,
+                    agent_role=agent_role,
+                    results=agent_results,
+                )
+
+                # Display iteration header
+                self.console_formatter.print(f"\n[bold]Iteration {iter_num}[/bold]")
+
+                # Create table for this iteration
+                table = Table(box=ROUNDED)
+                table.add_column("Metric", style="cyan")
+                table.add_column("Score (1-10)", justify="center")
+                table.add_column("Feedback", style="green")
+
+                # Add metrics to table
+                if aggregated_result.metrics:
+                    for metric, evaluation_score in aggregated_result.metrics.items():
+                        score = evaluation_score.score if evaluation_score.score is not None else "N/A"
+
+                        if isinstance(score, (int, float)) and score is not None:
+                            if score >= 8.0:
+                                score_text = f"[green]{score:.1f}[/green]"
+                            elif score >= 6.0:
+                                score_text = f"[cyan]{score:.1f}[/cyan]"
+                            elif score >= 4.0:
+                                score_text = f"[yellow]{score:.1f}[/yellow]"
+                            else:
+                                score_text = f"[red]{score:.1f}[/red]"
+                        else:
+                            score_text = "[dim]N/A[/dim]"
+
+                        table.add_section()
+                        table.add_row(
+                            metric.title(),
+                            score_text,
+                            evaluation_score.feedback or ""
+                        )
+
+                if aggregated_result.overall_score is not None:
+                    overall_score = aggregated_result.overall_score
+                    if overall_score >= 8.0:
+                        overall_color = "green"
+                    elif overall_score >= 6.0:
+                        overall_color = "cyan"
+                    elif overall_score >= 4.0:
+                        overall_color = "yellow"
                     else:
-                        score_text = f"[red]{score:.1f}[/red]"
-                else:
-                    score_text = "[dim]N/A[/dim]"
+                        overall_color = "red"
 
-                table.add_section()
-                table.add_row(
-                    metric.title(),
-                    score_text,
-                    evaluation_score.feedback or ""
-                )
+                    table.add_section()
+                    table.add_row(
+                        "Overall Score",
+                        f"[{overall_color}]{overall_score:.1f}[/]",
+                        "Overall agent evaluation score"
+                    )
 
-            if result.overall_score is not None:
-                if result.overall_score >= 8.0:
-                    color = "green"
-                elif result.overall_score >= 6.0:
-                    color = "cyan"
-                elif result.overall_score >= 4.0:
-                    color = "yellow"
-                else:
-                    color = "red"
-
-                table.add_section()
-                table.add_row(
-                    "[bold]Overall Score[/bold]",
-                    f"[bold {color}]{result.overall_score:.1f}[/bold {color}]",
-                    ""
-                )
-
-            self.console_formatter.print(table)
+                # Print the table for this iteration
+                self.console_formatter.print(table)
 
     def display_summary_results(self, iterations_results: Dict[int, Dict[str, List[AgentAggregatedEvaluationResult]]]):
         if not iterations_results:
