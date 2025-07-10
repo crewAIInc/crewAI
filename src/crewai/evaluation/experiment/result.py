@@ -1,35 +1,22 @@
-"""Agent evaluation experiments for crewAI.
-
-This module provides tools for running experiments to evaluate agent performance
-across a dataset of test cases, as well as persistence and visualization of results.
-"""
-
-from collections import defaultdict
-from hashlib import md5
 import json
 import os
 from datetime import datetime
-from typing import List, Dict, Union, Optional, Any, Tuple
-from dataclasses import dataclass, asdict
+from typing import List, Dict, Optional, Any
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-
-from crewai import Crew
-from crewai.evaluation import AgentEvaluator, create_default_evaluator
 from pydantic import BaseModel
-from crewai.evaluation.evaluation_display import AgentAggregatedEvaluationResult
 
-class TestCaseResult(BaseModel):
+class ExperimentResult(BaseModel):
     identifier: str
-    inputs: Dict[str, Any]
-    score: Union[int, Dict[str, Union[int, float]]]
-    expected_score: Union[int, Dict[str, Union[int, float]]]
+    inputs: dict[str, Any]
+    score: int | dict[str, int | float]
+    expected_score: int | dict[str, int | float]
     passed: bool
-    agent_evaluations: Optional[Dict[str, Any]] = None
+    agent_evaluations: dict[str, Any] | None = None
 
 class ExperimentResults:
-    def __init__(self, results: List[TestCaseResult], metadata: Optional[Dict[str, Any]] = None):
+    def __init__(self, results: List[ExperimentResult], metadata: Optional[Dict[str, Any]] = None):
         self.results = results
         self.metadata = metadata or {}
         self.timestamp = datetime.now()
@@ -204,97 +191,3 @@ class ExperimentResults:
             table.add_row("➖ Missing Tests", str(len(missing_tests)), details)
 
         self.console.print(table)
-
-
-class ExperimentRunner:
-    def __init__(self, dataset: Optional[List[Dict[str, Any]]] = None, evaluator: AgentEvaluator | None = None):
-        self.dataset = dataset or []
-        self.evaluator = evaluator
-        self.console = Console()
-
-    def run(self, crew: Optional[Crew] = None) -> ExperimentResults:
-        if not self.dataset:
-            raise ValueError("No dataset provided. Use load_dataset() or provide dataset in constructor.")
-
-        if not crew:
-            raise ValueError("crew must be provided.")
-
-        if not self.evaluator:
-            self.evaluator = create_default_evaluator(crew=crew)
-
-        results = []
-
-        for test_case in self.dataset:
-            self.evaluator.reset_iterations_results()
-            result = self._run_test_case(test_case, crew)
-            results.append(result)
-
-
-        return ExperimentResults(results)
-
-    def _run_test_case(self, test_case: Dict[str, Any], crew: Crew) -> TestCaseResult:
-        inputs = test_case["inputs"]
-        expected_score = test_case["expected_score"]
-        identifier = test_case.get("identifier") or md5(str(test_case)).hexdigest()
-
-        try:
-            self.console.print(f"[dim]Running crew with input: {str(inputs)[:50]}...[/dim]")
-            crew.kickoff(inputs=inputs)
-
-            agent_evaluations = self.evaluator.get_agent_evaluation()
-
-            actual_score = self._extract_scores(agent_evaluations)
-
-            passed = self._compare_scores(expected_score, actual_score)
-            return TestCaseResult(
-                identifier=identifier,
-                inputs=inputs,
-                score=actual_score,
-                expected_score=expected_score,
-                passed=passed,
-                agent_evaluations=agent_evaluations
-            )
-
-        except Exception as e:
-            self.console.print(f"[red]Error running test case: {str(e)}[/red]")
-            return TestCaseResult(
-                identifier=identifier,
-                inputs=inputs,
-                score=0,
-                expected_score=expected_score,
-                passed=False
-            )
-
-    def _extract_scores(self, agent_evaluations: Dict[str, AgentAggregatedEvaluationResult]) -> Union[int, Dict[str, int]]:
-        all_scores = defaultdict(list)
-        for evaluation in agent_evaluations.values():
-            for metric_name, score in evaluation.metrics.items():
-                if score.score is not None:
-                    all_scores[metric_name.value].append(score.score)
-
-        avg_scores = {m: sum(s)/len(s) for m, s in all_scores.items()}
-
-        if len(avg_scores) == 1:
-            return list(avg_scores.values())[0]
-
-        return avg_scores
-
-    def _compare_scores(self, expected: Union[int, Dict[str, int]],
-                        actual: Union[int, Dict[str, int]]) -> bool:
-        if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
-            return actual >= expected
-
-        elif isinstance(expected, dict) and isinstance(actual, (int, float)):
-            return False
-
-        elif isinstance(expected, (int, float)) and isinstance(actual, dict):
-            avg_score = sum(actual.values()) / len(actual)
-            return avg_score >= expected
-
-        elif isinstance(expected, dict) and isinstance(actual, dict):
-            for metric, exp_score in expected.items():
-                if metric not in actual or actual[metric] < exp_score:
-                    return False
-            return True
-
-        return False
