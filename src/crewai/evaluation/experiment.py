@@ -18,6 +18,7 @@ from rich.panel import Panel
 from crewai import Crew
 from crewai.evaluation import AgentEvaluator, create_default_evaluator
 from pydantic import BaseModel
+from crewai.evaluation.evaluation_display import AgentAggregatedEvaluationResult
 
 class TestCaseResult(BaseModel):
     identifier: str
@@ -206,7 +207,7 @@ class ExperimentResults:
 
 
 class ExperimentRunner:
-    def __init__(self, dataset: Optional[List[Dict[str, Any]]] = None, evaluator: Optional[AgentEvaluator] = None):
+    def __init__(self, dataset: Optional[List[Dict[str, Any]]] = None, evaluator: AgentEvaluator | None = None):
         self.dataset = dataset or []
         self.evaluator = evaluator
         self.console = Console()
@@ -215,15 +216,16 @@ class ExperimentRunner:
         if not self.dataset:
             raise ValueError("No dataset provided. Use load_dataset() or provide dataset in constructor.")
 
-        if not self.evaluator and not crew:
-            raise ValueError("Either evaluator or crew must be provided.")
+        if not crew:
+            raise ValueError("crew must be provided.")
 
-        if not self.evaluator and crew:
+        if not self.evaluator:
             self.evaluator = create_default_evaluator(crew=crew)
 
         results = []
 
         for test_case in self.dataset:
+            self.evaluator.reset_iterations_results()
             result = self._run_test_case(test_case, crew)
             results.append(result)
 
@@ -263,7 +265,7 @@ class ExperimentRunner:
                 passed=False
             )
 
-    def _extract_scores(self, agent_evaluations: Dict[str, Any]) -> Union[int, Dict[str, int]]:
+    def _extract_scores(self, agent_evaluations: Dict[str, AgentAggregatedEvaluationResult]) -> Union[int, Dict[str, int]]:
         all_scores = defaultdict(list)
         for evaluation in agent_evaluations.values():
             for metric_name, score in evaluation.metrics.items():
