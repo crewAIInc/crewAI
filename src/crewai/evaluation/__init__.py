@@ -35,6 +35,12 @@ from crewai.evaluation.agent_evaluator import (
     create_default_evaluator
 )
 
+from crewai.evaluation.experiment import (
+    ExperimentRunner,
+    ExperimentResults,
+    TestCaseResult
+)
+
 __all__ = [
     "BaseEvaluator",
     "EvaluationScore",
@@ -49,5 +55,8 @@ __all__ = [
     "EvaluationTraceCallback",
     "create_evaluation_callbacks",
     "AgentEvaluator",
-    "create_default_evaluator"
+    "create_default_evaluator",
+    "ExperimentRunner",
+    "ExperimentResults",
+    "TestCaseResult"
 ]
