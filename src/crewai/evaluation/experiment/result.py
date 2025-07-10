@@ -137,15 +137,6 @@ class ExperimentResults:
             "baseline_timestamp": baseline_run.get("timestamp", "unknown")
         }
 
-    def _get_inputs_from_test_case(self, test_case: Dict[str, Any]) -> str:
-        inputs = test_case.get("inputs")
-        if inputs is None:
-            return ""
-
-        if not isinstance(inputs, str):
-            return str(inputs)
-        return inputs
-
     def _print_comparison_summary(self, comparison: Dict[str, Any], baseline_timestamp: str):
         self.console.print(Panel(f"[bold]Comparison with baseline run from {baseline_timestamp}[/bold]",
                                  expand=False))
