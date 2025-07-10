@@ -75,7 +75,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                         "id": fetched["ids"][0][i],  # type: ignore
                         "metadata": fetched["metadatas"][0][i],  # type: ignore
                         "context": fetched["documents"][0][i],  # type: ignore
-                        "score": fetched["distances"][0][i],  # type: ignore
+                        "score": 1 - fetched["distances"][0][i],  # type: ignore
                     }
                     if result["score"] >= score_threshold:
                         results.append(result)
@@ -102,6 +102,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 self.collection = self.app.get_or_create_collection(
                     name=sanitize_collection_name(collection_name),
                     embedding_function=self.embedder,
+                    metadata={"hnsw:space": "cosine"},
                 )
             else:
                 raise Exception("Vector Database Client not initialized")
