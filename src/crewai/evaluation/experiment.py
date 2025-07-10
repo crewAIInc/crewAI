@@ -108,9 +108,9 @@ class ExperimentResults:
 
         baseline_lookup = {}
         for result in baseline_results:
-            test_id = result.get("test_id")
-            if test_id:
-                baseline_lookup[test_id] = result
+            test_identifier = result.get("identifier")
+            if test_identifier:
+                baseline_lookup[test_identifier] = result
 
         improved = []
         regressed = []
@@ -118,27 +118,27 @@ class ExperimentResults:
         new_tests = []
 
         for result in self.results:
-            test_id = result.identifier
-            if not test_id or test_id not in baseline_lookup:
-                new_tests.append(test_id)
+            test_identifier = result.identifier
+            if not test_identifier or test_identifier not in baseline_lookup:
+                new_tests.append(test_identifier)
                 continue
 
-            baseline_result = baseline_lookup[test_id]
+            baseline_result = baseline_lookup[test_identifier]
             baseline_passed = baseline_result.get("passed", False)
 
             if result.passed and not baseline_passed:
-                improved.append((test_id, result.score, baseline_result.get("score", 0)))
+                improved.append((test_identifier, result.score, baseline_result.get("score", 0)))
             elif not result.passed and baseline_passed:
-                regressed.append((test_id, result.score, baseline_result.get("score", 0)))
+                regressed.append((test_identifier, result.score, baseline_result.get("score", 0)))
             else:
-                unchanged.append(test_id)
+                unchanged.append(test_identifier)
 
         missing_tests = []
-        current_test_ids = {result.identifier for result in self.results}
+        current_test_identifiers = {result.identifier for result in self.results}
         for result in baseline_results:
-            test_id = result.get("identifier")
-            if test_id and test_id not in current_test_ids:
-                missing_tests.append(test_id)
+            test_identifier = result.get("identifier")
+            if test_identifier and test_identifier not in current_test_identifiers:
+                missing_tests.append(test_identifier)
 
         return {
             "improved": improved,
@@ -170,7 +170,7 @@ class ExperimentResults:
 
         improved = comparison.get("improved", [])
         if improved:
-            details = ", ".join([f"{test_id}" for test_id, _, _ in improved[:3]])
+            details = ", ".join([f"{test_identifier}" for test_identifier, _, _ in improved[:3]])
             if len(improved) > 3:
                 details += f" and {len(improved) - 3} more"
             table.add_row("✅ Improved", str(len(improved)), details)
@@ -179,7 +179,7 @@ class ExperimentResults:
 
         regressed = comparison.get("regressed", [])
         if regressed:
-            details = ", ".join([f"{test_id}" for test_id, _, _ in regressed[:3]])
+            details = ", ".join([f"{test_identifier}" for test_identifier, _, _ in regressed[:3]])
             if len(regressed) > 3:
                 details += f" and {len(regressed) - 3} more"
             table.add_row("❌ Regressed", str(len(regressed)), details, style="red")
