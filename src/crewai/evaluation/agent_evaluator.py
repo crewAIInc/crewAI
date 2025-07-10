@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from crewai.crew import Crew
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
+from crewai.evaluation.evaluation_display import AgentAggregatedEvaluationResult
 
 class AgentEvaluator:
     def __init__(
@@ -35,6 +36,9 @@ class AgentEvaluator:
 
     def set_iteration(self, iteration: int) -> None:
         self.iteration = iteration
+
+    def reset_iterations_results(self):
+        self.iterations_results = {}
 
     def evaluate_current_iteration(self) -> dict[str, list[AgentEvaluationResult]]:
         if not self.crew:
@@ -99,7 +103,7 @@ class AgentEvaluator:
     def display_results_with_iterations(self):
         self.display_formatter.display_summary_results(self.iterations_results)
 
-    def get_agent_evaluation(self, strategy: AggregationStrategy = AggregationStrategy.SIMPLE_AVERAGE, include_evaluation_feedback: bool = False):
+    def get_agent_evaluation(self, strategy: AggregationStrategy = AggregationStrategy.SIMPLE_AVERAGE, include_evaluation_feedback: bool = False) -> Dict[str, AgentAggregatedEvaluationResult]:
         agent_results = {}
         with crewai_event_bus.scoped_handlers():
             task_results = self.get_evaluation_results()
