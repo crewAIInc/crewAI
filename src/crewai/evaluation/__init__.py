@@ -38,7 +38,7 @@ from crewai.evaluation.agent_evaluator import (
 from crewai.evaluation.experiment import (
     ExperimentRunner,
     ExperimentResults,
-    TestCaseResult
+    ExperimentResult
 )
 
 __all__ = [
