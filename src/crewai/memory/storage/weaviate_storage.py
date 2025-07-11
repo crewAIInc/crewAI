@@ -215,10 +215,9 @@ class WeaviateStorage(BaseRAGStorage):
                 f"An error occurred while resetting the {self.type} memory: {e}"
             )
 
-    def __del__(self):
+    def close(self):
         """Cleanup Weaviate client connection"""
-        if self.client:
-            self.client.close()
+        self.client.close()
     
     def _generate_embedding(
         self, text: str, metadata: Optional[Dict[str, Any]] = None

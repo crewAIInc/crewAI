@@ -16,6 +16,7 @@ from crewai.utilities.events.memory_events import (
 
 if TYPE_CHECKING:
     from crewai.memory.storage.mem0_storage import Mem0Storage
+    from crewai.memory.storage.weaviate_storage import WeaviateStorage
 
 
 class ExternalMemory(Memory):
@@ -27,11 +28,18 @@ class ExternalMemory(Memory):
         from crewai.memory.storage.mem0_storage import Mem0Storage
 
         return Mem0Storage(type="external", crew=crew, config=config)
+    
+    @staticmethod
+    def _configure_weaviate(crew: Any, config: Dict[str, Any]) -> "WeaviateStorage":
+        from crewai.memory.storage.weaviate_storage import WeaviateStorage
+
+        return WeaviateStorage(type="external", crew=crew, config=config)
 
     @staticmethod
     def external_supported_storages() -> Dict[str, Any]:
         return {
             "mem0": ExternalMemory._configure_mem0,
+            "weaviate": ExternalMemory._configure_weaviate
         }
 
     @staticmethod
