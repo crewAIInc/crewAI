@@ -97,11 +97,10 @@ class ExperimentResults:
 
             baseline_result = baseline_lookup[test_identifier]
             baseline_passed = baseline_result.get("passed", False)
-
             if result.passed and not baseline_passed:
-                improved.append((test_identifier, result.score, baseline_result.get("score", 0)))
+                improved.append(test_identifier)
             elif not result.passed and baseline_passed:
-                regressed.append((test_identifier, result.score, baseline_result.get("score", 0)))
+                regressed.append(test_identifier)
             else:
                 unchanged.append(test_identifier)
 

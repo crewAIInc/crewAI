@@ -34,7 +34,7 @@ class ExperimentResultsDisplay:
 
         improved = comparison.get("improved", [])
         if improved:
-            details = ", ".join([f"{test_identifier}" for test_identifier, _, _ in improved[:3]])
+            details = ", ".join([f"{test_identifier}" for test_identifier in improved[:3]])
             if len(improved) > 3:
                 details += f" and {len(improved) - 3} more"
             table.add_row("✅ Improved", str(len(improved)), details)
@@ -43,7 +43,7 @@ class ExperimentResultsDisplay:
 
         regressed = comparison.get("regressed", [])
         if regressed:
-            details = ", ".join([f"{test_identifier}" for test_identifier, _, _ in regressed[:3]])
+            details = ", ".join([f"{test_identifier}" for test_identifier in regressed[:3]])
             if len(regressed) > 3:
                 details += f" and {len(regressed) - 3} more"
             table.add_row("❌ Regressed", str(len(regressed)), details, style="red")
