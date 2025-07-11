@@ -58,7 +58,7 @@ class LLMCallCompletedEvent(LLMEventBase):
     """Event emitted when a LLM call completes"""
 
     type: str = "llm_call_completed"
-    messages: Union[str, List[Dict[str, Any]]]
+    messages: str | list[dict[str, Any]] | None = None
     response: Any
     call_type: LLMCallType
 

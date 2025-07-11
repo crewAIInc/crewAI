@@ -508,7 +508,6 @@ class LLM(BaseLLM):
                             # Enable tool calls using streaming
                             if "tool_calls" in delta:
                                 tool_calls = delta["tool_calls"]
-
                                 if tool_calls:
                                     result = self._handle_streaming_tool_calls(
                                         tool_calls=tool_calls,
@@ -517,6 +516,7 @@ class LLM(BaseLLM):
                                         from_task=from_task,
                                         from_agent=from_agent,
                                     )
+
                                     if result is not None:
                                         chunk_content = result
 
@@ -861,6 +861,7 @@ class LLM(BaseLLM):
                         tool_args=function_args,
                     ),
                 )
+
                 result = fn(**function_args)
                 crewai_event_bus.emit(
                     self,
@@ -991,7 +992,7 @@ class LLM(BaseLLM):
                 logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
-    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType, from_task: Optional[Any] = None, from_agent: Optional[Any] = None, messages: Optional[Union[str, List[Dict[str, Any]]]] = None):
+    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType, from_task: Optional[Any] = None, from_agent: Optional[Any] = None, messages: str | list[dict[str, Any]] | None = None):
         """Handle the events for the LLM call.
 
         Args:

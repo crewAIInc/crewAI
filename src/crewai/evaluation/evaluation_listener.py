@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional
 
 from collections.abc import Sequence
 
@@ -149,7 +149,7 @@ class EvaluationTraceCallback(BaseEventListener):
             "end_time": None
         }
 
-    def on_llm_call_end(self, messages: Union[str, List[Dict[str, Any]]], response: Any):
+    def on_llm_call_end(self, messages: str | list[dict[str, Any]] | None, response: Any):
         if not self.current_agent_id or not self.current_task_id:
             return
 
