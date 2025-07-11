@@ -155,6 +155,7 @@ class CrewEvaluator:
         )
 
         console = Console()
+        console.print("\n")
         console.print(table)
 
     def evaluate(self, task_output: TaskOutput):
