@@ -2,7 +2,7 @@ from typing import Dict, Any
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from crewai.evaluation.experiment.result import ExperimentResults
+from crewai.experimental.evaluation.experiment.result import ExperimentResults
 
 class ExperimentResultsDisplay:
     def __init__(self):

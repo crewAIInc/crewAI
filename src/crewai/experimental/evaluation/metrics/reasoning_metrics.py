@@ -16,8 +16,8 @@ from collections.abc import Sequence
 from crewai.agent import Agent
 from crewai.task import Task
 
-from crewai.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
-from crewai.evaluation.json_parser import extract_json_from_llm_response
+from crewai.experimental.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
+from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.tasks.task_output import TaskOutput
 
 class ReasoningPatternType(Enum):
