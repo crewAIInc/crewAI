@@ -5,16 +5,17 @@ from rich.console import Console
 
 from crewai import Crew
 from crewai.evaluation import AgentEvaluator, create_default_evaluator
-from crewai.evaluation.evaluation_display import AgentAggregatedEvaluationResult
+from crewai.evaluation.experiment.result_display import ExperimentResultsDisplay
 from crewai.evaluation.experiment.result import ExperimentResults, ExperimentResult
+from crewai.evaluation.evaluation_display import AgentAggregatedEvaluationResult
 
 class ExperimentRunner:
     def __init__(self, dataset: List[Dict[str, Any]]):
         self.dataset = dataset or []
         self.evaluator = None
-        self.console = Console()
+        self.display = ExperimentResultsDisplay()
 
-    def run(self, crew: Optional[Crew] = None) -> ExperimentResults:
+    def run(self, crew: Optional[Crew] = None, print_summary: bool = False) -> ExperimentResults:
         if not crew:
             raise ValueError("crew must be provided.")
 
@@ -27,8 +28,12 @@ class ExperimentRunner:
             result = self._run_test_case(test_case, crew)
             results.append(result)
 
+        experiment_results = ExperimentResults(results)
 
-        return ExperimentResults(results)
+        if print_summary:
+            self.display.summary(experiment_results)
+
+        return experiment_results
 
     def _run_test_case(self, test_case: Dict[str, Any], crew: Crew) -> ExperimentResult:
         inputs = test_case["inputs"]
@@ -36,7 +41,8 @@ class ExperimentRunner:
         identifier = test_case.get("identifier") or md5(str(test_case), usedforsecurity=False).hexdigest()
 
         try:
-            self.console.print(f"[dim]Running crew with input: {str(inputs)[:50]}...[/dim]")
+            self.display.console.print(f"[dim]Running crew with input: {str(inputs)[:50]}...[/dim]")
+            self.display.console.print("\n")
             crew.kickoff(inputs=inputs)
 
             agent_evaluations = self.evaluator.get_agent_evaluation()
@@ -54,7 +60,7 @@ class ExperimentRunner:
             )
 
         except Exception as e:
-            self.console.print(f"[red]Error running test case: {str(e)}[/red]")
+            self.display.console.print(f"[red]Error running test case: {str(e)}[/red]")
             return ExperimentResult(
                 identifier=identifier,
                 inputs=inputs,
