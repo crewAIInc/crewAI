@@ -83,8 +83,9 @@ def run_chat():
         system_message = build_system_message(crew_chat_inputs)
 
         # Call the LLM to generate the introductory message
+        # NOTE: Some model (e.g. Google Gemini) rejects empty content for user role, thus input a meaningless character
         introductory_message = chat_llm.call(
-            messages=[{"role": "system", "content": system_message}]
+            messages=[{"role": "system", "content": system_message}, {"role": "user", "content": "."}]
         )
     finally:
         # Stop loading indicator
