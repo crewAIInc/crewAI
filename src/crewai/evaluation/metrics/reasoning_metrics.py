@@ -11,6 +11,7 @@ import re
 from enum import Enum
 from typing import Any, Dict, List, Tuple
 import numpy as np
+from collections.abc import Sequence
 
 from crewai.agent import Agent
 from crewai.task import Task
@@ -136,6 +137,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
 """}
         ]
 
+        assert self.llm is not None
         response = self.llm.call(prompt)
 
         try:
@@ -275,7 +277,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
             }
         }
 
-    def _calculate_trend(self, values: List[float]) -> float:
+    def _calculate_trend(self, values: Sequence[float | int]) -> float:
         if not values or len(values) < 2:
             return 0.0
 
@@ -295,7 +297,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
         except Exception:
             return 0.0
 
-    def _calculate_loop_likelihood(self, call_lengths: List[float], response_times: List[float]) -> float:
+    def _calculate_loop_likelihood(self, call_lengths: Sequence[float], response_times: Sequence[float]) -> float:
         if not call_lengths or len(call_lengths) < 3:
             return 0.0
 

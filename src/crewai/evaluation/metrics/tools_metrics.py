@@ -87,11 +87,13 @@ IMPORTANT:
 - DO NOT evaluate tool usage or results
 """}
         ]
-
+        assert self.llm is not None
         response = self.llm.call(prompt)
 
         try:
             evaluation_data = extract_json_from_llm_response(response)
+            assert evaluation_data is not None
+
             scores = evaluation_data.get("scores", {})
             relevance = scores.get("relevance", 5.0)
             coverage = scores.get("coverage", 5.0)
@@ -220,10 +222,13 @@ Evaluate the quality of the agent's parameter extraction for this task.
 """}
         ]
 
+        assert self.llm is not None
         response = self.llm.call(prompt)
 
         try:
             evaluation_data = extract_json_from_llm_response(response)
+            assert evaluation_data is not None
+
             scores = evaluation_data.get("scores", {})
             accuracy = scores.get("accuracy", 5.0)
             formatting = scores.get("formatting", 5.0)
@@ -359,10 +364,12 @@ Evaluate the quality of the agent's tool invocation structure during this task.
 """}
         ]
 
+        assert self.llm is not None
         response = self.llm.call(prompt)
 
         try:
             evaluation_data = extract_json_from_llm_response(response)
+            assert evaluation_data is not None
             scores = evaluation_data.get("scores", {})
             structure = scores.get("structure", 5.0)
             error_handling = scores.get("error_handling", 5.0)

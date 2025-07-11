@@ -46,13 +46,15 @@ Agent's final output:
 Evaluate how well the agent's output aligns with the assigned task goal.
 """}
         ]
-
+        assert self.llm is not None
         response = self.llm.call(prompt)
 
         try:
-            evaluation_data = extract_json_from_llm_response(response)
+            evaluation_data: dict[str, Any] = extract_json_from_llm_response(response)
+            assert evaluation_data is not None
+
             return EvaluationScore(
-                score=float(evaluation_data.get("score", None)),
+                score=evaluation_data.get("score", 0),
                 feedback=evaluation_data.get("feedback", response),
                 raw_response=response
             )

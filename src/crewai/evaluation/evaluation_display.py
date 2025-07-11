@@ -1,7 +1,9 @@
+from collections import defaultdict
 from typing import Dict, Any, List
 from rich.table import Table
 from rich.box import HEAVY_EDGE, ROUNDED
-from crewai.evaluation.base_evaluator import AgentAggregatedEvaluationResult, AggregationStrategy
+from collections.abc import Sequence
+from crewai.evaluation.base_evaluator import AgentAggregatedEvaluationResult, AggregationStrategy, AgentEvaluationResult, MetricCategory
 from crewai.evaluation import EvaluationScore
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 from crewai.utilities.llm_utils import create_llm
@@ -16,7 +18,7 @@ class EvaluationDisplayFormatter:
             return
 
         # Get all agent roles across all iterations
-        all_agent_roles = set()
+        all_agent_roles: set[str] = set()
         for iter_results in iterations_results.values():
             all_agent_roles.update(iter_results.keys())
 
@@ -50,9 +52,9 @@ class EvaluationDisplayFormatter:
                 # Add metrics to table
                 if aggregated_result.metrics:
                     for metric, evaluation_score in aggregated_result.metrics.items():
-                        score = evaluation_score.score if evaluation_score.score is not None else "N/A"
+                        score = evaluation_score.score
 
-                        if isinstance(score, (int, float)) and score is not None:
+                        if isinstance(score, (int, float)):
                             if score >= 8.0:
                                 score_text = f"[green]{score:.1f}[/green]"
                             elif score >= 6.0:
@@ -109,7 +111,7 @@ class EvaluationDisplayFormatter:
 
         table.add_column("Avg. Total", justify="center")
 
-        all_agent_roles = set()
+        all_agent_roles: set[str] = set()
         for results in iterations_results.values():
             all_agent_roles.update(results.keys())
 
@@ -173,7 +175,7 @@ class EvaluationDisplayFormatter:
 
             table.add_row(*row)
 
-            all_metrics = set()
+            all_metrics: set[Any] = set()
             for metrics in agent_metrics_by_iteration.values():
                 all_metrics.update(metrics.keys())
 
@@ -185,18 +187,18 @@ class EvaluationDisplayFormatter:
                 for iter_num in sorted(iterations_results.keys()):
                     if (iter_num in agent_metrics_by_iteration and
                             metric in agent_metrics_by_iteration[iter_num]):
-                        score = agent_metrics_by_iteration[iter_num][metric].score
-                        if score is not None:
-                            metric_scores.append(score)
-                            if score >= 8.0:
+                        metric_score = agent_metrics_by_iteration[iter_num][metric].score
+                        if metric_score is not None:
+                            metric_scores.append(metric_score)
+                            if metric_score >= 8.0:
                                 color = "green"
-                            elif score >= 6.0:
+                            elif metric_score >= 6.0:
                                 color = "cyan"
-                            elif score >= 4.0:
+                            elif metric_score >= 4.0:
                                 color = "yellow"
                             else:
                                 color = "red"
-                            row.append(f"[{color}]{score:.1f}[/]")
+                            row.append(f"[{color}]{metric_score:.1f}[/]")
                         else:
                             row.append("[dim]N/A[/dim]")
                     else:
@@ -227,34 +229,29 @@ class EvaluationDisplayFormatter:
         self,
         agent_id: str,
         agent_role: str,
-        results: List[Any],
+        results: Sequence[AgentEvaluationResult],
         strategy: AggregationStrategy = AggregationStrategy.SIMPLE_AVERAGE,
     ) -> AgentAggregatedEvaluationResult:
-        metrics_by_category = {}
+        metrics_by_category: dict[MetricCategory, list[EvaluationScore]] = defaultdict(list)
 
         for result in results:
             for metric_name, evaluation_score in result.metrics.items():
-                if metric_name not in metrics_by_category:
-                    metrics_by_category[metric_name] = []
                 metrics_by_category[metric_name].append(evaluation_score)
 
-        aggregated_metrics = {}
+        aggregated_metrics: dict[MetricCategory, EvaluationScore] = {}
         for category, scores in metrics_by_category.items():
-            valid_scores = [s for s in scores if s.score is not None]
+            valid_scores = [s.score for s in scores if s.score is not None]
+            avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else None
 
-            avg_score = sum(s.score for s in valid_scores) / len(valid_scores) if valid_scores else None
-
-            # Extract all feedback text from scores
             feedbacks = [s.feedback for s in scores if s.feedback]
 
-            # Process feedback based on number of entries
             feedback_summary = None
             if feedbacks:
                 if len(feedbacks) > 1:
                     # Use the summarization method for multiple feedbacks
                     feedback_summary = self._summarize_feedbacks(
                         agent_role=agent_role,
-                        metric=category,
+                        metric=category.title(),
                         feedbacks=feedbacks,
                         scores=[s.score for s in scores],
                         strategy=strategy
@@ -269,9 +266,9 @@ class EvaluationDisplayFormatter:
 
         overall_score = None
         if aggregated_metrics:
-            scores = [m.score for m in aggregated_metrics.values() if m.score is not None]
-            if scores:
-                overall_score = sum(scores) / len(scores)
+            valid_scores = [m.score for m in aggregated_metrics.values() if m.score is not None]
+            if valid_scores:
+                overall_score = sum(valid_scores) / len(valid_scores)
 
         return AgentAggregatedEvaluationResult(
             agent_id=agent_id,
@@ -287,7 +284,7 @@ class EvaluationDisplayFormatter:
         agent_role: str,
         metric: str,
         feedbacks: List[str],
-        scores: List[float],
+        scores: List[float | None],
         strategy: AggregationStrategy
     ) -> str:
         if len(feedbacks) <= 2 and all(len(fb) < 200 for fb in feedbacks):
@@ -335,7 +332,7 @@ class EvaluationDisplayFormatter:
                 {all_feedbacks}
                 """}
             ]
-
+            assert llm is not None
             response = llm.call(prompt)
 
             return response

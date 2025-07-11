@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
+from collections.abc import Sequence
+
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.utilities.events.base_event_listener import BaseEventListener
@@ -40,7 +42,7 @@ class EvaluationTraceCallback(BaseEventListener):
     def __init__(self):
         if not hasattr(self, "_initialized") or not self._initialized:
             super().__init__()
-            self.traces: Dict[str, Dict[str, Any]] = {}
+            self.traces = {}
             self.current_agent_id = None
             self.current_task_id = None
             self._initialized = True
@@ -109,8 +111,8 @@ class EvaluationTraceCallback(BaseEventListener):
         self.current_agent_id = None
         self.current_task_id = None
 
-    def on_tool_use(self, tool_name: str, tool_args: Dict[str, Any], result: Any,
-                   success: bool = True, error_type: Optional[str] = None):
+    def on_tool_use(self, tool_name: str, tool_args: dict[str, Any] | str, result: Any,
+                   success: bool = True, error_type: str | None = None):
         if not self.current_agent_id or not self.current_task_id:
             return
 
@@ -131,7 +133,7 @@ class EvaluationTraceCallback(BaseEventListener):
 
             self.traces[trace_key]["tool_uses"].append(tool_use)
 
-    def on_llm_call_start(self, messages: Union[str, List[Dict[str, Any]]], tools: Optional[List[Dict]] = None):
+    def on_llm_call_start(self, messages: str | Sequence[dict[str, Any]] | None, tools: Sequence[dict[str, Any]] | None = None):
         if not self.current_agent_id or not self.current_task_id:
             return
 
@@ -177,7 +179,7 @@ class EvaluationTraceCallback(BaseEventListener):
         self.traces[trace_key]["llm_calls"].append(llm_call)
 
         if hasattr(self, "current_llm_call"):
-            self.current_llm_call = None
+            self.current_llm_call = {}
 
     def get_trace(self, agent_id: str, task_id: str) -> Optional[Dict[str, Any]]:
         trace_key = f"{agent_id}_{task_id}"

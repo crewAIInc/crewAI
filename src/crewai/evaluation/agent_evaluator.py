@@ -3,9 +3,10 @@ from crewai.agent import Agent
 from crewai.task import Task
 from crewai.evaluation.evaluation_display import EvaluationDisplayFormatter
 
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict
 from collections import defaultdict
 from crewai.evaluation import BaseEvaluator, create_evaluation_callbacks
+from collections.abc import Sequence
 from crewai.crew import Crew
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
@@ -13,28 +14,29 @@ from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 class AgentEvaluator:
     def __init__(
         self,
-        evaluators: Optional[List[BaseEvaluator]] = None,
-        crew: Optional[Any] = None,
+        evaluators: Sequence[BaseEvaluator] | None = None,
+        crew: Crew | None = None,
     ):
-        self.crew: Crew = crew
-        self.evaluators = evaluators
+        self.crew: Crew | None = crew
+        self.evaluators: Sequence[BaseEvaluator] | None = evaluators
 
-        self.agent_evaluators = {}
+        self.agent_evaluators: dict[str, Sequence[BaseEvaluator] | None] = {}
         if crew is not None:
+            assert crew and crew.agents is not None
             for agent in crew.agents:
-                self.agent_evaluators[agent.id] = self.evaluators.copy()
+                self.agent_evaluators[str(agent.id)] = self.evaluators
 
         self.callback = create_evaluation_callbacks()
         self.console_formatter = ConsoleFormatter()
         self.display_formatter = EvaluationDisplayFormatter()
 
         self.iteration = 1
-        self.iterations_results = {}
+        self.iterations_results: dict[int, dict[str, list[AgentEvaluationResult]]] = {}
 
     def set_iteration(self, iteration: int) -> None:
         self.iteration = iteration
 
-    def evaluate_current_iteration(self):
+    def evaluate_current_iteration(self) -> dict[str, list[AgentEvaluationResult]]:
         if not self.crew:
             raise ValueError("Cannot evaluate: no crew was provided to the evaluator.")
 
@@ -42,12 +44,12 @@ class AgentEvaluator:
             raise ValueError("Cannot evaluate: no callback was set. Use set_callback() method first.")
 
         from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-        evaluation_results = defaultdict(list)
+        evaluation_results: defaultdict[str, list[AgentEvaluationResult]] = defaultdict(list)
 
         total_evals = 0
         for agent in self.crew.agents:
             for task in self.crew.tasks:
-                if task.agent.id == agent.id and self.agent_evaluators.get(agent.id):
+                if task.agent and task.agent.id == agent.id and self.agent_evaluators.get(str(agent.id)):
                     total_evals += 1
 
         with Progress(
@@ -60,15 +62,16 @@ class AgentEvaluator:
             eval_task = progress.add_task(f"Evaluating agents (iteration {self.iteration})...", total=total_evals)
 
             for agent in self.crew.agents:
-                evaluator = self.agent_evaluators.get(agent.id)
+                evaluator = self.agent_evaluators.get(str(agent.id))
                 if not evaluator:
                     continue
 
                 for task in self.crew.tasks:
-                    if task.agent.id != agent.id:
+
+                    if task.agent and str(task.agent.id) != str(agent.id):
                         continue
 
-                    trace = self.callback.get_trace(agent.id, task.id)
+                    trace = self.callback.get_trace(str(agent.id), str(task.id))
                     if not trace:
                         self.console_formatter.print(f"[yellow]Warning: No trace found for agent {agent.role} on task {task.description[:30]}...[/yellow]")
                         progress.update(eval_task, advance=1)
@@ -138,7 +141,7 @@ class AgentEvaluator:
             agent_id=str(agent.id),
             task_id=str(task.id)
         )
-
+        assert self.evaluators is not None
         for evaluator in self.evaluators:
             try:
                 score = evaluator.evaluate(

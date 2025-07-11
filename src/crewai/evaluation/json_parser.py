@@ -2,10 +2,10 @@
 
 import json
 import re
-from typing import Dict, Any
+from typing import Any
 
 
-def extract_json_from_llm_response(text: str) -> Dict[str, Any]:
+def extract_json_from_llm_response(text: str) -> dict[str, Any]:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
@@ -27,4 +27,4 @@ def extract_json_from_llm_response(text: str) -> Dict[str, Any]:
                 return json.loads(match.strip())
             except json.JSONDecodeError:
                 continue
-    return text
+    raise ValueError("No valid JSON found in the response")

@@ -23,7 +23,7 @@ class MetricCategory(enum.Enum):
 
 
 class EvaluationScore(BaseModel):
-    score: Optional[float] = Field(
+    score: float | None = Field(
         default=5.0,
         description="Numeric score from 0-10 where 0 is worst and 10 is best, None if not applicable",
         ge=0.0,
@@ -33,7 +33,7 @@ class EvaluationScore(BaseModel):
         default="",
         description="Detailed feedback explaining the evaluation score"
     )
-    raw_response: Optional[str] = Field(
+    raw_response: str | None = Field(
         default=None,
         description="Raw response from the evaluator (e.g., LLM)"
     )
@@ -45,8 +45,8 @@ class EvaluationScore(BaseModel):
 
 
 class BaseEvaluator(abc.ABC):
-    def __init__(self, llm: Optional[BaseLLM] = None):
-        self.llm = create_llm(llm)
+    def __init__(self, llm: BaseLLM | None = None):
+        self.llm: BaseLLM | None = create_llm(llm)
 
     @property
     @abc.abstractmethod

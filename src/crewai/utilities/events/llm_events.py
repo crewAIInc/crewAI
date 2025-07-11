@@ -49,7 +49,7 @@ class LLMCallStartedEvent(LLMEventBase):
 
     type: str = "llm_call_started"
     messages: Optional[Union[str, List[Dict[str, Any]]]] = None
-    tools: Optional[List[dict]] = None
+    tools: Optional[List[dict[str, Any]]] = None
     callbacks: Optional[List[Any]] = None
     available_functions: Optional[Dict[str, Any]] = None
 
