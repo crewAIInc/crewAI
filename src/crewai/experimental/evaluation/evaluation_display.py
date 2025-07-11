@@ -3,8 +3,8 @@ from typing import Dict, Any, List
 from rich.table import Table
 from rich.box import HEAVY_EDGE, ROUNDED
 from collections.abc import Sequence
-from crewai.evaluation.base_evaluator import AgentAggregatedEvaluationResult, AggregationStrategy, AgentEvaluationResult, MetricCategory
-from crewai.evaluation import EvaluationScore
+from crewai.experimental.evaluation.base_evaluator import AgentAggregatedEvaluationResult, AggregationStrategy, AgentEvaluationResult, MetricCategory
+from crewai.experimental.evaluation import EvaluationScore
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 from crewai.utilities.llm_utils import create_llm
 

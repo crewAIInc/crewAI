@@ -1,16 +1,16 @@
-from crewai.evaluation.base_evaluator import AgentEvaluationResult, AggregationStrategy
+from crewai.experimental.evaluation.base_evaluator import AgentEvaluationResult, AggregationStrategy
 from crewai.agent import Agent
 from crewai.task import Task
-from crewai.evaluation.evaluation_display import EvaluationDisplayFormatter
+from crewai.experimental.evaluation.evaluation_display import EvaluationDisplayFormatter
 
 from typing import Any, Dict
 from collections import defaultdict
-from crewai.evaluation import BaseEvaluator, create_evaluation_callbacks
+from crewai.experimental.evaluation import BaseEvaluator, create_evaluation_callbacks
 from collections.abc import Sequence
 from crewai.crew import Crew
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
-from crewai.evaluation.evaluation_display import AgentAggregatedEvaluationResult
+from crewai.experimental.evaluation.evaluation_display import AgentAggregatedEvaluationResult
 
 class AgentEvaluator:
     def __init__(
@@ -161,7 +161,7 @@ class AgentEvaluator:
         return result
 
 def create_default_evaluator(crew, llm=None):
-    from crewai.evaluation import (
+    from crewai.experimental.evaluation import (
         GoalAlignmentEvaluator,
         SemanticQualityEvaluator,
         ToolSelectionEvaluator,

@@ -1,8 +1,8 @@
 import json
 from typing import Dict, Any
 
-from crewai.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
-from crewai.evaluation.json_parser import extract_json_from_llm_response
+from crewai.experimental.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
+from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.agent import Agent
 from crewai.task import Task
 

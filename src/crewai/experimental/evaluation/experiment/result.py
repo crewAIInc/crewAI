@@ -18,7 +18,7 @@ class ExperimentResults:
         self.metadata = metadata or {}
         self.timestamp = datetime.now(timezone.utc)
 
-        from crewai.evaluation.experiment.result_display import ExperimentResultsDisplay
+        from crewai.experimental.evaluation.experiment.result_display import ExperimentResultsDisplay
         self.display = ExperimentResultsDisplay()
 
     def to_json(self, filepath: str | None = None) -> dict[str, Any]:

@@ -3,10 +3,10 @@ from hashlib import md5
 from typing import Any
 
 from crewai import Crew
-from crewai.evaluation import AgentEvaluator, create_default_evaluator
-from crewai.evaluation.experiment.result_display import ExperimentResultsDisplay
-from crewai.evaluation.experiment.result import ExperimentResults, ExperimentResult
-from crewai.evaluation.evaluation_display import AgentAggregatedEvaluationResult
+from crewai.experimental.evaluation import AgentEvaluator, create_default_evaluator
+from crewai.experimental.evaluation.experiment.result_display import ExperimentResultsDisplay
+from crewai.experimental.evaluation.experiment.result import ExperimentResults, ExperimentResult
+from crewai.experimental.evaluation.evaluation_display import AgentAggregatedEvaluationResult
 
 class ExperimentRunner:
     def __init__(self, dataset: list[dict[str, Any]]):

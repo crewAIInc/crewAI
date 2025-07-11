@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from crewai.evaluation.experiment.result import ExperimentResult, ExperimentResults
+from crewai.experimental.evaluation.experiment.result import ExperimentResult, ExperimentResults
 
 
 class TestExperimentResult:
