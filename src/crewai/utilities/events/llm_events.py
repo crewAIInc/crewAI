@@ -48,8 +48,8 @@ class LLMCallStartedEvent(LLMEventBase):
     """
 
     type: str = "llm_call_started"
-    messages: Union[str, List[Dict[str, Any]]]
-    tools: Optional[List[dict]] = None
+    messages: Optional[Union[str, List[Dict[str, Any]]]] = None
+    tools: Optional[List[dict[str, Any]]] = None
     callbacks: Optional[List[Any]] = None
     available_functions: Optional[Dict[str, Any]] = None
 
@@ -58,9 +58,9 @@ class LLMCallCompletedEvent(LLMEventBase):
     """Event emitted when a LLM call completes"""
 
     type: str = "llm_call_completed"
+    messages: str | list[dict[str, Any]] | None = None
     response: Any
     call_type: LLMCallType
-
 
 class LLMCallFailedEvent(LLMEventBase):
     """Event emitted when a LLM call fails"""
