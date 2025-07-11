@@ -1,7 +1,6 @@
 from collections import defaultdict
 from hashlib import md5
-from typing import List, Dict, Union, Optional, Any
-from rich.console import Console
+from typing import List, Dict, Union, Any
 
 from crewai import Crew
 from crewai.evaluation import AgentEvaluator, create_default_evaluator

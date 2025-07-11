@@ -1,15 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, patch
-import json
 
-from crewai import llm
-from crewai.agent import Agent
-from crewai.evaluation import metrics
-from crewai.task import Task
 from crewai.crew import Crew
 from crewai.evaluation.experiment.runner import ExperimentRunner
-from crewai.evaluation.experiment.result import ExperimentResult, ExperimentResults
-from crewai.evaluation.agent_evaluator import AgentEvaluator
+from crewai.evaluation.experiment.result import ExperimentResults
 from crewai.evaluation.evaluation_display import AgentAggregatedEvaluationResult
 from crewai.evaluation.base_evaluator import MetricCategory, EvaluationScore
 

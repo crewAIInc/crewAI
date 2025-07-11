@@ -58,5 +58,5 @@ __all__ = [
     "create_default_evaluator",
     "ExperimentRunner",
     "ExperimentResults",
-    "TestCaseResult"
+    "ExperimentResult"
 ]
