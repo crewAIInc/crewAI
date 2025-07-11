@@ -37,9 +37,20 @@ jobs:
       - name: Install the project
         run: uv sync --dev --all-extras
 
+      - name: Install SQLite with FTS5 support
+        run: |
+          # Install pysqlite3-binary which has FTS5 support
+          uv pip install pysqlite3-binary
+          # Create a sitecustomize.py to override sqlite3 with pysqlite3
+          mkdir -p .pytest_sqlite_override
+          echo "import sys; import pysqlite3; sys.modules['sqlite3'] = pysqlite3" > .pytest_sqlite_override/sitecustomize.py
+          # Test FTS5 availability
+          PYTHONPATH=.pytest_sqlite_override uv run python -c "import sqlite3; print(f'SQLite version: {sqlite3.sqlite_version}')"
+          PYTHONPATH=.pytest_sqlite_override uv run python -c "import sqlite3; conn = sqlite3.connect(':memory:'); conn.execute('CREATE VIRTUAL TABLE test USING fts5(content)'); print('FTS5 module available')"
+
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
-          uv run pytest \
+          PYTHONPATH=.pytest_sqlite_override uv run pytest \
             --block-network \
             --timeout=30 \
             -vv \
