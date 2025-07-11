@@ -19,6 +19,9 @@ from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
 
+# “cosine” is the only supported metric in CrewAI for now; do NOT change.
+_VECTOR_SPACE = "cosine"
+
 
 @contextlib.contextmanager
 def suppress_logging(
@@ -75,6 +78,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                         "id": fetched["ids"][0][i],  # type: ignore
                         "metadata": fetched["metadatas"][0][i],  # type: ignore
                         "context": fetched["documents"][0][i],  # type: ignore
+                        # Chroma returns cosine *distance* (0~1); convert to similarity via 1 - distance
                         "score": 1 - fetched["distances"][0][i],  # type: ignore
                     }
                     if result["score"] >= score_threshold:
@@ -102,7 +106,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 self.collection = self.app.get_or_create_collection(
                     name=sanitize_collection_name(collection_name),
                     embedding_function=self.embedder,
-                    metadata={"hnsw:space": "cosine"},
+                    metadata={"hnsw:space": _VECTOR_SPACE},
                 )
             else:
                 raise Exception("Vector Database Client not initialized")
