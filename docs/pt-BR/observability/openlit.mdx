@@ -69,10 +69,10 @@ Essa configuração permite acompanhar hiperparâmetros e monitorar problemas de
 
           openlit.init(disable_metrics=True)
           # Definir seus agentes
-          researcher = Agent(
-              role="Researcher",
-              goal="Conduct thorough research and analysis on AI and AI agents",
-              backstory="You're an expert researcher, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently researching for a new client.",
+          pesquisador = Agent(
+              role="Pesquisador",
+              goal="Realizar pesquisas e análises aprofundadas sobre IA e agentes de IA",
+              backstory="Você é um pesquisador especialista em tecnologia, engenharia de software, IA e startups. Trabalha como freelancer e está atualmente pesquisando para um novo cliente.",
               allow_delegation=False,
               llm='command-r'
           )
@@ -80,24 +80,24 @@ Essa configuração permite acompanhar hiperparâmetros e monitorar problemas de
 
           # Definir sua task
           task = Task(
-              description="Generate a list of 5 interesting ideas for an article, then write one captivating paragraph for each idea that showcases the potential of a full article on this topic. Return the list of ideas with their paragraphs and your notes.",
-              expected_output="5 bullet points, each with a paragraph and accompanying notes.",
+              description="Gere uma lista com 5 ideias interessantes para um artigo e escreva um parágrafo cativante para cada ideia, mostrando o potencial de um artigo completo sobre o tema. Retorne a lista de ideias com seus parágrafos e suas anotações.",
+              expected_output="5 tópicos, cada um com um parágrafo e notas complementares.",
           )
 
           # Definir o agente gerente
-          manager = Agent(
-              role="Project Manager",
-              goal="Efficiently manage the crew and ensure high-quality task completion",
-              backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
+          gerente = Agent(
+              role="Gerente de Projeto",
+              goal="Gerenciar eficientemente a equipe e garantir a conclusão de tarefas de alta qualidade",
+              backstory="Você é um gerente de projetos experiente, habilidoso em supervisionar projetos complexos e guiar equipes para o sucesso. Sua função é coordenar os esforços dos membros da equipe, garantindo que cada tarefa seja concluída no prazo e com o mais alto padrão.",
               allow_delegation=True,
               llm='command-r'
           )
 
           # Instanciar sua crew com um manager personalizado
           crew = Crew(
-              agents=[researcher],
+              agents=[pesquisador],
               tasks=[task],
-              manager_agent=manager,
+              manager_agent=gerente,
               process=Process.hierarchical,
           )
 
@@ -132,18 +132,18 @@ Essa configuração permite acompanhar hiperparâmetros e monitorar problemas de
 
           # Criar um agente com execução de código habilitada
           coding_agent = Agent(
-            role="Python Data Analyst",
-            goal="Analyze data and provide insights using Python",
-            backstory="You are an experienced data analyst with strong Python skills.",
+            role="Analista de Dados Python",
+            goal="Analisar dados e fornecer insights usando Python",
+            backstory="Você é um analista de dados experiente com fortes habilidades em Python.",
             allow_code_execution=True,
             llm="command-r"
           )
 
           # Criar uma task que exige execução de código
           data_analysis_task = Task(
-            description="Analyze the given dataset and calculate the average age of participants. Ages: {ages}",
+            description="Analise o conjunto de dados fornecido e calcule a idade média dos participantes. Idades: {ages}",
             agent=coding_agent,
-            expected_output="5 bullet points, each with a paragraph and accompanying notes.",
+            expected_output="5 tópicos, cada um com um parágrafo e notas complementares.",
           )
 
           # Criar uma crew e adicionar a task

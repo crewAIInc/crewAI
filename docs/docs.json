@@ -41,6 +41,11 @@
               "anchor": "Get Help",
               "href": "mailto:support@crewai.com",
               "icon": "headset"
+            },
+            {
+              "anchor": "Releases",
+              "href": "https://github.com/crewAIInc/crewAI/releases",
+              "icon": "tag"
             }
           ]
         },
@@ -89,6 +94,7 @@
                     "pages": [
                       "en/guides/advanced/customizing-prompts",
                       "en/guides/advanced/fingerprinting"
+
                     ]
                   }
                 ]
@@ -290,7 +296,8 @@
                   "en/enterprise/features/webhook-streaming",
                   "en/enterprise/features/traces",
                   "en/enterprise/features/hallucination-guardrail",
-                  "en/enterprise/features/integrations"
+                  "en/enterprise/features/integrations",
+                  "en/enterprise/features/agent-repositories"
                 ]
               },
               {
@@ -358,7 +365,7 @@
           },
           {
             "tab": "Examples",
-            "groups": [
+                        "groups": [
               {
                 "group": "Examples",
                 "pages": [
@@ -366,18 +373,8 @@
                 ]
               }
             ]
-          },
-          {
-            "tab": "Releases",
-            "groups": [
-              {
-                "group": "Releases",
-                "pages": [
-                  "en/changelog"
-                ]
-              }
-            ]
           }
+
         ]
       },
       {
@@ -403,6 +400,11 @@
               "anchor": "Obter Ajuda",
               "href": "mailto:support@crewai.com",
               "icon": "headset"
+            },
+            {
+              "anchor": "Lançamentos",
+              "href": "https://github.com/crewAIInc/crewAI/releases",
+              "icon": "tag"
             }
           ]
         },
@@ -720,7 +722,7 @@
           },
           {
             "tab": "Exemplos",
-            "groups": [
+                        "groups": [
               {
                 "group": "Exemplos",
                 "pages": [
@@ -728,18 +730,8 @@
                 ]
               }
             ]
-          },
-          {
-            "tab": "Lançamentos",
-            "groups": [
-              {
-                "group": "Lançamentos",
-                "pages": [
-                  "pt-BR/changelog"
-                ]
-              }
-            ]
           }
+
         ]
       }
     ]
@@ -777,6 +769,64 @@
   "seo": {
     "indexing": "all"
   },
+  "redirects": [
+    {
+      "source": "/introduction",
+      "destination": "/en/introduction"
+    },
+    {
+      "source": "/installation",
+      "destination": "/en/installation"
+    },
+    {
+      "source": "/quickstart",
+      "destination": "/en/quickstart"
+    },
+    {
+      "source": "/changelog",
+      "destination": "https://github.com/crewAIInc/crewAI/releases"
+    },
+    {
+      "source": "/telemetry",
+      "destination": "/en/telemetry"
+    },
+    {
+      "source": "/concepts/:path*",
+      "destination": "/en/concepts/:path*"
+    },
+    {
+      "source": "/guides/:path*",
+      "destination": "/en/guides/:path*"
+    },
+    {
+      "source": "/tools/:path*",
+      "destination": "/en/tools/:path*"
+    },
+    {
+      "source": "/learn/:path*",
+      "destination": "/en/learn/:path*"
+    },
+    {
+      "source": "/mcp/:path*",
+      "destination": "/en/mcp/:path*"
+    },
+    {
+      "source": "/observability/:path*",
+      "destination": "/en/observability/:path*"
+    },
+    {
+      "source": "/enterprise/:path*",
+      "destination": "/en/enterprise/:path*"
+    },
+    {
+      "source": "/api-reference/:path*",
+      "destination": "/en/api-reference/:path*"
+    },
+    {
+      "source": "/examples/:path*",
+      "destination": "/en/examples/:path*"
+    }
+  ],
   "errors": {
     "404": {
       "redirect": true

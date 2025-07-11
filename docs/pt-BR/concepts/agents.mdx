@@ -149,34 +149,33 @@ from crewai_tools import SerperDevTool
 
 # Crie um agente com todos os parâmetros disponíveis
 agent = Agent(
-    role="Senior Data Scientist",
-    goal="Analyze and interpret complex datasets to provide actionable insights",
-    backstory="With over 10 years of experience in data science and machine learning, "
-              "you excel at finding patterns in complex datasets.",
-    llm="gpt-4",  # Default: OPENAI_MODEL_NAME or "gpt-4"
-    function_calling_llm=None,  # Optional: Separate LLM for tool calling
-    verbose=False,  # Default: False
-    allow_delegation=False,  # Default: False
-    max_iter=20,  # Default: 20 iterations
-    max_rpm=None,  # Optional: Rate limit for API calls
-    max_execution_time=None,  # Optional: Maximum execution time in seconds
-    max_retry_limit=2,  # Default: 2 retries on error
-    allow_code_execution=False,  # Default: False
-    code_execution_mode="safe",  # Default: "safe" (options: "safe", "unsafe")
-    respect_context_window=True,  # Default: True
-    use_system_prompt=True,  # Default: True
-    multimodal=False,  # Default: False
-    inject_date=False,  # Default: False
-    date_format="%Y-%m-%d",  # Default: ISO format
-    reasoning=False,  # Default: False
-    max_reasoning_attempts=None,  # Default: None
-    tools=[SerperDevTool()],  # Optional: List of tools
-    knowledge_sources=None,  # Optional: List of knowledge sources
-    embedder=None,  # Optional: Custom embedder configuration
-    system_template=None,  # Optional: Custom system prompt template
-    prompt_template=None,  # Optional: Custom prompt template
-    response_template=None,  # Optional: Custom response template
-    step_callback=None,  # Optional: Callback function for monitoring
+    role="Cientista de Dados Sênior",
+    goal="Analisar e interpretar conjuntos de dados complexos para fornecer insights acionáveis",
+    backstory="Com mais de 10 anos de experiência em ciência de dados e aprendizado de máquina, você é especialista em encontrar padrões em grandes volumes de dados.",
+    llm="gpt-4",  # Padrão: OPENAI_MODEL_NAME ou "gpt-4"
+    function_calling_llm=None,  # Opcional: LLM separado para chamadas de ferramentas
+    verbose=False,  # Padrão: False
+    allow_delegation=False,  # Padrão: False
+    max_iter=20,  # Padrão: 20 iterações
+    max_rpm=None,  # Opcional: Limite de requisições por minuto
+    max_execution_time=None,  # Opcional: Tempo máximo de execução em segundos
+    max_retry_limit=2,  # Padrão: 2 tentativas em caso de erro
+    allow_code_execution=False,  # Padrão: False
+    code_execution_mode="safe",  # Padrão: "safe" (opções: "safe", "unsafe")
+    respect_context_window=True,  # Padrão: True
+    use_system_prompt=True,  # Padrão: True
+    multimodal=False,  # Padrão: False
+    inject_date=False,  # Padrão: False
+    date_format="%Y-%m-%d",  # Padrão: formato ISO
+    reasoning=False,  # Padrão: False
+    max_reasoning_attempts=None,  # Padrão: None
+    tools=[SerperDevTool()],  # Opcional: Lista de ferramentas
+    knowledge_sources=None,  # Opcional: Lista de fontes de conhecimento
+    embedder=None,  # Opcional: Configuração de embedder customizado
+    system_template=None,  # Opcional: Template de prompt de sistema
+    prompt_template=None,  # Opcional: Template de prompt customizado
+    response_template=None,  # Opcional: Template de resposta customizado
+    step_callback=None,  # Opcional: Função de callback para monitoramento
 )
 ```
 
@@ -185,65 +184,62 @@ Vamos detalhar algumas combinações de parâmetros-chave para casos de uso comu
 #### Agente de Pesquisa Básico
 ```python Code
 research_agent = Agent(
-    role="Research Analyst",
-    goal="Find and summarize information about specific topics",
-    backstory="You are an experienced researcher with attention to detail",
+    role="Analista de Pesquisa",
+    goal="Encontrar e resumir informações sobre tópicos específicos",
+    backstory="Você é um pesquisador experiente com atenção aos detalhes",
     tools=[SerperDevTool()],
-    verbose=True  # Enable logging for debugging
+    verbose=True  # Ativa logs para depuração
 )
 ```
 
 #### Agente de Desenvolvimento de Código
 ```python Code
 dev_agent = Agent(
-    role="Senior Python Developer",
-    goal="Write and debug Python code",
-    backstory="Expert Python developer with 10 years of experience",
+    role="Desenvolvedor Python Sênior",
+    goal="Escrever e depurar códigos Python",
+    backstory="Desenvolvedor Python especialista com 10 anos de experiência",
     allow_code_execution=True,
-    code_execution_mode="safe",  # Uses Docker for safety
-    max_execution_time=300,  # 5-minute timeout
-    max_retry_limit=3  # More retries for complex code tasks
+    code_execution_mode="safe",  # Usa Docker para segurança
+    max_execution_time=300,  # Limite de 5 minutos
+    max_retry_limit=3  # Mais tentativas para tarefas complexas
 )
 ```
 
 #### Agente de Análise de Longa Duração
 ```python Code
 analysis_agent = Agent(
-    role="Data Analyst",
-    goal="Perform deep analysis of large datasets",
-    backstory="Specialized in big data analysis and pattern recognition",
+    role="Analista de Dados",
+    goal="Realizar análise aprofundada de grandes conjuntos de dados",
+    backstory="Especialista em análise de big data e reconhecimento de padrões",
     memory=True,
     respect_context_window=True,
-    max_rpm=10,  # Limit API calls
-    function_calling_llm="gpt-4o-mini"  # Cheaper model for tool calls
+    max_rpm=10,  # Limite de requisições por minuto
+    function_calling_llm="gpt-4o-mini"  # Modelo mais econômico para chamadas de ferramentas
 )
 ```
 
 #### Agente com Template Personalizado
 ```python Code
 custom_agent = Agent(
-    role="Customer Service Representative",
-    goal="Assist customers with their inquiries",
-    backstory="Experienced in customer support with a focus on satisfaction",
-    system_template="""<|start_header_id|>system<|end_header_id|>
-                        {{ .System }}<|eot_id|>""",
-    prompt_template="""<|start_header_id|>user<|end_header_id|>
-                        {{ .Prompt }}<|eot_id|>""",
-    response_template="""<|start_header_id|>assistant<|end_header_id|>
-                        {{ .Response }}<|eot_id|>""",
+    role="Atendente de Suporte ao Cliente",
+    goal="Auxiliar clientes com suas dúvidas e solicitações",
+    backstory="Experiente em atendimento ao cliente com foco em satisfação",
+    system_template="""<|start_header_id|>system<|end_header_id|>\n                        {{ .System }}<|eot_id|>""",
+    prompt_template="""<|start_header_id|>user<|end_header_id|>\n                        {{ .Prompt }}<|eot_id|>""",
+    response_template="""<|start_header_id|>assistant<|end_header_id|>\n                        {{ .Response }}<|eot_id|>""",
 )
 ```
 
 #### Agente Ciente de Data, com Raciocínio
 ```python Code
 strategic_agent = Agent(
-    role="Market Analyst",
-    goal="Track market movements with precise date references and strategic planning",
-    backstory="Expert in time-sensitive financial analysis and strategic reporting",
-    inject_date=True,  # Automatically inject current date into tasks
-    date_format="%B %d, %Y",  # Format as "May 21, 2025"
-    reasoning=True,  # Enable strategic planning
-    max_reasoning_attempts=2,  # Limit planning iterations
+    role="Analista de Mercado",
+    goal="Acompanhar movimentos do mercado com referências de datas precisas e planejamento estratégico",
+    backstory="Especialista em análise financeira sensível ao tempo e relatórios estratégicos",
+    inject_date=True,  # Injeta automaticamente a data atual nas tarefas
+    date_format="%d de %B de %Y",  # Exemplo: "21 de maio de 2025"
+    reasoning=True,  # Ativa planejamento estratégico
+    max_reasoning_attempts=2,  # Limite de iterações de planejamento
     verbose=True
 )
 ```
@@ -251,12 +247,12 @@ strategic_agent = Agent(
 #### Agente de Raciocínio
 ```python Code
 reasoning_agent = Agent(
-    role="Strategic Planner",
-    goal="Analyze complex problems and create detailed execution plans",
-    backstory="Expert strategic planner who methodically breaks down complex challenges",
-    reasoning=True,  # Enable reasoning and planning
-    max_reasoning_attempts=3,  # Limit reasoning attempts
-    max_iter=30,  # Allow more iterations for complex planning
+    role="Planejador Estratégico",
+    goal="Analisar problemas complexos e criar planos de execução detalhados",
+    backstory="Especialista em planejamento estratégico que desmembra desafios complexos metodicamente",
+    reasoning=True,  # Ativa raciocínio e planejamento
+    max_reasoning_attempts=3,  # Limite de tentativas de raciocínio
+    max_iter=30,  # Permite mais iterações para planejamento complexo
     verbose=True
 )
 ```
@@ -264,10 +260,10 @@ reasoning_agent = Agent(
 #### Agente Multimodal
 ```python Code
 multimodal_agent = Agent(
-    role="Visual Content Analyst",
-    goal="Analyze and process both text and visual content",
-    backstory="Specialized in multimodal analysis combining text and image understanding",
-    multimodal=True,  # Enable multimodal capabilities
+    role="Analista de Conteúdo Visual",
+    goal="Analisar e processar tanto conteúdo textual quanto visual",
+    backstory="Especialista em análise multimodal combinando compreensão de texto e imagem",
+    multimodal=True,  # Ativa capacidades multimodais
     verbose=True
 )
 ```
@@ -336,8 +332,8 @@ wiki_tool = WikipediaTools()
 
 # Adicionar ferramentas ao agente
 researcher = Agent(
-    role="AI Technology Researcher",
-    goal="Research the latest AI developments",
+    role="Pesquisador de Tecnologia em IA",
+    goal="Pesquisar os últimos avanços em IA",
     tools=[search_tool, wiki_tool],
     verbose=True
 )
@@ -351,9 +347,9 @@ Agentes podem manter a memória de suas interações e usar contexto de tarefas 
 from crewai import Agent
 
 analyst = Agent(
-    role="Data Analyst",
-    goal="Analyze and remember complex data patterns",
-    memory=True,  # Enable memory
+    role="Analista de Dados",
+    goal="Analisar e memorizar padrões complexos de dados",
+    memory=True,  # Ativa memória
     verbose=True
 )
 ```
@@ -380,10 +376,10 @@ Esta é a **configuração padrão e recomendada** para a maioria dos casos. Qua
 ```python Code
 # Agente com gerenciamento automático de contexto (padrão)
 smart_agent = Agent(
-    role="Research Analyst",
-    goal="Analyze large documents and datasets",
-    backstory="Expert at processing extensive information",
-    respect_context_window=True,  # 🔑 Default: auto-handle context limits
+    role="Analista de Pesquisa",
+    goal="Analisar grandes documentos e conjuntos de dados",
+    backstory="Especialista em processar informações extensas",
+    respect_context_window=True,  # 🔑 Padrão: gerencia limites de contexto automaticamente
     verbose=True
 )
 ```

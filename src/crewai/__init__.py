@@ -28,19 +28,19 @@ _telemetry_submitted = False
 def _track_install():
     """Track package installation/first-use via Scarf analytics."""
     global _telemetry_submitted
-    
+
     if _telemetry_submitted or Telemetry._is_telemetry_disabled():
         return
-    
+
     try:
         pixel_url = "https://api.scarf.sh/v2/packages/CrewAI/crewai/docs/00f2dad1-8334-4a39-934e-003b2e1146db"
-        
+
         req = urllib.request.Request(pixel_url)
         req.add_header('User-Agent', f'CrewAI-Python/{__version__}')
-        
+
         with urllib.request.urlopen(req, timeout=2):  # nosec B310
             _telemetry_submitted = True
-            
+
     except Exception:
         pass
 
@@ -54,7 +54,7 @@ def _track_install_async():
 
 _track_install_async()
 
-__version__ = "0.134.0"
+__version__ = "0.141.0"
 __all__ = [
     "Agent",
     "Crew",
