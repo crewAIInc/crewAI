@@ -39,6 +39,11 @@ jobs:
 
       - name: Install SQLite with FTS5 support
         run: |
+          # WORKAROUND: GitHub Actions' Ubuntu runner uses SQLite without FTS5 support compiled in.
+          # This is a temporary fix until the runner includes SQLite with FTS5 or Python's sqlite3
+          # module is compiled with FTS5 support by default.
+          # TODO: Remove this workaround once GitHub Actions runners include SQLite FTS5 support
+          
           # Install pysqlite3-binary which has FTS5 support
           uv pip install pysqlite3-binary
           # Create a sitecustomize.py to override sqlite3 with pysqlite3
