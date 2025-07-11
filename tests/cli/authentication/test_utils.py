@@ -1,31 +1,110 @@
 import json
+import jwt
 import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 from cryptography.fernet import Fernet
 
-from crewai.cli.authentication.utils import TokenManager, validate_token
+from crewai.cli.authentication.utils import TokenManager, validate_jwt_token
 
 
+@patch("crewai.cli.authentication.utils.PyJWKClient", return_value=MagicMock())
+@patch("crewai.cli.authentication.utils.jwt")
 class TestValidateToken(unittest.TestCase):
-    @patch("crewai.cli.authentication.utils.AsymmetricSignatureVerifier")
-    @patch("crewai.cli.authentication.utils.TokenVerifier")
-    def test_validate_token(self, mock_token_verifier, mock_asymmetric_verifier):
-        mock_verifier_instance = mock_token_verifier.return_value
-        mock_id_token = "mock_id_token"
+    def test_validate_jwt_token(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.return_value = {"exp": 1719859200}
 
-        validate_token(mock_id_token)
+        # Create signing key object mock with a .key attribute
+        mock_pyjwkclient.return_value.get_signing_key_from_jwt.return_value = MagicMock(
+            key="mock_signing_key"
+        )
 
-        mock_asymmetric_verifier.assert_called_once_with(
-            "https://crewai.us.auth0.com/.well-known/jwks.json"
+        decoded_token = validate_jwt_token(
+            jwt_token="aaaaa.bbbbbb.cccccc",
+            jwks_url="https://mock_jwks_url",
+            issuer="https://mock_issuer",
+            audience="app_id_xxxx",
         )
-        mock_token_verifier.assert_called_once_with(
-            signature_verifier=mock_asymmetric_verifier.return_value,
-            issuer="https://crewai.us.auth0.com/",
-            audience="DEVC5Fw6NlRoSzmDCcOhVq85EfLBjKa8",
+
+        mock_jwt.decode.assert_called_with(
+            "aaaaa.bbbbbb.cccccc",
+            "mock_signing_key",
+            algorithms=["RS256"],
+            audience="app_id_xxxx",
+            issuer="https://mock_issuer",
+            options={
+                "verify_signature": True,
+                "verify_exp": True,
+                "verify_nbf": True,
+                "verify_iat": True,
+                "require": ["exp", "iat", "iss", "aud", "sub"],
+            },
         )
-        mock_verifier_instance.verify.assert_called_once_with(mock_id_token)
+        mock_pyjwkclient.assert_called_once_with("https://mock_jwks_url")
+        self.assertEqual(decoded_token, {"exp": 1719859200})
+
+    def test_validate_jwt_token_expired(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.ExpiredSignatureError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_invalid_audience(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.InvalidAudienceError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_invalid_issuer(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.InvalidIssuerError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_missing_required_claims(
+        self, mock_jwt, mock_pyjwkclient
+    ):
+        mock_jwt.decode.side_effect = jwt.MissingRequiredClaimError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_jwks_error(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.exceptions.PyJWKClientError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
+
+    def test_validate_jwt_token_invalid_token(self, mock_jwt, mock_pyjwkclient):
+        mock_jwt.decode.side_effect = jwt.InvalidTokenError
+        with self.assertRaises(Exception):
+            validate_jwt_token(
+                jwt_token="aaaaa.bbbbbb.cccccc",
+                jwks_url="https://mock_jwks_url",
+                issuer="https://mock_issuer",
+                audience="app_id_xxxx",
+            )
 
 
 class TestTokenManager(unittest.TestCase):
@@ -62,9 +141,9 @@ class TestTokenManager(unittest.TestCase):
     @patch("crewai.cli.authentication.utils.TokenManager.save_secure_file")
     def test_save_tokens(self, mock_save):
         access_token = "test_token"
-        expires_in = 3600
+        expires_at = int((datetime.now() + timedelta(seconds=3600)).timestamp())
 
-        self.token_manager.save_tokens(access_token, expires_in)
+        self.token_manager.save_tokens(access_token, expires_at)
 
         mock_save.assert_called_once()
         args = mock_save.call_args[0]
@@ -73,11 +152,7 @@ class TestTokenManager(unittest.TestCase):
         data = json.loads(decrypted_data)
         self.assertEqual(data["access_token"], access_token)
         expiration = datetime.fromisoformat(data["expiration"])
-        self.assertAlmostEqual(
-            expiration,
-            datetime.now() + timedelta(seconds=expires_in),
-            delta=timedelta(seconds=1),
-        )
+        self.assertEqual(expiration, datetime.fromtimestamp(expires_at))
 
     @patch("crewai.cli.authentication.utils.TokenManager.read_secure_file")
     def test_get_token_valid(self, mock_read):

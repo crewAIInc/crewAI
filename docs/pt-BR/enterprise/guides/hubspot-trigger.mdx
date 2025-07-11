@@ -1,0 +1,53 @@
+---
+title: "Gatilho HubSpot"
+description: "Acione crews do CrewAI diretamente a partir de Workflows do HubSpot"
+icon: "hubspot"
+---
+
+Este guia fornece um processo passo a passo para configurar gatilhos do HubSpot para o CrewAI Enterprise, permitindo iniciar crews diretamente a partir de Workflows do HubSpot.
+
+## Pré-requisitos
+
+- Uma conta CrewAI Enterprise
+- Uma conta HubSpot com o recurso de [Workflows do HubSpot](https://knowledge.hubspot.com/workflows/create-workflows)
+
+## Etapas de Configuração
+
+<Steps>
+    <Step title="Conecte sua conta HubSpot com o CrewAI Enterprise">
+        - Faça login na sua `Conta CrewAI Enterprise > Triggers`
+        - Selecione `HubSpot` na lista de gatilhos disponíveis
+        - Escolha a conta HubSpot que deseja conectar ao CrewAI Enterprise
+        - Siga as instruções na tela para autorizar o acesso do CrewAI Enterprise à sua conta HubSpot
+        - Uma mensagem de confirmação aparecerá assim que o HubSpot estiver conectado com sucesso ao CrewAI Enterprise
+    </Step>
+    <Step title="Crie um Workflow no HubSpot">
+        - Faça login na sua `Conta HubSpot > Automations > Workflows > New workflow`
+        - Selecione o tipo de workflow que atende às suas necessidades (por exemplo, Começar do zero)
+        - No construtor de workflow, clique no ícone de mais (+) para adicionar uma nova ação.
+        - Escolha `Integrated apps > CrewAI > Kickoff a Crew`.
+        - Selecione a Crew que deseja iniciar.
+        - Clique em `Save` para adicionar a ação ao seu workflow
+        <Frame>
+            <img src="/images/enterprise/hubspot-workflow-1.png" alt="HubSpot Workflow 1" />
+        </Frame>
+    </Step>
+    <Step title="Use os resultados da Crew com outras ações">
+        - Após a etapa Kickoff a Crew, clique no ícone de mais (+) para adicionar uma nova ação.
+        - Por exemplo, para enviar uma notificação de e-mail interna, escolha `Communications > Send internal email notification`
+        - No campo Body, clique em `Insert data`, selecione `View properties or action outputs from > Action outputs > Crew Result` para incluir dados da Crew no e-mail
+            <Frame>
+                <img src="/images/enterprise/hubspot-workflow-2.png" alt="HubSpot Workflow 2" />
+            </Frame>
+        - Configure quaisquer ações adicionais necessárias
+        - Revise as etapas do seu workflow para garantir que tudo está configurado corretamente
+        - Ative o workflow
+            <Frame>
+                <img src="/images/enterprise/hubspot-workflow-3.png" alt="HubSpot Workflow 3" />
+            </Frame>
+    </Step>
+</Steps>
+
+## Recursos Adicionais
+
+Para informações mais detalhadas sobre as ações disponíveis e opções de personalização, consulte a [Documentação de Workflows do HubSpot](https://knowledge.hubspot.com/workflows/create-workflows).

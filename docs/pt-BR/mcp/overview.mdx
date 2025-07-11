@@ -1,0 +1,215 @@
+---
+title: 'Servidores MCP como Ferramentas no CrewAI'
+description: 'Aprenda como integrar servidores MCP como ferramentas nos seus agentes CrewAI usando a biblioteca `crewai-tools`.'
+icon: plug
+---
+
+## Visão Geral
+
+O [Model Context Protocol](https://modelcontextprotocol.io/introduction) (MCP) fornece uma maneira padronizada para agentes de IA fornecerem contexto para LLMs comunicando-se com serviços externos, conhecidos como Servidores MCP.
+A biblioteca `crewai-tools` expande as capacidades do CrewAI permitindo que você integre facilmente ferramentas desses servidores MCP em seus agentes.
+Isso oferece às suas crews acesso a um vasto ecossistema de funcionalidades.
+
+Atualmente, suportamos os seguintes mecanismos de transporte:
+
+- **Stdio**: para servidores locais (comunicação via entrada/saída padrão entre processos na mesma máquina)
+- **Server-Sent Events (SSE)**: para servidores remotos (transmissão de dados unidirecional em tempo real do servidor para o cliente via HTTP)
+- **Streamable HTTP**: para servidores remotos (comunicação flexível e potencialmente bidirecional via HTTP, geralmente utilizando SSE para streams do servidor para o cliente)
+
+## Tutorial em Vídeo
+Assista a este tutorial em vídeo para um guia abrangente sobre a integração do MCP com o CrewAI:
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/TpQ45lAZh48"
+  title="CrewAI MCP Integration Guide"
+  frameborder="0"
+  style={{ borderRadius: '10px' }}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+## Instalação
+
+Antes de começar a usar MCP com `crewai-tools`, é necessário instalar a dependência extra `mcp` do `crewai-tools` com o seguinte comando:
+
+```shell
+uv pip install 'crewai-tools[mcp]'
+```
+
+## Conceitos Chave & Primeiros Passos
+
+A classe `MCPServerAdapter` da `crewai-tools` é a principal forma de conectar-se a um servidor MCP e disponibilizar suas ferramentas aos seus agentes CrewAI. Ela suporta diferentes mecanismos de transporte e simplifica o gerenciamento de conexões.
+
+O uso de um gerenciador de contexto Python (`with`) é a **abordagem recomendada** para o `MCPServerAdapter`. Ele lida automaticamente com a abertura e o fechamento da conexão com o servidor MCP.
+
+```python
+from crewai import Agent
+from crewai_tools import MCPServerAdapter
+from mcp import StdioServerParameters # Para servidor Stdio
+
+# Exemplo de server_params (escolha um baseado no seu tipo de servidor):
+# 1. Servidor Stdio:
+server_params=StdioServerParameters(
+    command="python3",
+    args=["servers/your_server.py"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+# 2. Servidor SSE:
+server_params = {
+    "url": "http://localhost:8000/sse",
+    "transport": "sse"
+}
+
+# 3. Servidor Streamable HTTP:
+server_params = {
+    "url": "http://localhost:8001/mcp",
+    "transport": "streamable-http"
+}
+
+# Exemplo de uso (descomente e adapte após definir server_params):
+with MCPServerAdapter(server_params) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    meu_agente = Agent(
+        role="Usuário de Ferramentas MCP",
+        goal="Utilizar ferramentas de um servidor MCP.",
+        backstory="Posso conectar a servidores MCP e usar suas ferramentas.",
+        tools=mcp_tools, # Passe as ferramentas carregadas para o seu agente
+        reasoning=True,
+        verbose=True
+    )
+    # ... restante da configuração do seu crew ...
+```
+Este padrão geral mostra como integrar ferramentas. Para exemplos específicos para cada transporte, consulte os guias detalhados abaixo.
+
+## Filtrando Ferramentas
+
+```python
+with MCPServerAdapter(server_params) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    meu_agente = Agent(
+        role="Usuário de Ferramentas MCP",
+        goal="Utilizar ferramentas de um servidor MCP.",
+        backstory="Posso conectar a servidores MCP e usar suas ferramentas.",
+        tools=mcp_tools["tool_name"], # Passe as ferramentas filtradas para o seu agente
+        reasoning=True,
+        verbose=True
+    )
+    # ... restante da configuração do seu crew ...
+```
+
+## Usando com CrewBase
+
+Para usar ferramentas de servidores MCP dentro de uma classe CrewBase, utilize o método `mcp_tools`. As configurações dos servidores devem ser fornecidas via o atributo mcp_server_params. Você pode passar uma configuração única ou uma lista com múltiplas configurações.
+
+```python
+@CrewBase
+class CrewWithMCP:
+  # ... defina o arquivo de configuração de agentes e tasks ...
+
+  mcp_server_params = [
+    # Servidor Streamable HTTP
+    {
+        "url": "http://localhost:8001/mcp",
+        "transport": "streamable-http"
+    },
+    # Servidor SSE
+    {
+        "url": "http://localhost:8000/sse",
+        "transport": "sse"
+    },
+    # Servidor StdIO
+    StdioServerParameters(
+        command="python3",
+        args=["servers/your_stdio_server.py"],
+        env={"UV_PYTHON": "3.12", **os.environ},
+    )
+  ]
+
+  @agent
+  def your_agent(self):
+      return Agent(config=self.agents_config["your_agent"], tools=self.get_mcp_tools()) # você também pode filtrar quais ferramentas estarão disponíveis
+
+    # ... restante da configuração do seu crew ...
+```
+## Explore Integrações MCP
+
+<CardGroup cols={2}>
+  <Card
+    title="Transporte Stdio"
+    icon="server"
+    href="/pt-BR/mcp/stdio"
+    color="#3B82F6"
+  >
+    Conecte-se a servidores MCP locais via entrada/saída padrão. Ideal para scripts e executáveis locais.
+  </Card>
+  <Card
+    title="Transporte SSE"
+    icon="wifi"
+    href="/pt-BR/mcp/sse"
+    color="#10B981"
+  >
+    Integre com servidores MCP remotos usando Server-Sent Events para streaming de dados em tempo real.
+  </Card>
+  <Card
+    title="Transporte HTTP Streamable"
+    icon="globe"
+    href="/pt-BR/mcp/streamable-http"
+    color="#F59E0B"
+  >
+    Utilize HTTP Streamable para uma comunicação robusta com servidores MCP remotos.
+  </Card>
+  <Card
+    title="Conectando a Múltiplos Servidores"
+    icon="layer-group"
+    href="/pt-BR/mcp/multiple-servers"
+    color="#8B5CF6"
+  >
+    Agregue ferramentas de vários servidores MCP simultaneamente usando um único adaptador.
+  </Card>
+  <Card
+    title="Considerações de Segurança"
+    icon="lock"
+    href="/pt-BR/mcp/security"
+    color="#EF4444"
+  >
+    Revise práticas importantes de segurança para integração MCP e mantenha seus agentes protegidos.
+  </Card>
+</CardGroup>
+
+Confira este repositório para demonstrações completas e exemplos de integração MCP com CrewAI! 👇
+
+<Card
+title="Repositório GitHub"
+icon="github"
+href="https://github.com/tonykipkemboi/crewai-mcp-demo"
+target="_blank"
+>
+Demo MCP do CrewAI
+</Card>
+
+## Segurança ao Usar MCP
+<Warning>
+Sempre assegure-se de confiar no servidor MCP antes de utilizá-lo.
+</Warning>
+
+#### Aviso de Segurança: Ataques de DNS Rebinding
+Transportes SSE podem ser vulneráveis a ataques de DNS rebinding se não forem devidamente protegidos.
+Para prevenir isso:
+
+1. **Sempre valide os cabeçalhos Origin** das conexões SSE recebidas para garantir que venham de fontes esperadas
+2. **Evite vincular servidores a todas as interfaces de rede** (0.0.0.0) quando executando localmente – faça o bind apenas para localhost (127.0.0.1)
+3. **Implemente autenticação adequada** para todas as conexões SSE
+
+Sem essas proteções, invasores podem usar DNS rebinding para interagir com servidores MCP locais via sites remotos.
+
+Para mais detalhes, consulte a [documentação de Segurança de Transporte da MCP da Anthropic](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations).
+
+### Limitações
+*   **Primitivas Suportadas**: Atualmente, o `MCPServerAdapter` suporta principalmente a adaptação de `tools` MCP.
+Outras primitivas MCP como `prompts` ou `resources` não são integradas diretamente como componentes CrewAI através deste adaptador por enquanto.
+*   **Manipulação de Saída**: O adaptador normalmente processa a saída principal de texto de uma ferramenta MCP (por exemplo, `.content[0].text`). Saídas complexas ou multimodais podem exigir tratamento customizado caso não se encaixem nesse padrão.

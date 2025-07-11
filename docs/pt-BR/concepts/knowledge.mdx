@@ -1,0 +1,1059 @@
+---
+title: Knowledge
+description: O que é knowledge em CrewAI e como usá-lo.
+icon: book
+---
+
+## Visão Geral
+
+Knowledge no CrewAI é um sistema poderoso que permite que agentes de IA acessem e utilizem fontes de informação externas durante suas tarefas.
+Pense nisso como dar aos seus agentes uma biblioteca de referência que eles podem consultar enquanto trabalham.
+
+<Info>
+  Principais benefícios de usar Knowledge:
+  - Aprimorar agentes com informações específicas do domínio
+  - Apoiar decisões com dados do mundo real
+  - Manter contexto entre conversas
+  - Fundamentar respostas em informações factuais
+</Info>
+
+## Exemplos de Início Rápido
+
+<Tip>
+Para Fontes de Knowledge baseadas em arquivos, certifique-se de colocar seus arquivos em um diretório `knowledge` na raiz do seu projeto.
+Além disso, use caminhos relativos do diretório `knowledge` ao criar a fonte.
+</Tip>
+
+### Exemplo Básico de Knowledge com String
+
+```python Code
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create a knowledge source
+content = "Users name is John. He is 30 years old and lives in San Francisco."
+string_source = StringKnowledgeSource(content=content)
+
+# Create an LLM with a temperature of 0 to ensure deterministic outputs
+llm = LLM(model="gpt-4o-mini", temperature=0)
+
+# Create an agent with the knowledge store
+agent = Agent(
+    role="Sobre o Usuário",
+    goal="Você sabe tudo sobre o usuário.",
+    backstory="Você é mestre em entender pessoas e suas preferências.",
+    verbose=True,
+    allow_delegation=False,
+    llm=llm,
+)
+
+task = Task(
+    description="Responda às seguintes perguntas sobre o usuário: {question}",
+    expected_output="Uma resposta para a pergunta.",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    knowledge_sources=[string_source], # Enable knowledge by adding the sources here
+)
+
+result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
+```
+
+### Exemplo de Knowledge com Conteúdo Web
+
+<Note>
+  Você precisa instalar `docling` para o seguinte exemplo funcionar: `uv add docling`
+</Note>
+
+```python Code
+from crewai import LLM, Agent, Crew, Process, Task
+from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
+
+# Create a knowledge source from web content
+content_source = CrewDoclingSource(
+    file_paths=[
+        "https://lilianweng.github.io/posts/2024-11-28-reward-hacking",
+        "https://lilianweng.github.io/posts/2024-07-07-hallucination",
+    ],
+)
+
+# Create an LLM with a temperature of 0 to ensure deterministic outputs
+llm = LLM(model="gpt-4o-mini", temperature=0)
+
+# Create an agent with the knowledge store
+agent = Agent(
+    role="Sobre artigos",
+    goal="Você sabe tudo sobre os artigos.",
+    backstory="Você é mestre em entender artigos e seus conteúdos.",
+    verbose=True,
+    allow_delegation=False,
+    llm=llm,
+)
+
+task = Task(
+    description="Responda às seguintes perguntas sobre os artigos: {question}",
+    expected_output="Uma resposta para a pergunta.",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    knowledge_sources=[content_source],
+)
+
+result = crew.kickoff(
+    inputs={"question": "What is the reward hacking paper about? Be sure to provide sources."}
+)
+```
+
+## Fontes de Knowledge Suportadas
+
+O CrewAI suporta vários tipos de fontes de knowledge prontas para uso:
+
+<CardGroup cols={2}>
+  <Card title="Fontes de Texto" icon="text">
+    - Strings brutas
+    - Arquivos de texto (.txt)
+    - Documentos PDF
+  </Card>
+  <Card title="Dados Estruturados" icon="table">
+    - Arquivos CSV
+    - Planilhas Excel
+    - Documentos JSON
+  </Card>
+</CardGroup>
+
+### Fonte de Knowledge de Arquivo de Texto
+```python
+from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+
+text_source = TextFileKnowledgeSource(
+    file_paths=["document.txt", "another.txt"]
+)
+```
+
+### Fonte de Knowledge PDF
+```python
+from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
+
+pdf_source = PDFKnowledgeSource(
+    file_paths=["document.pdf", "another.pdf"]
+)
+```
+
+### Fonte de Knowledge CSV
+```python
+from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
+
+csv_source = CSVKnowledgeSource(
+    file_paths=["data.csv"]
+)
+```
+
+### Fonte de Knowledge Excel
+```python
+from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
+
+excel_source = ExcelKnowledgeSource(
+    file_paths=["spreadsheet.xlsx"]
+)
+```
+
+### Fonte de Knowledge JSON
+```python
+from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
+
+json_source = JSONKnowledgeSource(
+    file_paths=["data.json"]
+)
+```
+
+<Note>
+  Certifique-se de criar a pasta ./knowledge. Todos os arquivos de origem (ex: .txt, .pdf, .xlsx, .json) devem ser colocados nesta pasta para gerenciamento centralizado.
+</Note>
+
+## Knowledge de Agente vs Crew: Guia Completo
+
+<Info>
+**Entendendo os Níveis de Knowledge**: O CrewAI suporta knowledge tanto no nível de agente quanto de crew. Esta seção esclarece exatamente como cada um funciona, quando são inicializados, e aborda equívocos comuns sobre dependências.
+</Info>
+
+### Como a Inicialização de Knowledge Realmente Funciona
+
+Aqui está exatamente o que acontece quando você usa knowledge:
+
+#### Knowledge no Nível do Agente (Independente)
+```python
+from crewai import Agent, Task, Crew
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Agent with its own knowledge - NO crew knowledge needed
+specialist_knowledge = StringKnowledgeSource(
+    content="Specialized technical information for this agent only"
+)
+
+specialist_agent = Agent(
+    role="Especialista Técnico",
+    goal="Fornecer expertise técnica",
+    backstory="Especialista em domínios técnicos especializados",
+    knowledge_sources=[specialist_knowledge]  # Conhecimento específico do agente
+)
+
+task = Task(
+    description="Responda perguntas técnicas",
+    agent=specialist_agent,
+    expected_output="Resposta técnica"
+)
+
+# No crew-level knowledge required
+crew = Crew(
+    agents=[specialist_agent],
+    tasks=[task]
+)
+
+result = crew.kickoff()  # Agent knowledge works independently
+```
+
+#### O Que Acontece Durante `crew.kickoff()`
+
+Quando você chama `crew.kickoff()`, aqui está a sequência exata:
+
+```python
+# During kickoff
+for agent in self.agents:
+    agent.crew = self  # Agent gets reference to crew
+    agent.set_knowledge(crew_embedder=self.embedder)  # Agent knowledge initialized
+    agent.create_agent_executor()
+```
+
+#### Independência de Armazenamento
+
+Cada nível de knowledge usa coleções de armazenamento independentes:
+
+```python
+# Agent knowledge storage
+agent_collection_name = agent.role  # e.g., "Especialista Técnico"
+
+# Crew knowledge storage
+crew_collection_name = "crew"
+
+# Both stored in same ChromaDB instance but different collections
+# Path: ~/.local/share/CrewAI/{project}/knowledge/
+#   ├── crew/                    # Crew knowledge collection
+#   ├── Especialista Técnico/    # Agent knowledge collection
+#   └── Another Agent Role/      # Another agent's collection
+```
+
+### Exemplos Completos Funcionais
+
+#### Exemplo 1: Knowledge Apenas do Agente
+```python
+from crewai import Agent, Task, Crew
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Agent-specific knowledge
+agent_knowledge = StringKnowledgeSource(
+    content="Agent-specific information that only this agent needs"
+)
+
+agent = Agent(
+    role="Especialista",
+    goal="Use specialized knowledge",
+    backstory="Expert with specific knowledge",
+    knowledge_sources=[agent_knowledge],
+    embedder={  # Agent can have its own embedder
+        "provider": "openai",
+        "config": {"model": "text-embedding-3-small"}
+    }
+)
+
+task = Task(
+    description="Answer using your specialized knowledge",
+    agent=agent,
+    expected_output="Answer based on agent knowledge"
+)
+
+# No crew knowledge needed
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()  # Works perfectly
+```
+
+#### Exemplo 2: Knowledge Tanto do Agente Quanto da Crew
+```python
+# Crew-wide knowledge (shared by all agents)
+crew_knowledge = StringKnowledgeSource(
+    content="Company policies and general information for all agents"
+)
+
+# Agent-specific knowledge
+specialist_knowledge = StringKnowledgeSource(
+    content="Technical specifications only the specialist needs"
+)
+
+specialist = Agent(
+    role="Especialista Técnico",
+    goal="Fornecer expertise técnica",
+    backstory="Especialista em domínios técnicos especializados",
+    knowledge_sources=[specialist_knowledge]  # Conhecimento específico do agente
+)
+
+generalist = Agent(
+    role="General Assistant",
+    goal="Provide general assistance",
+    backstory="General helper"
+    # No agent-specific knowledge
+)
+
+crew = Crew(
+    agents=[specialist, generalist],
+    tasks=[...],
+    knowledge_sources=[crew_knowledge]  # Crew-wide knowledge
+)
+
+# Result:
+# - specialist gets: crew_knowledge + specialist_knowledge
+# - generalist gets: crew_knowledge only
+```
+
+#### Exemplo 3: Múltiplos Agentes com Knowledge Diferente
+```python
+# Different knowledge for different agents
+sales_knowledge = StringKnowledgeSource(content="Sales procedures and pricing")
+tech_knowledge = StringKnowledgeSource(content="Technical documentation")
+support_knowledge = StringKnowledgeSource(content="Support procedures")
+
+sales_agent = Agent(
+    role="Sales Representative",
+    knowledge_sources=[sales_knowledge],
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}}
+)
+
+tech_agent = Agent(
+    role="Technical Expert",
+    knowledge_sources=[tech_knowledge],
+    embedder={"provider": "ollama", "config": {"model": "mxbai-embed-large"}}
+)
+
+support_agent = Agent(
+    role="Support Specialist",
+    knowledge_sources=[support_knowledge]
+    # Will use crew embedder as fallback
+)
+
+crew = Crew(
+    agents=[sales_agent, tech_agent, support_agent],
+    tasks=[...],
+    embedder={  # Fallback embedder for agents without their own
+        "provider": "google",
+        "config": {"model": "text-embedding-004"}
+    }
+)
+
+# Each agent gets only their specific knowledge
+# Each can use different embedding providers
+```
+
+<Tip>
+Diferente da recuperação de um banco de dados vetorial usando uma ferramenta, agentes pré-carregados com knowledge não precisarão de uma persona de recuperação ou tarefa.
+Simplesmente adicione as fontes de knowledge relevantes que seu agente ou crew precisa para funcionar.
+
+As fontes de knowledge podem ser adicionadas no nível do agente ou da crew.
+As fontes de knowledge no nível da crew serão usadas por **todos os agentes** na crew.
+As fontes de knowledge no nível do agente serão usadas pelo **agente específico** que é pré-carregado com o knowledge.
+</Tip>
+
+## Configuração de Knowledge
+
+Você pode configurar a configuração de knowledge para a crew ou agente.
+
+```python Code
+from crewai.knowledge.knowledge_config import KnowledgeConfig
+
+knowledge_config = KnowledgeConfig(results_limit=10, score_threshold=0.5)
+
+agent = Agent(
+    ...
+    knowledge_config=knowledge_config
+)
+```
+
+<Tip>
+  `results_limit`: é o número de documentos relevantes a retornar. Padrão é 3.
+  `score_threshold`: é a pontuação mínima para um documento ser considerado relevante. Padrão é 0.35.
+</Tip>
+
+## Parâmetros de Knowledge Suportados
+
+<ParamField body="sources" type="List[BaseKnowledgeSource]" required="Yes">
+    Lista de fontes de knowledge que fornecem conteúdo para ser armazenado e consultado. Pode incluir PDF, CSV, Excel, JSON, arquivos de texto ou conteúdo de string.
+</ParamField>
+<ParamField body="collection_name" type="str">
+    Nome da coleção onde o knowledge será armazenado. Usado para identificar diferentes conjuntos de knowledge. Padrão é "knowledge" se não fornecido.
+</ParamField>
+<ParamField body="storage" type="Optional[KnowledgeStorage]">
+Configuração de armazenamento personalizada para gerenciar como o knowledge é armazenado e recuperado. Se não fornecido, um armazenamento padrão será criado.
+</ParamField>
+
+## Transparência do Armazenamento de Knowledge
+
+<Info>
+**Entendendo o Armazenamento de Knowledge**: O CrewAI armazena automaticamente as fontes de knowledge em diretórios específicos da plataforma usando ChromaDB para armazenamento vetorial. Entender essas localizações e padrões ajuda com implantações de produção, depuração e gerenciamento de armazenamento.
+</Info>
+
+### Onde o CrewAI Armazena Arquivos de Knowledge
+
+Por padrão, o CrewAI usa o mesmo sistema de armazenamento que a memória, armazenando knowledge em diretórios específicos da plataforma:
+
+#### Localizações de Armazenamento Padrão por Plataforma
+
+**macOS:**
+```
+~/Library/Application Support/CrewAI/{project_name}/
+└── knowledge/                    # Knowledge ChromaDB files
+    ├── chroma.sqlite3           # ChromaDB metadata
+    ├── {collection_id}/         # Vector embeddings
+    └── knowledge_{collection}/  # Named collections
+```
+
+**Linux:**
+```
+~/.local/share/CrewAI/{project_name}/
+└── knowledge/
+    ├── chroma.sqlite3
+    ├── {collection_id}/
+    └── knowledge_{collection}/
+```
+
+**Windows:**
+```
+C:\Users\{username}\AppData\Local\CrewAI\{project_name}\
+└── knowledge\
+    ├── chroma.sqlite3
+    ├── {collection_id}\
+    └── knowledge_{collection}\
+```
+
+### Encontrando Sua Localização de Armazenamento de Knowledge
+
+Para ver exatamente onde o CrewAI está armazenando seus arquivos de knowledge:
+
+```python
+from crewai.utilities.paths import db_storage_path
+import os
+
+# Get the knowledge storage path
+knowledge_path = os.path.join(db_storage_path(), "knowledge")
+print(f"Knowledge storage location: {knowledge_path}")
+
+# List knowledge collections and files
+if os.path.exists(knowledge_path):
+    print("\nKnowledge storage contents:")
+    for item in os.listdir(knowledge_path):
+        item_path = os.path.join(knowledge_path, item)
+        if os.path.isdir(item_path):
+            print(f"📁 Collection: {item}/")
+            # Show collection contents
+            try:
+                for subitem in os.listdir(item_path):
+                    print(f"   └── {subitem}")
+            except PermissionError:
+                print(f"   └── (permission denied)")
+        else:
+            print(f"📄 {item}")
+else:
+    print("No knowledge storage found yet.")
+```
+
+### Controlando Localizações de Armazenamento de Knowledge
+
+#### Opção 1: Variável de Ambiente (Recomendado)
+```python
+import os
+from crewai import Crew
+
+# Set custom storage location for all CrewAI data
+os.environ["CREWAI_STORAGE_DIR"] = "./my_project_storage"
+
+# All knowledge will now be stored in ./my_project_storage/knowledge/
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    knowledge_sources=[...]
+)
+```
+
+#### Opção 2: Armazenamento de Knowledge Personalizado
+```python
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create custom storage with specific embedder
+custom_storage = KnowledgeStorage(
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "mxbai-embed-large"}
+    },
+    collection_name="my_custom_knowledge"
+)
+
+# Use with knowledge sources
+knowledge_source = StringKnowledgeSource(
+    content="Your knowledge content here"
+)
+knowledge_source.storage = custom_storage
+```
+
+#### Opção 3: Armazenamento de Knowledge Específico do Projeto
+```python
+import os
+from pathlib import Path
+
+# Store knowledge in project directory
+project_root = Path(__file__).parent
+knowledge_dir = project_root / "knowledge_storage"
+
+os.environ["CREWAI_STORAGE_DIR"] = str(knowledge_dir)
+
+# Now all knowledge will be stored in your project directory
+```
+
+### Comportamento Padrão do Provedor de Embedding
+
+<Info>
+**Provedor de Embedding Padrão**: O CrewAI usa por padrão embeddings da OpenAI (`text-embedding-3-small`) para armazenamento de knowledge, mesmo quando usa diferentes provedores de LLM. Você pode facilmente personalizar isso para corresponder à sua configuração.
+</Info>
+
+#### Entendendo o Comportamento Padrão
+```python
+from crewai import Agent, Crew, LLM
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# When using Claude as your LLM...
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    llm=LLM(provider="anthropic", model="claude-3-sonnet")  # Using Claude
+)
+
+# CrewAI will still use OpenAI embeddings by default for knowledge
+# This ensures consistency but may not match your LLM provider preference
+knowledge_source = StringKnowledgeSource(content="Research data...")
+
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source]
+    # Default: Uses OpenAI embeddings even with Claude LLM
+)
+```
+
+#### Personalizando Provedores de Embedding de Knowledge
+```python
+# Option 1: Use Voyage AI (recommended by Anthropic for Claude users)
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "voyageai",  # Recommended for Claude users
+        "config": {
+            "api_key": "your-voyage-api-key",
+            "model": "voyage-3"  # or "voyage-3-large" for best quality
+        }
+    }
+)
+
+# Option 2: Use local embeddings (no external API calls)
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "ollama",
+        "config": {
+            "model": "mxbai-embed-large",
+            "url": "http://localhost:11434/api/embeddings"
+        }
+    }
+)
+
+# Option 3: Agent-level embedding customization
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "google",
+        "config": {
+            "model": "models/text-embedding-004",
+            "api_key": "your-google-key"
+        }
+    }
+)
+```
+
+#### Configurando Embeddings do Azure OpenAI
+
+Ao usar embeddings do Azure OpenAI:
+1. Certifique-se de implantar o modelo de embedding na plataforma Azure primeiro
+2. Então você precisa usar a seguinte configuração:
+
+```python
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "azure",
+        "config": {
+            "api_key": "your-azure-api-key",
+            "model": "text-embedding-ada-002", # change to the model you are using and is deployed in Azure
+            "api_base": "https://your-azure-endpoint.openai.azure.com/",
+            "api_version": "2024-02-01"
+        }
+    }
+)
+```
+
+## Recursos Avançados
+
+### Reescrita de Consulta
+
+O CrewAI implementa um mecanismo inteligente de reescrita de consulta para otimizar a recuperação de knowledge. Quando um agente precisa pesquisar nas fontes de knowledge, o prompt da tarefa bruto é automaticamente transformado em uma consulta de pesquisa mais eficaz.
+
+#### Como a Reescrita de Consulta Funciona
+
+1. Quando um agente executa uma tarefa com fontes de knowledge disponíveis, o método `_get_knowledge_search_query` é acionado
+2. O LLM do agente é usado para transformar o prompt original da tarefa em uma consulta de pesquisa otimizada
+3. Esta consulta otimizada é então usada para recuperar informações relevantes das fontes de knowledge
+
+#### Benefícios da Reescrita de Consulta
+
+<CardGroup cols={2}>
+  <Card title="Precisão de Recuperação Melhorada" icon="bullseye-arrow">
+    Ao focar em conceitos-chave e remover conteúdo irrelevante, a reescrita de consulta ajuda a recuperar informações mais relevantes.
+  </Card>
+  <Card title="Consciência de Contexto" icon="brain">
+    As consultas reescritas são projetadas para ser mais específicas e conscientes do contexto para recuperação de banco de dados vetorial.
+  </Card>
+</CardGroup>
+
+#### Exemplo
+
+```python
+# Original task prompt
+task_prompt = "Answer the following questions about the user's favorite movies: What movie did John watch last week? Format your answer in JSON."
+
+# Behind the scenes, this might be rewritten as:
+rewritten_query = "What movies did John watch last week?"
+```
+
+A consulta reescrita é mais focada na necessidade de informação principal e remove instruções irrelevantes sobre formatação de saída.
+
+<Tip>
+  Este mecanismo é totalmente automático e não requer configuração dos usuários. O LLM do agente é usado para realizar a reescrita da consulta, então usar um LLM mais capaz pode melhorar a qualidade das consultas reescritas.
+</Tip>
+
+### Eventos de Knowledge
+
+O CrewAI emite eventos durante o processo de recuperação de knowledge que você pode escutar usando o sistema de eventos. Esses eventos permitem que você monitore, depure e analise como o knowledge está sendo recuperado e usado pelos seus agentes.
+
+#### Eventos de Knowledge Disponíveis
+
+- **KnowledgeRetrievalStartedEvent**: Emitido quando um agente começa a recuperar knowledge das fontes
+- **KnowledgeRetrievalCompletedEvent**: Emitido quando a recuperação de knowledge é concluída, incluindo a consulta usada e o conteúdo recuperado
+- **KnowledgeQueryStartedEvent**: Emitido quando uma consulta às fontes de knowledge começa
+- **KnowledgeQueryCompletedEvent**: Emitido quando uma consulta é concluída com sucesso
+- **KnowledgeQueryFailedEvent**: Emitido quando uma consulta às fontes de knowledge falha
+- **KnowledgeSearchQueryFailedEvent**: Emitido quando uma consulta de pesquisa falha
+
+#### Exemplo: Monitorando Recuperação de Knowledge
+
+```python
+from crewai.utilities.events import (
+    KnowledgeRetrievalStartedEvent,
+    KnowledgeRetrievalCompletedEvent,
+)
+from crewai.utilities.events.base_event_listener import BaseEventListener
+
+class KnowledgeMonitorListener(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(KnowledgeRetrievalStartedEvent)
+        def on_knowledge_retrieval_started(source, event):
+            print(f"Agent '{event.agent.role}' started retrieving knowledge")
+
+        @crewai_event_bus.on(KnowledgeRetrievalCompletedEvent)
+        def on_knowledge_retrieval_completed(source, event):
+            print(f"Agent '{event.agent.role}' completed knowledge retrieval")
+            print(f"Query: {event.query}")
+            print(f"Retrieved {len(event.retrieved_knowledge)} knowledge chunks")
+
+# Create an instance of your listener
+knowledge_monitor = KnowledgeMonitorListener()
+```
+
+Para mais informações sobre como usar eventos, consulte a documentação [Event Listeners](https://docs.crewai.com/concepts/event-listener).
+
+### Fontes de Knowledge Personalizadas
+
+O CrewAI permite que você crie fontes de knowledge personalizadas para qualquer tipo de dados estendendo a classe `BaseKnowledgeSource`. Vamos criar um exemplo prático que busca e processa artigos de notícias espaciais.
+
+#### Exemplo de Fonte de Knowledge de Notícias Espaciais
+
+<CodeGroup>
+
+```python Code
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+import requests
+from datetime import datetime
+from typing import Dict, Any
+from pydantic import BaseModel, Field
+
+class SpaceNewsKnowledgeSource(BaseKnowledgeSource):
+    """Knowledge source that fetches data from Space News API."""
+
+    api_endpoint: str = Field(description="API endpoint URL")
+    limit: int = Field(default=10, description="Number of articles to fetch")
+
+    def load_content(self) -> Dict[Any, str]:
+        """Fetch and format space news articles."""
+        try:
+            response = requests.get(
+                f"{self.api_endpoint}?limit={self.limit}"
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            articles = data.get('results', [])
+
+            formatted_data = self.validate_content(articles)
+            return {self.api_endpoint: formatted_data}
+        except Exception as e:
+            raise ValueError(f"Failed to fetch space news: {str(e)}")
+
+    def validate_content(self, articles: list) -> str:
+        """Format articles into readable text."""
+        formatted = "Space News Articles:\n\n"
+        for article in articles:
+            formatted += f"""
+                Title: {article['title']}
+                Published: {article['published_at']}
+                Summary: {article['summary']}
+                News Site: {article['news_site']}
+                URL: {article['url']}
+                -------------------"""
+        return formatted
+
+    def add(self) -> None:
+        """Process and store the articles."""
+        content = self.load_content()
+        for _, text in content.items():
+            chunks = self._chunk_text(text)
+            self.chunks.extend(chunks)
+
+        self._save_documents()
+
+# Create knowledge source
+recent_news = SpaceNewsKnowledgeSource(
+    api_endpoint="https://api.spaceflightnewsapi.net/v4/articles",
+    limit=10,
+)
+
+# Create specialized agent
+space_analyst = Agent(
+    role="Space News Analyst",
+    goal="Answer questions about space news accurately and comprehensively",
+    backstory="""You are a space industry analyst with expertise in space exploration,
+    satellite technology, and space industry trends. You excel at answering questions
+    about space news and providing detailed, accurate information.""",
+    knowledge_sources=[recent_news],
+    llm=LLM(model="gpt-4", temperature=0.0)
+)
+
+# Create task that handles user questions
+analysis_task = Task(
+    description="Answer this question about space news: {user_question}",
+    expected_output="A detailed answer based on the recent space news articles",
+    agent=space_analyst
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[space_analyst],
+    tasks=[analysis_task],
+    verbose=True,
+    process=Process.sequential
+)
+
+# Example usage
+result = crew.kickoff(
+    inputs={"user_question": "What are the latest developments in space exploration?"}
+)
+```
+
+```output Output
+# Agent: Space News Analyst
+## Task: Answer this question about space news: What are the latest developments in space exploration?
+
+
+# Agent: Space News Analyst
+## Final Answer:
+The latest developments in space exploration, based on recent space news articles, include the following:
+
+1. SpaceX has received the final regulatory approvals to proceed with the second integrated Starship/Super Heavy launch, scheduled for as soon as the morning of Nov. 17, 2023. This is a significant step in SpaceX's ambitious plans for space exploration and colonization. [Source: SpaceNews](https://spacenews.com/starship-cleared-for-nov-17-launch/)
+
+2. SpaceX has also informed the US Federal Communications Commission (FCC) that it plans to begin launching its first next-generation Starlink Gen2 satellites. This represents a major upgrade to the Starlink satellite internet service, which aims to provide high-speed internet access worldwide. [Source: Teslarati](https://www.teslarati.com/spacex-first-starlink-gen2-satellite-launch-2022/)
+
+3. AI startup Synthetaic has raised $15 million in Series B funding. The company uses artificial intelligence to analyze data from space and air sensors, which could have significant applications in space exploration and satellite technology. [Source: SpaceNews](https://spacenews.com/ai-startup-synthetaic-raises-15-million-in-series-b-funding/)
+
+4. The Space Force has formally established a unit within the U.S. Indo-Pacific Command, marking a permanent presence in the Indo-Pacific region. This could have significant implications for space security and geopolitics. [Source: SpaceNews](https://spacenews.com/space-force-establishes-permanent-presence-in-indo-pacific-region/)
+
+5. Slingshot Aerospace, a space tracking and data analytics company, is expanding its network of ground-based optical telescopes to increase coverage of low Earth orbit. This could improve our ability to track and analyze objects in low Earth orbit, including satellites and space debris. [Source: SpaceNews](https://spacenews.com/slingshots-space-tracking-network-to-extend-coverage-of-low-earth-orbit/)
+
+6. The National Natural Science Foundation of China has outlined a five-year project for researchers to study the assembly of ultra-large spacecraft. This could lead to significant advancements in spacecraft technology and space exploration capabilities. [Source: SpaceNews](https://spacenews.com/china-researching-challenges-of-kilometer-scale-ultra-large-spacecraft/)
+
+7. The Center for AEroSpace Autonomy Research (CAESAR) at Stanford University is focusing on spacecraft autonomy. The center held a kickoff event on May 22, 2024, to highlight the industry, academia, and government collaboration it seeks to foster. This could lead to significant advancements in autonomous spacecraft technology. [Source: SpaceNews](https://spacenews.com/stanford-center-focuses-on-spacecraft-autonomy/)
+```
+
+</CodeGroup>
+
+## Depuração e Solução de Problemas
+
+### Depurando Problemas de Knowledge
+
+#### Verificar Inicialização de Knowledge do Agente
+```python
+from crewai import Agent, Crew, Task
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+knowledge_source = StringKnowledgeSource(content="Test knowledge")
+
+agent = Agent(
+    role="Test Agent",
+    goal="Test knowledge",
+    backstory="Testing",
+    knowledge_sources=[knowledge_source]
+)
+
+crew = Crew(agents=[agent], tasks=[Task(...)])
+
+# Before kickoff - knowledge not initialized
+print(f"Before kickoff - Agent knowledge: {getattr(agent, 'knowledge', None)}")
+
+crew.kickoff()
+
+# After kickoff - knowledge initialized
+print(f"After kickoff - Agent knowledge: {agent.knowledge}")
+print(f"Agent knowledge collection: {agent.knowledge.storage.collection_name}")
+print(f"Number of sources: {len(agent.knowledge.sources)}")
+```
+
+#### Verificar Localizações de Armazenamento de Knowledge
+```python
+import os
+from crewai.utilities.paths import db_storage_path
+
+# Check storage structure
+storage_path = db_storage_path()
+knowledge_path = os.path.join(storage_path, "knowledge")
+
+if os.path.exists(knowledge_path):
+    print("Knowledge collections found:")
+    for collection in os.listdir(knowledge_path):
+        collection_path = os.path.join(knowledge_path, collection)
+        if os.path.isdir(collection_path):
+            print(f"  - {collection}/")
+            # Show collection contents
+            for item in os.listdir(collection_path):
+                print(f"    └── {item}")
+```
+
+#### Testar Recuperação de Knowledge
+```python
+# Test agent knowledge retrieval
+if hasattr(agent, 'knowledge') and agent.knowledge:
+    test_query = ["test query"]
+    results = agent.knowledge.query(test_query)
+    print(f"Agent knowledge results: {len(results)} documents found")
+
+    # Test crew knowledge retrieval (if exists)
+    if hasattr(crew, 'knowledge') and crew.knowledge:
+        crew_results = crew.query_knowledge(test_query)
+        print(f"Crew knowledge results: {len(crew_results)} documents found")
+```
+
+#### Inspecionar Coleções de Knowledge
+```python
+import chromadb
+from crewai.utilities.paths import db_storage_path
+import os
+
+# Connect to CrewAI's knowledge ChromaDB
+knowledge_path = os.path.join(db_storage_path(), "knowledge")
+
+if os.path.exists(knowledge_path):
+    client = chromadb.PersistentClient(path=knowledge_path)
+    collections = client.list_collections()
+
+    print("Knowledge Collections:")
+    for collection in collections:
+        print(f"  - {collection.name}: {collection.count()} documents")
+
+        # Sample a few documents to verify content
+        if collection.count() > 0:
+            sample = collection.peek(limit=2)
+            print(f"    Sample content: {sample['documents'][0][:100]}...")
+else:
+    print("No knowledge storage found")
+```
+
+#### Verificar Processamento de Knowledge
+```python
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create a test knowledge source
+test_source = StringKnowledgeSource(
+    content="Test knowledge content for debugging",
+    chunk_size=100,  # Small chunks for testing
+    chunk_overlap=20
+)
+
+# Check chunking behavior
+print(f"Original content length: {len(test_source.content)}")
+print(f"Chunk size: {test_source.chunk_size}")
+print(f"Chunk overlap: {test_source.chunk_overlap}")
+
+# Process and inspect chunks
+test_source.add()
+print(f"Number of chunks created: {len(test_source.chunks)}")
+for i, chunk in enumerate(test_source.chunks[:3]):  # Show first 3 chunks
+    print(f"Chunk {i+1}: {chunk[:50]}...")
+```
+
+### Problemas Comuns de Armazenamento de Knowledge
+
+**Erros "Arquivo não encontrado":**
+```python
+# Ensure files are in the correct location
+from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
+import os
+
+knowledge_dir = KNOWLEDGE_DIRECTORY  # Usually "knowledge"
+file_path = os.path.join(knowledge_dir, "your_file.pdf")
+
+if not os.path.exists(file_path):
+    print(f"File not found: {file_path}")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Expected knowledge directory: {os.path.abspath(knowledge_dir)}")
+```
+
+**Erros "Incompatibilidade de dimensão de embedding":**
+```python
+# This happens when switching embedding providers
+# Reset knowledge storage to clear old embeddings
+crew.reset_memories(command_type='knowledge')
+
+# Or use consistent embedding providers
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    knowledge_sources=[...],
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}}
+)
+```
+
+**Erros "ChromaDB permissão negada":**
+```bash
+# Fix storage permissions
+chmod -R 755 ~/.local/share/CrewAI/
+```
+
+**Knowledge não persistindo entre execuções:**
+```python
+# Verify storage location consistency
+import os
+from crewai.utilities.paths import db_storage_path
+
+print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
+print("Computed storage path:", db_storage_path())
+print("Knowledge path:", os.path.join(db_storage_path(), "knowledge"))
+```
+
+### Comandos de Reset de Knowledge
+
+```python
+# Reset only agent-specific knowledge
+crew.reset_memories(command_type='agent_knowledge')
+
+# Reset both crew and agent knowledge
+crew.reset_memories(command_type='knowledge')
+
+# CLI commands
+# crewai reset-memories --agent-knowledge  # Agent knowledge only
+# crewai reset-memories --knowledge        # All knowledge
+```
+
+### Limpando Knowledge
+
+Se você precisar limpar o knowledge armazenado no CrewAI, você pode usar o comando `crewai reset-memories` com a opção `--knowledge`.
+
+```bash Command
+crewai reset-memories --knowledge
+```
+
+Isso é útil quando você atualizou suas fontes de knowledge e quer garantir que os agentes estejam usando as informações mais recentes.
+
+## Melhores Práticas
+
+<AccordionGroup>
+  <Accordion title="Organização de Conteúdo">
+    - Mantenha tamanhos de chunk apropriados para seu tipo de conteúdo
+    - Considere sobreposição de conteúdo para preservação de contexto
+    - Organize informações relacionadas em fontes de knowledge separadas
+  </Accordion>
+
+  <Accordion title="Dicas de Performance">
+    - Ajuste tamanhos de chunk baseado na complexidade do conteúdo
+    - Configure modelos de embedding apropriados
+    - Considere usar provedores de embedding locais para processamento mais rápido
+  </Accordion>
+
+  <Accordion title="Knowledge de Uma Vez">
+    - Com a estrutura de arquivo típica fornecida pelo CrewAI, as fontes de knowledge são incorporadas toda vez que o kickoff é acionado.
+    - Se as fontes de knowledge são grandes, isso leva à ineficiência e latência aumentada, pois os mesmos dados são incorporados cada vez.
+    - Para resolver isso, inicialize diretamente o parâmetro knowledge em vez do parâmetro knowledge_sources.
+    - Link para a issue para ter a ideia completa [Github Issue](https://github.com/crewAIInc/crewAI/issues/2755)
+  </Accordion>
+
+  <Accordion title="Gerenciamento de Knowledge">
+    - Use knowledge no nível do agente para informações específicas do papel
+    - Use knowledge no nível da crew para informações compartilhadas que todos os agentes precisam
+    - Configure embedders no nível do agente se você precisar de estratégias de embedding diferentes
+    - Use nomenclatura consistente de coleção mantendo papéis de agente descritivos
+    - Teste a inicialização de knowledge verificando agent.knowledge após o kickoff
+    - Monitore localizações de armazenamento para entender onde o knowledge está armazenado
+    - Reset knowledge apropriadamente usando os tipos de comando corretos
+  </Accordion>
+
+  <Accordion title="Melhores Práticas de Produção">
+    - Configure `CREWAI_STORAGE_DIR` para uma localização conhecida em produção
+    - Escolha provedores de embedding explícitos para corresponder à sua configuração de LLM e evitar conflitos de chave de API
+    - Monitore o tamanho do armazenamento de knowledge conforme ele cresce com adições de documentos
+    - Organize fontes de knowledge por domínio ou propósito usando nomes de coleção
+    - Inclua diretórios de knowledge em suas estratégias de backup e implantação
+    - Configure permissões de arquivo apropriadas para arquivos de knowledge e diretórios de armazenamento
+    - Use variáveis de ambiente para chaves de API e configuração sensível
+  </Accordion>
+</AccordionGroup>

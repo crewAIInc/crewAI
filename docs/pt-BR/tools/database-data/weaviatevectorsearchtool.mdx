@@ -1,0 +1,162 @@
+---
+title: Busca Vetorial Weaviate
+description: O `WeaviateVectorSearchTool` foi projetado para buscar documentos semanticamente similares em um banco de dados vetorial Weaviate.
+icon: network-wired
+---
+
+## Visão Geral
+
+O `WeaviateVectorSearchTool` foi especificamente desenvolvido para realizar buscas semânticas em documentos armazenados em um banco de dados vetorial Weaviate. Essa ferramenta permite encontrar documentos semanticamente similares a uma determinada consulta, aproveitando o poder das embeddings vetoriais para resultados de busca mais precisos e contextualmente relevantes.
+
+[Weaviate](https://weaviate.io/) é um banco de dados vetorial que armazena e consulta embeddings vetoriais, possibilitando recursos de busca semântica.
+
+## Instalação
+
+Para incorporar esta ferramenta ao seu projeto, é necessário instalar o cliente Weaviate:
+
+```shell
+uv add weaviate-client
+```
+
+## Etapas para Começar
+
+Para utilizar efetivamente o `WeaviateVectorSearchTool`, siga as etapas abaixo:
+
+1. **Instalação dos Pacotes**: Confirme que os pacotes `crewai[tools]` e `weaviate-client` estão instalados em seu ambiente Python.
+2. **Configuração do Weaviate**: Configure um cluster Weaviate. Você pode seguir as instruções na [documentação do Weaviate](https://weaviate.io/developers/wcs/manage-clusters/connect).
+3. **Chaves de API**: Obtenha a URL do seu cluster Weaviate e a chave de API correspondente.
+4. **Chave de API da OpenAI**: Certifique-se de que você tenha uma chave de API da OpenAI definida nas variáveis de ambiente como `OPENAI_API_KEY`.
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma busca:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+
+# Inicializar a ferramenta
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+
+@agent
+def search_agent(self) -> Agent:
+    '''
+    Este agente utiliza o WeaviateVectorSearchTool para buscar 
+    documentos semanticamente similares em um banco de dados vetorial Weaviate.
+    '''
+    return Agent(
+        config=self.agents_config["search_agent"],
+        tools=[tool]
+    )
+```
+
+## Parâmetros
+
+O `WeaviateVectorSearchTool` aceita os seguintes parâmetros:
+
+- **collection_name**: Obrigatório. O nome da coleção a ser pesquisada.
+- **weaviate_cluster_url**: Obrigatório. A URL do cluster Weaviate.
+- **weaviate_api_key**: Obrigatório. A chave de API para o cluster Weaviate.
+- **limit**: Opcional. O número de resultados a serem retornados. O padrão é `3`.
+- **vectorizer**: Opcional. O vetorizador a ser utilizado. Se não for informado, será utilizado o `text2vec_openai` com o modelo `nomic-embed-text`.
+- **generative_model**: Opcional. O modelo generativo a ser utilizado. Se não for informado, será utilizado o `gpt-4o` da OpenAI.
+
+## Configuração Avançada
+
+Você pode personalizar o vetorizador e o modelo generativo utilizados pela ferramenta:
+
+```python Code
+from crewai_tools import WeaviateVectorSearchTool
+from weaviate.classes.config import Configure
+
+# Configurar modelo personalizado para vetorizador e modelo generativo
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    vectorizer=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+    generative_model=Configure.Generative.openai(model="gpt-4o-mini"),
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## Pré-carregando Documentos
+
+Você pode pré-carregar seu banco de dados Weaviate com documentos antes de utilizar a ferramenta:
+
+```python Code
+import os
+from crewai_tools import WeaviateVectorSearchTool
+import weaviate
+from weaviate.classes.init import Auth
+
+# Conectar ao Weaviate
+client = weaviate.connect_to_weaviate_cloud(
+    cluster_url="https://your-weaviate-cluster-url.com",
+    auth_credentials=Auth.api_key("your-weaviate-api-key"),
+    headers={"X-OpenAI-Api-Key": "your-openai-api-key"}
+)
+
+# Obter ou criar coleção
+test_docs = client.collections.get("example_collections")
+if not test_docs:
+    test_docs = client.collections.create(
+        name="example_collections",
+        vectorizer_config=Configure.Vectorizer.text2vec_openai(model="nomic-embed-text"),
+        generative_config=Configure.Generative.openai(model="gpt-4o"),
+    )
+
+# Carregar documentos
+docs_to_load = os.listdir("knowledge")
+with test_docs.batch.dynamic() as batch:
+    for d in docs_to_load:
+        with open(os.path.join("knowledge", d), "r") as f:
+            content = f.read()
+        batch.add_object(
+            {
+                "content": content,
+                "year": d.split("_")[0],
+            }
+        )
+
+# Inicializar a ferramenta
+tool = WeaviateVectorSearchTool(
+    collection_name='example_collections', 
+    limit=3,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+```
+
+## Exemplo de Integração com Agente
+
+Veja como integrar o `WeaviateVectorSearchTool` com um agente CrewAI:
+
+```python Code
+from crewai import Agent
+from crewai_tools import WeaviateVectorSearchTool
+
+# Inicializar a ferramenta
+weaviate_tool = WeaviateVectorSearchTool(
+    collection_name='example_collections',
+    limit=3,
+    weaviate_cluster_url="https://your-weaviate-cluster-url.com",
+    weaviate_api_key="your-weaviate-api-key",
+)
+
+# Criar um agente com a ferramenta
+rag_agent = Agent(
+    name="rag_agent",
+    role="Você é um assistente útil que pode responder perguntas com a ajuda do WeaviateVectorSearchTool.",
+    llm="gpt-4o-mini",
+    tools=[weaviate_tool],
+)
+```
+
+## Conclusão
+
+O `WeaviateVectorSearchTool` fornece uma maneira poderosa de buscar documentos semanticamente similares em um banco de dados vetorial Weaviate. Ao utilizar embeddings vetoriais, ele permite resultados de busca mais precisos e relevantes em termos de contexto, quando comparado a buscas tradicionais baseadas em palavras-chave. Essa ferramenta é especialmente útil para aplicações que precisam encontrar informações a partir do significado e não apenas de correspondências exatas.

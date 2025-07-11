@@ -1,0 +1,204 @@
+---
+title: Conecte-se a qualquer LLM
+description: Guia abrangente sobre como integrar o CrewAI a diversos Large Language Models (LLMs) usando o LiteLLM, incluindo provedores compatíveis e opções de configuração.
+icon: brain-circuit
+---
+
+## Conecte o CrewAI a LLMs
+
+O CrewAI utiliza o LiteLLM para conectar-se a uma grande variedade de Modelos de Linguagem (LLMs). Essa integração proporciona grande versatilidade, permitindo que você utilize modelos de inúmeros provedores por meio de uma interface simples e unificada.
+
+<Note>
+    Por padrão, o CrewAI usa o modelo `gpt-4o-mini`. Isso é determinado pela variável de ambiente `OPENAI_MODEL_NAME`, que tem como padrão "gpt-4o-mini" se não for definida.
+    Você pode facilmente configurar seus agentes para usar um modelo ou provedor diferente, conforme descrito neste guia.
+</Note>
+
+## Provedores Compatíveis
+
+O LiteLLM oferece suporte a uma ampla gama de provedores, incluindo, mas não se limitando a:
+
+- OpenAI
+- Anthropic
+- Google (Vertex AI, Gemini)
+- Azure OpenAI
+- AWS (Bedrock, SageMaker)
+- Cohere
+- VoyageAI
+- Hugging Face
+- Ollama
+- Mistral AI
+- Replicate
+- Together AI
+- AI21
+- Cloudflare Workers AI
+- DeepInfra
+- Groq
+- SambaNova
+- [NVIDIA NIMs](https://docs.api.nvidia.com/nim/reference/models-1)
+- E muitos outros!
+
+Para uma lista completa e sempre atualizada dos provedores suportados, consulte a [documentação de Provedores do LiteLLM](https://docs.litellm.ai/docs/providers).
+
+## Alterando a LLM
+
+Para utilizar uma LLM diferente com seus agentes CrewAI, você tem várias opções:
+
+<Tabs>
+    <Tab title="Usando um Identificador de String">
+    Passe o nome do modelo como uma string ao inicializar o agente:
+        <CodeGroup>
+            ```python Code
+            from crewai import Agent
+
+            # Usando o GPT-4 da OpenAI
+            openai_agent = Agent(
+                role='OpenAI Expert',
+                goal='Provide insights using GPT-4',
+                backstory="An AI assistant powered by OpenAI's latest model.",
+                llm='gpt-4'
+            )
+
+            # Usando o Claude da Anthropic
+            claude_agent = Agent(
+                role='Anthropic Expert',
+                goal='Analyze data using Claude',
+                backstory="An AI assistant leveraging Anthropic's language model.",
+                llm='claude-2'
+            )
+            ```
+        </CodeGroup>
+    </Tab>
+    <Tab title="Usando a Classe LLM">
+    Para uma configuração mais detalhada, utilize a classe LLM:
+        <CodeGroup>
+            ```python Code
+            from crewai import Agent, LLM
+
+            llm = LLM(
+                model="gpt-4",
+                temperature=0.7,
+                base_url="https://api.openai.com/v1",
+                api_key="your-api-key-here"
+            )
+
+            agent = Agent(
+                role='Customized LLM Expert',
+                goal='Provide tailored responses',
+                backstory="An AI assistant with custom LLM settings.",
+                llm=llm
+            )
+            ```
+        </CodeGroup>
+    </Tab>
+</Tabs>
+
+## Opções de Configuração
+
+Ao configurar uma LLM para o seu agente, você tem acesso a uma variedade de parâmetros:
+
+| Parâmetro | Tipo | Descrição |
+|:----------|:-----:|:-------------|
+| **model** | `str` | O nome do modelo a ser utilizado (ex.: "gpt-4", "claude-2") |
+| **temperature** | `float` | Controla o grau de aleatoriedade nas respostas (0.0 a 1.0) |
+| **max_tokens** | `int` | Número máximo de tokens a serem gerados |
+| **top_p** | `float` | Controla a diversidade das respostas (0.0 a 1.0) |
+| **frequency_penalty** | `float` | Penaliza novos tokens com base na frequência em que já apareceram no texto |
+| **presence_penalty** | `float` | Penaliza novos tokens com base na presença deles no texto até o momento |
+| **stop** | `str`, `List[str]` | Sequência(s) que interrompem a geração do texto |
+| **base_url** | `str` | URL base do endpoint da API |
+| **api_key** | `str` | Sua chave de API para autenticação |
+
+Para uma lista completa de parâmetros e suas respectivas descrições, consulte a documentação da classe LLM.
+
+## Conectando-se a LLMs Compatíveis com OpenAI
+
+Você pode se conectar a LLMs compatíveis com a OpenAI usando variáveis de ambiente ou definindo atributos específicos na classe LLM:
+
+<Tabs>
+    <Tab title="Usando Variáveis de Ambiente">
+        <CodeGroup>
+        ```python Generic
+        import os
+
+        os.environ["OPENAI_API_KEY"] = "your-api-key"
+        os.environ["OPENAI_API_BASE"] = "https://api.your-provider.com/v1"
+        os.environ["OPENAI_MODEL_NAME"] = "your-model-name"
+        ```
+
+        ```python Google
+        import os
+
+        # Exemplo usando a API compatível com OpenAI do Gemini.
+        os.environ["OPENAI_API_KEY"] = "your-gemini-key"  # Deve começar com AIza...
+        os.environ["OPENAI_API_BASE"] = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-2.0-flash"  # Adicione aqui seu modelo do Gemini, sob openai/
+        ```
+        </CodeGroup>
+    </Tab>
+    <Tab title="Usando Atributos da Classe LLM">
+        <CodeGroup>
+            ```python Generic
+            llm = LLM(
+                model="custom-model-name",
+                api_key="your-api-key",
+                base_url="https://api.your-provider.com/v1"
+            )
+            agent = Agent(llm=llm, ...)
+            ```
+
+            ```python Google
+            # Exemplo usando a API compatível com OpenAI do Gemini
+            llm = LLM(
+                model="openai/gemini-2.0-flash",
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                api_key="your-gemini-key",  # Deve começar com AIza...
+            )
+            agent = Agent(llm=llm, ...)
+            ```
+        </CodeGroup>
+    </Tab>
+</Tabs>
+
+## Utilizando Modelos Locais com Ollama
+
+Para modelos locais como os oferecidos pelo Ollama:
+
+<Steps>
+    <Step title="Baixe e instale o Ollama">
+    [Clique aqui para baixar e instalar o Ollama](https://ollama.com/download)
+    </Step>
+    <Step title="Puxe o modelo desejado">
+    Por exemplo, execute `ollama pull llama3.2` para baixar o modelo.
+    </Step>
+    <Step title="Configure seu agente">
+        <CodeGroup>
+        ```python Code
+            agent = Agent(
+                role='Local AI Expert',
+                goal='Process information using a local model',
+                backstory="An AI assistant running on local hardware.",
+                llm=LLM(model="ollama/llama3.2", base_url="http://localhost:11434")
+            )
+            ```
+        </CodeGroup>
+    </Step>
+</Steps>
+
+## Alterando a URL Base da API
+
+Você pode alterar a URL base da API para qualquer provedor de LLM definindo o parâmetro `base_url`:
+
+```python Code
+llm = LLM(
+    model="custom-model-name",
+    base_url="https://api.your-provider.com/v1",
+    api_key="your-api-key"
+)
+agent = Agent(llm=llm, ...)
+```
+
+Isso é particularmente útil ao trabalhar com APIs compatíveis com a OpenAI ou quando você precisa especificar um endpoint diferente para o provedor escolhido.
+
+## Conclusão
+
+Ao utilizar o LiteLLM, o CrewAI oferece integração transparente com uma vasta gama de LLMs. Essa flexibilidade permite que você escolha o modelo mais adequado para sua necessidade específica, seja priorizando desempenho, custo-benefício ou implantação local. Lembre-se de consultar a [documentação do LiteLLM](https://docs.litellm.ai/docs/) para obter as informações mais atualizadas sobre modelos suportados e opções de configuração.

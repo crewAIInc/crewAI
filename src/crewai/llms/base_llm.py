@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 
 class BaseLLM(ABC):
@@ -47,6 +47,8 @@ class BaseLLM(ABC):
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
     ) -> Union[str, Any]:
         """Call the LLM with the given messages.
 
@@ -61,6 +63,7 @@ class BaseLLM(ABC):
                       during and after the LLM call.
             available_functions: Optional dict mapping function names to callables
                                that can be invoked by the LLM.
+            from_task: Optional task caller to be used for the LLM call.
 
         Returns:
             Either a text response from the LLM (str) or

@@ -1,0 +1,185 @@
+---
+title: Integrations
+description: "Connected applications for your agents to take actions."
+icon: "plug"
+---
+
+## Overview
+
+Enable your agents to authenticate with any OAuth enabled provider and take actions. From Salesforce and HubSpot to Google and GitHub, we've got you covered with 16+ integrated services.
+
+<Frame>
+  ![Integrations](/images/enterprise/crew_connectors.png)
+</Frame>
+
+## Supported Integrations
+
+### **Communication & Collaboration**
+- **Gmail** - Manage emails and drafts
+- **Slack** - Workspace notifications and alerts
+- **Microsoft** - Office 365 and Teams integration
+
+### **Project Management**
+- **Jira** - Issue tracking and project management
+- **ClickUp** - Task and productivity management
+- **Asana** - Team task and project coordination
+- **Notion** - Page and database management
+- **Linear** - Software project and bug tracking
+- **GitHub** - Repository and issue management
+
+### **Customer Relationship Management**
+- **Salesforce** - CRM account and opportunity management
+- **HubSpot** - Sales pipeline and contact management
+- **Zendesk** - Customer support ticket management
+
+### **Business & Finance**
+- **Stripe** - Payment processing and customer management
+- **Shopify** - E-commerce store and product management
+
+### **Productivity & Storage**
+- **Google Sheets** - Spreadsheet data synchronization
+- **Google Calendar** - Event and schedule management
+- **Box** - File storage and document management
+
+and more to come!
+
+## Prerequisites
+
+Before using Authentication Integrations, ensure you have:
+
+- A [CrewAI Enterprise](https://app.crewai.com) account. You can get started with a free trial.
+
+
+## Setting Up Integrations
+
+### 1. Connect Your Account
+
+1. Navigate to [CrewAI Enterprise](https://app.crewai.com)
+2. Go to **Integrations** tab - https://app.crewai.com/crewai_plus/connectors
+3. Click **Connect** on your desired service from the Authentication Integrations section
+4. Complete the OAuth authentication flow
+5. Grant necessary permissions for your use case
+6. Get your Enterprise Token from your [CrewAI Enterprise](https://app.crewai.com) account page - https://app.crewai.com/crewai_plus/settings/account
+
+<Frame>
+  ![Integrations](/images/enterprise/enterprise_action_auth_token.png)
+</Frame>
+
+### 2. Install Integration Tools
+
+All you need is the latest version of `crewai-tools` package.
+
+```bash
+uv add crewai-tools
+```
+
+## Usage Examples
+
+### Basic Usage
+<Tip>
+  All the services you are authenticated into will be available as tools. So all you need to do is add the `CrewaiEnterpriseTools` to your agent and you are good to go.
+</Tip>
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Get enterprise tools (Gmail tool will be included)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+# print the tools
+print(enterprise_tools)
+
+# Create an agent with Gmail capabilities
+email_agent = Agent(
+    role="Email Manager",
+    goal="Manage and organize email communications",
+    backstory="An AI assistant specialized in email management and communication.",
+    tools=enterprise_tools
+)
+
+# Task to send an email
+email_task = Task(
+    description="Draft and send a follow-up email to john@example.com about the project update",
+    agent=email_agent,
+    expected_output="Confirmation that email was sent successfully"
+)
+
+# Run the task
+crew = Crew(
+    agents=[email_agent],
+    tasks=[email_task]
+)
+
+# Run the crew
+crew.kickoff()
+```
+
+### Filtering Tools
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    actions_list=["gmail_find_email"] # only gmail_find_email tool will be available
+)
+gmail_tool = enterprise_tools["gmail_find_email"]
+
+gmail_agent = Agent(
+    role="Gmail Manager",
+    goal="Manage gmail communications and notifications",
+    backstory="An AI assistant that helps coordinate gmail communications.",
+    tools=[gmail_tool]
+)
+
+notification_task = Task(
+    description="Find the email from john@example.com",
+    agent=gmail_agent,
+    expected_output="Email found from john@example.com"
+)
+
+# Run the task
+crew = Crew(
+    agents=[slack_agent],
+    tasks=[notification_task]
+)
+```
+
+## Best Practices
+
+### Security
+- **Principle of Least Privilege**: Only grant the minimum permissions required for your agents' tasks
+- **Regular Audits**: Periodically review connected integrations and their permissions
+- **Secure Credentials**: Never hardcode credentials; use CrewAI's secure authentication flow
+
+
+### Filtering Tools
+On a deployed crew, you can specify which actions are avialbel for each integration from the settings page of the service you connected to.
+
+<Frame>
+  ![Integrations](/images/enterprise/filtering_enterprise_action_tools.png)
+</Frame>
+
+
+### Scoped Deployments for multi user organizations
+You can deploy your crew and scope each integration to a specific user. For example, a crew that connects to google can use a specific user's gmail account.
+
+<Tip>
+  This is useful for multi user organizations where you want to scope the integration to a specific user.
+</Tip>
+
+
+Use the `user_bearer_token` to scope the integration to a specific user so that when the crew is kicked off, it will use the user's bearer token to authenticate with the integration. If user is not logged in, then the crew will not use any connected integrations. Use the default bearer token to authenticate with the integrations thats deployed with the crew.
+
+<Frame>
+  ![Integrations](/images/enterprise/user_bearer_token.png)
+</Frame>
+
+
+
+### Getting Help
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with integration setup or troubleshooting.
+</Card>

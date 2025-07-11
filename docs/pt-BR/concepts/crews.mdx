@@ -1,0 +1,366 @@
+---
+title: Crews
+description: Compreendendo e utilizando crews no framework crewAI com atributos e funcionalidades abrangentes.
+icon: people-group
+---
+
+## Visão Geral
+
+Uma crew no crewAI representa um grupo colaborativo de agentes trabalhando em conjunto para alcançar um conjunto de tarefas. Cada crew define a estratégia de execução de tarefas, colaboração entre agentes e o fluxo de trabalho geral.
+
+## Atributos de Crew
+
+| Atributo                              | Parâmetros              | Descrição                                                                                                                                                                                                                |
+| :------------------------------------ | :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tasks**                             | `tasks`                 | Uma lista de tasks atribuídas à crew.                                                                                                                                                                                    |
+| **Agents**                            | `agents`                | Uma lista de agentes que fazem parte da crew.                                                                                                                                                                            |
+| **Process** _(opcional)_              | `process`               | O fluxo de processo (por exemplo, sequencial, hierárquico) seguido pela crew. O padrão é `sequential`.                                                                                                                   |
+| **Verbose** _(opcional)_              | `verbose`               | O nível de verbosidade para logging durante a execução. O padrão é `False`.                                                                                                                               |
+| **Manager LLM** _(opcional)_          | `manager_llm`           | O modelo de linguagem utilizado pelo agente gerenciador em um processo hierárquico. **Obrigatório ao usar um processo hierárquico.**                                                                                    |
+| **Function Calling LLM** _(opcional)_ | `function_calling_llm`  | Se definido, a crew utilizará este LLM para invocar funções das ferramentas para todos os agentes da crew. Cada agente pode ter seu próprio LLM, que substitui o LLM da crew para chamadas de função.                     |
+| **Config** _(opcional)_               | `config`                | Configurações opcionais para a crew, no formato `Json` ou `Dict[str, Any]`.                                                                                                       |
+| **Max RPM** _(opcional)_              | `max_rpm`               | Número máximo de requisições por minuto que a crew respeita durante a execução. O padrão é `None`.                                                                                                                       |
+| **Memory** _(opcional)_               | `memory`                | Utilizada para armazenar memórias de execução (curto prazo, longo prazo, memória de entidade).                                                                                                                           |
+| **Memory Config** _(opcional)_        | `memory_config`         | Configuração para o provedor de memória a ser utilizada pela crew.                                                                                                                |
+| **Cache** _(opcional)_                | `cache`                 | Especifica se deve usar cache para armazenar os resultados da execução de ferramentas. O padrão é `True`.                                                                         |
+| **Embedder** _(opcional)_             | `embedder`              | Configuração do embedder a ser utilizado pela crew. Atualmente mais usado por memory. O padrão é `{"provider": "openai"}`.                                                        |
+| **Step Callback** _(opcional)_        | `step_callback`         | Uma função chamada após cada etapa de cada agente. Pode ser usada para registrar as ações do agente ou executar outras operações; não sobrescreve o `step_callback` específico do agente.                                |
+| **Task Callback** _(opcional)_        | `task_callback`         | Uma função chamada após a conclusão de cada tarefa. Útil para monitoramento ou para operações adicionais pós-execução da task.                                                     |
+| **Share Crew** _(opcional)_           | `share_crew`            | Se deseja compartilhar as informações completas da crew e execução com a equipe do crewAI para melhorar a biblioteca e nos permitir treinar modelos.                                 |
+| **Output Log File** _(opcional)_      | `output_log_file`       | Defina como True para salvar logs como logs.txt no diretório atual ou forneça um caminho de arquivo. Os logs estarão em formato JSON se o nome terminar com .json, caso contrário .txt. O padrão é `None`.                |
+| **Manager Agent** _(opcional)_        | `manager_agent`         | `manager` define um agente customizado que será utilizado como gerente.                                                                                                             |
+| **Prompt File** _(opcional)_          | `prompt_file`           | Caminho para o arquivo JSON de prompt a ser utilizado pela crew.                                                                                                                   |
+| **Planning** *(opcional)*             | `planning`              | Adiciona habilidade de planejamento à Crew. Quando ativado, antes de cada iteração, todos os dados da Crew são enviados a um AgentPlanner que planejará as tasks e este plano será adicionado à descrição de cada task.    |
+| **Planning LLM** *(opcional)*         | `planning_llm`          | O modelo de linguagem usado pelo AgentPlanner em um processo de planejamento.                                                                                                      |
+
+<Tip>
+**Crew Max RPM**: O atributo `max_rpm` define o número máximo de requisições por minuto que a crew pode executar para evitar limites de taxa e irá sobrescrever as configurações de `max_rpm` dos agentes individuais se você o definir.
+</Tip>
+
+## Criando Crews
+
+Existem duas maneiras de criar crews no CrewAI: utilizando **configuração YAML (recomendado)** ou definindo diretamente **em código**.
+
+### Configuração YAML (Recomendado)
+
+O uso da configuração YAML proporciona uma forma mais limpa e fácil de manter para definir crews, sendo consistente com a definição de agentes e tasks em projetos CrewAI.
+
+Após criar seu projeto CrewAI conforme descrito na seção [Instalação](/pt-BR/installation), você pode definir sua crew em uma classe que herda de `CrewBase` e utiliza decorators para definir agentes, tarefas e a própria crew.
+
+#### Exemplo de Classe Crew com Decorators
+
+```python code
+from crewai import Agent, Crew, Task, Process
+from crewai.project import CrewBase, agent, task, crew, before_kickoff, after_kickoff
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
+
+@CrewBase
+class YourCrewName:
+    """Descrição da sua crew"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
+    # Caminhos para seus arquivos de configuração YAML
+    # Para um exemplo de agente e tarefa definidos em YAML, confira:
+    # - Task: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
+    # - Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
+    agents_config = 'config/agents.yaml'
+    tasks_config = 'config/tasks.yaml'
+
+    @before_kickoff
+    def prepare_inputs(self, inputs):
+        # Modifique inputs antes da crew iniciar
+        inputs['additional_data'] = "Alguma informação extra"
+        return inputs
+
+    @after_kickoff
+    def process_output(self, output):
+        # Modifique a saída após a crew finalizar
+        output.raw += "\nProcessado após kickoff."
+        return output
+
+    @agent
+    def agent_one(self) -> Agent:
+        return Agent(
+            config=self.agents_config['agent_one'], # type: ignore[index]
+            verbose=True
+        )
+
+    @agent
+    def agent_two(self) -> Agent:
+        return Agent(
+            config=self.agents_config['agent_two'], # type: ignore[index]
+            verbose=True
+        )
+
+    @task
+    def task_one(self) -> Task:
+        return Task(
+            config=self.tasks_config['task_one'] # type: ignore[index]
+        )
+
+    @task
+    def task_two(self) -> Task:
+        return Task(
+            config=self.tasks_config['task_two'] # type: ignore[index]
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,  # Coletado automaticamente pelo decorator @agent
+            tasks=self.tasks,    # Coletado automaticamente pelo decorator @task
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+Como executar o código acima:
+
+```python code
+YourCrewName().crew().kickoff(inputs={"any": "input here"})
+```
+
+<Note>
+As tarefas serão executadas na ordem em que forem definidas.
+</Note>
+
+A classe `CrewBase`, junto com esses decorators, automatiza a coleta de agentes e tarefas, reduzindo a necessidade de gerenciamento manual.
+
+#### Visão geral dos Decorators de `annotations.py`
+
+O CrewAI fornece vários decorators no arquivo `annotations.py` que são usados para marcar métodos dentro de sua classe crew para tratamento especial:
+
+- `@CrewBase`: Marca a classe como classe base de crew.
+- `@agent`: Denota um método que retorna um objeto `Agent`.
+- `@task`: Denota um método que retorna um objeto `Task`.
+- `@crew`: Denota o método que retorna o objeto `Crew`.
+- `@before_kickoff`: (Opcional) Marca um método a ser executado antes da crew iniciar.
+- `@after_kickoff`: (Opcional) Marca um método a ser executado após a crew finalizar.
+
+Esses decorators ajudam na organização da estrutura da sua crew e coletam automaticamente agentes e tasks sem precisar listá-los manualmente.
+
+### Definição Direta em Código (Alternativa)
+
+Como alternativa, você pode definir a crew diretamente em código sem utilizar arquivos de configuração YAML.
+
+```python code
+from crewai import Agent, Crew, Task, Process
+from crewai_tools import YourCustomTool
+
+class YourCrewName:
+    def agent_one(self) -> Agent:
+        return Agent(
+            role="Analista de Dados",
+            goal="Analisar tendências de dados no mercado brasileiro",
+            backstory="Analista experiente com formação em economia",
+            verbose=True,
+            tools=[YourCustomTool()]
+        )
+
+    def agent_two(self) -> Agent:
+        return Agent(
+            role="Pesquisador de Mercado",
+            goal="Coletar informações sobre a dinâmica do mercado nacional",
+            backstory="Pesquisador dedicado com olhar atento aos detalhes",
+            verbose=True
+        )
+
+    def task_one(self) -> Task:
+        return Task(
+            description="Coletar dados recentes do mercado brasileiro e identificar tendências.",
+            expected_output="Um relatório resumido com as principais tendências do mercado.",
+            agent=self.agent_one()
+        )
+
+    def task_two(self) -> Task:
+        return Task(
+            description="Pesquisar fatores que afetam a dinâmica do mercado nacional.",
+            expected_output="Uma análise dos fatores que influenciam o mercado.",
+            agent=self.agent_two()
+        )
+
+    def crew(self) -> Crew:
+        return Crew(
+            agents=[self.agent_one(), self.agent_two()],
+            tasks=[self.task_one(), self.task_two()],
+            process=Process.sequential,
+            verbose=True
+        )
+```
+Como executar o código acima:
+
+```python code
+YourCrewName().crew().kickoff(inputs={})
+```
+
+Neste exemplo:
+
+- Agentes e tarefas são definidos diretamente dentro da classe, sem decorators.
+- Criamos e gerenciamos manualmente a lista de agentes e tasks.
+- Essa abordagem fornece mais controle, mas pode ser menos sustentável para projetos maiores.
+
+## Saída da Crew
+
+A saída de uma crew no framework CrewAI é encapsulada na classe `CrewOutput`.
+Essa classe fornece uma forma estruturada de acessar os resultados da execução da crew, incluindo vários formatos como string bruta, JSON e modelos Pydantic.
+O `CrewOutput` inclui os resultados da tarefa final, uso de tokens e as saídas das tasks individuais.
+
+### Atributos do Crew Output
+
+| Atributo         | Parâmetros      | Tipo                      | Descrição                                                                                         |
+| :--------------- | :------------- | :------------------------ | :------------------------------------------------------------------------------------------------ |
+| **Raw**          | `raw`          | `str`                     | A saída bruta da crew. Este é o formato padrão da saída.                                          |
+| **Pydantic**     | `pydantic`     | `Optional[BaseModel]`     | Um objeto modelo Pydantic representando a saída estruturada da crew.                              |
+| **JSON Dict**    | `json_dict`    | `Optional[Dict[str, Any]]`| Um dicionário representando a saída da crew em formato JSON.                                      |
+| **Tasks Output** | `tasks_output` | `List[TaskOutput]`        | Uma lista de objetos `TaskOutput`, cada um representando a saída de uma task na crew.             |
+| **Token Usage**  | `token_usage`  | `Dict[str, Any]`          | Um resumo do uso de tokens, oferecendo informações sobre a performance do modelo de linguagem.    |
+
+### Métodos e Propriedades do Crew Output
+
+| Método/Propriedade | Descrição                                                                                          |
+| :----------------- | :------------------------------------------------------------------------------------------------- |
+| **json**           | Retorna a representação em string JSON da saída da crew caso o formato seja JSON.                  |
+| **to_dict**        | Converte as saídas JSON e Pydantic em um dicionário.                                               |
+| **__str__**        | Retorna a representação em string do resultado da crew, priorizando Pydantic, depois JSON, depois raw.|
+
+### Acessando a Saída da Crew
+
+Após executar uma crew, sua saída pode ser acessada pelo atributo `output` do objeto `Crew`. A classe `CrewOutput` oferece várias formas de interagir com esta saída.
+
+#### Exemplo
+
+```python Code
+# Execução de exemplo da crew
+crew = Crew(
+    agents=[research_agent, writer_agent],
+    tasks=[research_task, write_article_task],
+    verbose=True
+)
+
+crew_output = crew.kickoff()
+
+# Acessando a saída da crew
+print(f"Raw Output: {crew_output.raw}")
+if crew_output.json_dict:
+    print(f"JSON Output: {json.dumps(crew_output.json_dict, indent=2)}")
+if crew_output.pydantic:
+    print(f"Pydantic Output: {crew_output.pydantic}")
+print(f"Tasks Output: {crew_output.tasks_output}")
+print(f"Token Usage: {crew_output.token_usage}")
+```
+
+## Acessando Logs da Crew
+
+Você pode visualizar o log em tempo real da execução da crew, definindo `output_log_file` como `True(Boolean)` ou um `file_name(str)`. Suporta logging de eventos como tanto `file_name.txt` quanto `file_name.json`.
+Se for `True(Boolean)`, salvará como `logs.txt`.
+
+Caso `output_log_file` seja `False(Boolean)` ou `None`, os logs não serão gerados.
+
+```python Code
+# Salvar logs da crew
+crew = Crew(output_log_file = True)  # Logs serão salvos como logs.txt
+crew = Crew(output_log_file = file_name)  # Logs serão salvos como file_name.txt
+crew = Crew(output_log_file = file_name.txt)  # Logs serão salvos como file_name.txt
+crew = Crew(output_log_file = file_name.json)  # Logs serão salvos como file_name.json
+```
+
+## Utilização de Memória
+
+As crews podem utilizar memória (curto prazo, longo prazo e memória de entidade) para potencializar sua execução e aprendizado ao longo do tempo. Este recurso permite que as crews armazenem e recuperem memórias de execução, auxiliando na tomada de decisão e nas estratégias de execução de tasks.
+
+## Utilização de Cache
+
+Caches podem ser utilizados para armazenar resultados de execuções de ferramentas, tornando o processo mais eficiente ao evitar a reexecução de tasks idênticas.
+
+## Métricas de Uso da Crew
+
+Após a execução da crew, você pode acessar o atributo `usage_metrics` para visualizar as métricas de uso do modelo de linguagem (LLM) para todas as tasks executadas pela crew. Isso fornece insights sobre eficiência operacional e oportunidades de melhoria.
+
+```python Code
+# Acessar as métricas de uso da crew
+crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
+crew.kickoff()
+print(crew.usage_metrics)
+```
+
+## Processo de Execução da Crew
+
+- **Sequential Process**: As tasks são executadas uma após a outra, permitindo um fluxo de trabalho linear.
+- **Hierarchical Process**: Um agente gerente coordena a crew, delegando tarefas e validando resultados antes de prosseguir. **Nota**: Um `manager_llm` ou `manager_agent` é necessário para este processo e é essencial para validar o fluxo.
+
+### Iniciando uma Crew
+
+Uma vez que sua crew esteja montada, inicie o workflow com o método `kickoff()`. Isso inicia a execução conforme o fluxo de processo definido.
+
+```python Code
+# Iniciar execução das tasks da crew
+result = my_crew.kickoff()
+print(result)
+```
+
+### Diferentes Formas de Iniciar uma Crew
+
+Assim que sua crew estiver definida, inicie o fluxo de trabalho com o método kickoff apropriado. O CrewAI oferece vários métodos para melhor controle do processo: `kickoff()`, `kickoff_for_each()`, `kickoff_async()` e `kickoff_for_each_async()`.
+
+- `kickoff()`: Inicia o processo de execução seguindo o fluxo definido.
+- `kickoff_for_each()`: Executa tasks sequencialmente para cada evento de entrada ou item da coleção fornecida.
+- `kickoff_async()`: Inicia o workflow de forma assíncrona.
+- `kickoff_for_each_async()`: Executa as tasks concorrentemente para cada entrada, aproveitando o processamento assíncrono.
+
+```python Code
+# Iniciar execução das tasks da crew
+result = my_crew.kickoff()
+print(result)
+
+# Exemplo com kickoff_for_each
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+results = my_crew.kickoff_for_each(inputs=inputs_array)
+for result in results:
+    print(result)
+
+# Exemplo com kickoff_async
+inputs = {'topic': 'AI in healthcare'}
+async_result = await my_crew.kickoff_async(inputs=inputs)
+print(async_result)
+
+# Exemplo com kickoff_for_each_async
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+async_results = await my_crew.kickoff_for_each_async(inputs=inputs_array)
+for async_result in async_results:
+    print(async_result)
+```
+
+Esses métodos fornecem flexibilidade para gerenciar e executar tasks dentro de sua crew, permitindo fluxos de trabalho síncronos e assíncronos de acordo com sua necessidade.
+
+### Repetindo Execução a partir de uma Task Específica
+
+Agora é possível reiniciar a execução a partir de uma task específica usando o comando CLI `replay`.
+
+O recurso de replay no CrewAI permite reexecutar a partir de uma task específica através da interface de linha de comando (CLI). Rodando o comando `crewai replay -t <task_id>`, você pode especificar o `task_id` para o processo de replay.
+
+Kickoffs agora salvam localmente as saídas das tasks dos kickoffs recentes para permitir replay posteriormente.
+
+### Repetindo a Partir de uma Task Específica Usando o CLI
+
+Para usar o recurso de replay, siga estes passos:
+
+1. Abra seu terminal ou prompt de comando.
+2. Navegue até o diretório do seu projeto CrewAI.
+3. Execute o seguinte comando:
+
+Para visualizar os IDs das últimas tasks do kickoff, utilize:
+
+```shell
+crewai log-tasks-outputs
+```
+
+Depois, para repetir a partir de uma task específica, utilize:
+
+```shell
+crewai replay -t <task_id>
+```
+
+Esses comandos permitem repetir tasks dos seus últimos kickoffs, mantendo o contexto das tasks já executadas anteriormente.
