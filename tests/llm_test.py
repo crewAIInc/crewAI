@@ -601,7 +601,7 @@ def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
 def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_emit):
     def get_weather_error(location):
         raise Exception("Error")
-        
+
     llm = LLM(model="openai/gpt-4o", stream=True)
     response = llm.call(
         messages=[
@@ -619,7 +619,7 @@ def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_em
         expected_stream_chunk=9,
         expected_completed_llm_call=1,
         expected_tool_usage_started=1,
-        expected_tool_usage_error=1,    
+        expected_tool_usage_error=1,
         expected_final_chunk_result=expected_final_chunk_result,
     )
 

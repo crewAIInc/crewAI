@@ -538,6 +538,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     crewai_event_bus.emit(
                         self,
                         event=LLMCallCompletedEvent(
+                            messages=self._messages,
                             response=answer,
                             call_type=LLMCallType.LLM_CALL,
                             from_agent=self,
