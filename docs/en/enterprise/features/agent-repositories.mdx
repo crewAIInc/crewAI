@@ -1,0 +1,155 @@
+---
+title: 'Agent Repositories'
+description: 'Learn how to use Agent Repositories to share and reuse your agents across teams and projects'
+icon: 'database'
+---
+
+Agent Repositories allow enterprise users to store, share, and reuse agent definitions across teams and projects. This feature enables organizations to maintain a centralized library of standardized agents, promoting consistency and reducing duplication of effort.
+
+## Benefits of Agent Repositories
+
+- **Standardization**: Maintain consistent agent definitions across your organization
+- **Reusability**: Create an agent once and use it in multiple crews and projects
+- **Governance**: Implement organization-wide policies for agent configurations
+- **Collaboration**: Enable teams to share and build upon each other's work
+
+## Using Agent Repositories
+
+### Prerequisites
+
+1. You must have an account at CrewAI, try the [free plan](https://app.crewai.com).
+2. You need to be authenticated using the CrewAI CLI.
+3. If you have more than one organization, make sure you are switched to the correct organization using the CLI command:
+
+```bash
+crewai org switch <org_id>
+```
+
+### Creating and Managing Agents in Repositories
+
+To create and manage agents in repositories,Enterprise Dashboard.
+
+### Loading Agents from Repositories
+
+You can load agents from repositories in your code using the `from_repository` parameter:
+
+```python
+from crewai import Agent
+
+# Create an agent by loading it from a repository
+# The agent is loaded with all its predefined configurations
+researcher = Agent(
+    from_repository="market-research-agent"
+)
+
+```
+
+### Overriding Repository Settings
+
+You can override specific settings from the repository by providing them in the configuration:
+
+```python
+researcher = Agent(
+    from_repository="market-research-agent",
+    goal="Research the latest trends in AI development",  # Override the repository goal
+    verbose=True  # Add a setting not in the repository
+)
+```
+
+### Example: Creating a Crew with Repository Agents
+
+```python
+from crewai import Crew, Agent, Task
+
+# Load agents from repositories
+researcher = Agent(
+    from_repository="market-research-agent"
+)
+
+writer = Agent(
+    from_repository="content-writer-agent"
+)
+
+# Create tasks
+research_task = Task(
+    description="Research the latest trends in AI",
+    agent=researcher
+)
+
+writing_task = Task(
+    description="Write a comprehensive report based on the research",
+    agent=writer
+)
+
+# Create the crew
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    verbose=True
+)
+
+# Run the crew
+result = crew.kickoff()
+```
+
+### Example: Using `kickoff()` with Repository Agents
+
+You can also use repository agents directly with the `kickoff()` method for simpler interactions:
+
+```python
+from crewai import Agent
+from pydantic import BaseModel
+from typing import List
+
+# Define a structured output format
+class MarketAnalysis(BaseModel):
+    key_trends: List[str]
+    opportunities: List[str]
+    recommendation: str
+
+# Load an agent from repository
+analyst = Agent(
+    from_repository="market-analyst-agent",
+    verbose=True
+)
+
+# Get a free-form response
+result = analyst.kickoff("Analyze the AI market in 2025")
+print(result.raw)  # Access the raw response
+
+# Get structured output
+structured_result = analyst.kickoff(
+    "Provide a structured analysis of the AI market in 2025",
+    response_format=MarketAnalysis
+)
+
+# Access structured data
+print(f"Key Trends: {structured_result.pydantic.key_trends}")
+print(f"Recommendation: {structured_result.pydantic.recommendation}")
+```
+
+## Best Practices
+
+1. **Naming Convention**: Use clear, descriptive names for your repository agents
+2. **Documentation**: Include comprehensive descriptions for each agent
+3. **Tool Management**: Ensure that tools referenced by repository agents are available in your environment
+4. **Access Control**: Manage permissions to ensure only authorized team members can modify repository agents
+
+## Organization Management
+
+To switch between organizations or see your current organization, use the CrewAI CLI:
+
+```bash
+# View current organization
+crewai org current
+
+# Switch to a different organization
+crewai org switch <org_id>
+
+# List all available organizations
+crewai org list
+```
+
+<Note>
+When loading agents from repositories, you must be authenticated and switched to the correct organization. If you receive errors, check your authentication status and organization settings using the CLI commands above.
+</Note>
