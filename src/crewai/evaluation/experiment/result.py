@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
@@ -16,7 +16,7 @@ class ExperimentResults:
     def __init__(self, results: list[ExperimentResult], metadata: dict[str, Any] | None = None):
         self.results = results
         self.metadata = metadata or {}
-        self.timestamp = datetime.now()
+        self.timestamp = datetime.now(timezone.utc)
 
         from crewai.evaluation.experiment.result_display import ExperimentResultsDisplay
         self.display = ExperimentResultsDisplay()
