@@ -12,7 +12,7 @@ from crewai.evaluation.evaluation_display import AgentAggregatedEvaluationResult
 class ExperimentRunner:
     def __init__(self, dataset: List[Dict[str, Any]]):
         self.dataset = dataset or []
-        self.evaluator = None
+        self.evaluator: AgentEvaluator | None = None
         self.display = ExperimentResultsDisplay()
 
     def run(self, crew: Crew, print_summary: bool = False) -> ExperimentResults:
@@ -86,27 +86,32 @@ class ExperimentRunner:
         Compare expected and actual scores, and return whether the test case passed.
 
         The rules for comparison are as follows:
-
-        - If both expected and actual scores are single numbers, the actual score must be greater than or equal to the expected score.
-        - If the expected score is a single number and the actual score is a dict, the test case fails.
-        - If the expected score is a dict and the actual score is a single number, the test case fails.
-        - If both expected and actual scores are dicts, the actual score must have all the same keys as the expected score, and the value for each key must be greater than or equal to the expected score.
+        - If both expected and actual scores are single numbers, the actual score must be >= expected.
+        - If expected is a single number and actual is a dict, compare against the average of actual values.
+        - If expected is a dict and actual is a single number, actual must be >= all expected values.
+        - If both are dicts, actual must have matching keys with values >= expected values.
         """
 
         if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
             return actual >= expected
 
-        elif isinstance(expected, dict) and isinstance(actual, (int, float)):
-            return False
+        if isinstance(expected, dict) and isinstance(actual, (int, float)):
+            return all(actual >= exp_score for exp_score in expected.values())
 
-        elif isinstance(expected, (int, float)) and isinstance(actual, dict):
+        if isinstance(expected, (int, float)) and isinstance(actual, dict):
+            if not actual:
+                return False
             avg_score = sum(actual.values()) / len(actual)
             return avg_score >= expected
 
-        elif isinstance(expected, dict) and isinstance(actual, dict):
-            for metric, exp_score in expected.items():
-                if metric not in actual or actual[metric] < exp_score:
-                    return False
-            return True
+        if isinstance(expected, dict) and isinstance(actual, dict):
+            if not expected:
+                return True
+            matching_keys = set(expected.keys()) & set(actual.keys())
+            if not matching_keys:
+                return False
+
+            # All matching keys must have actual >= expected
+            return all(actual[key] >= expected[key] for key in matching_keys)
 
         return False
