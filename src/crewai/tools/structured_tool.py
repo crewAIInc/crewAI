@@ -63,6 +63,7 @@ class CrewStructuredTool:
         return_direct: bool = False,
         args_schema: Optional[type[BaseModel]] = None,
         infer_schema: bool = True,
+        cache_function: Callable = None,
         **kwargs: Any,
     ) -> CrewStructuredTool:
         """Create a tool from a function.
@@ -113,6 +114,7 @@ class CrewStructuredTool:
             args_schema=schema,
             func=func,
             result_as_answer=return_direct,
+            cache_function=cache_function,
         )
 
     @staticmethod

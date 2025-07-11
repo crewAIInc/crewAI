@@ -27,27 +27,39 @@ def schema_class():
 
 def test_initialization(basic_function, schema_class):
     """Test basic initialization of CrewStructuredTool"""
+    def dummy_cache_function():
+        return True
+
     tool = CrewStructuredTool(
         name="test_tool",
         description="Test tool description",
         func=basic_function,
         args_schema=schema_class,
+        cache_function=dummy_cache_function,
     )
 
     assert tool.name == "test_tool"
     assert tool.description == "Test tool description"
     assert tool.func == basic_function
     assert tool.args_schema == schema_class
+    assert tool.cache_function == dummy_cache_function
 
 def test_from_function(basic_function):
     """Test creating tool from function"""
+    def dummy_cache_function():
+        return True
+
     tool = CrewStructuredTool.from_function(
-        func=basic_function, name="test_tool", description="Test description"
+        func=basic_function,
+        name="test_tool",
+        description="Test description",
+        cache_function=dummy_cache_function,
     )
 
     assert tool.name == "test_tool"
     assert tool.description == "Test description"
     assert tool.func == basic_function
+    assert tool.cache_function == dummy_cache_function
     assert isinstance(tool.args_schema, type(BaseModel))
 
 def test_validate_function_signature(basic_function, schema_class):
