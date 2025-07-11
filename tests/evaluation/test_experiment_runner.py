@@ -58,7 +58,6 @@ class TestExperimentRunner:
                 "expected_score": {"goal_alignment": 7}
             },
             {
-                "identifier": "test-case-3",
                 "inputs": {"query": "Test query 3"},
                 "expected_score": {"tool_selection": 9}
             }
@@ -88,7 +87,7 @@ class TestExperimentRunner:
         assert "goal_alignment" in result_2.expected_score
         assert result_2.passed is True
 
-        assert result_3.identifier == "test-case-3"
+        assert result_3.identifier == "c2ed49e63aa9a83af3ca382794134fd5"
         assert result_3.inputs == {"query": "Test query 3"}
         assert isinstance(result_3.expected_score, dict)
         assert "tool_selection" in result_3.expected_score

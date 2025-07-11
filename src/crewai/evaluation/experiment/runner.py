@@ -34,7 +34,7 @@ class ExperimentRunner:
     def _run_test_case(self, test_case: Dict[str, Any], crew: Crew) -> ExperimentResult:
         inputs = test_case["inputs"]
         expected_score = test_case["expected_score"]
-        identifier = test_case.get("identifier") or md5(str(test_case), usedforsecurity=False).hexdigest()
+        identifier = test_case.get("identifier") or md5(str(test_case).encode(), usedforsecurity=False).hexdigest()
 
         try:
             self.display.console.print(f"[dim]Running crew with input: {str(inputs)[:50]}...[/dim]")
