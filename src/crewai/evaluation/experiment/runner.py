@@ -15,10 +15,7 @@ class ExperimentRunner:
         self.evaluator = None
         self.display = ExperimentResultsDisplay()
 
-    def run(self, crew: Optional[Crew] = None, print_summary: bool = False) -> ExperimentResults:
-        if not crew:
-            raise ValueError("crew must be provided.")
-
+    def run(self, crew: Crew, print_summary: bool = False) -> ExperimentResults:
         self.evaluator = create_default_evaluator(crew=crew)
 
         results = []
