@@ -7,6 +7,7 @@ from pathlib import Path
 
 import click
 import requests
+import subprocess
 
 from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
 
@@ -93,7 +94,20 @@ def select_model(provider, provider_models):
     """
     predefined_providers = [p.lower() for p in PROVIDERS]
 
-    if provider in predefined_providers:
+    if provider == "ollama":
+        # Dynamically fetch locally available Ollama models
+        available_models = _get_local_ollama_models()
+        # Fallback to the static list if no local models found
+        if not available_models:
+            available_models = MODELS.get(provider, [])
+
+        # Ensure every entry looks like "ollama/<model>" so that the
+        # value saved in .env works out-of-the-box.
+        available_models = [
+            m if m.lower().startswith("ollama/") else f"ollama/{m}"
+            for m in available_models
+        ]
+    elif provider in predefined_providers:
         available_models = MODELS.get(provider, [])
     else:
         available_models = provider_models.get(provider, [])
@@ -229,3 +243,54 @@ def get_provider_data():
         if provider:
             provider_models[provider].append(model_name)
     return provider_models
+
+
+def _get_local_ollama_models():
+    """Return the list of model names available via `ollama list`.
+
+    If Ollama is not installed or the command fails, an empty list is returned.
+    """
+    try:
+        # `ollama list --json` prints a JSON array with objects containing a
+        # `name` field for each local model. We capture and parse this output.
+        result = subprocess.run(
+            ["ollama", "list", "--json"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        models_data = json.loads(result.stdout)
+        return [entry.get("name") for entry in models_data if entry.get("name")]
+    except FileNotFoundError:
+        # Ollama CLI not installed
+        return []
+    except subprocess.CalledProcessError:
+        # Error running `ollama list --json`, fallback to plain text output
+        return _parse_plain_ollama_list()
+    except json.JSONDecodeError:
+        # Unexpected JSON output, fallback to plain text
+        return _parse_plain_ollama_list()
+
+
+def _parse_plain_ollama_list():
+    """Parse the output of `ollama list` (table format)."""
+    try:
+        result = subprocess.run(
+            ["ollama", "list"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        lines = result.stdout.strip().splitlines()
+        # Skip header line(s). Header usually contains 'NAME', we keep entries after that
+        models = []
+        for line in lines:
+            if not line or line.lower().startswith("name"):
+                continue
+            # Model name is everything up to first two spaces (since ID etc). We can split by two or more spaces.
+            parts = line.split()
+            if parts:
+                models.append(parts[0])
+        return models
+    except Exception:
+        return []
