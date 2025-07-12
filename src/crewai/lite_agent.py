@@ -28,7 +28,7 @@ from pydantic import (
     InstanceOf,
     PrivateAttr,
     model_validator,
-    field_validator,
+    field_validator
 )
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -40,7 +40,7 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.flow.flow_trackable import FlowTrackable
-from crewai.llm import LLM
+from crewai.llm import LLM, BaseLLM
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities import I18N
@@ -135,7 +135,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Goal of the agent")
     backstory: str = Field(description="Backstory of the agent")
-    llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
+    llm: Optional[Union[str, InstanceOf[BaseLLM], Any]] = Field(
         default=None, description="Language model that will run the agent"
     )
     tools: List[BaseTool] = Field(
@@ -209,8 +209,8 @@ class LiteAgent(FlowTrackable, BaseModel):
     def setup_llm(self):
         """Set up the LLM and other components after initialization."""
         self.llm = create_llm(self.llm)
-        if not isinstance(self.llm, LLM):
-            raise ValueError("Unable to create LLM instance")
+        if not isinstance(self.llm, BaseLLM):
+            raise ValueError(f"Expected LLM instance of type BaseLLM, got {type(self.llm).__name__}")
 
         # Initialize callbacks
         token_callback = TokenCalcHandler(token_cost_process=self._token_process)
@@ -232,7 +232,8 @@ class LiteAgent(FlowTrackable, BaseModel):
         elif isinstance(self.guardrail, str):
             from crewai.tasks.llm_guardrail import LLMGuardrail
 
-            assert isinstance(self.llm, LLM)
+            if not isinstance(self.llm, BaseLLM):
+                raise TypeError(f"Guardrail requires LLM instance of type BaseLLM, got {type(self.llm).__name__}")
 
             self._guardrail = LLMGuardrail(description=self.guardrail, llm=self.llm)
 
