@@ -57,6 +57,7 @@ crew = Crew(
 | **Output JSON** _(optional)_     | `output_json`     | `Optional[Type[BaseModel]]`   | A Pydantic model to structure the JSON output.                                                                       |
 | **Output Pydantic** _(optional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`   | A Pydantic model for task output.                                                                                    |
 | **Callback** _(optional)_        | `callback`        | `Optional[Any]`               | Function/object to be executed after task completion.                                                                |
+| **Guardrail** _(optional)_       | `guardrail`       | `Optional[Union[Callable, str]]` | Function or string description to validate task output before proceeding to next task.                            |
 
 ## Creating Tasks
 
@@ -86,6 +87,7 @@ research_task:
   expected_output: >
     A list with 10 bullet points of the most relevant information about {topic}
   agent: researcher
+  guardrail: ensure each bullet contains a minimum of 100 words
 
 reporting_task:
   description: >
@@ -332,9 +334,13 @@ Task guardrails provide a way to validate and transform task outputs before they
 are passed to the next task. This feature helps ensure data quality and provides
 feedback to agents when their output doesn't meet specific criteria.
 
-### Using Task Guardrails
+**Guardrails can be defined in two ways:**
+1. **Function-based guardrails**: Python functions that implement custom validation logic
+2. **String-based guardrails**: Natural language descriptions that are automatically converted to LLM-powered validation
 
-To add a guardrail to a task, provide a validation function through the `guardrail` parameter:
+### Function-Based Guardrails
+
+To add a function-based guardrail to a task, provide a validation function through the `guardrail` parameter:
 
 ```python Code
 from typing import Tuple, Union, Dict, Any
@@ -372,9 +378,82 @@ blog_task = Task(
    - On success: it returns a tuple of `(bool, Any)`. For example: `(True, validated_result)`
    - On Failure: it returns a tuple of `(bool, str)`. For example: `(False, "Error message explain the failure")`
 
-### LLMGuardrail
+### String-Based Guardrails
 
-The `LLMGuardrail` class offers a robust mechanism for validating task outputs.
+String-based guardrails allow you to describe validation criteria in natural language. When you provide a string instead of a function, CrewAI automatically converts it to an `LLMGuardrail` that uses an AI agent to validate the task output.
+
+#### Using String Guardrails in Python
+
+```python Code
+from crewai import Task
+
+# Simple string-based guardrail
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail="Ensure the blog post is under 200 words and includes practical examples"
+)
+
+# More complex validation criteria
+research_task = Task(
+    description="Research AI trends for 2025",
+    expected_output="A comprehensive research report",
+    agent=research_agent,
+    guardrail="Ensure each finding includes a credible source and is backed by recent data from 2024-2025"
+)
+```
+
+#### Using String Guardrails in YAML
+
+```yaml
+research_task:
+  description: Research the latest AI developments
+  expected_output: A list of 10 bullet points about AI
+  agent: researcher
+  guardrail: ensure each bullet contains a minimum of 100 words
+
+validation_task:
+  description: Validate the research findings
+  expected_output: A validation report
+  agent: validator
+  guardrail: confirm all sources are from reputable publications and published within the last 2 years
+```
+
+#### How String Guardrails Work
+
+When you provide a string guardrail, CrewAI automatically:
+1. Creates an `LLMGuardrail` instance using the string as validation criteria
+2. Uses the task's agent LLM to power the validation
+3. Creates a temporary validation agent that checks the output against your criteria
+4. Returns detailed feedback if validation fails
+
+This approach is ideal when you want to use natural language to describe validation rules without writing custom validation functions.
+
+### LLMGuardrail Class
+
+The `LLMGuardrail` class is the underlying mechanism that powers string-based guardrails. You can also use it directly for more advanced control:
+
+```python Code
+from crewai import Task
+from crewai.tasks.llm_guardrail import LLMGuardrail
+from crewai.llm import LLM
+
+# Create a custom LLMGuardrail with specific LLM
+custom_guardrail = LLMGuardrail(
+    description="Ensure the response contains exactly 5 bullet points with proper citations",
+    llm=LLM(model="gpt-4o-mini")
+)
+
+task = Task(
+    description="Research AI safety measures",
+    expected_output="A detailed analysis with bullet points",
+    agent=research_agent,
+    guardrail=custom_guardrail
+)
+```
+
+**Note**: When you use a string guardrail, CrewAI automatically creates an `LLMGuardrail` instance using your task's agent LLM. Using `LLMGuardrail` directly gives you more control over the validation process and LLM selection.
 
 ### Error Handling Best Practices
 
@@ -798,166 +877,7 @@ While creating and executing tasks, certain validation mechanisms are in place t
 
 These validations help in maintaining the consistency and reliability of task executions within the crewAI framework.
 
-## Task Guardrails
 
-Task guardrails provide a powerful way to validate, transform, or filter task outputs before they are passed to the next task. Guardrails are optional functions that execute before the next task starts, allowing you to ensure that task outputs meet specific requirements or formats.
-
-### Basic Usage
-
-#### Define your own logic to validate
-
-```python Code
-from typing import Tuple, Union
-from crewai import Task
-
-def validate_json_output(result: str) -> Tuple[bool, Union[dict, str]]:
-    """Validate that the output is valid JSON."""
-    try:
-        json_data = json.loads(result)
-        return (True, json_data)
-    except json.JSONDecodeError:
-        return (False, "Output must be valid JSON")
-
-task = Task(
-    description="Generate JSON data",
-    expected_output="Valid JSON object",
-    guardrail=validate_json_output
-)
-```
-
-#### Leverage a no-code approach for validation
-
-```python Code
-from crewai import Task
-
-task = Task(
-    description="Generate JSON data",
-    expected_output="Valid JSON object",
-    guardrail="Ensure the response is a valid JSON object"
-)
-```
-
-#### Using YAML
-
-```yaml
-research_task:
-  ...
-  guardrail: make sure each bullet contains a minimum of 100 words
-  ...
-```
-
-```python Code
-@CrewBase
-class InternalCrew:
-    agents_config = "config/agents.yaml"
-    tasks_config = "config/tasks.yaml"
-
-    ...
-    @task
-    def research_task(self):
-        return Task(config=self.tasks_config["research_task"])  # type: ignore[index]
-    ...
-```
-
-
-#### Use custom models for code generation
-
-```python Code
-from crewai import Task
-from crewai.llm import LLM
-
-task = Task(
-    description="Generate JSON data",
-    expected_output="Valid JSON object",
-    guardrail=LLMGuardrail(
-        description="Ensure the response is a valid JSON object",
-        llm=LLM(model="gpt-4o-mini"),
-    )
-)
-```
-
-### How Guardrails Work
-
-1. **Optional Attribute**: Guardrails are an optional attribute at the task level, allowing you to add validation only where needed.
-2. **Execution Timing**: The guardrail function is executed before the next task starts, ensuring valid data flow between tasks.
-3. **Return Format**: Guardrails must return a tuple of `(success, data)`:
-   - If `success` is `True`, `data` is the validated/transformed result
-   - If `success` is `False`, `data` is the error message
-4. **Result Routing**:
-   - On success (`True`), the result is automatically passed to the next task
-   - On failure (`False`), the error is sent back to the agent to generate a new answer
-
-### Common Use Cases
-
-#### Data Format Validation
-```python Code
-def validate_email_format(result: str) -> Tuple[bool, Union[str, str]]:
-    """Ensure the output contains a valid email address."""
-    import re
-    email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
-    if re.match(email_pattern, result.strip()):
-        return (True, result.strip())
-    return (False, "Output must be a valid email address")
-```
-
-#### Content Filtering
-```python Code
-def filter_sensitive_info(result: str) -> Tuple[bool, Union[str, str]]:
-    """Remove or validate sensitive information."""
-    sensitive_patterns = ['SSN:', 'password:', 'secret:']
-    for pattern in sensitive_patterns:
-        if pattern.lower() in result.lower():
-            return (False, f"Output contains sensitive information ({pattern})")
-    return (True, result)
-```
-
-#### Data Transformation
-```python Code
-def normalize_phone_number(result: str) -> Tuple[bool, Union[str, str]]:
-    """Ensure phone numbers are in a consistent format."""
-    import re
-    digits = re.sub(r'\D', '', result)
-    if len(digits) == 10:
-        formatted = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-        return (True, formatted)
-    return (False, "Output must be a 10-digit phone number")
-```
-
-### Advanced Features
-
-#### Chaining Multiple Validations
-```python Code
-def chain_validations(*validators):
-    """Chain multiple validators together."""
-    def combined_validator(result):
-        for validator in validators:
-            success, data = validator(result)
-            if not success:
-                return (False, data)
-            result = data
-        return (True, result)
-    return combined_validator
-
-# Usage
-task = Task(
-    description="Get user contact info",
-    expected_output="Email and phone",
-    guardrail=chain_validations(
-        validate_email_format,
-        filter_sensitive_info
-    )
-)
-```
-
-#### Custom Retry Logic
-```python Code
-task = Task(
-    description="Generate data",
-    expected_output="Valid data",
-    guardrail=validate_data,
-    max_retries=5  # Override default retry limit
-)
-```
 
 ## Creating Directories when Saving Files
 

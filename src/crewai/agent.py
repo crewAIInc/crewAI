@@ -210,7 +210,6 @@ class Agent(BaseAgent):
                         sources=self.knowledge_sources,
                         embedder=self.embedder,
                         collection_name=self.role,
-                        storage=self.knowledge_storage or None,
                     )
                     self.knowledge.add_sources()
         except (TypeError, ValueError) as e:
@@ -341,7 +340,8 @@ class Agent(BaseAgent):
             self.knowledge_config.model_dump() if self.knowledge_config else {}
         )
 
-        if self.knowledge:
+
+        if self.knowledge or (self.crew and self.crew.knowledge):
             crewai_event_bus.emit(
                 self,
                 event=KnowledgeRetrievalStartedEvent(
@@ -353,25 +353,28 @@ class Agent(BaseAgent):
                     task_prompt
                 )
                 if self.knowledge_search_query:
-                    agent_knowledge_snippets = self.knowledge.query(
-                        [self.knowledge_search_query], **knowledge_config
-                    )
-                    if agent_knowledge_snippets:
-                        self.agent_knowledge_context = extract_knowledge_context(
-                            agent_knowledge_snippets
-                        )
-                        if self.agent_knowledge_context:
-                            task_prompt += self.agent_knowledge_context
-                    if self.crew:
-                        knowledge_snippets = self.crew.query_knowledge(
+                    # Quering agent specific knowledge
+                    if self.knowledge:
+                        agent_knowledge_snippets = self.knowledge.query(
                             [self.knowledge_search_query], **knowledge_config
                         )
-                        if knowledge_snippets:
-                            self.crew_knowledge_context = extract_knowledge_context(
-                                knowledge_snippets
+                        if agent_knowledge_snippets:
+                            self.agent_knowledge_context = extract_knowledge_context(
+                                agent_knowledge_snippets
                             )
-                            if self.crew_knowledge_context:
-                                task_prompt += self.crew_knowledge_context
+                            if self.agent_knowledge_context:
+                                task_prompt += self.agent_knowledge_context
+
+                    # Quering crew specific knowledge
+                    knowledge_snippets = self.crew.query_knowledge(
+                        [self.knowledge_search_query], **knowledge_config
+                    )
+                    if knowledge_snippets:
+                        self.crew_knowledge_context = extract_knowledge_context(
+                            knowledge_snippets
+                        )
+                        if self.crew_knowledge_context:
+                            task_prompt += self.crew_knowledge_context
 
                     crewai_event_bus.emit(
                         self,
