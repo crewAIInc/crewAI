@@ -42,6 +42,14 @@ class ShortTermMemory(Memory):
                     "Mem0 is not installed. Please install it with `pip install mem0ai`."
                 )
             storage = Mem0Storage(type="short_term", crew=crew)
+        elif memory_provider == "weaviate":
+            try:
+                from crewai.memory.storage.weaviate_storage import WeaviateStorage
+            except ImportError:
+                raise ImportError(
+                    "Weaviate is not installed. Please install it with pip install `weaviate-client`."
+                )
+            storage = WeaviateStorage(type="short_term", crew=crew)
         else:
             storage = (
                 storage

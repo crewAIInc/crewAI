@@ -68,6 +68,7 @@ docling = [
 aisuite = [
     "aisuite>=0.1.10",
 ]
+weaviate = ["weaviate-client>=4.15.4"]
 
 [tool.uv]
 dev-dependencies = [
