@@ -125,7 +125,8 @@ class Mem0Storage(Storage):
         params = {
             "query": query, 
             "limit": limit, 
-            "version": "v2"
+            "version": "v2",
+            "output_format": "v1.1"
             }
         
         if user_id := self.config.get("user_id", ""):
@@ -149,7 +150,7 @@ class Mem0Storage(Storage):
         # Discard the filters for now since we create the filters
         # automatically when the crew is created.
         if isinstance(self.memory, Memory):
-            del params["metadata"], params["version"], params["run_id"]
+            del params["metadata"], params["version"], params["run_id"], params['output_format']
             
         results = self.memory.search(**params)
         return [r for r in results["results"] if r["score"] >= score_threshold]

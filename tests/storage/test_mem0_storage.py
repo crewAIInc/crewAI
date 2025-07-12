@@ -225,6 +225,7 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
         run_id="my_run_id",
         includes="include1",
         excludes="exclude1",
+        output_format='v1.1'
     )
 
 
@@ -263,6 +264,7 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
         user_id="test_user",
         version='v2',
         run_id="my_run_id",
+        output_format='v1.1'
     )
 
     assert len(results) == 1
