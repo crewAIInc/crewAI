@@ -52,7 +52,7 @@
       "default_action": "Please provide a detailed description of this image, including all visual elements, context, and any notable details you can observe."
     },
     "analyze_image": {
-      "name": "Analyze image",
+      "name": "Analyze and describe this image",
       "description": "See image to understand its content, you can optionally ask a question about the image",
       "default_action": "Please provide a detailed description of this image, including all visual elements, context, and any notable details you can observe."
     }
