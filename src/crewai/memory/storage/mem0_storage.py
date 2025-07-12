@@ -114,6 +114,7 @@ class Mem0Storage(Storage):
             if isinstance(self.memory, MemoryClient):
                 params["includes"] = self.includes
                 params["excludes"] = self.excludes
+                params["output_format"] = "v1.1"
 
                 if self.memory_type == "short_term":
                     params["run_id"] = self.mem0_run_id
