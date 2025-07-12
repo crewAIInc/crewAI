@@ -116,6 +116,7 @@ class BaseTool(BaseModel, ABC):
             result_as_answer=self.result_as_answer,
             max_usage_count=self.max_usage_count,
             current_usage_count=self.current_usage_count,
+            cache_function=self.cache_function,
         )
 
     @classmethod
