@@ -1,14 +1,10 @@
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from mem0.client.main import MemoryClient
 from mem0.memory.main import Memory
 
-from crewai.agent import Agent
-from crewai.crew import Crew
 from crewai.memory.storage.mem0_storage import Mem0Storage
-from crewai.task import Task
 
 
 # Define the class (if not already defined)
@@ -59,10 +55,11 @@ def mem0_storage_with_mocked_config(mock_mem0_memory):
         }
 
         # Instantiate the class with memory_config
+        # Parameters like run_id, includes, and excludes doesn't matter in Memory OSS
         crew = MockCrew(
             memory_config={
                 "provider": "mem0",
-                "config": {"user_id": "test_user", "local_mem0_config": config},
+                "config": {"user_id": "test_user", "local_mem0_config": config, "run_id": "my_run_id", "includes": "include1","excludes": "exclude1"},
             }
         )
 
@@ -99,6 +96,9 @@ def mem0_storage_with_memory_client_using_config_from_crew(mock_mem0_memory_clie
                     "api_key": "ABCDEFGH",
                     "org_id": "my_org_id",
                     "project_id": "my_project_id",
+                    "run_id": "my_run_id",
+                    "includes": "include1",
+                    "excludes": "exclude1",
                 },
             }
         )
@@ -154,10 +154,36 @@ def test_mem0_storage_with_explict_config(
     assert (
         mem0_storage_with_memory_client_using_explictly_config.config == expected_config
     )
-    assert (
-        mem0_storage_with_memory_client_using_explictly_config.memory_config
-        == expected_config
+
+
+def test_mem0_storage_updates_project_with_custom_categories(mock_mem0_memory_client):
+    mock_mem0_memory_client.update_project = MagicMock()
+
+    new_categories = [
+    {"lifestyle_management_concerns": "Tracks daily routines, habits, hobbies and interests including cooking, time management and work-life balance"},
+    ]
+
+    crew = MockCrew(
+        memory_config={
+            "provider": "mem0",
+            "config": {
+                "user_id": "test_user",
+                "api_key": "ABCDEFGH",
+                "org_id": "my_org_id",
+                "project_id": "my_project_id",
+                "custom_categories": new_categories,
+            },
+        }
     )
+
+    with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client):
+        _ = Mem0Storage(type="short_term", crew=crew)
+
+    mock_mem0_memory_client.update_project.assert_called_once_with(
+        custom_categories=new_categories
+    )
+
+
 
 
 def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
@@ -195,7 +221,11 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
-        output_format="v1.1"
+        version="v2",
+        run_id="my_run_id",
+        includes="include1",
+        excludes="exclude1",
+        output_format='v1.1'
     )
 
 
@@ -232,6 +262,8 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
         agent_id="Test_Agent", 
         metadata={"type": "short_term"},
         user_id="test_user",
+        version='v2',
+        run_id="my_run_id",
         output_format='v1.1'
     )
 
