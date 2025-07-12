@@ -146,12 +146,12 @@ def test_lite_agent_with_tools():
         "What is the population of Tokyo and how many people would that be per square kilometer if Tokyo's area is 2,194 square kilometers?"
     )
 
-    assert (
-        "21 million" in result.raw or "37 million" in result.raw
-    ), "Agent should find Tokyo's population"
-    assert (
-        "per square kilometer" in result.raw
-    ), "Agent should calculate population density"
+    assert "21 million" in result.raw or "37 million" in result.raw, (
+        "Agent should find Tokyo's population"
+    )
+    assert "per square kilometer" in result.raw, (
+        "Agent should calculate population density"
+    )
 
     received_events = []
 
@@ -316,11 +316,17 @@ def test_sets_parent_flow_when_inside_flow():
         flow.kickoff()
         assert captured_agent.parent_flow is flow
 
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_is_called_using_string():
     guardrail_events = defaultdict(list)
-    from crewai.utilities.events import LLMGuardrailCompletedEvent, LLMGuardrailStartedEvent
+    from crewai.utilities.events import (
+        LLMGuardrailCompletedEvent,
+        LLMGuardrailStartedEvent,
+    )
+
     with crewai_event_bus.scoped_handlers():
+
         @crewai_event_bus.on(LLMGuardrailStartedEvent)
         def capture_guardrail_started(source, event):
             guardrail_events["started"].append(event)
@@ -338,17 +344,26 @@ def test_guardrail_is_called_using_string():
 
         result = agent.kickoff(messages="Top 10 best players in the world?")
 
-        assert len(guardrail_events['started']) == 2
-        assert len(guardrail_events['completed']) == 2
-        assert not guardrail_events['completed'][0].success
-        assert guardrail_events['completed'][1].success
-        assert "Here are the top 10 best soccer players in the world, focusing exclusively on Brazilian players" in result.raw
+        assert len(guardrail_events["started"]) == 2
+        assert len(guardrail_events["completed"]) == 2
+        assert not guardrail_events["completed"][0].success
+        assert guardrail_events["completed"][1].success
+        assert (
+            "Here are the top 10 best soccer players in the world, focusing exclusively on Brazilian players"
+            in result.raw
+        )
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_is_called_using_callable():
     guardrail_events = defaultdict(list)
-    from crewai.utilities.events import LLMGuardrailCompletedEvent, LLMGuardrailStartedEvent
+    from crewai.utilities.events import (
+        LLMGuardrailCompletedEvent,
+        LLMGuardrailStartedEvent,
+    )
+
     with crewai_event_bus.scoped_handlers():
+
         @crewai_event_bus.on(LLMGuardrailStartedEvent)
         def capture_guardrail_started(source, event):
             guardrail_events["started"].append(event)
@@ -366,16 +381,22 @@ def test_guardrail_is_called_using_callable():
 
         result = agent.kickoff(messages="Top 1 best players in the world?")
 
-        assert len(guardrail_events['started']) == 1
-        assert len(guardrail_events['completed']) == 1
-        assert guardrail_events['completed'][0].success
+        assert len(guardrail_events["started"]) == 1
+        assert len(guardrail_events["completed"]) == 1
+        assert guardrail_events["completed"][0].success
         assert "Pelé - Santos, 1958" in result.raw
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_guardrail_reached_attempt_limit():
     guardrail_events = defaultdict(list)
-    from crewai.utilities.events import LLMGuardrailCompletedEvent, LLMGuardrailStartedEvent
+    from crewai.utilities.events import (
+        LLMGuardrailCompletedEvent,
+        LLMGuardrailStartedEvent,
+    )
+
     with crewai_event_bus.scoped_handlers():
+
         @crewai_event_bus.on(LLMGuardrailStartedEvent)
         def capture_guardrail_started(source, event):
             guardrail_events["started"].append(event)
@@ -388,18 +409,23 @@ def test_guardrail_reached_attempt_limit():
             role="Sports Analyst",
             goal="Gather information about the best soccer players",
             backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
-            guardrail=lambda output: (False, "You are not allowed to include Brazilian players"),
+            guardrail=lambda output: (
+                False,
+                "You are not allowed to include Brazilian players",
+            ),
             guardrail_max_retries=2,
         )
 
-        with pytest.raises(Exception, match="Agent's guardrail failed validation after 2 retries"):
+        with pytest.raises(
+            Exception, match="Agent's guardrail failed validation after 2 retries"
+        ):
             agent.kickoff(messages="Top 10 best players in the world?")
 
-        assert len(guardrail_events['started']) == 3 # 2 retries + 1 initial call
-        assert len(guardrail_events['completed']) == 3 # 2 retries + 1 initial call
-        assert not guardrail_events['completed'][0].success
-        assert not guardrail_events['completed'][1].success
-        assert not guardrail_events['completed'][2].success
+        assert len(guardrail_events["started"]) == 3  # 2 retries + 1 initial call
+        assert len(guardrail_events["completed"]) == 3  # 2 retries + 1 initial call
+        assert not guardrail_events["completed"][0].success
+        assert not guardrail_events["completed"][1].success
+        assert not guardrail_events["completed"][2].success
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -412,7 +438,10 @@ def test_agent_output_when_guardrail_returns_base_model():
         role="Sports Analyst",
         goal="Gather information about the best soccer players",
         backstory="""You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.""",
-        guardrail=lambda output: (True, Player(name="Lionel Messi", country="Argentina")),
+        guardrail=lambda output: (
+            True,
+            Player(name="Lionel Messi", country="Argentina"),
+        ),
     )
 
     result = agent.kickoff(messages="Top 10 best players in the world?")
@@ -424,22 +453,30 @@ def test_agent_output_when_guardrail_returns_base_model():
 def test_lite_agent_with_custom_llm_and_guardrails():
     """Test that CustomLLM (inheriting from BaseLLM) works with guardrails."""
     from crewai.llms.base_llm import BaseLLM
-    
+
     class CustomLLM(BaseLLM):
         def __init__(self, response: str = "Custom response"):
             super().__init__(model="custom-model")
             self.response = response
             self.call_count = 0
 
-        def call(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None) -> str:
+        def call(
+            self,
+            messages,
+            tools=None,
+            callbacks=None,
+            available_functions=None,
+            from_task=None,
+            from_agent=None,
+        ) -> str:
             self.call_count += 1
-            
+
             if "valid" in str(messages) and "feedback" in str(messages):
                 return '{"valid": true, "feedback": null}'
-            
+
             if "Thought:" in str(messages):
                 return f"Thought: I will analyze soccer players\nFinal Answer: {self.response}"
-            
+
             return self.response
 
         def supports_function_calling(self) -> bool:
@@ -452,33 +489,33 @@ def test_lite_agent_with_custom_llm_and_guardrails():
             return 4096
 
     custom_llm = CustomLLM(response="Brazilian soccer players are the best!")
-    
+
     agent = Agent(
         role="Sports Analyst",
         goal="Analyze soccer players",
         backstory="You analyze soccer players and their performance.",
         llm=custom_llm,
-        guardrail="Only include Brazilian players"
+        guardrail="Only include Brazilian players",
     )
-    
+
     result = agent.kickoff("Tell me about the best soccer players")
-    
+
     assert custom_llm.call_count > 0
     assert "Brazilian" in result.raw
-    
+
     custom_llm2 = CustomLLM(response="Original response")
-    
+
     def test_guardrail(output):
         return (True, "Modified by guardrail")
-    
+
     agent2 = Agent(
         role="Test Agent",
         goal="Test goal",
         backstory="Test backstory",
         llm=custom_llm2,
-        guardrail=test_guardrail
+        guardrail=test_guardrail,
     )
-    
+
     result2 = agent2.kickoff("Test message")
     assert result2.raw == "Modified by guardrail"
 
@@ -486,15 +523,15 @@ def test_lite_agent_with_custom_llm_and_guardrails():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_lite_agent_with_invalid_llm():
     """Test that LiteAgent raises proper error when create_llm returns None."""
-    from crewai.lite_agent import LiteAgent
     from unittest.mock import patch
-    
-    with patch('crewai.lite_agent.create_llm', return_value=None):
+
+    with patch("crewai.lite_agent.create_llm", return_value=None):
+        agent = Agent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm="invalid-model",
+        )
         with pytest.raises(ValueError) as exc_info:
-            LiteAgent(
-                role="Test Agent",
-                goal="Test goal", 
-                backstory="Test backstory",
-                llm="invalid-model"
-            )
+            agent.kickoff("Test message")
         assert "Expected LLM instance of type BaseLLM" in str(exc_info.value)
