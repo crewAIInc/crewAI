@@ -3,9 +3,9 @@ import pytest
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.crew import Crew
-from crewai.evaluation.agent_evaluator import AgentEvaluator
-from crewai.evaluation.base_evaluator import AgentEvaluationResult
-from crewai.evaluation import (
+from crewai.experimental.evaluation.agent_evaluator import AgentEvaluator
+from crewai.experimental.evaluation.base_evaluator import AgentEvaluationResult
+from crewai.experimental.evaluation import (
     GoalAlignmentEvaluator,
     SemanticQualityEvaluator,
     ToolSelectionEvaluator,
@@ -14,7 +14,7 @@ from crewai.evaluation import (
     ReasoningEfficiencyEvaluator
 )
 
-from crewai.evaluation import create_default_evaluator
+from crewai.experimental.evaluation import create_default_evaluator
 class TestAgentEvaluator:
     @pytest.fixture
     def mock_crew(self):

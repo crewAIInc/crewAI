@@ -1,7 +1,7 @@
 from unittest.mock import patch, MagicMock
 
-from crewai.evaluation.base_evaluator import EvaluationScore
-from crewai.evaluation.metrics.semantic_quality_metrics import SemanticQualityEvaluator
+from crewai.experimental.evaluation.base_evaluator import EvaluationScore
+from crewai.experimental.evaluation.metrics.semantic_quality_metrics import SemanticQualityEvaluator
 from tests.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
 from crewai.utilities.llm_utils import LLM
 

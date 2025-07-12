@@ -1337,7 +1337,7 @@ class Crew(FlowTrackable, BaseModel):
             evaluator = CrewEvaluator(test_crew, llm_instance)
 
             if include_agent_eval:
-                from crewai.evaluation import create_default_evaluator
+                from crewai.experimental.evaluation import create_default_evaluator
                 agent_evaluator = create_default_evaluator(crew=test_crew)
 
             for i in range(1, n_iterations + 1):
