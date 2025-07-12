@@ -92,13 +92,51 @@ class EmbeddingConfigurator:
         )
 
     @staticmethod
+    def _validate_url(url):
+        """Validate that a URL is properly formatted and uses HTTP/HTTPS scheme."""
+        if not url:
+            return False
+        
+        from urllib.parse import urlparse
+        
+        try:
+            result = urlparse(url)
+            return all([
+                result.scheme in ('http', 'https'),
+                result.netloc
+            ])
+        except ValueError:
+            return False
+
+    @staticmethod
     def _configure_ollama(config, model_name):
+        """Configure Ollama embedding function.
+        
+        Supports configuration via:
+        1. config.url - Direct URL to Ollama embeddings endpoint
+        2. config.api_base - Base URL for Ollama API 
+        3. API_BASE environment variable - Base URL from environment
+        4. Default: http://localhost:11434/api/embeddings
+        
+        Note: When using api_base or API_BASE, ensure the URL includes the full
+        embeddings endpoint path (e.g., http://localhost:11434/api/embeddings)
+        """
         from chromadb.utils.embedding_functions.ollama_embedding_function import (
             OllamaEmbeddingFunction,
         )
 
+        url = (
+            config.get("url") 
+            or config.get("api_base") 
+            or os.getenv("API_BASE")
+            or "http://localhost:11434/api/embeddings"
+        )
+        
+        if not EmbeddingConfigurator._validate_url(url):
+            raise ValueError(f"Invalid Ollama API URL: {url}")
+
         return OllamaEmbeddingFunction(
-            url=config.get("url", "http://localhost:11434/api/embeddings"),
+            url=url,
             model_name=model_name,
         )
 
