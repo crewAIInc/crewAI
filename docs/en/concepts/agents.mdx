@@ -526,6 +526,103 @@ agent = Agent(
 The context window management feature works automatically in the background. You don't need to call any special functions - just set `respect_context_window` to your preferred behavior and CrewAI handles the rest!
 </Note>
 
+## Direct Agent Interaction with `kickoff()`
+
+Agents can be used directly without going through a task or crew workflow using the `kickoff()` method. This provides a simpler way to interact with an agent when you don't need the full crew orchestration capabilities.
+
+### How `kickoff()` Works
+
+The `kickoff()` method allows you to send messages directly to an agent and get a response, similar to how you would interact with an LLM but with all the agent's capabilities (tools, reasoning, etc.).
+
+```python Code
+from crewai import Agent
+from crewai_tools import SerperDevTool
+
+# Create an agent
+researcher = Agent(
+    role="AI Technology Researcher",
+    goal="Research the latest AI developments",
+    tools=[SerperDevTool()],
+    verbose=True
+)
+
+# Use kickoff() to interact directly with the agent
+result = researcher.kickoff("What are the latest developments in language models?")
+
+# Access the raw response
+print(result.raw)
+```
+
+### Parameters and Return Values
+
+| Parameter         | Type                                | Description                                                               |
+| :---------------- | :---------------------------------- | :------------------------------------------------------------------------ |
+| `messages`        | `Union[str, List[Dict[str, str]]]`  | Either a string query or a list of message dictionaries with role/content |
+| `response_format` | `Optional[Type[Any]]`               | Optional Pydantic model for structured output                             |
+
+The method returns a `LiteAgentOutput` object with the following properties:
+
+- `raw`: String containing the raw output text
+- `pydantic`: Parsed Pydantic model (if a `response_format` was provided)
+- `agent_role`: Role of the agent that produced the output
+- `usage_metrics`: Token usage metrics for the execution
+
+### Structured Output
+
+You can get structured output by providing a Pydantic model as the `response_format`:
+
+```python Code
+from pydantic import BaseModel
+from typing import List
+
+class ResearchFindings(BaseModel):
+    main_points: List[str]
+    key_technologies: List[str]
+    future_predictions: str
+
+# Get structured output
+result = researcher.kickoff(
+    "Summarize the latest developments in AI for 2025",
+    response_format=ResearchFindings
+)
+
+# Access structured data
+print(result.pydantic.main_points)
+print(result.pydantic.future_predictions)
+```
+
+### Multiple Messages
+
+You can also provide a conversation history as a list of message dictionaries:
+
+```python Code
+messages = [
+    {"role": "user", "content": "I need information about large language models"},
+    {"role": "assistant", "content": "I'd be happy to help with that! What specifically would you like to know?"},
+    {"role": "user", "content": "What are the latest developments in 2025?"}
+]
+
+result = researcher.kickoff(messages)
+```
+
+### Async Support
+
+An asynchronous version is available via `kickoff_async()` with the same parameters:
+
+```python Code
+import asyncio
+
+async def main():
+    result = await researcher.kickoff_async("What are the latest developments in AI?")
+    print(result.raw)
+
+asyncio.run(main())
+```
+
+<Note>
+The `kickoff()` method uses a `LiteAgent` internally, which provides a simpler execution flow while preserving all of the agent's configuration (role, goal, backstory, tools, etc.).
+</Note>
+
 ## Important Considerations and Best Practices
 
 ### Security and Code Execution

@@ -18,6 +18,11 @@ from typing import (
     cast,
 )
 
+from opentelemetry import baggage
+from opentelemetry.context import attach, detach
+
+from crewai.utilities.crew.models import CrewContext
+
 from pydantic import (
     UUID4,
     BaseModel,
@@ -616,6 +621,11 @@ class Crew(FlowTrackable, BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
+        ctx = baggage.set_baggage(
+            "crew_context", CrewContext(id=str(self.id), key=self.key)
+        )
+        token = attach(ctx)
+
         try:
             for before_callback in self.before_kickoff_callbacks:
                 if inputs is None:
@@ -676,6 +686,8 @@ class Crew(FlowTrackable, BaseModel):
                 CrewKickoffFailedEvent(error=str(e), crew_name=self.name or "crew"),
             )
             raise
+        finally:
+            detach(token)
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
         """Executes the Crew's workflow for each input in the list and aggregates results."""
@@ -1301,6 +1313,7 @@ class Crew(FlowTrackable, BaseModel):
         n_iterations: int,
         eval_llm: Union[str, InstanceOf[BaseLLM]],
         inputs: Optional[Dict[str, Any]] = None,
+        include_agent_eval: Optional[bool] = False
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         try:
@@ -1319,13 +1332,29 @@ class Crew(FlowTrackable, BaseModel):
                 ),
             )
             test_crew = self.copy()
+
+            # TODO: Refator to use a single Evaluator Manage class
             evaluator = CrewEvaluator(test_crew, llm_instance)
+
+            if include_agent_eval:
+                from crewai.evaluation import create_default_evaluator
+                agent_evaluator = create_default_evaluator(crew=test_crew)
 
             for i in range(1, n_iterations + 1):
                 evaluator.set_iteration(i)
+
+                if include_agent_eval:
+                    agent_evaluator.set_iteration(i)
+
                 test_crew.kickoff(inputs=inputs)
 
+                # TODO: Refactor to use ListenerEvents instead of trigger each iteration manually
+                if include_agent_eval:
+                    agent_evaluator.evaluate_current_iteration()
+
             evaluator.print_crew_evaluation_result()
+            if include_agent_eval:
+                agent_evaluator.get_agent_evaluation(include_evaluation_feedback=True)
 
             crewai_event_bus.emit(
                 self,

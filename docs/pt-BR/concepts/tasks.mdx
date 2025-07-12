@@ -57,6 +57,7 @@ crew = Crew(
 | **Saída JSON** _(opcional)_      | `output_json`     | `Optional[Type[BaseModel]]`  | Um modelo Pydantic para estruturar a saída em JSON.                                                                |
 | **Output Pydantic** _(opcional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`  | Um modelo Pydantic para a saída da tarefa.                                                                         |
 | **Callback** _(opcional)_        | `callback`        | `Optional[Any]`              | Função/objeto a ser executado após a conclusão da tarefa.                                                          |
+| **Guardrail** _(opcional)_       | `guardrail`       | `Optional[Union[Callable, str]]` | Função ou descrição em string para validar a saída da tarefa antes de prosseguir para a próxima tarefa.        |
 
 ## Criando Tarefas
 
@@ -86,6 +87,7 @@ research_task:
   expected_output: >
     Uma lista com 10 tópicos em bullet points das informações mais relevantes sobre {topic}
   agent: researcher
+  guardrail: garanta que cada bullet point contenha no mínimo 100 palavras
 
 reporting_task:
   description: >
@@ -330,9 +332,13 @@ analysis_task = Task(
 
 Guardrails (trilhas de proteção) de tarefas fornecem uma maneira de validar e transformar as saídas das tarefas antes que elas sejam passadas para a próxima tarefa. Esse recurso assegura a qualidade dos dados e oferece feedback aos agentes quando sua saída não atende a critérios específicos.
 
-### Usando Guardrails em Tarefas
+**Guardrails podem ser definidos de duas maneiras:**
+1. **Guardrails baseados em função**: Funções Python que implementam lógica de validação customizada
+2. **Guardrails baseados em string**: Descrições em linguagem natural que são automaticamente convertidas em validação baseada em LLM
 
-Para adicionar um guardrail a uma tarefa, forneça uma função de validação por meio do parâmetro `guardrail`:
+### Guardrails Baseados em Função
+
+Para adicionar um guardrail baseado em função a uma tarefa, forneça uma função de validação por meio do parâmetro `guardrail`:
 
 ```python Code
 from typing import Tuple, Union, Dict, Any
@@ -370,9 +376,82 @@ blog_task = Task(
    - Em caso de sucesso: retorna uma tupla `(True, resultado_validado)`
    - Em caso de falha: retorna uma tupla `(False, "mensagem de erro explicando a falha")`
 
-### LLMGuardrail
+### Guardrails Baseados em String
 
-A classe `LLMGuardrail` oferece um mecanismo robusto para validação das saídas das tarefas.
+Guardrails baseados em string permitem que você descreva critérios de validação em linguagem natural. Quando você fornece uma string em vez de uma função, o CrewAI automaticamente a converte em um `LLMGuardrail` que usa um agente de IA para validar a saída da tarefa.
+
+#### Usando Guardrails de String em Python
+
+```python Code
+from crewai import Task
+
+# Guardrail simples baseado em string
+blog_task = Task(
+    description="Escreva um post de blog sobre IA",
+    expected_output="Um post de blog com menos de 200 palavras",
+    agent=blog_agent,
+    guardrail="Garanta que o post do blog tenha menos de 200 palavras e inclua exemplos práticos"
+)
+
+# Critérios de validação mais complexos
+research_task = Task(
+    description="Pesquise tendências de IA para 2025",
+    expected_output="Um relatório abrangente de pesquisa",
+    agent=research_agent,
+    guardrail="Garanta que cada descoberta inclua uma fonte confiável e seja respaldada por dados recentes de 2024-2025"
+)
+```
+
+#### Usando Guardrails de String em YAML
+
+```yaml
+research_task:
+  description: Pesquise os últimos desenvolvimentos em IA
+  expected_output: Uma lista de 10 bullet points sobre IA
+  agent: researcher
+  guardrail: garanta que cada bullet point contenha no mínimo 100 palavras
+
+validation_task:
+  description: Valide os achados da pesquisa
+  expected_output: Um relatório de validação
+  agent: validator
+  guardrail: confirme que todas as fontes são de publicações respeitáveis e publicadas nos últimos 2 anos
+```
+
+#### Como Funcionam os Guardrails de String
+
+Quando você fornece um guardrail de string, o CrewAI automaticamente:
+1. Cria uma instância `LLMGuardrail` usando a string como critério de validação
+2. Usa o LLM do agente da tarefa para alimentar a validação
+3. Cria um agente temporário de validação que verifica a saída contra seus critérios
+4. Retorna feedback detalhado se a validação falhar
+
+Esta abordagem é ideal quando você quer usar linguagem natural para descrever regras de validação sem escrever funções de validação customizadas.
+
+### Classe LLMGuardrail
+
+A classe `LLMGuardrail` é o mecanismo subjacente que alimenta os guardrails baseados em string. Você também pode usá-la diretamente para maior controle avançado:
+
+```python Code
+from crewai import Task
+from crewai.tasks.llm_guardrail import LLMGuardrail
+from crewai.llm import LLM
+
+# Crie um LLMGuardrail customizado com LLM específico
+custom_guardrail = LLMGuardrail(
+    description="Garanta que a resposta contenha exatamente 5 bullet points com citações adequadas",
+    llm=LLM(model="gpt-4o-mini")
+)
+
+task = Task(
+    description="Pesquise medidas de segurança em IA",
+    expected_output="Uma análise detalhada com bullet points",
+    agent=research_agent,
+    guardrail=custom_guardrail
+)
+```
+
+**Nota**: Quando você usa um guardrail de string, o CrewAI automaticamente cria uma instância `LLMGuardrail` usando o LLM do agente da sua tarefa. Usar `LLMGuardrail` diretamente lhe dá mais controle sobre o processo de validação e seleção de LLM.
 
 ### Melhores Práticas de Tratamento de Erros
 

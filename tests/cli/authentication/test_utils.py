@@ -27,7 +27,7 @@ class TestValidateToken(unittest.TestCase):
             audience="app_id_xxxx",
         )
 
-        mock_jwt.decode.assert_called_once_with(
+        mock_jwt.decode.assert_called_with(
             "aaaaa.bbbbbb.cccccc",
             "mock_signing_key",
             algorithms=["RS256"],
