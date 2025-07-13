@@ -1135,7 +1135,6 @@ def test_output_file_validation():
 
 def test_create_directory_true():
     """Test that directories are created when create_directory=True."""
-    import os
     from pathlib import Path
     
     output_path = "test_create_dir/output.txt"
