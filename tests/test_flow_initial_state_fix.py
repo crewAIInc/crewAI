@@ -1,6 +1,5 @@
 """Test Flow initial_state BaseModel dict coercion fix for issue #3147"""
 
-import pytest
 from pydantic import BaseModel
 
 from crewai.flow.flow import Flow
