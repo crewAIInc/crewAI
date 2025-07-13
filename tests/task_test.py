@@ -1133,6 +1133,120 @@ def test_output_file_validation():
         )
 
 
+def test_create_directory_true():
+    """Test that directories are created when create_directory=True."""
+    import os
+    from pathlib import Path
+    
+    output_path = "test_create_dir/output.txt"
+    
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file=output_path,
+        create_directory=True,
+    )
+    
+    resolved_path = Path(output_path).expanduser().resolve()
+    resolved_dir = resolved_path.parent
+    
+    if resolved_path.exists():
+        resolved_path.unlink()
+    if resolved_dir.exists():
+        import shutil
+        shutil.rmtree(resolved_dir)
+    
+    assert not resolved_dir.exists()
+    
+    task._save_file("test content")
+    
+    assert resolved_dir.exists()
+    assert resolved_path.exists()
+    
+    if resolved_path.exists():
+        resolved_path.unlink()
+    if resolved_dir.exists():
+        import shutil
+        shutil.rmtree(resolved_dir)
+
+
+def test_create_directory_false():
+    """Test that directories are not created when create_directory=False."""
+    from pathlib import Path
+    
+    output_path = "nonexistent_test_dir/output.txt"
+    
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file=output_path,
+        create_directory=False,
+    )
+    
+    resolved_path = Path(output_path).expanduser().resolve()
+    resolved_dir = resolved_path.parent
+    
+    if resolved_dir.exists():
+        import shutil
+        shutil.rmtree(resolved_dir)
+    
+    assert not resolved_dir.exists()
+    
+    with pytest.raises(RuntimeError, match="Directory .* does not exist and create_directory is False"):
+        task._save_file("test content")
+
+
+def test_create_directory_default():
+    """Test that create_directory defaults to True for backward compatibility."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file="output.txt",
+    )
+    
+    assert task.create_directory is True
+
+
+def test_create_directory_with_existing_directory():
+    """Test that create_directory=False works when directory already exists."""
+    from pathlib import Path
+    
+    output_path = "existing_test_dir/output.txt"
+    
+    resolved_path = Path(output_path).expanduser().resolve()
+    resolved_dir = resolved_path.parent
+    resolved_dir.mkdir(parents=True, exist_ok=True)
+    
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file=output_path,
+        create_directory=False,
+    )
+    
+    task._save_file("test content")
+    assert resolved_path.exists()
+    
+    if resolved_path.exists():
+        resolved_path.unlink()
+    if resolved_dir.exists():
+        import shutil
+        shutil.rmtree(resolved_dir)
+
+
+def test_github_issue_3149_reproduction():
+    """Test that reproduces the exact issue from GitHub issue #3149."""
+    task = Task(
+        description="Test task for issue reproduction",
+        expected_output="Test output",
+        output_file="test_output.txt",
+        create_directory=True,
+    )
+    
+    assert task.create_directory is True
+    assert task.output_file == "test_output.txt"
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_execution_times():
     researcher = Agent(
