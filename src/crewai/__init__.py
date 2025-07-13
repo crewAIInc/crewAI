@@ -11,6 +11,7 @@ from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.chunk_based_task import ChunkBasedTask
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
@@ -57,6 +58,7 @@ _track_install_async()
 __version__ = "0.141.0"
 __all__ = [
     "Agent",
+    "ChunkBasedTask",
     "Crew",
     "CrewOutput",
     "Process",
