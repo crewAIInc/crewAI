@@ -1,4 +1,3 @@
-import pytest
 import tempfile
 from pathlib import Path
 
@@ -42,7 +41,7 @@ class TestChunkBasedTaskIntegration:
                 agent=agent
             )
             
-            crew = Crew(
+            Crew(
                 agents=[agent],
                 tasks=[task],
                 memory=True

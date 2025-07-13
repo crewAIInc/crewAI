@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from crewai.tasks.chunk_based_task import ChunkBasedTask
-from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
 
 
@@ -110,7 +109,7 @@ class TestChunkBasedTask:
             mock_agent.role = "test_agent"
             mock_agent.crew = None
             
-            result = task._execute_core(mock_agent, None, None)
+            task._execute_core(mock_agent, None, None)
             
             assert len(task.chunk_results) > 1
             assert mock_execute.call_count > len(task.chunk_results)

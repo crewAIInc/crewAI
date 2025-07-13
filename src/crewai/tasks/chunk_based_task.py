@@ -1,6 +1,6 @@
 import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, List, Optional, Union
 from pydantic import Field, field_validator
 
 from crewai.task import Task
@@ -61,7 +61,7 @@ class ChunkBasedTask(Task):
         """Create a task description for processing a single chunk."""
         chunk_context = f"Processing chunk {chunk_index + 1} of {total_chunks}"
         if self.chunk_results:
-            chunk_context += f"\n\nPrevious chunk insights from memory will be available."
+            chunk_context += "\n\nPrevious chunk insights from memory will be available."
         
         return f"{chunk_context}\n\n{self.description}\n\nChunk content:\n{chunk}"
 
