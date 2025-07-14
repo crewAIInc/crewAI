@@ -6,7 +6,7 @@ from crewai.experimental.evaluation.metrics.tools_metrics import (
     ToolInvocationEvaluator
 )
 from crewai.utilities.llm_utils import LLM
-from tests.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
+from tests.experimental.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
 
 class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
     def test_no_tools_available(self, mock_task, mock_agent):

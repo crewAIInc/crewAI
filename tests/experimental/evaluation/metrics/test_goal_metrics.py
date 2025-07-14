@@ -1,5 +1,5 @@
 from unittest.mock import patch, MagicMock
-from tests.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
+from tests.experimental.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
 
 from crewai.experimental.evaluation.base_evaluator import EvaluationScore
 from crewai.experimental.evaluation.metrics.goal_metrics import GoalAlignmentEvaluator

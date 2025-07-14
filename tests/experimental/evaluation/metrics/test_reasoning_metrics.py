@@ -6,7 +6,7 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.experimental.evaluation.metrics.reasoning_metrics import (
     ReasoningEfficiencyEvaluator,
 )
-from tests.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
+from tests.experimental.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
 from crewai.utilities.llm_utils import LLM
 from crewai.experimental.evaluation.base_evaluator import EvaluationScore
 
