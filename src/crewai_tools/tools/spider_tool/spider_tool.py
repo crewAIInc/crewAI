@@ -2,7 +2,7 @@ import logging
 from typing import Any, Dict, Literal, Optional, Type, List
 from urllib.parse import unquote, urlparse
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__file__)
@@ -54,6 +54,9 @@ class SpiderTool(BaseTool):
     log_failures: bool = True
     config: SpiderToolConfig = SpiderToolConfig()
     package_dependencies: List[str] = ["spider-client"]
+    env_vars: List[EnvVar] = [
+        EnvVar(name="SPIDER_API_KEY", description="API key for Spider.cloud", required=True),
+    ]
 
     def __init__(
         self,

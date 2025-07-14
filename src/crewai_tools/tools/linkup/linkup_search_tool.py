@@ -1,6 +1,7 @@
+import os
 from typing import Any, List
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 
 try:
     from linkup import LinkupClient
@@ -24,8 +25,11 @@ class LinkupSearchTool(BaseTool):
     )
     _client: LinkupClient = PrivateAttr()  # type: ignore
     package_dependencies: List[str] = ["linkup-sdk"]
+    env_vars: List[EnvVar] = [
+        EnvVar(name="LINKUP_API_KEY", description="API key for Linkup", required=True),
+    ]
 
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str | None = None):
         """
         Initialize the tool with an API key.
         """
@@ -48,7 +52,7 @@ class LinkupSearchTool(BaseTool):
                     "The 'linkup-sdk' package is required to use the LinkupSearchTool. "
                     "Please install it with: uv add linkup-sdk"
                 )
-        self._client = LinkupClient(api_key=api_key)
+        self._client = LinkupClient(api_key=api_key or os.getenv("LINKUP_API_KEY"))
 
     def _run(
         self, query: str, depth: str = "standard", output_type: str = "searchResults"

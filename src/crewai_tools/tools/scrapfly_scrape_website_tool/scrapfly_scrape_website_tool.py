@@ -1,7 +1,8 @@
+import os
 import logging
 from typing import Any, Dict, Literal, Optional, Type, List
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__file__)
@@ -29,6 +30,9 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
     api_key: str = None
     scrapfly: Optional[Any] = None
     package_dependencies: List[str] = ["scrapfly-sdk"]
+    env_vars: List[EnvVar] = [
+        EnvVar(name="SCRAPFLY_API_KEY", description="API key for Scrapfly", required=True),
+    ]
 
     def __init__(self, api_key: str):
         super().__init__()
@@ -47,7 +51,7 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
                 raise ImportError(
                     "`scrapfly-sdk` package not found, please run `uv add scrapfly-sdk`"
                 )
-        self.scrapfly = ScrapflyClient(key=api_key)
+        self.scrapfly = ScrapflyClient(key=api_key or os.getenv("SCRAPFLY_API_KEY"))
 
     def _run(
         self,

@@ -2,7 +2,7 @@ import os
 import secrets
 from typing import Any, Dict, List, Optional, Type
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
@@ -33,6 +33,9 @@ class AIMindTool(BaseTool):
     datasources: Optional[List[Dict[str, Any]]] = None
     mind_name: Optional[str] = None
     package_dependencies: List[str] = ["minds-sdk"]
+    env_vars: List[EnvVar] = [
+        EnvVar(name="MINDS_API_KEY", description="API key for AI-Minds", required=True),
+    ]
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
