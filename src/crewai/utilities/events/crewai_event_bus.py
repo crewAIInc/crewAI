@@ -1,6 +1,6 @@
 import threading
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Type, TypeVar, cast
+from typing import Any, Callable, Type, TypeVar, cast
 
 from blinker import Signal
 
@@ -18,6 +18,7 @@ class CrewAIEventsBus:
 
     _instance = None
     _lock = threading.Lock()
+    _thread_local: threading.local = threading.local()
 
     def __new__(cls):
         if cls._instance is None:
@@ -30,7 +31,18 @@ class CrewAIEventsBus:
     def _initialize(self) -> None:
         """Initialize the event bus internal state"""
         self._signal = Signal("crewai_event_bus")
-        self._handlers: Dict[Type[BaseEvent], List[Callable]] = {}
+
+    @property
+    def _handlers(self) -> dict[type[BaseEvent], list[Callable]]:
+        if not hasattr(CrewAIEventsBus._thread_local, 'handlers'):
+            CrewAIEventsBus._thread_local.handlers = {}
+        return CrewAIEventsBus._thread_local.handlers
+
+    @_handlers.setter
+    def _handlers(self, value: dict[type[BaseEvent], list[Callable]]) -> None:
+        if not hasattr(CrewAIEventsBus._thread_local, 'handlers'):
+            CrewAIEventsBus._thread_local.handlers = {}
+        CrewAIEventsBus._thread_local.handlers = value
 
     def on(
         self, event_type: Type[EventT]
