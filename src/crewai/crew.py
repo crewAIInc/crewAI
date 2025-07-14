@@ -1313,6 +1313,7 @@ class Crew(FlowTrackable, BaseModel):
         n_iterations: int,
         eval_llm: Union[str, InstanceOf[BaseLLM]],
         inputs: Optional[Dict[str, Any]] = None,
+        include_agent_eval: Optional[bool] = False
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         try:
@@ -1331,13 +1332,29 @@ class Crew(FlowTrackable, BaseModel):
                 ),
             )
             test_crew = self.copy()
+
+            # TODO: Refator to use a single Evaluator Manage class
             evaluator = CrewEvaluator(test_crew, llm_instance)
+
+            if include_agent_eval:
+                from crewai.experimental.evaluation import create_default_evaluator
+                agent_evaluator = create_default_evaluator(crew=test_crew)
 
             for i in range(1, n_iterations + 1):
                 evaluator.set_iteration(i)
+
+                if include_agent_eval:
+                    agent_evaluator.set_iteration(i)
+
                 test_crew.kickoff(inputs=inputs)
 
+                # TODO: Refactor to use ListenerEvents instead of trigger each iteration manually
+                if include_agent_eval:
+                    agent_evaluator.evaluate_current_iteration()
+
             evaluator.print_crew_evaluation_result()
+            if include_agent_eval:
+                agent_evaluator.get_agent_evaluation(include_evaluation_feedback=True)
 
             crewai_event_bus.emit(
                 self,
