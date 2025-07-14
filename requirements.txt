@@ -1,0 +1,2 @@
+crewai
+crewai_tools
