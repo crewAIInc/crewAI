@@ -42,7 +42,7 @@ class TestAgentEvaluator:
         agent_evaluator = AgentEvaluator()
 
         agent_evaluator.set_iteration(3)
-        assert agent_evaluator.iteration == 3
+        assert agent_evaluator._execution_state.iteration == 3
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_evaluate_current_iteration(self, mock_crew):
