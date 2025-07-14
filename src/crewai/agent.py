@@ -187,8 +187,8 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             self._setup_agent_executor()
 
-        if self.allow_code_execution:
-            self._validate_docker_installation()
+        if self.allow_code_execution and self.code_execution_mode == "safe":
+            self._validate_docker_installation()  # Docker is required if the code is executed in safe mode
 
         return self
 
