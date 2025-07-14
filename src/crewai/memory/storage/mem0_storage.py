@@ -93,7 +93,13 @@ class Mem0Storage(Storage):
         if params:
             if isinstance(self.memory, MemoryClient):
                 params["output_format"] = "v1.1"
-            self.memory.add(value, **params)
+            
+            if isinstance(value, str):
+                messages = [{"role": "assistant", "content": value}]
+            else:
+                messages = value
+            
+            self.memory.add(messages, **params)
 
     def search(
         self,

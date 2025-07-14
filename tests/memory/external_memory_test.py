@@ -329,3 +329,29 @@ def test_external_memory_save_events(custom_storage, external_memory_with_mocked
         'agent_role': "test_agent",
         'save_time_ms': ANY
     }
+
+
+def test_external_memory_with_mem0_storage_integration():
+    """Test external memory integration with mem0 storage specifically"""
+    from crewai.memory.storage.mem0_storage import Mem0Storage
+    
+    with patch('crewai.memory.external.external_memory.ExternalMemory._configure_mem0') as mock_configure:
+        mock_storage = MagicMock(spec=Mem0Storage)
+        mock_configure.return_value = mock_storage
+        
+        embedder_config = {"provider": "mem0", "config": {"user_id": "test_user"}}
+        external_memory = ExternalMemory(embedder_config=embedder_config)
+        
+        mock_crew = MagicMock()
+        external_memory.set_crew(mock_crew)
+        
+        test_value = "Test external memory content"
+        test_metadata = {"task": "test_task"}
+        test_agent = "test_agent"
+        
+        external_memory.save(value=test_value, metadata=test_metadata, agent=test_agent)
+        
+        mock_storage.save.assert_called_once_with(
+            test_value,
+            {'task': 'test_task', 'agent': 'test_agent'}
+        )
