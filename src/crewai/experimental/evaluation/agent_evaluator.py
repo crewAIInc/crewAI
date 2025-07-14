@@ -79,20 +79,6 @@ class AgentEvaluator:
 
             self._execution_state.iterations_results[current_iteration][agent.role].append(result)
 
-    @contextmanager
-    def execution_context(self):
-        state = ExecutionState()
-        try:
-            yield state
-        finally:
-            pass
-
-    @property
-    def _execution_state(self) -> ExecutionState:
-        if not hasattr(self._thread_local, 'execution_state'):
-            self._thread_local.execution_state = ExecutionState()
-        return self._thread_local.execution_state
-
     def set_iteration(self, iteration: int) -> None:
         self._execution_state.iteration = iteration
 
