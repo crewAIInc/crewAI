@@ -34,6 +34,4 @@ def process_config(
         else:
             values[key] = value
 
-    # Remove the config from values to avoid duplicate processing
-    values.pop("config", None)
     return values

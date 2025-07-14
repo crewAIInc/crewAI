@@ -324,7 +324,8 @@ class Task(BaseModel):
         """Set attributes based on the agent configuration."""
         if self.config:
             for key, value in self.config.items():
-                setattr(self, key, value)
+                if key in self.__class__.model_fields:
+                    setattr(self, key, value)
         return self
 
     @model_validator(mode="after")

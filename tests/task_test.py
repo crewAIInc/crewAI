@@ -1246,6 +1246,113 @@ def test_github_issue_3149_reproduction():
     assert task.output_file == "test_output.txt"
 
 
+def test_task_config_parameter_retention():
+    """Test that config parameter is retained after Task initialization (Issue #3160)."""
+    config_dict = {"priority": "high", "timeout": 300}
+    
+    task = Task(
+        description="Test task with config",
+        expected_output="Test output",
+        config=config_dict
+    )
+    
+    assert task.config is not None
+    assert task.config == config_dict
+    assert task.config.get("priority") == "high"
+    assert task.config.get("timeout") == 300
+
+
+def test_task_config_value_extraction():
+    """Test that config values are still extracted to individual attributes."""
+    task = Task(
+        description="Original description",
+        expected_output="Original output",
+        config={
+            "description": "Config description",
+            "expected_output": "Config output",
+            "custom_field": "custom_value"
+        }
+    )
+    
+    assert task.config is not None
+    assert task.description == "Config description"
+    assert task.expected_output == "Config output"
+
+
+def test_task_config_prioritize_tasks_scenario():
+    """Test the exact scenario from GitHub issue #3160."""
+    def prioritize_tasks(tasks):
+        return sorted(tasks, key=lambda t: {"low": 2, "medium": 1, "high": 0}.get(t.config.get("priority", "medium")))
+    
+    from crewai import Agent
+    
+    researcher = Agent(
+        role="Researcher",
+        goal="Find relevant facts",
+        backstory="An expert at gathering information quickly."
+    )
+    
+    tasks = [
+        Task(
+            description="Search for the author's biography",
+            expected_output="A summary of the author's background",
+            agent=researcher,
+            config={"priority": "high"}
+        ),
+        Task(
+            description="Check publication date",
+            expected_output="Date of first publication",
+            agent=researcher,
+            config={"priority": "low"}
+        ),
+        Task(
+            description="Extract book title",
+            expected_output="Title of the main book",
+            agent=researcher,
+            config={"priority": "medium"}
+        )
+    ]
+    
+    ordered_tasks = prioritize_tasks(tasks)
+    
+    assert len(ordered_tasks) == 3
+    assert ordered_tasks[0].config.get("priority") == "high"
+    assert ordered_tasks[1].config.get("priority") == "medium"
+    assert ordered_tasks[2].config.get("priority") == "low"
+
+
+def test_task_config_none_and_empty():
+    """Test edge cases with None and empty config."""
+    task_none = Task(
+        description="Test task with None config",
+        expected_output="Test output",
+        config=None
+    )
+    assert task_none.config is None
+    
+    task_empty = Task(
+        description="Test task with empty config",
+        expected_output="Test output",
+        config={}
+    )
+    assert task_empty.config == {}
+
+
+def test_task_callback_parameter_retention():
+    """Test that callback parameter is retained after Task initialization."""
+    def test_callback(output):
+        return "callback_executed"
+    
+    task = Task(
+        description="Test task with callback",
+        expected_output="Test output",
+        callback=test_callback
+    )
+    
+    assert task.callback is not None
+    assert task.callback == test_callback
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_execution_times():
     researcher = Agent(
