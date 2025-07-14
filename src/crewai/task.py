@@ -67,6 +67,7 @@ class Task(BaseModel):
         description: Descriptive text detailing task's purpose and execution.
         expected_output: Clear definition of expected task outcome.
         output_file: File path for storing task output.
+        create_directory: Whether to create the directory for output_file if it doesn't exist.
         output_json: Pydantic model for structuring JSON output.
         output_pydantic: Pydantic model for task output.
         security_config: Security configuration including fingerprinting.
@@ -114,6 +115,10 @@ class Task(BaseModel):
     output_file: Optional[str] = Field(
         description="A file path to be used to create a file output.",
         default=None,
+    )
+    create_directory: Optional[bool] = Field(
+        description="Whether to create the directory for output_file if it doesn't exist.",
+        default=True,
     )
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
@@ -753,8 +758,10 @@ Follow these guidelines:
             resolved_path = Path(self.output_file).expanduser().resolve()
             directory = resolved_path.parent
 
-            if not directory.exists():
+            if self.create_directory and not directory.exists():
                 directory.mkdir(parents=True, exist_ok=True)
+            elif not self.create_directory and not directory.exists():
+                raise RuntimeError(f"Directory {directory} does not exist and create_directory is False")
 
             with resolved_path.open("w", encoding="utf-8") as file:
                 if isinstance(result, dict):
