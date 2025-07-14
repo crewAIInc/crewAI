@@ -3,7 +3,6 @@ Reproduction script for issue #3152 - mem0 external memory format error
 Based on the code provided in the GitHub issue
 """
 
-import os
 from crewai import Agent, Task, Crew
 from crewai.memory.external.external_memory import ExternalMemory
 
