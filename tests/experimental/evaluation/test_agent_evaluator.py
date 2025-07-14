@@ -70,7 +70,7 @@ class TestAgentEvaluator:
         goal_alignment, = result.metrics.values()
         assert goal_alignment.score == 5.0
 
-        expected_feedback = "The agent's output demonstrates an understanding of the need for a comprehensive document"
+        expected_feedback = "The agent provided a detailed description of what the expected output should include,"
         assert expected_feedback in goal_alignment.feedback
 
         assert goal_alignment.raw_response is not None

@@ -15,7 +15,7 @@ class ExperimentRunner:
         self.display = ExperimentResultsDisplay()
 
     def run(self, crew: Crew, print_summary: bool = False) -> ExperimentResults:
-        self.evaluator = create_default_evaluator(crew=crew)
+        self.evaluator = create_default_evaluator(agents=[crew.agents[0]])
 
         results = []
 

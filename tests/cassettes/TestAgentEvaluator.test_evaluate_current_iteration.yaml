@@ -427,4 +427,140 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are an expert evaluator
+      assessing how well an AI agent''s output aligns with its assigned task goal.\n\nScore
+      the agent''s goal alignment on a scale from 0-10 where:\n- 0: Complete misalignment,
+      agent did not understand or attempt the task goal\n- 5: Partial alignment, agent
+      attempted the task but missed key requirements\n- 10: Perfect alignment, agent
+      fully satisfied all task requirements\n\nConsider:\n1. Did the agent correctly
+      interpret the task goal?\n2. Did the final output directly address the requirements?\n3.
+      Did the agent focus on relevant aspects of the task?\n4. Did the agent provide
+      all requested information or deliverables?\n\nReturn your evaluation as JSON
+      with fields ''score'' (number) and ''feedback'' (string).\n"}, {"role": "user",
+      "content": "\nAgent role: Test Agent\nAgent goal: Complete test tasks successfully\nTask
+      description: Test task description\nExpected output: Expected test output\n\nAgent''s
+      final output:\nThe expected test output is a comprehensive document that outlines
+      the specific parameters and criteria that define success for the task at hand.
+      It should include detailed descriptions of the tasks, the goals that need to
+      be achieved, and any specific formatting or structural requirements necessary
+      for the output. Each component of the task must be analyzed and addressed, providing
+      context as well as examples where applicable. Additionally, any tools or methodologies
+      that are relevant to executing the tasks successfully should be outlined, including
+      any potential risks or challenges that may arise during the process. This document
+      serves as a guiding framework to ensure that all aspects of the task are thoroughly
+      considered and executed to meet the high standards expected.\n\nEvaluate how
+      well the agent''s output aligns with the assigned task goal.\n"}], "model":
+      "gpt-4o-mini", "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1893'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=XwsgBfgvDGlKFQ4LiGYGIARIoSNTiwidqoo9UZcc.XY-1752087999227-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFRNbxs5DL37VxA6jwPHddrUxxwWi2BRtEAPRevCYCSOh41GUkWOnTTI
+        fy8kf4zT5rCXOfCRT4+P5DxNAAw7swRjO1TbJz+90dvFxy//vX0za7dfr29+3eo/n75++Mh0O/za
+        maZUxLsfZPVYdWFjnzwpx7CHbSZUKqyX767mV/PL2eKqAn105EvZJul0Eac9B57OZ/PFdPZuenl9
+        qO4iWxKzhG8TAICn+i06g6MHs4RZc4z0JIIbMstTEoDJ0ZeIQREWxaCmGUEbg1Ko0p9WAWBlxMZM
+        K7OEq2YfaIncHdr7EluZzx0BbigopBy37MgBgiNF9uTAkdjMqbQOsYVdhwraEdBDIqvkIA6aBgXp
+        4uAdcLB+cNTArmPbAQfHFpUEJPYEQ3CUi2LHYVPoCpOi3EOmnwNn6imoXMC/cUdbyk3FWw7oj8+4
+        SAIhKkgiyy1b9P4RHHneUn4pTEn0WIYC6YDX5866aqDH+yKHFRJm5cqInjeB3AWM7vQsUgzhTFb9
+        48GtUlloSwMkZ4bEDMetOaSg1QH9XldVwSrk2wY4iBLWSs/hmG47zGiVMouylZP7WHkzdRSEtwQu
+        2qH4dhyBjcWKHWsXhzJTEgpVAwagByySirgzRSfLDrtzsTKr8Hy+VJnaQbAsdhi8PwMwhKhYfKzr
+        /P2APJ8W2MdNyvFO/ig1LQeWbp0JJYayrKIxmYo+TwC+10MZXuy+STn2Sdca76k+92ax2POZ8T5H
+        9P31AdSo6Mf4YjFvXuFb71dezk7NWLQdubF0vEscHMczYHLW9d9qXuPed85h83/oR8BaSkpunTI5
+        ti87HtMy/agTfT3t5HIVbITyli2tlSmXSThqcfD7n4qRR1Hq1y2HDeWUuf5ZyiQnz5PfAAAA//8D
+        AEfUP8BcBQAA
+    headers:
+      CF-RAY:
+      - 95f365f1bfc87ded-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 14 Jul 2025 19:24:07 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=PcC3_3T8.MK_WpZlQLdZfwpNv9Pe45AIYmrXOSgJ65E-1752521047-1.0.1.1-eyqwSWfQC7ZV6.JwTsTihK1ZWCrEmxd52CtNcfe.fw1UjjBN9rdTU4G7hRZiNqHQYo4sVZMmgRgqM9k7HRSzN2zln0bKmMiOuSQTZh6xF_I;
+        path=/; expires=Mon, 14-Jul-25 19:54:07 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=JvQ1c4qYZefNwOPoVNgAtX8ET7ObU.JKDvGc43LOR6g-1752521047741-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '2729'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '2789'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999559'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_74f6e8ff49db25dbea3d3525cc149e8e
+    status:
+      code: 200
+      message: OK
 version: 1

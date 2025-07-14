@@ -37,11 +37,55 @@ class AgentEvaluator:
 
         self._thread_local: threading.local = threading.local()
 
-        self.agent_evaluators: dict[str, Sequence[BaseEvaluator] | None] = {}
+        target_agents = []
         if crew is not None:
             assert crew and crew.agents is not None
-            for agent in crew.agents:
-                self.agent_evaluators[str(agent.id)] = self.evaluators
+            target_agents = crew.agents
+        elif agents is not None:
+            target_agents = agents
+
+        for agent in target_agents:
+            self.agent_evaluators[str(agent.id)] = self.evaluators
+
+        self._subscribe_to_events()
+
+    @property
+    def _execution_state(self) -> ExecutionState:
+        if not hasattr(self._thread_local, 'execution_state'):
+            self._thread_local.execution_state = ExecutionState()
+        return self._thread_local.execution_state
+
+    def _subscribe_to_events(self) -> None:
+        crewai_event_bus.register_handler(TaskCompletedEvent, self._handle_task_completed)
+
+    def _handle_task_completed(self, source: object, event: TaskCompletedEvent) -> None:
+        agent = event.task.agent
+        if agent and str(getattr(agent, 'id', 'unknown')) in self.agent_evaluators:
+            state = ExecutionState()
+            state.current_agent_id = str(agent.id)
+            state.current_task_id = str(event.task.id)
+
+            trace = self.callback.get_trace(state.current_agent_id, state.current_task_id)
+
+            if not trace:
+                return
+
+            result = self.evaluate(
+                agent=agent,
+                task=event.task,
+                execution_trace=trace,
+                final_output=event.output,
+                state=state
+            )
+
+            current_iteration = self._execution_state.iteration
+            if current_iteration not in self._execution_state.iterations_results:
+                self._execution_state.iterations_results[current_iteration] = {}
+
+            if agent.role not in self._execution_state.iterations_results[current_iteration]:
+                self._execution_state.iterations_results[current_iteration][agent.role] = []
+
+            self._execution_state.iterations_results[current_iteration][agent.role].append(result)
 
     @contextmanager
     def execution_context(self):
@@ -124,9 +168,9 @@ class AgentEvaluator:
         return evaluation_results
 
     def get_evaluation_results(self) -> dict[str, list[AgentEvaluationResult]]:
-        if self._execution_state.iteration in self._execution_state.iterations_results:
+        if self._execution_state.iterations_results and self._execution_state.iteration in self._execution_state.iterations_results:
             return self._execution_state.iterations_results[self._execution_state.iteration]
-        return self.evaluate_current_iteration()
+        return {}
 
     def display_results_with_iterations(self) -> None:
         self.display_formatter.display_summary_results(self._execution_state.iterations_results)
@@ -190,7 +234,7 @@ class AgentEvaluator:
 
         return result
 
-def create_default_evaluator(crew, llm=None):
+def create_default_evaluator(crew: Crew | None = None, agents: list[Agent] | None = None, llm: None = None):
     from crewai.experimental.evaluation import (
         GoalAlignmentEvaluator,
         SemanticQualityEvaluator,
@@ -209,4 +253,4 @@ def create_default_evaluator(crew, llm=None):
         ReasoningEfficiencyEvaluator(llm=llm),
     ]
 
-    return AgentEvaluator(evaluators=evaluators, crew=crew)
+    return AgentEvaluator(evaluators=evaluators, crew=crew, agents=agents)
