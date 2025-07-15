@@ -361,6 +361,7 @@ class EventListener(BaseEventListener):
                 self.formatter.current_tool_branch,
                 event.error,
                 self.formatter.current_crew_tree,
+                event,
             )
 
         @crewai_event_bus.on(LLMStreamChunkEvent)
