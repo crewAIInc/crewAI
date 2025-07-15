@@ -67,6 +67,9 @@ class LLMCallFailedEvent(LLMEventBase):
 
     error: str
     type: str = "llm_call_failed"
+    error_type: Optional[str] = None
+    original_error: Optional[str] = None
+    endpoint_info: Optional[Dict[str, Any]] = None
 
 
 class FunctionCall(BaseModel):

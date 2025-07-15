@@ -984,10 +984,27 @@ class LLM(BaseLLM):
                 # whether to summarize the content or abort based on the respect_context_window flag
                 raise
             except Exception as e:
+                error_info = {
+                    "error_type": type(e).__name__,
+                    "original_error": str(e),
+                    "endpoint_info": {
+                        "base_url": self.base_url,
+                        "model": self.model,
+                        "api_base": self.api_base,
+                    } if self.base_url or self.api_base else None
+                }
+                
                 assert hasattr(crewai_event_bus, "emit")
                 crewai_event_bus.emit(
                     self,
-                    event=LLMCallFailedEvent(error=str(e), from_task=from_task, from_agent=from_agent),
+                    event=LLMCallFailedEvent(
+                        error=str(e),
+                        error_type=error_info["error_type"],
+                        original_error=error_info["original_error"],
+                        endpoint_info=error_info["endpoint_info"],
+                        from_task=from_task, 
+                        from_agent=from_agent
+                    ),
                 )
                 logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
