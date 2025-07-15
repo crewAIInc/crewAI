@@ -4,7 +4,6 @@ from typing import Any, Dict, Optional
 from collections.abc import Sequence
 
 from crewai.agent import Agent
-from crewai.lite_agent import LiteAgent
 from crewai.task import Task
 from crewai.utilities.events.base_event_listener import BaseEventListener
 from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus
@@ -114,7 +113,7 @@ class EvaluationTraceCallback(BaseEventListener):
             final_output=None
         )
 
-    def _init_trace(self, trace_key: str, **kwargs: dict[str, Any]):
+    def _init_trace(self, trace_key: str, **kwargs: Any):
         self.traces[trace_key] = kwargs
 
     def on_agent_start(self, agent: Agent, task: Task):

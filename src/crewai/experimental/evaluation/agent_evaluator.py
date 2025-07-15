@@ -3,8 +3,7 @@ from crewai.agent import Agent
 from crewai.task import Task
 from crewai.experimental.evaluation.evaluation_display import EvaluationDisplayFormatter
 
-from typing import Any, Dict
-from collections import defaultdict
+from typing import Any
 from crewai.experimental.evaluation import BaseEvaluator, create_evaluation_callbacks
 from collections.abc import Sequence
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
@@ -12,16 +11,16 @@ from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 from crewai.utilities.events.task_events import TaskCompletedEvent
 from crewai.utilities.events.agent_events import LiteAgentExecutionCompletedEvent
 from crewai.experimental.evaluation.base_evaluator import AgentAggregatedEvaluationResult
-from contextlib import contextmanager
 import threading
 
 class ExecutionState:
     def __init__(self):
-        self.traces: dict[str, Any] = {}
-        self.current_agent_id: str | None = None
-        self.current_task_id: str | None = None
-        self.iteration: int = 1
-        self.iterations_results: dict[int, dict[str, list[AgentEvaluationResult]]] = {}
+        self.traces = {}
+        self.current_agent_id = None
+        self.current_task_id = None
+        self.iteration = 1
+        self.iterations_results = {}
+        self.agent_evaluators = {}
 
 class AgentEvaluator:
     def __init__(
@@ -39,7 +38,7 @@ class AgentEvaluator:
         self._thread_local: threading.local = threading.local()
 
         for agent in self.agents:
-            self.agent_evaluators[str(agent.id)] = self.evaluators
+            self._execution_state.agent_evaluators[str(agent.id)] = self.evaluators
 
         self._subscribe_to_events()
 
@@ -54,8 +53,9 @@ class AgentEvaluator:
         crewai_event_bus.register_handler(LiteAgentExecutionCompletedEvent, self._handle_lite_agent_completed)
 
     def _handle_task_completed(self, source: Any, event: TaskCompletedEvent) -> None:
+        assert event.task is not None
         agent = event.task.agent
-        if agent and str(getattr(agent, 'id', 'unknown')) in self.agent_evaluators:
+        if agent and str(getattr(agent, 'id', 'unknown')) in self._execution_state.agent_evaluators:
             state = ExecutionState()
             state.current_agent_id = str(agent.id)
             state.current_task_id = str(event.task.id)
@@ -86,7 +86,7 @@ class AgentEvaluator:
         agent_info = event.agent_info
         agent_id = str(agent_info["id"])
 
-        if agent_id in self.agent_evaluators:
+        if agent_id in self._execution_state.agent_evaluators:
             state = ExecutionState()
             state.current_agent_id = agent_id
             state.current_task_id = "lite_task"
@@ -101,6 +101,10 @@ class AgentEvaluator:
                 return
 
             trace = self.callback.get_trace(state.current_agent_id, state.current_task_id)
+
+            if not trace:
+                return
+
             result = self.evaluate(
                 agent=target_agent,
                 execution_trace=trace,
@@ -173,7 +177,7 @@ class AgentEvaluator:
     ) -> AgentEvaluationResult:
         result = AgentEvaluationResult(
             agent_id=state.current_agent_id or str(agent.id),
-            task_id=state.current_task_id or str(task.id)
+            task_id=state.current_task_id or (str(task.id) if task else "unknown_task")
         )
 
         assert self.evaluators is not None
