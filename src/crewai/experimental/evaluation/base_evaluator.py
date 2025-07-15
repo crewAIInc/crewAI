@@ -57,9 +57,9 @@ class BaseEvaluator(abc.ABC):
     def evaluate(
         self,
         agent: Agent,
-        task: Task,
         execution_trace: Dict[str, Any],
         final_output: Any,
+        task: Task | None = None,
     ) -> EvaluationScore:
         pass
 

@@ -9,7 +9,9 @@ from crewai.experimental.evaluation import BaseEvaluator, create_evaluation_call
 from collections.abc import Sequence
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
-from crewai.experimental.evaluation.evaluation_display import AgentAggregatedEvaluationResult
+from crewai.utilities.events.task_events import TaskCompletedEvent
+from crewai.utilities.events.agent_events import LiteAgentExecutionCompletedEvent
+from crewai.experimental.evaluation.base_evaluator import AgentAggregatedEvaluationResult
 from contextlib import contextmanager
 import threading
 
@@ -49,6 +51,7 @@ class AgentEvaluator:
 
     def _subscribe_to_events(self) -> None:
         crewai_event_bus.register_handler(TaskCompletedEvent, self._handle_task_completed)
+        crewai_event_bus.register_handler(LiteAgentExecutionCompletedEvent, self._handle_lite_agent_completed)
 
     def _handle_task_completed(self, source: Any, event: TaskCompletedEvent) -> None:
         agent = event.task.agent
@@ -79,6 +82,42 @@ class AgentEvaluator:
 
             self._execution_state.iterations_results[current_iteration][agent.role].append(result)
 
+    def _handle_lite_agent_completed(self, source: object, event: LiteAgentExecutionCompletedEvent) -> None:
+        agent_info = event.agent_info
+        agent_id = str(agent_info["id"])
+
+        if agent_id in self.agent_evaluators:
+            state = ExecutionState()
+            state.current_agent_id = agent_id
+            state.current_task_id = "lite_task"
+
+            target_agent = None
+            for agent in self.agents:
+                if str(agent.id) == agent_id:
+                    target_agent = agent
+                    break
+
+            if not target_agent:
+                return
+
+            trace = self.callback.get_trace(state.current_agent_id, state.current_task_id)
+            result = self.evaluate(
+                agent=target_agent,
+                execution_trace=trace,
+                final_output=event.output,
+                state=state
+            )
+
+            current_iteration = self._execution_state.iteration
+            if current_iteration not in self._execution_state.iterations_results:
+                self._execution_state.iterations_results[current_iteration] = {}
+
+            agent_role = target_agent.role
+            if agent_role not in self._execution_state.iterations_results[current_iteration]:
+                self._execution_state.iterations_results[current_iteration][agent_role] = []
+
+            self._execution_state.iterations_results[current_iteration][agent_role].append(result)
+
     def set_iteration(self, iteration: int) -> None:
         self._execution_state.iteration = iteration
 
@@ -93,7 +132,7 @@ class AgentEvaluator:
     def display_results_with_iterations(self) -> None:
         self.display_formatter.display_summary_results(self._execution_state.iterations_results)
 
-    def get_agent_evaluation(self, strategy: AggregationStrategy = AggregationStrategy.SIMPLE_AVERAGE, include_evaluation_feedback: bool = False) -> Dict[str, AgentAggregatedEvaluationResult]:
+    def get_agent_evaluation(self, strategy: AggregationStrategy = AggregationStrategy.SIMPLE_AVERAGE, include_evaluation_feedback: bool = True) -> dict[str, AgentAggregatedEvaluationResult]:
         agent_results = {}
         with crewai_event_bus.scoped_handlers():
             task_results = self.get_evaluation_results()
@@ -127,10 +166,10 @@ class AgentEvaluator:
     def evaluate(
         self,
         agent: Agent,
-        task: Task,
         execution_trace: dict[str, Any],
         final_output: Any,
-        state: ExecutionState
+        state: ExecutionState,
+        task: Task | None = None,
     ) -> AgentEvaluationResult:
         result = AgentEvaluationResult(
             agent_id=state.current_agent_id or str(agent.id),

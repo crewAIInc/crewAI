@@ -2,7 +2,7 @@ from collections import defaultdict
 from hashlib import md5
 from typing import Any
 
-from crewai import Crew
+from crewai import Crew, Agent
 from crewai.experimental.evaluation import AgentEvaluator, create_default_evaluator
 from crewai.experimental.evaluation.experiment.result_display import ExperimentResultsDisplay
 from crewai.experimental.evaluation.experiment.result import ExperimentResults, ExperimentResult
@@ -14,14 +14,18 @@ class ExperimentRunner:
         self.evaluator: AgentEvaluator | None = None
         self.display = ExperimentResultsDisplay()
 
-    def run(self, crew: Crew, print_summary: bool = False) -> ExperimentResults:
-        self.evaluator = create_default_evaluator(agents=[crew.agents[0]])
+    def run(self, crew: Crew | None = None, agents: list[Agent] | None = None, print_summary: bool = False) -> ExperimentResults:
+        if crew and not agents:
+            agents = crew.agents
+
+        assert agents is not None
+        self.evaluator = create_default_evaluator(agents=agents)
 
         results = []
 
         for test_case in self.dataset:
             self.evaluator.reset_iterations_results()
-            result = self._run_test_case(test_case, crew)
+            result = self._run_test_case(test_case=test_case, crew=crew, agents=agents)
             results.append(result)
 
         experiment_results = ExperimentResults(results)
@@ -31,7 +35,7 @@ class ExperimentRunner:
 
         return experiment_results
 
-    def _run_test_case(self, test_case: dict[str, Any], crew: Crew) -> ExperimentResult:
+    def _run_test_case(self, test_case: dict[str, Any], agents: list[Agent], crew: Crew | None = None) -> ExperimentResult:
         inputs = test_case["inputs"]
         expected_score = test_case["expected_score"]
         identifier = test_case.get("identifier") or md5(str(test_case).encode(), usedforsecurity=False).hexdigest()
@@ -39,7 +43,11 @@ class ExperimentRunner:
         try:
             self.display.console.print(f"[dim]Running crew with input: {str(inputs)[:50]}...[/dim]")
             self.display.console.print("\n")
-            crew.kickoff(inputs=inputs)
+            if crew:
+                crew.kickoff(inputs=inputs)
+            else:
+                for agent in agents:
+                    agent.kickoff(**inputs)
 
             assert self.evaluator is not None
             agent_evaluations = self.evaluator.get_agent_evaluation()
