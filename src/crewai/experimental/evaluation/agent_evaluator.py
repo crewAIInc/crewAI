@@ -1,17 +1,18 @@
+import threading
+from typing import Any
+
 from crewai.experimental.evaluation.base_evaluator import AgentEvaluationResult, AggregationStrategy
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.experimental.evaluation.evaluation_display import EvaluationDisplayFormatter
-
-from typing import Any
+from crewai.utilities.events.agent_events import AgentEvaluationStartedEvent, AgentEvaluationCompletedEvent, AgentEvaluationFailedEvent
 from crewai.experimental.evaluation import BaseEvaluator, create_evaluation_callbacks
 from collections.abc import Sequence
 from crewai.utilities.events.crewai_event_bus import crewai_event_bus
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 from crewai.utilities.events.task_events import TaskCompletedEvent
 from crewai.utilities.events.agent_events import LiteAgentExecutionCompletedEvent
-from crewai.experimental.evaluation.base_evaluator import AgentAggregatedEvaluationResult
-import threading
+from crewai.experimental.evaluation.base_evaluator import AgentAggregatedEvaluationResult, EvaluationScore, MetricCategory
 
 class ExecutionState:
     def __init__(self):
@@ -56,6 +57,8 @@ class AgentEvaluator:
         assert event.task is not None
         agent = event.task.agent
         if agent and str(getattr(agent, 'id', 'unknown')) in self._execution_state.agent_evaluators:
+            self.emit_evaluation_started_event(agent_role=agent.role, agent_id=str(agent.id), task_id=str(event.task.id))
+
             state = ExecutionState()
             state.current_agent_id = str(agent.id)
             state.current_task_id = str(event.task.id)
@@ -181,8 +184,10 @@ class AgentEvaluator:
         )
 
         assert self.evaluators is not None
+        task_id = str(task.id) if task else None
         for evaluator in self.evaluators:
             try:
+                self.emit_evaluation_started_event(agent_role=agent.role, agent_id=str(agent.id), task_id=task_id)
                 score = evaluator.evaluate(
                     agent=agent,
                     task=task,
@@ -190,10 +195,30 @@ class AgentEvaluator:
                     final_output=final_output
                 )
                 result.metrics[evaluator.metric_category] = score
+                self.emit_evaluation_completed_event(agent_role=agent.role, agent_id=str(agent.id), task_id=task_id, metric_category=evaluator.metric_category, score=score)
             except Exception as e:
+                self.emit_evaluation_failed_event(agent_role=agent.role, agent_id=str(agent.id), task_id=task_id, error=str(e))
                 self.console_formatter.print(f"Error in {evaluator.metric_category.value} evaluator: {str(e)}")
 
         return result
+
+    def emit_evaluation_started_event(self, agent_role: str, agent_id: str, task_id: str | None = None):
+        crewai_event_bus.emit(
+            self,
+            AgentEvaluationStartedEvent(agent_role=agent_role, agent_id=agent_id, task_id=task_id, iteration=self._execution_state.iteration)
+        )
+
+    def emit_evaluation_completed_event(self, agent_role: str, agent_id: str, task_id: str | None = None, metric_category: MetricCategory | None = None, score: EvaluationScore | None = None):
+        crewai_event_bus.emit(
+            self,
+            AgentEvaluationCompletedEvent(agent_role=agent_role, agent_id=agent_id, task_id=task_id, iteration=self._execution_state.iteration, metric_category=metric_category, score=score)
+        )
+
+    def emit_evaluation_failed_event(self, agent_role: str, agent_id: str, error: str, task_id: str | None = None):
+        crewai_event_bus.emit(
+            self,
+            AgentEvaluationFailedEvent(agent_role=agent_role, agent_id=agent_id, task_id=task_id, iteration=self._execution_state.iteration, error=error)
+        )
 
 def create_default_evaluator(agents: list[Agent], llm: None = None):
     from crewai.experimental.evaluation import (
