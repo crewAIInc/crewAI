@@ -6,7 +6,6 @@ This script reproduces the bug where CrewAI shows generic "LLM Failed" errors
 instead of propagating specific error details from custom endpoints.
 """
 
-import os
 import sys
 from crewai import Agent, Task, Crew
 from crewai.llm import LLM
