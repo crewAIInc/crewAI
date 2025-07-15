@@ -1,0 +1,24 @@
+[
+  {
+    "timestamp": "2025-07-15T21:31:05.916161+00:00",
+    "metadata": {},
+    "results": [
+      {
+        "identifier": "df0ea31ac4a7fb4a908b8319ec7b3719",
+        "inputs": {
+          "messages": "How was the Battle of Waterloo?"
+        },
+        "score": {
+          "goal_alignment": 10.0,
+          "semantic_quality": 10.0,
+          "tool_selection": 10.0,
+          "parameter_extraction": 10.0,
+          "tool_invocation": 10.0,
+          "reasoning_efficiency": 5.5
+        },
+        "expected_score": 8,
+        "passed": true
+      }
+    ]
+  }
+]

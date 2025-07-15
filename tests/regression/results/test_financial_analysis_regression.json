@@ -1,0 +1,42 @@
+[
+  {
+    "timestamp": "2025-07-15T21:34:08.253410+00:00",
+    "metadata": {},
+    "results": [
+      {
+        "identifier": "72239c22b0cdde98ad5c588074ef6325",
+        "inputs": {
+          "company": "Apple Inc. (AAPL)"
+        },
+        "score": {
+          "goal_alignment": 10.0,
+          "semantic_quality": 9.0,
+          "tool_selection": 6.0,
+          "parameter_extraction": 5.0,
+          "tool_invocation": 10.0,
+          "reasoning_efficiency": 7.300000000000001
+        },
+        "expected_score": {
+          "goal_alignment": 8
+        },
+        "passed": true
+      },
+      {
+        "identifier": "test_2",
+        "inputs": {
+          "company": "Microsoft Corporation (MSFT)"
+        },
+        "score": {
+          "goal_alignment": 10.0,
+          "semantic_quality": 7.333333333333333,
+          "tool_selection": 6.25,
+          "parameter_extraction": 9.5,
+          "tool_invocation": 10.0,
+          "reasoning_efficiency": 6.0
+        },
+        "expected_score": 8,
+        "passed": true
+      }
+    ]
+  }
+]
