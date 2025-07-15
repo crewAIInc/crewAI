@@ -305,6 +305,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         """
         # Create agent info for event emission
         agent_info = {
+            "id": self.id,
             "role": self.role,
             "goal": self.goal,
             "backstory": self.backstory,
