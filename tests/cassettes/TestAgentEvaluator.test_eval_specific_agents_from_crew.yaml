@@ -49,7 +49,7 @@ interactions:
       Content-Length:
       - '148467'
       Date:
-      - Wed, 09 Jul 2025 19:06:37 GMT
+      - Tue, 15 Jul 2025 12:30:20 GMT
       Permissions-Policy:
       - publickey-credentials-create=(self),publickey-credentials-get=(self),accelerometer=(),ambient-light-sensor=(),autoplay=(),battery=(),camera=(),display-capture=(),document-domain=(),encrypted-media=(),execution-while-not-rendered=(),execution-while-out-of-viewport=(),fullscreen=(),gamepad=(),geolocation=(),gyroscope=(),hid=(),identity-credentials-get=(),idle-detection=(),local-fonts=(),magnetometer=(),microphone=(),midi=(),otp-credentials=(),payment=(),picture-in-picture=(),screen-wake-lock=(),serial=(),speaker-selection=(),storage-access=(),usb=(),web-share=(),xr-spatial-tracking=()
       Strict-Transport-Security:
@@ -59,7 +59,7 @@ interactions:
       X-Cache:
       - MISS, HIT, HIT
       X-Cache-Hits:
-      - 0, 931, 1
+      - 0, 931, 0
       X-Content-Type-Options:
       - nosniff
       X-Frame-Options:
@@ -67,9 +67,9 @@ interactions:
       X-Permitted-Cross-Domain-Policies:
       - none
       X-Served-By:
-      - cache-iad-kjyo7100056-IAD, cache-iad-kjyo7100044-IAD, cache-gru-sbgr1930062-GRU
+      - cache-iad-kjyo7100056-IAD, cache-iad-kjyo7100044-IAD, cache-gru-sbsp2090079-GRU
       X-Timer:
-      - S1752087997.099673,VS0,VE2
+      - S1752582620.330991,VS0,VE129
       X-XSS-Protection:
       - 1; mode=block
       access-control-allow-headers:
@@ -107,6 +107,75 @@ interactions:
       - origin-when-cross-origin
       x-pypi-last-serial:
       - '29926354'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!binary |
+      CpYRCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS7RAKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRLTDAoQxqNYq3YtMMnOMGUPy8jzmBIIeasOV/BKx1EqDENyZXcgQ3JlYXRlZDABORCA
+      oISbbFIYQYDqp4SbbFIYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTQxLjBKGwoOcHl0aG9uX3Zl
+      cnNpb24SCQoHMy4xMS4xMkouCghjcmV3X2tleRIiCiAyNTZiMTkyNmM1ZDkzMjY3YzFjZWM0OGRk
+      MzVlZDNlYUoxCgdjcmV3X2lkEiYKJGM0MDMyN2FiLTdiYjAtNGIwNC05Y2MyLTdmM2MxOTIxODA4
+      NkocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jl
+      d19udW1iZXJfb2ZfdGFza3MSAhgCShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKOgoQY3Jl
+      d19maW5nZXJwcmludBImCiQ3NTg5NDY3Mi03MThkLTRiMTQtOGIwNC00NGU4YzliMDNhNzdKOwob
+      Y3Jld19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMDctMTVUMDk6MzA6MjAuMTk1NTkz
+      SpQFCgtjcmV3X2FnZW50cxKEBQqBBVt7ImtleSI6ICI1MzgxMzMzNTViYjlmZTZhYWZiN2U3YmYw
+      MzE2MTljNSIsICJpZCI6ICI0MmVkNTRmZS03MDQwLTRiNjEtODY1Yy0wN2E2MzU2MGFjMTciLCAi
+      cm9sZSI6ICJUZXN0IEFnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAi
+      bWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00
+      by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0
+      aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119LCB7
+      ImtleSI6ICI2NzdhOWVjN2NiMTIyZjUxMmMxYTU3MDllMWQ0OGFhMiIsICJpZCI6ICI4MTA1MDMz
+      Ni1jYzMxLTRhNzQtYTNhNy0yMjA1NzFhNmJkZmQiLCAicm9sZSI6ICJUZXN0IEFnZW50IEV2YWwi
+      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1
+      bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvLW1pbmkiLCAiZGVsZWdhdGlv
+      bl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhf
+      cmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSvEDCgpjcmV3X3Rhc2tzEuIDCt8D
+      W3sia2V5IjogIjRkM2Q2YTY0YzRmMWEzOTYxMDMwZDQ3NWIxMzRlMWMzIiwgImlkIjogImIxMTg4
+      ZGFjLThmYTQtNDAyMi04OWM4LWNjODViMjhmM2EwOSIsICJhc3luY19leGVjdXRpb24/IjogZmFs
+      c2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiVGVzdCBBZ2VudCIsICJh
+      Z2VudF9rZXkiOiAiNTM4MTMzMzU1YmI5ZmU2YWFmYjdlN2JmMDMxNjE5YzUiLCAidG9vbHNfbmFt
+      ZXMiOiBbXX0sIHsia2V5IjogIjRkM2Q2YTY0YzRmMWEzOTYxMDMwZDQ3NWIxMzRlMWMzIiwgImlk
+      IjogImU1YjcxNDliLTA4MmUtNGIzYS1iZWMxLWQ3M2JlMTMyM2ZmOCIsICJhc3luY19leGVjdXRp
+      b24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiVGVzdCBB
+      Z2VudCBFdmFsIiwgImFnZW50X2tleSI6ICI2NzdhOWVjN2NiMTIyZjUxMmMxYTU3MDllMWQ0OGFh
+      MiIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEoAEChBy4LOHzXsDm8WVE6Kzzc8FEgjg
+      2z/TrVCNlioMVGFzayBDcmVhdGVkMAE50P/EhJtsUhhBIMPFhJtsUhhKLgoIY3Jld19rZXkSIgog
+      MjU2YjE5MjZjNWQ5MzI2N2MxY2VjNDhkZDM1ZWQzZWFKMQoHY3Jld19pZBImCiRjNDAzMjdhYi03
+      YmIwLTRiMDQtOWNjMi03ZjNjMTkyMTgwODZKLgoIdGFza19rZXkSIgogNGQzZDZhNjRjNGYxYTM5
+      NjEwMzBkNDc1YjEzNGUxYzNKMQoHdGFza19pZBImCiRiMTE4OGRhYy04ZmE0LTQwMjItODljOC1j
+      Yzg1YjI4ZjNhMDlKOgoQY3Jld19maW5nZXJwcmludBImCiQ3NTg5NDY3Mi03MThkLTRiMTQtOGIw
+      NC00NGU4YzliMDNhNzdKOgoQdGFza19maW5nZXJwcmludBImCiQ0ZmU0ZjNiOC1hOTQyLTRhZDUt
+      Yjc5Yy1iZDI4YjliOGMyOTFKOwobdGFza19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUt
+      MDctMTVUMDk6MzA6MjAuMTk1NTQ5SjsKEWFnZW50X2ZpbmdlcnByaW50EiYKJDQwNzFiODNlLWM0
+      MDEtNDc1OS1hZDBjLTYwNmIzZjg0ODQ2MHoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2201'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.34.1
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 15 Jul 2025 12:30:22 GMT
     status:
       code: 200
       message: OK
@@ -160,30 +229,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BrUPlyy6FJgrPxOZMBZbbIE86pw5y\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1752087997,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: The expected test output is a comprehensive document that outlines the
-      specific parameters and criteria that define success for the task at hand. It
-      should include detailed descriptions of the tasks, the goals that need to be
-      achieved, and any specific formatting or structural requirements necessary for
-      the output. Each component of the task must be analyzed and addressed, providing
-      context as well as examples where applicable. Additionally, any tools or methodologies
-      that are relevant to executing the tasks successfully should be outlined, including
-      any potential risks or challenges that may arise during the process. This document
-      serves as a guiding framework to ensure that all aspects of the task are thoroughly
-      considered and executed to meet the high standards expected.\",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\":
-      142,\n    \"total_tokens\": 303,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xUTY8bNwy9+1cQc7YXu0a8SX1r0QQImkuDHJK2gSFLnBkmGlIVKXudYP97Idlr
+        O+0eehlg9PQeH7/0fQbQUejW0PnRmZ9SXPxif6w+8W8rwfz6p18H//Hv399x/1biu+3yfTevDNl+
+        QW9PrBsvU4poJHyEfUZnWFXvXq6Wq1fL++VtAyYJGCttSLZ4IYuJmBbL2+WLxe3Lxd2rE3sU8qjd
+        Gv6cAQB8b9/qkwM+dGtoWu1kQlU3YLc+XwLossR60jlVUnNs3fwCemFDbtbfAssevGMYaIfgYKi2
+        wbHuMQP8xW+IXYSf2/8aPowI+JDQGwaQYqkY9JLBRgRDNTCnX4HYxxJQIaA5ihggoPpMqVZHQXpA
+        50dQwwTEO4k7DEDcVFIWj6o38GEkBR2lxABedpiBmIxchJQxueya2LyRJrRRgkQZDlAUwxwcH8BE
+        ooJkUOlt7zKeg1U8NKbPZJjJtSwmdFoy8QBa/NHFm5JtxDxJxvlTXuBA0dfwIAyOjTyl2mvwo4sR
+        eUBtAVRiObnsJUbZY4DtARx4qUpaFWx0BlqmyWX6htpMSTEv00mE8cFaqbR57IuVjK3OChlji2vy
+        VLs6kjfwupX35HEqarBFqAOacUTW1mkO4CO6XMnI2kTH1vqDMELGHeG+1uLkqLa6cMBcxykcjSIb
+        5XPPmiaZAk0pkj82CPoS4+Hmevwy9kVdXQEuMV4BjlnsSKuD//mEPJ5HPcqQsmz1X9SuJyYdNxmd
+        CtexVpPUNfRxBvC5rVT5YUu6lGVKtjH5ii3c3f3dUa+7bPIVers6oSbm4gVY3t/PnxHcHEdfr7ay
+        886PGC7Uywq7EkiugNlV2v+185z2MXXi4f/IXwDvMRmGTcoYyP+Y8uVaxi9t45+/di5zM9wp5h15
+        3Bhhrq0I2LsSj+9Ppwc1nDY98YA5ZWqPUG3l7HH2DwAAAP//AwAdDuMChwUAAA==
     headers:
       CF-RAY:
-      - 95ca197e89637df2-GRU
+      - 95f94541bc76a109-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -191,14 +254,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 09 Jul 2025 19:06:39 GMT
+      - Tue, 15 Jul 2025 12:30:23 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=.t6bOXGdf07C3xXSw4OEg_f3icel94zEZRH72nzbd2I-1752087999-1.0.1.1-6h4F1dxRC8TZNmW0mIEwZADPtL9aYoS7gEP4wcgn5fvf57s3W7WhUYNoYMRPoCTTSarVSBwBgtGgVzAd5EhbDkXGlv3NOqS3dE6CBS_gZ9E;
-        path=/; expires=Wed, 09-Jul-25 19:36:39 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=BV0s2UQraAxouFDUEdsj9AS9rtSrZA9kcMCB139AN9w-1752582623-1.0.1.1-LG9qIt_O34KccmRqQn2MVTixHsfIEVlkom8.eRacYd8sxYO48_vaIjjhPwFqlphCYq3QSu8vB8QbAZLAThgRZdn6dTWAX37l_O.OA3aoQvU;
+        path=/; expires=Tue, 15-Jul-25 13:00:23 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=XwsgBfgvDGlKFQ4LiGYGIARIoSNTiwidqoo9UZcc.XY-1752087999227-0.0.1.1-604800000;
+      - _cfuvid=5fV8AudakGgHslCW2Y6zvxEI7ZPYrEFN390mRiV8Zpw-1752582623184-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -213,13 +276,13 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1872'
+      - '2595'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '1875'
+      - '2602'
       x-ratelimit-limit-requests:
       - '30000'
       x-ratelimit-limit-tokens:
@@ -233,172 +296,23 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_fdd2d2f329227f49b6ce3970bba95b31
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are an expert evaluator
-      assessing how well an AI agent''s output aligns with its assigned task goal.\n\nScore
-      the agent''s goal alignment on a scale from 0-10 where:\n- 0: Complete misalignment,
-      agent did not understand or attempt the task goal\n- 5: Partial alignment, agent
-      attempted the task but missed key requirements\n- 10: Perfect alignment, agent
-      fully satisfied all task requirements\n\nConsider:\n1. Did the agent correctly
-      interpret the task goal?\n2. Did the final output directly address the requirements?\n3.
-      Did the agent focus on relevant aspects of the task?\n4. Did the agent provide
-      all requested information or deliverables?\n\nReturn your evaluation as JSON
-      with fields ''score'' (number) and ''feedback'' (string).\n"}, {"role": "user",
-      "content": "\nAgent role: Test Agent\nAgent goal: Complete test tasks successfully\nTask
-      description: Test task description\nExpected output: Expected test output\n\nAgent''s
-      final output:\nThe expected test output is a comprehensive document that outlines
-      the specific parameters and criteria that define success for the task at hand.
-      It should include detailed descriptions of the tasks, the goals that need to
-      be achieved, and any specific formatting or structural requirements necessary
-      for the output. Each component of the task must be analyzed and addressed, providing
-      context as well as examples where applicable. Additionally, any tools or methodologies
-      that are relevant to executing the tasks successfully should be outlined, including
-      any potential risks or challenges that may arise during the process. This document
-      serves as a guiding framework to ensure that all aspects of the task are thoroughly
-      considered and executed to meet the high standards expected.\n\nEvaluate how
-      well the agent''s output aligns with the assigned task goal.\n"}], "model":
-      "gpt-4o-mini", "stop": []}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '1893'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=.t6bOXGdf07C3xXSw4OEg_f3icel94zEZRH72nzbd2I-1752087999-1.0.1.1-6h4F1dxRC8TZNmW0mIEwZADPtL9aYoS7gEP4wcgn5fvf57s3W7WhUYNoYMRPoCTTSarVSBwBgtGgVzAd5EhbDkXGlv3NOqS3dE6CBS_gZ9E;
-        _cfuvid=XwsgBfgvDGlKFQ4LiGYGIARIoSNTiwidqoo9UZcc.XY-1752087999227-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.93.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.93.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-read-timeout:
-      - '600.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.12
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-BrUPn4pG0PkiwTx9zAwzBaBYj6HG3\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1752087999,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"{\\n  \\\"score\\\": 5,\\n  \\\"feedback\\\":
-      \\\"The agent's output demonstrates an understanding of the need for a comprehensive
-      document outlining task parameters and success criteria. However, it does not
-      explicitly provide the expected test output or directly address the specific
-      test tasks as described in the task definition. The agent missed delivering
-      the precise expected output and did not include clear examples or structure
-      that align with the task at hand.\\\"\\n}\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 344,\n    \"completion_tokens\":
-      84,\n    \"total_tokens\": 428,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_62a23a81ef\"\n}\n"
-    headers:
-      CF-RAY:
-      - 95ca198b5aef7df2-GRU
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Wed, 09 Jul 2025 19:06:40 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '1197'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '1200'
-      x-ratelimit-limit-requests:
-      - '30000'
-      x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-requests:
-      - '29999'
-      x-ratelimit-remaining-tokens:
-      - '149999559'
-      x-ratelimit-reset-requests:
-      - 2ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_2a5ac0597056b7459275d4645963e215
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_a9b4ce3fe85f643471d05f2bcd8676b0
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
-      CuEMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAwKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKeCAoQNBzmDkHxynob0iVvgLhjnRIISZd+egh6hQQqDENyZXcgQ3JlYXRlZDABOVj2
-      1hXAqlAYQSg/4RXAqlAYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTM0LjBKGwoOcHl0aG9uX3Zl
-      cnNpb24SCQoHMy4xMS4xMkouCghjcmV3X2tleRIiCiA3MWMxN2VmMjcwYzI2MTgzMTI4Y2NlNDgz
-      YzE4NWU3NUoxCgdjcmV3X2lkEiYKJGI3N2U2NWNiLTZhYjQtNGJjMi05ZDMzLTcxN2FiNTVhMzBk
-      MkocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jl
-      d19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKOgoQY3Jl
-      d19maW5nZXJwcmludBImCiRjZDNmM2RhYi05NDBhLTQ2MTMtODgzOC1hMGM2YWQ2MDAzMDhKOwob
-      Y3Jld19maW5nZXJwcmludF9jcmVhdGVkX2F0EhwKGjIwMjUtMDctMDlUMTY6MDY6MzcuMDIyODI5
-      StECCgtjcmV3X2FnZW50cxLBAgq+Alt7ImtleSI6ICI1MzgxMzMzNTViYjlmZTZhYWZiN2U3YmYw
-      MzE2MTljNSIsICJpZCI6ICJlMjNmYWFmOC03M2M4LTQyNmQtOGJhYi1mN2Y2YjhhY2FkOWMiLCAi
-      cm9sZSI6ICJUZXN0IEFnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAi
-      bWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00
-      by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0
-      aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr/
-      AQoKY3Jld190YXNrcxLwAQrtAVt7ImtleSI6ICI0ZDNkNmE2NGM0ZjFhMzk2MTAzMGQ0NzViMTM0
-      ZTFjMyIsICJpZCI6ICJlMDczNGMwOC03MzE5LTQ0YmYtYTNiMi1kYjEwNzVkZjA5ODAiLCAiYXN5
-      bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xl
-      IjogIlRlc3QgQWdlbnQiLCAiYWdlbnRfa2V5IjogIjUzODEzMzM1NWJiOWZlNmFhZmI3ZTdiZjAz
-      MTYxOWM1IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASgAQKECJsWbMSQx8UwmQntIV8
-      1RoSCIiJiUMNOuNFKgxUYXNrIENyZWF0ZWQwATn4qvoVwKpQGEEonfsVwKpQGEouCghjcmV3X2tl
-      eRIiCiA3MWMxN2VmMjcwYzI2MTgzMTI4Y2NlNDgzYzE4NWU3NUoxCgdjcmV3X2lkEiYKJGI3N2U2
-      NWNiLTZhYjQtNGJjMi05ZDMzLTcxN2FiNTVhMzBkMkouCgh0YXNrX2tleRIiCiA0ZDNkNmE2NGM0
-      ZjFhMzk2MTAzMGQ0NzViMTM0ZTFjM0oxCgd0YXNrX2lkEiYKJGUwNzM0YzA4LTczMTktNDRiZi1h
-      M2IyLWRiMTA3NWRmMDk4MEo6ChBjcmV3X2ZpbmdlcnByaW50EiYKJGNkM2YzZGFiLTk0MGEtNDYx
-      My04ODM4LWEwYzZhZDYwMDMwOEo6ChB0YXNrX2ZpbmdlcnByaW50EiYKJDlmMWI3ZmVlLTEwNmYt
-      NDI1MS1iYWY5LTVhOGYzMWQ4NWFmZUo7Cht0YXNrX2ZpbmdlcnByaW50X2NyZWF0ZWRfYXQSHAoa
-      MjAyNS0wNy0wOVQxNjowNjozNy4wMjI3ODJKOwoRYWdlbnRfZmluZ2VycHJpbnQSJgokMTQ0MmQy
-      NTQtYmEyNS00NjkwLTg4ZTUtNGMyYzA2YWQwZmM4egIYAYUBAAEAAA==
+      CsAECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSlwQKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKABAoQg9o5mLgBBOxY6NIFUGx9TRIICcTYS+itZhwqDFRhc2sgQ3JlYXRlZDABOVCo
+      FjecbFIYQbCMGDecbFIYSi4KCGNyZXdfa2V5EiIKIDI1NmIxOTI2YzVkOTMyNjdjMWNlYzQ4ZGQz
+      NWVkM2VhSjEKB2NyZXdfaWQSJgokYzQwMzI3YWItN2JiMC00YjA0LTljYzItN2YzYzE5MjE4MDg2
+      Si4KCHRhc2tfa2V5EiIKIDRkM2Q2YTY0YzRmMWEzOTYxMDMwZDQ3NWIxMzRlMWMzSjEKB3Rhc2tf
+      aWQSJgokZTViNzE0OWItMDgyZS00YjNhLWJlYzEtZDczYmUxMzIzZmY4SjoKEGNyZXdfZmluZ2Vy
+      cHJpbnQSJgokNzU4OTQ2NzItNzE4ZC00YjE0LThiMDQtNDRlOGM5YjAzYTc3SjoKEHRhc2tfZmlu
+      Z2VycHJpbnQSJgokOTdhNDBmZDEtMjc1Zi00YWVmLWFkMzUtMzJlZjEwOTUwNjk4SjsKG3Rhc2tf
+      ZmluZ2VycHJpbnRfY3JlYXRlZF9hdBIcChoyMDI1LTA3LTE1VDA5OjMwOjIwLjIwMTEyMEo7ChFh
+      Z2VudF9maW5nZXJwcmludBImCiRiMWE5NmVkMy0xYTZmLTQxMDEtYWYzYS03NjI0MWQ0OWIwNzB6
+      AhgBhQEAAQAA
     headers:
       Accept:
       - '*/*'
@@ -407,7 +321,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '1636'
+      - '579'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -423,35 +337,30 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Wed, 09 Jul 2025 19:06:41 GMT
+      - Tue, 15 Jul 2025 12:30:27 GMT
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are an expert evaluator
-      assessing how well an AI agent''s output aligns with its assigned task goal.\n\nScore
-      the agent''s goal alignment on a scale from 0-10 where:\n- 0: Complete misalignment,
-      agent did not understand or attempt the task goal\n- 5: Partial alignment, agent
-      attempted the task but missed key requirements\n- 10: Perfect alignment, agent
-      fully satisfied all task requirements\n\nConsider:\n1. Did the agent correctly
-      interpret the task goal?\n2. Did the final output directly address the requirements?\n3.
-      Did the agent focus on relevant aspects of the task?\n4. Did the agent provide
-      all requested information or deliverables?\n\nReturn your evaluation as JSON
-      with fields ''score'' (number) and ''feedback'' (string).\n"}, {"role": "user",
-      "content": "\nAgent role: Test Agent\nAgent goal: Complete test tasks successfully\nTask
-      description: Test task description\nExpected output: Expected test output\n\nAgent''s
-      final output:\nThe expected test output is a comprehensive document that outlines
-      the specific parameters and criteria that define success for the task at hand.
-      It should include detailed descriptions of the tasks, the goals that need to
-      be achieved, and any specific formatting or structural requirements necessary
-      for the output. Each component of the task must be analyzed and addressed, providing
-      context as well as examples where applicable. Additionally, any tools or methodologies
-      that are relevant to executing the tasks successfully should be outlined, including
-      any potential risks or challenges that may arise during the process. This document
-      serves as a guiding framework to ensure that all aspects of the task are thoroughly
-      considered and executed to meet the high standards expected.\n\nEvaluate how
-      well the agent''s output aligns with the assigned task goal.\n"}], "model":
-      "gpt-4o-mini", "stop": []}'
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent Eval. An
+      agent created for testing purposes\nYour personal goal is: Complete test tasks
+      successfully\nTo give my best complete final answer to the task respond using
+      the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Test task description\n\nThis
+      is the expected criteria for your final answer: Expected test output\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is the context you''re working with:\nThe expected output for the test task
+      includes detailed descriptions of each step involved in the process. This should
+      cover initial preparations, the methodology used, any tools or software involved,
+      and the criteria for measuring success. Furthermore, include a section on anticipated
+      challenges and solutions, followed by a conclusion that summarizes the outcomes
+      and next steps for future tasks related to the project. Each section must be
+      comprehensive and clear to ensure that anyone reviewing the output understands
+      the entire process and its implications fully.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -460,11 +369,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1893'
+      - '1499'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=XwsgBfgvDGlKFQ4LiGYGIARIoSNTiwidqoo9UZcc.XY-1752087999227-0.0.1.1-604800000
+      - __cf_bm=BV0s2UQraAxouFDUEdsj9AS9rtSrZA9kcMCB139AN9w-1752582623-1.0.1.1-LG9qIt_O34KccmRqQn2MVTixHsfIEVlkom8.eRacYd8sxYO48_vaIjjhPwFqlphCYq3QSu8vB8QbAZLAThgRZdn6dTWAX37l_O.OA3aoQvU;
+        _cfuvid=5fV8AudakGgHslCW2Y6zvxEI7ZPYrEFN390mRiV8Zpw-1752582623184-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -494,22 +404,46 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFRNbxs5DL37VxA6jwPHddrUxxwWi2BRtEAPRevCYCSOh41GUkWOnTTI
-        fy8kf4zT5rCXOfCRT4+P5DxNAAw7swRjO1TbJz+90dvFxy//vX0za7dfr29+3eo/n75++Mh0O/za
-        maZUxLsfZPVYdWFjnzwpx7CHbSZUKqyX767mV/PL2eKqAn105EvZJul0Eac9B57OZ/PFdPZuenl9
-        qO4iWxKzhG8TAICn+i06g6MHs4RZc4z0JIIbMstTEoDJ0ZeIQREWxaCmGUEbg1Ko0p9WAWBlxMZM
-        K7OEq2YfaIncHdr7EluZzx0BbigopBy37MgBgiNF9uTAkdjMqbQOsYVdhwraEdBDIqvkIA6aBgXp
-        4uAdcLB+cNTArmPbAQfHFpUEJPYEQ3CUi2LHYVPoCpOi3EOmnwNn6imoXMC/cUdbyk3FWw7oj8+4
-        SAIhKkgiyy1b9P4RHHneUn4pTEn0WIYC6YDX5866aqDH+yKHFRJm5cqInjeB3AWM7vQsUgzhTFb9
-        48GtUlloSwMkZ4bEDMetOaSg1QH9XldVwSrk2wY4iBLWSs/hmG47zGiVMouylZP7WHkzdRSEtwQu
-        2qH4dhyBjcWKHWsXhzJTEgpVAwagByySirgzRSfLDrtzsTKr8Hy+VJnaQbAsdhi8PwMwhKhYfKzr
-        /P2APJ8W2MdNyvFO/ig1LQeWbp0JJYayrKIxmYo+TwC+10MZXuy+STn2Sdca76k+92ax2POZ8T5H
-        9P31AdSo6Mf4YjFvXuFb71dezk7NWLQdubF0vEscHMczYHLW9d9qXuPed85h83/oR8BaSkpunTI5
-        ti87HtMy/agTfT3t5HIVbITyli2tlSmXSThqcfD7n4qRR1Hq1y2HDeWUuf5ZyiQnz5PfAAAA//8D
-        AEfUP8BcBQAA
+        H4sIAAAAAAAAAwAAAP//bFfbchy3EX33V3TtI2u5JdGS7eIbRSoOHVNxeHGqEr30Aj07HWKAES6z
+        HPnnXd2YmR1aeSF3F0CjL+ecbvzxHcCG7eYSNqbFbLrenX/I/3m/97/fhdZ6wn98+Xc8kvvXy9OH
+        9v5T2GzlRNj/j0yeT+1M6HpHmYOvyyYSZhKrb398f/H+p4sfLr7XhS5YcnLs0Ofzd+G8Y8/nF28u
+        3p2/+fH87U/T6TawobS5hP9+BwDwh/4VP72ll80lvNnOv3SUEh5oc7lsAtjE4OSXDabEKaPPm+1p
+        0QSfyavrt+DDEQx6OPBAgHAQtwF9OlIE+Oz/xh4dXOn3S/jsP/uzs0dKGR4xPcMNJRO5l6jPzuri
+        2x3ces6MDn6L1GNEWU2Xsv6BmhAJTOg68ob9AY6cW8gtQRabGdPzFhINFNFBPx0PcYSUqU/giSzk
+        AHuCjM/kd/DYcgL2xhVL6VI8OIezsxtq2BP8UyvEA8ntcO0IoxshlOxk9dhiPl2N3CUxjaZlGmgL
+        qZgWMMGAji1mcRYhhSYfMRI0hLlEghABU6KUZD2NKVMHPcUmxA69oV3152fMLUW4pxRKNNWdq5So
+        2zsC9CN4MlLFOEIOwSVAbyHOu7dTgHKF+lpznrbQYrTizlYPLM6RHzgG35HPafLg1pLP3IzwIIlr
+        g7MU1Y1fOdUssLc8sC3okkSVCTvJ7BDcQBbY66Y+Bknp2iNLA7nQU0xb9U4/iDvTXujQ46EuByCf
+        JG3UNLUyioXi2ShKdhVCFzu4o9wGG1w4jIqcx5agCc6Fo9zZnVbncib1r8KkCRHohUzRqr1C1wIR
+        xfDHU6LggXLpFSfBN3wQL+VkpC+FI9kl169TnSjLJWlbI5P7RAgw854d5/E1wGW5idjRMcTnCbwd
+        jnOagX3K6JxiqSfDDZvTVQPFJEzagpk81H0Uh1XKhTFaFcyYSMsvLF4ivqHEB69hqj6BpYzshFay
+        bDBpJjFPDowTNvqS1eZ2TmzwNdn1YnrpyWSyUg0TOko7+FgrnSeWjWDCQBHQOWiKN2IBnR72wZ+v
+        f5Kbc4LQ1JIqqXZz3T4u14cGNKRr8VkietCdmNmgcyPE4oHQtKfItuDC4SDpiZSKy0mAxKa4UJIb
+        d/CUCLDk0IlwLwWrjOQGsO8dGxTOKpJbYbhAmQ2TN6MGg8aUiGacoPz9Dh4XRj/MpbydaLVAOxUj
+        AjDHvMAVWvYHShAq/U60KYlk84CRQ0nVxxUrX8P8ThlYUT65IPmqjjl+Jvjl9v5KWC/b75GdUijE
+        A3r+qsrnLeSI5nnRIEXKJC5XNWdSFLWpxVgYMunoAznyXDq55pcnz1nvmNJda9JTZo1uUjnyEp4I
+        R0uR9iMkHNQB7miSSFu0jbSlQw8UY4iTT3fBcw7KhcWnp8yOv9JaoKE77Zvqq+2qpuUTHjioHP4c
+        sUGPUniDvUr/t2oPtnJyLuGEgXc7uI6cKTJqzHeEk1Q81LJXGASgAV0RUoqBmUnfYELTsRJDM9s+
+        snPSGlkGEak22QUH10I+PJAIa2Sj6ZgYKowUG0KbFTU5MyWQCqqq24qBuWea2R46PvhUZa6PZLXz
+        WtiTN22H8XnGyA0JdOGGfOIsmj6loQbrS7enKKFa3ScaXry2nUiuQiuHqgdSwSknJljaY5rbbNX0
+        RSDuMVecC3ChDUdpRaOGk6DFgWBP5CdBI1uFO9YJQzMeskwhDr0nu131ecGf9pxK65MCTAV/v4Mr
+        n9lwr0Jy3aJzpDyuKuDKaSRaLcoUlkps8Fskyec+BgHL0lyxKkGazWmtKCVp9OiWyt+mVAjeXr5u
+        dhlrf5L83K4AthodgBMUaUh7R1vgrJ3KEWp+2JvgZbSUjZOa7uDsbA5O7P4ddaLco3ku/SvLkdCO
+        gC7ME+BJdS31Loy6axpz5Lovhc2zaDrVsbqq4cni7nW0F5fLrAVXA7JbRfsrd6xwroqbw6nFLxOX
+        lsKSw9r+hHV/De43h17ZLMO0iLQ3wpe9hOWCmQZGa3nqaifbIcoX05It2unFuvoR+sydoFv++cME
+        ph92MpEYV1K9+bN/6oOH03Pj/wgE6nKkVtg20CwssllFIpWuw6hXrZTmL9M0oEc3fp1haIJztcfL
+        HCD+WsoUuzpKkw64am0Zulcc6yhvT9TmF+WTwHglnifJmIdwu5seHJ/oRTBLfeXMXdA20IR4xGi3
+        68lU51ZIbShO6jkwHacxTiG6PYkjOEpJlZ4weh1xc4CmqLbPnDOjcTRRTlRWoCdSdJqVRH6s/NYQ
+        WYH6Dq6WqrtxO8/H9f1QwVKkZbPPdKiPo7mVaG3YC8TTVBp9Cbn1kBGatZMVPavpU5kCXMf9qZst
+        zwm3TE4sPEkKsQ/jqplMeHAq4v3p/baa+2o25nBnWaL0ug4aS4fsM7IHhJYPLchL1GK04sGXgjog
+        Y0olKgAUEAIZsXPEUenFXR+DvECWOXiNGRbF3Cf6UqqsONKxZP3YjdSUhPLg9sW51QJ6/ycAAAD/
+        /4xYzQ6CMAy+7ylIz57UoD4MWXAUrCJdtnHk3U03ZaAcPH9t167pz1cOadoLza7eyDQT65476/jq
+        v1ShpYH8TUuWeBAS7QNbiOikiqKKBH5ccXKwjp826MAPjM/ty2OyB7mQM1qePmicQRm4HM67DYM6
+        bfF+cQMAU0uLyar5YFCPDfECUIuwf93Zsp1Cp6H7x3wGjEEbsNGyJ5BZh5zFHN5jn9kWm785OgxC
+        f8igDoROUtFgW499unZAKivdSnt21lE8eUgq1aReAAAA//8DAIFlQmv1EQAA
     headers:
       CF-RAY:
-      - 95f365f1bfc87ded-GRU
+      - 95f945532dc9a109-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -517,15 +451,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 14 Jul 2025 19:24:07 GMT
+      - Tue, 15 Jul 2025 12:30:39 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=PcC3_3T8.MK_WpZlQLdZfwpNv9Pe45AIYmrXOSgJ65E-1752521047-1.0.1.1-eyqwSWfQC7ZV6.JwTsTihK1ZWCrEmxd52CtNcfe.fw1UjjBN9rdTU4G7hRZiNqHQYo4sVZMmgRgqM9k7HRSzN2zln0bKmMiOuSQTZh6xF_I;
-        path=/; expires=Mon, 14-Jul-25 19:54:07 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=JvQ1c4qYZefNwOPoVNgAtX8ET7ObU.JKDvGc43LOR6g-1752521047741-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -539,13 +467,13 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2729'
+      - '16236'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '2789'
+      - '16239'
       x-ratelimit-limit-requests:
       - '30000'
       x-ratelimit-limit-tokens:
@@ -553,13 +481,180 @@ interactions:
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149999559'
+      - '149999660'
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_74f6e8ff49db25dbea3d3525cc149e8e
+      - req_0b59257e62a24774081ee25ddf3b348b
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are an expert evaluator
+      assessing how well an AI agent''s output aligns with its assigned task goal.\n\nScore
+      the agent''s goal alignment on a scale from 0-10 where:\n- 0: Complete misalignment,
+      agent did not understand or attempt the task goal\n- 5: Partial alignment, agent
+      attempted the task but missed key requirements\n- 10: Perfect alignment, agent
+      fully satisfied all task requirements\n\nConsider:\n1. Did the agent correctly
+      interpret the task goal?\n2. Did the final output directly address the requirements?\n3.
+      Did the agent focus on relevant aspects of the task?\n4. Did the agent provide
+      all requested information or deliverables?\n\nReturn your evaluation as JSON
+      with fields ''score'' (number) and ''feedback'' (string).\n"}, {"role": "user",
+      "content": "\nAgent role: Test Agent Eval\nAgent goal: Complete test tasks successfully\nTask
+      description: Test task description\nExpected output: Expected test output\n\n\nAgent''s
+      final output:\n**Test Task Description**\n\n**1. Initial Preparations:**\nBefore
+      commencing with the test task, several preparatory steps need to be taken. This
+      includes:\n\n- **Define Objectives:** Clearly outline what the test aims to
+      achieve, such as validating a software feature or assessing system performance.\n-
+      **Gather Resources:** Assemble any necessary tools and resources, including
+      test scripts, hardware, and software environments.\n- **Identify Stakeholders:**
+      List the individuals or teams involved in the project, including developers,
+      testers, and project managers, to ensure effective communication.\n\n**2. Methodology:**\nThe
+      following methodology outlines the steps for executing the test task:\n\n- **Test
+      Environment Setup:** Configure the required hardware and software settings,
+      ensuring compatibility with the testing framework. This may involve installing
+      specific software versions, configuring servers, and preparing datasets.\n  \n-
+      **Test Design:** Create detailed test cases that specify the input data, execution
+      steps, and expected outcomes. Ensure that they cover all functional and non-functional
+      aspects of the system.\n\n- **Execution of Test Cases:** Systematically run
+      each test case, logging results meticulously. Use automated testing tools if
+      applicable to enhance efficiency and accuracy.\n\n**3. Tools and Software Involved:**\nThe
+      success of the test task hinges on the effective use of various tools, including:\n\n-
+      **Test Management Software:** Tools like JIRA or TestRail for organizing and
+      tracking test cases.\n- **Automation Tools:** Software such as Selenium or JUnit
+      for automating repetitive test scenarios, thereby saving time and reducing human
+      error.\n- **Monitoring Tools:** Utilize performance monitoring applications
+      like Nagios or Grafana to capture system performance during the test.\n\n**4.
+      Criteria for Measuring Success:**\nTo evaluate the outcomes of the test task,
+      the following criteria will be implemented:\n\n- **Coverage Metrics:** Ensure
+      all critical functionalities are tested and that the coverage aligns with predefined
+      benchmarks.\n- **Defect Density:** Measure the number of defects found in relation
+      to the size of the codebase.\n- **Test Execution Rate:** Track how many tests
+      have been executed compared to the total planned, assessing timeliness and efficiency.\n\n**5.
+      Anticipated Challenges and Solutions:**\nChallenges can surface during the testing
+      process, and proactive solutions are essential:\n\n- **Issue 1: Environment
+      Stability:** If the test environment is unstable, it may lead to inconsistent
+      results. **Solution:** Have a backup environment ready along with automated
+      deployment scripts to quickly recreate the environment.\n\n- **Issue 2: Resource
+      Availability:** Limited access to required resources can delay the task. **Solution:**
+      Plan for contingencies by allocating additional resources or rescheduling tasks
+      to optimize timing.\n\n**6. Conclusion:**\nUpon completion of the test task,
+      a comprehensive evaluation will summarize the outcomes. This includes analyzing
+      the collected data to determine whether the objectives have been met, defects
+      fixed, and performance benchmarks achieved. \n\n**Next Steps:**\nMoving forward,
+      the project team should review the results, implement lessons learned into future
+      testing cycles, and iterate on test cases based on feedback. Additionally, developing
+      a continuous integration system will increase the overall efficiency of future
+      test tasks, ensuring quick identification and resolution of issues.\n\nBy following
+      the outlined preparation, execution, and feedback processes, the project will
+      maintain a high standard of quality assurance and pave the way for improved
+      software performance in subsequent releases.\n\nEvaluate how well the agent''s
+      output aligns with the assigned task goal.\n"}], "model": "gpt-4o-mini", "stop":
+      []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '4863'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=BV0s2UQraAxouFDUEdsj9AS9rtSrZA9kcMCB139AN9w-1752582623-1.0.1.1-LG9qIt_O34KccmRqQn2MVTixHsfIEVlkom8.eRacYd8sxYO48_vaIjjhPwFqlphCYq3QSu8vB8QbAZLAThgRZdn6dTWAX37l_O.OA3aoQvU;
+        _cfuvid=5fV8AudakGgHslCW2Y6zvxEI7ZPYrEFN390mRiV8Zpw-1752582623184-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xUTU8bMRC951eMfOGyQSElEHLsAVG1qnqgH2qDIseerE28HtczGxoh/nvl3ZCE
+        lkq97MFv3pt54+d9HAAob9UMlHFaTJPC8K18n+TRe+foQ+s+fqFP726+Tcfp5vbz9bWoqjBoeY9G
+        nlmnhpoUUDzFHjYZtWBRPbucjCfT8cWbqw5oyGIotDrJ8JyGjY9+OB6Nz4ejy+HZdMd25A2ymsGP
+        AQDAY/ctc0aLv9QMRtXzSYPMukY12xcBqEyhnCjN7Fl07GfegYaiYOxGf5xHgLliQxnnagaTqj9Y
+        IdqlNutyNle3DkHXGAVSpo23aEGDOMrU1g7q1lsEiuDoAYTAULStkVKCLCCa17BsBVbaB7SlImWy
+        rUHghMavvAH8ldAIWqBWUiugGTL+bH1GC8stiMNexiKb7FPZ8il8dT4geAFDGyyVGQNudCz0Iseg
+        owWL0vdNGZPOWihvgQUTV9CgOLIUqN5WIESBKzDZC2avYUUZuDUGmatOKVHZmtcBjNMhYKyRq9I/
+        aLPuVmJ9RiOQkRNFxmK1jH6yt9ctpPd4Ak1Ro4gWfPyHxVvXcgUPnVFxmBEedLEFWgSbJKWDtjYj
+        80GhJh0qWOP2eYelEcNDoTeeGe3pXM3j03EkMq5a1iWWsQ3hCNAxkugyTRfGux3ytI9foDplWvIf
+        VLXy0bNbZNRMsUSNhZLq0KcBwF0X8/ZFclXK1CRZCK2xaze9vOj11OF1HdCz0e4RKCHR4QBc7Wkv
+        BBd9FPjopSijjUN7oB6elW6tpyNgcGT773Fe0+6t+1j/j/wBMAaToF2kjNabl5YPZRnvu0i9XrZf
+        czewYswbb3AhHnO5Cosr3Ybdf4y3LNgsVj7WmFP23Y+hXOXgafAbAAD//wMAjKNUeBsFAAA=
+    headers:
+      CF-RAY:
+      - 95f945b9eac0a109-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 15 Jul 2025 12:30:41 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '2009'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '2013'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998828'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_22872f033ca600fc6e4b05b8eb423580
     status:
       code: 200
       message: OK

@@ -1,0 +1,237 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. An agent
+      created for testing purposes\nYour personal goal is: Complete test tasks successfully\n\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "Complete this task successfully"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '583'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNb9swDL3nVxA6J0U+HKTNbd0woMAOw7Bu6LbCUCXa1iqLgkgnzYr8
+        98FKWqdbB+wiQHx81OMj9TgCUM6qNSjTaDFt9JNL+TZ7N/dfrusPN01NyV6vPk3f/mrl5vLrXI17
+        Bt39RCNPrDNDbfQojsIBNgm1YF91tlrOl+fzxXKWgZYs+p5WR5kUNGldcJP5dF5MpqvJ7PzIbsgZ
+        ZLWG7yMAgMd89jqDxQe1hun4KdIis65RrZ+TAFQi30eUZnYsOogaD6ChIBiy9M8NdXUja7iCQFsw
+        OkDtNgga6l4/6MBbTAA/wnsXtIc3+b6Gjx41I8REG2cRWoStkwakQeCIxlXOgEXRzjNQgvzigwBV
+        OUU038OOOgiIFhr0MdPHoIOFK9g67wEDdwlBCI7OIjgB7oxB5qrzfpeznxRokIZS3wwk5EiB8ey0
+        54RVx7r3PXTenwA6BBLdzy27fXtE9s/+eqpjojv+g6oqFxw3ZULNFHovWSiqjO5HALd5jt2L0aiY
+        qI1SCt1jfu7i4lBODdszgEVxBIVE+yE+KxbjV8qVR79PFkEZbRq0A3XYGt1ZRyfA6KTpv9W8VvvQ
+        uAv1/5QfAGMwCtoyJrTOvOx4SEvYf65/pT2bnAUrxrRxBktxmPpBWKx05w8rr3jHgm1ZuVBjiskd
+        9r6K5aLQy0LjxcKo0X70GwAA//8DAMz2wVUFBAAA
+    headers:
+      CF-RAY:
+      - 95f93ea9af627e0b-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 15 Jul 2025 12:25:54 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=GRZmZLrjW5ZRHNmUJa4ccrMcy20D1rmeqK6Ptlv0mRY-1752582354-1.0.1.1-xKd_yga48Eedech5TRlThlEpDgsB2whxkWHlCyAGOVMqMcvH1Ju9FdXYbuQ9NdUQcVxPLgiGM35lYhqSLVQiXDyK01dnyp2Gvm560FBN9DY;
+        path=/; expires=Tue, 15-Jul-25 12:55:54 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=MYqswpSR7sqr4kGp6qZVkaL7HDYwMiww49PeN9QBP.A-1752582354973-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '4047'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '4440'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999885'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_5704c0f206a927ddc12aa1a19b612a75
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are an expert evaluator
+      assessing how well an AI agent''s output aligns with its assigned task goal.\n\nScore
+      the agent''s goal alignment on a scale from 0-10 where:\n- 0: Complete misalignment,
+      agent did not understand or attempt the task goal\n- 5: Partial alignment, agent
+      attempted the task but missed key requirements\n- 10: Perfect alignment, agent
+      fully satisfied all task requirements\n\nConsider:\n1. Did the agent correctly
+      interpret the task goal?\n2. Did the final output directly address the requirements?\n3.
+      Did the agent focus on relevant aspects of the task?\n4. Did the agent provide
+      all requested information or deliverables?\n\nReturn your evaluation as JSON
+      with fields ''score'' (number) and ''feedback'' (string).\n"}, {"role": "user",
+      "content": "\nAgent role: Test Agent\nAgent goal: Complete test tasks successfully\n\n\nAgent''s
+      final output:\nPlease provide me with the specific details or context of the
+      task you need help with, and I will ensure to complete it successfully and provide
+      a thorough response.\n\nEvaluate how well the agent''s output aligns with the
+      assigned task goal.\n"}], "model": "gpt-4o-mini", "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1196'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=GRZmZLrjW5ZRHNmUJa4ccrMcy20D1rmeqK6Ptlv0mRY-1752582354-1.0.1.1-xKd_yga48Eedech5TRlThlEpDgsB2whxkWHlCyAGOVMqMcvH1Ju9FdXYbuQ9NdUQcVxPLgiGM35lYhqSLVQiXDyK01dnyp2Gvm560FBN9DY;
+        _cfuvid=MYqswpSR7sqr4kGp6qZVkaL7HDYwMiww49PeN9QBP.A-1752582354973-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xUy27bQAy8+yuIPdtGbMdN4FvbSxM0QIsEKNA6MJhdSmK82hWWVFwj8L8XKz/k
+        9AH0ogOHnOFjVq8DAMPOLMDYCtXWjR990O+TT7dfZs/v5OtFy/ef7++mxfu7j83t/cONGeaK+PRM
+        Vo9VYxvrxpNyDHvYJkKlzDq5mk/n19PZfN4BdXTkc1nZ6OgyjmoOPJpeTC9HF1ejyfWhuopsScwC
+        fgwAAF67b+4zOPppFnAxPEZqEsGSzOKUBGBS9DliUIRFMagZ9qCNQSl0rb8uA8DSiI2JlmYB0+E+
+        UBC5J7TrHFuah4oASwoKjh2EqOCojkE0oRIgWE+YoA2OUhZzHEqIBWhFoChrKCP6IWwqthWwgEY4
+        bItASbRLEpDWWhIpWu+3Y7gJooRuCKyAsiYHRUxQx0TgSJG9DIGDY4ua5RA82nVW5cDKqPxCWYhC
+        iSXBhrU69TOGbxV7ysxSxY0Awoa951AGkq69/do67QLZk8vBJsUXdgQYtoBWW/SQSJoYpFPq2Ptp
+        MLjTttC51DFXVIPjRFb9drw0y7A7v0uiohXM3git92cAhhAVs7c6RzwekN3JAz6WTYpP8lupKTiw
+        VKtEKDHke4vGxnTobgDw2HmtfWMf06RYN7rSuKZObjo7eM30Fu/R6yOoUdH38dnkCLzhWx1ud+ZW
+        Y9FW5PrS3trYOo5nwOBs6j+7+Rv3fnIO5f/Q94C11Ci5VZPIsX07cZ+WKP8B/pV22nLXsBFKL2xp
+        pUwpX8JRga3fv0sjW1GqVwWHklKTuHuc+ZKD3eAXAAAA//8DADksFsafBAAA
+    headers:
+      CF-RAY:
+      - 95f93ec73a1c7e0b-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 15 Jul 2025 12:25:57 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1544'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '1546'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999732'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_44930ba12ad8d1e3f0beed1d5e3d8b0c
+    status:
+      code: 200
+      message: OK
+version: 1
