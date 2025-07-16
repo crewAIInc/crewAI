@@ -17,6 +17,9 @@ from .agent_events import (
     AgentExecutionStartedEvent,
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
+    AgentEvaluationStartedEvent,
+    AgentEvaluationCompletedEvent,
+    AgentEvaluationFailedEvent,
 )
 from .task_events import (
     TaskStartedEvent,
@@ -74,6 +77,9 @@ __all__ = [
     "AgentExecutionStartedEvent",
     "AgentExecutionCompletedEvent",
     "AgentExecutionErrorEvent",
+    "AgentEvaluationStartedEvent",
+    "AgentEvaluationCompletedEvent",
+    "AgentEvaluationFailedEvent",
     "TaskStartedEvent",
     "TaskCompletedEvent",
     "TaskFailedEvent",
