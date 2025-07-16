@@ -17,8 +17,8 @@ from crewai.experimental.evaluation.base_evaluator import AgentAggregatedEvaluat
 class ExecutionState:
     def __init__(self):
         self.traces = {}
-        self.current_agent_id = None
-        self.current_task_id = None
+        self.current_agent_id: str | None = None
+        self.current_task_id: str | None = None
         self.iteration = 1
         self.iterations_results = {}
         self.agent_evaluators = {}
@@ -50,8 +50,9 @@ class AgentEvaluator:
         return self._thread_local.execution_state
 
     def _subscribe_to_events(self) -> None:
-        crewai_event_bus.register_handler(TaskCompletedEvent, self._handle_task_completed)
-        crewai_event_bus.register_handler(LiteAgentExecutionCompletedEvent, self._handle_lite_agent_completed)
+        from typing import cast
+        crewai_event_bus.register_handler(TaskCompletedEvent, cast(Any, self._handle_task_completed))
+        crewai_event_bus.register_handler(LiteAgentExecutionCompletedEvent, cast(Any, self._handle_lite_agent_completed))
 
     def _handle_task_completed(self, source: Any, event: TaskCompletedEvent) -> None:
         assert event.task is not None
@@ -63,6 +64,7 @@ class AgentEvaluator:
             state.current_agent_id = str(agent.id)
             state.current_task_id = str(event.task.id)
 
+            assert state.current_agent_id is not None and state.current_task_id is not None
             trace = self.callback.get_trace(state.current_agent_id, state.current_task_id)
 
             if not trace:
@@ -103,6 +105,7 @@ class AgentEvaluator:
             if not target_agent:
                 return
 
+            assert state.current_agent_id is not None and state.current_task_id is not None
             trace = self.callback.get_trace(state.current_agent_id, state.current_task_id)
 
             if not trace:
