@@ -227,4 +227,8 @@ class EvaluationTraceCallback(BaseEventListener):
 
 
 def create_evaluation_callbacks() -> EvaluationTraceCallback:
-    return EvaluationTraceCallback()
+    from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+
+    callback = EvaluationTraceCallback()
+    callback.setup_listeners(crewai_event_bus)
+    return callback
