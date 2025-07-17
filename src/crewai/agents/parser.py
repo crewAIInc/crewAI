@@ -85,14 +85,11 @@ class CrewAgentParser:
         return parser.parse(text)
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
+        cleaned_text = self._clean_agent_observations(text)
+
         thought = self._extract_thought(text)
         includes_answer = FINAL_ANSWER_ACTION in text
-        regex = (
-            r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
-        )
-        action_match = re.search(regex, text, re.DOTALL)
-        if includes_answer:
-            final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
+            final_answer = cleaned_text.split(FINAL_ANSWER_ACTION)[-1].strip()
             # Check whether the final answer ends with triple backticks.
             if final_answer.endswith("```"):
                 # Count occurrences of triple backticks in the final answer.
@@ -111,14 +108,14 @@ class CrewAgentParser:
             tool_input = action_input.strip(" ").strip('"')
             safe_tool_input = self._safe_repair_json(tool_input)
 
-            return AgentAction(thought, clean_action, safe_tool_input, text)
+            return AgentAction(thought, clean_action, safe_tool_input, cleaned_text)
 
-        if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
+        if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", cleaned_text, re.DOTALL):
             raise OutputParserException(
                 f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{self._i18n.slice('final_answer_format')}",
             )
         elif not re.search(
-            r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL
+            r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", cleaned_text, re.DOTALL
         ):
             raise OutputParserException(
                 MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
@@ -167,3 +164,30 @@ class CrewAgentParser:
             return tool_input
 
         return str(result)
+
+    def _clean_agent_observations(self, text: str) -> str:
+        """
+        Remove agent-written observations from the text.
+
+        This handles cases where agents write their own observations instead of
+        letting the system generate them after tool execution.
+        """
+        observation_pattern = (
+            r'(Action\s*\d*\s*Input\s*\d*\s*:[^\n]*)'  # Capture Action Input line
+            r'\n\s*Observation\s*:.*?'                 # Match Observation line
+            r'(?=\n\s*(?:Thought|Action\s*\d*\s*:|Final\s+Answer:|$))'  # Lookahead
+        )
+
+        def clean_text(text: str) -> str:
+            # Remove agent-written observations while keeping Action Input
+            text = re.sub(observation_pattern, r'\1', text, flags=re.MULTILINE | re.DOTALL)
+
+            # Remove excessive blank lines
+            text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
+
+            return text.strip()
+
+        if re.search(observation_pattern, text, flags=re.MULTILINE | re.DOTALL):
+            text = clean_text(text)
+
+        return text
