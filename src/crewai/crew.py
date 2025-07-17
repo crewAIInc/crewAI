@@ -262,8 +262,8 @@ class Crew(FlowTrackable, BaseModel):
     @field_validator("config", mode="before")
     @classmethod
     def check_config_type(
-        cls, v: Union[Json, Dict[str, Any]]
-    ) -> Union[Json, Dict[str, Any]]:
+        cls, v: Union[str, Dict[str, Any]]
+    ) -> Union[str, Dict[str, Any]]:
         """Validates that the config is a valid type.
         Args:
             v: The config to be validated.
@@ -271,8 +271,7 @@ class Crew(FlowTrackable, BaseModel):
             The config if it is valid.
         """
 
-        # TODO: Improve typing
-        return json.loads(v) if isinstance(v, Json) else v  # type: ignore
+        return json.loads(v) if isinstance(v, str) else v
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
@@ -319,7 +318,7 @@ class Crew(FlowTrackable, BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Initialize private memory attributes."""
         self._external_memory = (
-            # External memory doesn’t support a default value since it was designed to be managed entirely externally
+            # External memory doesn't support a default value since it was designed to be managed entirely externally
             self.external_memory.set_crew(self) if self.external_memory else None
         )
 
