@@ -509,6 +509,85 @@ def test_deepseek_r1_with_open_router():
     assert "Paris" in result
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_passes_extra_headers():
+    """Test that extra_headers parameter is passed to litellm.completion."""
+    extra_headers = {
+        "X-Custom-Auth": "bearer token123",
+        "X-API-Version": "v1.0"
+    }
+    
+    llm = LLM(
+        model="gpt-4o-mini",
+        extra_headers=extra_headers,
+    )
+
+    messages = [{"role": "user", "content": "Hello, world!"}]
+
+    with patch("litellm.completion") as mocked_completion:
+        mock_message = MagicMock()
+        mock_message.content = "Test response"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 5,
+            "completion_tokens": 5,
+            "total_tokens": 10,
+        }
+
+        mocked_completion.return_value = mock_response
+
+        result = llm.call(messages)
+
+        mocked_completion.assert_called_once()
+
+        _, kwargs = mocked_completion.call_args
+
+        assert kwargs["extra_headers"] == extra_headers
+
+        assert kwargs["model"] == "gpt-4o-mini"
+        assert kwargs["messages"] == messages
+
+        assert result == "Test response"
+
+
+def test_llm_extra_headers_none_by_default():
+    """Test that extra_headers defaults to None and doesn't break existing functionality."""
+    llm = LLM(model="gpt-4o-mini")
+    
+    messages = [{"role": "user", "content": "Hello, world!"}]
+
+    with patch("litellm.completion") as mocked_completion:
+        mock_message = MagicMock()
+        mock_message.content = "Test response"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 5,
+            "completion_tokens": 5,
+            "total_tokens": 10,
+        }
+
+        mocked_completion.return_value = mock_response
+
+        result = llm.call(messages)
+
+        mocked_completion.assert_called_once()
+
+        _, kwargs = mocked_completion.call_args
+
+        assert "extra_headers" not in kwargs
+
+        assert kwargs["model"] == "gpt-4o-mini"
+        assert kwargs["messages"] == messages
+
+        assert result == "Test response"
+
+
 def assert_event_count(
     mock_emit,
     expected_completed_tool_call: int = 0,
