@@ -24,32 +24,28 @@ class ToolSelectionEvaluator(BaseEvaluator):
         if task is not None:
             task_context = f"Task description: {task.description}"
 
+        if not agent.tools:
+            return EvaluationScore(
+                score=None,
+                feedback="Agent had no tools available to use."
+            )
+
         tool_uses = execution_trace.get("tool_uses", [])
         tool_count = len(tool_uses)
         unique_tool_types = set([tool.get("tool", "Unknown tool") for tool in tool_uses])
+        available_tools_info = "No tools available"
 
-        if tool_count == 0:
-            if not agent.tools:
-                return EvaluationScore(
-                    score=None,
-                    feedback="Agent had no tools available to use."
-                )
-            else:
-                return EvaluationScore(
-                    score=None,
-                    feedback="Agent had tools available but didn't use any."
-                )
-
-        available_tools_info = ""
         if agent.tools:
+            available_tools_info = ""
             for tool in agent.tools:
                 available_tools_info += f"- {tool.name}: {tool.description}\n"
-        else:
-            available_tools_info = "No tools available"
 
         tool_types_summary = "Tools selected by the agent:\n"
         for tool_type in sorted(unique_tool_types):
             tool_types_summary += f"- {tool_type}\n"
+
+        if tool_count == 0:
+            tool_types_summary += "No tools used"
 
         prompt = [
             {"role": "system", "content": """You are an expert evaluator assessing if an AI agent selected the most appropriate tools for a given task.
@@ -92,6 +88,7 @@ IMPORTANT:
 """}
         ]
         assert self.llm is not None
+        breakpoint()
         response = self.llm.call(prompt)
 
         try:
