@@ -80,6 +80,18 @@ def test_model_with_union():
 }"""
     assert schema.strip() == expected_schema.strip()
 
+def test_model_with_new_union():
+    class UnionModel(BaseModel):
+        union_field: int | str
+
+    parser = PydanticSchemaParser(model=UnionModel)
+    schema = parser.get_schema()
+
+    expected_schema = """{
+    union_field: Union[int, str]
+}"""
+    assert schema.strip() == expected_schema.strip()
+
 
 def test_model_with_dict():
     class DictModel(BaseModel):

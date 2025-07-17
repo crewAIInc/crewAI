@@ -1,4 +1,5 @@
 from typing import Dict, List, Type, Union, get_args, get_origin
+from types import UnionType
 
 from pydantic import BaseModel
 
@@ -34,7 +35,7 @@ class PydanticSchemaParser(BaseModel):
             key_type, value_type = get_args(field_type)
             return f"Dict[{key_type.__name__}, {value_type.__name__}]"
 
-        if origin is Union:
+        if origin in {Union, UnionType}:
             return self._format_union_type(field_type, depth)
 
         if isinstance(field_type, type) and issubclass(field_type, BaseModel):
