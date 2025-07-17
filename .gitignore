@@ -27,3 +27,4 @@ crewairules.mdc
 plan.md
 conceptual_plan.md
 build_image
+chromadb-*.lock
