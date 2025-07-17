@@ -91,6 +91,12 @@ class CrewAgentParser:
         includes_answer = FINAL_ANSWER_ACTION in text
         action_match = self._find_last_action_input_pair(cleaned_text)
 
+        # Prevent tool bypassing when both Action and Final Answer are present
+        # If the model returns both, we PRIORITIZE the action to force tool execution
+        if includes_answer and action_match:
+            return self._create_agent_action(thought, action_match, cleaned_text)
+
+        elif includes_answer:
             final_answer = cleaned_text.split(FINAL_ANSWER_ACTION)[-1].strip()
             # Check whether the final answer ends with triple backticks.
             if final_answer.endswith("```"):
