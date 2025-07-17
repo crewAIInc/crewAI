@@ -311,6 +311,7 @@ class LLM(BaseLLM):
         callbacks: List[Any] = [],
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
+        extra_headers: Optional[Dict[str, str]] = None,
         **kwargs,
     ):
         self.model = model
@@ -337,6 +338,7 @@ class LLM(BaseLLM):
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
+        self.extra_headers = extra_headers
 
         litellm.drop_params = True
 
@@ -408,6 +410,7 @@ class LLM(BaseLLM):
             "stream": self.stream,
             "tools": tools,
             "reasoning_effort": self.reasoning_effort,
+            "extra_headers": self.extra_headers,
             **self.additional_params,
         }
 
