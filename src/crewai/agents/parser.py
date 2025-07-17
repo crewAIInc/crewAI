@@ -99,7 +99,7 @@ class CrewAgentParser:
                 # If count is odd then it's an unmatched trailing set; remove it.
                 if count % 2 != 0:
                     final_answer = final_answer[:-3].rstrip()
-            return AgentFinish(thought, final_answer, text)
+            return AgentFinish(thought, final_answer, cleaned_text)
 
         elif action_match:
             return self._create_agent_action(thought, action_match, cleaned_text)
