@@ -87,7 +87,7 @@ class InternalCrew:
 
 @CrewBase
 class InternalCrewWithMCP(InternalCrew):
-    mcp_server_params = {"host": "localhost", "port": 8000}
+    mcp_server_params = [{"url": "localhost", "port": 8000}]
 
     @agent
     def reporting_analyst(self):
@@ -96,6 +96,19 @@ class InternalCrewWithMCP(InternalCrew):
     @agent
     def researcher(self):
         return Agent(config=self.agents_config["researcher"], tools=self.get_mcp_tools("simple_tool"))  # type: ignore[index]
+
+@CrewBase
+class InternalCrewWithMultipleMCP(InternalCrew):
+    mcp_server_params = {"mcp1": {"url": "localhost", "port": 8000}, "mcp2": {"url": "localhost", "port": 8001}}
+
+    @agent
+    def reporting_analyst(self):
+        return Agent(config=self.agents_config["reporting_analyst"], tools=self.get_mcp_tools(server="mcp1"))  # type: ignore[index]
+
+    @agent
+    def researcher(self):
+        return Agent(config=self.agents_config["researcher"], tools=self.get_mcp_tools("simple_tool", server="mcp2"))  # type: ignore[index]
+
 
 def test_agent_memoization():
     crew = SimpleCrew()
@@ -270,4 +283,21 @@ def test_internal_crew_with_mcp():
         assert crew.reporting_analyst().tools == [simple_tool, another_simple_tool]
         assert crew.researcher().tools == [simple_tool]
 
-    adapter_mock.assert_called_once_with({"host": "localhost", "port": 8000})
+    adapter_mock.assert_called_once_with([{"url": "localhost", "port": 8000}])
+
+
+def test_internal_crew_with_multiple_mcp():
+    from crewai_tools import MCPServerAdapter
+    from crewai_tools.adapters.mcp_adapter import ToolCollection
+    from unittest.mock import call
+
+    mock = Mock(spec=MCPServerAdapter)
+    mock.tools = ToolCollection([simple_tool, another_simple_tool])
+    with patch("crewai_tools.MCPServerAdapter", return_value=mock) as adapter_mock:
+        crew = InternalCrewWithMultipleMCP()
+        assert crew.reporting_analyst().tools == [simple_tool, another_simple_tool]
+        assert crew.researcher().tools == [simple_tool]
+        adapter_mock.assert_has_calls([
+            call({"url": "localhost", "port": 8000}),
+            call({"url": "localhost", "port": 8001})
+        ], any_order=True)
