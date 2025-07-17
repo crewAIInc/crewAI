@@ -221,29 +221,19 @@ class CrewAgentParser:
 
         return _match_fallback_pair(text)
 
-    def _clean_agent_observations(self, text: str) -> str:
-        """
-        Remove agent-written observations from the text.
 
-        This handles cases where agents write their own observations instead of
-        letting the system generate them after tool execution.
-        """
-        observation_pattern = (
-            r'(Action\s*\d*\s*Input\s*\d*\s*:[^\n]*)'  # Capture Action Input line
-            r'\n\s*Observation\s*:.*?'                 # Match Observation line
-            r'(?=\n\s*(?:Thought|Action\s*\d*\s*:|Final\s+Answer:|$))'  # Lookahead
+    def _clean_agent_observations(self, text: str) -> str:
+        # Pattern: capture Action/Input lines, then Observation block until next Thought or end-of-string
+        obs_pattern = re.compile(
+            r'^(\s*Action:.*\n\s*Action Input:.*\n)'   # group 1: Action + Action Input
+            r'\s*Observation:.*?(?=(?:\n\s*Thought:|\Z))',  # non-greedy until Thought: or end-of-string
+            flags=re.DOTALL | re.MULTILINE
         )
 
-        def clean_text(text: str) -> str:
-            # Remove agent-written observations while keeping Action Input
-            text = re.sub(observation_pattern, r'\1', text, flags=re.MULTILINE | re.DOTALL)
-
-            # Remove excessive blank lines
-            text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
-
-            return text.strip()
-
-        if re.search(observation_pattern, text, flags=re.MULTILINE | re.DOTALL):
-            text = clean_text(text)
-
+        if obs_pattern.search(text):
+            text = obs_pattern.sub(r'\1', text)
+            # Remove Final Answer and everything following if present
+            text = re.sub(r'\n\s*Final\s+Answer:.*', '', text, flags=re.DOTALL | re.MULTILINE)
+            # Normalize blank lines
+            text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text).strip()
         return text
