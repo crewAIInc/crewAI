@@ -1090,14 +1090,18 @@ class LLM(BaseLLM):
           - If no slash is present, "openai" is assumed.
         """
         provider = self._get_custom_llm_provider()
-        if self.response_format is not None and not supports_response_schema(
-            model=self.model,
-            custom_llm_provider=provider,
-        ):
-            raise ValueError(
-                f"The model {self.model} does not support response_format for provider '{provider}'. "
-                "Please remove response_format or use a supported model."
-            )
+        if self.response_format is not None:
+            if provider == "openai":
+                return
+            
+            if not supports_response_schema(
+                model=self.model,
+                custom_llm_provider=provider,
+            ):
+                raise ValueError(
+                    f"The model {self.model} does not support response_format for provider '{provider}'. "
+                    "Please remove response_format or use a supported model."
+                )
 
     def supports_function_calling(self) -> bool:
         try:

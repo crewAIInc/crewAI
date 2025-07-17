@@ -259,6 +259,41 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
+def test_openai_compatible_models_response_format():
+    """Test that OpenAI-compatible models support response_format without validation errors."""
+    from pydantic import BaseModel
+    
+    class TestResponse(BaseModel):
+        content: str
+    
+    llm = LLM(model="openai/qwen-plus", response_format=TestResponse)
+    llm._validate_call_params()
+    
+    llm = LLM(model="openai/custom-model", response_format=TestResponse)
+    llm._validate_call_params()
+    
+    llm = LLM(model="openai/gpt-4", response_format=TestResponse)
+    llm._validate_call_params()
+
+
+def test_non_openai_providers_still_use_validation():
+    """Test that non-OpenAI providers still use the original validation logic."""
+    from pydantic import BaseModel
+    
+    class TestResponse(BaseModel):
+        content: str
+    
+    with patch("crewai.llm.supports_response_schema", return_value=False):
+        llm = LLM(model="gemini/gemini-1.5-pro", response_format=TestResponse)
+        with pytest.raises(ValueError) as excinfo:
+            llm._validate_call_params()
+        assert "does not support response_format" in str(excinfo.value)
+    
+    with patch("crewai.llm.supports_response_schema", return_value=True):
+        llm = LLM(model="anthropic/claude-3", response_format=TestResponse)
+        llm._validate_call_params()
+
+
 @pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
 @pytest.mark.parametrize(
     "model",
