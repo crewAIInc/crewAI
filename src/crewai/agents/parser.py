@@ -163,6 +163,14 @@ class CrewAgentParser:
         if result in UNABLE_TO_REPAIR_JSON_RESULTS:
             return tool_input
 
+        # if isinstance(result, str) and result.startswith("[") and result.endswith("]"):
+        #     try:
+        #         result_data = json.loads(result)
+        #         if isinstance(result_data, list) and len(result_data) > 0 and isinstance(result_data[0], dict):
+        #             return json.dumps(result_data[0])
+        #     except Exception:
+        #         ...
+
         return str(result)
 
     def _clean_agent_observations(self, text: str) -> str:
