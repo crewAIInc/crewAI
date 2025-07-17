@@ -3,8 +3,8 @@ from typing import Any, Dict
 from crewai.agent import Agent
 from crewai.task import Task
 
-from crewai.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
-from crewai.evaluation.json_parser import extract_json_from_llm_response
+from crewai.experimental.evaluation.base_evaluator import BaseEvaluator, EvaluationScore, MetricCategory
+from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 
 class GoalAlignmentEvaluator(BaseEvaluator):
     @property
@@ -14,10 +14,14 @@ class GoalAlignmentEvaluator(BaseEvaluator):
     def evaluate(
         self,
         agent: Agent,
-        task: Task,
         execution_trace: Dict[str, Any],
         final_output: Any,
+        task: Task | None = None,
     ) -> EvaluationScore:
+        task_context = ""
+        if task is not None:
+            task_context = f"Task description: {task.description}\nExpected output: {task.expected_output}\n"
+
         prompt = [
             {"role": "system", "content": """You are an expert evaluator assessing how well an AI agent's output aligns with its assigned task goal.
 
@@ -37,8 +41,7 @@ Return your evaluation as JSON with fields 'score' (number) and 'feedback' (stri
             {"role": "user", "content": f"""
 Agent role: {agent.role}
 Agent goal: {agent.goal}
-Task description: {task.description}
-Expected output: {task.expected_output}
+{task_context}
 
 Agent's final output:
 {final_output}

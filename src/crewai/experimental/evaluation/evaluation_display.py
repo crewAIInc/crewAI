@@ -3,8 +3,8 @@ from typing import Dict, Any, List
 from rich.table import Table
 from rich.box import HEAVY_EDGE, ROUNDED
 from collections.abc import Sequence
-from crewai.evaluation.base_evaluator import AgentAggregatedEvaluationResult, AggregationStrategy, AgentEvaluationResult, MetricCategory
-from crewai.evaluation import EvaluationScore
+from crewai.experimental.evaluation.base_evaluator import AgentAggregatedEvaluationResult, AggregationStrategy, AgentEvaluationResult, MetricCategory
+from crewai.experimental.evaluation import EvaluationScore
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 from crewai.utilities.llm_utils import create_llm
 
@@ -17,7 +17,6 @@ class EvaluationDisplayFormatter:
             self.console_formatter.print("[yellow]No evaluation results to display[/yellow]")
             return
 
-        # Get all agent roles across all iterations
         all_agent_roles: set[str] = set()
         for iter_results in iterations_results.values():
             all_agent_roles.update(iter_results.keys())
@@ -25,7 +24,6 @@ class EvaluationDisplayFormatter:
         for agent_role in sorted(all_agent_roles):
             self.console_formatter.print(f"\n[bold cyan]Agent: {agent_role}[/bold cyan]")
 
-            # Process each iteration
             for iter_num, results in sorted(iterations_results.items()):
                 if agent_role not in results or not results[agent_role]:
                     continue
@@ -33,23 +31,19 @@ class EvaluationDisplayFormatter:
                 agent_results = results[agent_role]
                 agent_id = agent_results[0].agent_id
 
-                # Aggregate results for this agent in this iteration
                 aggregated_result = self._aggregate_agent_results(
                     agent_id=agent_id,
                     agent_role=agent_role,
                     results=agent_results,
                 )
 
-                # Display iteration header
                 self.console_formatter.print(f"\n[bold]Iteration {iter_num}[/bold]")
 
-                # Create table for this iteration
                 table = Table(box=ROUNDED)
                 table.add_column("Metric", style="cyan")
                 table.add_column("Score (1-10)", justify="center")
                 table.add_column("Feedback", style="green")
 
-                # Add metrics to table
                 if aggregated_result.metrics:
                     for metric, evaluation_score in aggregated_result.metrics.items():
                         score = evaluation_score.score
@@ -91,7 +85,6 @@ class EvaluationDisplayFormatter:
                         "Overall agent evaluation score"
                     )
 
-                # Print the table for this iteration
                 self.console_formatter.print(table)
 
     def display_summary_results(self, iterations_results: Dict[int, Dict[str, List[AgentAggregatedEvaluationResult]]]):
@@ -248,7 +241,6 @@ class EvaluationDisplayFormatter:
             feedback_summary = None
             if feedbacks:
                 if len(feedbacks) > 1:
-                    # Use the summarization method for multiple feedbacks
                     feedback_summary = self._summarize_feedbacks(
                         agent_role=agent_role,
                         metric=category.title(),
@@ -307,7 +299,7 @@ class EvaluationDisplayFormatter:
                 strategy_guidance = "Focus on the highest-scoring aspects and strengths demonstrated."
             elif strategy == AggregationStrategy.WORST_PERFORMANCE:
                 strategy_guidance = "Focus on areas that need improvement and common issues across tasks."
-            else:  # Default/average strategies
+            else:
                 strategy_guidance = "Provide a balanced analysis of strengths and weaknesses across all tasks."
 
             prompt = [

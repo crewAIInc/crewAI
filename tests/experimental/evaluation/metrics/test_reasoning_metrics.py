@@ -3,12 +3,12 @@ from unittest.mock import patch, MagicMock
 from typing import List, Dict, Any
 
 from crewai.tasks.task_output import TaskOutput
-from crewai.evaluation.metrics.reasoning_metrics import (
+from crewai.experimental.evaluation.metrics.reasoning_metrics import (
     ReasoningEfficiencyEvaluator,
 )
-from tests.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
+from tests.experimental.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
 from crewai.utilities.llm_utils import LLM
-from crewai.evaluation.base_evaluator import EvaluationScore
+from crewai.experimental.evaluation.base_evaluator import EvaluationScore
 
 class TestReasoningEfficiencyEvaluator(BaseEvaluationMetricsTest):
     @pytest.fixture
