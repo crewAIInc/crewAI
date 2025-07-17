@@ -1,5 +1,9 @@
 import re
+import portalocker
+from chromadb import PersistentClient
+from hashlib import md5
 from typing import Optional
+
 
 MIN_COLLECTION_LENGTH = 3
 MAX_COLLECTION_LENGTH = 63
@@ -60,3 +64,16 @@ def sanitize_collection_name(name: Optional[str], max_collection_length: int = M
             sanitized = sanitized[:-1] + "z"
 
     return sanitized
+
+
+def create_persistent_client(path: str, **kwargs):
+    """
+    Creates a persistent client for ChromaDB with a lock file to prevent
+    concurrent creations. Works for both multi-threads and multi-processes
+    environments.
+    """
+    lockfile = f"chromadb-{md5(path.encode(), usedforsecurity=False).hexdigest()}.lock"
+    with portalocker.Lock(lockfile):
+        client = PersistentClient(path=path, **kwargs)
+
+    return client
