@@ -1,18 +1,18 @@
 import pytest
+
 from crewai.tools.agent_tools.analyze_image_tool import AnalyzeImageTool
+
 
 def analyze_image_with_tool(image_url: str):
     tool = AnalyzeImageTool()
     try:
         result = tool._run(
-            image_url=image_url,
+            image_urls=[image_url],
             action="Analyze and describe the content of the image",
         )
         return result
     except Exception as e:
         return None
-
-
 
 
 @pytest.mark.vcr

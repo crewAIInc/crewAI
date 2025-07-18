@@ -1,10 +1,11 @@
-from typing import Any, Optional
+from typing import Any
+
+from litellm import Reasoning, responses
 
 # from langchain.chat_models import init_chat_model
 # from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-from litellm import Reasoning, responses
 from crewai.tools.agent_tools.add_image_tool import AddImageToolSchema
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities import I18N
@@ -51,6 +52,15 @@ class AnthropicImageBlockProvider(ImageAnalyzerTemplateProvider):
         }
 
 
+class AnalyzeImageToolSchema(BaseModel):
+    image_urls: list[str] = Field(
+        ..., description="List of URL or path of the images to analyze"
+    )
+    action: str | None = Field(
+        default=None, description="Optional context or question about the image"
+    )
+
+
 class AnalyzeImageTool(BaseTool):
     """Tool for analyzing images"""
 
@@ -66,7 +76,7 @@ class AnalyzeImageTool(BaseTool):
 
     def _run(
         self,
-        image_url: str,
+        image_urls: list[str],
         action: str | None = None,
         **kwargs,
     ) -> str:
@@ -81,17 +91,24 @@ class AnalyzeImageTool(BaseTool):
                     "role": "user",
                     "content": [
                         self.chat_templ_provider.format_action(action),
-                        self.chat_templ_provider.format_image(image_url),
+                        *[
+                            self.chat_templ_provider.format_image(image_url)
+                            for image_url in image_urls
+                        ],
                     ],
-                },
-            ]
+                },  # type: ignore[index]
+            ],
         )
 
-        if response.output is None or (response.output is list and len(response.output) == 0):
+        if response.output is None or (
+            response.output is list and len(response.output) == 0
+        ):
             return "Failed to analyze image"
 
         output = response.output[0]
-        if output.content is None or (output.content is list and len(output.content) == 0):
+        if output.content is None or (
+            output.content is list and len(output.content) == 0
+        ):
             return "Failed to analyze image"
 
         return output.content[0].text
