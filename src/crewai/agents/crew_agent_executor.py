@@ -145,6 +145,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
+                    self._parser.reached_max_iterations()
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
                         printer=self._printer,

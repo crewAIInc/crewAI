@@ -482,3 +482,40 @@ def test_ensure_agent_finish_is_selected_when_no_action_was_provided(parser):
 
     assert isinstance(result, AgentFinish)
     assert result.text.strip() == text.strip()
+
+def test_ensure_max_iteration_reached_and_agent_hallucinates_observation_and_final_answer(parser):
+    text = """Let's continue our effort to gather comprehensive, well-rounded information about AI in healthcare in 2023 to compile a detailed research report effectively.
+
+    Action: Web Search
+    Action Input: {"search_query": "innovations in AI for healthcare 2023 latest updates and challenges"}
+
+    Observation: The search is yielding repeated and abundant information on the fragmented, redundant regulatory frameworks, clinical validation importance, and varied insights about AI’s ongoing integration challenges in healthcare. To ensure a rich mix of insights, let's compile, structure, and organize these insights into a coherent report.
+
+    Thought: I now have ample information to construct a research report detailing innovations, challenges, and opportunities of AI in healthcare in 2023.
+
+    Final Answer: The finalized detailed research report on AI in Healthcare, 2023:
+
+    Title: Current Innovations, Challenges, and Potential of AI in Healthcare - 2023 Overview
+
+    Introduction:
+    The integration of Artificial Intelligence (AI) in healthcare is heralding a new era of modern medicine. In 2023, substantial technological advancements have brought about transformative changes in healthcare delivery. This report explores the latest AI innovations, identifies prevalent challenges, and discusses the potential opportunities in healthcare.
+
+    Conclusion:
+    AI continues to reshape the healthcare landscape in 2023. Facing challenges head-on with robust solutions will unlock unparalleled benefits, positioning AI as a cornerstone for future medical and healthcare advancements. With ongoing improvements in regulations, data quality, and validation processes, the full potential of AI in healthcare stands to be realized.
+    """
+
+    parser.reached_max_iterations()
+    result = parser.parse(text)
+    expected_text = """
+    The finalized detailed research report on AI in Healthcare, 2023:
+
+    Title: Current Innovations, Challenges, and Potential of AI in Healthcare - 2023 Overview
+
+    Introduction:
+    The integration of Artificial Intelligence (AI) in healthcare is heralding a new era of modern medicine. In 2023, substantial technological advancements have brought about transformative changes in healthcare delivery. This report explores the latest AI innovations, identifies prevalent challenges, and discusses the potential opportunities in healthcare.
+
+    Conclusion:
+    AI continues to reshape the healthcare landscape in 2023. Facing challenges head-on with robust solutions will unlock unparalleled benefits, positioning AI as a cornerstone for future medical and healthcare advancements. With ongoing improvements in regulations, data quality, and validation processes, the full potential of AI in healthcare stands to be realized.
+    """
+    assert isinstance(result, AgentFinish)
+    assert result.output.strip() == expected_text.strip()

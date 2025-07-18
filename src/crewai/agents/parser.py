@@ -65,25 +65,27 @@ class CrewAgentParser:
     """
 
     _i18n: I18N = I18N()
+    _max_iterations_reached: bool = False
     agent: Any = None
 
     def __init__(self, agent: Optional[Any] = None):
         self.agent = agent
 
-    def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
-        cleaned_text = self._clean_agent_observations(text)
+    def reached_max_iterations(self) -> None:
+        self._max_iterations_reached = True
 
+    def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
         thought = self._extract_thought(text)
         includes_answer = FINAL_ANSWER_ACTION in text
-        action_match = self._find_last_action_input_pair(cleaned_text)
+        action_match = self._find_last_action_input_pair(text)
 
         # Prevent tool bypassing when both Action and Final Answer are present
         # If the model returns both, we PRIORITIZE the action to force tool execution
-        if includes_answer and action_match:
-            return self._create_agent_action(thought, action_match, cleaned_text)
+        if not self._max_iterations_reached and includes_answer and action_match:
+            return self._create_agent_action(thought, action_match, text)
 
         elif includes_answer:
-            final_answer = cleaned_text.split(FINAL_ANSWER_ACTION)[-1].strip()
+            final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
             # Check whether the final answer ends with triple backticks.
             if final_answer.endswith("```"):
                 # Count occurrences of triple backticks in the final answer.
@@ -91,17 +93,17 @@ class CrewAgentParser:
                 # If count is odd then it's an unmatched trailing set; remove it.
                 if count % 2 != 0:
                     final_answer = final_answer[:-3].rstrip()
-            return AgentFinish(thought, final_answer, cleaned_text)
+            return AgentFinish(thought, final_answer, text)
 
         elif action_match:
-            return self._create_agent_action(thought, action_match, cleaned_text)
+            return self._create_agent_action(thought, action_match, text)
 
-        if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", cleaned_text, re.DOTALL):
+        if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
             raise OutputParserException(
                 f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{self._i18n.slice('final_answer_format')}",
             )
         elif not re.search(
-            r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", cleaned_text, re.DOTALL
+            r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL
         ):
             raise OutputParserException(
                 MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
@@ -151,7 +153,8 @@ class CrewAgentParser:
 
         return str(result)
 
-    def _create_agent_action(self, thought: str, action_match: dict, cleaned_text: str) -> AgentAction:
+    def _create_agent_action(self, thought: str, action_match: dict, text: str) -> AgentAction:
+        cleaned_text = self._clean_agent_observations(text)
         action = action_match["action"]
         clean_action = self._clean_action(action)
         action_input = action_match["input"]
