@@ -70,20 +70,6 @@ class CrewAgentParser:
     def __init__(self, agent: Optional[Any] = None):
         self.agent = agent
 
-    @staticmethod
-    def parse_text(text: str) -> Union[AgentAction, AgentFinish]:
-        """
-        Static method to parse text into an AgentAction or AgentFinish without needing to instantiate the class.
-
-        Args:
-            text: The text to parse.
-
-        Returns:
-            Either an AgentAction or AgentFinish based on the parsed content.
-        """
-        parser = CrewAgentParser()
-        return parser.parse(text)
-
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
         cleaned_text = self._clean_agent_observations(text)
 
@@ -162,14 +148,6 @@ class CrewAgentParser:
         result = repair_json(tool_input)
         if result in UNABLE_TO_REPAIR_JSON_RESULTS:
             return tool_input
-
-        # if isinstance(result, str) and result.startswith("[") and result.endswith("]"):
-        #     try:
-        #         result_data = json.loads(result)
-        #         if isinstance(result_data, list) and len(result_data) > 0 and isinstance(result_data[0], dict):
-        #             return json.dumps(result_data[0])
-        #     except Exception:
-        #         ...
 
         return str(result)
 

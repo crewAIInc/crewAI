@@ -71,6 +71,7 @@ def handle_max_iterations_exceeded(
     messages: List[Dict[str, str]],
     llm: Union[LLM, BaseLLM],
     callbacks: List[Any],
+    parser: CrewAgentParser
 ) -> Union[AgentAction, AgentFinish]:
     """
     Handles the case when the maximum number of iterations is exceeded.
@@ -109,7 +110,7 @@ def handle_max_iterations_exceeded(
         )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    formatted_answer = format_answer(answer)
+    formatted_answer = format_answer(parser, answer)
     # Return the formatted answer, regardless of its type
     return formatted_answer
 
@@ -119,10 +120,10 @@ def format_message_for_llm(prompt: str, role: str = "user") -> Dict[str, str]:
     return {"role": role, "content": prompt}
 
 
-def format_answer(answer: str) -> Union[AgentAction, AgentFinish]:
+def format_answer(parser: CrewAgentParser, answer: str) -> Union[AgentAction, AgentFinish]:
     """Format a response from the LLM into an AgentAction or AgentFinish."""
     try:
-        return CrewAgentParser.parse_text(answer)
+        return parser.parse(answer)
     except Exception:
         # If parsing fails, return a default AgentFinish
         return AgentFinish(
@@ -173,18 +174,18 @@ def get_llm_response(
 
 
 def process_llm_response(
-    answer: str, use_stop_words: bool
+    answer: str, use_stop_words: bool, parser: CrewAgentParser
 ) -> Union[AgentAction, AgentFinish]:
     """Process the LLM response and format it into an AgentAction or AgentFinish."""
     if not use_stop_words:
         try:
             # Preliminary parsing to check for errors.
-            format_answer(answer)
+            format_answer(parser, answer)
         except OutputParserException as e:
             if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
                 answer = answer.split("Observation:")[0].strip()
 
-    return format_answer(answer)
+    return format_answer(parser, answer)
 
 
 def handle_agent_action_core(

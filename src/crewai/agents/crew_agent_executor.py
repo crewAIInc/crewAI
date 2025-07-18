@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import (
+    CrewAgentParser,
     AgentAction,
     AgentFinish,
     OutputParserException,
@@ -95,6 +96,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 else self.stop
             )
         )
+        self._parser = CrewAgentParser(agent=self)
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
@@ -150,6 +152,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        parser=self._parser,
                     )
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
@@ -161,7 +164,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     printer=self._printer,
                     from_task=self.task
                 )
-                formatted_answer = process_llm_response(answer, self.use_stop_words)
+                formatted_answer = process_llm_response(answer, self.use_stop_words, self._parser)
 
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available

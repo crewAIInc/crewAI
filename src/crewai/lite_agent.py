@@ -35,6 +35,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache import CacheHandler
 from crewai.agents.parser import (
+    CrewAgentParser,
     AgentAction,
     AgentFinish,
     OutputParserException,
@@ -204,6 +205,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     _printer: Printer = PrivateAttr(default_factory=Printer)
     _guardrail: Optional[Callable] = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
+    _parser: CrewAgentParser = PrivateAttr(default_factory=CrewAgentParser)
 
     @model_validator(mode="after")
     def setup_llm(self):
@@ -236,6 +238,13 @@ class LiteAgent(FlowTrackable, BaseModel):
                 raise TypeError(f"Guardrail requires LLM instance of type BaseLLM, got {type(self.llm).__name__}")
 
             self._guardrail = LLMGuardrail(description=self.guardrail, llm=self.llm)
+
+        return self
+
+    @model_validator(mode="after")
+    def setup_parser(self):
+        """Set up the parser after initialization."""
+        self._parser = CrewAgentParser(agent=self.original_agent)
 
         return self
 
@@ -511,6 +520,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
+                        parser=self._parser,
                     )
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
@@ -553,7 +563,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     )
                     raise e
 
-                formatted_answer = process_llm_response(answer, self.use_stop_words)
+                formatted_answer = process_llm_response(answer, self.use_stop_words, self._parser)
 
                 if isinstance(formatted_answer, AgentAction):
                     try:
