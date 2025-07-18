@@ -721,7 +721,7 @@ class ConsoleFormatter:
                 self.print()
 
     def handle_llm_call_failed(
-        self, tool_branch: Optional[Tree], error: str, crew_tree: Optional[Tree]
+        self, tool_branch: Optional[Tree], error: str, crew_tree: Optional[Tree], event: Optional[Any] = None
     ) -> None:
         """Handle LLM call failed event."""
         if not self.verbose:
@@ -764,9 +764,19 @@ class ConsoleFormatter:
                 self.print(tree_to_use)
                 self.print()
 
-        # Show error panel
+        # Show detailed error panel
         error_content = Text()
         error_content.append("❌ LLM Call Failed\n", style="red bold")
+        
+        if event and hasattr(event, 'error_type') and event.error_type:
+            error_content.append(f"Error Type: {event.error_type}\n", style="yellow")
+        
+        if event and hasattr(event, 'endpoint_info') and event.endpoint_info:
+            endpoint = event.endpoint_info.get('base_url') or event.endpoint_info.get('api_base')
+            if endpoint:
+                error_content.append(f"Endpoint: {endpoint}\n", style="cyan")
+                error_content.append(f"Model: {event.endpoint_info.get('model', 'unknown')}\n", style="cyan")
+        
         error_content.append("Error: ", style="white")
         error_content.append(str(error), style="red")
 
