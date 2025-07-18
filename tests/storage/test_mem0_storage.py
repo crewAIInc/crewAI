@@ -1,14 +1,10 @@
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from mem0.client.main import MemoryClient
 from mem0.memory.main import Memory
 
-from crewai.agent import Agent
-from crewai.crew import Crew
 from crewai.memory.storage.mem0_storage import Mem0Storage
-from crewai.task import Task
 
 
 # Define the class (if not already defined)
@@ -171,8 +167,9 @@ def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
     
     mem0_storage.save(test_value, test_metadata)
     
+    expected_messages = [{"role": "assistant", "content": test_value}]
     mem0_storage.memory.add.assert_called_once_with(
-        test_value,
+        expected_messages,
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
@@ -190,8 +187,9 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
     
     mem0_storage.save(test_value, test_metadata)
     
+    expected_messages = [{"role": "assistant", "content": test_value}]
     mem0_storage.memory.add.assert_called_once_with(
-        test_value,
+        expected_messages,
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
@@ -216,6 +214,67 @@ def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
 
     assert len(results) == 1
     assert results[0]["content"] == "Result 1"
+
+
+def test_save_method_external_memory_type():
+    """Test save method specifically for external memory type"""
+    crew = MockCrew(
+        memory_config={
+            "provider": "mem0",
+            "config": {"user_id": "test_user", "api_key": "test-key"},
+        }
+    )
+    
+    with patch.object(MemoryClient, "__new__") as mock_client:
+        mock_memory_instance = MagicMock(spec=MemoryClient)
+        mock_client.return_value = mock_memory_instance
+        
+        mem0_storage = Mem0Storage(type="external", crew=crew)
+        mem0_storage.memory.add = MagicMock()
+        
+        test_value = "External memory test content"
+        test_metadata = {"task": "test_task", "agent": "test_agent"}
+        
+        mem0_storage.save(test_value, test_metadata)
+        
+        expected_messages = [{"role": "assistant", "content": test_value}]
+        mem0_storage.memory.add.assert_called_once_with(
+            expected_messages,
+            user_id="test_user",
+            agent_id="Test_Agent",
+            metadata={"type": "external", "task": "test_task", "agent": "test_agent"},
+            output_format="v1.1"
+        )
+
+
+def test_save_method_with_non_string_value():
+    """Test save method when value is already in message format"""
+    crew = MockCrew(
+        memory_config={
+            "provider": "mem0",
+            "config": {"user_id": "test_user", "api_key": "test-key"},
+        }
+    )
+    
+    with patch.object(MemoryClient, "__new__") as mock_client:
+        mock_memory_instance = MagicMock(spec=MemoryClient)
+        mock_client.return_value = mock_memory_instance
+        
+        mem0_storage = Mem0Storage(type="external", crew=crew)
+        mem0_storage.memory.add = MagicMock()
+        
+        test_messages = [{"role": "user", "content": "Test message"}]
+        test_metadata = {"task": "test_task"}
+        
+        mem0_storage.save(test_messages, test_metadata)
+        
+        mem0_storage.memory.add.assert_called_once_with(
+            test_messages,
+            user_id="test_user",
+            agent_id="Test_Agent",
+            metadata={"type": "external", "task": "test_task"},
+            output_format="v1.1"
+        )
 
 
 def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_config_from_crew):
