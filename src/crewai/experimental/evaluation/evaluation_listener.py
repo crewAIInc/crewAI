@@ -9,7 +9,9 @@ from crewai.utilities.events.base_event_listener import BaseEventListener
 from crewai.utilities.events.crewai_event_bus import CrewAIEventsBus
 from crewai.utilities.events.agent_events import (
     AgentExecutionStartedEvent,
-    AgentExecutionCompletedEvent
+    AgentExecutionCompletedEvent,
+    LiteAgentExecutionStartedEvent,
+    LiteAgentExecutionCompletedEvent
 )
 from crewai.utilities.events.tool_usage_events import (
     ToolUsageFinishedEvent,
@@ -52,9 +54,17 @@ class EvaluationTraceCallback(BaseEventListener):
         def on_agent_started(source, event: AgentExecutionStartedEvent):
             self.on_agent_start(event.agent, event.task)
 
+        @event_bus.on(LiteAgentExecutionStartedEvent)
+        def on_lite_agent_started(source, event: LiteAgentExecutionStartedEvent):
+            self.on_lite_agent_start(event.agent_info)
+
         @event_bus.on(AgentExecutionCompletedEvent)
         def on_agent_completed(source, event: AgentExecutionCompletedEvent):
             self.on_agent_finish(event.agent, event.task, event.output)
+
+        @event_bus.on(LiteAgentExecutionCompletedEvent)
+        def on_lite_agent_completed(source, event: LiteAgentExecutionCompletedEvent):
+            self.on_lite_agent_finish(event.output)
 
         @event_bus.on(ToolUsageFinishedEvent)
         def on_tool_completed(source, event: ToolUsageFinishedEvent):
@@ -88,19 +98,38 @@ class EvaluationTraceCallback(BaseEventListener):
         def on_llm_call_completed(source, event: LLMCallCompletedEvent):
             self.on_llm_call_end(event.messages, event.response)
 
+    def on_lite_agent_start(self, agent_info: dict[str, Any]):
+        self.current_agent_id = agent_info['id']
+        self.current_task_id = "lite_task"
+
+        trace_key = f"{self.current_agent_id}_{self.current_task_id}"
+        self._init_trace(
+            trace_key=trace_key,
+            agent_id=self.current_agent_id,
+            task_id=self.current_task_id,
+            tool_uses=[],
+            llm_calls=[],
+            start_time=datetime.now(),
+            final_output=None
+        )
+
+    def _init_trace(self, trace_key: str, **kwargs: Any):
+        self.traces[trace_key] = kwargs
+
     def on_agent_start(self, agent: Agent, task: Task):
         self.current_agent_id = agent.id
         self.current_task_id = task.id
 
         trace_key = f"{agent.id}_{task.id}"
-        self.traces[trace_key] = {
-            "agent_id": agent.id,
-            "task_id": task.id,
-            "tool_uses": [],
-            "llm_calls": [],
-            "start_time": datetime.now(),
-            "final_output": None
-        }
+        self._init_trace(
+            trace_key=trace_key,
+            agent_id=agent.id,
+            task_id=task.id,
+            tool_uses=[],
+            llm_calls=[],
+            start_time=datetime.now(),
+            final_output=None
+        )
 
     def on_agent_finish(self, agent: Agent, task: Task, output: Any):
         trace_key = f"{agent.id}_{task.id}"
@@ -108,8 +137,19 @@ class EvaluationTraceCallback(BaseEventListener):
             self.traces[trace_key]["final_output"] = output
             self.traces[trace_key]["end_time"] = datetime.now()
 
+        self._reset_current()
+
+    def _reset_current(self):
         self.current_agent_id = None
         self.current_task_id = None
+
+    def on_lite_agent_finish(self, output: Any):
+        trace_key = f"{self.current_agent_id}_lite_task"
+        if trace_key in self.traces:
+            self.traces[trace_key]["final_output"] = output
+            self.traces[trace_key]["end_time"] = datetime.now()
+
+        self._reset_current()
 
     def on_tool_use(self, tool_name: str, tool_args: dict[str, Any] | str, result: Any,
                    success: bool = True, error_type: str | None = None):
@@ -187,4 +227,8 @@ class EvaluationTraceCallback(BaseEventListener):
 
 
 def create_evaluation_callbacks() -> EvaluationTraceCallback:
-    return EvaluationTraceCallback()
+    from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+
+    callback = EvaluationTraceCallback()
+    callback.setup_listeners(crewai_event_bus)
+    return callback

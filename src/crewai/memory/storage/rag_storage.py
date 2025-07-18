@@ -4,12 +4,12 @@ import logging
 import os
 import shutil
 import uuid
+
 from typing import Any, Dict, List, Optional
-
 from chromadb.api import ClientAPI
-
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
 
@@ -60,16 +60,14 @@ class RAGStorage(BaseRAGStorage):
         self.embedder_config = configurator.configure_embedder(self.embedder_config)
 
     def _initialize_app(self):
-        import chromadb
         from chromadb.config import Settings
 
         self._set_embedder_config()
-        chroma_client = chromadb.PersistentClient(
+
+        self.app = create_persistent_client(
             path=self.path if self.path else self.storage_file_name,
             settings=Settings(allow_reset=self.allow_reset),
         )
-
-        self.app = chroma_client
 
         self.collection = self.app.get_or_create_collection(
             name=self.type, embedding_function=self.embedder_config

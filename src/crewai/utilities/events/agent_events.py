@@ -123,3 +123,28 @@ class AgentLogsExecutionEvent(BaseEvent):
     type: str = "agent_logs_execution"
 
     model_config = {"arbitrary_types_allowed": True}
+
+# Agent Eval events
+class AgentEvaluationStartedEvent(BaseEvent):
+    agent_id: str
+    agent_role: str
+    task_id: str | None = None
+    iteration: int
+    type: str = "agent_evaluation_started"
+
+class AgentEvaluationCompletedEvent(BaseEvent):
+    agent_id: str
+    agent_role: str
+    task_id: str | None = None
+    iteration: int
+    metric_category: Any
+    score: Any
+    type: str = "agent_evaluation_completed"
+
+class AgentEvaluationFailedEvent(BaseEvent):
+    agent_id: str
+    agent_role: str
+    task_id: str | None = None
+    iteration: int
+    error: str
+    type: str = "agent_evaluation_failed"
