@@ -25,6 +25,11 @@ class CrewOutput(BaseModel):
 
     @property
     def json(self) -> Optional[str]:
+        if not self.tasks_output:
+            raise ValueError(
+                "No tasks found in crew output. Please ensure the crew has completed at least one task before accessing JSON output."
+            )
+        
         if self.tasks_output[-1].output_format != OutputFormat.JSON:
             raise ValueError(
                 "No JSON output found in the final task. Please make sure to set the output_json property in the final task in your crew."

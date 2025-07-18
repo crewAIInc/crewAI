@@ -310,6 +310,41 @@ def test_crew_creation(researcher, writer):
     assert result.raw == expected_string_output
 
 
+def test_crew_output_json_empty_tasks():
+    """Test that CrewOutput.json raises ValueError when tasks_output is empty."""
+    from crewai.crews.crew_output import CrewOutput
+    from crewai.types.usage_metrics import UsageMetrics
+    
+    output = CrewOutput(
+        raw="Test output",
+        tasks_output=[],
+        token_usage=UsageMetrics()
+    )
+    
+    with pytest.raises(ValueError) as excinfo:
+        _ = output.json
+    
+    assert "No tasks found in crew output" in str(excinfo.value)
+
+
+def test_crew_output_json_reproduction_case():
+    """Test reproduction case from GitHub issue #3185."""
+    from crewai.crews.crew_output import CrewOutput
+    
+    output = CrewOutput(
+        raw="",
+        pydantic=None,
+        json_dict={"test": "value"},
+        tasks_output=[],
+        token_usage={}
+    )
+    
+    with pytest.raises(ValueError) as excinfo:
+        json_output = output.json
+    
+    assert "No tasks found in crew output" in str(excinfo.value)
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_sync_task_execution(researcher, writer):
     from unittest.mock import patch
