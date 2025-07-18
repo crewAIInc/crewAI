@@ -59,6 +59,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 
 load_dotenv()
 
+litellm.suppress_debug_info = True
 
 class FilteredStream(io.TextIOBase):
     _lock = None
@@ -76,9 +77,7 @@ class FilteredStream(io.TextIOBase):
 
             # Skip common noisy LiteLLM banners and any other lines that contain "litellm"
             if (
-                "give feedback / get help" in lower_s
-                or "litellm.info:" in lower_s
-                or "litellm" in lower_s
+                "litellm.info:" in lower_s
                 or "Consider using a smaller input or implementing a text splitting strategy" in lower_s
             ):
                 return 0
@@ -1010,7 +1009,6 @@ class LLM(BaseLLM):
                     self,
                     event=LLMCallFailedEvent(error=str(e), from_task=from_task, from_agent=from_agent),
                 )
-                logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
     def _handle_emit_call_events(self, response: Any, call_type: LLMCallType, from_task: Optional[Any] = None, from_agent: Optional[Any] = None, messages: str | list[dict[str, Any]] | None = None):
