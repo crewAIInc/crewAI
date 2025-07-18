@@ -1,3 +1,4 @@
+import pytest
 from unittest.mock import patch, MagicMock
 
 from crewai.experimental.evaluation.metrics.tools_metrics import (
@@ -7,6 +8,26 @@ from crewai.experimental.evaluation.metrics.tools_metrics import (
 )
 from crewai.utilities.llm_utils import LLM
 from tests.experimental.evaluation.metrics.base_evaluation_metrics_test import BaseEvaluationMetricsTest
+from crewai.tools.base_tool import BaseTool
+
+@pytest.fixture
+def tools_available():
+    class MyCustomTool(BaseTool):
+        name: str = "Name of my tool"
+        description: str = "Clear description for what this tool is useful for, your agent will need this information to use it."
+
+        def _run(self, question: str) -> str:
+            return question
+
+    class AnotherCustomTool(BaseTool):
+        name: str = "Another name of my tool"
+        description: str = "Clear description for what this another tool is useful for, your agent will need this information to use it."
+
+        def _run(self, question: str) -> str:
+            return question
+
+    return [MyCustomTool(), AnotherCustomTool()]
+
 
 class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
     def test_no_tools_available(self, mock_task, mock_agent):
@@ -26,8 +47,8 @@ class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
         assert result.score is None
         assert "no tools available" in result.feedback.lower()
 
-    def test_tools_available_but_none_used(self, mock_agent, mock_task):
-        mock_agent.tools = ["tool1", "tool2"]
+    def test_tools_available_but_none_used(self, mock_agent, mock_task, tools_available):
+        mock_agent.tools = tools_available
         execution_trace = {"tool_uses": []}
 
         evaluator = ToolSelectionEvaluator()
@@ -42,7 +63,8 @@ class TestToolSelectionEvaluator(BaseEvaluationMetricsTest):
         assert "had tools available but didn't use any" in result.feedback.lower()
 
     @patch("crewai.utilities.llm_utils.create_llm")
-    def test_successful_evaluation(self, mock_create_llm, mock_agent, mock_task):
+    def test_successful_evaluation(self, mock_create_llm, mock_agent, mock_task, tools_available):
+        mock_agent.tools = tools_available
         # Setup mock LLM response
         mock_llm = MagicMock(spec=LLM)
         mock_llm.call.return_value = """
