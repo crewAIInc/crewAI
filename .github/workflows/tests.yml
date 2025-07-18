@@ -37,25 +37,9 @@ jobs:
       - name: Install the project
         run: uv sync --dev --all-extras
 
-      - name: Install SQLite with FTS5 support
-        run: |
-          # WORKAROUND: GitHub Actions' Ubuntu runner uses SQLite without FTS5 support compiled in.
-          # This is a temporary fix until the runner includes SQLite with FTS5 or Python's sqlite3
-          # module is compiled with FTS5 support by default.
-          # TODO: Remove this workaround once GitHub Actions runners include SQLite FTS5 support
-          
-          # Install pysqlite3-binary which has FTS5 support
-          uv pip install pysqlite3-binary
-          # Create a sitecustomize.py to override sqlite3 with pysqlite3
-          mkdir -p .pytest_sqlite_override
-          echo "import sys; import pysqlite3; sys.modules['sqlite3'] = pysqlite3" > .pytest_sqlite_override/sitecustomize.py
-          # Test FTS5 availability
-          PYTHONPATH=.pytest_sqlite_override uv run python -c "import sqlite3; print(f'SQLite version: {sqlite3.sqlite_version}')"
-          PYTHONPATH=.pytest_sqlite_override uv run python -c "import sqlite3; conn = sqlite3.connect(':memory:'); conn.execute('CREATE VIRTUAL TABLE test USING fts5(content)'); print('FTS5 module available')"
-
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
-          PYTHONPATH=.pytest_sqlite_override uv run pytest \
+          uv run pytest \
             --block-network \
             --timeout=30 \
             -vv \
