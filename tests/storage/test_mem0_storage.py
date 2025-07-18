@@ -1,14 +1,10 @@
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 from mem0.client.main import MemoryClient
 from mem0.memory.main import Memory
 
-from crewai.agent import Agent
-from crewai.crew import Crew
 from crewai.memory.storage.mem0_storage import Mem0Storage
-from crewai.task import Task
 
 
 # Define the class (if not already defined)
@@ -172,7 +168,7 @@ def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
     mem0_storage.save(test_value, test_metadata)
     
     mem0_storage.memory.add.assert_called_once_with(
-        test_value,
+        [{'role': 'assistant' , 'content': test_value}],
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
@@ -191,7 +187,7 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
     mem0_storage.save(test_value, test_metadata)
     
     mem0_storage.memory.add.assert_called_once_with(
-        test_value,
+        [{'role': 'assistant' , 'content': test_value}],
         agent_id="Test_Agent",
         infer=False,
         metadata={"type": "short_term", "key": "value"},
