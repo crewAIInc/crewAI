@@ -64,6 +64,7 @@ class Mem0Storage(Storage):
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self._get_user_id()
         agent_name = self._get_agent_name()
+        assistant_message = [{"role" : "assistant","content" : value}] 
         params = None
         if self.memory_type == "short_term":
             params = {
@@ -93,7 +94,8 @@ class Mem0Storage(Storage):
         if params:
             if isinstance(self.memory, MemoryClient):
                 params["output_format"] = "v1.1"
-            self.memory.add(value, **params)
+            
+            self.memory.add(assistant_message, **params)
 
     def search(
         self,
