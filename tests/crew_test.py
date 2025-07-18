@@ -340,7 +340,7 @@ def test_crew_output_json_reproduction_case():
     )
     
     with pytest.raises(ValueError) as excinfo:
-        json_output = output.json
+        _ = output.json
     
     assert "No tasks found in crew output" in str(excinfo.value)
 
