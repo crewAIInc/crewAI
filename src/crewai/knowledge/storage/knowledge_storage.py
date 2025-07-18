@@ -16,6 +16,7 @@ from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.chromadb import sanitize_collection_name
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
+from crewai.utilities.embedding_configurator import EmbeddingConfig
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
 from crewai.utilities.chromadb import create_persistent_client
@@ -50,7 +51,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     def __init__(
         self,
-        embedder: Optional[Dict[str, Any]] = None,
+        embedder: Optional[EmbeddingConfig] = None,
         collection_name: Optional[str] = None,
     ):
         self.collection_name = collection_name
@@ -186,7 +187,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
         )
 
-    def _set_embedder_config(self, embedder: Optional[Dict[str, Any]] = None) -> None:
+    def _set_embedder_config(self, embedder: Optional[EmbeddingConfig] = None) -> None:
         """Set the embedding configuration for the knowledge storage.
 
         Args:
