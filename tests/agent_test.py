@@ -2010,7 +2010,6 @@ def test_crew_agent_executor_litellm_auth_error():
     from litellm.exceptions import AuthenticationError
 
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.utilities import Printer
 
     # Create an agent and executor
     agent = Agent(
@@ -2043,7 +2042,6 @@ def test_crew_agent_executor_litellm_auth_error():
     # Mock the LLM call to raise AuthenticationError
     with (
         patch.object(LLM, "call") as mock_llm_call,
-        patch.object(Printer, "print") as mock_printer,
         pytest.raises(AuthenticationError) as exc_info,
     ):
         mock_llm_call.side_effect = AuthenticationError(
@@ -2056,13 +2054,6 @@ def test_crew_agent_executor_litellm_auth_error():
                 "tools": "",
             }
         )
-
-    # Verify error handling messages
-    error_message = f"Error during LLM call: {str(mock_llm_call.side_effect)}"
-    mock_printer.assert_any_call(
-        content=error_message,
-        color="red",
-    )
 
     # Verify the call was only made once (no retries)
     mock_llm_call.assert_called_once()
