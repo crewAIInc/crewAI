@@ -172,6 +172,60 @@ def another_agent(self):
     )
 ```
 
+### Using Multiple MCP Servers with CrewBase
+
+You can configure multiple MCP servers and assign different servers and tools to different agents. Use a dictionary to pass multiple named MCP servers.
+
+```python
+@CrewBase
+class CrewWithMultipleMCP:
+  # ... define your agents and tasks config file ...
+
+  # MCP servers keyed by server name
+  mcp_server_params = {
+      "web_tools": {
+        "url": "http://localhost:8000/mcp",
+        "transport": "streamable-http"
+      },
+      "data_tools": {
+        "url":
+        "http://localhost:8001/sse",
+        "transport": "sse"
+      },
+      "local_tools": StdioServerParameters(
+          command="python3",
+          args=["servers/local_server.py"],
+          env={"UV_PYTHON": "3.12", **os.environ},
+      )
+  }
+
+  @agent
+  def web_researcher(self):
+      # Use tools from specific server
+      return Agent(
+          config=self.agents_config["web_researcher"],
+          tools=self.get_mcp_tools(server="web_tools")
+      )
+
+  @agent
+  def data_analyst(self):
+      # Use specific tools from specific server
+      return Agent(
+          config=self.agents_config["data_analyst"],
+          tools=self.get_mcp_tools("analyze_csv", "create_chart", server="data_tools")
+      )
+
+  @agent
+  def multi_tool_agent(self):
+      # Use tools from all servers
+      return Agent(
+          config=self.agents_config["multi_tool_agent"],
+          tools=self.get_mcp_tools()  # No server specified = all tools
+      )
+
+  # ... rest of your crew setup ...
+```
+
 ## Explore MCP Integrations
 
 <CardGroup cols={2}>
