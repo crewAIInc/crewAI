@@ -447,7 +447,7 @@ class Agent(BaseAgent):
                     error=str(e),
                 ),
             )
-            raise e
+            raise
         except Exception as e:
             if e.__class__.__module__.startswith("litellm"):
                 # Do not retry on litellm errors
@@ -459,7 +459,7 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
-                raise e
+                raise
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
                 crewai_event_bus.emit(
@@ -470,7 +470,7 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
-                raise e
+                raise
             result = self.execute_task(task, context, tools)
 
         if self.max_rpm and self._rpm_controller:

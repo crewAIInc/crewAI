@@ -75,10 +75,10 @@ class CrewDoclingSource(BaseKnowledgeSource):
                 f"Error loading content: {e}. Supported formats: {self.document_converter.allowed_formats}",
                 "red",
             )
-            raise e
+            raise
         except Exception as e:
             self._logger.log("error", f"Error loading content: {e}")
-            raise e
+            raise
 
     def add(self) -> None:
         if self.content is None:

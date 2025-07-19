@@ -161,7 +161,7 @@ def get_llm_response(
             content=f"Error during LLM call: {e}",
             color="red",
         )
-        raise e
+        raise
     if not answer:
         printer.print(
             content="Received None or empty response from LLM call.",
