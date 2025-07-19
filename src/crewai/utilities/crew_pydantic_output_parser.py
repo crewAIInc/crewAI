@@ -8,6 +8,22 @@ from crewai.agents.parser import OutputParserException
 
 """Parser for converting text outputs into Pydantic models."""
 
+
+def clean_json_from_text(text: str) -> str:
+    """Extract and clean JSON from text that may contain markdown or trailing characters."""
+    text = text.replace("```", "").replace("json", "")
+    json_pattern = r"\{(?:[^{}]|(?R))*\}"
+    matches = regex.finditer(json_pattern, text)
+
+    for match in matches:
+        try:
+            json_obj = json.loads(match.group())
+            json_obj = json.dumps(json_obj)
+            return str(json_obj)
+        except json.JSONDecodeError:
+            continue
+    return text
+
 class CrewPydanticOutputParser:
     """Parses text outputs into specified Pydantic models."""
 
@@ -30,18 +46,4 @@ class CrewPydanticOutputParser:
             raise OutputParserException(error=msg)
 
     def _transform_in_valid_json(self, text) -> str:
-        text = text.replace("```", "").replace("json", "")
-        json_pattern = r"\{(?:[^{}]|(?R))*\}"
-        matches = regex.finditer(json_pattern, text)
-
-        for match in matches:
-            try:
-                # Attempt to parse the matched string as JSON
-                json_obj = json.loads(match.group())
-                # Return the first successfully parsed JSON object
-                json_obj = json.dumps(json_obj)
-                return str(json_obj)
-            except json.JSONDecodeError:
-                # If parsing fails, skip to the next match
-                continue
-        return text
+        return clean_json_from_text(text)
