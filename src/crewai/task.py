@@ -501,7 +501,7 @@ class Task(BaseModel):
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
-            raise e  # Re-raise the exception after emitting the event
+            raise  # Re-raise the exception after emitting the event
 
     def _process_guardrail(self, task_output: TaskOutput) -> GuardrailResult:
         assert self._guardrail is not None
