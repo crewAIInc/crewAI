@@ -1,0 +1,115 @@
+---
+title: Ferramentas do Servidor MCP Klavis
+description: "`KlavisMcpServerTools` permite que agentes CrewAI interajam com ferramentas de servidores MCP Klavis, automatizando fluxos de trabalho e integrando com centenas de aplicações."
+icon: "bolt"
+---
+
+# `KlavisMcpServerTools`
+
+Integre o [Servidor MCP Klavis](https://www.klavis.ai/mcp-servers) em seus fluxos de trabalho CrewAI para automação complexa.
+
+## Descrição
+
+Klavis AI é uma plataforma de integrações MCP de código aberto para Aplicações de IA. Nossa API fornece servidores MCP hospedados, de alta qualidade e seguros, eliminando o gerenciamento de autenticação e código do lado do cliente.
+
+Possui suporte integrado para autenticação de nível empresarial.
+
+## Passos para começar
+
+<Steps>
+    <Step title="Instalar dependências">
+        Instale `crewai[tools]` e `klavis` usando pip: `pip install 'crewai[tools]' klavis`.
+    </Step>
+    <Step title="Obter uma chave API Klavis">
+        Cadastre-se em [klavis.ai](https://klavis.ai/) e obtenha sua chave API no painel de controle.
+    </Step>
+    <Step title="Configurar ambiente">
+        Defina sua chave API Klavis como a variável de ambiente `KLAVIS_API_KEY` para habilitar a funcionalidade da ferramenta.
+    </Step>
+</Steps>
+
+## Exemplo de uso
+
+Use o `KlavisMcpServerTools` para criar um agente de gerenciamento de CRM Salesforce:
+
+```python
+from crewai_tools import KlavisMcpServerTools
+from crewai import Agent
+from klavis import Klavis
+from klavis.types import McpServerName
+
+klavis_client = Klavis(api_key="sua-chave-api-klavis")
+
+# Passo 1: Criar instância do servidor MCP via Klavis
+mcp_server = klavis_client.mcp_server.create_server_instance(
+    server_name=McpServerName.SALESFORCE,
+    user_id="123", #<your-enterprise_user_id> 
+    platform_name="Klavis"  #<your-enterprise_platform>
+)
+
+# Passo 2: Criar ferramentas a partir do servidor MCP
+tools = KlavisMcpServerTools(
+    klavis_api_key="sua-chave-api-klavis",
+    mcp_server_url=mcp_server.server_url
+)
+
+# Passo 3: Usar com agente CrewAI
+my_agent = Agent(
+    role="Gerente de CRM Salesforce",
+    tools=tools,
+    goal="gerenciar leads, oportunidades e relacionamentos com clientes no Salesforce",
+    backstory="Você é um especialista em gerenciar relacionamentos com clientes e pipelines de vendas usando o CRM Salesforce",
+    verbose=True,
+)
+
+# Passo 4: Executar o agente
+result = my_agent.execute_task(
+    "Obtenha todas as oportunidades abertas para Q4 2024 e crie um relatório resumido"
+)
+```
+
+### Saída esperada
+
+O agente recuperará oportunidades abertas do Salesforce e gerará um relatório resumido abrangente com valores de negócios, estágios e métricas-chave.
+
+### Filtrando Ferramentas Específicas
+
+Se você quiser usar apenas ferramentas específicas do servidor MCP:
+
+```python
+# Incluir apenas ferramentas específicas por nome
+tools = KlavisMcpServerTools(
+    klavis_api_key="sua-chave-api-klavis",
+    mcp_server_url=mcp_server.server_url,
+    tool_list=["salesforce_get_opportunities", "salesforce_update_opportunity", "salesforce_get_accounts"]
+)
+```
+
+## Configuração
+
+O `KlavisMcpServerTools` requer estas entradas para funcionar:
+
+- **`klavis_api_key`** (Obrigatório)
+  Sua chave API Klavis para autenticação. Também pode ser definida através da variável de ambiente `KLAVIS_API_KEY`.
+
+- **`mcp_server_url`** (Obrigatório)
+  A URL da instância do servidor MCP Klavis ao qual você deseja se conectar. Também pode ser definida através da variável de ambiente `KLAVIS_MCP_SERVER_URL`.
+
+- **`tool_list`** (Opcional)
+  Uma lista de nomes de ferramentas específicas para incluir. Se não fornecida, todas as ferramentas disponíveis do servidor MCP serão retornadas.
+
+## Servidores MCP Disponíveis
+
+Klavis suporta vários servidores MCP empresariais que fornecem diferentes capacidades de negócios:
+
+- **CRM**: Salesforce, Close, Attio, etc. para rastreamento de negócios, gerenciamento de contatos, análise de pipeline de vendas
+- **GSuite**: Integração com Google Workspace (Gmail, Drive, Calendar, Sheets, Docs) - suporte OAuth
+- **Banco de Dados**: Operações SQL, consultas de dados, business intelligence, relatórios
+- **Sistemas ERP**: Planejamento de recursos empresariais, gerenciamento de estoque, relatórios financeiros
+- **E muitos mais**: Consulte a documentação Klavis para a lista completa de integrações empresariais
+
+## Recursos
+
+- **[Servidores MCP Klavis](https://www.klavis.ai/mcp-servers/)**: Explore a plataforma MCP Klavis.
+- **[Documentação Klavis](https://klavis.ai/docs)**: Documentação completa para servidores MCP Klavis.
+- **[Model Context Protocol](https://modelcontextprotocol.io/)**: Saiba mais sobre o padrão MCP. 
