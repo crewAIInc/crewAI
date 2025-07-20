@@ -18,6 +18,7 @@ from crewai.utilities.chromadb import sanitize_collection_name
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
+from crewai.utilities.chromadb import create_persistent_client
 
 
 @contextlib.contextmanager
@@ -84,13 +85,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 raise Exception("Collection not initialized")
 
     def initialize_knowledge_storage(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        chroma_client = chromadb.PersistentClient(
-            path=base_path,
+        self.app = create_persistent_client(
+            path=os.path.join(db_storage_path(), "knowledge"),
             settings=Settings(allow_reset=True),
         )
-
-        self.app = chroma_client
 
         try:
             collection_name = (
@@ -111,9 +109,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     def reset(self):
         base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
         if not self.app:
-            self.app = chromadb.PersistentClient(
-                path=base_path,
-                settings=Settings(allow_reset=True),
+            self.app = create_persistent_client(
+                path=base_path, settings=Settings(allow_reset=True)
             )
 
         self.app.reset()

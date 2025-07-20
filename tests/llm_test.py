@@ -1,3 +1,4 @@
+import logging
 import os
 from time import sleep
 from unittest.mock import MagicMock, patch
@@ -664,3 +665,22 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
         expected_completed_llm_call=1,
         expected_final_chunk_result=response,
     )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_call_when_stop_is_unsupported(caplog):
+    llm = LLM(model="o1-mini", stop=["stop"])
+    with caplog.at_level(logging.INFO):
+        result = llm.call("What is the capital of France?")
+        assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provided(caplog):
+    llm = LLM(model="o1-mini", stop=["stop"], additional_drop_params=["another_param"])
+    with caplog.at_level(logging.INFO):
+        result = llm.call("What is the capital of France?")
+        assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+    assert isinstance(result, str)
+    assert "Paris" in result
