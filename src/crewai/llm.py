@@ -1103,14 +1103,25 @@ class LLM(BaseLLM):
 
     def _validate_call_params(self) -> None:
         """
-        Validate parameters before making a call. Currently this only checks if
-        a response_format is provided and whether the model supports it.
-        The custom_llm_provider is dynamically determined from the model:
-          - E.g., "openrouter/deepseek/deepseek-chat" yields "openrouter"
-          - "gemini/gemini-1.5-pro" yields "gemini"
-          - If no slash is present, "openai" is assumed.
+        Validate parameters before making a call. This check ensures that
+        `response_format` is only used with models that support it.
+
+        For OpenAI-compatible providers (inferred when provider is 'openai'
+        or `None`), this check is skipped, allowing the API provider to handle
+        validation. This enables broader compatibility with custom models
+-        and endpoints that adhere to the OpenAI API structure.
++        and endpoints that adhere to the OpenAI API structure..
         """
         provider = self._get_custom_llm_provider()
+
+-        # When provider is None, litellm will infer it. For official openai models,
+-        # it will be inferred as 'openai'.
+-        # We skip the check if the user is explicitly or implicitly targeting
+-        # an openai-compatible endpoint.
+-        if provider is None or provider == "openai":
++        if provider is None or "openai" in provider:
+            return
+
         if self.response_format is not None and not supports_response_schema(
             model=self.model,
             custom_llm_provider=provider,
