@@ -1079,6 +1079,15 @@ class LLM(BaseLLM):
                 messages.append({"role": "user", "content": "Please continue."})
             return messages
 
+        # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
+        # Ollama doesn't supports last message to be 'assistant'
+        if "ollama" in self.model.lower() and messages and messages[-1]["role"] == "assistant":
+            messages = messages.copy()
+            messages.append(
+                {"role": "user", "content": ""}
+            )
+            return messages
+
         # Handle Anthropic models
         if not self.is_anthropic:
             return messages
