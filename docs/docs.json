@@ -166,7 +166,9 @@
                       "en/tools/search-research/websitesearchtool",
                       "en/tools/search-research/codedocssearchtool",
                       "en/tools/search-research/youtubechannelsearchtool",
-                      "en/tools/search-research/youtubevideosearchtool"
+                      "en/tools/search-research/youtubevideosearchtool",
+                      "en/tools/search-research/tavilysearchtool",
+                      "en/tools/search-research/tavilyextractortool"
                     ]
                   },
                   {
