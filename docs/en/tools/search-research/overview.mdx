@@ -44,6 +44,14 @@ These tools enable your agents to search the web, research topics, and find info
   <Card title="YouTube Video Search" icon="play" href="/en/tools/search-research/youtubevideosearchtool">
     Find and analyze YouTube videos by topic, keyword, or criteria.
   </Card>
+
+  <Card title="Tavily Search Tool" icon="magnifying-glass" href="/en/tools/search-research/tavilysearchtool">
+    Comprehensive web search using Tavily's AI-powered search API.
+  </Card>
+
+  <Card title="Tavily Extractor Tool" icon="file-text" href="/en/tools/search-research/tavilyextractortool">
+    Extract structured content from web pages using the Tavily API.
+  </Card>
 </CardGroup>
 
 ## **Common Use Cases**
@@ -55,17 +63,19 @@ These tools enable your agents to search the web, research topics, and find info
 - **Academic Research**: Find scholarly articles and technical papers
 
 ```python
-from crewai_tools import SerperDevTool, GitHubSearchTool, YoutubeVideoSearchTool
+from crewai_tools import SerperDevTool, GitHubSearchTool, YoutubeVideoSearchTool, TavilySearchTool, TavilyExtractorTool
 
 # Create research tools
 web_search = SerperDevTool()
 code_search = GitHubSearchTool()
 video_research = YoutubeVideoSearchTool()
+tavily_search = TavilySearchTool()
+content_extractor = TavilyExtractorTool()
 
 # Add to your agent
 agent = Agent(
     role="Research Analyst",
-    tools=[web_search, code_search, video_research],
+    tools=[web_search, code_search, video_research, tavily_search, content_extractor],
     goal="Gather comprehensive information on any topic"
 )
 ```

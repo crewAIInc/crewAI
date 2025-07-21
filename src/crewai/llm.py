@@ -984,6 +984,27 @@ class LLM(BaseLLM):
                 # whether to summarize the content or abort based on the respect_context_window flag
                 raise
             except Exception as e:
+                unsupported_stop = "Unsupported parameter" in str(e) and "'stop'" in str(e)
+
+                if unsupported_stop:
+                    if "additional_drop_params" in self.additional_params and isinstance(self.additional_params["additional_drop_params"], list):
+                        self.additional_params["additional_drop_params"].append("stop")
+                    else:
+                        self.additional_params = {"additional_drop_params": ["stop"]}
+
+                    logging.info(
+                        "Retrying LLM call without the unsupported 'stop'"
+                    )
+
+                    return self.call(
+                        messages,
+                        tools=tools,
+                        callbacks=callbacks,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
+
                 assert hasattr(crewai_event_bus, "emit")
                 crewai_event_bus.emit(
                     self,
@@ -1056,6 +1077,15 @@ class LLM(BaseLLM):
                     messages.copy()
                 )  # Create a copy to avoid modifying the original
                 messages.append({"role": "user", "content": "Please continue."})
+            return messages
+
+        # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
+        # Ollama doesn't supports last message to be 'assistant'
+        if "ollama" in self.model.lower() and messages and messages[-1]["role"] == "assistant":
+            messages = messages.copy()
+            messages.append(
+                {"role": "user", "content": ""}
+            )
             return messages
 
         # Handle Anthropic models
