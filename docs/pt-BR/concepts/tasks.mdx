@@ -54,6 +54,7 @@ crew = Crew(
 | **Markdown** _(opcional)_        | `markdown`        | `Optional[bool]`             | Se a tarefa deve instruir o agente a retornar a resposta final formatada em Markdown. O padrão é False.            |
 | **Config** _(opcional)_          | `config`          | `Optional[Dict[str, Any]]`   | Parâmetros de configuração específicos da tarefa.                                                                  |
 | **Arquivo de Saída** _(opcional)_| `output_file`     | `Optional[str]`              | Caminho do arquivo para armazenar a saída da tarefa.                                                               |
+| **Criar Diretório** _(opcional)_ | `create_directory` | `Optional[bool]`            | Se deve criar o diretório para output_file caso não exista. O padrão é True.                                       |
 | **Saída JSON** _(opcional)_      | `output_json`     | `Optional[Type[BaseModel]]`  | Um modelo Pydantic para estruturar a saída em JSON.                                                                |
 | **Output Pydantic** _(opcional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`  | Um modelo Pydantic para a saída da tarefa.                                                                         |
 | **Callback** _(opcional)_        | `callback`        | `Optional[Any]`              | Função/objeto a ser executado após a conclusão da tarefa.                                                          |
@@ -1037,21 +1038,87 @@ task = Task(
 
 ## Criando Diretórios ao Salvar Arquivos
 
-Agora é possível especificar se uma tarefa deve criar diretórios ao salvar sua saída em arquivo. Isso é útil para organizar outputs e garantir que os caminhos estejam corretos.
+O parâmetro `create_directory` controla se o CrewAI deve criar automaticamente diretórios ao salvar saídas de tarefas em arquivos. Este recurso é particularmente útil para organizar outputs e garantir que os caminhos de arquivos estejam estruturados corretamente, especialmente ao trabalhar com hierarquias de projetos complexas.
+
+### Comportamento Padrão
+
+Por padrão, `create_directory=True`, o que significa que o CrewAI criará automaticamente qualquer diretório ausente no caminho do arquivo de saída:
 
 ```python Code
-# ...
-
-save_output_task = Task(
-    description='Salve o resumo das notícias de IA em um arquivo',
-    expected_output='Arquivo salvo com sucesso',
-    agent=research_agent,
-    tools=[file_save_tool],
-    output_file='outputs/ai_news_summary.txt',
-    create_directory=True
+# Comportamento padrão - diretórios são criados automaticamente
+report_task = Task(
+    description='Gerar um relatório abrangente de análise de mercado',
+    expected_output='Uma análise detalhada de mercado com gráficos e insights',
+    agent=analyst_agent,
+    output_file='reports/2025/market_analysis.md',  # Cria 'reports/2025/' se não existir
+    markdown=True
 )
+```
 
-#...
+### Desabilitando a Criação de Diretórios
+
+Se você quiser evitar a criação automática de diretórios e garantir que o diretório já exista, defina `create_directory=False`:
+
+```python Code
+# Modo estrito - o diretório já deve existir
+strict_output_task = Task(
+    description='Salvar dados críticos que requerem infraestrutura existente',
+    expected_output='Dados salvos em localização pré-configurada',
+    agent=data_agent,
+    output_file='secure/vault/critical_data.json',
+    create_directory=False  # Gerará RuntimeError se 'secure/vault/' não existir
+)
+```
+
+### Configuração YAML
+
+Você também pode configurar este comportamento em suas definições de tarefas YAML:
+
+```yaml tasks.yaml
+analysis_task:
+  description: >
+    Gerar análise financeira trimestral
+  expected_output: >
+    Um relatório financeiro abrangente com insights trimestrais
+  agent: financial_analyst
+  output_file: reports/quarterly/q4_2024_analysis.pdf
+  create_directory: true  # Criar automaticamente o diretório 'reports/quarterly/'
+
+audit_task:
+  description: >
+    Realizar auditoria de conformidade e salvar no diretório de auditoria existente
+  expected_output: >
+    Um relatório de auditoria de conformidade
+  agent: auditor
+  output_file: audit/compliance_report.md
+  create_directory: false  # O diretório já deve existir
+```
+
+### Casos de Uso
+
+**Criação Automática de Diretórios (`create_directory=True`):**
+- Ambientes de desenvolvimento e prototipagem
+- Geração dinâmica de relatórios com pastas baseadas em datas
+- Fluxos de trabalho automatizados onde a estrutura de diretórios pode variar
+- Aplicações multi-tenant com pastas específicas do usuário
+
+**Gerenciamento Manual de Diretórios (`create_directory=False`):**
+- Ambientes de produção com controles rígidos do sistema de arquivos
+- Aplicações sensíveis à segurança onde diretórios devem ser pré-configurados
+- Sistemas com requisitos específicos de permissão
+- Ambientes de conformidade onde a criação de diretórios é auditada
+
+### Tratamento de Erros
+
+Quando `create_directory=False` e o diretório não existe, o CrewAI gerará um `RuntimeError`:
+
+```python Code
+try:
+    result = crew.kickoff()
+except RuntimeError as e:
+    # Tratar erro de diretório ausente
+    print(f"Falha na criação do diretório: {e}")
+    # Criar diretório manualmente ou usar local alternativo
 ```
 
 Veja o vídeo abaixo para aprender como utilizar saídas estruturadas no CrewAI:
