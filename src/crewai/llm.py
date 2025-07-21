@@ -760,7 +760,7 @@ class LLM(BaseLLM):
         available_functions: Optional[Dict[str, Any]] = None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle a non-streaming response from the LLM.
 
         Args:
