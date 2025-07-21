@@ -3,8 +3,7 @@ Simple test to verify the logging fix works without external API calls
 """
 import logging
 import io
-import sys
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stdout
 from crewai.utilities.events.utils.console_formatter import ConsoleFormatter
 from rich.tree import Tree
 

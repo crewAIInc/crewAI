@@ -3,9 +3,7 @@ Tests for issue #3197: Custom logger conflicts with Crew AI logging
 """
 import logging
 import io
-import sys
 from unittest.mock import patch
-import pytest
 from crewai import Agent, Task, Crew
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
