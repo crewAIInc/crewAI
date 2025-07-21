@@ -84,6 +84,7 @@ class Mem0Storage(Storage):
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self.config.get("user_id", "")
         agent_name = self._get_agent_name()
+        assistant_message = [{"role" : "assistant","content" : value}] 
 
         base_metadata = {
             "short_term": "short_term",
@@ -120,7 +121,7 @@ class Mem0Storage(Storage):
                 if self.memory_type == "short_term":
                     params["run_id"] = self.mem0_run_id
 
-            self.memory.add(value, **params)
+            self.memory.add(assistant_message, **params)
 
     def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> List[Any]:
         params = {
