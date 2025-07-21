@@ -1,0 +1,139 @@
+---
+title: "Tavily Extractor Tool"
+description: "Extract structured content from web pages using the Tavily API"
+icon: "file-text"
+---
+
+The `TavilyExtractorTool` allows CrewAI agents to extract structured content from web pages using the Tavily API. It can process single URLs or lists of URLs and provides options for controlling the extraction depth and including images.
+
+## Installation
+
+To use the `TavilyExtractorTool`, you need to install the `tavily-python` library:
+
+```shell
+pip install 'crewai[tools]' tavily-python
+```
+
+You also need to set your Tavily API key as an environment variable:
+
+```bash
+export TAVILY_API_KEY='your-tavily-api-key'
+```
+
+## Example Usage
+
+Here's how to initialize and use the `TavilyExtractorTool` within a CrewAI agent:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import TavilyExtractorTool
+
+# Ensure TAVILY_API_KEY is set in your environment
+# os.environ["TAVILY_API_KEY"] = "YOUR_API_KEY"
+
+# Initialize the tool
+tavily_tool = TavilyExtractorTool()
+
+# Create an agent that uses the tool
+extractor_agent = Agent(
+    role='Web Content Extractor',
+    goal='Extract key information from specified web pages',
+    backstory='You are an expert at extracting relevant content from websites using the Tavily API.',
+    tools=[tavily_tool],
+    verbose=True
+)
+
+# Define a task for the agent
+extract_task = Task(
+    description='Extract the main content from the URL https://example.com using basic extraction depth.',
+    expected_output='A JSON string containing the extracted content from the URL.',
+    agent=extractor_agent
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[extractor_agent],
+    tasks=[extract_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+The `TavilyExtractorTool` accepts the following arguments:
+
+- `urls` (Union[List[str], str]): **Required**. A single URL string or a list of URL strings to extract data from.
+- `include_images` (Optional[bool]): Whether to include images in the extraction results. Defaults to `False`.
+- `extract_depth` (Literal["basic", "advanced"]): The depth of extraction. Use `"basic"` for faster, surface-level extraction or `"advanced"` for more comprehensive extraction. Defaults to `"basic"`.
+- `timeout` (int): The maximum time in seconds to wait for the extraction request to complete. Defaults to `60`.
+
+## Advanced Usage
+
+### Multiple URLs with Advanced Extraction
+
+```python
+# Example with multiple URLs and advanced extraction
+multi_extract_task = Task(
+    description='Extract content from https://example.com and https://anotherexample.org using advanced extraction.',
+    expected_output='A JSON string containing the extracted content from both URLs.',
+    agent=extractor_agent
+)
+
+# Configure the tool with custom parameters
+custom_extractor = TavilyExtractorTool(
+    extract_depth='advanced',
+    include_images=True,
+    timeout=120
+)
+
+agent_with_custom_tool = Agent(
+    role="Advanced Content Extractor",
+    goal="Extract comprehensive content with images",
+    tools=[custom_extractor]
+)
+```
+
+### Tool Parameters
+
+You can customize the tool's behavior by setting parameters during initialization:
+
+```python
+# Initialize with custom configuration
+extractor_tool = TavilyExtractorTool(
+    extract_depth='advanced',  # More comprehensive extraction
+    include_images=True,       # Include image results
+    timeout=90                 # Custom timeout
+)
+```
+
+## Features
+
+- **Single or Multiple URLs**: Extract content from one URL or process multiple URLs in a single request
+- **Configurable Depth**: Choose between basic (fast) and advanced (comprehensive) extraction modes
+- **Image Support**: Optionally include images in the extraction results
+- **Structured Output**: Returns well-formatted JSON containing the extracted content
+- **Error Handling**: Robust handling of network timeouts and extraction errors
+
+## Response Format
+
+The tool returns a JSON string representing the structured data extracted from the provided URL(s). The exact structure depends on the content of the pages and the `extract_depth` used.
+
+Common response elements include:
+- **Title**: The page title
+- **Content**: Main text content of the page
+- **Images**: Image URLs and metadata (when `include_images=True`)
+- **Metadata**: Additional page information like author, description, etc.
+
+## Use Cases
+
+- **Content Analysis**: Extract and analyze content from competitor websites
+- **Research**: Gather structured data from multiple sources for analysis
+- **Content Migration**: Extract content from existing websites for migration
+- **Monitoring**: Regular extraction of content for change detection
+- **Data Collection**: Systematic extraction of information from web sources
+
+Refer to the [Tavily API documentation](https://docs.tavily.com/docs/tavily-api/python-sdk#extract) for detailed information about the response structure and available options.
