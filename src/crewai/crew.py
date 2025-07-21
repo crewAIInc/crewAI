@@ -161,7 +161,7 @@ class Crew(FlowTrackable, BaseModel):
     )
     user_memory: Optional[InstanceOf[UserMemory]] = Field(
         default=None,
-        description="An instance of the UserMemory to be used by the Crew to store/fetch memories of a specific user.",
+        description="DEPRECATED: Will be removed in version 0.156.0 or on 2025-08-04, whichever comes first. Use external_memory instead.",
     )
     external_memory: Optional[InstanceOf[ExternalMemory]] = Field(
         default=None,
@@ -327,7 +327,7 @@ class Crew(FlowTrackable, BaseModel):
         self._short_term_memory = self.short_term_memory
         self._entity_memory = self.entity_memory
 
-        # UserMemory is gonna to be deprecated in the future, but we have to initialize a default value for now
+        # UserMemory will be removed in version 0.156.0 or on 2025-08-04, whichever comes first
         self._user_memory = None
 
         if self.memory:
@@ -1255,6 +1255,7 @@ class Crew(FlowTrackable, BaseModel):
         if self.external_memory:
             copied_data["external_memory"] = self.external_memory.model_copy(deep=True)
         if self.user_memory:
+            # DEPRECATED: UserMemory will be removed in version 0.156.0 or on 2025-08-04
             copied_data["user_memory"] = self.user_memory.model_copy(deep=True)
 
         copied_data.pop("agents", None)
