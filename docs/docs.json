@@ -368,11 +368,6 @@
               "icon": "robot"
             },
             {
-              "anchor": "Obter Ajuda",
-              "href": "mailto:support@crewai.com",
-              "icon": "headset"
-            },
-            {
               "anchor": "Lançamentos",
               "href": "https://github.com/crewAIInc/crewAI/releases",
               "icon": "tag"
