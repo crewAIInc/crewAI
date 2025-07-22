@@ -547,12 +547,17 @@ class Agent(BaseAgent):
         Returns:
             The output of the agent.
         """
+        if not self.agent_executor:
+            raise ValueError(
+                "Agent executor not initialized. Call create_agent_executor() first."
+            )
+
         return self.agent_executor.invoke(
             {
                 "input": task_prompt,
                 "tool_names": self.agent_executor.tools_names,
                 "tools": self.agent_executor.tools_description,
-                "ask_for_human_input": task.human_input,
+                "ask_for_human_input": bool(task.human_input),
             }
         )["output"]
 
