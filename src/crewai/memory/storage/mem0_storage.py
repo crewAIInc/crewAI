@@ -66,24 +66,29 @@ class Mem0Storage(Storage):
                 else Memory()
             )
 
-    def _get_agent_name(self) -> str:
-        if not self.crew:
-            return ""
-
-        agents = self.crew.agents
-        agents = [self._sanitize_role(agent.role) for agent in agents]
-        agents = "_".join(agents)
-        return sanitize_collection_name(name=agents,max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)
-
-    def _sanitize_role(self, role: str) -> str:
+    def _create_filter_for_search(self):
         """
-        Sanitizes agent roles to ensure valid directory names.
+        Returns:
+            dict: A filter dictionary containing AND conditions for querying data.
+                - Includes user_id if memory_type is 'external'.
+                - Includes run_id if memory_type is 'short_term' and mem0_run_id is present.
         """
-        return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+        filter = {
+            "AND": []
+        }
+
+        # Add user_id condition if the memory type is external
+        if self.memory_type == "external":
+            filter["AND"].append({"user_id": self.config.get("user_id", "")})
+
+        # Add run_id condition if the memory type is short_term and a run ID is set
+        if self.memory_type == "short_term" and self.mem0_run_id:
+            filter["AND"].append({"run_id": self.mem0_run_id})
+
+        return filter
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self.config.get("user_id", "")
-        agent_name = self._get_agent_name()
         assistant_message = [{"role" : "assistant","content" : value}] 
 
         base_metadata = {
@@ -95,7 +100,6 @@ class Mem0Storage(Storage):
 
         # Shared base params
         params: dict[str, Any] = {
-            "agent_id": agent_name,
             "metadata": {"type": base_metadata[self.memory_type], **metadata}
         }
 
@@ -134,9 +138,6 @@ class Mem0Storage(Storage):
         if user_id := self.config.get("user_id", ""):
             params["user_id"] = user_id
 
-        agent_name = self._get_agent_name()
-        params["agent_id"] = agent_name
-
         memory_type_map = {
             "short_term": {"type": "short_term"},
             "long_term": {"type": "long_term"},
@@ -151,12 +152,16 @@ class Mem0Storage(Storage):
 
         # Discard the filters for now since we create the filters
         # automatically when the crew is created.
+
+        params["filters"] = self._create_filter_for_search()
+        params['threshold'] = score_threshold
+
         if isinstance(self.memory, Memory):
             del params["metadata"], params["version"], params["run_id"], params['output_format']
-            
-        results = self.memory.search(**params)
-        return [r for r in results["results"] if r["score"] >= score_threshold]
 
+        results = self.memory.search(**params)
+        return [r for r in results["results"]]
+    
     def reset(self):
         if self.memory:
             self.memory.reset()
