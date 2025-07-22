@@ -744,6 +744,7 @@ crew = Crew(
             "run_id": "my_run_id",        # Optional - for short-term memory
             "includes": "include1",       # Optional 
             "excludes": "exclude1",       # Optional
+            "infer": True
             "custom_categories": new_categories  # Optional - custom categories for user memory
         },
         "user_memory": {}
@@ -774,7 +775,8 @@ crew = Crew(
                     "provider": "openai",
                     "config": {"api_key": "your-api-key", "model": "text-embedding-3-small"}
                 }
-            }
+            },
+            "infer": True
         },
         "user_memory": {}
     }

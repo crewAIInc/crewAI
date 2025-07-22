@@ -4,7 +4,6 @@ from typing import Any, Dict, List
 from mem0 import Memory, MemoryClient
 
 from crewai.memory.storage.interface import Storage
-from crewai.utilities.chromadb import sanitize_collection_name
 
 MAX_AGENT_ID_LENGTH_MEM0 = 255
 
