@@ -59,7 +59,7 @@ def mem0_storage_with_mocked_config(mock_mem0_memory):
         crew = MockCrew(
             memory_config={
                 "provider": "mem0",
-                "config": {"user_id": "test_user", "local_mem0_config": config, "run_id": "my_run_id", "includes": "include1","excludes": "exclude1"},
+                "config": {"user_id": "test_user", "local_mem0_config": config, "run_id": "my_run_id", "includes": "include1","excludes": "exclude1", "infer" : True},
             }
         )
 
@@ -99,6 +99,7 @@ def mem0_storage_with_memory_client_using_config_from_crew(mock_mem0_memory_clie
                     "run_id": "my_run_id",
                     "includes": "include1",
                     "excludes": "exclude1",
+                    "infer": True
                 },
             }
         )
@@ -199,8 +200,7 @@ def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
     
     mem0_storage.memory.add.assert_called_once_with(
         [{'role': 'assistant' , 'content': test_value}],
-        agent_id="Test_Agent",
-        infer=False,
+        infer=True,
         metadata={"type": "short_term", "key": "value"},
     )
 
@@ -218,8 +218,7 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
     
     mem0_storage.memory.add.assert_called_once_with(
         [{'role': 'assistant' , 'content': test_value}],
-        agent_id="Test_Agent",
-        infer=False,
+        infer=True,
         metadata={"type": "short_term", "key": "value"},
         version="v2",
         run_id="my_run_id",
@@ -240,11 +239,12 @@ def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
     mem0_storage.memory.search.assert_called_once_with(
         query="test query", 
         limit=5, 
-        agent_id="Test_Agent",
-        user_id="test_user"
+        user_id="test_user",
+        filters={'AND': [{'run_id': 'my_run_id'}]}, 
+        threshold=0.5
     )
 
-    assert len(results) == 1
+    assert len(results) == 2
     assert results[0]["content"] == "Result 1"
 
 
@@ -259,13 +259,14 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
     mem0_storage.memory.search.assert_called_once_with(
         query="test query", 
         limit=5, 
-        agent_id="Test_Agent", 
         metadata={"type": "short_term"},
         user_id="test_user",
         version='v2',
         run_id="my_run_id",
-        output_format='v1.1'
+        output_format='v1.1',
+        filters={'AND': [{'run_id': 'my_run_id'}]},
+        threshold=0.5
     )
 
-    assert len(results) == 1
+    assert len(results) == 2
     assert results[0]["content"] == "Result 1"

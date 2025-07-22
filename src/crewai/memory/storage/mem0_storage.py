@@ -44,6 +44,7 @@ class Mem0Storage(Storage):
         self.includes = cfg.get("includes")
         self.excludes = cfg.get("excludes")
         self.custom_categories = cfg.get("custom_categories")
+        self.infer = cfg.get("infer", False)
 
     def _initialize_memory(self):
         api_key = self.config.get("api_key") or os.getenv("MEM0_API_KEY")
@@ -100,17 +101,11 @@ class Mem0Storage(Storage):
 
         # Shared base params
         params: dict[str, Any] = {
-            "metadata": {"type": base_metadata[self.memory_type], **metadata}
+            "metadata": {"type": base_metadata[self.memory_type], **metadata},
+            "infer": self.infer
         }
 
-        # Type-specific overrides
-        if self.memory_type == "short_term":
-            params["infer"] = False
-        elif self.memory_type == "long_term":
-            params["infer"] = False
-        elif self.memory_type == "entities":
-            params["infer"] = False
-        elif self.memory_type == "external":
+        if self.memory_type == "external":
             params["user_id"] = user_id
 
         
