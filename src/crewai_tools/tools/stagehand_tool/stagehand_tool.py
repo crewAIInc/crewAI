@@ -16,7 +16,7 @@ try:
         ExtractOptions,
         ObserveOptions,
     )
-    from stagehand.utils import configure_logging
+    from stagehand import configure_logging
     _HAS_STAGEHAND = True
 except ImportError:
     # Define type stubs for when stagehand is not installed
@@ -249,7 +249,7 @@ class StagehandTool(BaseTool):
         # Check if stagehand is available, but only if we're not in testing mode
         if not self._testing and not _HAS_STAGEHAND:
             raise ImportError(
-                "`stagehand-py` package not found, please run `uv add stagehand-py`"
+                "`stagehand` package not found, please run `uv add stagehand`"
             )
             
         if not self.api_key:
