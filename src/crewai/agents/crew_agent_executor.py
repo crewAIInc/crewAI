@@ -96,7 +96,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
         )
 
-    def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
+    def invoke(self, inputs: Dict[str, Union[str, bool, None]]) -> Dict[str, Any]:
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
@@ -121,7 +121,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         except Exception as e:
             handle_unknown_error(self._printer, e)
             raise
-
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
@@ -156,7 +155,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     messages=self.messages,
                     callbacks=self.callbacks,
                     printer=self._printer,
-                    from_task=self.task
+                    from_task=self.task,
                 )
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 

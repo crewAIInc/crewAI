@@ -557,7 +557,7 @@ class Agent(BaseAgent):
                 "input": task_prompt,
                 "tool_names": self.agent_executor.tools_names,
                 "tools": self.agent_executor.tools_description,
-                "ask_for_human_input": bool(task.human_input),
+                "ask_for_human_input": task.human_input,
             }
         )["output"]
 
