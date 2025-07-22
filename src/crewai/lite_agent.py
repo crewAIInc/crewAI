@@ -62,6 +62,7 @@ from crewai.utilities.agent_utils import (
     render_text_description_and_args,
 )
 from crewai.utilities.converter import generate_model_description
+from crewai.utilities.crew_pydantic_output_parser import clean_json_from_text
 from crewai.utilities.events.agent_events import (
     AgentLogsExecutionEvent,
     LiteAgentExecutionCompletedEvent,
@@ -355,8 +356,8 @@ class LiteAgent(FlowTrackable, BaseModel):
         formatted_result: Optional[BaseModel] = None
         if self.response_format:
             try:
-                # Cast to BaseModel to ensure type safety
-                result = self.response_format.model_validate_json(agent_finish.output)
+                cleaned_output = clean_json_from_text(agent_finish.output)
+                result = self.response_format.model_validate_json(cleaned_output)
                 if isinstance(result, BaseModel):
                     formatted_result = result
             except Exception as e:

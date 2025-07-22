@@ -302,3 +302,78 @@ def test_hallucination_guardrail_description_in_events():
 
     event = LLMGuardrailStartedEvent(guardrail=guardrail, retry_count=0)
     assert event.guardrail == "HallucinationGuardrail (no-op)"
+
+
+def test_llm_guardrail_with_trailing_characters():
+    """Test that LLMGuardrail can handle responses with trailing characters."""
+    from unittest.mock import patch
+    
+    mock_response_with_trailing = '''{"valid": true, "feedback": null}
+
+Some additional text that should be ignored.
+More trailing content.'''
+
+    with patch('crewai.Agent.kickoff') as mock_kickoff:
+        from crewai.agent import LiteAgentOutput
+        from crewai.tasks.llm_guardrail import LLMGuardrailResult
+        
+        mock_output = LiteAgentOutput(
+            raw=mock_response_with_trailing,
+            pydantic=LLMGuardrailResult(valid=True, feedback=None),
+            agent_role="Guardrail Agent",
+            usage_metrics=None
+        )
+        mock_kickoff.return_value = mock_output
+        
+        guardrail = LLMGuardrail(
+            description="Test guardrail", 
+            llm=LLM(model="gpt-4o-mini")
+        )
+        
+        task_output = TaskOutput(
+            raw="Test task output",
+            description="Test task",
+            expected_output="Output",
+            agent="Test Agent",
+        )
+        
+        result = guardrail(task_output)
+        assert result[0] is True
+        assert result[1] == "Test task output"
+
+
+def test_llm_guardrail_with_markdown_formatting():
+    """Test that LLMGuardrail can handle responses with markdown formatting."""
+    from unittest.mock import patch
+    
+    mock_response_with_markdown = '''```json
+{"valid": false, "feedback": "The output does not meet the requirements"}
+```'''
+
+    with patch('crewai.Agent.kickoff') as mock_kickoff:
+        from crewai.agent import LiteAgentOutput
+        from crewai.tasks.llm_guardrail import LLMGuardrailResult
+        
+        mock_output = LiteAgentOutput(
+            raw=mock_response_with_markdown,
+            pydantic=LLMGuardrailResult(valid=False, feedback="The output does not meet the requirements"),
+            agent_role="Guardrail Agent",
+            usage_metrics=None
+        )
+        mock_kickoff.return_value = mock_output
+        
+        guardrail = LLMGuardrail(
+            description="Test guardrail", 
+            llm=LLM(model="gpt-4o-mini")
+        )
+        
+        task_output = TaskOutput(
+            raw="Test task output",
+            description="Test task",
+            expected_output="Output",
+            agent="Test Agent",
+        )
+        
+        result = guardrail(task_output)
+        assert result[0] is False
+        assert result[1] == "The output does not meet the requirements"

@@ -493,3 +493,101 @@ def test_lite_agent_with_invalid_llm():
                 llm="invalid-model"
             )
         assert "Expected LLM instance of type BaseLLM" in str(exc_info.value)
+
+
+def test_lite_agent_structured_output_with_trailing_characters():
+    """Test that LiteAgent can handle JSON responses with trailing characters."""
+    from unittest.mock import patch
+    
+    class SimpleOutput(BaseModel):
+        summary: str = Field(description="A brief summary")
+        confidence: int = Field(description="Confidence level from 1-100")
+
+    mock_response_with_trailing = '''{"summary": "Test summary", "confidence": 85}
+
+Additional text after JSON that should be ignored.
+Final Answer: This text should also be ignored.'''
+
+    with patch('crewai.lite_agent.get_llm_response') as mock_llm:
+        mock_llm.return_value = mock_response_with_trailing
+        
+        agent = LiteAgent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm=LLM(model="gpt-4o-mini"),
+        )
+        
+        result = agent.kickoff(
+            "Test message",
+            response_format=SimpleOutput
+        )
+        
+        assert result.pydantic is not None
+        assert isinstance(result.pydantic, SimpleOutput)
+        assert result.pydantic.summary == "Test summary"
+        assert result.pydantic.confidence == 85
+
+
+def test_lite_agent_structured_output_with_markdown():
+    """Test that LiteAgent can handle JSON responses wrapped in markdown."""
+    from unittest.mock import patch
+    
+    class SimpleOutput(BaseModel):
+        summary: str = Field(description="A brief summary")
+        confidence: int = Field(description="Confidence level from 1-100")
+
+    mock_response_with_markdown = '''```json
+{"summary": "Test summary with markdown", "confidence": 90}
+```'''
+
+    with patch('crewai.lite_agent.get_llm_response') as mock_llm:
+        mock_llm.return_value = mock_response_with_markdown
+        
+        agent = LiteAgent(
+            role="Test Agent",
+            goal="Test goal", 
+            backstory="Test backstory",
+            llm=LLM(model="gpt-4o-mini"),
+        )
+        
+        result = agent.kickoff(
+            "Test message",
+            response_format=SimpleOutput
+        )
+        
+        assert result.pydantic is not None
+        assert isinstance(result.pydantic, SimpleOutput)
+        assert result.pydantic.summary == "Test summary with markdown"
+        assert result.pydantic.confidence == 90
+
+
+def test_lite_agent_structured_output_with_final_answer_prefix():
+    """Test that LiteAgent can handle JSON responses with Final Answer prefix."""
+    from unittest.mock import patch
+    
+    class SimpleOutput(BaseModel):
+        summary: str = Field(description="A brief summary")
+        confidence: int = Field(description="Confidence level from 1-100")
+
+    mock_response_with_prefix = '''Final Answer: {"summary": "Test summary with prefix", "confidence": 95}'''
+
+    with patch('crewai.lite_agent.get_llm_response') as mock_llm:
+        mock_llm.return_value = mock_response_with_prefix
+        
+        agent = LiteAgent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory", 
+            llm=LLM(model="gpt-4o-mini"),
+        )
+        
+        result = agent.kickoff(
+            "Test message",
+            response_format=SimpleOutput
+        )
+        
+        assert result.pydantic is not None
+        assert isinstance(result.pydantic, SimpleOutput)
+        assert result.pydantic.summary == "Test summary with prefix"
+        assert result.pydantic.confidence == 95
