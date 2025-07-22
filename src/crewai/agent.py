@@ -1,7 +1,18 @@
 import shutil
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -76,6 +87,12 @@ class Agent(BaseAgent):
     """
 
     _times_executed: int = PrivateAttr(default=0)
+    agent_executor: Optional[CrewAgentExecutor] = Field(
+        default=None,
+        init=False,  # Not included in __init__ as it's created dynamically in create_agent_executor()
+        exclude=True,  # Excluded from serialization to avoid circular references
+        description="The agent executor instance for running tasks. Created dynamically when needed.",
+    )
     max_execution_time: Optional[int] = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -162,7 +179,7 @@ class Agent(BaseAgent):
     )
     guardrail: Optional[Union[Callable[[Any], Tuple[bool, Any]], str]] = Field(
         default=None,
-        description="Function or string description of a guardrail to validate agent output"
+        description="Function or string description of a guardrail to validate agent output",
     )
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
@@ -339,7 +356,6 @@ class Agent(BaseAgent):
         knowledge_config = (
             self.knowledge_config.model_dump() if self.knowledge_config else {}
         )
-
 
         if self.knowledge or (self.crew and self.crew.knowledge):
             crewai_event_bus.emit(
