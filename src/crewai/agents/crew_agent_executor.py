@@ -371,10 +371,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         training_data[agent_id] = agent_training_data
         training_handler.save(training_data)
 
-    def _format_prompt(self, prompt: str, inputs: Dict[str, str]) -> str:
-        prompt = prompt.replace("{input}", inputs["input"])
-        prompt = prompt.replace("{tool_names}", inputs["tool_names"])
-        prompt = prompt.replace("{tools}", inputs["tools"])
+    def _format_prompt(
+        self, prompt: str, inputs: Dict[str, Union[str, bool, None]]
+    ) -> str:
+        # Cast to str to satisfy type checker - these are always strings when called
+        prompt = prompt.replace("{input}", str(inputs["input"]))
+        prompt = prompt.replace("{tool_names}", str(inputs["tool_names"]))
+        prompt = prompt.replace("{tools}", str(inputs["tools"]))
         return prompt
 
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
