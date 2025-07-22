@@ -759,7 +759,7 @@ class LLM(BaseLLM):
         available_functions: Optional[Dict[str, Any]] = None,
         from_task: Optional[Any] = None,
         from_agent: Optional[Any] = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle a non-streaming response from the LLM.
 
         Args:
@@ -783,13 +783,11 @@ class LLM(BaseLLM):
             # Convert litellm's context window error to our own exception type
             # for consistent handling in the rest of the codebase
             raise LLMContextLengthExceededException(str(e))
-
         # --- 2) Extract response message and content
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
             0
         ].message
         text_response = response_message.content or ""
-
         # --- 3) Handle callbacks with usage info
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
@@ -802,21 +800,22 @@ class LLM(BaseLLM):
                             start_time=0,
                             end_time=0,
                         )
-
         # --- 4) Check for tool calls
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        # --- 5) If no tool calls or no available functions, return the text response directly
-        if not tool_calls or not available_functions:
+        # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
+        if (not tool_calls or not available_functions) and text_response:
             self._handle_emit_call_events(response=text_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
             return text_response
+        # --- 6) If there is no text response, no available functions, but there are tool calls, return the tool calls
+        elif tool_calls and not available_functions and not text_response:
+            return tool_calls
 
-        # --- 6) Handle tool calls if present
+        # --- 7) Handle tool calls if present
         tool_result = self._handle_tool_call(tool_calls, available_functions)
         if tool_result is not None:
             return tool_result
-
-        # --- 7) If tool call handling didn't return a result, emit completion event and return text response
+        # --- 8) If tool call handling didn't return a result, emit completion event and return text response
         self._handle_emit_call_events(response=text_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
         return text_response
 
@@ -951,22 +950,18 @@ class LLM(BaseLLM):
         # --- 3) Convert string messages to proper format if needed
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
-
         # --- 4) Handle O1 model special case (system messages not supported)
         if "o1" in self.model.lower():
             for message in messages:
                 if message.get("role") == "system":
                     message["role"] = "assistant"
-
         # --- 5) Set up callbacks if provided
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
-
             try:
                 # --- 6) Prepare parameters for the completion call
                 params = self._prepare_completion_params(messages, tools)
-
                 # --- 7) Make the completion call and handle response
                 if self.stream:
                     return self._handle_streaming_response(
