@@ -712,7 +712,7 @@ crew = Crew(
     memory_config={
         "provider": "mem0",
         "config": {"user_id": "john"},
-        "user_memory": {}  # Required - triggers user memory initialization
+        "user_memory": {}  # DEPRECATED: Will be removed in version 0.156.0 or on 2025-08-04, use external_memory instead
     },
     process=Process.sequential,
     verbose=True
