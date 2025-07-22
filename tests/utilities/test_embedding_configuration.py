@@ -16,10 +16,10 @@ def test_configure_embedder_importerror():
     }
     
     with patch('chromadb.utils.embedding_functions.openai_embedding_function.OpenAIEmbeddingFunction') as mock_openai:
-        mock_openai.side_effect = ImportError("Module not found")
+        mock_openai.side_effect = ImportError("Module not found.")
         
         with pytest.raises(ImportError) as exc_info:
             configurator.configure_embedder(embedder_config)
 
-        assert str(exc_info.value) == "Module not found"
+        assert str(exc_info.value) == "Module not found."
         mock_openai.assert_called_once()
