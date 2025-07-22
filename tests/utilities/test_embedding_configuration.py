@@ -1,9 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-from chromadb.utils.embedding_functions.openai_embedding_function import (
-    OpenAIEmbeddingFunction,
-)
 
 from crewai.utilities.embedding_configurator import EmbeddingConfigurator
 
