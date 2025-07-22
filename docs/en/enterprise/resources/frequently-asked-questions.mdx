@@ -1,0 +1,151 @@
+---
+title: FAQs
+description: "Frequently asked questions about CrewAI Enterprise"
+icon: "circle-question"
+---
+
+<AccordionGroup>
+    <Accordion title="How is task execution handled in the hierarchical process?">
+        In the hierarchical process, a manager agent is automatically created and coordinates the workflow, delegating tasks and validating outcomes for streamlined and effective execution. The manager agent utilizes tools to facilitate task delegation and execution by agents under the manager's guidance. The manager LLM is crucial for the hierarchical process and must be set up correctly for proper function.
+    </Accordion>
+
+    <Accordion title="Where can I get the latest CrewAI documentation?">
+        The most up-to-date documentation for CrewAI is available on our official documentation website: https://docs.crewai.com/
+        <Card href="https://docs.crewai.com/" icon="books">CrewAI Docs</Card>
+    </Accordion>
+
+    <Accordion title="What are the key differences between Hierarchical and Sequential Processes in CrewAI?">
+        #### Hierarchical Process:
+        - Tasks are delegated and executed based on a structured chain of command
+        - A manager language model (`manager_llm`) must be specified for the manager agent
+        - Manager agent oversees task execution, planning, delegation, and validation
+        - Tasks are not pre-assigned; the manager allocates tasks to agents based on their capabilities
+
+        #### Sequential Process:
+        - Tasks are executed one after another, ensuring tasks are completed in an orderly progression
+        - Output of one task serves as context for the next
+        - Task execution follows the predefined order in the task list
+
+        #### Which Process is Better for Complex Projects?
+        The hierarchical process is better suited for complex projects because it allows for:
+        - **Dynamic task allocation and delegation**: Manager agent can assign tasks based on agent capabilities
+        - **Structured validation and oversight**: Manager agent reviews task outputs and ensures completion
+        - **Complex task management**: Precise control over tool availability at the agent level
+    </Accordion>
+
+    <Accordion title="What are the benefits of using memory in the CrewAI framework?">
+        - **Adaptive Learning**: Crews become more efficient over time, adapting to new information and refining their approach to tasks
+        - **Enhanced Personalization**: Memory enables agents to remember user preferences and historical interactions, leading to personalized experiences
+        - **Improved Problem Solving**: Access to a rich memory store aids agents in making more informed decisions, drawing on past learnings and contextual insights
+    </Accordion>
+
+    <Accordion title="What is the purpose of setting a maximum RPM limit for an agent?">
+        Setting a maximum RPM limit for an agent prevents the agent from making too many requests to external services, which can help to avoid rate limits and improve performance.
+    </Accordion>
+
+    <Accordion title="What role does human input play in the execution of tasks within a CrewAI crew?">
+        Human input allows agents to request additional information or clarification when necessary. This feature is crucial in complex decision-making processes or when agents require more details to complete a task effectively.
+
+        To integrate human input into agent execution, set the `human_input` flag in the task definition. When enabled, the agent prompts the user for input before delivering its final answer. This input can provide extra context, clarify ambiguities, or validate the agent's output.
+
+        For detailed implementation guidance, see our [Human-in-the-Loop guide](/en/how-to/human-in-the-loop).
+    </Accordion>
+
+    <Accordion title="What advanced customization options are available for tailoring and enhancing agent behavior and capabilities in CrewAI?">
+        CrewAI provides a range of advanced customization options:
+
+        - **Language Model Customization**: Agents can be customized with specific language models (`llm`) and function-calling language models (`function_calling_llm`)
+        - **Performance and Debugging Settings**: Adjust an agent's performance and monitor its operations
+        - **Verbose Mode**: Enables detailed logging of an agent's actions, useful for debugging and optimization
+        - **RPM Limit**: Sets the maximum number of requests per minute (`max_rpm`)
+        - **Maximum Iterations**: The `max_iter` attribute allows users to define the maximum number of iterations an agent can perform for a single task
+        - **Delegation and Autonomy**: Control an agent's ability to delegate or ask questions with the `allow_delegation` attribute (default: True)
+        - **Human Input Integration**: Agents can request additional information or clarification when necessary
+    </Accordion>
+
+    <Accordion title="In what scenarios is human input particularly useful in agent execution?">
+        Human input is particularly useful when:
+        - **Agents require additional information or clarification**: When agents encounter ambiguity or incomplete data
+        - **Agents need to make complex or sensitive decisions**: Human input can assist in ethical or nuanced decision-making
+        - **Oversight and validation of agent output**: Human input can help validate results and prevent errors
+        - **Customizing agent behavior**: Human input can provide feedback to refine agent responses over time
+        - **Identifying and resolving errors or limitations**: Human input helps address agent capability gaps
+    </Accordion>
+
+    <Accordion title="What are the different types of memory that are available in crewAI?">
+        The different types of memory available in CrewAI are:
+        - **Short-term memory**: Temporary storage for immediate context
+        - **Long-term memory**: Persistent storage for learned patterns and information
+        - **Entity memory**: Focused storage for specific entities and their attributes
+        - **Contextual memory**: Memory that maintains context across interactions
+
+        Learn more about the different types of memory:
+        <Card href="https://docs.crewai.com/concepts/memory" icon="brain">CrewAI Memory</Card>
+    </Accordion>
+
+    <Accordion title="How do I use Output Pydantic in a Task?">
+        To use Output Pydantic in a task, you need to define the expected output of the task as a Pydantic model. Here's a quick example:
+
+        <Steps>
+            <Step title="Define a Pydantic model">
+                ```python
+                from pydantic import BaseModel
+
+                class User(BaseModel):
+                    name: str
+                    age: int
+                ```
+            </Step>
+
+            <Step title="Create a task with Output Pydantic">
+                ```python
+                from crewai import Task, Crew, Agent
+                from my_models import User
+
+                task = Task(
+                    description="Create a user with the provided name and age",
+                    expected_output=User,  # This is the Pydantic model
+                    agent=agent,
+                    tools=[tool1, tool2]
+                )
+                ```
+            </Step>
+
+            <Step title="Set the output_pydantic attribute in your agent">
+                ```python
+                from crewai import Agent
+                from my_models import User
+
+                agent = Agent(
+                    role='User Creator',
+                    goal='Create users',
+                    backstory='I am skilled in creating user accounts',
+                    tools=[tool1, tool2],
+                    output_pydantic=User
+                )
+                ```
+            </Step>
+        </Steps>
+
+        Here's a tutorial on how to consistently get structured outputs from your agents:
+        <Frame>
+            <iframe
+            height="400"
+            width="100%"
+            src="https://www.youtube.com/embed/dNpKQk5uxHw"
+            title="YouTube video player" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+        </Frame>
+    </Accordion>
+
+    <Accordion title="How can I create custom tools for my CrewAI agents?">
+        You can create custom tools by subclassing the `BaseTool` class provided by CrewAI or by using the tool decorator. Subclassing involves defining a new class that inherits from `BaseTool`, specifying the name, description, and the `_run` method for operational logic. The tool decorator allows you to create a `Tool` object directly with the required attributes and a functional logic.
+
+        <Card href="https://docs.crewai.com/how-to/create-custom-tools" icon="code">CrewAI Tools Guide</Card>
+    </Accordion>
+
+    <Accordion title="How can you control the maximum number of requests per minute that the entire crew can perform?">
+        The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
+    </Accordion>
+</AccordionGroup>

@@ -1,8 +1,8 @@
+import logging
 import os
 from time import sleep
 from unittest.mock import MagicMock, patch
 
-import litellm
 import pytest
 from pydantic import BaseModel
 
@@ -11,7 +11,11 @@ from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.utilities.events import (
     LLMCallCompletedEvent,
     LLMStreamChunkEvent,
+    ToolUsageStartedEvent,
+    ToolUsageFinishedEvent,
+    ToolUsageErrorEvent,
 )
+
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 
@@ -222,7 +226,7 @@ def test_get_custom_llm_provider_gemini():
 
 def test_get_custom_llm_provider_openai():
     llm = LLM(model="gpt-4")
-    assert llm._get_custom_llm_provider() == None
+    assert llm._get_custom_llm_provider() is None
 
 
 def test_validate_call_params_supported():
@@ -254,6 +258,52 @@ def test_validate_call_params_no_response_format():
     # When no response_format is provided, no validation error should occur.
     llm = LLM(model="gemini/gemini-1.5-pro", response_format=None)
     llm._validate_call_params()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
+@pytest.mark.parametrize(
+    "model",
+    [
+        "gemini/gemini-2.0-flash-thinking-exp-01-21",
+        "gemini/gemini-2.0-flash-001",
+        "gemini/gemini-2.0-flash-lite-001",
+        "gemini/gemini-2.5-flash-preview-04-17",
+        "gemini/gemini-2.5-pro-exp-03-25",
+    ],
+)
+def test_gemini_models(model):
+    llm = LLM(model=model)
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
+@pytest.mark.parametrize(
+    "model",
+    [
+        "gemini/gemma-3-1b-it",
+        "gemini/gemma-3-4b-it",
+        "gemini/gemma-3-12b-it",
+        "gemini/gemma-3-27b-it",
+    ],
+)
+def test_gemma3(model):
+    llm = LLM(model=model)
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.parametrize(
+    "model", ["gpt-4.1", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"]
+)
+def test_gpt_4_1(model):
+    llm = LLM(model=model)
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert "Paris" in result
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -326,6 +376,45 @@ def get_weather_tool_schema():
             },
         },
     }
+
+def test_context_window_exceeded_error_handling():
+    """Test that litellm.ContextWindowExceededError is converted to LLMContextLengthExceededException."""
+    from litellm.exceptions import ContextWindowExceededError
+
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMContextLengthExceededException,
+    )
+
+    llm = LLM(model="gpt-4")
+
+    # Test non-streaming response
+    with patch("litellm.completion") as mock_completion:
+        mock_completion.side_effect = ContextWindowExceededError(
+            "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
+            model="gpt-4",
+            llm_provider="openai"
+        )
+
+        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+            llm.call("This is a test message")
+
+        assert "context length exceeded" in str(excinfo.value).lower()
+        assert "8192 tokens" in str(excinfo.value)
+
+    # Test streaming response
+    llm = LLM(model="gpt-4", stream=True)
+    with patch("litellm.completion") as mock_completion:
+        mock_completion.side_effect = ContextWindowExceededError(
+            "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
+            model="gpt-4",
+            llm_provider="openai"
+        )
+
+        with pytest.raises(LLMContextLengthExceededException) as excinfo:
+            llm.call("This is a test message")
+
+        assert "context length exceeded" in str(excinfo.value).lower()
+        assert "8192 tokens" in str(excinfo.value)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -426,12 +515,18 @@ def assert_event_count(
     expected_completed_tool_call: int = 0,
     expected_stream_chunk: int = 0,
     expected_completed_llm_call: int = 0,
+    expected_tool_usage_started: int = 0,
+    expected_tool_usage_finished: int = 0,
+    expected_tool_usage_error: int = 0,
     expected_final_chunk_result: str = "",
 ):
     event_count = {
         "completed_tool_call": 0,
         "stream_chunk": 0,
         "completed_llm_call": 0,
+        "tool_usage_started": 0,
+        "tool_usage_finished": 0,
+        "tool_usage_error": 0,
     }
     final_chunk_result = ""
     for _call in mock_emit.call_args_list:
@@ -450,12 +545,21 @@ def assert_event_count(
             and event.call_type.value == "llm_call"
         ):
             event_count["completed_llm_call"] += 1
+        elif isinstance(event, ToolUsageStartedEvent):
+            event_count["tool_usage_started"] += 1
+        elif isinstance(event, ToolUsageFinishedEvent):
+            event_count["tool_usage_finished"] += 1
+        elif isinstance(event, ToolUsageErrorEvent):
+            event_count["tool_usage_error"] += 1
         else:
             continue
 
     assert event_count["completed_tool_call"] == expected_completed_tool_call
     assert event_count["stream_chunk"] == expected_stream_chunk
     assert event_count["completed_llm_call"] == expected_completed_llm_call
+    assert event_count["tool_usage_started"] == expected_tool_usage_started
+    assert event_count["tool_usage_finished"] == expected_tool_usage_finished
+    assert event_count["tool_usage_error"] == expected_tool_usage_error
     assert final_chunk_result == expected_final_chunk_result
 
 
@@ -489,6 +593,34 @@ def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
         expected_completed_tool_call=1,
         expected_stream_chunk=10,
         expected_completed_llm_call=1,
+        expected_tool_usage_started=1,
+        expected_tool_usage_finished=1,
+        expected_final_chunk_result=expected_final_chunk_result,
+    )
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_emit):
+    def get_weather_error(location):
+        raise Exception("Error")
+
+    llm = LLM(model="openai/gpt-4o", stream=True)
+    response = llm.call(
+        messages=[
+            {"role": "user", "content": "What is the weather in New York?"},
+        ],
+        tools=[get_weather_tool_schema],
+        available_functions={
+            "get_weather": get_weather_error
+        },
+    )
+    assert response == ""
+    expected_final_chunk_result = '{"location":"New York, NY"}'
+    assert_event_count(
+        mock_emit=mock_emit,
+        expected_stream_chunk=9,
+        expected_completed_llm_call=1,
+        expected_tool_usage_started=1,
+        expected_tool_usage_error=1,
         expected_final_chunk_result=expected_final_chunk_result,
     )
 
@@ -533,3 +665,49 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
         expected_completed_llm_call=1,
         expected_final_chunk_result=response,
     )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_call_when_stop_is_unsupported(caplog):
+    llm = LLM(model="o1-mini", stop=["stop"])
+    with caplog.at_level(logging.INFO):
+        result = llm.call("What is the capital of France?")
+        assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provided(caplog):
+    llm = LLM(model="o1-mini", stop=["stop"], additional_drop_params=["another_param"])
+    with caplog.at_level(logging.INFO):
+        result = llm.call("What is the capital of France?")
+        assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+    assert isinstance(result, str)
+    assert "Paris" in result
+
+
+@pytest.fixture
+def ollama_llm():
+    return LLM(model="ollama/llama3.2:3b")
+
+def test_ollama_appends_dummy_user_message_when_last_is_assistant(ollama_llm):
+    original_messages = [
+        {"role": "user", "content": "Hi there"},
+        {"role": "assistant", "content": "Hello!"},
+    ]
+
+    formatted = ollama_llm._format_messages_for_provider(original_messages)
+
+    assert len(formatted) == len(original_messages) + 1
+    assert formatted[-1]["role"] == "user"
+    assert formatted[-1]["content"] == ""
+
+
+def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
+    original_messages = [
+        {"role": "user", "content": "Tell me a joke."},
+    ]
+
+    formatted = ollama_llm._format_messages_for_provider(original_messages)
+
+    assert formatted == original_messages

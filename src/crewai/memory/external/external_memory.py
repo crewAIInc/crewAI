@@ -1,8 +1,18 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional
+import time
 
 from crewai.memory.external.external_memory_item import ExternalMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.interface import Storage
+from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+from crewai.utilities.events.memory_events import (
+    MemoryQueryStartedEvent,
+    MemoryQueryCompletedEvent,
+    MemoryQueryFailedEvent,
+    MemorySaveStartedEvent,
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+)
 
 if TYPE_CHECKING:
     from crewai.memory.storage.mem0_storage import Mem0Storage
@@ -46,8 +56,91 @@ class ExternalMemory(Memory):
         agent: Optional[str] = None,
     ) -> None:
         """Saves a value into the external storage."""
-        item = ExternalMemoryItem(value=value, metadata=metadata, agent=agent)
-        super().save(value=item.value, metadata=item.metadata, agent=item.agent)
+        crewai_event_bus.emit(
+            self,
+            event=MemorySaveStartedEvent(
+                value=value,
+                metadata=metadata,
+                agent_role=agent,
+                source_type="external_memory",
+            ),
+        )
+
+        start_time = time.time()
+        try:
+            item = ExternalMemoryItem(value=value, metadata=metadata, agent=agent)
+            super().save(value=item.value, metadata=item.metadata, agent=item.agent)
+
+            crewai_event_bus.emit(
+                self,
+                event=MemorySaveCompletedEvent(
+                    value=value,
+                    metadata=metadata,
+                    agent_role=agent,
+                    save_time_ms=(time.time() - start_time) * 1000,
+                    source_type="external_memory",
+                ),
+            )
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=MemorySaveFailedEvent(
+                    value=value,
+                    metadata=metadata,
+                    agent_role=agent,
+                    error=str(e),
+                    source_type="external_memory",
+                ),
+            )
+            raise
+
+    def search(
+        self,
+        query: str,
+        limit: int = 3,
+        score_threshold: float = 0.35,
+    ):
+        crewai_event_bus.emit(
+            self,
+            event=MemoryQueryStartedEvent(
+                query=query,
+                limit=limit,
+                score_threshold=score_threshold,
+                source_type="external_memory",
+            ),
+        )
+
+        start_time = time.time()
+        try:
+            results = super().search(
+                query=query, limit=limit, score_threshold=score_threshold
+            )
+
+            crewai_event_bus.emit(
+                self,
+                event=MemoryQueryCompletedEvent(
+                    query=query,
+                    results=results,
+                    limit=limit,
+                    score_threshold=score_threshold,
+                    query_time_ms=(time.time() - start_time) * 1000,
+                    source_type="external_memory",
+                ),
+            )
+
+            return results
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=MemoryQueryFailedEvent(
+                    query=query,
+                    limit=limit,
+                    score_threshold=score_threshold,
+                    error=str(e),
+                    source_type="external_memory",
+                ),
+            )
+            raise
 
     def reset(self) -> None:
         self.storage.reset()

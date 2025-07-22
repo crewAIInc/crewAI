@@ -1,0 +1,73 @@
+---
+title: "Geração de Imagens com DALL-E"
+description: "Aprenda a usar o DALL-E para geração de imagens com IA em seus projetos CrewAI"
+icon: "image"
+---
+
+O CrewAI oferece integração com o DALL-E da OpenAI, permitindo que seus agentes de IA gerem imagens como parte de suas tarefas. Este guia irá orientá-lo sobre como configurar e utilizar a ferramenta DALL-E em seus projetos CrewAI.
+
+## Pré-requisitos
+
+- crewAI instalado (última versão)
+- Chave de API OpenAI com acesso ao DALL-E
+
+## Configurando a Ferramenta DALL-E
+
+<Steps>
+    <Step title="Importe a ferramenta DALL-E">
+        ```python
+        from crewai_tools import DallETool
+        ```
+    </Step>
+
+    <Step title="Adicione a ferramenta DALL-E na configuração do seu agente">
+        ```python
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                config=self.agents_config['researcher'],
+                tools=[SerperDevTool(), DallETool()],  # Add DallETool to the list of tools
+                allow_delegation=False,
+                verbose=True
+            )
+        ```
+    </Step>
+</Steps>
+
+## Utilizando a Ferramenta DALL-E
+
+Depois de adicionar a ferramenta DALL-E ao seu agente, ele poderá gerar imagens baseadas em prompts de texto. A ferramenta retornará uma URL para a imagem gerada, que pode ser utilizada na resposta do agente ou repassada para outros agentes para processamento adicional.
+
+### Exemplo de Configuração de Agente
+
+```yaml
+role: >
+    Pesquisador Sênior de Dados para Perfis do LinkedIn
+goal: >
+    Encontrar perfis detalhados do LinkedIn com base no nome fornecido {name} e domínio {domain}
+    Gerar uma imagem com o Dall-e baseada no domínio {domain}
+backstory: >
+    Você é um pesquisador experiente com habilidade para encontrar os perfis do LinkedIn mais relevantes.
+    Conhecido por sua eficiência em navegar no LinkedIn, você se destaca em reunir e apresentar
+    informações profissionais de forma clara e concisa.
+```
+
+### Resultado Esperado
+
+O agente com a ferramenta DALL-E conseguirá gerar a imagem e fornecer uma URL em sua resposta. Você poderá então baixar a imagem.
+
+<Frame>
+    <img src="/images/enterprise/dall-e-image.png" alt="Imagem DALL-E" />
+</Frame>
+
+## Boas Práticas
+
+1. **Seja específico nos prompts de geração de imagem** para obter melhores resultados.
+2. **Considere o tempo de geração** - A geração de imagens pode levar algum tempo, então inclua isso no seu planejamento de tarefas.
+3. **Siga as políticas de uso** - Sempre cumpra as políticas de uso da OpenAI ao gerar imagens.
+
+## Solução de Problemas
+
+1. **Verifique o acesso à API** - Certifique-se de que sua chave de API OpenAI possui acesso ao DALL-E.
+2. **Compatibilidade de versões** - Verifique se você está utilizando a versão mais recente do crewAI e crewai-tools.
+3. **Configuração da ferramenta** - Confirme que a ferramenta DALL-E foi corretamente adicionada à lista de ferramentas do agente.

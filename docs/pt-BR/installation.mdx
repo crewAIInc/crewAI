@@ -1,0 +1,200 @@
+---
+title: Instalação
+description: Comece a usar o CrewAI - Instale, configure e crie seu primeiro crew de IA
+icon: wrench
+---
+
+## Tutorial em Vídeo
+Assista a este tutorial em vídeo para uma demonstração passo a passo do processo de instalação:
+
+<iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/-kSOTtYzgEw"
+  title="CrewAI Installation Guide"
+  frameborder="0"
+  style={{ borderRadius: '10px' }}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+## Tutorial em Texto
+<Note>
+  **Requisitos de Versão do Python**
+
+  CrewAI requer `Python >=3.10 e <3.14`. Veja como verificar sua versão:
+  ```bash
+  python3 --version
+  ```
+
+  Se você precisar atualizar o Python, acesse [python.org/downloads](https://python.org/downloads)
+</Note>
+
+CrewAI utiliza o `uv` como ferramenta de gerenciamento de dependências e pacotes. Ele simplifica a configuração e execução do projeto, oferecendo uma experiência fluida.
+
+Se você ainda não instalou o `uv`, siga o **passo 1** para instalá-lo rapidamente em seu sistema, caso contrário, avance para o **passo 2**.
+
+<Steps>
+    <Step title="Instale o uv">
+      - **No macOS/Linux:**
+
+        Use `curl` para baixar o script e executá-lo com `sh`:
+
+        ```shell
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        ```
+        Se seu sistema não possuir `curl`, você pode usar `wget`:
+
+        ```shell
+        wget -qO- https://astral.sh/uv/install.sh | sh
+        ```
+
+      - **No Windows:**
+
+        Use `irm` para baixar o script e `iex` para executá-lo:
+
+        ```shell
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+        ```
+        Caso enfrente algum problema, consulte o [guia de instalação do UV](https://docs.astral.sh/uv/getting-started/installation/) para mais informações.
+    </Step>
+
+    <Step title="Instale o CrewAI 🚀">
+      - Execute o seguinte comando para instalar o CLI do `crewai`:
+        ```shell
+        uv tool install crewai
+        ```
+          <Warning>
+            Se aparecer um aviso relacionado ao `PATH`, execute este comando para atualizar seu shell:
+            ```shell
+            uv tool update-shell
+            ```
+          </Warning>
+
+          <Warning>
+            Se você encontrar o erro de build ao instalar `chroma-hnswlib==0.7.6` (`fatal error C1083: Cannot open include file: 'float.h'`) no Windows, instale o (Visual Studio Build Tools)[https://visualstudio.microsoft.com/downloads/] com o *Desenvolvimento de Desktop com C++*.
+          </Warning>
+
+      - Para verificar se o `crewai` está instalado, execute:
+        ```shell
+        uv tool list
+        ```
+      - Você deverá ver algo assim:
+        ```shell
+        crewai v0.102.0
+        - crewai
+        ```
+      - Caso precise atualizar o `crewai`, execute:
+        ```shell
+        uv tool install crewai --upgrade
+        ```
+      <Check>Instalação realizada com sucesso! Você está pronto para criar seu primeiro crew! 🎉</Check>
+    </Step>
+</Steps>
+
+# Criando um Projeto CrewAI
+
+Recomendamos utilizar o template de scaffolding `YAML` para uma abordagem estruturada na definição dos agentes e tarefas. Veja como começar:
+
+<Steps>
+  <Step title="Gerar Scaffolding do Projeto">
+    - Execute o comando CLI do `crewai`:
+      ```shell
+      crewai create crew <your_project_name>
+      ```
+
+    - Isso criará um novo projeto com a seguinte estrutura:
+      <Frame>
+      ```
+      my_project/
+      ├── .gitignore
+      ├── knowledge/
+      ├── pyproject.toml
+      ├── README.md
+      ├── .env
+      └── src/
+          └── my_project/
+              ├── __init__.py
+              ├── main.py
+              ├── crew.py
+              ├── tools/
+              │   ├── custom_tool.py
+              │   └── __init__.py
+              └── config/
+                  ├── agents.yaml
+                  └── tasks.yaml
+      ```
+      </Frame>
+  </Step>
+
+  <Step title="Personalize Seu Projeto">
+    - Seu projeto conterá estes arquivos essenciais:
+      | Arquivo | Finalidade |
+      | --- | --- |
+      | `agents.yaml` | Defina seus agentes de IA e seus papéis |
+      | `tasks.yaml` | Configure as tarefas e fluxos de trabalho dos agentes |
+      | `.env` | Armazene chaves de API e variáveis de ambiente |
+      | `main.py` | Ponto de entrada e fluxo de execução do projeto |
+      | `crew.py` | Orquestração e coordenação do crew |
+      | `tools/` | Diretório para ferramentas customizadas dos agentes |
+      | `knowledge/` | Diretório para base de conhecimento |
+
+    - Comece editando `agents.yaml` e `tasks.yaml` para definir o comportamento do seu crew.
+    - Mantenha informações sensíveis como chaves de API no arquivo `.env`.
+  </Step>
+
+  <Step title="Execute seu Crew">
+    - Antes de rodar seu crew, execute:
+      ```bash
+      crewai install
+      ```
+    - Se precisar instalar pacotes adicionais, utilize:
+      ```shell
+      uv add <package-name>
+      ```
+    - Para rodar seu crew, execute o seguinte comando na raiz do seu projeto:
+      ```bash
+      crewai run
+      ```
+  </Step>
+</Steps>
+
+## Opções de Instalação Enterprise
+
+<Note type="info">
+Para equipes e organizações, o CrewAI oferece opções de implantação corporativa que eliminam a complexidade da configuração:
+
+### CrewAI Enterprise (SaaS)
+- Zero instalação necessária - basta se cadastrar gratuitamente em [app.crewai.com](https://app.crewai.com)
+- Atualizações e manutenção automáticas
+- Infraestrutura e escalabilidade gerenciadas
+- Construa crews sem código
+
+### CrewAI Factory (Auto-Hospedado)
+- Implantação containerizada para sua infraestrutura
+- Compatível com qualquer hyperscaler, incluindo ambientes on-premises
+- Integração com seus sistemas de segurança existentes
+
+<Card title="Explore as Opções Enterprise" icon="building" href="https://crewai.com/enterprise">
+  Saiba mais sobre as soluções enterprise do CrewAI e agende uma demonstração
+</Card>
+</Note>
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card
+    title="Construa Seu Primeiro Agente"
+    icon="code"
+    href="/pt-BR/quickstart"
+  >
+    Siga nosso guia de início rápido para criar seu primeiro agente CrewAI e obter experiência prática.
+  </Card>
+  <Card
+    title="Junte-se à Comunidade"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    Conecte-se com outros desenvolvedores, obtenha ajuda e compartilhe suas experiências com o CrewAI.
+  </Card>
+</CardGroup>

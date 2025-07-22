@@ -102,3 +102,49 @@ class LiteAgentExecutionErrorEvent(BaseEvent):
     agent_info: Dict[str, Any]
     error: str
     type: str = "lite_agent_execution_error"
+
+
+# New logging events
+class AgentLogsStartedEvent(BaseEvent):
+    """Event emitted when agent logs should be shown at start"""
+
+    agent_role: str
+    task_description: Optional[str] = None
+    verbose: bool = False
+    type: str = "agent_logs_started"
+
+
+class AgentLogsExecutionEvent(BaseEvent):
+    """Event emitted when agent logs should be shown during execution"""
+
+    agent_role: str
+    formatted_answer: Any
+    verbose: bool = False
+    type: str = "agent_logs_execution"
+
+    model_config = {"arbitrary_types_allowed": True}
+
+# Agent Eval events
+class AgentEvaluationStartedEvent(BaseEvent):
+    agent_id: str
+    agent_role: str
+    task_id: str | None = None
+    iteration: int
+    type: str = "agent_evaluation_started"
+
+class AgentEvaluationCompletedEvent(BaseEvent):
+    agent_id: str
+    agent_role: str
+    task_id: str | None = None
+    iteration: int
+    metric_category: Any
+    score: Any
+    type: str = "agent_evaluation_completed"
+
+class AgentEvaluationFailedEvent(BaseEvent):
+    agent_id: str
+    agent_role: str
+    task_id: str | None = None
+    iteration: int
+    error: str
+    type: str = "agent_evaluation_failed"

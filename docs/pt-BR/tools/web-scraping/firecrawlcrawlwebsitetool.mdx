@@ -1,0 +1,47 @@
+---
+title: Firecrawl Crawl Website
+description: O `FirecrawlCrawlWebsiteTool` foi projetado para rastrear e converter sites em markdown limpo ou dados estruturados.
+icon: fire-flame
+---
+
+# `FirecrawlCrawlWebsiteTool`
+
+## Descrição
+
+[Firecrawl](https://firecrawl.dev) é uma plataforma para rastrear e converter qualquer site em markdown limpo ou dados estruturados.
+
+## Instalação
+
+- Obtenha uma chave de API em [firecrawl.dev](https://firecrawl.dev) e defina-a nas variáveis de ambiente (`FIRECRAWL_API_KEY`).
+- Instale o [SDK do Firecrawl](https://github.com/mendableai/firecrawl) junto com o pacote `crewai[tools]`:
+
+```shell
+pip install firecrawl-py 'crewai[tools]'
+```
+
+## Exemplo
+
+Utilize o FirecrawlScrapeFromWebsiteTool como a seguir para permitir que seu agente carregue sites:
+
+```python Code
+from crewai_tools import FirecrawlCrawlWebsiteTool
+
+tool = FirecrawlCrawlWebsiteTool(url='firecrawl.dev')
+```
+
+## Argumentos
+
+- `api_key`: Opcional. Especifica a chave de API do Firecrawl. Por padrão, utiliza a variável de ambiente `FIRECRAWL_API_KEY`.
+- `url`: A URL base para iniciar o rastreamento.
+- `page_options`: Opcional.
+  - `onlyMainContent`: Opcional. Retorna apenas o conteúdo principal da página, excluindo cabeçalhos, navegações, rodapés, etc.
+  - `includeHtml`: Opcional. Inclui o conteúdo HTML bruto da página. Vai adicionar uma chave html na resposta.
+- `crawler_options`: Opcional. Opções para controlar o comportamento do rastreamento.
+  - `includes`: Opcional. Padrões de URL para incluir no rastreamento.
+  - `exclude`: Opcional. Padrões de URL para excluir do rastreamento.
+  - `generateImgAltText`: Opcional. Gera texto alternativo para imagens usando LLMs (requer um plano pago).
+  - `returnOnlyUrls`: Opcional. Se verdadeiro, retorna apenas as URLs como uma lista no status do rastreamento. Nota: a resposta será uma lista de URLs dentro do campo data, não uma lista de documentos.
+  - `maxDepth`: Opcional. Profundidade máxima de rastreamento. Profundidade 1 é a URL base, profundidade 2 inclui a URL base e seus filhos diretos, e assim por diante.
+  - `mode`: Opcional. O modo de rastreamento a ser utilizado. O modo rápido rastreia 4x mais rápido em sites sem sitemap, mas pode não ser tão preciso e não deve ser usado em sites fortemente renderizados com JavaScript.
+  - `limit`: Opcional. Número máximo de páginas a serem rastreadas.
+  - `timeout`: Opcional. Tempo limite em milissegundos para a operação de rastreamento.

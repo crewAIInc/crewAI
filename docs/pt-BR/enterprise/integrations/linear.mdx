@@ -1,0 +1,453 @@
+---
+title: Integração com o Linear
+description: "Acompanhamento de projetos de software e rastreamento de bugs com a integração Linear para CrewAI."
+icon: "list-check"
+---
+
+## Visão Geral
+
+Permita que seus agentes gerenciem issues, projetos e fluxos de trabalho de desenvolvimento através do Linear. Crie e atualize issues, gerencie cronogramas de projetos, organize equipes e otimize seu processo de desenvolvimento de software com automação impulsionada por IA.
+
+## Pré-requisitos
+
+Antes de utilizar a integração com o Linear, certifique-se de que você possui:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com) com uma assinatura ativa
+- Uma conta Linear com permissões apropriadas no workspace
+- Conectou sua conta Linear através da [página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração com o Linear
+
+### 1. Conecte sua Conta Linear
+
+1. Navegue até [Integrações CrewAI Enterprise](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Linear** na seção Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para gerenciamento de issues e projetos
+5. Copie seu Token Empresarial em [Configurações da Conta](https://app.crewai.com/crewai_plus/settings/account)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="LINEAR_CREATE_ISSUE">
+    **Descrição:** Crie uma nova issue no Linear.
+
+    **Parâmetros:**
+    - `teamId` (string, obrigatório): ID da Equipe - Especifique o ID da equipe responsável para esta nova issue. Use as Configurações de Fluxo do Connect Portal para permitir que usuários escolham um ID de Equipe. (exemplo: "a70bdf0f-530a-4887-857d-46151b52b47c").
+    - `title` (string, obrigatório): Título - Especifique um título para esta issue.
+    - `description` (string, opcional): Descrição - Especifique uma descrição para esta issue.
+    - `statusId` (string, opcional): Status - Especifique o status desta issue.
+    - `priority` (string, opcional): Prioridade - Especifique a prioridade desta issue como um inteiro.
+    - `dueDate` (string, opcional): Data de Vencimento - Especifique a data de vencimento desta issue no formato ISO 8601.
+    - `cycleId` (string, opcional): ID do Ciclo - Especifique o ciclo associado a esta issue.
+    - `additionalFields` (object, opcional): Campos Adicionais.
+      ```json
+      {
+        "assigneeId": "a70bdf0f-530a-4887-857d-46151b52b47c",
+        "labelIds": ["a70bdf0f-530a-4887-857d-46151b52b47c"]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_UPDATE_ISSUE">
+    **Descrição:** Atualize uma issue no Linear.
+
+    **Parâmetros:**
+    - `issueId` (string, obrigatório): ID da Issue - Especifique o ID da issue a ser atualizada. (exemplo: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+    - `title` (string, opcional): Título - Especifique um título para esta issue.
+    - `description` (string, opcional): Descrição - Especifique uma descrição para esta issue.
+    - `statusId` (string, opcional): Status - Especifique o status desta issue.
+    - `priority` (string, opcional): Prioridade - Especifique a prioridade desta issue como um inteiro.
+    - `dueDate` (string, opcional): Data de Vencimento - Especifique a data de vencimento desta issue no formato ISO 8601.
+    - `cycleId` (string, opcional): ID do Ciclo - Especifique o ciclo associado a esta issue.
+    - `additionalFields` (object, opcional): Campos Adicionais.
+      ```json
+      {
+        "assigneeId": "a70bdf0f-530a-4887-857d-46151b52b47c",
+        "labelIds": ["a70bdf0f-530a-4887-857d-46151b52b47c"]
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_GET_ISSUE_BY_ID">
+    **Descrição:** Obtenha uma issue pelo ID no Linear.
+
+    **Parâmetros:**
+    - `issueId` (string, obrigatório): ID da Issue - Especifique o ID do registro da issue a ser buscada. (exemplo: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+  </Accordion>
+
+  <Accordion title="LINEAR_GET_ISSUE_BY_ISSUE_IDENTIFIER">
+    **Descrição:** Obtenha uma issue através do identificador da issue no Linear.
+
+    **Parâmetros:**
+    - `externalId` (string, obrigatório): ID Externo - Especifique o identificador legível da issue a ser buscada. (exemplo: "ABC-1").
+  </Accordion>
+
+  <Accordion title="LINEAR_SEARCH_ISSUE">
+    **Descrição:** Pesquise issues no Linear.
+
+    **Parâmetros:**
+    - `queryTerm` (string, obrigatório): Termo de Pesquisa - O termo a ser localizado na busca.
+    - `issueFilterFormula` (object, opcional): Um filtro na forma normal disjuntiva – OU de grupos E de condições únicas.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "title",
+                "operator": "$stringContains",
+                "value": "bug"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      Campos disponíveis: `title`, `number`, `project`, `createdAt`
+      Operadores disponíveis: `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringIsIn`, `$stringIsNotIn`, `$stringStartsWith`, `$stringDoesNotStartWith`, `$stringEndsWith`, `$stringDoesNotEndWith`, `$stringContains`, `$stringDoesNotContain`, `$stringGreaterThan`, `$stringLessThan`, `$numberGreaterThanOrEqualTo`, `$numberLessThanOrEqualTo`, `$numberGreaterThan`, `$numberLessThan`, `$dateTimeAfter`, `$dateTimeBefore`
+  </Accordion>
+
+  <Accordion title="LINEAR_DELETE_ISSUE">
+    **Descrição:** Exclua uma issue no Linear.
+
+    **Parâmetros:**
+    - `issueId` (string, obrigatório): ID da Issue - Especifique o ID do registro da issue a ser excluída. (exemplo: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+  </Accordion>
+
+  <Accordion title="LINEAR_ARCHIVE_ISSUE">
+    **Descrição:** Arquive uma issue no Linear.
+
+    **Parâmetros:**
+    - `issueId` (string, obrigatório): ID da Issue - Especifique o ID do registro da issue a ser arquivada. (exemplo: "90fbc706-18cd-42c9-ae66-6bd344cc8977").
+  </Accordion>
+
+  <Accordion title="LINEAR_CREATE_SUB_ISSUE">
+    **Descrição:** Crie uma sub-issue no Linear.
+
+    **Parâmetros:**
+    - `parentId` (string, obrigatório): ID do Pai - Especifique o ID da issue pai desta nova issue.
+    - `teamId` (string, obrigatório): ID da Equipe - Especifique o ID da equipe responsável pela nova sub-issue. Use as Configurações de Fluxo do Connect Portal para permitir que usuários escolham um ID de Equipe. (exemplo: "a70bdf0f-530a-4887-857d-46151b52b47c").
+    - `title` (string, obrigatório): Título - Especifique um título para esta issue.
+    - `description` (string, opcional): Descrição - Especifique uma descrição para esta issue.
+    - `additionalFields` (object, opcional): Campos Adicionais.
+      ```json
+      {
+        "lead": "linear_user_id"
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_CREATE_PROJECT">
+    **Descrição:** Crie um novo projeto no Linear.
+
+    **Parâmetros:**
+    - `teamIds` (object, obrigatório): ID da Equipe - Especifique o(s) ID(s) da equipe associada a este projeto como string ou array JSON. Use as Configurações de Usuário do Connect Portal para que seu usuário selecione um ID de Equipe.
+      ```json
+      [
+        "a70bdf0f-530a-4887-857d-46151b52b47c",
+        "4ac7..."
+      ]
+      ```
+    - `projectName` (string, obrigatório): Nome do Projeto - Especifique o nome do projeto. (exemplo: "Meu Projeto Linear").
+    - `description` (string, opcional): Descrição do Projeto - Especifique uma descrição para este projeto.
+    - `additionalFields` (object, opcional): Campos Adicionais.
+      ```json
+      {
+        "state": "planned",
+        "description": ""
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_UPDATE_PROJECT">
+    **Descrição:** Atualize um projeto no Linear.
+
+    **Parâmetros:**
+    - `projectId` (string, obrigatório): ID do Projeto - Especifique o ID do projeto a ser atualizado. (exemplo: "a6634484-6061-4ac7-9739-7dc5e52c796b").
+    - `projectName` (string, opcional): Nome do Projeto - Especifique o nome do projeto a ser atualizado. (exemplo: "Meu Projeto Linear").
+    - `description` (string, opcional): Descrição do Projeto - Especifique uma descrição para este projeto.
+    - `additionalFields` (object, opcional): Campos Adicionais.
+      ```json
+      {
+        "state": "planned",
+        "description": ""
+      }
+      ```
+  </Accordion>
+
+  <Accordion title="LINEAR_GET_PROJECT_BY_ID">
+    **Descrição:** Obtenha um projeto pelo ID no Linear.
+
+    **Parâmetros:**
+    - `projectId` (string, obrigatório): ID do Projeto - Especifique o ID do projeto a ser buscado. (exemplo: "a6634484-6061-4ac7-9739-7dc5e52c796b").
+  </Accordion>
+
+  <Accordion title="LINEAR_DELETE_PROJECT">
+    **Descrição:** Exclua um projeto no Linear.
+
+    **Parâmetros:**
+    - `projectId` (string, obrigatório): ID do Projeto - Especifique o ID do projeto a ser excluído. (exemplo: "a6634484-6061-4ac7-9739-7dc5e52c796b").
+  </Accordion>
+
+  <Accordion title="LINEAR_SEARCH_TEAMS">
+    **Descrição:** Pesquise equipes no Linear.
+
+    **Parâmetros:**
+    - `teamFilterFormula` (object, opcional): Um filtro na forma normal disjuntiva – OU de grupos E de condições únicas.
+      ```json
+      {
+        "operator": "OR",
+        "conditions": [
+          {
+            "operator": "AND",
+            "conditions": [
+              {
+                "field": "name",
+                "operator": "$stringContains",
+                "value": "Engineering"
+              }
+            ]
+          }
+        ]
+      }
+      ```
+      Campos disponíveis: `id`, `name`
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente Linear
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha ferramentas empresariais (ferramentas do Linear serão incluídas)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Crie um agente com funcionalidades do Linear
+linear_agent = Agent(
+    role="Development Manager",
+    goal="Gerenciar issues do Linear e acompanhar o progresso do desenvolvimento de forma eficiente",
+    backstory="Um assistente de IA especializado em gerenciamento de projetos de desenvolvimento de software.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa para criar um relatório de bug
+create_bug_task = Task(
+    description="Crie um relatório de bug de alta prioridade para o sistema de autenticação e atribua à equipe de backend",
+    agent=linear_agent,
+    expected_output="Bug report criado com sucesso com ID da issue"
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[linear_agent],
+    tasks=[create_bug_task]
+)
+
+crew.kickoff()
+```
+
+### Filtrando Ferramentas Lineares Específicas
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha apenas ferramentas lineares específicas
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["linear_create_issue", "linear_update_issue", "linear_search_issue"]
+)
+
+issue_manager = Agent(
+    role="Issue Manager",
+    goal="Criar e gerenciar issues no Linear de forma eficiente",
+    backstory="Um assistente de IA focado na criação e no gerenciamento do ciclo de vida de issues.",
+    tools=enterprise_tools
+)
+
+# Tarefa para gerenciar fluxo de issues
+issue_workflow = Task(
+    description="Crie uma issue de solicitação de recurso e atualize os status das issues relacionadas para refletir o progresso atual",
+    agent=issue_manager,
+    expected_output="Solicitação de recurso criada e issues relacionadas atualizadas"
+)
+
+crew = Crew(
+    agents=[issue_manager],
+    tasks=[issue_workflow]
+)
+
+crew.kickoff()
+```
+
+### Gerenciamento de Projetos e Equipes
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+project_coordinator = Agent(
+    role="Project Coordinator",
+    goal="Coordenar projetos e equipes no Linear de forma eficiente",
+    backstory="Um coordenador de projetos experiente que gerencia ciclos de desenvolvimento e fluxos de trabalho de equipe.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa para coordenar a configuração de projeto
+project_coordination = Task(
+    description="""
+    1. Pesquise por equipes de engenharia no Linear
+    2. Crie um novo projeto para o desenvolvimento de recursos do Q2
+    3. Associe o projeto às equipes relevantes
+    4. Crie marcos iniciais do projeto como issues
+    """,
+    agent=project_coordinator,
+    expected_output="Projeto Q2 criado com equipes atribuídas e marcos iniciais estabelecidos"
+)
+
+crew = Crew(
+    agents=[project_coordinator],
+    tasks=[project_coordination]
+)
+
+crew.kickoff()
+```
+
+### Hierarquia de Issues e Gerenciamento de Sub-tarefas
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+task_organizer = Agent(
+    role="Task Organizer",
+    goal="Organizar issues complexas em sub-tarefas gerenciáveis",
+    backstory="Um assistente de IA que divide trabalhos de desenvolvimento complexos em sub-tarefas organizadas.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa para criar hierarquia de issues
+hierarchy_task = Task(
+    description="""
+    1. Pesquise por issues de recursos grandes que precisam ser divididos
+    2. Para cada issue complexa, crie sub-issues para diferentes componentes
+    3. Atualize as issues principais com descrições adequadas e links para sub-issues
+    4. Atribua sub-issues aos membros apropriados da equipe com base na especialidade
+    """,
+    agent=task_organizer,
+    expected_output="Issues complexas divididas em sub-tarefas gerenciáveis com atribuições corretas"
+)
+
+crew = Crew(
+    agents=[task_organizer],
+    tasks=[hierarchy_task]
+)
+
+crew.kickoff()
+```
+
+### Fluxo de Trabalho de Desenvolvimento Automatizado
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+workflow_automator = Agent(
+    role="Workflow Automator",
+    goal="Automatizar processos de fluxo de trabalho de desenvolvimento no Linear",
+    backstory="Um assistente de IA que automatiza tarefas repetitivas de fluxo de trabalho de desenvolvimento.",
+    tools=[enterprise_tools]
+)
+
+# Tarefa de automação de workflow complexa
+automation_task = Task(
+    description="""
+    1. Pesquise por issues que estejam em progresso há mais de 7 dias
+    2. Atualize suas prioridades com base nas datas de vencimento e importância do projeto
+    3. Crie issues semanais de planejamento de sprint para cada equipe
+    4. Arquive issues concluídas do ciclo anterior
+    5. Gere relatórios de status do projeto como novas issues
+    """,
+    agent=workflow_automator,
+    expected_output="Fluxo de desenvolvimento automatizado com prioridades atualizadas, planejamento de sprint e relatórios de status"
+)
+
+crew = Crew(
+    agents=[workflow_automator],
+    tasks=[automation_task]
+)
+
+crew.kickoff()
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros de Permissão**
+- Certifique-se de que sua conta Linear possui as permissões necessárias no workspace de destino
+- Verifique se a conexão OAuth inclui os escopos requeridos pela API do Linear
+- Confirme se você tem permissões para criar/editar issues e projetos no workspace
+
+**IDs e Referências Inválidas**
+- Verifique os IDs de equipes, IDs de issues e IDs de projetos para garantir o formato UUID correto
+- Assegure que as entidades referenciadas (equipes, projetos, ciclos) existem e estão acessíveis
+- Verifique se os identificadores de issues seguem o formato correto (ex: "ABC-1")
+
+**Problemas de Associação entre Equipe e Projeto**
+- Use LINEAR_SEARCH_TEAMS para obter IDs de equipe válidos antes de criar issues ou projetos
+- Certifique-se de que as equipes existem e estão ativas no seu workspace
+- Verifique se os IDs das equipes estão devidamente formatados como UUIDs
+
+**Problemas com Status e Prioridade das Issues**
+- Verifique se os IDs de status referenciam estados de workflow válidos para a equipe
+- Certifique-se de que os valores de prioridade estão dentro do intervalo válido para sua configuração do Linear
+- Confirme que campos personalizados e labels existem antes de referenciá-los
+
+**Problemas com Formato de Data e Hora**
+- Use o formato ISO 8601 para datas de vencimento e timestamps
+- Certifique-se de que os fusos horários estão corretos para cálculos de datas de vencimento
+- Verifique se os valores de data são válidos e posteriores à data atual para datas de vencimento
+
+**Problemas de Pesquisa e Filtros**
+- Garanta que as consultas de busca estejam formatadas corretamente e não estejam vazias
+- Utilize nomes de campos válidos nas fórmulas de filtro: `title`, `number`, `project`, `createdAt`
+- Teste filtros simples antes de montar consultas complexas com múltiplas condições
+- Verifique se os tipos de operadores correspondem aos tipos de dados dos campos filtrados
+
+**Problemas na Criação de Sub-issues**
+- Certifique-se de que os IDs das issues pai são válidos e acessíveis
+- Verifique se o ID da equipe para as sub-issues corresponde ou é compatível com o da issue pai
+- Assegure-se de que as issues pai não estejam arquivadas ou excluídas
+
+### Obtendo Ajuda
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência na configuração ou solução de problemas da integração com o Linear.
+</Card>

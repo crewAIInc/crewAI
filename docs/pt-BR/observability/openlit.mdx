@@ -1,0 +1,180 @@
+---
+title: Integração OpenLIT
+description: Comece a monitorar seus Agentes rapidamente com apenas uma linha de código usando OpenTelemetry.
+icon: magnifying-glass-chart
+---
+
+# Visão Geral do OpenLIT
+
+[OpenLIT](https://github.com/openlit/openlit?src=crewai-docs) é uma ferramenta open-source que simplifica o monitoramento de desempenho de agentes de IA, LLMs, VectorDBs e GPUs com apenas **uma** linha de código.
+
+Ela oferece rastreamento e métricas nativos do OpenTelemetry para acompanhar parâmetros importantes como custo, latência, interações e sequências de tarefas.
+Essa configuração permite acompanhar hiperparâmetros e monitorar problemas de desempenho, ajudando a encontrar formas de aprimorar e refinar seus agentes com o tempo.
+
+<Frame caption="Painel do OpenLIT">
+  <img src="/images/openlit1.png" alt="Visão geral do uso de agentes, incluindo custo e tokens" />
+  <img src="/images/openlit2.png" alt="Visão geral dos rastreamentos e métricas otel do agente" />
+  <img src="/images/openlit3.png" alt="Visão detalhada dos rastreamentos do agente" />
+</Frame>
+
+### Funcionalidades
+
+- **Painel Analítico**: Monitore a saúde e desempenho dos seus Agentes com dashboards detalhados que acompanham métricas, custos e interações dos usuários.
+- **SDK de Observabilidade Nativo OpenTelemetry**: SDKs neutros de fornecedor para enviar rastreamentos e métricas para suas ferramentas de observabilidade existentes como Grafana, DataDog e outros.
+- **Rastreamento de Custos para Modelos Customizados e Ajustados**: Adapte estimativas de custo para modelos específicos usando arquivos de precificação customizados para orçamentos precisos.
+- **Painel de Monitoramento de Exceções**: Identifique e solucione rapidamente problemas ao rastrear exceções comuns e erros por meio de um painel de monitoramento.
+- **Conformidade e Segurança**: Detecte ameaças potenciais como profanidade e vazamento de dados sensíveis (PII).
+- **Detecção de Prompt Injection**: Identifique possíveis injeções de código e vazamentos de segredos.
+- **Gerenciamento de Chaves de API e Segredos**: Gerencie suas chaves de API e segredos do LLM de forma centralizada e segura, evitando práticas inseguras.
+- **Gerenciamento de Prompt**: Gerencie e versiona prompts de Agente usando o PromptHub para acesso consistente e fácil entre os agentes.
+- **Model Playground** Teste e compare diferentes modelos para seus agentes CrewAI antes da implantação.
+
+## Instruções de Configuração
+
+<Steps>
+    <Step title="Implantar o OpenLIT">
+      <Steps>
+        <Step title="Clonar o Repositório do OpenLIT">
+          ```shell
+          git clone git@github.com:openlit/openlit.git
+          ```
+        </Step>
+        <Step title="Iniciar o Docker Compose">
+          A partir do diretório raiz do [Repositório OpenLIT](https://github.com/openlit/openlit), execute o comando abaixo:
+          ```shell
+          docker compose up -d
+          ```
+        </Step>
+      </Steps>
+    </Step>
+    <Step title="Instalar o SDK OpenLIT">
+      ```shell
+      pip install openlit
+      ```
+    </Step>
+    <Step title="Inicializar o OpenLIT em Sua Aplicação">
+      Adicione as duas linhas abaixo ao seu código de aplicação:
+      <Tabs>
+        <Tab title="Configuração usando argumentos de função">
+          ```python
+          import openlit
+          openlit.init(otlp_endpoint="http://127.0.0.1:4318")
+          ```
+          
+          Exemplo de uso para monitoramento de um Agente CrewAI:
+    
+          ```python
+          from crewai import Agent, Task, Crew, Process
+          import openlit
+
+          openlit.init(disable_metrics=True)
+          # Definir seus agentes
+          pesquisador = Agent(
+              role="Pesquisador",
+              goal="Realizar pesquisas e análises aprofundadas sobre IA e agentes de IA",
+              backstory="Você é um pesquisador especialista em tecnologia, engenharia de software, IA e startups. Trabalha como freelancer e está atualmente pesquisando para um novo cliente.",
+              allow_delegation=False,
+              llm='command-r'
+          )
+
+
+          # Definir sua task
+          task = Task(
+              description="Gere uma lista com 5 ideias interessantes para um artigo e escreva um parágrafo cativante para cada ideia, mostrando o potencial de um artigo completo sobre o tema. Retorne a lista de ideias com seus parágrafos e suas anotações.",
+              expected_output="5 tópicos, cada um com um parágrafo e notas complementares.",
+          )
+
+          # Definir o agente gerente
+          gerente = Agent(
+              role="Gerente de Projeto",
+              goal="Gerenciar eficientemente a equipe e garantir a conclusão de tarefas de alta qualidade",
+              backstory="Você é um gerente de projetos experiente, habilidoso em supervisionar projetos complexos e guiar equipes para o sucesso. Sua função é coordenar os esforços dos membros da equipe, garantindo que cada tarefa seja concluída no prazo e com o mais alto padrão.",
+              allow_delegation=True,
+              llm='command-r'
+          )
+
+          # Instanciar sua crew com um manager personalizado
+          crew = Crew(
+              agents=[pesquisador],
+              tasks=[task],
+              manager_agent=gerente,
+              process=Process.hierarchical,
+          )
+
+          # Iniciar o trabalho da crew
+          result = crew.kickoff()
+
+          print(result)
+          ```
+        </Tab>
+        <Tab title="Configuração usando Variáveis de Ambiente">
+
+          Adicione as duas linhas abaixo ao seu código de aplicação:
+          ```python
+          import openlit
+
+          openlit.init()
+          ```
+
+          Execute o seguinte comando para configurar o endpoint de exportação OTEL:
+          ```shell
+          export OTEL_EXPORTER_OTLP_ENDPOINT = "http://127.0.0.1:4318"
+          ```
+
+          Exemplo de uso para monitoramento de um Agente CrewAI Async:
+
+          ```python
+          import asyncio
+          from crewai import Crew, Agent, Task
+          import openlit
+
+          openlit.init(otlp_endpoint="http://127.0.0.1:4318")
+
+          # Criar um agente com execução de código habilitada
+          coding_agent = Agent(
+            role="Analista de Dados Python",
+            goal="Analisar dados e fornecer insights usando Python",
+            backstory="Você é um analista de dados experiente com fortes habilidades em Python.",
+            allow_code_execution=True,
+            llm="command-r"
+          )
+
+          # Criar uma task que exige execução de código
+          data_analysis_task = Task(
+            description="Analise o conjunto de dados fornecido e calcule a idade média dos participantes. Idades: {ages}",
+            agent=coding_agent,
+            expected_output="5 tópicos, cada um com um parágrafo e notas complementares.",
+          )
+
+          # Criar uma crew e adicionar a task
+          analysis_crew = Crew(
+            agents=[coding_agent],
+            tasks=[data_analysis_task]
+          )
+
+          # Função async para iniciar a crew de forma assíncrona
+          async def async_crew_execution():
+              result = await analysis_crew.kickoff_async(inputs={"ages": [25, 30, 35, 40, 45]})
+              print("Crew Result:", result)
+
+          # Executar a função async
+          asyncio.run(async_crew_execution())
+          ```
+        </Tab>
+      </Tabs>
+      Consulte o [repositório do SDK Python do OpenLIT](https://github.com/openlit/openlit/tree/main/sdk/python) para configurações e casos de uso avançados.
+    </Step>
+    <Step title="Visualizar e Analisar">
+      Com os dados de Observabilidade dos Agentes agora sendo coletados e enviados ao OpenLIT, o próximo passo é visualizar e analisar esses dados para obter insights sobre o desempenho, comportamento e identificar oportunidades de melhoria dos seus Agentes.
+
+      Basta acessar o OpenLIT em `127.0.0.1:3000` no seu navegador para começar a explorar. Você pode fazer login usando as credenciais padrão
+      - **Email**: `user@openlit.io`
+      - **Senha**: `openlituser`
+      
+      <Frame caption="Painel do OpenLIT">
+        <img src="/images/openlit1.png" alt="Visão geral do uso de agentes, incluindo custo e tokens" />
+        <img src="/images/openlit2.png" alt="Visão geral dos rastreamentos e métricas otel do agente" />
+      </Frame>
+
+    </Step>
+</Steps>

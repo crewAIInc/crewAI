@@ -1,5 +1,4 @@
 import json
-import os
 from typing import Dict, List, Optional
 from unittest.mock import MagicMock, Mock, patch
 
@@ -19,6 +18,8 @@ from crewai.utilities.converter import (
     validate_model,
 )
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+# Tests for enums
+from enum import Enum
 
 
 @pytest.fixture(scope="module")
@@ -357,16 +358,9 @@ def test_convert_with_instructions():
     assert output.age == 30
 
 
-# Skip tests that call external APIs when running in CI/CD
-skip_external_api = pytest.mark.skipif(
-    os.getenv("CI") is not None, reason="Skipping tests that call external API in CI/CD"
-)
-
-
-@skip_external_api
-@pytest.mark.vcr(filter_headers=["authorization"], record_mode="once")
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_converter_with_llama3_2_model():
-    llm = LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434")
+    llm = LLM(model="openrouter/meta-llama/llama-3.2-3b-instruct")
     sample_text = "Name: Alice Llama, Age: 30"
     instructions = get_conversion_instructions(SimpleModel, llm)
     converter = Converter(
@@ -381,8 +375,7 @@ def test_converter_with_llama3_2_model():
     assert output.age == 30
 
 
-@skip_external_api
-@pytest.mark.vcr(filter_headers=["authorization"], record_mode="once")
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_converter_with_llama3_1_model():
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     sample_text = "Name: Alice Llama, Age: 30"
@@ -399,13 +392,6 @@ def test_converter_with_llama3_1_model():
     assert output.age == 30
 
 
-# Skip tests that call external APIs when running in CI/CD
-skip_external_api = pytest.mark.skipif(
-    os.getenv("CI") is not None, reason="Skipping tests that call external API in CI/CD"
-)
-
-
-@skip_external_api
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_converter_with_nested_model():
     llm = LLM(model="gpt-4o-mini")
@@ -446,7 +432,7 @@ def test_converter_error_handling():
     )
 
     with pytest.raises(ConverterError) as exc_info:
-        output = converter.to_pydantic()
+        converter.to_pydantic()
 
     assert "Failed to convert text into a Pydantic model" in str(exc_info.value)
 
@@ -530,10 +516,6 @@ def test_converter_with_list_field():
     assert output.items == [1, 2, 3]
 
 
-# Tests for enums
-from enum import Enum
-
-
 def test_converter_with_enum():
     class Color(Enum):
         RED = "red"
@@ -580,7 +562,7 @@ def test_converter_with_ambiguous_input():
     )
 
     with pytest.raises(ConverterError) as exc_info:
-        output = converter.to_pydantic()
+        converter.to_pydantic()
 
     assert "failed to convert text into a pydantic model" in str(exc_info.value).lower()
 

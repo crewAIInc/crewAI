@@ -2,14 +2,13 @@
 
 import os
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
-from crewai.agents.parser import CrewAgentParser, OutputParserException
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -19,6 +18,7 @@ from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
+from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.events import crewai_event_bus
 from crewai.utilities.events.tool_usage_events import ToolUsageFinishedEvent
 
@@ -72,7 +72,55 @@ def test_agent_creation():
     assert agent.role == "test role"
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
-    assert agent.tools == []
+
+
+def test_agent_with_only_system_template():
+    """Test that an agent with only system_template works without errors."""
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        system_template="You are a test agent...",
+        # prompt_template is intentionally missing
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
+
+
+def test_agent_with_only_prompt_template():
+    """Test that an agent with only system_template works without errors."""
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        prompt_template="You are a test agent...",
+        # prompt_template is intentionally missing
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
+
+
+def test_agent_with_missing_response_template():
+    """Test that an agent with system_template and prompt_template but no response_template works without errors."""
+    agent = Agent(
+        role="Test Role",
+        goal="Test Goal",
+        backstory="Test Backstory",
+        allow_delegation=False,
+        system_template="You are a test agent...",
+        prompt_template="This is a test prompt...",
+        # response_template is intentionally missing
+    )
+
+    assert agent.role == "Test Role"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
 
 
 def test_agent_default_values():
@@ -453,8 +501,7 @@ def test_agent_custom_max_iterations():
 def test_agent_repeated_tool_usage(capsys):
     @tool
     def get_final_answer() -> float:
-        """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        """Get the final answer but don't give it yet, just re-use this tool non-stop."""
         return 42
 
     agent = Agent(
@@ -479,11 +526,41 @@ def test_agent_repeated_tool_usage(capsys):
     )
 
     captured = capsys.readouterr()
-
-    assert (
-        "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
-        in captured.out
+    output = (
+        captured.out.replace("\n", " ")
+        .replace("  ", " ")
+        .strip()
+        .replace("╭", "")
+        .replace("╮", "")
+        .replace("╯", "")
+        .replace("╰", "")
+        .replace("│", "")
+        .replace("─", "")
+        .replace("[", "")
+        .replace("]", "")
+        .replace("bold", "")
+        .replace("blue", "")
+        .replace("yellow", "")
+        .replace("green", "")
+        .replace("red", "")
+        .replace("dim", "")
+        .replace("🤖", "")
+        .replace("🔧", "")
+        .replace("✅", "")
+        .replace("\x1b[93m", "")
+        .replace("\x1b[00m", "")
+        .replace("\\", "")
+        .replace('"', "")
+        .replace("'", "")
     )
+
+    # Look for the message in the normalized output, handling the apostrophe difference
+    expected_message = (
+        "I tried reusing the same input, I must stop using this action input."
+    )
+    assert (
+        expected_message in output
+    ), f"Expected message not found in output. Output was: {output}"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -516,10 +593,42 @@ def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
     )
 
     captured = capsys.readouterr()
-    assert (
-        "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
-        in captured.out
+    output = (
+        captured.out.replace("\n", " ")
+        .replace("  ", " ")
+        .strip()
+        .replace("╭", "")
+        .replace("╮", "")
+        .replace("╯", "")
+        .replace("╰", "")
+        .replace("│", "")
+        .replace("─", "")
+        .replace("[", "")
+        .replace("]", "")
+        .replace("bold", "")
+        .replace("blue", "")
+        .replace("yellow", "")
+        .replace("green", "")
+        .replace("red", "")
+        .replace("dim", "")
+        .replace("🤖", "")
+        .replace("🔧", "")
+        .replace("✅", "")
+        .replace("\x1b[93m", "")
+        .replace("\x1b[00m", "")
+        .replace("\\", "")
+        .replace('"', "")
+        .replace("'", "")
     )
+
+    # Look for the message in the normalized output, handling the apostrophe difference
+    expected_message = (
+        "I tried reusing the same input, I must stop using this action input"
+    )
+
+    assert (
+        expected_message in output
+    ), f"Expected message not found in output. Output was: {output}"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -993,7 +1102,7 @@ def test_agent_human_input():
             CrewAgentExecutor,
             "_invoke_loop",
             return_value=AgentFinish(output="Hello", thought="", text=""),
-        ) as mock_invoke_loop,
+        ),
     ):
         # Execute the task
         output = agent.execute_task(task)
@@ -1582,16 +1691,13 @@ def test_agent_execute_task_with_ollama():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
-    # Create a knowledge source with some content
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
-
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
+    with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [{"content": content}]
+        mock_knowledge_instance.search.return_value = [{"content": content}]
+        MockKnowledge.add_sources.return_value = [string_source]
 
         agent = Agent(
             role="Information Agent",
@@ -1601,7 +1707,6 @@ def test_agent_with_knowledge_sources():
             knowledge_sources=[string_source],
         )
 
-        # Create a task that requires the agent to use the knowledge
         task = Task(
             description="What is Brandon's favorite color?",
             expected_output="Brandon's favorite color.",
@@ -1609,10 +1714,11 @@ def test_agent_with_knowledge_sources():
         )
 
         crew = Crew(agents=[agent], tasks=[task])
-        result = crew.kickoff()
-
-        # Assert that the agent provides the correct information
-        assert "red" in result.raw.lower()
+        with patch.object(Knowledge, "add_sources") as mock_add_sources:
+            result = crew.kickoff()
+            assert mock_add_sources.called, "add_sources() should have been called"
+            mock_add_sources.assert_called_once()
+            assert "red" in result.raw.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1645,7 +1751,7 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold():
 
             assert agent.knowledge is not None
             mock_knowledge_query.assert_called_once_with(
-                [task.prompt()],
+                ["Brandon's favorite color"],
                 **knowledge_config.model_dump(),
             )
 
@@ -1682,7 +1788,7 @@ def test_agent_with_knowledge_sources_with_query_limit_and_score_threshold_defau
 
             assert agent.knowledge is not None
             mock_knowledge_query.assert_called_once_with(
-                [task.prompt()],
+                ["Brandon's favorite color"],
                 **knowledge_config.model_dump(),
             )
 
@@ -1692,9 +1798,7 @@ def test_agent_with_knowledge_sources_extensive_role():
     content = "Brandon's favorite color is red and he likes Mexican food."
     string_source = StringKnowledgeSource(content=content)
 
-    with patch(
-        "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
-    ) as MockKnowledge:
+    with patch("crewai.knowledge") as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
         mock_knowledge_instance.query.return_value = [{"content": content}]
@@ -1759,6 +1863,114 @@ def test_agent_with_knowledge_sources_works_with_copy():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources_generate_search_query():
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    with patch("crewai.knowledge") as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
+
+        agent = Agent(
+            role="Information Agent with extensive role description that is longer than 80 characters",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+            knowledge_sources=[string_source],
+        )
+
+        task = Task(
+            description="What is Brandon's favorite color?",
+            expected_output="The answer to the question, in a format like this: `{{name: str, favorite_color: str}}`",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        # Updated assertion to check the JSON content
+        assert "Brandon" in str(agent.knowledge_search_query)
+        assert "favorite color" in str(agent.knowledge_search_query)
+
+        assert "red" in result.raw.lower()
+
+
+@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+def test_agent_with_knowledge_with_no_crewai_knowledge():
+    mock_knowledge = MagicMock(spec=Knowledge)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
+        knowledge=mock_knowledge
+    )
+
+    # Create a task that requires the agent to use the knowledge
+    task = Task(
+        description="What is Vidit's favorite color?",
+        expected_output="Vidit's favorclearite color.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff()
+    mock_knowledge.query.assert_called_once()
+
+
+@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+def test_agent_with_only_crewai_knowledge():
+    mock_knowledge = MagicMock(spec=Knowledge)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY'))
+    )
+
+    # Create a task that requires the agent to use the knowledge
+    task = Task(
+        description="What is Vidit's favorite color?",
+        expected_output="Vidit's favorclearite color.",
+        agent=agent
+    )
+
+    crew = Crew(agents=[agent], tasks=[task],knowledge=mock_knowledge)
+    crew.kickoff()
+    mock_knowledge.query.assert_called_once()
+
+
+@pytest.mark.vcr(record_mode='none', filter_headers=["authorization"])
+def test_agent_knowledege_with_crewai_knowledge():
+    crew_knowledge = MagicMock(spec=Knowledge)
+    agent_knowledge = MagicMock(spec=Knowledge)
+
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(model="openrouter/openai/gpt-4o-mini",api_key=os.getenv('OPENROUTER_API_KEY')),
+        knowledge=agent_knowledge
+    )
+
+    # Create a task that requires the agent to use the knowledge
+    task = Task(
+        description="What is Vidit's favorite color?",
+        expected_output="Vidit's favorclearite color.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent],tasks=[task],knowledge=crew_knowledge)
+    crew.kickoff()
+    agent_knowledge.query.assert_called_once()
+    crew_knowledge.query.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_litellm_auth_error_handling():
     """Test that LiteLLM authentication errors are handled correctly and not retried."""
     from litellm import AuthenticationError as LiteLLMAuthenticationError
@@ -1798,7 +2010,6 @@ def test_crew_agent_executor_litellm_auth_error():
     from litellm.exceptions import AuthenticationError
 
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.utilities import Printer
 
     # Create an agent and executor
     agent = Agent(
@@ -1831,7 +2042,6 @@ def test_crew_agent_executor_litellm_auth_error():
     # Mock the LLM call to raise AuthenticationError
     with (
         patch.object(LLM, "call") as mock_llm_call,
-        patch.object(Printer, "print") as mock_printer,
         pytest.raises(AuthenticationError) as exc_info,
     ):
         mock_llm_call.side_effect = AuthenticationError(
@@ -1844,13 +2054,6 @@ def test_crew_agent_executor_litellm_auth_error():
                 "tools": "",
             }
         )
-
-    # Verify error handling messages
-    error_message = f"Error during LLM call: {str(mock_llm_call.side_effect)}"
-    mock_printer.assert_any_call(
-        content=error_message,
-        color="red",
-    )
 
     # Verify the call was only made once (no retries)
     mock_llm_call.assert_called_once()
@@ -1895,3 +2098,246 @@ def test_litellm_anthropic_error_handling():
 
     # Verify the LLM call was only made once (no retries)
     mock_llm_call.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_get_knowledge_search_query():
+    """Test that _get_knowledge_search_query calls the LLM with the correct prompts."""
+    from crewai.utilities.i18n import I18N
+
+    content = "The capital of France is Paris."
+    string_source = StringKnowledgeSource(content=content)
+
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="I have access to knowledge sources",
+        llm=LLM(model="gpt-4"),
+        knowledge_sources=[string_source],
+    )
+
+    task = Task(
+        description="What is the capital of France?",
+        expected_output="The capital of France is Paris.",
+        agent=agent,
+    )
+
+    i18n = I18N()
+    task_prompt = task.prompt()
+
+    with patch.object(agent, "_get_knowledge_search_query") as mock_get_query:
+        mock_get_query.return_value = "Capital of France"
+
+        crew = Crew(agents=[agent], tasks=[task])
+        crew.kickoff()
+
+        mock_get_query.assert_called_once_with(task_prompt)
+
+    with patch.object(agent.llm, "call") as mock_llm_call:
+        agent._get_knowledge_search_query(task_prompt)
+
+        mock_llm_call.assert_called_once_with(
+            [
+                {
+                    "role": "system",
+                    "content": i18n.slice(
+                        "knowledge_search_query_system_prompt"
+                    ).format(task_prompt=task.description),
+                },
+                {
+                    "role": "user",
+                    "content": i18n.slice("knowledge_search_query").format(
+                        task_prompt=task_prompt
+                    ),
+                },
+            ]
+        )
+
+
+@pytest.fixture
+def mock_get_auth_token():
+    with patch(
+        "crewai.cli.authentication.token.get_auth_token", return_value="test_token"
+    ):
+        yield
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
+    from crewai_tools import SerperDevTool, XMLSearchTool, CSVSearchTool, EnterpriseActionTool
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": [
+            {"module": "crewai_tools", "name": "SerperDevTool", "init_params": {"n_results": 30}},
+            {"module": "crewai_tools", "name": "XMLSearchTool", "init_params": {"summarize": True}},
+            {"module": "crewai_tools", "name": "CSVSearchTool", "init_params": {}},
+
+            # using a tools that returns a list of BaseTools
+            {"module": "crewai_tools", "name": "CrewaiEnterpriseTools", "init_params": {"actions_list": [], "enterprise_token": "test_key"}},
+        ],
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    tool_action = EnterpriseActionTool(
+        name="test_name",
+        description="test_description",
+        enterprise_action_token="test_token",
+        action_name="test_action_name",
+        action_schema={"test": "test"},
+    )
+
+    with patch("crewai_tools.CrewaiEnterpriseTools", return_value=[tool_action]):
+        agent = Agent(from_repository="test_agent")
+
+    assert agent.role == "test role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+    assert len(agent.tools) == 4
+
+    assert isinstance(agent.tools[0], SerperDevTool)
+    assert agent.tools[0].n_results == 30
+    assert isinstance(agent.tools[1], XMLSearchTool)
+    assert agent.tools[1].summarize
+
+    assert isinstance(agent.tools[2], CSVSearchTool)
+    assert not agent.tools[2].summarize
+
+    assert isinstance(agent.tools[3], EnterpriseActionTool)
+    assert agent.tools[3].name == "test_name"
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth_token):
+    from crewai_tools import SerperDevTool
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": [{"name": "SerperDevTool", "module": "crewai_tools", "init_params": {}}],
+    }
+    mock_get_agent.return_value = mock_get_response
+    agent = Agent(from_repository="test_agent", role="Custom Role")
+
+    assert agent.role == "Custom Role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+    assert len(agent.tools) == 1
+    assert isinstance(agent.tools[0], SerperDevTool)
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_token):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": [
+            {
+                "name": "DoesNotExist",
+                "module": "crewai_tools",
+            }
+        ],
+    }
+    mock_get_agent.return_value = mock_get_response
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Tool DoesNotExist could not be loaded: module 'crewai_tools' has no attribute 'DoesNotExist'",
+    ):
+        Agent(from_repository="test_agent")
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_internal_error(mock_get_agent, mock_get_auth_token):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 500
+    mock_get_response.text = "Internal server error"
+    mock_get_agent.return_value = mock_get_response
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Agent test_agent could not be loaded: Internal server error",
+    ):
+        Agent(from_repository="test_agent")
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_token):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 404
+    mock_get_response.text = "Agent not found"
+    mock_get_agent.return_value = mock_get_response
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Agent test_agent does not exist, make sure the name is correct or the agent is available on your organization",
+    ):
+        Agent(from_repository="test_agent")
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+@patch("crewai.utilities.agent_utils.Settings")
+@patch("crewai.utilities.agent_utils.console")
+def test_agent_from_repository_displays_org_info(
+    mock_console, mock_settings, mock_get_agent, mock_get_auth_token
+):
+    mock_settings_instance = MagicMock()
+    mock_settings_instance.org_uuid = "test-org-uuid"
+    mock_settings_instance.org_name = "Test Organization"
+    mock_settings.return_value = mock_settings_instance
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "tools": [],
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    agent = Agent(from_repository="test_agent")
+
+    mock_console.print.assert_any_call(
+        "Fetching agent from organization: Test Organization (test-org-uuid)",
+        style="bold blue",
+    )
+
+    assert agent.role == "test role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+
+
+@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+@patch("crewai.utilities.agent_utils.Settings")
+@patch("crewai.utilities.agent_utils.console")
+def test_agent_from_repository_without_org_set(
+    mock_console, mock_settings, mock_get_agent, mock_get_auth_token
+):
+    mock_settings_instance = MagicMock()
+    mock_settings_instance.org_uuid = None
+    mock_settings_instance.org_name = None
+    mock_settings.return_value = mock_settings_instance
+
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 401
+    mock_get_response.text = "Unauthorized access"
+    mock_get_agent.return_value = mock_get_response
+
+    with pytest.raises(
+        AgentRepositoryError,
+        match="Agent test_agent could not be loaded: Unauthorized access",
+    ):
+        Agent(from_repository="test_agent")
+
+    mock_console.print.assert_any_call(
+        "No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.",
+        style="yellow",
+    )

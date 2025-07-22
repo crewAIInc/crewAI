@@ -1,0 +1,360 @@
+---
+title: Colaboração
+description: Como permitir que agentes trabalhem juntos, deleguem tarefas e se comuniquem de forma eficaz em equipes CrewAI.
+icon: screen-users
+---
+
+## Visão Geral
+
+A colaboração no CrewAI permite que agentes trabalhem juntos como uma equipe, delegando tarefas e fazendo perguntas para aproveitar a expertise uns dos outros. Quando `allow_delegation=True`, os agentes automaticamente têm acesso a poderosas ferramentas de colaboração.
+
+## Guia Rápido: Habilite a Colaboração
+
+```python
+from crewai import Agent, Crew, Task
+
+# Enable collaboration for agents
+researcher = Agent(
+    role="Especialista em Pesquisa",
+    goal="Realizar pesquisas aprofundadas sobre qualquer tema",
+    backstory="Pesquisador especialista com acesso a diversas fontes",
+    allow_delegation=True,  # 🔑 Configuração chave para colaboração
+    verbose=True
+)
+
+writer = Agent(
+    role="Redator de Conteúdo",
+    goal="Criar conteúdo envolvente com base em pesquisas",
+    backstory="Redator habilidoso que transforma pesquisas em conteúdo atraente",
+    allow_delegation=True,  # 🔑 Permite fazer perguntas a outros agentes
+    verbose=True
+)
+
+# Agents can now collaborate automatically
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[...],
+    verbose=True
+)
+```
+
+## Como Funciona a Colaboração entre Agentes
+
+Quando `allow_delegation=True`, o CrewAI automaticamente fornece aos agentes duas ferramentas poderosas:
+
+### 1. **Ferramenta de Delegação de Trabalho**
+Permite que agentes designem tarefas para colegas com expertise específica.
+
+```python
+# Agent automatically gets this tool:
+# Delegate work to coworker(task: str, context: str, coworker: str)
+```
+
+### 2. **Ferramenta de Fazer Pergunta**
+Permite que agentes façam perguntas específicas para obter informações de colegas.
+
+```python
+# Agent automatically gets this tool:
+# Ask question to coworker(question: str, context: str, coworker: str)
+```
+
+## Colaboração em Ação
+
+Veja um exemplo completo onde agentes colaboram em uma tarefa de criação de conteúdo:
+
+```python
+from crewai import Agent, Crew, Task, Process
+
+# Create collaborative agents
+researcher = Agent(
+    role="Especialista em Pesquisa",
+    goal="Realizar pesquisas aprofundadas sobre qualquer tema",
+    backstory="Pesquisador especialista com acesso a diversas fontes",
+    allow_delegation=True,
+    verbose=True
+)
+
+writer = Agent(
+    role="Redator de Conteúdo",
+    goal="Criar conteúdo envolvente com base em pesquisas",
+    backstory="Redator habilidoso que transforma pesquisas em conteúdo atraente",
+    allow_delegation=True,
+    verbose=True
+)
+
+editor = Agent(
+    role="Content Editor",
+    goal="Ensure content quality and consistency",
+    backstory="""You're an experienced editor with an eye for detail, 
+    ensuring content meets high standards for clarity and accuracy.""",
+    allow_delegation=True,
+    verbose=True
+)
+
+# Create a task that encourages collaboration
+article_task = Task(
+    description="""Escreva um artigo abrangente de 1000 palavras sobre 'O Futuro da IA na Saúde'.
+
+O artigo deve incluir:
+- Aplicações atuais de IA na saúde
+- Tendências e tecnologias emergentes
+- Desafios potenciais e considerações éticas
+- Previsões de especialistas para os próximos 5 anos
+
+Colabore com seus colegas para garantir precisão e qualidade.""",
+    expected_output="Um artigo bem pesquisado, envolvente, com 1000 palavras, estrutura adequada e citações",
+    agent=writer  # O redator lidera, mas pode delegar pesquisa ao pesquisador
+)
+
+# Create collaborative crew
+crew = Crew(
+    agents=[researcher, writer, editor],
+    tasks=[article_task],
+    process=Process.sequential,
+    verbose=True
+)
+
+result = crew.kickoff()
+```
+
+## Padrões de Colaboração
+
+### Padrão 1: Pesquisa → Redação → Edição
+```python
+research_task = Task(
+    description="Pesquise os últimos avanços em computação quântica",
+    expected_output="Resumo abrangente da pesquisa com principais descobertas e fontes",
+    agent=researcher
+)
+
+writing_task = Task(
+    description="Escreva um artigo com base nos achados da pesquisa",
+    expected_output="Artigo envolvente de 800 palavras sobre computação quântica",
+    agent=writer,
+    context=[research_task]  # Recebe a saída da pesquisa como contexto
+)
+
+editing_task = Task(
+    description="Edite e revise o artigo para publicação",
+    expected_output="Artigo pronto para publicação, com clareza e fluidez aprimoradas",
+    agent=editor,
+    context=[writing_task]  # Recebe o rascunho do artigo como contexto
+)
+```
+
+### Padrão 2: Tarefa Única Colaborativa
+```python
+collaborative_task = Task(
+    description="""Crie uma estratégia de marketing para um novo produto de IA.
+
+Redator: Foque em mensagens e estratégia de conteúdo
+Pesquisador: Forneça análise de mercado e insights de concorrentes
+
+Trabalhem juntos para criar uma estratégia abrangente.""",
+    expected_output="Estratégia de marketing completa com embasamento em pesquisa",
+    agent=writer  # Agente líder, mas pode delegar ao pesquisador
+)
+```
+
+## Colaboração Hierárquica
+
+Para projetos complexos, utilize um processo hierárquico com um agente gerente:
+
+```python
+from crewai import Agent, Crew, Task, Process
+
+# Manager agent coordinates the team
+manager = Agent(
+    role="Gerente de Projetos",
+    goal="Coordenar esforços da equipe e garantir o sucesso do projeto",
+    backstory="Gerente de projetos experiente, habilidoso em delegação e controle de qualidade",
+    allow_delegation=True,
+    verbose=True
+)
+
+# Specialist agents
+researcher = Agent(
+    role="Pesquisador",
+    goal="Fornecer pesquisa e análise precisas",
+    backstory="Pesquisador especialista com habilidades analíticas profundas",
+    allow_delegation=False,  # Especialistas focam em sua expertise
+    verbose=True
+)
+
+writer = Agent(
+    role="Redator",
+    goal="Criar conteúdo envolvente",
+    backstory="Redator habilidoso que cria conteúdo atraente",
+    allow_delegation=False,
+    verbose=True
+)
+
+# Manager-led task
+project_task = Task(
+    description="Crie um relatório de análise de mercado completo com recomendações",
+    expected_output="Resumo executivo, análise detalhada e recomendações estratégicas",
+    agent=manager  # O gerente delega para especialistas
+)
+
+# Hierarchical crew
+crew = Crew(
+    agents=[manager, researcher, writer],
+    tasks=[project_task],
+    process=Process.hierarchical,  # Manager coordinates everything
+    manager_llm="gpt-4o",  # Specify LLM for manager
+    verbose=True
+)
+```
+
+## Melhores Práticas para Colaboração
+
+### 1. **Definição Clara de Papéis**
+```python
+# ✅ Bom: papéis específicos e complementares
+researcher = Agent(role="Market Research Analyst", ...)
+writer = Agent(role="Technical Content Writer", ...)
+
+# ❌ Evite: Papéis sobrepostos ou vagos  
+agent1 = Agent(role="General Assistant", ...)
+agent2 = Agent(role="Helper", ...)
+```
+
+### 2. **Delegação Estratégica Habilitada**
+```python
+# ✅ Habilite delegação para coordenadores e generalistas
+lead_agent = Agent(
+    role="Content Lead",
+    allow_delegation=True,  # Can delegate to specialists
+    ...
+)
+
+# ✅ Desative para especialistas focados (opcional)
+specialist_agent = Agent(
+    role="Data Analyst", 
+    allow_delegation=False,  # Focuses on core expertise
+    ...
+)
+```
+
+### 3. **Compartilhamento de Contexto**
+```python
+# ✅ Use o parâmetro context para dependências entre tarefas
+writing_task = Task(
+    description="Write article based on research",
+    agent=writer,
+    context=[research_task],  # Shares research results
+    ...
+)
+```
+
+### 4. **Descrições Claras de Tarefas**
+```python
+# ✅ Descrições específicas e acionáveis
+Task(
+    description="""Research competitors in the AI chatbot space.
+    Focus on: pricing models, key features, target markets.
+    Provide data in a structured format.""",
+    ...
+)
+
+# ❌ Descrições vagas que não orientam a colaboração
+Task(description="Do some research about chatbots", ...)
+```
+
+## Solução de Problemas em Colaboração
+
+### Problema: Agentes Não Colaboram
+**Sintomas:** Agentes trabalham isoladamente, sem ocorrer delegação
+```python
+# ✅ Solução: Certifique-se que a delegação está habilitada
+agent = Agent(
+    role="...",
+    allow_delegation=True,  # This is required!
+    ...
+)
+```
+
+### Problema: Troca Excessiva de Perguntas
+**Sintomas:** Agentes fazem perguntas em excesso, progresso lento
+```python
+# ✅ Solução: Forneça melhor contexto e papéis específicos
+Task(
+    description="""Write a technical blog post about machine learning.
+    
+    Context: Target audience is software developers with basic ML knowledge.
+    Length: 1200 words
+    Include: code examples, practical applications, best practices
+    
+    If you need specific technical details, delegate research to the researcher.""",
+    ...
+)
+```
+
+### Problema: Loops de Delegação
+**Sintomas:** Agentes delegam tarefas repetidamente uns para os outros indefinidamente
+```python
+# ✅ Solução: Hierarquia e responsabilidades bem definidas
+manager = Agent(role="Manager", allow_delegation=True)
+specialist1 = Agent(role="Specialist A", allow_delegation=False)  # No re-delegation
+specialist2 = Agent(role="Specialist B", allow_delegation=False)
+```
+
+## Recursos Avançados de Colaboração
+
+### Regras Personalizadas de Colaboração
+```python
+# Set specific collaboration guidelines in agent backstory
+agent = Agent(
+    role="Senior Developer",
+    backstory="""You lead development projects and coordinate with team members.
+    
+    Collaboration guidelines:
+    - Delegate research tasks to the Research Analyst
+    - Ask the Designer for UI/UX guidance  
+    - Consult the QA Engineer for testing strategies
+    - Only escalate blocking issues to the Project Manager""",
+    allow_delegation=True
+)
+```
+
+### Monitoramento da Colaboração
+```python
+def track_collaboration(output):
+    """Track collaboration patterns"""
+    if "Delegate work to coworker" in output.raw:
+        print("🤝 Delegation occurred")
+    if "Ask question to coworker" in output.raw:
+        print("❓ Question asked")
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    step_callback=track_collaboration,  # Monitor collaboration
+    verbose=True
+)
+```
+
+## Memória e Aprendizado
+
+Permita que agentes se lembrem de colaborações passadas:
+
+```python
+agent = Agent(
+    role="Content Lead",
+    memory=True,  # Remembers past interactions
+    allow_delegation=True,
+    verbose=True
+)
+```
+
+Com a memória ativada, os agentes aprendem com colaborações anteriores e aprimoram suas decisões de delegação ao longo do tempo.
+
+## Próximos Passos
+
+- **Teste os exemplos**: Comece pelo exemplo básico de colaboração
+- **Experimente diferentes papéis**: Teste combinações variadas de papéis de agentes  
+- **Monitore as interações**: Use `verbose=True` para ver a colaboração em ação
+- **Otimize descrições de tarefas**: Tarefas claras geram melhor colaboração
+- **Escale**: Experimente processos hierárquicos para projetos complexos
+
+A colaboração transforma agentes de IA individuais em equipes poderosas capazes de enfrentar desafios complexos e multifacetados juntos.

@@ -1,0 +1,579 @@
+---
+title: "Integração com HubSpot"
+description: "Gerencie empresas e contatos no HubSpot com o CrewAI."
+icon: "briefcase"
+---
+
+## Visão Geral
+
+Permita que seus agentes gerenciem empresas e contatos dentro do HubSpot. Crie novos registros e otimize seus processos de CRM com automação baseada em IA.
+
+## Pré-requisitos
+
+Antes de utilizar a integração com o HubSpot, certifique-se de que você possui:
+
+- Uma conta [CrewAI Enterprise](https://app.crewai.com) com assinatura ativa.
+- Uma conta HubSpot com permissões adequadas.
+- Sua conta HubSpot conectada pela [página de Integrações](https://app.crewai.com/crewai_plus/connectors).
+
+## Configurando a Integração com o HubSpot
+
+### 1. Conecte Sua Conta HubSpot
+
+1. Navegue até [CrewAI Enterprise Integrações](https://app.crewai.com/crewai_plus/connectors).
+2. Encontre **HubSpot** na seção de Integrações de Autenticação.
+3. Clique em **Conectar** e complete o fluxo OAuth.
+4. Conceda as permissões necessárias para gerenciamento de empresas e contatos.
+5. Copie o seu Token Enterprise nas [Configurações da Conta](https://app.crewai.com/crewai_plus/settings/account).
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="HUBSPOT_CREATE_RECORD_COMPANIES">
+    **Descrição:** Crie um novo registro de empresa no HubSpot.
+
+    **Parâmetros:**
+    - `name` (string, obrigatório): Nome da empresa.
+    - `domain` (string, opcional): Nome do domínio da empresa.
+    - `industry` (string, opcional): Setor. Deve ser um dos valores predefinidos do HubSpot.
+    - `phone` (string, opcional): Telefone.
+    - `hubspot_owner_id` (string, opcional): ID do responsável pela empresa.
+    - `type` (string, opcional): Tipo da empresa. Valores disponíveis: `PROSPECT`, `PARTNER`, `RESELLER`, `VENDOR`, `OTHER`.
+    - `city` (string, opcional): Cidade.
+    - `state` (string, opcional): Estado/Região.
+    - `zip` (string, opcional): CEP.
+    - `numberofemployees` (number, opcional): Número de funcionários.
+    - `annualrevenue` (number, opcional): Receita anual.
+    - `timezone` (string, opcional): Fuso horário.
+    - `description` (string, opcional): Descrição.
+    - `linkedin_company_page` (string, opcional): URL da página da empresa no LinkedIn.
+    - `company_email` (string, opcional): E-mail da empresa.
+    - `first_name` (string, opcional): Nome do contato na empresa.
+    - `last_name` (string, opcional): Sobrenome do contato na empresa.
+    - `about_us` (string, opcional): Sobre nós.
+    - `hs_csm_sentiment` (string, opcional): Sentimento CSM. Valores disponíveis: `at_risk`, `neutral`, `healthy`.
+    - `closedate` (string, opcional): Data de fechamento.
+    - `hs_keywords` (string, opcional): Palavras-chave da empresa. Deve ser um dos valores predefinidos.
+    - `country` (string, opcional): País/Região.
+    - `hs_country_code` (string, opcional): Código do País/Região.
+    - `hs_employee_range` (string, opcional): Faixa de funcionários.
+    - `facebook_company_page` (string, opcional): URL da página da empresa no Facebook.
+    - `facebookfans` (number, opcional): Número de fãs no Facebook.
+    - `hs_gps_coordinates` (string, opcional): Coordenadas GPS.
+    - `hs_gps_error` (string, opcional): Erro de GPS.
+    - `googleplus_page` (string, opcional): URL da página do Google Plus.
+    - `owneremail` (string, opcional): E-mail do proprietário no HubSpot.
+    - `ownername` (string, opcional): Nome do proprietário no HubSpot.
+    - `hs_ideal_customer_profile` (string, opcional): Tier de Perfil de Cliente Ideal. Valores disponíveis: `tier_1`, `tier_2`, `tier_3`.
+    - `hs_industry_group` (string, opcional): Grupo do setor.
+    - `is_public` (boolean, opcional): É público.
+    - `hs_last_metered_enrichment_timestamp` (string, opcional): Último registro de enriquecimento medido.
+    - `hs_lead_status` (string, opcional): Status do lead. Valores disponíveis: `NEW`, `OPEN`, `IN_PROGRESS`, `OPEN_DEAL`, `UNQUALIFIED`, `ATTEMPTED_TO_CONTACT`, `CONNECTED`, `BAD_TIMING`.
+    - `lifecyclestage` (string, opcional): Estágio no ciclo de vida. Valores disponíveis: `subscriber`, `lead`, `marketingqualifiedlead`, `salesqualifiedlead`, `opportunity`, `customer`, `evangelist`, `other`.
+    - `linkedinbio` (string, opcional): Bio do LinkedIn.
+    - `hs_linkedin_handle` (string, opcional): Handle do LinkedIn.
+    - `hs_live_enrichment_deadline` (string, opcional): Prazo para enriquecimento ao vivo.
+    - `hs_logo_url` (string, opcional): URL do logotipo.
+    - `hs_analytics_source` (string, opcional): Fonte original do tráfego.
+    - `hs_pinned_engagement_id` (number, opcional): ID do engajamento fixado.
+    - `hs_quick_context` (string, opcional): Contexto rápido.
+    - `hs_revenue_range` (string, opcional): Faixa de receita.
+    - `hs_state_code` (string, opcional): Código do Estado/Região.
+    - `address` (string, opcional): Endereço.
+    - `address2` (string, opcional): Complemento de endereço.
+    - `hs_is_target_account` (boolean, opcional): Conta alvo.
+    - `hs_target_account` (string, opcional): Tier da Conta Alvo. Valores disponíveis: `tier_1`, `tier_2`, `tier_3`.
+    - `hs_target_account_recommendation_snooze_time` (string, opcional): Tempo para adiar recomendação de conta alvo.
+    - `hs_target_account_recommendation_state` (string, opcional): Estado da recomendação da conta alvo. Valores disponíveis: `DISMISSED`, `NONE`, `SNOOZED`.
+    - `total_money_raised` (string, opcional): Total arrecadado.
+    - `twitterbio` (string, opcional): Bio do Twitter.
+    - `twitterfollowers` (number, opcional): Seguidores no Twitter.
+    - `twitterhandle` (string, opcional): Usuário do Twitter.
+    - `web_technologies` (string, opcional): Tecnologias web utilizadas. Deve ser um dos valores predefinidos.
+    - `website` (string, opcional): URL do site.
+    - `founded_year` (string, opcional): Ano de fundação.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_CONTACTS">
+    **Descrição:** Crie um novo registro de contato no HubSpot.
+
+    **Parâmetros:**
+    - `email` (string, obrigatório): E-mail do contato.
+    - `firstname` (string, opcional): Nome.
+    - `lastname` (string, opcional): Sobrenome.
+    - `phone` (string, opcional): Telefone.
+    - `hubspot_owner_id` (string, opcional): Responsável pelo contato.
+    - `lifecyclestage` (string, opcional): Estágio no ciclo de vida. Valores disponíveis: `subscriber`, `lead`, `marketingqualifiedlead`, `salesqualifiedlead`, `opportunity`, `customer`, `evangelist`, `other`.
+    - `hs_lead_status` (string, opcional): Status do lead. Valores disponíveis: `NEW`, `OPEN`, `IN_PROGRESS`, `OPEN_DEAL`, `UNQUALIFIED`, `ATTEMPTED_TO_CONTACT`, `CONNECTED`, `BAD_TIMING`.
+    - `annualrevenue` (string, opcional): Receita anual.
+    - `hs_buying_role` (string, opcional): Papel na compra.
+    - `cc_emails` (string, opcional): E-mails em cópia.
+    - `ch_customer_id` (string, opcional): ID do cliente no Chargify.
+    - `ch_customer_reference` (string, opcional): Referência do cliente no Chargify.
+    - `chargify_sites` (string, opcional): Sites Chargify.
+    - `city` (string, opcional): Cidade.
+    - `hs_facebook_ad_clicked` (boolean, opcional): Clicou em anúncio do Facebook.
+    - `hs_linkedin_ad_clicked` (string, opcional): Clicou em anúncio do LinkedIn.
+    - `hs_clicked_linkedin_ad` (string, opcional): Clicou em anúncio do LinkedIn.
+    - `closedate` (string, opcional): Data de fechamento.
+    - `company` (string, opcional): Nome da empresa.
+    - `company_size` (string, opcional): Tamanho da empresa.
+    - `country` (string, opcional): País/Região.
+    - `hs_country_region_code` (string, opcional): Código do País/Região.
+    - `date_of_birth` (string, opcional): Data de nascimento.
+    - `degree` (string, opcional): Grau de instrução.
+    - `hs_email_customer_quarantined_reason` (string, opcional): Motivo da quarentena de e-mail.
+    - `hs_role` (string, opcional): Cargo. Deve ser um dos valores predefinidos.
+    - `hs_seniority` (string, opcional): Senioridade. Deve ser um dos valores predefinidos.
+    - `hs_sub_role` (string, opcional): Sub papel. Deve ser um dos valores predefinidos.
+    - `hs_employment_change_detected_date` (string, opcional): Data da detecção de mudança de emprego.
+    - `hs_enriched_email_bounce_detected` (boolean, opcional): Bounce de e-mail enriquecido detectado.
+    - `hs_facebookid` (string, opcional): Facebook ID.
+    - `hs_facebook_click_id` (string, opcional): ID de clique no Facebook.
+    - `fax` (string, opcional): Fax.
+    - `field_of_study` (string, opcional): Área de estudo.
+    - `followercount` (number, opcional): Número de seguidores.
+    - `gender` (string, opcional): Gênero.
+    - `hs_google_click_id` (string, opcional): ID de clique no Google.
+    - `graduation_date` (string, opcional): Data de graduação.
+    - `owneremail` (string, opcional): E-mail do proprietário no HubSpot (legado).
+    - `ownername` (string, opcional): Nome do proprietário no HubSpot (legado).
+    - `industry` (string, opcional): Setor.
+    - `hs_inferred_language_codes` (string, opcional): Códigos de idioma inferido. Deve ser um dos valores predefinidos.
+    - `jobtitle` (string, opcional): Cargo.
+    - `hs_job_change_detected_date` (string, opcional): Data de detecção de mudança de emprego.
+    - `job_function` (string, opcional): Função.
+    - `hs_journey_stage` (string, opcional): Estágio da jornada. Deve ser um dos valores predefinidos.
+    - `kloutscoregeneral` (number, opcional): Klout Score.
+    - `hs_last_metered_enrichment_timestamp` (string, opcional): Último registro de enriquecimento medido.
+    - `hs_latest_source` (string, opcional): Fonte de tráfego mais recente.
+    - `hs_latest_source_timestamp` (string, opcional): Data da fonte mais recente.
+    - `hs_legal_basis` (string, opcional): Base legal para o processamento dos dados do contato.
+    - `linkedinbio` (string, opcional): Bio do LinkedIn.
+    - `linkedinconnections` (number, opcional): Conexões no LinkedIn.
+    - `hs_linkedin_url` (string, opcional): URL do LinkedIn.
+    - `hs_linkedinid` (string, opcional): Linkedin ID.
+    - `hs_live_enrichment_deadline` (string, opcional): Prazo para enriquecimento ao vivo.
+    - `marital_status` (string, opcional): Estado civil.
+    - `hs_content_membership_email` (string, opcional): E-mail de membro.
+    - `hs_content_membership_notes` (string, opcional): Notas de associação.
+    - `message` (string, opcional): Mensagem.
+    - `military_status` (string, opcional): Status militar.
+    - `mobilephone` (string, opcional): Celular.
+    - `numemployees` (string, opcional): Número de funcionários.
+    - `hs_analytics_source` (string, opcional): Fonte original do tráfego.
+    - `photo` (string, opcional): Foto.
+    - `hs_pinned_engagement_id` (number, opcional): ID de engajamento fixado.
+    - `zip` (string, opcional): CEP.
+    - `hs_language` (string, opcional): Idioma preferencial. Deve ser um dos valores predefinidos.
+    - `associatedcompanyid` (number, opcional): ID da empresa associada primária.
+    - `hs_email_optout_survey_reason` (string, opcional): Motivo da recusa de e-mail.
+    - `relationship_status` (string, opcional): Status de relacionamento.
+    - `hs_returning_to_office_detected_date` (string, opcional): Data de retorno ao escritório detectada.
+    - `salutation` (string, opcional): Saudação.
+    - `school` (string, opcional): Escola.
+    - `seniority` (string, opcional): Senioridade.
+    - `hs_feedback_show_nps_web_survey` (boolean, opcional): Mostrar pesquisa NPS na web.
+    - `start_date` (string, opcional): Data de início.
+    - `state` (string, opcional): Estado/Região.
+    - `hs_state_code` (string, opcional): Código do Estado/Região.
+    - `hs_content_membership_status` (string, opcional): Status.
+    - `address` (string, opcional): Endereço.
+    - `tax_exempt` (string, opcional): Isento de impostos.
+    - `hs_timezone` (string, opcional): Fuso horário. Deve ser um dos valores predefinidos.
+    - `twitterbio` (string, opcional): Bio do Twitter.
+    - `hs_twitterid` (string, opcional): Twitter ID.
+    - `twitterprofilephoto` (string, opcional): Foto de perfil do Twitter.
+    - `twitterhandle` (string, opcional): Usuário do Twitter.
+    - `vat_number` (string, opcional): Número VAT.
+    - `ch_verified` (string, opcional): Verificado para pagamentos ACH/eCheck.
+    - `website` (string, opcional): URL do site.
+    - `hs_whatsapp_phone_number` (string, opcional): Número do WhatsApp.
+    - `work_email` (string, opcional): E-mail corporativo.
+    - `hs_googleplusid` (string, opcional): googleplus ID.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_DEALS">
+    **Descrição:** Crie um novo registro de negócio (deal) no HubSpot.
+
+    **Parâmetros:**
+    - `dealname` (string, obrigatório): Nome do negócio.
+    - `amount` (number, opcional): Valor do negócio.
+    - `dealstage` (string, opcional): Estágio no pipeline.
+    - `pipeline` (string, opcional): Pipeline ao qual o negócio pertence.
+    - `closedate` (string, opcional): Data prevista de fechamento do negócio.
+    - `hubspot_owner_id` (string, opcional): Responsável pelo negócio.
+    - `dealtype` (string, opcional): Tipo do negócio. Valores disponíveis: `newbusiness`, `existingbusiness`.
+    - `description` (string, opcional): Descrição do negócio.
+    - `hs_priority` (string, opcional): Prioridade do negócio. Valores disponíveis: `low`, `medium`, `high`.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_ENGAGEMENTS">
+    **Descrição:** Crie um novo engajamento (ex: nota, e-mail, ligação, reunião, tarefa) no HubSpot.
+
+    **Parâmetros:**
+    - `engagementType` (string, obrigatório): Tipo de engajamento. Valores disponíveis: `NOTE`, `EMAIL`, `CALL`, `MEETING`, `TASK`.
+    - `hubspot_owner_id` (string, opcional): Usuário responsável pela atividade.
+    - `hs_timestamp` (string, opcional): Data e hora da atividade.
+    - `hs_note_body` (string, opcional): Corpo da nota. (Utilizado para `NOTE`)
+    - `hs_task_subject` (string, opcional): Título da tarefa. (Utilizado para `TASK`)
+    - `hs_task_body` (string, opcional): Notas da tarefa. (Utilizado para `TASK`)
+    - `hs_task_status` (string, opcional): Status da tarefa. (Utilizado para `TASK`)
+    - `hs_meeting_title` (string, opcional): Título da reunião. (Utilizado para `MEETING`)
+    - `hs_meeting_body` (string, opcional): Descrição da reunião. (Utilizado para `MEETING`)
+    - `hs_meeting_start_time` (string, opcional): Horário de início da reunião. (Utilizado para `MEETING`)
+    - `hs_meeting_end_time` (string, opcional): Horário de término da reunião. (Utilizado para `MEETING`)
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_COMPANIES">
+    **Descrição:** Atualize um registro de empresa existente no HubSpot.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID da empresa a ser atualizada.
+    - `name` (string, opcional): Nome da empresa.
+    - `domain` (string, opcional): Nome do domínio da empresa.
+    - `industry` (string, opcional): Setor.
+    - `phone` (string, opcional): Telefone.
+    - `city` (string, opcional): Cidade.
+    - `state` (string, opcional): Estado/Região.
+    - `zip` (string, opcional): CEP.
+    - `numberofemployees` (number, opcional): Número de funcionários.
+    - `annualrevenue` (number, opcional): Receita anual.
+    - `description` (string, opcional): Descrição.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_CREATE_RECORD_ANY">
+    **Descrição:** Crie um registro para um tipo de objeto especificado no HubSpot.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): ID do tipo de objeto personalizado.
+    - Parâmetros adicionais dependem do esquema do objeto personalizado.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_CONTACTS">
+    **Descrição:** Atualize um registro de contato existente no HubSpot.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do contato a ser atualizado.
+    - `firstname` (string, opcional): Nome.
+    - `lastname` (string, opcional): Sobrenome.
+    - `email` (string, opcional): E-mail.
+    - `phone` (string, opcional): Telefone.
+    - `company` (string, opcional): Nome da empresa.
+    - `jobtitle` (string, opcional): Cargo.
+    - `lifecyclestage` (string, opcional): Estágio no ciclo de vida.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_DEALS">
+    **Descrição:** Atualize um registro de negócio existente no HubSpot.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do negócio a ser atualizado.
+    - `dealname` (string, opcional): Nome do negócio.
+    - `amount` (number, opcional): Valor do negócio.
+    - `dealstage` (string, opcional): Estágio do pipeline.
+    - `pipeline` (string, opcional): Pipeline ao qual o negócio pertence.
+    - `closedate` (string, opcional): Data prevista de fechamento.
+    - `dealtype` (string, opcional): Tipo de negócio.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_ENGAGEMENTS">
+    **Descrição:** Atualize um engajamento existente no HubSpot.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do engajamento a ser atualizado.
+    - `hs_note_body` (string, opcional): Corpo da nota.
+    - `hs_task_subject` (string, opcional): Título da tarefa.
+    - `hs_task_body` (string, opcional): Notas da tarefa.
+    - `hs_task_status` (string, opcional): Status da tarefa.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_UPDATE_RECORD_ANY">
+    **Descrição:** Atualize um registro para um tipo de objeto especificado no HubSpot.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do registro a ser atualizado.
+    - `recordType` (string, obrigatório): ID do tipo de objeto personalizado.
+    - Parâmetros adicionais dependem do esquema do objeto personalizado.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_COMPANIES">
+    **Descrição:** Obtenha uma lista de registros de empresas do HubSpot.
+
+    **Parâmetros:**
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_CONTACTS">
+    **Descrição:** Obtenha uma lista de registros de contatos do HubSpot.
+
+    **Parâmetros:**
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_DEALS">
+    **Descrição:** Obtenha uma lista de registros de negócios do HubSpot.
+
+    **Parâmetros:**
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_ENGAGEMENTS">
+    **Descrição:** Obtenha uma lista de registros de engajamentos do HubSpot.
+
+    **Parâmetros:**
+    - `objectName` (string, obrigatório): O tipo de engajamento a ser buscado (ex.: "notes").
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORDS_ANY">
+    **Descrição:** Obtenha uma lista de registros de qualquer tipo de objeto no HubSpot.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): O ID do tipo de objeto personalizado.
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_COMPANIES">
+    **Descrição:** Obtenha um registro de empresa pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID da empresa a ser consultada.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_CONTACTS">
+    **Descrição:** Obtenha um registro de contato pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do contato a ser consultado.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_DEALS">
+    **Descrição:** Obtenha um registro de negócio pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do negócio a ser consultado.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ENGAGEMENTS">
+    **Descrição:** Obtenha um registro de engajamento pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do engajamento a ser consultado.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_RECORD_BY_ID_ANY">
+    **Descrição:** Obtenha um registro de qualquer tipo de objeto especificado pelo seu ID.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): ID do tipo de objeto personalizado.
+    - `recordId` (string, obrigatório): ID do registro a ser consultado.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_COMPANIES">
+    **Descrição:** Pesquise registros de empresas no HubSpot utilizando uma fórmula de filtro.
+
+    **Parâmetros:**
+    - `filterFormula` (object, opcional): Filtro em forma normal disjuntiva (OU de E).
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_CONTACTS">
+    **Descrição:** Pesquise registros de contatos no HubSpot utilizando uma fórmula de filtro.
+
+    **Parâmetros:**
+    - `filterFormula` (object, opcional): Filtro em forma normal disjuntiva (OU de E).
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_DEALS">
+    **Descrição:** Pesquise registros de negócios no HubSpot utilizando uma fórmula de filtro.
+
+    **Parâmetros:**
+    - `filterFormula` (object, opcional): Filtro em forma normal disjuntiva (OU de E).
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_ENGAGEMENTS">
+    **Descrição:** Pesquise registros de engajamento no HubSpot utilizando uma fórmula de filtro.
+
+    **Parâmetros:**
+    - `engagementFilterFormula` (object, opcional): Filtro para engajamentos.
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_SEARCH_RECORDS_ANY">
+    **Descrição:** Pesquise registros de qualquer tipo de objeto no HubSpot.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): O ID do tipo de objeto para pesquisa.
+    - `filterFormula` (string, opcional): Fórmula de filtro a aplicar.
+    - `paginationParameters` (object, opcional): Use `pageCursor` para buscar páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_COMPANIES">
+    **Descrição:** Exclua um registro de empresa pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID da empresa a ser excluída.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_CONTACTS">
+    **Descrição:** Exclua um registro de contato pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do contato a ser excluído.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_DEALS">
+    **Descrição:** Exclua um registro de negócio pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do negócio a ser excluído.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_ENGAGEMENTS">
+    **Descrição:** Exclua um registro de engajamento pelo seu ID.
+
+    **Parâmetros:**
+    - `recordId` (string, obrigatório): ID do engajamento a ser excluído.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DELETE_RECORD_ANY">
+    **Descrição:** Exclua um registro de qualquer tipo de objeto especificado pelo seu ID.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): ID do tipo de objeto personalizado.
+    - `recordId` (string, obrigatório): ID do registro a ser excluído.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_GET_CONTACTS_BY_LIST_ID">
+    **Descrição:** Obtenha contatos de uma lista específica pelo seu ID.
+
+    **Parâmetros:**
+    - `listId` (string, obrigatório): ID da lista da qual obter os contatos.
+    - `paginationParameters` (object, opcional): Use `pageCursor` para páginas subsequentes.
+  </Accordion>
+
+  <Accordion title="HUBSPOT_DESCRIBE_ACTION_SCHEMA">
+    **Descrição:** Obtenha o esquema esperado para um dado tipo de objeto e operação.
+
+    **Parâmetros:**
+    - `recordType` (string, obrigatório): ID do tipo de objeto (ex.: 'companies').
+    - `operation` (string, obrigatório): Tipo de operação (ex.: 'CREATE_RECORD').
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica de Agente HubSpot
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha as ferramentas enterprise (ferramentas HubSpot incluídas)
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+# Crie um agente com capacidades HubSpot
+hubspot_agent = Agent(
+    role="CRM Manager",
+    goal="Manage company and contact records in HubSpot",
+    backstory="An AI assistant specialized in CRM management.",
+    tools=[enterprise_tools]
+)
+
+# Task para criar nova empresa
+create_company_task = Task(
+    description="Create a new company in HubSpot with name 'Innovate Corp' and domain 'innovatecorp.com'.",
+    agent=hubspot_agent,
+    expected_output="Company created successfully with confirmation"
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[hubspot_agent],
+    tasks=[create_company_task]
+)
+
+crew.kickoff()
+```
+
+### Filtrando Ferramentas HubSpot Específicas
+
+```python
+from crewai_tools import CrewaiEnterpriseTools
+
+# Obtenha somente a ferramenta para criar contatos
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token",
+    actions_list=["hubspot_create_record_contacts"]
+)
+
+contact_creator = Agent(
+    role="Contact Creator",
+    goal="Create new contacts in HubSpot",
+    backstory="An AI assistant that focuses on creating new contact entries in the CRM.",
+    tools=[enterprise_tools]
+)
+
+# Task para criar contato
+create_contact = Task(
+    description="Create a new contact for 'John Doe' with email 'john.doe@example.com'.",
+    agent=contact_creator,
+    expected_output="Contact created successfully in HubSpot."
+)
+
+crew = Crew(
+    agents=[contact_creator],
+    tasks=[create_contact]
+)
+
+crew.kickoff()
+```
+
+### Gerenciamento de Contatos
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CrewaiEnterpriseTools
+
+enterprise_tools = CrewaiEnterpriseTools(
+    enterprise_token="your_enterprise_token"
+)
+
+crm_manager = Agent(
+    role="CRM Manager",
+    goal="Manage and organize HubSpot contacts efficiently.",
+    backstory="An experienced CRM manager who maintains an organized contact database.",
+    tools=[enterprise_tools]
+)
+
+# Task para gerenciar contatos
+contact_task = Task(
+    description="Create a new contact for 'Jane Smith' at 'Global Tech Inc.' with email 'jane.smith@globaltech.com'.",
+    agent=crm_manager,
+    expected_output="Contact database updated with the new contact."
+)
+
+crew = Crew(
+    agents=[crm_manager],
+    tasks=[contact_task]
+)
+
+crew.kickoff()
+```
+
+### Precisa de Ajuda?
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência na configuração ou solução de problemas com a integração HubSpot.
+</Card>

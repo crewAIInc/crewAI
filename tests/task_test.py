@@ -398,6 +398,79 @@ def test_output_json_hierarchical():
     assert result.json == '{"score": 4}'
     assert result.to_dict() == {"score": 4}
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_inject_date():
+    reporter = Agent(
+        role="Reporter",
+        goal="Report the date",
+        backstory="You're an expert reporter, specialized in reporting the date.",
+        allow_delegation=False,
+        inject_date=True,
+    )
+
+    task = Task(
+        description="What is the date today?",
+        expected_output="The date today as you were told, same format as the date you were told.",
+        agent=reporter,
+    )
+
+    crew = Crew(
+        agents=[reporter],
+        tasks=[task],
+        process=Process.sequential,
+    )
+    result = crew.kickoff()
+    assert "2025-05-21" in result.raw
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_inject_date_custom_format():
+    reporter = Agent(
+        role="Reporter",
+        goal="Report the date",
+        backstory="You're an expert reporter, specialized in reporting the date.",
+        allow_delegation=False,
+        inject_date=True,
+        date_format="%B %d, %Y",
+    )
+
+    task = Task(
+        description="What is the date today?",
+        expected_output="The date today.",
+        agent=reporter,
+    )
+
+    crew = Crew(
+        agents=[reporter],
+        tasks=[task],
+        process=Process.sequential,
+    )
+    result = crew.kickoff()
+    assert "May 21, 2025" in result.raw
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_no_inject_date():
+    reporter = Agent(
+        role="Reporter",
+        goal="Report the date",
+        backstory="You're an expert reporter, specialized in reporting the date.",
+        allow_delegation=False,
+        inject_date=False,
+    )
+
+    task = Task(
+        description="What is the date today?",
+        expected_output="The date today.",
+        agent=reporter,
+    )
+
+    crew = Crew(
+        agents=[reporter],
+        tasks=[task],
+        process=Process.sequential,
+    )
+    result = crew.kickoff()
+    assert "2025-05-21" not in result.raw
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_json_property_without_output_json():
@@ -837,9 +910,6 @@ def test_interpolate_inputs():
 
 def test_interpolate_only():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
-    task = Task(
-        description="Unused in this test", expected_output="Unused in this test"
-    )
 
     # Test JSON structure preservation
     json_string = '{"info": "Look at {placeholder}", "nested": {"val": "{nestedVal}"}}'
@@ -871,10 +941,6 @@ def test_interpolate_only():
 
 def test_interpolate_only_with_dict_inside_expected_output():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
-    task = Task(
-        description="Unused in this test",
-        expected_output="Unused in this test: {questions}",
-    )
 
     json_string = '{"questions": {"main_question": "What is the user\'s name?", "secondary_question": "What is the user\'s age?"}}'
     result = interpolate_only(
@@ -1067,6 +1133,119 @@ def test_output_file_validation():
         )
 
 
+def test_create_directory_true():
+    """Test that directories are created when create_directory=True."""
+    from pathlib import Path
+    
+    output_path = "test_create_dir/output.txt"
+    
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file=output_path,
+        create_directory=True,
+    )
+    
+    resolved_path = Path(output_path).expanduser().resolve()
+    resolved_dir = resolved_path.parent
+    
+    if resolved_path.exists():
+        resolved_path.unlink()
+    if resolved_dir.exists():
+        import shutil
+        shutil.rmtree(resolved_dir)
+    
+    assert not resolved_dir.exists()
+    
+    task._save_file("test content")
+    
+    assert resolved_dir.exists()
+    assert resolved_path.exists()
+    
+    if resolved_path.exists():
+        resolved_path.unlink()
+    if resolved_dir.exists():
+        import shutil
+        shutil.rmtree(resolved_dir)
+
+
+def test_create_directory_false():
+    """Test that directories are not created when create_directory=False."""
+    from pathlib import Path
+    
+    output_path = "nonexistent_test_dir/output.txt"
+    
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file=output_path,
+        create_directory=False,
+    )
+    
+    resolved_path = Path(output_path).expanduser().resolve()
+    resolved_dir = resolved_path.parent
+    
+    if resolved_dir.exists():
+        import shutil
+        shutil.rmtree(resolved_dir)
+    
+    assert not resolved_dir.exists()
+    
+    with pytest.raises(RuntimeError, match="Directory .* does not exist and create_directory is False"):
+        task._save_file("test content")
+
+
+def test_create_directory_default():
+    """Test that create_directory defaults to True for backward compatibility."""
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file="output.txt",
+    )
+    
+    assert task.create_directory is True
+
+
+def test_create_directory_with_existing_directory():
+    """Test that create_directory=False works when directory already exists."""
+    from pathlib import Path
+    
+    output_path = "existing_test_dir/output.txt"
+    
+    resolved_path = Path(output_path).expanduser().resolve()
+    resolved_dir = resolved_path.parent
+    resolved_dir.mkdir(parents=True, exist_ok=True)
+    
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file=output_path,
+        create_directory=False,
+    )
+    
+    task._save_file("test content")
+    assert resolved_path.exists()
+    
+    if resolved_path.exists():
+        resolved_path.unlink()
+    if resolved_dir.exists():
+        import shutil
+        shutil.rmtree(resolved_dir)
+
+
+def test_github_issue_3149_reproduction():
+    """Test that reproduces the exact issue from GitHub issue #3149."""
+    task = Task(
+        description="Test task for issue reproduction",
+        expected_output="Test output",
+        output_file="test_output.txt",
+        create_directory=True,
+    )
+    
+    assert task.create_directory is True
+    assert task.output_file == "test_output.txt"
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_execution_times():
     researcher = Agent(
@@ -1094,11 +1273,6 @@ def test_task_execution_times():
 
 
 def test_interpolate_with_list_of_strings():
-    task = Task(
-        description="Test list interpolation",
-        expected_output="List: {items}",
-    )
-
     # Test simple list of strings
     input_str = "Available items: {items}"
     inputs = {"items": ["apple", "banana", "cherry"]}
@@ -1112,11 +1286,6 @@ def test_interpolate_with_list_of_strings():
 
 
 def test_interpolate_with_list_of_dicts():
-    task = Task(
-        description="Test list of dicts interpolation",
-        expected_output="People: {people}",
-    )
-
     input_data = {
         "people": [
             {"name": "Alice", "age": 30, "skills": ["Python", "AI"]},
@@ -1137,11 +1306,6 @@ def test_interpolate_with_list_of_dicts():
 
 
 def test_interpolate_with_nested_structures():
-    task = Task(
-        description="Test nested structures",
-        expected_output="Company: {company}",
-    )
-
     input_data = {
         "company": {
             "name": "TechCorp",
@@ -1165,11 +1329,6 @@ def test_interpolate_with_nested_structures():
 
 
 def test_interpolate_with_special_characters():
-    task = Task(
-        description="Test special characters in dicts",
-        expected_output="Data: {special_data}",
-    )
-
     input_data = {
         "special_data": {
             "quotes": """This has "double" and 'single' quotes""",
@@ -1188,11 +1347,6 @@ def test_interpolate_with_special_characters():
 
 
 def test_interpolate_mixed_types():
-    task = Task(
-        description="Test mixed type interpolation",
-        expected_output="Mixed: {data}",
-    )
-
     input_data = {
         "data": {
             "name": "Test Dataset",
@@ -1214,11 +1368,6 @@ def test_interpolate_mixed_types():
 
 
 def test_interpolate_complex_combination():
-    task = Task(
-        description="Test complex combination",
-        expected_output="Report: {report}",
-    )
-
     input_data = {
         "report": [
             {
@@ -1243,11 +1392,6 @@ def test_interpolate_complex_combination():
 
 
 def test_interpolate_invalid_type_validation():
-    task = Task(
-        description="Test invalid type validation",
-        expected_output="Should never reach here",
-    )
-
     # Test with invalid top-level type
     with pytest.raises(ValueError) as excinfo:
         interpolate_only("{data}", {"data": set()})  # type: ignore we are purposely testing this failure
@@ -1268,11 +1412,6 @@ def test_interpolate_invalid_type_validation():
 
 
 def test_interpolate_custom_object_validation():
-    task = Task(
-        description="Test custom object rejection",
-        expected_output="Should never reach here",
-    )
-
     class CustomObject:
         def __init__(self, value):
             self.value = value
@@ -1304,11 +1443,6 @@ def test_interpolate_custom_object_validation():
 
 
 def test_interpolate_valid_complex_types():
-    task = Task(
-        description="Test valid complex types",
-        expected_output="Validation should pass",
-    )
-
     # Valid complex structure
     valid_data = {
         "name": "Valid Dataset",
@@ -1328,11 +1462,6 @@ def test_interpolate_valid_complex_types():
 
 
 def test_interpolate_edge_cases():
-    task = Task(
-        description="Test edge cases",
-        expected_output="Edge case handling",
-    )
-
     # Test empty dict and list
     assert interpolate_only("{}", {"data": {}}) == "{}"
     assert interpolate_only("[]", {"data": []}) == "[]"
@@ -1347,11 +1476,6 @@ def test_interpolate_edge_cases():
 
 
 def test_interpolate_valid_types():
-    task = Task(
-        description="Test valid types including null and boolean",
-        expected_output="Should pass validation",
-    )
-
     # Test with boolean and null values (valid JSON types)
     valid_data = {
         "name": "Test",
@@ -1373,11 +1497,11 @@ def test_interpolate_valid_types():
 
 def test_task_with_no_max_execution_time():
     researcher = Agent(
-    role="Researcher",
-    goal="Make the best research and analysis on content about AI and AI agents",
-    backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
-    allow_delegation=False,
-    max_execution_time=None
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+        max_execution_time=None,
     )
 
     task = Task(
@@ -1386,7 +1510,7 @@ def test_task_with_no_max_execution_time():
         agent=researcher,
     )
 
-    with patch.object(Agent, "_execute_without_timeout", return_value = "ok") as execute:
+    with patch.object(Agent, "_execute_without_timeout", return_value="ok") as execute:
         result = task.execute_sync(agent=researcher)
         assert result.raw == "ok"
         execute.assert_called_once()
@@ -1395,6 +1519,7 @@ def test_task_with_no_max_execution_time():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_with_max_execution_time():
     from crewai.tools import tool
+
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
 
     @tool("what amazing tool", result_as_answer=True)
@@ -1412,7 +1537,7 @@ def test_task_with_max_execution_time():
         ),
         allow_delegation=False,
         tools=[my_tool],
-        max_execution_time=4
+        max_execution_time=4,
     )
 
     task = Task(
@@ -1428,6 +1553,7 @@ def test_task_with_max_execution_time():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_with_max_execution_time_exceeded():
     from crewai.tools import tool
+
     """Test that execution raises TimeoutError when max_execution_time is exceeded."""
 
     @tool("what amazing tool", result_as_answer=True)
@@ -1445,7 +1571,7 @@ def test_task_with_max_execution_time_exceeded():
         ),
         allow_delegation=False,
         tools=[my_tool],
-        max_execution_time=1
+        max_execution_time=1,
     )
 
     task = Task(
@@ -1456,3 +1582,27 @@ def test_task_with_max_execution_time_exceeded():
 
     with pytest.raises(TimeoutError):
         task.execute_sync(agent=researcher)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_interpolation_with_hyphens():
+    agent = Agent(
+        role="Researcher",
+        goal="be an assistant that responds with {interpolation-with-hyphens}",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="be an assistant that responds with {interpolation-with-hyphens}",
+        expected_output="The response should be addressing: {interpolation-with-hyphens}",
+        agent=agent,
+    )
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        verbose=True,
+    )
+    result = crew.kickoff(inputs={"interpolation-with-hyphens": "say hello world"})
+    assert "say hello world" in task.prompt()
+
+    assert result.raw == "Hello, World!"

@@ -2,13 +2,15 @@ import os
 import tempfile
 import unittest
 import unittest.mock
+from datetime import datetime, timedelta
 from contextlib import contextmanager
-from io import StringIO
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import pytest
 from pytest import raises
 
+from crewai.cli.authentication.utils import TokenManager
 from crewai.cli.tools.main import ToolCommand
 
 
@@ -23,17 +25,22 @@ def in_temp_dir():
             os.chdir(original_dir)
 
 
-@patch("crewai.cli.tools.main.subprocess.run")
-def test_create_success(mock_subprocess):
-    with in_temp_dir():
-        tool_command = ToolCommand()
+@pytest.fixture
+def tool_command():
+    TokenManager().save_tokens(
+        "test-token", (datetime.now() + timedelta(seconds=36000)).timestamp()
+    )
+    tool_command = ToolCommand()
+    with patch.object(tool_command, "login"):
+        yield tool_command
 
-        with (
-            patch.object(tool_command, "login") as mock_login,
-            patch("sys.stdout", new=StringIO()) as fake_out,
-        ):
-            tool_command.create("test-tool")
-            output = fake_out.getvalue()
+
+@patch("crewai.cli.tools.main.subprocess.run")
+def test_create_success(mock_subprocess, capsys, tool_command):
+    with in_temp_dir():
+        tool_command.create("test-tool")
+        output = capsys.readouterr().out
+        assert "Creating custom tool test_tool..." in output
 
         assert os.path.isdir("test_tool")
         assert os.path.isfile(os.path.join("test_tool", "README.md"))
@@ -47,15 +54,15 @@ def test_create_success(mock_subprocess):
             content = f.read()
             assert "class TestTool" in content
 
-        mock_login.assert_called_once()
         mock_subprocess.assert_called_once_with(["git", "init"], check=True)
-
-        assert "Creating custom tool test_tool..." in output
 
 
 @patch("crewai.cli.tools.main.subprocess.run")
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_success(mock_get, mock_subprocess_run):
+@patch("crewai.cli.tools.main.ToolCommand._print_current_organization")
+def test_install_success(
+    mock_print_org, mock_get, mock_subprocess_run, capsys, tool_command
+):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
     mock_get_response.json.return_value = {
@@ -65,11 +72,9 @@ def test_install_success(mock_get, mock_subprocess_run):
     mock_get.return_value = mock_get_response
     mock_subprocess_run.return_value = MagicMock(stderr=None)
 
-    tool_command = ToolCommand()
-
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        tool_command.install("sample-tool")
-        output = fake_out.getvalue()
+    tool_command.install("sample-tool")
+    output = capsys.readouterr().out
+    assert "Successfully installed sample-tool" in output
 
     mock_get.assert_has_calls([mock.call("sample-tool"), mock.call().json()])
     mock_subprocess_run.assert_any_call(
@@ -86,54 +91,76 @@ def test_install_success(mock_get, mock_subprocess_run):
         env=unittest.mock.ANY,
     )
 
+    # Verify _print_current_organization was called
+    mock_print_org.assert_called_once()
+
+
+@patch("crewai.cli.tools.main.subprocess.run")
+@patch("crewai.cli.plus_api.PlusAPI.get_tool")
+def test_install_success_from_pypi(mock_get, mock_subprocess_run, capsys, tool_command):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "handle": "sample-tool",
+        "repository": {"handle": "sample-repo", "url": "https://example.com/repo"},
+        "source": "pypi",
+    }
+    mock_get.return_value = mock_get_response
+    mock_subprocess_run.return_value = MagicMock(stderr=None)
+
+    tool_command.install("sample-tool")
+    output = capsys.readouterr().out
     assert "Successfully installed sample-tool" in output
+
+    mock_get.assert_has_calls([mock.call("sample-tool"), mock.call().json()])
+    mock_subprocess_run.assert_any_call(
+        [
+            "uv",
+            "add",
+            "sample-tool",
+        ],
+        capture_output=False,
+        text=True,
+        check=True,
+        env=unittest.mock.ANY,
+    )
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_tool_not_found(mock_get):
+def test_install_tool_not_found(mock_get, capsys, tool_command):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 404
     mock_get.return_value = mock_get_response
 
-    tool_command = ToolCommand()
-
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        try:
-            tool_command.install("non-existent-tool")
-        except SystemExit:
-            pass
-        output = fake_out.getvalue()
+    with raises(SystemExit):
+        tool_command.install("non-existent-tool")
+    output = capsys.readouterr().out
+    assert "No tool found with this name" in output
 
     mock_get.assert_called_once_with("non-existent-tool")
-    assert "No tool found with this name" in output
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
-def test_install_api_error(mock_get):
+def test_install_api_error(mock_get, capsys, tool_command):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 500
     mock_get.return_value = mock_get_response
 
-    tool_command = ToolCommand()
-
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        try:
-            tool_command.install("error-tool")
-        except SystemExit:
-            pass
-        output = fake_out.getvalue()
+    with raises(SystemExit):
+        tool_command.install("error-tool")
+    output = capsys.readouterr().out
+    assert "Failed to get tool details" in output
 
     mock_get.assert_called_once_with("error-tool")
-    assert "Failed to get tool details" in output
 
 
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
-def test_publish_when_not_in_sync(mock_is_synced):
-    with patch("sys.stdout", new=StringIO()) as fake_out, raises(SystemExit):
-        tool_command = ToolCommand()
+def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
+    with raises(SystemExit):
         tool_command.publish(is_public=True)
 
-    assert "Local changes need to be resolved before publishing" in fake_out.getvalue()
+    output = capsys.readouterr().out
+    assert "Local changes need to be resolved before publishing" in output
 
 
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
@@ -148,7 +175,14 @@ def test_publish_when_not_in_sync(mock_is_synced):
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
+@patch("crewai.cli.tools.main.ToolCommand._print_current_organization")
 def test_publish_when_not_in_sync_and_force(
+    mock_print_org,
+    mock_available_exports,
     mock_is_synced,
     mock_publish,
     mock_open,
@@ -157,13 +191,13 @@ def test_publish_when_not_in_sync_and_force(
     mock_get_project_description,
     mock_get_project_version,
     mock_get_project_name,
+    tool_command,
 ):
     mock_publish_response = MagicMock()
     mock_publish_response.status_code = 200
     mock_publish_response.json.return_value = {"handle": "sample-tool"}
     mock_publish.return_value = mock_publish_response
 
-    tool_command = ToolCommand()
     tool_command.publish(is_public=True, force=True)
 
     mock_get_project_name.assert_called_with(require=True)
@@ -181,7 +215,9 @@ def test_publish_when_not_in_sync_and_force(
         version="1.0.0",
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
+        available_exports=[{"name": "SampleTool"}],
     )
+    mock_print_org.assert_called_once()
 
 
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
@@ -196,7 +232,12 @@ def test_publish_when_not_in_sync_and_force(
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=True)
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
 def test_publish_success(
+    mock_available_exports,
     mock_is_synced,
     mock_publish,
     mock_open,
@@ -205,13 +246,13 @@ def test_publish_success(
     mock_get_project_description,
     mock_get_project_version,
     mock_get_project_name,
+    tool_command,
 ):
     mock_publish_response = MagicMock()
     mock_publish_response.status_code = 200
     mock_publish_response.json.return_value = {"handle": "sample-tool"}
     mock_publish.return_value = mock_publish_response
 
-    tool_command = ToolCommand()
     tool_command.publish(is_public=True)
 
     mock_get_project_name.assert_called_with(require=True)
@@ -229,6 +270,7 @@ def test_publish_success(
         version="1.0.0",
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
+        available_exports=[{"name": "SampleTool"}],
     )
 
 
@@ -243,7 +285,12 @@ def test_publish_success(
     read_data=b"sample tarball content",
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
 def test_publish_failure(
+    mock_available_exports,
     mock_publish,
     mock_open,
     mock_listdir,
@@ -251,24 +298,21 @@ def test_publish_failure(
     mock_get_project_description,
     mock_get_project_version,
     mock_get_project_name,
+    capsys,
+    tool_command,
 ):
     mock_publish_response = MagicMock()
     mock_publish_response.status_code = 422
     mock_publish_response.json.return_value = {"name": ["is already taken"]}
     mock_publish.return_value = mock_publish_response
 
-    tool_command = ToolCommand()
-
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        try:
-            tool_command.publish(is_public=True)
-        except SystemExit:
-            pass
-        output = fake_out.getvalue()
-
-    mock_publish.assert_called_once()
+    with raises(SystemExit):
+        tool_command.publish(is_public=True)
+    output = capsys.readouterr().out
     assert "Failed to complete operation" in output
     assert "Name is already taken" in output
+
+    mock_publish.assert_called_once()
 
 
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
@@ -282,7 +326,12 @@ def test_publish_failure(
     read_data=b"sample tarball content",
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
 def test_publish_api_error(
+    mock_available_exports,
     mock_publish,
     mock_open,
     mock_listdir,
@@ -290,6 +339,8 @@ def test_publish_api_error(
     mock_get_project_description,
     mock_get_project_version,
     mock_get_project_name,
+    capsys,
+    tool_command,
 ):
     mock_response = MagicMock()
     mock_response.status_code = 500
@@ -297,14 +348,32 @@ def test_publish_api_error(
     mock_response.ok = False
     mock_publish.return_value = mock_response
 
-    tool_command = ToolCommand()
-
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        try:
-            tool_command.publish(is_public=True)
-        except SystemExit:
-            pass
-        output = fake_out.getvalue()
+    with raises(SystemExit):
+        tool_command.publish(is_public=True)
+    output = capsys.readouterr().out
+    assert "Request to Enterprise API failed" in output
 
     mock_publish.assert_called_once()
-    assert "Request to Enterprise API failed" in output
+
+
+@patch("crewai.cli.tools.main.Settings")
+def test_print_current_organization_with_org(mock_settings, capsys, tool_command):
+    mock_settings_instance = MagicMock()
+    mock_settings_instance.org_uuid = "test-org-uuid"
+    mock_settings_instance.org_name = "Test Organization"
+    mock_settings.return_value = mock_settings_instance
+    tool_command._print_current_organization()
+    output = capsys.readouterr().out
+    assert "Current organization: Test Organization (test-org-uuid)" in output
+
+
+@patch("crewai.cli.tools.main.Settings")
+def test_print_current_organization_without_org(mock_settings, capsys, tool_command):
+    mock_settings_instance = MagicMock()
+    mock_settings_instance.org_uuid = None
+    mock_settings_instance.org_name = None
+    mock_settings.return_value = mock_settings_instance
+    tool_command._print_current_organization()
+    output = capsys.readouterr().out
+    assert "No organization currently set" in output
+    assert "org switch <org_id>" in output

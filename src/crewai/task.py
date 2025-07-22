@@ -2,7 +2,6 @@ import datetime
 import inspect
 import json
 import logging
-import re
 import threading
 import uuid
 from concurrent.futures import Future
@@ -36,11 +35,12 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.security import Fingerprint, SecurityConfig
-from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
+from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
+from crewai.utilities.guardrail import process_guardrail, GuardrailResult
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.events import (
     TaskCompletedEvent,
@@ -67,6 +67,7 @@ class Task(BaseModel):
         description: Descriptive text detailing task's purpose and execution.
         expected_output: Clear definition of expected task outcome.
         output_file: File path for storing task output.
+        create_directory: Whether to create the directory for output_file if it doesn't exist.
         output_json: Pydantic model for structuring JSON output.
         output_pydantic: Pydantic model for task output.
         security_config: Security configuration including fingerprinting.
@@ -95,9 +96,9 @@ class Task(BaseModel):
     agent: Optional[BaseAgent] = Field(
         description="Agent responsible for execution the task.", default=None
     )
-    context: Optional[List["Task"]] = Field(
+    context: Union[List["Task"], None, _NotSpecified] = Field(
         description="Other tasks that will have their output used as context for this task.",
-        default=None,
+        default=NOT_SPECIFIED,
     )
     async_execution: Optional[bool] = Field(
         description="Whether the task should be executed asynchronously or not.",
@@ -114,6 +115,10 @@ class Task(BaseModel):
     output_file: Optional[str] = Field(
         description="A file path to be used to create a file output.",
         default=None,
+    )
+    create_directory: Optional[bool] = Field(
+        description="Whether to create the directory for output_file if it doesn't exist.",
+        default=True,
     )
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
@@ -135,14 +140,18 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    markdown: Optional[bool] = Field(
+        description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
+        default=False,
+    )
     converter_cls: Optional[Type[Converter]] = Field(
         description="A converter class used to export structured output",
         default=None,
     )
     processed_by_agents: Set[str] = Field(default_factory=set)
-    guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
+    guardrail: Optional[Union[Callable[[TaskOutput], Tuple[bool, Any]], str]] = Field(
         default=None,
-        description="Function to validate task output before proceeding to next task",
+        description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
     max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
@@ -154,11 +163,16 @@ class Task(BaseModel):
     end_time: Optional[datetime.datetime] = Field(
         default=None, description="End time of the task execution"
     )
+    model_config = {"arbitrary_types_allowed": True}
 
     @field_validator("guardrail")
     @classmethod
-    def validate_guardrail_function(cls, v: Optional[Callable]) -> Optional[Callable]:
-        """Validate that the guardrail function has the correct signature and behavior.
+    def validate_guardrail_function(
+        cls, v: Optional[str | Callable]
+    ) -> Optional[str | Callable]:
+        """
+        If v is a callable, validate that the guardrail function has the correct signature and behavior.
+        If v is a string, return it as is.
 
         While type hints provide static checking, this validator ensures runtime safety by:
         1. Verifying the function accepts exactly one parameter (the TaskOutput)
@@ -171,16 +185,16 @@ class Task(BaseModel):
         - Clear error messages help users debug guardrail implementation issues
 
         Args:
-            v: The guardrail function to validate
+            v: The guardrail function to validate or a string describing the guardrail task
 
         Returns:
-            The validated guardrail function
+            The validated guardrail function or a string describing the guardrail task
 
         Raises:
             ValueError: If the function signature is invalid or return annotation
                        doesn't match Tuple[bool, Any]
         """
-        if v is not None:
+        if v is not None and callable(v):
             sig = inspect.signature(v)
             positional_args = [
                 param
@@ -193,7 +207,6 @@ class Task(BaseModel):
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
-
                 return_annotation_args = get_args(return_annotation)
                 if not (
                     get_origin(return_annotation) is tuple
@@ -211,6 +224,7 @@ class Task(BaseModel):
                     )
         return v
 
+    _guardrail: Optional[Callable] = PrivateAttr(default=None)
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _original_output_file: Optional[str] = PrivateAttr(default=None)
@@ -229,6 +243,20 @@ class Task(BaseModel):
                 raise ValueError(
                     f"{field} must be provided either directly or through config"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def ensure_guardrail_is_callable(self) -> "Task":
+        if callable(self.guardrail):
+            self._guardrail = self.guardrail
+        elif isinstance(self.guardrail, str):
+            from crewai.tasks.llm_guardrail import LLMGuardrail
+
+            assert self.agent is not None
+            self._guardrail = LLMGuardrail(
+                description=self.guardrail, llm=self.agent.llm
+            )
+
         return self
 
     @field_validator("id", mode="before")
@@ -407,9 +435,11 @@ class Task(BaseModel):
                 output_format=self._get_output_format(),
             )
 
-            if self.guardrail:
-                guardrail_result = GuardrailResult.from_tuple(
-                    self.guardrail(task_output)
+            if self._guardrail:
+                guardrail_result = process_guardrail(
+                    output=task_output,
+                    guardrail=self._guardrail,
+                    retry_count=self.retry_count,
                 )
                 if not guardrail_result.success:
                     if self.retry_count >= self.max_retries:
@@ -464,18 +494,59 @@ class Task(BaseModel):
                     )
                 )
                 self._save_file(content)
-            crewai_event_bus.emit(self, TaskCompletedEvent(output=task_output, task=self))
+            crewai_event_bus.emit(
+                self, TaskCompletedEvent(output=task_output, task=self)
+            )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
 
+    def _process_guardrail(self, task_output: TaskOutput) -> GuardrailResult:
+        assert self._guardrail is not None
+
+        from crewai.utilities.events import (
+            LLMGuardrailCompletedEvent,
+            LLMGuardrailStartedEvent,
+        )
+        from crewai.utilities.events.crewai_event_bus import crewai_event_bus
+
+        crewai_event_bus.emit(
+            self,
+            LLMGuardrailStartedEvent(
+                guardrail=self._guardrail, retry_count=self.retry_count
+            ),
+        )
+
+        try:
+            result = self._guardrail(task_output)
+            guardrail_result = GuardrailResult.from_tuple(result)
+        except Exception as e:
+            guardrail_result = GuardrailResult(
+                success=False, result=None, error=f"Guardrail execution error: {str(e)}"
+            )
+
+        crewai_event_bus.emit(
+            self,
+            LLMGuardrailCompletedEvent(
+                success=guardrail_result.success,
+                result=guardrail_result.result,
+                error=guardrail_result.error,
+                retry_count=self.retry_count,
+            ),
+        )
+        return guardrail_result
+
     def prompt(self) -> str:
-        """Prompt the task.
+        """Generates the task prompt with optional markdown formatting.
+
+        When the markdown attribute is True, instructions for formatting the
+        response in Markdown syntax will be added to the prompt.
 
         Returns:
-            Prompt of the task.
+            str: The formatted prompt string containing the task description,
+                 expected output, and optional markdown formatting instructions.
         """
         tasks_slices = [self.description]
 
@@ -483,6 +554,17 @@ class Task(BaseModel):
             expected_output=self.expected_output
         )
         tasks_slices = [self.description, output]
+
+        if self.markdown:
+            markdown_instruction = """Your final answer MUST be formatted in Markdown syntax.
+Follow these guidelines:
+- Use # for headers
+- Use ** for bold text
+- Use * for italic text
+- Use - or * for bullet points
+- Use `code` for inline code
+- Use ```language for code blocks"""
+            tasks_slices.append(markdown_instruction)
         return "\n".join(tasks_slices)
 
     def interpolate_inputs_and_add_conversation_history(
@@ -593,7 +675,7 @@ class Task(BaseModel):
 
         cloned_context = (
             [task_mapping[context_task.key] for context_task in self.context]
-            if self.context
+            if isinstance(self.context, list)
             else None
         )
 
@@ -676,8 +758,10 @@ class Task(BaseModel):
             resolved_path = Path(self.output_file).expanduser().resolve()
             directory = resolved_path.parent
 
-            if not directory.exists():
+            if self.create_directory and not directory.exists():
                 directory.mkdir(parents=True, exist_ok=True)
+            elif not self.create_directory and not directory.exists():
+                raise RuntimeError(f"Directory {directory} does not exist and create_directory is False")
 
             with resolved_path.open("w", encoding="utf-8") as file:
                 if isinstance(result, dict):

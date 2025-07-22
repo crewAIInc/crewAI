@@ -4,6 +4,9 @@ from typing import Any, Dict, List
 from mem0 import Memory, MemoryClient
 
 from crewai.memory.storage.interface import Storage
+from crewai.utilities.chromadb import sanitize_collection_name
+
+MAX_AGENT_ID_LENGTH_MEM0 = 255
 
 
 class Mem0Storage(Storage):
@@ -61,6 +64,7 @@ class Mem0Storage(Storage):
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self._get_user_id()
         agent_name = self._get_agent_name()
+        assistant_message = [{"role" : "assistant","content" : value}] 
         params = None
         if self.memory_type == "short_term":
             params = {
@@ -88,7 +92,10 @@ class Mem0Storage(Storage):
             }
 
         if params:
-            self.memory.add(value, **params | {"output_format": "v1.1"})
+            if isinstance(self.memory, MemoryClient):
+                params["output_format"] = "v1.1"
+            
+            self.memory.add(assistant_message, **params)
 
     def search(
         self,
@@ -96,7 +103,7 @@ class Mem0Storage(Storage):
         limit: int = 3,
         score_threshold: float = 0.35,
     ) -> List[Any]:
-        params = {"query": query, "limit": limit}
+        params = {"query": query, "limit": limit, "output_format": "v1.1"}
         if user_id := self._get_user_id():
             params["user_id"] = user_id
 
@@ -116,8 +123,11 @@ class Mem0Storage(Storage):
 
         # Discard the filters for now since we create the filters
         # automatically when the crew is created.
+        if isinstance(self.memory, Memory):
+            del params["metadata"], params["output_format"]
+            
         results = self.memory.search(**params)
-        return [r for r in results if r["score"] >= score_threshold]
+        return [r for r in results["results"] if r["score"] >= score_threshold]
 
     def _get_user_id(self) -> str:
         return self._get_config().get("user_id", "")
@@ -129,7 +139,7 @@ class Mem0Storage(Storage):
         agents = self.crew.agents
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
-        return agents
+        return sanitize_collection_name(name=agents,max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)
 
     def _get_config(self) -> Dict[str, Any]:
         return self.config or getattr(self, "memory_config", {}).get("config", {}) or {}

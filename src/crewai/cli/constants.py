@@ -13,7 +13,7 @@ ENV_VARS = {
     ],
     "gemini": [
         {
-            "prompt": "Enter your GEMINI API key (press Enter to skip)",
+            "prompt": "Enter your GEMINI API key from https://ai.dev/apikey (press Enter to skip)",
             "key_name": "GEMINI_API_KEY",
         }
     ],
@@ -122,7 +122,16 @@ PROVIDERS = [
 ]
 
 MODELS = {
-    "openai": ["gpt-4", "gpt-4o", "gpt-4o-mini", "o1-mini", "o1-preview"],
+    "openai": [
+        "gpt-4",
+        "gpt-4.1",
+        "gpt-4.1-mini-2025-04-14",
+        "gpt-4.1-nano-2025-04-14",
+        "gpt-4o",
+        "gpt-4o-mini",
+        "o1-mini",
+        "o1-preview",
+    ],
     "anthropic": [
         "claude-3-5-sonnet-20240620",
         "claude-3-sonnet-20240229",
@@ -132,8 +141,17 @@ MODELS = {
     "gemini": [
         "gemini/gemini-1.5-flash",
         "gemini/gemini-1.5-pro",
+        "gemini/gemini-2.0-flash-lite-001",
+        "gemini/gemini-2.0-flash-001",
+        "gemini/gemini-2.0-flash-thinking-exp-01-21",
+        "gemini/gemini-2.5-flash-preview-04-17",
+        "gemini/gemini-2.5-pro-exp-03-25",
         "gemini/gemini-gemma-2-9b-it",
         "gemini/gemini-gemma-2-27b-it",
+        "gemini/gemma-3-1b-it",
+        "gemini/gemma-3-4b-it",
+        "gemini/gemma-3-12b-it",
+        "gemini/gemma-3-27b-it",
     ],
     "nvidia_nim": [
         "nvidia_nim/nvidia/mistral-nemo-minitron-8b-8k-instruct",

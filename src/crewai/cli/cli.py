@@ -1,9 +1,8 @@
-import os
 from importlib.metadata import version as get_version
-from typing import Optional, Tuple
+from typing import Optional
 
 import click
-
+from crewai.cli.config import Settings
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
@@ -17,6 +16,7 @@ from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
 from .kickoff_flow import kickoff_flow
+from .organization.main import OrganizationCommand
 from .plot_flow import plot_flow
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
@@ -139,10 +139,10 @@ def log_tasks_outputs() -> None:
 @click.option("-e", "--entities", is_flag=True, help="Reset ENTITIES memory")
 @click.option("-kn", "--knowledge", is_flag=True, help="Reset KNOWLEDGE storage")
 @click.option(
-    "-k",
-    "--kickoff-outputs",
-    is_flag=True,
-    help="Reset LATEST KICKOFF TASK OUTPUTS",
+    "-akn", "--agent-knowledge", is_flag=True, help="Reset AGENT KNOWLEDGE storage"
+)
+@click.option(
+    "-k", "--kickoff-outputs", is_flag=True, help="Reset LATEST KICKOFF TASK OUTPUTS"
 )
 @click.option("-a", "--all", is_flag=True, help="Reset ALL memories")
 def reset_memories(
@@ -151,18 +151,30 @@ def reset_memories(
     entities: bool,
     knowledge: bool,
     kickoff_outputs: bool,
+    agent_knowledge: bool,
     all: bool,
 ) -> None:
     """
-    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved.
+    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs, knowledge, agent_knowledge). This will delete all the data saved.
     """
     try:
-        if not all and not (long or short or entities or knowledge or kickoff_outputs):
+        memory_types = [
+            long,
+            short,
+            entities,
+            knowledge,
+            agent_knowledge,
+            kickoff_outputs,
+            all,
+        ]
+        if not any(memory_types):
             click.echo(
                 "Please specify at least one memory type to reset using the appropriate flags."
             )
             return
-        reset_memories_command(long, short, entities, knowledge, kickoff_outputs, all)
+        reset_memories_command(
+            long, short, entities, knowledge, agent_knowledge, kickoff_outputs, all
+        )
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
 
@@ -213,15 +225,10 @@ def update():
 
 
 @crewai.command()
-def signup():
-    """Sign Up/Login to CrewAI+."""
-    AuthenticationCommand().signup()
-
-
-@crewai.command()
 def login():
-    """Sign Up/Login to CrewAI+."""
-    AuthenticationCommand().signup()
+    """Sign Up/Login to CrewAI Enterprise."""
+    Settings().clear()
+    AuthenticationCommand().login()
 
 
 # DEPLOY CREWAI+ COMMANDS
@@ -354,6 +361,34 @@ def chat():
     )
 
     run_chat()
+
+
+@crewai.group(invoke_without_command=True)
+def org():
+    """Organization management commands."""
+    pass
+
+
+@org.command()
+def list():
+    """List available organizations."""
+    org_command = OrganizationCommand()
+    org_command.list()
+
+
+@org.command()
+@click.argument("id")
+def switch(id):
+    """Switch to a specific organization."""
+    org_command = OrganizationCommand()
+    org_command.switch(id)
+
+
+@org.command()
+def current():
+    """Show current organization when 'crewai org' is called without subcommands."""
+    org_command = OrganizationCommand()
+    org_command.current()
 
 
 if __name__ == "__main__":

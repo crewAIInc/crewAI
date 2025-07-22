@@ -70,7 +70,12 @@ class CrewAIEventsBus:
         for event_type, handlers in self._handlers.items():
             if isinstance(event, event_type):
                 for handler in handlers:
-                    handler(source, event)
+                    try:
+                        handler(source, event)
+                    except Exception as e:
+                        print(
+                            f"[EventBus Error] Handler '{handler.__name__}' failed for event '{event_type.__name__}': {e}"
+                        )
 
         self._signal.send(source, event=event)
 
