@@ -687,6 +687,7 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            event_listener._clean_up_live_session()
             detach(token)
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
