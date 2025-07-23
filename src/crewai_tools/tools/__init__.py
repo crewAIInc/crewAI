@@ -74,6 +74,7 @@ from .selenium_scraping_tool.selenium_scraping_tool import SeleniumScrapingTool
 from .serpapi_tool.serpapi_google_search_tool import SerpApiGoogleSearchTool
 from .serpapi_tool.serpapi_google_shopping_tool import SerpApiGoogleShoppingTool
 from .serper_dev_tool.serper_dev_tool import SerperDevTool
+from .serper_scrape_website_tool.serper_scrape_website_tool import SerperScrapeWebsiteTool
 from .serply_api_tool.serply_job_search_tool import SerplyJobSearchTool
 from .serply_api_tool.serply_news_search_tool import SerplyNewsSearchTool
 from .serply_api_tool.serply_scholar_search_tool import SerplyScholarSearchTool
