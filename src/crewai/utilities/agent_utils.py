@@ -157,10 +157,6 @@ def get_llm_response(
             from_agent=from_agent,
         )
     except Exception as e:
-        printer.print(
-            content=f"Error during LLM call: {e}",
-            color="red",
-        )
         raise e
     if not answer:
         printer.print(
@@ -232,12 +228,17 @@ def handle_unknown_error(printer: Any, exception: Exception) -> None:
         printer: Printer instance for output
         exception: The exception that occurred
     """
+    error_message = str(exception)
+
+    if "litellm" in error_message:
+        return
+
     printer.print(
         content="An unknown error occurred. Please check the details below.",
         color="red",
     )
     printer.print(
-        content=f"Error details: {exception}",
+        content=f"Error details: {error_message}",
         color="red",
     )
 

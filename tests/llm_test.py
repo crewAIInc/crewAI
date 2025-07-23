@@ -684,3 +684,30 @@ def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provid
         assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
     assert isinstance(result, str)
     assert "Paris" in result
+
+
+@pytest.fixture
+def ollama_llm():
+    return LLM(model="ollama/llama3.2:3b")
+
+def test_ollama_appends_dummy_user_message_when_last_is_assistant(ollama_llm):
+    original_messages = [
+        {"role": "user", "content": "Hi there"},
+        {"role": "assistant", "content": "Hello!"},
+    ]
+
+    formatted = ollama_llm._format_messages_for_provider(original_messages)
+
+    assert len(formatted) == len(original_messages) + 1
+    assert formatted[-1]["role"] == "user"
+    assert formatted[-1]["content"] == ""
+
+
+def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
+    original_messages = [
+        {"role": "user", "content": "Tell me a joke."},
+    ]
+
+    formatted = ollama_llm._format_messages_for_provider(original_messages)
+
+    assert formatted == original_messages
