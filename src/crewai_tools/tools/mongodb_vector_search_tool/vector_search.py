@@ -1,4 +1,3 @@
-import json
 import os
 from importlib.metadata import version
 from logging import getLogger
@@ -46,7 +45,7 @@ class MongoDBVectorSearchConfig(BaseModel):
     )
 
 
-class MongoDBToolSchema(MongoDBVectorSearchConfig):
+class MongoDBToolSchema(BaseModel):
     """Input for MongoDBTool."""
 
     query: str = Field(
@@ -264,6 +263,8 @@ class MongoDBVectorSearchTool(BaseTool):
         return [str(_id) for _id in result.upserted_ids.values()]
 
     def _run(self, query: str) -> str:
+        from bson import json_util
+
         try:
             query_config = self.query_config or MongoDBVectorSearchConfig()
             limit = query_config.limit
@@ -306,7 +307,7 @@ class MongoDBVectorSearchTool(BaseTool):
             # Format
             for doc in cursor:
                 docs.append(doc)
-            return json.dumps(docs)
+            return json_util.dumps(docs)
         except Exception as e:
             logger.error(f"Error: {e}")
             return ""
