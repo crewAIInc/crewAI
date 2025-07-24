@@ -33,11 +33,6 @@
               "icon": "robot"
             },
             {
-              "anchor": "Get Help",
-              "href": "mailto:support@crewai.com",
-              "icon": "headset"
-            },
-            {
               "anchor": "Releases",
               "href": "https://github.com/crewAIInc/crewAI/releases",
               "icon": "tag"
@@ -166,7 +161,9 @@
                       "en/tools/search-research/websitesearchtool",
                       "en/tools/search-research/codedocssearchtool",
                       "en/tools/search-research/youtubechannelsearchtool",
-                      "en/tools/search-research/youtubevideosearchtool"
+                      "en/tools/search-research/youtubevideosearchtool",
+                      "en/tools/search-research/tavilysearchtool",
+                      "en/tools/search-research/tavilyextractortool"
                     ]
                   },
                   {
@@ -369,11 +366,6 @@
               "anchor": "Crew GPT",
               "href": "https://chatgpt.com/g/g-qqTuUWsBY-crewai-assistant",
               "icon": "robot"
-            },
-            {
-              "anchor": "Obter Ajuda",
-              "href": "mailto:support@crewai.com",
-              "icon": "headset"
             },
             {
               "anchor": "Lançamentos",

@@ -14,7 +14,8 @@ class UserMemory(Memory):
 
     def __init__(self, crew=None):
         warnings.warn(
-            "UserMemory is deprecated and will be removed in a future version. "
+            "UserMemory is deprecated and will be removed in version 0.156.0 "
+            "or on 2025-08-04, whichever comes first. "
             "Please use ExternalMemory instead.",
             DeprecationWarning,
             stacklevel=2,

@@ -108,6 +108,7 @@ class ContextualMemory:
 
     def _fetch_user_context(self, query: str) -> str:
         """
+        DEPRECATED: Will be removed in version 0.156.0 or on 2025-08-04, whichever comes first.
         Fetches and formats relevant user information from User Memory.
         Args:
             query (str): The search query to find relevant user memories.
