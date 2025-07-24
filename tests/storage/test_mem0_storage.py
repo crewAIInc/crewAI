@@ -191,13 +191,13 @@ def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
     """Test save method for different memory types"""
     mem0_storage, _, _ = mem0_storage_with_mocked_config
     mem0_storage.memory.add = MagicMock()
-    
+
     # Test short_term memory type (already set in fixture)
     test_value = "This is a test memory"
     test_metadata = {"key": "value"}
-    
+
     mem0_storage.save(test_value, test_metadata)
-    
+
     mem0_storage.memory.add.assert_called_once_with(
         [{'role': 'assistant' , 'content': test_value}],
         infer=True,
@@ -209,13 +209,13 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
     """Test save method for different memory types"""
     mem0_storage = mem0_storage_with_memory_client_using_config_from_crew
     mem0_storage.memory.add = MagicMock()
-    
+
     # Test short_term memory type (already set in fixture)
     test_value = "This is a test memory"
     test_metadata = {"key": "value"}
-    
+
     mem0_storage.save(test_value, test_metadata)
-    
+
     mem0_storage.memory.add.assert_called_once_with(
         [{'role': 'assistant' , 'content': test_value}],
         infer=True,
@@ -237,10 +237,10 @@ def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
     results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
 
     mem0_storage.memory.search.assert_called_once_with(
-        query="test query", 
-        limit=5, 
+        query="test query",
+        limit=5,
         user_id="test_user",
-        filters={'AND': [{'run_id': 'my_run_id'}]}, 
+        filters={'AND': [{'run_id': 'my_run_id'}]},
         threshold=0.5
     )
 
@@ -257,8 +257,8 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
     results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
 
     mem0_storage.memory.search.assert_called_once_with(
-        query="test query", 
-        limit=5, 
+        query="test query",
+        limit=5,
         metadata={"type": "short_term"},
         user_id="test_user",
         version='v2',
@@ -287,3 +287,36 @@ def test_mem0_storage_default_infer_value(mock_mem0_memory_client):
 
         mem0_storage = Mem0Storage(type="short_term", crew=crew)
         assert mem0_storage.infer is True
+
+def test_save_memory_using_agent_entity(mock_mem0_memory_client):
+    config = {
+        "agent_id": "agent-123",
+    }
+
+    mock_memory = MagicMock(spec=Memory)
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+        mem0_storage.save("test memory", {"key": "value"})
+        mem0_storage.memory.add.assert_called_once_with(
+            [{'role': 'assistant' , 'content': 'test memory'}],
+            infer=True,
+            metadata={"type": "external", "key": "value"},
+            agent_id="agent-123",
+        )
+
+def test_search_method_with_agent_entity(mem0_storage_with_mocked_config):
+    mem0_storage = Mem0Storage(type="external", config={"agent_id": "agent-123"})
+    mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
+    mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+    results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+    mem0_storage.memory.search.assert_called_once_with(
+        query="test query",
+        limit=5,
+        filters={"AND": [{"agent_id": "agent-123"}]},
+        threshold=0.5,
+    )
+
+    assert len(results) == 2
+    assert results[0]["content"] == "Result 1"
