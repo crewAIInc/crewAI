@@ -270,3 +270,16 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
 
     assert len(results) == 2
     assert results[0]["content"] == "Result 1"
+
+
+def test_mem0_storage_default_infer_value(mock_mem0_memory_client):
+    with patch.object(MemoryClient, "__new__", return_value=mock_mem0_memory_client):
+        crew = MockCrew(
+            memory_config={
+                "provider": "mem0",
+                "config": {"user_id": "test_user","api_key": "ABCDEFGH"},
+            }
+        )
+
+        mem0_storage = Mem0Storage(type="short_term", crew=crew)
+        assert mem0_storage.infer == True
