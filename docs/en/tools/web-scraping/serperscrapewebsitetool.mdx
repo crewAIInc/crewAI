@@ -1,0 +1,100 @@
+---
+title: Serper Scrape Website
+description: The `SerperScrapeWebsiteTool` is designed to scrape websites and extract clean, readable content using Serper's scraping API.
+icon: globe
+---
+
+# `SerperScrapeWebsiteTool`
+
+## Description
+
+This tool is designed to scrape website content and extract clean, readable text from any website URL. It utilizes the [serper.dev](https://serper.dev) scraping API to fetch and process web pages, optionally including markdown formatting for better structure and readability.
+
+## Installation
+
+To effectively use the `SerperScrapeWebsiteTool`, follow these steps:
+
+1. **Package Installation**: Confirm that the `crewai[tools]` package is installed in your Python environment.
+2. **API Key Acquisition**: Acquire a `serper.dev` API key by registering for an account at `serper.dev`.
+3. **Environment Configuration**: Store your obtained API key in an environment variable named `SERPER_API_KEY` to facilitate its use by the tool.
+
+To incorporate this tool into your project, follow the installation instructions below:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## Example
+
+The following example demonstrates how to initialize the tool and scrape a website:
+
+```python Code
+from crewai_tools import SerperScrapeWebsiteTool
+
+# Initialize the tool for website scraping capabilities
+tool = SerperScrapeWebsiteTool()
+
+# Scrape a website with markdown formatting
+result = tool.run(url="https://example.com", include_markdown=True)
+```
+
+## Arguments
+
+The `SerperScrapeWebsiteTool` accepts the following arguments:
+
+- **url**: Required. The URL of the website to scrape.
+- **include_markdown**: Optional. Whether to include markdown formatting in the scraped content. Defaults to `True`.
+
+## Example with Parameters
+
+Here is an example demonstrating how to use the tool with different parameters:
+
+```python Code
+from crewai_tools import SerperScrapeWebsiteTool
+
+tool = SerperScrapeWebsiteTool()
+
+# Scrape with markdown formatting (default)
+markdown_result = tool.run(
+    url="https://docs.crewai.com",
+    include_markdown=True
+)
+
+# Scrape without markdown formatting for plain text
+plain_result = tool.run(
+    url="https://docs.crewai.com",
+    include_markdown=False
+)
+
+print("Markdown formatted content:")
+print(markdown_result)
+
+print("\nPlain text content:")
+print(plain_result)
+```
+
+## Use Cases
+
+The `SerperScrapeWebsiteTool` is particularly useful for:
+
+- **Content Analysis**: Extract and analyze website content for research purposes
+- **Data Collection**: Gather structured information from web pages
+- **Documentation Processing**: Convert web-based documentation into readable formats
+- **Competitive Analysis**: Scrape competitor websites for market research
+- **Content Migration**: Extract content from existing websites for migration purposes
+
+## Error Handling
+
+The tool includes comprehensive error handling for:
+
+- **Network Issues**: Handles connection timeouts and network errors gracefully
+- **API Errors**: Provides detailed error messages for API-related issues
+- **Invalid URLs**: Validates and reports issues with malformed URLs
+- **Authentication**: Clear error messages for missing or invalid API keys
+
+## Security Considerations
+
+- Always store your `SERPER_API_KEY` in environment variables, never hardcode it in your source code
+- Be mindful of rate limits imposed by the Serper API
+- Respect robots.txt and website terms of service when scraping content
+- Consider implementing delays between requests for large-scale scraping operations
