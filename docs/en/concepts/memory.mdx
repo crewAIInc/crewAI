@@ -720,7 +720,7 @@ crew = Crew(
 ```
 
 ### Advanced Mem0 Configuration
-When using Mem0 Client, you can customize the memory configuration further, by using parameters like 'includes', 'excludes', 'custom_categories' and 'run_id' (this is only for short-term memory).
+When using Mem0 Client, you can customize the memory configuration further, by using parameters like 'includes', 'excludes', 'custom_categories', 'infer' and 'run_id' (this is only for short-term memory).
 You can find more details in the [Mem0 documentation](https://docs.mem0.ai/).
 ```python
 
@@ -744,7 +744,7 @@ crew = Crew(
             "run_id": "my_run_id",        # Optional - for short-term memory
             "includes": "include1",       # Optional 
             "excludes": "exclude1",       # Optional
-            "infer": True
+            "infer": True                 # Optional defaults to True
             "custom_categories": new_categories  # Optional - custom categories for user memory
         },
         "user_memory": {}
@@ -776,7 +776,7 @@ crew = Crew(
                     "config": {"api_key": "your-api-key", "model": "text-embedding-3-small"}
                 }
             },
-            "infer": True
+            "infer": True                   # Optional defaults to True
         },
         "user_memory": {}
     }
