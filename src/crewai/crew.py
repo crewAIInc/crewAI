@@ -57,6 +57,7 @@ from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
+from crewai.utilities.embedding_configurator import EmbeddingConfig
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
@@ -167,7 +168,7 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="An Instance of the ExternalMemory to be used by the Crew",
     )
-    embedder: Optional[dict] = Field(
+    embedder: Optional[EmbeddingConfig] = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
