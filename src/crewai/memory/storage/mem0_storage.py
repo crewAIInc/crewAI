@@ -70,7 +70,7 @@ class Mem0Storage(Storage):
         """
         Returns:
             dict: A filter dictionary containing AND conditions for querying data.
-                - Includes user_id if memory_type is 'external'.
+                - Includes user_id, if memory_type is 'external'.
                 - Includes run_id if memory_type is 'short_term' and mem0_run_id is present.
         """
         filter = {
@@ -79,7 +79,14 @@ class Mem0Storage(Storage):
 
         # Add user_id condition if the memory type is external
         if self.memory_type == "external":
-            filter["AND"].append({"user_id": self.config.get("user_id", "")})
+            user_id = self.config.get("user_id", "")
+            agent_id = self.config.get("agent_id", "")
+
+            if user_id:
+                filter["AND"].append({"user_id": user_id})
+
+            if agent_id:
+                filter["AND"].append({"agent_id": agent_id})
 
         # Add run_id condition if the memory type is short_term and a run ID is set
         if self.memory_type == "short_term" and self.mem0_run_id:
@@ -89,7 +96,8 @@ class Mem0Storage(Storage):
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self.config.get("user_id", "")
-        assistant_message = [{"role" : "assistant","content" : value}] 
+        agent_id = self.config.get("agent_id", "")
+        assistant_message = [{"role" : "assistant","content" : value}]
 
         base_metadata = {
             "short_term": "short_term",
@@ -106,8 +114,8 @@ class Mem0Storage(Storage):
 
         if self.memory_type == "external":
             params["user_id"] = user_id
+            params["agent_id"] = agent_id
 
-        
         if params:
             # MemoryClient-specific overrides
             if isinstance(self.memory, MemoryClient):
@@ -123,12 +131,12 @@ class Mem0Storage(Storage):
 
     def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> List[Any]:
         params = {
-            "query": query, 
-            "limit": limit, 
+            "query": query,
+            "limit": limit,
             "version": "v2",
             "output_format": "v1.1"
             }
-        
+
         if user_id := self.config.get("user_id", ""):
             params["user_id"] = user_id
 
@@ -138,7 +146,7 @@ class Mem0Storage(Storage):
             "entities": {"type": "entity"},
             "external": {"type": "external"},
         }
-        
+
         if self.memory_type in memory_type_map:
             params["metadata"] = memory_type_map[self.memory_type]
             if self.memory_type == "short_term":
@@ -155,7 +163,7 @@ class Mem0Storage(Storage):
 
         results = self.memory.search(**params)
         return [r for r in results["results"]]
-    
+
     def reset(self):
         if self.memory:
             self.memory.reset()

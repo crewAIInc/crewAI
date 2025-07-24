@@ -191,13 +191,13 @@ def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
     """Test save method for different memory types"""
     mem0_storage, _, _ = mem0_storage_with_mocked_config
     mem0_storage.memory.add = MagicMock()
-    
+
     # Test short_term memory type (already set in fixture)
     test_value = "This is a test memory"
     test_metadata = {"key": "value"}
-    
+
     mem0_storage.save(test_value, test_metadata)
-    
+
     mem0_storage.memory.add.assert_called_once_with(
         [{'role': 'assistant' , 'content': test_value}],
         infer=True,
@@ -209,13 +209,13 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
     """Test save method for different memory types"""
     mem0_storage = mem0_storage_with_memory_client_using_config_from_crew
     mem0_storage.memory.add = MagicMock()
-    
+
     # Test short_term memory type (already set in fixture)
     test_value = "This is a test memory"
     test_metadata = {"key": "value"}
-    
+
     mem0_storage.save(test_value, test_metadata)
-    
+
     mem0_storage.memory.add.assert_called_once_with(
         [{'role': 'assistant' , 'content': test_value}],
         infer=True,
@@ -237,10 +237,10 @@ def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
     results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
 
     mem0_storage.memory.search.assert_called_once_with(
-        query="test query", 
-        limit=5, 
+        query="test query",
+        limit=5,
         user_id="test_user",
-        filters={'AND': [{'run_id': 'my_run_id'}]}, 
+        filters={'AND': [{'run_id': 'my_run_id'}]},
         threshold=0.5
     )
 
@@ -257,8 +257,8 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
     results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
 
     mem0_storage.memory.search.assert_called_once_with(
-        query="test query", 
-        limit=5, 
+        query="test query",
+        limit=5,
         metadata={"type": "short_term"},
         user_id="test_user",
         version='v2',
@@ -270,3 +270,18 @@ def test_search_method_with_memory_client(mem0_storage_with_memory_client_using_
 
     assert len(results) == 2
     assert results[0]["content"] == "Result 1"
+
+def test_save_memory_using_agent_entity():
+    config = {
+        "agent_id": "agent-123",
+    }
+    mem0_storage = Mem0Storage(type="short_term", config=config)
+
+    mem0_storage.save("test memory", {"key": "value"})
+
+    mem0_storage.memory.add.assert_called_once_with(
+        [{'role': 'assistant' , 'content': 'test memory'}],
+        infer=True,
+        metadata={"type": "short_term", "key": "value"},
+        agent_id="agent-123",
+    )
