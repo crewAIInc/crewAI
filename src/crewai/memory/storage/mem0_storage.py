@@ -69,17 +69,25 @@ class Mem0Storage(Storage):
     def _create_filter_for_search(self):
         """
         Returns:
-            dict: A filter dictionary containing AND conditions for querying data.
-                - Includes user_id if memory_type is 'external'.
-                - Includes run_id if memory_type is 'short_term' and mem0_run_id is present.
+            dict: A filter dictionary containing conditions for querying data.
+                - Uses OR logic when both user_id and agent_id are present
+                - Uses AND logic for other conditions like run_id
         """
-        filter = {
-            "AND": []
-        }
-
-        # Add user_id condition if the memory type is external
-        if self.memory_type == "external":
-            filter["AND"].append({"user_id": self.config.get("user_id", "")})
+        user_id = self.config.get("user_id", "")
+        agent_id = self.config.get("agent_id", "")
+        
+        filter = {"AND": []}
+        
+        id_conditions = []
+        if user_id:
+            id_conditions.append({"user_id": user_id})
+        if agent_id:
+            id_conditions.append({"agent_id": agent_id})
+        
+        if len(id_conditions) > 1:
+            filter["AND"].append({"OR": id_conditions})
+        elif len(id_conditions) == 1:
+            filter["AND"].append(id_conditions[0])
 
         # Add run_id condition if the memory type is short_term and a run ID is set
         if self.memory_type == "short_term" and self.mem0_run_id:
@@ -89,6 +97,7 @@ class Mem0Storage(Storage):
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         user_id = self.config.get("user_id", "")
+        agent_id = metadata.get("agent", "")
         assistant_message = [{"role" : "assistant","content" : value}] 
 
         base_metadata = {
@@ -104,8 +113,11 @@ class Mem0Storage(Storage):
             "infer": self.infer
         }
 
-        if self.memory_type == "external":
+        if user_id:
             params["user_id"] = user_id
+        
+        if agent_id:
+            params["agent_id"] = agent_id
 
         
         if params:
@@ -129,8 +141,14 @@ class Mem0Storage(Storage):
             "output_format": "v1.1"
             }
         
-        if user_id := self.config.get("user_id", ""):
+        user_id = self.config.get("user_id", "")
+        agent_id = self.config.get("agent_id", "")
+        
+        if user_id:
             params["user_id"] = user_id
+        
+        if agent_id:
+            params["agent_id"] = agent_id
 
         memory_type_map = {
             "short_term": {"type": "short_term"},
@@ -156,6 +174,12 @@ class Mem0Storage(Storage):
         results = self.memory.search(**params)
         return [r for r in results["results"]]
     
+    def set_agent_id(self, agent_id: str) -> None:
+        """Set the agent_id for this memory storage instance."""
+        if not self.config:
+            self.config = {}
+        self.config["agent_id"] = agent_id
+
     def reset(self):
         if self.memory:
             self.memory.reset()
