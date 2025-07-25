@@ -7,8 +7,8 @@ import uuid
 
 from typing import Any, Dict, List, Optional
 from chromadb.api import ClientAPI
-from crewai.memory.storage.base_rag_storage import BaseRAGStorage
-from crewai.utilities import EmbeddingConfigurator
+from crewai.rag.storage.base_rag_storage import BaseRAGStorage
+from crewai.rag.embeddings.configurator import EmbeddingConfigurator
 from crewai.utilities.chromadb import create_persistent_client
 from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
