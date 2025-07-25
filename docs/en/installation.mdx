@@ -7,16 +7,7 @@ icon: wrench
 ## Video Tutorial
 Watch this video tutorial for a step-by-step demonstration of the installation process:
 
-<iframe
-  width="100%"
-  height="400"
-  src="https://www.youtube.com/embed/-kSOTtYzgEw"
-  title="CrewAI Installation Guide"
-  frameborder="0"
-  style={{ borderRadius: '10px' }}
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowfullscreen
-></iframe>
+[CrewAI Installation Guide](https://www.youtube.com/watch?v=-kSOTtYzgEw)
 
 ## Text Tutorial
 <Note>
@@ -126,20 +117,21 @@ We recommend using the `YAML` template scaffolding for a structured approach to 
   </Step>
 
   <Step title="Customize Your Project">
-    - Your project will contain these essential files:
-      | File | Purpose |
-      | --- | --- |
-      | `agents.yaml` | Define your AI agents and their roles |
-      | `tasks.yaml` | Set up agent tasks and workflows |
-      | `.env` | Store API keys and environment variables |
-      | `main.py` | Project entry point and execution flow |
-      | `crew.py` | Crew orchestration and coordination |
-      | `tools/` | Directory for custom agent tools |
-      | `knowledge/` | Directory for knowledge base |
-
-    - Start by editing `agents.yaml` and `tasks.yaml` to define your crew's behavior.
-    - Keep sensitive information like API keys in `.env`.
+    Your project will contain these essential files:
+    Start by editing `agents.yaml` and `tasks.yaml` to define your crew's behavior.
+    Keep sensitive information like API keys in `.env`.
   </Step>
+
+
+| File           | Purpose                                      |
+|----------------|----------------------------------------------|
+| `agents.yaml`  | Define your AI agents and their roles         |
+| `tasks.yaml`   | Set up agent tasks and workflows              |
+| `.env`         | Store API keys and environment variables      |
+| `main.py`      | Project entry point and execution flow        |
+| `crew.py`      | Crew orchestration and coordination           |
+| `tools/`       | Directory for custom agent tools              |
+| `knowledge/`   | Directory for knowledge base                  |
 
   <Step title="Run your Crew">
     - Before you run your crew, make sure to run:
