@@ -8,6 +8,15 @@ from dotenv import load_dotenv
 
 load_result = load_dotenv(override=True)
 
+from crewai.utilities.events.event_listener import EventListener
+event_listener = EventListener()
+
+@pytest.fixture(scope="session")
+def event_listener_fixture():
+    return event_listener
+
+import builtins
+builtins.event_listener = event_listener
 
 @pytest.fixture(autouse=True)
 def setup_test_environment():
@@ -39,8 +48,11 @@ def setup_test_environment():
 
         yield
 
+        # Close any open database connections before cleanup
+        import gc
+        gc.collect()  # Force garbage collection to close connections
+        
         # Cleanup is handled automatically when tempfile context exits
-
 
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
