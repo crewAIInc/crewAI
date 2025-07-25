@@ -40,7 +40,7 @@ class FlowPlot:
             raise ValueError("Invalid flow object: missing '_listeners' attribute")
         if not hasattr(flow, '_start_methods'):
             raise ValueError("Invalid flow object: missing '_start_methods' attribute")
-            
+
         self.flow = flow
         self.colors = COLORS
         self.node_styles = NODE_STYLES
@@ -65,7 +65,7 @@ class FlowPlot:
         """
         if not filename or not isinstance(filename, str):
             raise ValueError("Filename must be a non-empty string")
-            
+
         try:
             # Initialize network
             net = Network(
@@ -132,7 +132,7 @@ class FlowPlot:
                 raise IOError(f"Failed to save flow visualization to {filename}.html: {str(e)}")
 
         except (ValueError, RuntimeError, IOError) as e:
-            raise e
+            raise
         except Exception as e:
             raise RuntimeError(f"Unexpected error during flow visualization: {str(e)}")
         finally:

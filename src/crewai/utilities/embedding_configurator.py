@@ -206,7 +206,7 @@ class EmbeddingConfigurator:
                     return cast(Embeddings, embeddings)
                 except Exception as e:
                     print("Error during Watson embedding:", e)
-                    raise e
+                    raise
 
         return WatsonEmbeddingFunction()
 

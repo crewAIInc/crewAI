@@ -87,4 +87,4 @@ def execute_tool_and_check_finality(
         return ToolResult(tool_result, False)
 
     except Exception as e:
-        raise e
+        raise

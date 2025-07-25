@@ -337,7 +337,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     error=str(e),
                 ),
             )
-            raise e
+            raise
 
     def _execute_core(self, agent_info: Dict[str, Any]) -> LiteAgentOutput:
         # Emit event for agent execution start
@@ -551,7 +551,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         self,
                         event=LLMCallFailedEvent(error=str(e), from_agent=self),
                     )
-                    raise e
+                    raise
 
                 formatted_answer = process_llm_response(answer, self.use_stop_words)
 
@@ -566,7 +566,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                             agent=self.original_agent,
                         )
                     except Exception as e:
-                        raise e
+                        raise
 
                     formatted_answer = handle_agent_action_core(
                         formatted_answer=formatted_answer,
@@ -587,7 +587,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             except Exception as e:
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
-                    raise e
+                    raise
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
@@ -600,7 +600,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     continue
                 else:
                     handle_unknown_error(self._printer, e)
-                    raise e
+                    raise
 
             finally:
                 self._iterations += 1

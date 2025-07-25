@@ -157,7 +157,8 @@ def get_llm_response(
             from_agent=from_agent,
         )
     except Exception as e:
-        raise e
+        raise
+
     if not answer:
         printer.print(
             content="Received None or empty response from LLM call.",

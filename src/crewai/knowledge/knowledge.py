@@ -68,7 +68,7 @@ class Knowledge(BaseModel):
                 source.storage = self.storage
                 source.add()
         except Exception as e:
-            raise e
+            raise
 
     def reset(self) -> None:
         if self.storage:
