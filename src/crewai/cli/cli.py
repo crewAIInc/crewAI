@@ -3,6 +3,7 @@ from typing import Optional
 
 import click
 from crewai.cli.config import Settings
+from crewai.cli.settings.main import SettingsCommand
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
@@ -227,7 +228,7 @@ def update():
 @crewai.command()
 def login():
     """Sign Up/Login to CrewAI Enterprise."""
-    Settings().clear()
+    Settings().clear_user_settings()
     AuthenticationCommand().login()
 
 
@@ -369,8 +370,8 @@ def org():
     pass
 
 
-@org.command()
-def list():
+@org.command("list")
+def org_list():
     """List available organizations."""
     org_command = OrganizationCommand()
     org_command.list()
@@ -389,6 +390,35 @@ def current():
     """Show current organization when 'crewai org' is called without subcommands."""
     org_command = OrganizationCommand()
     org_command.current()
+
+
+@crewai.group()
+def config():
+    """CLI Configuration commands."""
+    pass
+
+
+@config.command("list")
+def config_list():
+    """List all CLI configuration parameters."""
+    config_command = SettingsCommand()
+    config_command.list()
+
+
+@config.command("set")
+@click.argument("key")
+@click.argument("value")
+def config_set(key: str, value: str):
+    """Set a CLI configuration parameter."""
+    config_command = SettingsCommand()
+    config_command.set(key, value)
+
+
+@config.command("reset")
+def config_reset():
+    """Reset all CLI configuration parameters to default values."""
+    config_command = SettingsCommand()
+    config_command.reset_all_settings()
 
 
 if __name__ == "__main__":
