@@ -69,19 +69,6 @@ def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
         TypeError: If state doesn't match expected type
         ValueError: If state validation fails
     """
-    """Ensure state matches expected type with proper validation.
-
-    Args:
-        state: State instance to validate
-        expected_type: Expected type for the state
-
-    Returns:
-        Validated state instance
-
-    Raises:
-        TypeError: If state doesn't match expected type
-        ValueError: If state validation fails
-    """
     if expected_type is dict:
         if not isinstance(state, dict):
             raise TypeError(f"Expected dict, got {type(state).__name__}")
@@ -447,15 +434,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     def __init__(
         self,
+        initial_state: Union[Type[T], T, None] = None,
         persistence: Optional[FlowPersistence] = None,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
-
         Args:
+            initial_state: Initial state for the flow (BaseModel instance or dict)
             persistence: Optional persistence backend for storing flow states
             **kwargs: Additional state values to initialize or override
         """
+        # Set the initial_state for this instance
+        if initial_state is not None:
+            self.initial_state = initial_state
+
         # Initialize basic instance attributes
         self._methods: Dict[str, Callable] = {}
         self._method_execution_counts: Dict[str, int] = {}
@@ -556,22 +548,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if not hasattr(model, "id"):
                 raise ValueError("Flow state model must have an 'id' field")
 
-            # Create new instance with same values to avoid mutations
-            if hasattr(model, "model_dump"):
+            # Create copy of the BaseModel to avoid mutations
+            if hasattr(model, "model_copy"):
                 # Pydantic v2
-                state_dict = model.model_dump()
-            elif hasattr(model, "dict"):
+                return cast(T, model.model_copy())
+            elif hasattr(model, "copy"):
                 # Pydantic v1
-                state_dict = model.dict()
+                return cast(T, model.copy())
             else:
-                # Fallback for other BaseModel implementations
+                # Fallback for other BaseModel implementations - preserve original logic
                 state_dict = {
                     k: v for k, v in model.__dict__.items() if not k.startswith("_")
                 }
-
-            # Create new instance of the same class
-            model_class = type(model)
-            return cast(T, model_class(**state_dict))
+                model_class = type(model)
+                return cast(T, model_class(**state_dict))
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
@@ -646,30 +636,25 @@ class Flow(Generic[T], metaclass=FlowMeta):
             # For BaseModel states, preserve existing fields unless overridden
             try:
                 model = cast(BaseModel, self._state)
-                # Get current state as dict
-                if hasattr(model, "model_dump"):
-                    current_state = model.model_dump()
-                elif hasattr(model, "dict"):
-                    current_state = model.dict()
+                if hasattr(model, "model_copy"):
+                    # Pydantic v2
+                    self._state = cast(T, model.model_copy(update=inputs))
+                elif hasattr(model, "copy"):
+                    # Pydantic v1
+                    self._state = cast(T, model.copy(update=inputs))
                 else:
+                    # Fallback for other BaseModel implementations - preserve original logic
                     current_state = {
                         k: v for k, v in model.__dict__.items() if not k.startswith("_")
                     }
-
-                # Create new state with preserved fields and updates
-                new_state = {**current_state, **inputs}
-
-                # Create new instance with merged state
-                model_class = type(model)
-                if hasattr(model_class, "model_validate"):
-                    # Pydantic v2
-                    self._state = cast(T, model_class.model_validate(new_state))
-                elif hasattr(model_class, "parse_obj"):
-                    # Pydantic v1
-                    self._state = cast(T, model_class.parse_obj(new_state))
-                else:
-                    # Fallback for other BaseModel implementations
-                    self._state = cast(T, model_class(**new_state))
+                    new_state = {**current_state, **inputs}
+                    model_class = type(model)
+                    if hasattr(model_class, "model_validate"):
+                        self._state = cast(T, model_class.model_validate(new_state))
+                    elif hasattr(model_class, "parse_obj"):
+                        self._state = cast(T, model_class.parse_obj(new_state))
+                    else:
+                        self._state = cast(T, model_class(**new_state))
             except ValidationError as e:
                 raise ValueError(f"Invalid inputs for structured state: {e}") from e
         else:
@@ -777,9 +762,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._log_flow_event(
             f"Flow started with ID: {self.flow_id}", color="bold_magenta"
         )
-
-        if inputs is not None and "id" not in inputs:
-            self._initialize_state(inputs)
 
         tasks = [
             self._execute_start_method(start_method)
