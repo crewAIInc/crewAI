@@ -19,6 +19,7 @@ class ConsoleFormatter:
     tool_usage_counts: Dict[str, int] = {}
     current_reasoning_branch: Optional[Tree] = None  # Track reasoning status
     _live_paused: bool = False
+    _paused_tree: Optional[Tree] = None
     current_llm_tool_tree: Optional[Tree] = None
 
     def __init__(self, verbose: bool = False):
@@ -120,10 +121,12 @@ class ConsoleFormatter:
         if len(args) == 0 and self._live:
             return
 
-        # Case 3: printing something other than a Tree → terminate live session
+        # Case 3: printing something other than a Tree → temporarily pause live session
         if self._live:
-            self._live.stop()
-            self._live = None
+            self.pause_live_updates()
+            self.console.print(*args, **kwargs)
+            self.resume_live_updates()
+            return
 
         # Finally, pass through to the regular Console.print implementation
         self.console.print(*args, **kwargs)
@@ -132,6 +135,7 @@ class ConsoleFormatter:
         """Pause Live session updates to allow for human input without interference."""
         if not self._live_paused:
             if self._live:
+                self._paused_tree = self._live.renderable
                 self._live.stop()
                 self._live = None
             self._live_paused = True
@@ -139,6 +143,10 @@ class ConsoleFormatter:
     def resume_live_updates(self) -> None:
         """Resume Live session updates after human input is complete."""
         if self._live_paused:
+            if (hasattr(self, '_paused_tree') and self._paused_tree and 
+                hasattr(self._paused_tree, '__rich_console__')):
+                self._live = Live(self._paused_tree, console=self.console, refresh_per_second=4)
+                self._live.start()
             self._live_paused = False
 
     def print_panel(
