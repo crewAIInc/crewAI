@@ -2,6 +2,7 @@ import asyncio
 import copy
 import inspect
 import logging
+import os
 from typing import (
     Any,
     Callable,
@@ -65,19 +66,6 @@ StateT = TypeVar(
 
 
 def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
-    """Ensure state matches expected type with proper validation.
-
-    Args:
-        state: State instance to validate
-        expected_type: Expected type for the state
-
-    Returns:
-        Validated state instance
-
-    Raises:
-        TypeError: If state doesn't match expected type
-        ValueError: If state validation fails
-    """
     """Ensure state matches expected type with proper validation.
 
     Args:
@@ -457,6 +445,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     def __init__(
         self,
+        initial_state: Union[Type[T], T, None] = None,
         persistence: Optional[FlowPersistence] = None,
         tracing: Optional[bool] = False,
         **kwargs: Any,
@@ -464,15 +453,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """Initialize a new Flow instance.
 
         Args:
+            initial_state: Initial state for the flow (BaseModel instance or dict)
             persistence: Optional persistence backend for storing flow states
             **kwargs: Additional state values to initialize or override
         """
+        # Set the initial_state for this instance
+        if initial_state is not None:
+            self.initial_state = initial_state
+
         # Initialize basic instance attributes
         self._methods: Dict[str, Callable] = {}
         self._method_execution_counts: Dict[str, int] = {}
         self._pending_and_listeners: Dict[str, Set[str]] = {}
-        self._method_outputs: List[Any] = []  # List to store all method outputs
-        self._completed_methods: Set[str] = set()  # Track completed methods for reload
+        self._method_outputs: List[Any] = []
+        self._completed_methods: Set[str] = set()
         self._persistence: Optional[FlowPersistence] = persistence
 
         # Initialize state with initial values
@@ -661,30 +655,25 @@ class Flow(Generic[T], metaclass=FlowMeta):
             # For BaseModel states, preserve existing fields unless overridden
             try:
                 model = cast(BaseModel, self._state)
-                # Get current state as dict
-                if hasattr(model, "model_dump"):
-                    current_state = model.model_dump()
-                elif hasattr(model, "dict"):
-                    current_state = model.dict()
+                if hasattr(model, "model_copy"):
+                    # Pydantic v2
+                    self._state = cast(T, model.model_copy(update=inputs))
+                elif hasattr(model, "copy"):
+                    # Pydantic v1
+                    self._state = cast(T, model.copy(update=inputs))
                 else:
+                    # Fallback for other BaseModel implementations - preserve original logic
                     current_state = {
                         k: v for k, v in model.__dict__.items() if not k.startswith("_")
                     }
-
-                # Create new state with preserved fields and updates
-                new_state = {**current_state, **inputs}
-
-                # Create new instance with merged state
-                model_class = type(model)
-                if hasattr(model_class, "model_validate"):
-                    # Pydantic v2
-                    self._state = cast(T, model_class.model_validate(new_state))
-                elif hasattr(model_class, "parse_obj"):
-                    # Pydantic v1
-                    self._state = cast(T, model_class.parse_obj(new_state))
-                else:
-                    # Fallback for other BaseModel implementations
-                    self._state = cast(T, model_class(**new_state))
+                    new_state = {**current_state, **inputs}
+                    model_class = type(model)
+                    if hasattr(model_class, "model_validate"):
+                        self._state = cast(T, model_class.model_validate(new_state))
+                    elif hasattr(model_class, "parse_obj"):
+                        self._state = cast(T, model_class.parse_obj(new_state))
+                    else:
+                        self._state = cast(T, model_class(**new_state))
             except ValidationError as e:
                 raise ValueError(f"Invalid inputs for structured state: {e}") from e
         else:
@@ -870,9 +859,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._log_flow_event(
                 f"Flow started with ID: {self.flow_id}", color="bold_magenta"
             )
-
-            if inputs is not None and "id" not in inputs:
-                self._initialize_state(inputs)
 
             tasks = [
                 self._execute_start_method(start_method)
@@ -1092,7 +1078,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns
         -------
         List[str]
-            Names of methods that should be triggered.
+            Names of a method that should be triggered.
 
         Notes
         -----
