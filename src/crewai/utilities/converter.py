@@ -20,6 +20,8 @@ class ConverterError(Exception):
 class Converter(OutputConverter):
     """Class that converts text into either pydantic or json."""
 
+    agent: Optional[Any] = None
+
     def to_pydantic(self, current_attempt=1) -> BaseModel:
         """Convert text to pydantic."""
         try:
@@ -37,7 +39,7 @@ class Converter(OutputConverter):
                     result = self.model.model_validate_json(response)
                 except ValidationError:
                     # If direct validation fails, attempt to extract valid JSON
-                    result = handle_partial_json(response, self.model, False, None)
+                    result = handle_partial_json(response, self.model, False, self.agent)
                     # Ensure result is a BaseModel instance
                     if not isinstance(result, BaseModel):
                         if isinstance(result, dict):
@@ -249,6 +251,9 @@ def create_converter(
 
     if not converter:
         raise Exception("No output converter found or set.")
+
+    if agent and not getattr(converter, "agent", None):
+        converter.agent = agent
 
     return converter
 
