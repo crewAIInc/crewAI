@@ -199,9 +199,11 @@ def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
     mem0_storage.save(test_value, test_metadata)
 
     mem0_storage.memory.add.assert_called_once_with(
-        [{'role': 'assistant' , 'content': test_value}],
+        [{"role": "assistant" , "content": test_value}],
         infer=True,
         metadata={"type": "short_term", "key": "value"},
+        run_id="my_run_id",
+        user_id="test_user"
     )
 
 
@@ -224,7 +226,8 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
         run_id="my_run_id",
         includes="include1",
         excludes="exclude1",
-        output_format='v1.1'
+        output_format='v1.1',
+        user_id='test_user'
     )
 
 

@@ -1,6 +1,6 @@
 import os
 from typing import Any, Dict, List
-
+from collections import defaultdict
 from mem0 import Memory, MemoryClient
 
 from crewai.memory.storage.interface import Storage
@@ -70,24 +70,25 @@ class Mem0Storage(Storage):
         """
         Returns:
             dict: A filter dictionary containing AND conditions for querying data.
-                - Includes user_id if memory_type is 'external'.
+                - Includes user_id and agent_id if both are present.
+                - Includes user_id if only user_id is present.
+                - Includes agent_id if only agent_id is present.
                 - Includes run_id if memory_type is 'short_term' and mem0_run_id is present.
         """
-        filter = {
-            "AND": []
-        }
+        filter = defaultdict(list)
 
-        # Add user_id condition if the memory type is external
-        if self.memory_type == "external":
-            if user_id := self.config.get("user_id", ""):
-                filter["AND"].append({"user_id": user_id})
-
-            if agent_id := self.config.get("agent_id", ""):
-                filter["AND"].append({"agent_id": agent_id})
-
-        # Add run_id condition if the memory type is short_term and a run ID is set
         if self.memory_type == "short_term" and self.mem0_run_id:
             filter["AND"].append({"run_id": self.mem0_run_id})
+        else:
+            user_id = self.config.get("user_id", "")
+            agent_id = self.config.get("agent_id", "")
+
+            if user_id and agent_id:
+                filter["OR"].append({"user_id": user_id, "agent_id": agent_id})
+            elif user_id:
+                filter["AND"].append({"user_id": user_id})
+            elif agent_id:
+                filter["AND"].append({"agent_id": agent_id})
 
         return filter
 
@@ -108,25 +109,23 @@ class Mem0Storage(Storage):
             "infer": self.infer
         }
 
-        if self.memory_type == "external":
-            if user_id:
-                params["user_id"] = user_id
-            if agent_id := self.config.get("agent_id", ""):
-                params["agent_id"] = agent_id
+        # MemoryClient-specific overrides
+        if isinstance(self.memory, MemoryClient):
+            params["includes"] = self.includes
+            params["excludes"] = self.excludes
+            params["output_format"] = "v1.1"
+            params["version"] = "v2"
 
+        if self.memory_type == "short_term" and self.mem0_run_id:
+            params["run_id"] = self.mem0_run_id
 
-        if params:
-            # MemoryClient-specific overrides
-            if isinstance(self.memory, MemoryClient):
-                params["includes"] = self.includes
-                params["excludes"] = self.excludes
-                params["output_format"] = "v1.1"
-                params["version"]="v2"
+        if user_id:
+            params["user_id"] = user_id
 
-                if self.memory_type == "short_term":
-                    params["run_id"] = self.mem0_run_id
+        if agent_id := self.config.get("agent_id", ""):
+            params["agent_id"] = agent_id
 
-            self.memory.add(assistant_message, **params)
+        self.memory.add(assistant_message, **params)
 
     def search(self,query: str,limit: int = 3,score_threshold: float = 0.35) -> List[Any]:
         params = {
