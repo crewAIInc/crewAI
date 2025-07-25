@@ -314,7 +314,7 @@ def test_search_with_agent_id_in_config(mem0_storage_with_memory_client_using_co
     mock_results = {"results": [{"score": 0.9, "content": "Result 1"}]}
     mem0_storage.memory.search = MagicMock(return_value=mock_results)
 
-    results = mem0_storage.search("test query")
+    mem0_storage.search("test query")
 
     call_args = mem0_storage.memory.search.call_args[1]
     assert "agent_id" in call_args
