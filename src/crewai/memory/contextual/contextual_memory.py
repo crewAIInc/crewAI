@@ -5,7 +5,6 @@ from crewai.memory import (
     ExternalMemory,
     LongTermMemory,
     ShortTermMemory,
-    UserMemory,
 )
 
 
@@ -16,7 +15,6 @@ class ContextualMemory:
         stm: ShortTermMemory,
         ltm: LongTermMemory,
         em: EntityMemory,
-        um: UserMemory,
         exm: ExternalMemory,
     ):
         if memory_config is not None:
@@ -26,7 +24,6 @@ class ContextualMemory:
         self.stm = stm
         self.ltm = ltm
         self.em = em
-        self.um = um
         self.exm = exm
 
     def build_context_for_task(self, task, context) -> str:
@@ -44,8 +41,6 @@ class ContextualMemory:
         context.append(self._fetch_stm_context(query))
         context.append(self._fetch_entity_context(query))
         context.append(self._fetch_external_context(query))
-        if self.memory_provider == "mem0":
-            context.append(self._fetch_user_context(query))
         return "\n".join(filter(None, context))
 
     def _fetch_stm_context(self, query) -> str:
@@ -105,28 +100,6 @@ class ContextualMemory:
             ]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
         return f"Entities:\n{formatted_results}" if em_results else ""
-
-    def _fetch_user_context(self, query: str) -> str:
-        """
-        DEPRECATED: Will be removed in version 0.156.0 or on 2025-08-04, whichever comes first.
-        Fetches and formats relevant user information from User Memory.
-        Args:
-            query (str): The search query to find relevant user memories.
-        Returns:
-            str: Formatted user memories as bullet points, or an empty string if none found.
-        """
-
-        if self.um is None:
-            return ""
-
-        user_memories = self.um.search(query)
-        if not user_memories:
-            return ""
-
-        formatted_memories = "\n".join(
-            f"- {result['memory']}" for result in user_memories
-        )
-        return f"User memories/preferences:\n{formatted_memories}"
 
     def _fetch_external_context(self, query: str) -> str:
         """
