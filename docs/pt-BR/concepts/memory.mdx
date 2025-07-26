@@ -712,7 +712,6 @@ crew = Crew(
     memory_config={
         "provider": "mem0",
         "config": {"user_id": "john"},
-        "user_memory": {}  # Obrigatório - inicializa a memória de usuário
     },
     process=Process.sequential,
     verbose=True
@@ -733,7 +732,6 @@ crew = Crew(
             "project_id": "my_project_id", # Opcional
             "api_key": "custom-api-key"    # Opcional - sobrescreve variável de ambiente
         },
-        "user_memory": {}
     }
 )
 ```
@@ -763,7 +761,6 @@ crew = Crew(
                 }
             }
         },
-        "user_memory": {}
     }
 )
 ```

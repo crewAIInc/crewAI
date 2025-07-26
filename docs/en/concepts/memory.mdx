@@ -712,7 +712,6 @@ crew = Crew(
     memory_config={
         "provider": "mem0",
         "config": {"user_id": "john"},
-        "user_memory": {}  # DEPRECATED: Will be removed in version 0.156.0 or on 2025-08-04, use external_memory instead
     },
     process=Process.sequential,
     verbose=True
@@ -747,7 +746,6 @@ crew = Crew(
             "infer": True                 # Optional defaults to True
             "custom_categories": new_categories  # Optional - custom categories for user memory
         },
-        "user_memory": {}
     }
 )
 ```
@@ -778,7 +776,6 @@ crew = Crew(
             },
             "infer": True                   # Optional defaults to True
         },
-        "user_memory": {}
     }
 )
 ```
