@@ -4,9 +4,8 @@ This addresses issue #3226 where custom tool registration was broken in CrewAI 0
 """
 
 import pytest
-from typing import Any
 from crewai import Agent
-from crewai.tools import BaseTool, tool, Tool
+from crewai.tools import BaseTool, tool
 
 
 class TestCustomToolPatterns:

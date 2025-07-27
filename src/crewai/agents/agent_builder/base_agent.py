@@ -2,7 +2,7 @@ import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional, TypeVar, cast
 
 from pydantic import (
     UUID4,
@@ -25,7 +25,6 @@ from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
-from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
 
 T = TypeVar("T", bound="BaseAgent")
@@ -186,7 +185,7 @@ class BaseAgent(ABC, BaseModel):
                 processed_tools.append(tool_item)
             elif callable(tool_item):
                 if hasattr(tool_item, '__doc__') and tool_item.__doc__:
-                    converted_tool = tool(tool_item)
+                    converted_tool = cast(BaseTool, tool(tool_item))
                     processed_tools.append(converted_tool)
                 else:
                     raise ValueError(
