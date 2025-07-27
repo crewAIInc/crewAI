@@ -30,10 +30,13 @@ def parse_tools(tools: List[BaseTool]) -> List[CrewStructuredTool]:
     tools_list = []
 
     for tool in tools:
-        if isinstance(tool, CrewAITool):
+        if isinstance(tool, BaseTool):
             tools_list.append(tool.to_structured_tool())
         else:
-            raise ValueError("Tool is not a CrewStructuredTool or BaseTool")
+            raise ValueError(
+                f"Tool must be a BaseTool instance, got {type(tool)}. "
+                "Ensure tools are properly validated before calling parse_tools."
+            )
 
     return tools_list
 
