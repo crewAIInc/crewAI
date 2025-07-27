@@ -43,7 +43,7 @@ class WeaviateStorage(BaseRAGStorage):
     def _initialize_app(self):
         """Initialize Weaviate client and create/get collection"""
         try:
-            # Connect to Weaviate Cloud
+            # Connect to Weaviate Client
             self.client = weaviate.connect_to_weaviate_cloud(
                 cluster_url=os.getenv("WEAVIATE_URL"),
                 auth_credentials=AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
