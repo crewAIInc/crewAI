@@ -43,7 +43,7 @@ class Mem0Storage(Storage):
         self.includes = cfg.get("includes")
         self.excludes = cfg.get("excludes")
         self.custom_categories = cfg.get("custom_categories")
-        self.infer = cfg.get("infer", False)
+        self.infer = cfg.get("infer", True)
 
     def _initialize_memory(self):
         api_key = self.config.get("api_key") or os.getenv("MEM0_API_KEY")

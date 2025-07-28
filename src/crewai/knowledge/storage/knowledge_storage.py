@@ -13,7 +13,7 @@ from chromadb.api.types import OneOrMany
 from chromadb.config import Settings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.utilities import EmbeddingConfigurator
+from crewai.rag.embeddings.configurator import EmbeddingConfigurator
 from crewai.utilities.chromadb import sanitize_collection_name
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
