@@ -1,8 +1,10 @@
+import portalocker
+
 from abc import ABC, abstractmethod
 from typing import Any
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Adapter(BaseModel, ABC):
@@ -39,10 +41,11 @@ class RagTool(BaseTool):
     def _set_default_adapter(self):
         if isinstance(self.adapter, RagTool._AdapterPlaceholder):
             from embedchain import App
-
             from crewai_tools.adapters.embedchain_adapter import EmbedchainAdapter
 
-            app = App.from_config(config=self.config) if self.config else App()
+            with portalocker.Lock("crewai-rag-tool.lock", timeout=10):
+                app = App.from_config(config=self.config) if self.config else App()
+
             self.adapter = EmbedchainAdapter(
                 embedchain_app=app, summarize=self.summarize
             )
