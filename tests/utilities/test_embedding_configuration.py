@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from crewai.utilities.embedding_configurator import EmbeddingConfigurator
+from crewai.rag.embeddings.configurator import EmbeddingConfigurator
 
 
 def test_configure_embedder_importerror():
