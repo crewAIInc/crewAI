@@ -2,6 +2,7 @@ import asyncio
 import copy
 import inspect
 import logging
+import os
 from typing import (
     Any,
     Callable,
@@ -31,6 +32,9 @@ from crewai.utilities.events.flow_events import (
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
+)
+from crewai.utilities.events.listeners.tracing.trace_listener import (
+    TraceCollectionListener,
 )
 from crewai.utilities.printer import Printer
 
@@ -464,7 +468,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
-
+        if os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true":
+            trace_listener = TraceCollectionListener()
+            trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:
             self._initialize_state(kwargs)

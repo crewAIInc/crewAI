@@ -39,6 +39,7 @@ from crewai.utilities.events.tool_usage_events import (
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
+    from litellm.cost_calculator import completion_cost
     from litellm import Choices
     from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
@@ -79,7 +80,8 @@ class FilteredStream(io.TextIOBase):
                 "give feedback / get help" in lower_s
                 or "litellm.info:" in lower_s
                 or "litellm" in lower_s
-                or "Consider using a smaller input or implementing a text splitting strategy" in lower_s
+                or "Consider using a smaller input or implementing a text splitting strategy"
+                in lower_s
             ):
                 return 0
 
@@ -533,7 +535,11 @@ class LLM(BaseLLM):
                     assert hasattr(crewai_event_bus, "emit")
                     crewai_event_bus.emit(
                         self,
-                        event=LLMStreamChunkEvent(chunk=chunk_content, from_task=from_task, from_agent=from_agent),
+                        event=LLMStreamChunkEvent(
+                            chunk=chunk_content,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                        ),
                     )
             # --- 4) Fallback to non-streaming if no content received
             if not full_response.strip() and chunk_count == 0:
@@ -546,7 +552,11 @@ class LLM(BaseLLM):
                     "stream_options", None
                 )  # Remove stream_options for non-streaming call
                 return self._handle_non_streaming_response(
-                    non_streaming_params, callbacks, available_functions, from_task, from_agent
+                    non_streaming_params,
+                    callbacks,
+                    available_functions,
+                    from_task,
+                    from_agent,
                 )
 
             # --- 5) Handle empty response with chunks
@@ -631,7 +641,13 @@ class LLM(BaseLLM):
                 # Log token usage if available in streaming mode
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
                 # Emit completion event and return response
-                self._handle_emit_call_events(response=full_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
+                self._handle_emit_call_events(
+                    response=full_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
                 return full_response
 
             # --- 9) Handle tool calls if present
@@ -643,7 +659,13 @@ class LLM(BaseLLM):
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             # --- 11) Emit completion event and return response
-            self._handle_emit_call_events(response=full_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
+            self._handle_emit_call_events(
+                response=full_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
             return full_response
 
         except ContextWindowExceededError as e:
@@ -655,14 +677,22 @@ class LLM(BaseLLM):
             logging.error(f"Error in streaming response: {str(e)}")
             if full_response.strip():
                 logging.warning(f"Returning partial response despite error: {str(e)}")
-                self._handle_emit_call_events(response=full_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
+                self._handle_emit_call_events(
+                    response=full_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
                 return full_response
 
             # Emit failed event and re-raise the exception
             assert hasattr(crewai_event_bus, "emit")
             crewai_event_bus.emit(
                 self,
-                event=LLMCallFailedEvent(error=str(e), from_task=from_task, from_agent=from_agent),
+                event=LLMCallFailedEvent(
+                    error=str(e), from_task=from_task, from_agent=from_agent
+                ),
             )
             raise Exception(f"Failed to get streaming response: {str(e)}")
 
@@ -780,6 +810,8 @@ class LLM(BaseLLM):
             # across the codebase. This allows CrewAgentExecutor to handle context
             # length issues appropriately.
             response = litellm.completion(**params)
+            self.completion_cost = completion_cost(response)
+
         except ContextWindowExceededError as e:
             # Convert litellm's context window error to our own exception type
             # for consistent handling in the rest of the codebase
@@ -806,7 +838,13 @@ class LLM(BaseLLM):
 
         # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
         if (not tool_calls or not available_functions) and text_response:
-            self._handle_emit_call_events(response=text_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
+            self._handle_emit_call_events(
+                response=text_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
             return text_response
         # --- 6) If there is no text response, no available functions, but there are tool calls, return the tool calls
         elif tool_calls and not available_functions and not text_response:
@@ -817,7 +855,13 @@ class LLM(BaseLLM):
         if tool_result is not None:
             return tool_result
         # --- 8) If tool call handling didn't return a result, emit completion event and return text response
-        self._handle_emit_call_events(response=text_response, call_type=LLMCallType.LLM_CALL, from_task=from_task, from_agent=from_agent, messages=params["messages"])
+        self._handle_emit_call_events(
+            response=text_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
         return text_response
 
     def _handle_tool_call(
@@ -874,7 +918,9 @@ class LLM(BaseLLM):
                 )
 
                 # --- 3.3) Emit success event
-                self._handle_emit_call_events(response=result, call_type=LLMCallType.TOOL_CALL)
+                self._handle_emit_call_events(
+                    response=result, call_type=LLMCallType.TOOL_CALL
+                )
                 return result
             except Exception as e:
                 # --- 3.4) Handle execution errors
@@ -892,7 +938,7 @@ class LLM(BaseLLM):
                     event=ToolUsageErrorEvent(
                         tool_name=function_name,
                         tool_args=function_args,
-                        error=f"Tool execution error: {str(e)}"
+                        error=f"Tool execution error: {str(e)}",
                     ),
                 )
         return None
@@ -942,6 +988,7 @@ class LLM(BaseLLM):
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
+                model=self.model,
             ),
         )
 
@@ -979,17 +1026,22 @@ class LLM(BaseLLM):
                 # whether to summarize the content or abort based on the respect_context_window flag
                 raise
             except Exception as e:
-                unsupported_stop = "Unsupported parameter" in str(e) and "'stop'" in str(e)
+                unsupported_stop = "Unsupported parameter" in str(
+                    e
+                ) and "'stop'" in str(e)
 
                 if unsupported_stop:
-                    if "additional_drop_params" in self.additional_params and isinstance(self.additional_params["additional_drop_params"], list):
+                    if (
+                        "additional_drop_params" in self.additional_params
+                        and isinstance(
+                            self.additional_params["additional_drop_params"], list
+                        )
+                    ):
                         self.additional_params["additional_drop_params"].append("stop")
                     else:
                         self.additional_params = {"additional_drop_params": ["stop"]}
 
-                    logging.info(
-                        "Retrying LLM call without the unsupported 'stop'"
-                    )
+                    logging.info("Retrying LLM call without the unsupported 'stop'")
 
                     return self.call(
                         messages,
@@ -1003,12 +1055,21 @@ class LLM(BaseLLM):
                 assert hasattr(crewai_event_bus, "emit")
                 crewai_event_bus.emit(
                     self,
-                    event=LLMCallFailedEvent(error=str(e), from_task=from_task, from_agent=from_agent),
+                    event=LLMCallFailedEvent(
+                        error=str(e), from_task=from_task, from_agent=from_agent
+                    ),
                 )
                 logging.error(f"LiteLLM call failed: {str(e)}")
                 raise
 
-    def _handle_emit_call_events(self, response: Any, call_type: LLMCallType, from_task: Optional[Any] = None, from_agent: Optional[Any] = None, messages: str | list[dict[str, Any]] | None = None):
+    def _handle_emit_call_events(
+        self,
+        response: Any,
+        call_type: LLMCallType,
+        from_task: Optional[Any] = None,
+        from_agent: Optional[Any] = None,
+        messages: str | list[dict[str, Any]] | None = None,
+    ):
         """Handle the events for the LLM call.
 
         Args:
@@ -1019,9 +1080,18 @@ class LLM(BaseLLM):
             messages: Optional messages object
         """
         assert hasattr(crewai_event_bus, "emit")
+
         crewai_event_bus.emit(
             self,
-            event=LLMCallCompletedEvent(messages=messages, response=response, call_type=call_type, from_task=from_task, from_agent=from_agent),
+            event=LLMCallCompletedEvent(
+                messages=messages,
+                response=response,
+                call_type=call_type,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_cost=self.completion_cost,
+                model=self.model,
+            ),
         )
 
     def _format_messages_for_provider(
@@ -1076,11 +1146,13 @@ class LLM(BaseLLM):
 
         # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
         # Ollama doesn't supports last message to be 'assistant'
-        if "ollama" in self.model.lower() and messages and messages[-1]["role"] == "assistant":
+        if (
+            "ollama" in self.model.lower()
+            and messages
+            and messages[-1]["role"] == "assistant"
+        ):
             messages = messages.copy()
-            messages.append(
-                {"role": "user", "content": ""}
-            )
+            messages.append({"role": "user", "content": ""})
             return messages
 
         # Handle Anthropic models

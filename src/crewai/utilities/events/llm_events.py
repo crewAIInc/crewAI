@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from crewai.utilities.events.base_events import BaseEvent
 
+
 class LLMEventBase(BaseEvent):
     task_name: Optional[str] = None
     task_id: Optional[str] = None
@@ -32,6 +33,7 @@ class LLMEventBase(BaseEvent):
             self.task_id = task.id
             self.task_name = task.name
 
+
 class LLMCallType(Enum):
     """Type of LLM call being made"""
 
@@ -48,6 +50,7 @@ class LLMCallStartedEvent(LLMEventBase):
     """
 
     type: str = "llm_call_started"
+    model: Optional[str] = None
     messages: Optional[Union[str, List[Dict[str, Any]]]] = None
     tools: Optional[List[dict[str, Any]]] = None
     callbacks: Optional[List[Any]] = None
@@ -61,6 +64,9 @@ class LLMCallCompletedEvent(LLMEventBase):
     messages: str | list[dict[str, Any]] | None = None
     response: Any
     call_type: LLMCallType
+    response_cost: Optional[float]
+    model: Optional[str] = None
+
 
 class LLMCallFailedEvent(LLMEventBase):
     """Event emitted when a LLM call fails"""
