@@ -44,7 +44,7 @@ class RAGStorage(BaseRAGStorage):
     ):
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
-        agents = [self._sanitize_role(agent.role) for agent in agents]
+        agents = [str(agent.id) for agent in agents]
         agents = "_".join(agents)
         self.agents = agents
         self.storage_file_name = self._build_storage_file_name(type, agents)
@@ -74,11 +74,6 @@ class RAGStorage(BaseRAGStorage):
         )
         logging.info(f"Collection found or created: {self.collection}")
 
-    def _sanitize_role(self, role: str) -> str:
-        """
-        Sanitizes agent roles to ensure valid directory names.
-        """
-        return role.replace("\n", "").replace(" ", "_").replace("/", "_")
 
     def _build_storage_file_name(self, type: str, file_name: str) -> str:
         """
