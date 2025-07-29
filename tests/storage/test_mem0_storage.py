@@ -203,7 +203,27 @@ def test_save_method_with_memory_oss(mem0_storage_with_mocked_config):
         infer=True,
         metadata={"type": "short_term", "key": "value"},
         run_id="my_run_id",
-        user_id="test_user"
+        user_id="test_user",
+        agent_id='Test_Agent'
+    )
+
+def test_save_method_with_multiple_agents(mem0_storage_with_mocked_config):
+    mem0_storage, _, _ = mem0_storage_with_mocked_config
+    mem0_storage.crew.agents = [MagicMock(role="Test Agent"), MagicMock(role="Test Agent 2"), MagicMock(role="Test Agent 3")]
+    mem0_storage.memory.add = MagicMock()
+
+    test_value = "This is a test memory"
+    test_metadata = {"key": "value"}
+
+    mem0_storage.save(test_value, test_metadata)
+
+    mem0_storage.memory.add.assert_called_once_with(
+        [{"role": "assistant" , "content": test_value}],
+        infer=True,
+        metadata={"type": "short_term", "key": "value"},
+        run_id="my_run_id",
+        user_id="test_user",
+        agent_id='Test_Agent_Test_Agent_2_Test_Agent_3'
     )
 
 
@@ -227,7 +247,8 @@ def test_save_method_with_memory_client(mem0_storage_with_memory_client_using_co
         includes="include1",
         excludes="exclude1",
         output_format='v1.1',
-        user_id='test_user'
+        user_id='test_user',
+         agent_id='Test_Agent'
     )
 
 
@@ -307,7 +328,7 @@ def test_save_memory_using_agent_entity(mock_mem0_memory_client):
             agent_id="agent-123",
         )
 
-def test_search_method_with_agent_entity(mem0_storage_with_mocked_config):
+def test_search_method_with_agent_entity():
     mem0_storage = Mem0Storage(type="external", config={"agent_id": "agent-123"})
     mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
     mem0_storage.memory.search = MagicMock(return_value=mock_results)

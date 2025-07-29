@@ -2,6 +2,7 @@ import os
 from typing import Any, Dict, List
 from collections import defaultdict
 from mem0 import Memory, MemoryClient
+from crewai.utilities.chromadb import sanitize_collection_name
 
 from crewai.memory.storage.interface import Storage
 
@@ -122,7 +123,7 @@ class Mem0Storage(Storage):
         if user_id:
             params["user_id"] = user_id
 
-        if agent_id := self.config.get("agent_id", ""):
+        if agent_id := self.config.get("agent_id", self._get_agent_name()):
             params["agent_id"] = agent_id
 
         self.memory.add(assistant_message, **params)
@@ -167,3 +168,18 @@ class Mem0Storage(Storage):
     def reset(self):
         if self.memory:
             self.memory.reset()
+
+    def _sanitize_role(self, role: str) -> str:
+        """
+        Sanitizes agent roles to ensure valid directory names.
+        """
+        return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+
+    def _get_agent_name(self) -> str:
+        if not self.crew:
+            return ""
+
+        agents = self.crew.agents
+        agents = [self._sanitize_role(agent.role) for agent in agents]
+        agents = "_".join(agents)
+        return sanitize_collection_name(name=agents, max_collection_length=MAX_AGENT_ID_LENGTH_MEM0)
