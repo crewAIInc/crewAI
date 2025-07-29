@@ -4,6 +4,7 @@ import json
 import logging
 import threading
 import uuid
+import time
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
@@ -157,6 +158,15 @@ class Task(BaseModel):
         default=3, description="Maximum number of retries when guardrail fails"
     )
     retry_count: int = Field(default=0, description="Current number of retries")
+    max_retries_after_failure: int = Field(
+        default=5, description="Maximum number of retries after a Task failure"
+    )
+    number_of_retries_remaining_after_failure: int = Field(
+        default=max_retries_after_failure.default, description="Number of retries remaining after a Task failure"
+    )
+    max_delay_after_failure: int = Field(
+        default=5, description="Maximum delay after a Task failure in seconds"
+    )
     start_time: Optional[datetime.datetime] = Field(
         default=None, description="Start time of the task execution"
     )
@@ -501,7 +511,14 @@ class Task(BaseModel):
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
-            raise e  # Re-raise the exception after emitting the event
+            if self.number_of_retries_remaining_after_failure > 0:
+                # Retrying Task execution after failure
+                time.sleep(self.max_delay_after_failure)
+                self.number_of_retries_remaining_after_failure -= 1
+                return self._execute_core(agent, context, tools)
+            else:
+                crewai_event_bus.emit(self, TaskCompletedEvent(output=TaskOutput(description="Task failed", agent=self.agent.role), task=self))
+                #raise e  # Re-raise the exception after emitting the event
 
     def _process_guardrail(self, task_output: TaskOutput) -> GuardrailResult:
         assert self._guardrail is not None
