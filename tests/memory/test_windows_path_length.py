@@ -1,10 +1,7 @@
-import pytest
-from unittest.mock import patch
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.memory.storage.rag_storage import RAGStorage
 from crewai.task import Task
-from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 
 
 def test_long_agent_role_memory_storage():
