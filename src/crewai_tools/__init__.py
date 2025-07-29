@@ -10,6 +10,7 @@ from .aws import (
 from .tools import (
     AIMindTool,
     ApifyActorsTool,
+    ArxivPaperTool,
     BraveSearchTool,
     BrowserbaseLoadTool,
     CodeDocsSearchTool,
