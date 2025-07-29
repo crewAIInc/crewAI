@@ -344,3 +344,22 @@ def test_search_method_with_agent_entity():
 
     assert len(results) == 2
     assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_agent_id_and_user_id():
+    mem0_storage = Mem0Storage(type="external", config={"agent_id": "agent-123", "user_id": "user-123"})
+    mock_results = {"results": [{"score": 0.9, "content": "Result 1"}, {"score": 0.4, "content": "Result 2"}]}
+    mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+    results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+    mem0_storage.memory.search.assert_called_once_with(
+        query="test query",
+        limit=5,
+        user_id='user-123',
+        filters={"OR": [{"user_id": "user-123"}, {"agent_id": "agent-123"}]},
+        threshold=0.5,
+    )
+
+    assert len(results) == 2
+    assert results[0]["content"] == "Result 1"

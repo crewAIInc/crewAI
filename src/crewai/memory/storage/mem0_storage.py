@@ -85,7 +85,8 @@ class Mem0Storage(Storage):
             agent_id = self.config.get("agent_id", "")
 
             if user_id and agent_id:
-                filter["OR"].append({"user_id": user_id, "agent_id": agent_id})
+                filter["OR"].append({"user_id": user_id})
+                filter["OR"].append({"agent_id": agent_id})
             elif user_id:
                 filter["AND"].append({"user_id": user_id})
             elif agent_id:
