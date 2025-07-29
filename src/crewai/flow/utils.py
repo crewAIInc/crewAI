@@ -19,6 +19,11 @@ import textwrap
 from collections import defaultdict, deque
 from typing import Any, Deque, Dict, List, Optional, Set, Union
 
+from pydantic import BaseModel
+
+from crewai.flow.flow_visualizer import FlowVisualizer
+from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+
 
 def get_possible_return_constants(function: Any) -> Optional[List[str]]:
     try:
@@ -374,3 +379,66 @@ def process_router_paths(flow, current, current_level, levels, queue):
                     ):
                         levels[listener_name] = current_level + 1
                         queue.append(listener_name)
+
+
+def configure_crew_with_flow_rpm(crew_instance: Any, flow_instance: Any) -> None:
+    """Configure a crew instance to use the flow's global RPM controller.
+
+    This function should be called whenever a crew is created within a flow
+    to ensure it respects the flow's global rate limiting.
+
+    Args:
+        crew_instance: The crew instance to configure
+        flow_instance: The flow instance containing the global RPM controller
+    """
+    # Import here to avoid circular imports
+    from crewai.crew import Crew
+
+    if not isinstance(crew_instance, Crew):
+        return
+
+    # Check if flow has a global RPM controller
+    if hasattr(flow_instance, '_rpm_controller') and flow_instance._rpm_controller is not None:
+        crew_instance.set_flow_rpm_controller(flow_instance._rpm_controller)
+
+
+def auto_configure_flow_crews(flow_instance: Any, result: Any) -> Any:
+    """Automatically configure any crew instances returned from a flow method.
+
+    This function is called after each flow method execution to detect and
+    configure any crew instances with the flow's global RPM controller.
+    Uses recursive traversal to handle nested data structures.
+
+    Args:
+        flow_instance: The flow instance
+        result: The result from the flow method (could contain crew instances)
+
+    Returns:
+        The original result, potentially with configured crews
+    """
+    # Import here to avoid circular imports
+    from crewai.crew import Crew
+
+    def configure_recursive(obj: Any) -> None:
+        """Recursively configure crew instances in nested structures."""
+        if isinstance(obj, Crew):
+            configure_crew_with_flow_rpm(obj, flow_instance)
+        elif isinstance(obj, (list, tuple)):
+            for item in obj:
+                configure_recursive(item)
+        elif isinstance(obj, dict):
+            for value in obj.values():
+                configure_recursive(value)
+        # Handle other container types if needed
+        elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes)):
+            try:
+                for item in obj:
+                    configure_recursive(item)
+            except (TypeError, AttributeError):
+                # Skip objects that aren't properly iterable
+                pass
+
+    if getattr(flow_instance, '_rpm_controller', None) is not None:
+        configure_recursive(result)
+
+    return result
