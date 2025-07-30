@@ -711,3 +711,99 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     formatted = ollama_llm._format_messages_for_provider(original_messages)
 
     assert formatted == original_messages
+
+
+def test_llm_reasoning_parameter_false():
+    """Test that reasoning=False disables reasoning mode."""
+    llm = LLM(model="ollama/qwen", reasoning=False)
+    
+    with patch("litellm.completion") as mock_completion:
+        mock_message = MagicMock()
+        mock_message.content = "Test response"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10}
+        mock_completion.return_value = mock_response
+        
+        llm.call("Test message")
+        
+        _, kwargs = mock_completion.call_args
+        assert "reasoning_effort" not in kwargs
+
+
+def test_llm_reasoning_parameter_true():
+    """Test that reasoning=True enables reasoning mode."""
+    llm = LLM(model="ollama/qwen", reasoning=True, reasoning_effort="medium")
+    
+    with patch("litellm.completion") as mock_completion:
+        mock_message = MagicMock()
+        mock_message.content = "Test response"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10}
+        mock_completion.return_value = mock_response
+        
+        llm.call("Test message")
+        
+        _, kwargs = mock_completion.call_args
+        assert kwargs["reasoning_effort"] == "medium"
+
+
+def test_llm_reasoning_parameter_none_with_reasoning_effort():
+    """Test that reasoning=None with reasoning_effort still includes reasoning_effort."""
+    llm = LLM(model="ollama/qwen", reasoning=None, reasoning_effort="high")
+    
+    with patch("litellm.completion") as mock_completion:
+        mock_message = MagicMock()
+        mock_message.content = "Test response"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10}
+        mock_completion.return_value = mock_response
+        
+        llm.call("Test message")
+        
+        _, kwargs = mock_completion.call_args
+        assert kwargs["reasoning_effort"] == "high"
+
+
+def test_llm_reasoning_false_overrides_reasoning_effort():
+    """Test that reasoning=False overrides reasoning_effort."""
+    llm = LLM(model="ollama/qwen", reasoning=False, reasoning_effort="high")
+    
+    with patch("litellm.completion") as mock_completion:
+        mock_message = MagicMock()
+        mock_message.content = "Test response"
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10}
+        mock_completion.return_value = mock_response
+        
+        llm.call("Test message")
+        
+        _, kwargs = mock_completion.call_args
+        assert "reasoning_effort" not in kwargs
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_ollama_qwen_with_reasoning_disabled():
+    """Test Ollama Qwen model with reasoning disabled."""
+    if not os.getenv("OLLAMA_BASE_URL"):
+        pytest.skip("OLLAMA_BASE_URL not set; skipping test.")
+    
+    llm = LLM(
+        model="ollama/qwen",
+        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        reasoning=False
+    )
+    result = llm.call("What is 2+2?")
+    assert isinstance(result, str)
+    assert len(result.strip()) > 0

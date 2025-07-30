@@ -2,6 +2,7 @@
 
 import json
 import pytest
+from unittest.mock import patch
 
 from crewai import Agent, Task
 from crewai.llm import LLM
@@ -259,3 +260,31 @@ def test_agent_with_function_calling_fallback():
     assert result == "4"
     assert "Reasoning Plan:" in task.description
     assert "Invalid JSON that will trigger fallback" in task.description
+
+
+def test_agent_with_llm_reasoning_disabled():
+    """Test agent with LLM reasoning disabled."""
+    llm = LLM("gpt-3.5-turbo", reasoning=False)
+    
+    agent = Agent(
+        role="Test Agent",
+        goal="To test the LLM reasoning parameter",
+        backstory="I am a test agent created to verify the LLM reasoning parameter works correctly.",
+        llm=llm,
+        reasoning=False,
+        verbose=True
+    )
+    
+    task = Task(
+        description="Simple math task: What's 3+3?",
+        expected_output="The answer should be a number.",
+        agent=agent
+    )
+    
+    with patch.object(agent.llm, 'call') as mock_call:
+        mock_call.return_value = "6"
+        
+        result = agent.execute_task(task)
+        
+        assert result == "6"
+        assert "Reasoning Plan:" not in task.description
