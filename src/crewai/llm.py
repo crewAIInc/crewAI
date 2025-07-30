@@ -308,6 +308,7 @@ class LLM(BaseLLM):
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
+        reasoning: Optional[bool] = None,
         reasoning_effort: Optional[Literal["none", "low", "medium", "high"]] = None,
         stream: bool = False,
         **kwargs,
@@ -332,6 +333,7 @@ class LLM(BaseLLM):
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
+        self.reasoning = reasoning
         self.reasoning_effort = reasoning_effort
         self.additional_params = kwargs
         self.is_anthropic = self._is_anthropic_model(model)
@@ -406,9 +408,14 @@ class LLM(BaseLLM):
             "api_key": self.api_key,
             "stream": self.stream,
             "tools": tools,
-            "reasoning_effort": self.reasoning_effort,
             **self.additional_params,
         }
+
+        if self.reasoning is False:
+            # When reasoning is explicitly disabled, don't include reasoning_effort
+            pass
+        elif self.reasoning is True or self.reasoning_effort is not None:
+            params["reasoning_effort"] = self.reasoning_effort
 
         # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}
