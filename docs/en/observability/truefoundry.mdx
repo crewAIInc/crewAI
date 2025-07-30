@@ -1,0 +1,269 @@
+---
+title: TrueFoundry Integration
+description: Learn how to integrate TrueFoundry with CrewAI for comprehensive observability and tracing of your AI agents
+icon: chart-line
+---
+
+# Integrate TrueFoundry with CrewAI
+
+TrueFoundry provides comprehensive observability and tracing capabilities for CrewAI agents through its OtelCollector and Traceloop SDK integration. This integration enables you to monitor, debug, and optimize your agent workflows with detailed trace data, performance metrics, and execution insights.
+
+### TrueFoundry AI Gateway
+
+- **Unified API Access**: Connect to 250+ LLMs (OpenAI, Claude, Gemini, Groq, Mistral) through one API
+- **Ultra-Low Latency**: Sub-3ms internal latency with intelligent routing and load balancing
+- **Enterprise Security**: SOC 2, HIPAA, GDPR compliance with RBAC and audit logging
+- **Cost Management**: Token-based quotas, rate limiting, and usage tracking
+
+### How TrueFoundry Integrates with CrewAI
+
+TrueFoundry uses the **Traceloop SDK** with OpenTelemetry standards to automatically capture CrewAI execution traces without code changes.
+
+**Architecture Flow:**
+```
+CrewAI Application → Traceloop SDK → OtelCollector → TrueFoundry Platform → Dashboard
+```
+
+**What Gets Traced:**
+- Agent interactions and task executions
+- LLM calls with token usage and latency
+- Tool invocations and memory operations
+- Error handling and workflow orchestration
+
+### Key Features
+
+- **Agent Execution Tracing**: Track detailed execution flows of your CrewAI agents
+- **Performance Monitoring**: Monitor latency, token usage, and execution times
+- **Error Tracking**: Capture and analyze agent failures and exceptions
+- **Cost Management**: Track API usage and associated costs across your agent workflows
+- **Distributed Tracing**: End-to-end visibility across complex multi-agent systems
+- **Real-time Monitoring**: Live dashboards for monitoring agent performance
+- **Custom Metrics**: Create custom analytics for your specific use cases
+
+## Getting Started
+
+<Steps>
+   <Step title="Create TrueFoundry Account and Project">
+      1. Sign up for a [TrueFoundry account](https://www.truefoundry.com/)
+      2. Create a new tracing project in your TrueFoundry dashboard
+      3. Generate an API key for your project
+      4. Note down your API endpoint and tracing project FQN (Fully Qualified Name)
+   </Step>
+
+   <Step title="Install Dependencies">
+      Install the required packages for TrueFoundry integration:
+
+      ```bash
+      pip install crewai traceloop-sdk python-dotenv
+      ```
+   </Step>
+
+   <Step title="Set Up Environment Variables">
+      Create a `.env` file or set the following environment variables:
+
+      ```bash
+      # TrueFoundry Configuration
+      TFY_API_KEY=your_truefoundry_api_key
+      TFY_API_ENDPOINT=your_api_endpoint
+      TFY_TRACING_PROJECT=your_tracing_project_fqn
+
+      # LLM Configuration (e.g., OpenAI)
+      OPENAI_API_KEY=your_openai_api_key
+      ```
+   </Step>
+
+   <Step title="Initialize Tracing in Your CrewAI Application">
+      Add the TrueFoundry tracing initialization to your CrewAI application:
+
+      ```python
+      from dotenv import load_dotenv
+      from crewai import Agent, Task, Crew, LLM
+      import os
+      from traceloop.sdk import Traceloop
+
+      # Load environment variables
+      load_dotenv()
+
+      # Initialize TrueFoundry tracing
+      TFY_API_KEY = os.environ.get("TFY_API_KEY")
+      TFY_API_ENDPOINT = os.environ.get("TFY_API_ENDPOINT")
+      TFY_TRACING_PROJECT = os.environ.get("TFY_TRACING_PROJECT")
+
+      Traceloop.init(
+          api_endpoint=TFY_API_ENDPOINT,
+          headers={
+              "Authorization": f"Bearer {TFY_API_KEY}",
+              "TFY-Tracing-Project": TFY_TRACING_PROJECT,
+          },
+      )
+      ```
+   </Step>
+
+   <Step title="Create Your CrewAI Application">
+      Now create your CrewAI agents and tasks as usual. The tracing will be automatically captured:
+
+      ```python
+      # Create your agents
+      researcher = Agent(
+          role='Research Analyst',
+          goal='Conduct detailed market research on specified topics',
+          backstory='Expert market analyst with keen attention to detail and data-driven insights',
+          llm=LLM(model="gpt-4o-mini"),
+          verbose=True
+      )
+
+      writer = Agent(
+          role='Content Writer',
+          goal='Create comprehensive reports based on research findings',
+          backstory='Experienced technical writer specializing in market research reports',
+          llm=LLM(model="gpt-4o-mini"),
+          verbose=True
+      )
+
+      # Create tasks
+      research_task = Task(
+          description='Conduct detailed research on AI and machine learning market trends for 2024',
+          agent=researcher,
+          expected_output='A comprehensive research summary with key findings and data points'
+      )
+
+      writing_task = Task(
+          description='Create a detailed market research report based on the research findings',
+          agent=writer,
+          expected_output='A well-structured market research report with insights and recommendations',
+          context=[research_task]
+      )
+
+      # Create and execute crew
+      crew = Crew(
+          agents=[researcher, writer],
+          tasks=[research_task, writing_task],
+          verbose=True,
+          debug=True
+      )
+
+      # Execute the crew - tracing will be automatically captured
+      result = crew.kickoff()
+      print("Final Result:", result)
+      ```
+   </Step>
+
+   <Step title="View Traces in TrueFoundry Dashboard">
+      1. Run your CrewAI application
+      2. Navigate to your TrueFoundry dashboard
+      3. Go to your tracing project
+      4. View detailed traces, performance metrics, and execution flows
+   </Step>
+</Steps>
+
+### Results: TrueFoundry Tracing Dashboard
+
+Once your CrewAI application is running with TrueFoundry tracing enabled, you'll see comprehensive observability data in your dashboard:
+
+![TrueFoundry CrewAI Tracing Dashboard](/images/tracing_crewai.png)
+
+
+## Advanced Configuration
+
+### Custom Tracing Metadata
+
+You can add custom metadata to your traces for better organization and filtering:
+
+```python
+from traceloop.sdk import Traceloop
+
+# Add custom attributes to traces
+Traceloop.set_correlation_id("unique-session-id")
+Traceloop.set_user_id("user-123")
+Traceloop.set_session_id("session-456")
+
+# Add custom tags
+Traceloop.set_association_properties({
+    "environment": "production",
+    "version": "1.0.0",
+    "team": "ai-research"
+})
+```
+
+### Filtering Sensitive Data
+
+Configure data filtering to exclude sensitive information from traces:
+
+```python
+Traceloop.init(
+    api_endpoint=TFY_API_ENDPOINT,
+    headers={
+        "Authorization": f"Bearer {TFY_API_KEY}",
+        "TFY-Tracing-Project": TFY_TRACING_PROJECT,
+    },
+    disable_batch=False,
+    tracing_config={
+        "sanitize_query": True,
+        "sanitize_response": True,
+        "hide_inputs": False,
+        "hide_outputs": False
+    }
+)
+```
+
+### Integration with CrewAI Memory
+
+TrueFoundry tracing works seamlessly with CrewAI's memory capabilities:
+
+```python
+from crewai import Crew
+
+# Enable memory with tracing
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    memory=True,  # Memory operations will be traced
+    verbose=True
+)
+```
+
+## Monitoring Best Practices
+
+### Performance Optimization
+
+1. **Monitor Token Usage**: Track token consumption across agents to optimize costs
+2. **Execution Time Analysis**: Identify slow-performing tasks and optimize prompts
+3. **Error Rate Monitoring**: Set up alerts for high error rates in production
+4. **Resource Utilization**: Monitor memory and CPU usage during agent execution
+
+### Production Deployment
+
+```python
+import logging
+from traceloop.sdk import Traceloop
+
+# Configure logging level for production
+logging.getLogger("traceloop").setLevel(logging.WARNING)
+
+# Initialize with production settings
+Traceloop.init(
+    api_endpoint=TFY_API_ENDPOINT,
+    headers={
+        "Authorization": f"Bearer {TFY_API_KEY}",
+        "TFY-Tracing-Project": TFY_TRACING_PROJECT,
+    },
+    disable_batch=False,  # Enable batching for better performance
+    batch_size=100,       # Optimize batch size for your workload
+    flush_timeout=10000   # Set appropriate flush timeout
+)
+```
+
+
+## Next Steps
+
+1. **Explore Dashboard Features**: Familiarize yourself with TrueFoundry's tracing dashboard and analytics capabilities
+2. **Set Up Alerts**: Configure monitoring alerts for critical metrics like error rates and performance thresholds
+3. **Custom Metrics**: Implement custom metrics for business-specific KPIs
+4. **Integration Testing**: Test the integration thoroughly in staging environments before production deployment
+5. **Team Collaboration**: Share dashboard access with team members for collaborative monitoring and debugging
+
+## Resources & Support
+
+- **Documentation**: [TrueFoundry Docs](https://docs.truefoundry.com/) | [AI Gateway](https://docs.truefoundry.com/docs/ai-gateway) | [Tracing Guide](https://docs.truefoundry.com/docs/tracing/tracing-in-crewai)
+- **Support**: For technical assistance, contact [support@truefoundry.com](mailto:support@truefoundry.com)
+- **Platform**: Sign up at [TrueFoundry.com](https://www.truefoundry.com/)
