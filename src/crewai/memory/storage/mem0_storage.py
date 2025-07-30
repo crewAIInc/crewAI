@@ -23,20 +23,15 @@ class Mem0Storage(Storage):
         # TODO: Memory config will be removed in the future the config will be passed as a parameter
         self.config = config or getattr(crew, "memory_config", {}).get("config", {}) or {}
 
-        self._validate_user_id()
         self._extract_config_values()
         self._initialize_memory()
 
     def _validate_type(self, type):
-        supported_types = {"user", "short_term", "long_term", "entities", "external"}
+        supported_types = {"short_term", "long_term", "entities", "external"}
         if type not in supported_types:
             raise ValueError(
                 f"Invalid type '{type}' for Mem0Storage. Must be one of: {', '.join(supported_types)}"
             )
-
-    def _validate_user_id(self):
-        if self.memory_type == "user" and not self.config.get("user_id", ""):
-            raise ValueError("User ID is required for user memory type")
 
     def _extract_config_values(self):
         cfg = self.config
