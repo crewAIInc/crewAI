@@ -1,0 +1,356 @@
+---
+title: LangDB Integration
+description: How to use LangDB AI Gateway with CrewAI
+icon: database
+---
+
+<img src="https://raw.githubusercontent.com/LangDB/assets/main/langdb-crewai-header.png" alt="LangDB CrewAI Header Image" width="70%" />
+
+## Introduction
+
+LangDB is the fastest enterprise AI gateway that enhances CrewAI with production-ready observability and optimization features. It provides:
+
+- **Complete end-to-end tracing** of every agent interaction and LLM call
+- **Real-time cost monitoring** and optimization across 250+ LLMs
+- **Performance analytics** with detailed metrics and insights
+- **Secure governance** for enterprise AI deployments
+- **OpenAI-compatible APIs** for seamless integration
+- **Fine-grained control** over agent workflows and resource usage
+
+### Installation & Setup
+
+<Steps>
+<Step title="Install the required packages">
+```bash
+pip install -U crewai langdb
+```
+</Step>
+
+<Step title="Set up environment variables" icon="lock">
+Configure your LangDB credentials from the [LangDB dashboard](https://app.langdb.ai/):
+
+```bash
+export LANGDB_API_KEY="your_langdb_api_key"
+export LANGDB_PROJECT_ID="your_project_id"
+```
+</Step>
+
+<Step title="Initialize LangDB with CrewAI">
+The integration requires a single initialization call before creating your agents:
+
+```python
+from langdb import LangDB
+from crewai import Agent, Task, Crew, LLM
+
+# Initialize LangDB tracing
+LangDB.init()
+
+# Create LLM instance - LangDB automatically traces all calls
+llm = LLM(
+    model="gpt-4o",
+    temperature=0.7
+)
+
+# Create your agents as usual
+@agent
+def research_agent(self) -> Agent:
+    return Agent(
+        role="Senior Research Analyst",
+        goal="Conduct comprehensive research on assigned topics",
+        backstory="You are an expert researcher with deep analytical skills.",
+        llm=llm,
+        verbose=True
+    )
+```
+</Step>
+</Steps>
+
+## Key Features
+
+### 1. Comprehensive Observability
+
+LangDB provides complete visibility into your CrewAI agent workflows with minimal setup overhead.
+
+<Tabs>
+  <Tab title="Request Tracing">
+LangDB automatically captures every LLM interaction in your crew execution:
+
+```python
+from langdb import LangDB
+from crewai import Agent, Task, Crew, LLM
+
+# Initialize with custom trace metadata
+LangDB.init(
+    metadata={
+        "environment": "production",
+        "crew_type": "research_workflow",
+        "user_id": "user_123"
+    }
+)
+
+# All agent interactions are automatically traced
+crew = Crew(
+    agents=[research_agent, writer_agent],
+    tasks=[research_task, writing_task],
+    verbose=True
+)
+
+# Execute with full tracing
+result = crew.kickoff(inputs={"topic": "AI trends 2025"})
+```
+
+View detailed traces in the LangDB dashboard showing:
+- Complete agent conversation flows
+- Tool usage and function calls
+- Task execution timelines
+- LLM request/response pairs
+  </Tab>
+
+  <Tab title="Performance Metrics">
+LangDB tracks comprehensive performance metrics for your crews:
+
+- **Execution Time**: Total and per-task execution duration
+- **Token Usage**: Input/output tokens for cost optimization
+- **Success Rates**: Task completion and failure analytics
+- **Latency Analysis**: Response times and bottleneck identification
+
+```python
+# Access metrics programmatically
+from langdb import LangDB
+
+# Get crew execution metrics
+metrics = LangDB.get_metrics(
+    project_id="your_project_id",
+    filters={
+        "crew_type": "research_workflow",
+        "time_range": "last_24h"
+    }
+)
+
+print(f"Average execution time: {metrics.avg_execution_time}")
+print(f"Total cost: ${metrics.total_cost}")
+print(f"Success rate: {metrics.success_rate}%")
+```
+  </Tab>
+
+  <Tab title="Cost Monitoring">
+Track and optimize AI spending across your CrewAI deployments:
+
+```python
+from langdb import LangDB
+
+# Initialize with cost tracking
+LangDB.init(
+    cost_tracking=True,
+    budget_alerts={
+        "daily_limit": 100.0,  # $100 daily limit
+        "alert_threshold": 0.8  # Alert at 80% of limit
+    }
+)
+
+# LangDB automatically tracks costs for all LLM calls
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+
+# View cost breakdown
+cost_report = LangDB.get_cost_report(
+    breakdown_by=["model", "agent", "task"]
+)
+```
+
+Features include:
+- Real-time cost tracking across all models
+- Budget alerts and spending limits
+- Cost optimization recommendations
+- Detailed cost attribution by agent and task
+  </Tab>
+</Tabs>
+
+### 2. Advanced Analytics & Insights
+
+LangDB provides powerful analytics to optimize your CrewAI workflows.
+
+<Tabs>
+  <Tab title="Agent Performance Analysis">
+Analyze individual agent performance and identify optimization opportunities:
+
+```python
+from langdb import LangDB
+
+# Get agent-specific analytics
+analytics = LangDB.get_agent_analytics(
+    agent_role="Senior Research Analyst",
+    time_range="last_week"
+)
+
+print(f"Average task completion time: {analytics.avg_completion_time}")
+print(f"Most used tools: {analytics.top_tools}")
+print(f"Success rate: {analytics.success_rate}%")
+print(f"Cost per task: ${analytics.cost_per_task}")
+```
+  </Tab>
+
+  <Tab title="Workflow Optimization">
+Identify bottlenecks and optimization opportunities in your crew workflows:
+
+```python
+# Analyze crew workflow patterns
+workflow_analysis = LangDB.analyze_workflow(
+    crew_id="research_crew_v1",
+    optimization_focus=["speed", "cost", "quality"]
+)
+
+# Get optimization recommendations
+recommendations = workflow_analysis.recommendations
+for rec in recommendations:
+    print(f"Optimization: {rec.type}")
+    print(f"Potential savings: {rec.estimated_savings}")
+    print(f"Implementation: {rec.implementation_guide}")
+```
+  </Tab>
+</Tabs>
+
+### 3. Production-Ready Features
+
+<CardGroup cols="2">
+  <Card title="Error Monitoring" icon="exclamation-triangle" href="https://docs.langdb.ai/features/error-monitoring">
+    Automatic detection and alerting for agent failures, LLM errors, and workflow issues.
+  </Card>
+  <Card title="Rate Limiting" icon="gauge" href="https://docs.langdb.ai/features/rate-limiting">
+    Intelligent rate limiting to prevent API quota exhaustion and optimize throughput.
+  </Card>
+  <Card title="Caching" icon="bolt" href="https://docs.langdb.ai/features/caching">
+    Smart caching of LLM responses to reduce costs and improve response times.
+  </Card>
+  <Card title="Load Balancing" icon="scale-balanced" href="https://docs.langdb.ai/features/load-balancing">
+    Distribute requests across multiple LLM providers for reliability and performance.
+  </Card>
+</CardGroup>
+
+### 4. Enterprise Security & Governance
+
+LangDB provides enterprise-grade security features for production CrewAI deployments:
+
+```python
+from langdb import LangDB
+
+# Initialize with security configurations
+LangDB.init(
+    security_config={
+        "pii_detection": True,
+        "content_filtering": True,
+        "audit_logging": True,
+        "data_retention_days": 90
+    }
+)
+
+# All crew interactions are automatically secured
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+Security features include:
+- **PII Detection**: Automatic detection and redaction of sensitive information
+- **Content Filtering**: Block inappropriate or harmful content
+- **Audit Logging**: Complete audit trails for compliance
+- **Data Governance**: Configurable data retention and privacy controls
+
+## Advanced Configuration
+
+### Custom Metadata and Filtering
+
+Add custom metadata to enable powerful filtering and analytics:
+
+```python
+from langdb import LangDB
+from crewai import Agent, Crew, Task
+
+# Initialize with rich metadata
+LangDB.init(
+    metadata={
+        "environment": "production",
+        "team": "research_team",
+        "version": "v2.1.0",
+        "customer_tier": "enterprise"
+    }
+)
+
+# Add task-specific metadata
+@task
+def research_task(self) -> Task:
+    return Task(
+        description="Research the latest AI trends",
+        expected_output="Comprehensive research report",
+        agent=research_agent,
+        metadata={
+            "task_type": "research",
+            "priority": "high",
+            "estimated_duration": "30min"
+        }
+    )
+```
+
+### Multi-Environment Setup
+
+Configure different LangDB projects for different environments:
+
+```python
+import os
+from langdb import LangDB
+
+# Environment-specific configuration
+environment = os.getenv("ENVIRONMENT", "development")
+
+if environment == "production":
+    LangDB.init(
+        project_id="prod_project_id",
+        sampling_rate=1.0,  # Trace all requests
+        cost_tracking=True
+    )
+elif environment == "staging":
+    LangDB.init(
+        project_id="staging_project_id",
+        sampling_rate=0.5,  # Sample 50% of requests
+        cost_tracking=False
+    )
+else:
+    LangDB.init(
+        project_id="dev_project_id",
+        sampling_rate=0.1,  # Sample 10% of requests
+        cost_tracking=False
+    )
+```
+
+## Best Practices
+
+### Development Phase
+- Use detailed tracing to understand agent behavior patterns
+- Monitor resource usage during testing and development
+- Set up cost alerts to prevent unexpected spending
+- Implement comprehensive error handling and monitoring
+
+### Production Phase
+- Enable full request tracing for complete observability
+- Set up automated alerts for performance degradation
+- Implement cost optimization strategies based on analytics
+- Use metadata for detailed filtering and analysis
+
+### Continuous Improvement
+- Regular performance reviews using LangDB analytics
+- A/B testing of different agent configurations
+- Cost optimization based on usage patterns
+- Workflow optimization using bottleneck analysis
+
+## Getting Started
+
+1. **Sign up** for a LangDB account at [app.langdb.ai](https://app.langdb.ai)
+2. **Install** the LangDB package: `pip install langdb`
+3. **Initialize** LangDB in your CrewAI application
+4. **Deploy** your crews with automatic observability
+5. **Monitor** and optimize using the LangDB dashboard
+
+<Card title="LangDB Documentation" icon="book" href="https://docs.langdb.ai">
+  Explore comprehensive LangDB documentation and advanced features
+</Card>
+
+LangDB transforms your CrewAI agents into production-ready, observable, and optimized AI workflows with minimal code changes and maximum insights.
