@@ -2,7 +2,7 @@ import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional, TypeVar, cast
 
 from pydantic import (
     UUID4,
@@ -25,7 +25,6 @@ from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
-from crewai.utilities.converter import Converter
 from crewai.utilities.string_utils import interpolate_only
 
 T = TypeVar("T", bound="BaseAgent")
@@ -108,7 +107,7 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    tools: Optional[List[BaseTool]] = Field(
+    tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: int = Field(
@@ -171,27 +170,48 @@ class BaseAgent(ABC, BaseModel):
     def validate_tools(cls, tools: List[Any]) -> List[BaseTool]:
         """Validate and process the tools provided to the agent.
 
-        This method ensures that each tool is either an instance of BaseTool
-        or an object with 'name', 'func', and 'description' attributes. If the
-        tool meets these criteria, it is processed and added to the list of
-        tools. Otherwise, a ValueError is raised.
+        This method ensures that each tool is either an instance of BaseTool,
+        a function (with or without @tool decorator), a dict with tool definition,
+        or an object with 'name', 'func', and 'description' attributes.
         """
         if not tools:
             return []
 
+        from crewai.tools.base_tool import tool
+        
         processed_tools = []
-        required_attrs = ["name", "func", "description"]
-        for tool in tools:
-            if isinstance(tool, BaseTool):
-                processed_tools.append(tool)
-            elif all(hasattr(tool, attr) for attr in required_attrs):
-                # Tool has the required attributes, create a Tool instance
-                processed_tools.append(Tool.from_langchain(tool))
+        for tool_item in tools:
+            if isinstance(tool_item, BaseTool):
+                processed_tools.append(tool_item)
+            elif callable(tool_item):
+                if hasattr(tool_item, '__doc__') and tool_item.__doc__:
+                    converted_tool = cast(BaseTool, tool(tool_item))
+                    processed_tools.append(converted_tool)
+                else:
+                    raise ValueError(
+                        f"Function tool '{tool_item.__name__}' must have a docstring"
+                    )
+            elif isinstance(tool_item, dict):
+                required_keys = ['name', 'description', 'func']
+                if all(key in tool_item for key in required_keys):
+                    processed_tools.append(Tool(
+                        name=tool_item['name'],
+                        description=tool_item['description'],
+                        func=tool_item['func']
+                    ))
+                else:
+                    raise ValueError(
+                        f"Dict tool must contain keys: {required_keys}. "
+                        f"Got: {list(tool_item.keys())}"
+                    )
+            elif hasattr(tool_item, 'name') and hasattr(tool_item, 'func') and hasattr(tool_item, 'description'):
+                processed_tools.append(Tool.from_langchain(tool_item))
             else:
                 raise ValueError(
-                    f"Invalid tool type: {type(tool)}. "
-                    "Tool must be an instance of BaseTool or "
-                    "an object with 'name', 'func', and 'description' attributes."
+                    f"Invalid tool type: {type(tool_item)}. "
+                    "Tool must be a BaseTool instance, function, dict with "
+                    "'name'/'description'/'func' keys, or object with "
+                    "'name'/'func'/'description' attributes."
                 )
         return processed_tools
 
