@@ -9,9 +9,6 @@ from typing_extensions import Required
 class BaseRecord(TypedDict, total=False):
     """A typed dictionary representing a document record.
 
-    This provides a simpler alternative to BaseDocument for cases where
-    you want to pass document data as a dictionary.
-
     Attributes:
         doc_id: Optional unique identifier for the document. If not provided,
             a content-based ID will be generated using SHA256 hash.
