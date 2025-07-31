@@ -160,3 +160,41 @@ def test_save_and_search(short_term_memory):
         find = short_term_memory.search("test value", score_threshold=0.01)[0]
         assert find["context"] == memory.data, "Data value mismatch."
         assert find["metadata"]["agent"] == "test_agent", "Agent value mismatch."
+
+
+def test_memory_with_long_agent_role():
+    """Test that memory works correctly with very long agent roles."""
+    very_long_role = (
+        "Senior Equity Research Analyst specializing in corporate fundamentals and industry dynamics "
+        "with expertise in financial modeling, valuation techniques, and market analysis for "
+        "technology, healthcare, and consumer discretionary sectors, responsible for generating "
+        "comprehensive investment recommendations and detailed research reports"
+    )
+    
+    agent = Agent(
+        role=very_long_role,
+        goal="Search relevant data and provide results",
+        backstory="You are a researcher at a leading tech think tank.",
+        tools=[],
+        verbose=True,
+    )
+
+    task = Task(
+        description="Perform a search on specific topics.",
+        expected_output="A list of relevant URLs based on the search query.",
+        agent=agent,
+    )
+    
+    memory = ShortTermMemory(crew=Crew(agents=[agent], tasks=[task]))
+    
+    test_data = "Test memory data for long role agent"
+    test_metadata = {"task": "test_task"}
+    
+    memory.save(
+        value=test_data,
+        metadata=test_metadata,
+        agent=very_long_role,
+    )
+    
+    results = memory.search("Test memory", score_threshold=0.01)
+    assert isinstance(results, list), "Search should return a list even with long agent roles"
