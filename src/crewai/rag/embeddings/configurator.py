@@ -38,7 +38,14 @@ class EmbeddingConfigurator:
                 f"Unsupported embedding provider: {provider}, supported providers: {list(self.embedding_functions.keys())}"
             )
 
-        embedding_function = self.embedding_functions[provider]
+        try:
+            embedding_function = self.embedding_functions[provider]
+        except ImportError as e:
+            missing_package = str(e).split()[-1]
+            raise ImportError( 
+                f"{missing_package} is not installed. Please install it with: pip install {missing_package}"
+            )
+
         return (
             embedding_function(config)
             if provider == "custom"
